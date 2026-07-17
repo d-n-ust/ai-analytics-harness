@@ -1,0 +1,173 @@
+"""Model wrappers behind one interface, so the agent loop drives all three unchanged.
+
+The loop speaks Anthropic's block shape (content = [text | tool_use] blocks;
+tool_result messages). The Anthropic wrapper is native; the OpenAI wrapper is a thin
+adapter that translates that shape to and from OpenAI's chat-completions format. A
+mock model needs no key, for testing.
+
+Extended thinking / reasoning is turned down on every model so the experiment's
+variable is the *context*, not the reasoning depth — and so the three are comparable.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from dataclasses import dataclass
+from types import SimpleNamespace
+
+MAX_TOKENS = 4096
+
+
+@dataclass(frozen=True)
+class ModelSpec:
+    name: str
+    model_id: str
+    input_price: float      # USD per 1M input tokens
+    output_price: float     # USD per 1M output tokens
+    provider: str = "anthropic"
+    thinking: dict | None = None   # Anthropic only
+
+
+MODEL_SPECS: dict[str, ModelSpec] = {
+    # Sonnet 5 runs adaptive thinking unless disabled; Haiku 4.5 has none to disable.
+    "haiku": ModelSpec("haiku", "claude-haiku-4-5", 1.0, 5.0, "anthropic", None),
+    "sonnet": ModelSpec("sonnet", "claude-sonnet-5", 3.0, 15.0, "anthropic", {"type": "disabled"}),
+    # OpenAI. Prices are placeholders (mini is far cheaper than the flagship).
+    "gpt": ModelSpec("gpt", "gpt-5.6-terra", 1.25, 10.0, "openai", None),
+    "mini": ModelSpec("mini", "gpt-5.4-mini", 0.25, 2.0, "openai", None),
+    "luna": ModelSpec("luna", "gpt-5.6-luna", 1.0, 8.0, "openai", None),  # price a placeholder; tier unknown
+}
+
+
+def _load_env() -> None:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+
+# --------------------------------------------------------------------------- #
+# Anthropic
+# --------------------------------------------------------------------------- #
+class AnthropicModel:
+    def __init__(self, spec: ModelSpec):
+        import anthropic
+        _load_env()
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
+        self.spec = spec
+        self.client = anthropic.Anthropic()
+
+    def create(self, system: str, messages: list, tools: list):
+        kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS,
+                  system=system, messages=messages, tools=tools)
+        if self.spec.thinking is not None:
+            kw["thinking"] = self.spec.thinking
+        return self.client.messages.create(**kw)
+
+
+# --------------------------------------------------------------------------- #
+# OpenAI — adapter to/from Anthropic block shape
+# --------------------------------------------------------------------------- #
+class OpenAIModel:
+    def __init__(self, spec: ModelSpec):
+        from openai import OpenAI
+        _load_env()
+        if not os.environ.get("OPENAI_API_KEY"):
+            raise RuntimeError("OPENAI_API_KEY is not set (add it to .env).")
+        self.spec = spec
+        self.client = OpenAI()
+        # 'none' keeps reasoning off (comparable to the thinking-disabled Anthropic
+        # models) and is required for function tools on gpt-5.6 via chat-completions.
+        self.reasoning = os.environ.get("OPENAI_REASONING", "none")
+
+    @staticmethod
+    def _to_openai_messages(system: str, messages: list) -> list:
+        out = [{"role": "system", "content": system}]
+        for m in messages:
+            role, content = m["role"], m["content"]
+            if role == "user" and isinstance(content, str):
+                out.append({"role": "user", "content": content})
+            elif role == "user":  # a list of tool_result blocks
+                for b in content:
+                    if isinstance(b, dict) and b.get("type") == "tool_result":
+                        out.append({"role": "tool", "tool_call_id": b["tool_use_id"],
+                                    "content": str(b["content"])})
+            elif role == "assistant":  # a list of our own SimpleNamespace blocks
+                text, calls = [], []
+                for b in content:
+                    if getattr(b, "type", None) == "text":
+                        text.append(b.text or "")
+                    elif getattr(b, "type", None) == "tool_use":
+                        calls.append({"id": b.id, "type": "function",
+                                      "function": {"name": b.name, "arguments": json.dumps(b.input or {})}})
+                msg = {"role": "assistant", "content": "".join(text) or None}
+                if calls:
+                    msg["tool_calls"] = calls
+                out.append(msg)
+        return out
+
+    @staticmethod
+    def _to_openai_tools(tools: list) -> list:
+        return [{"type": "function",
+                 "function": {"name": t["name"], "description": t.get("description", ""),
+                              "parameters": t["input_schema"]}} for t in tools]
+
+    def create(self, system: str, messages: list, tools: list):
+        resp = self.client.chat.completions.create(
+            model=self.spec.model_id,
+            messages=self._to_openai_messages(system, messages),
+            tools=self._to_openai_tools(tools),
+            tool_choice="auto",
+            max_completion_tokens=MAX_TOKENS,
+            reasoning_effort=self.reasoning,
+        )
+        msg = resp.choices[0].message
+        blocks = []
+        if msg.content:
+            blocks.append(SimpleNamespace(type="text", text=msg.content))
+        for tc in (msg.tool_calls or []):
+            try:
+                args = json.loads(tc.function.arguments or "{}")
+            except json.JSONDecodeError:
+                args = {}
+            blocks.append(SimpleNamespace(type="tool_use", id=tc.id,
+                                          name=tc.function.name, input=args))
+        stop = "tool_use" if msg.tool_calls else "end_turn"
+        u = resp.usage
+        usage = SimpleNamespace(input_tokens=getattr(u, "prompt_tokens", 0),
+                                output_tokens=getattr(u, "completion_tokens", 0),
+                                cache_creation_input_tokens=0, cache_read_input_tokens=0)
+        return SimpleNamespace(content=blocks, stop_reason=stop, usage=usage)
+
+
+# --------------------------------------------------------------------------- #
+# Mock
+# --------------------------------------------------------------------------- #
+class MockModel:
+    def __init__(self, spec: ModelSpec):
+        self.spec = spec
+
+    @staticmethod
+    def _has_tool_result(messages: list) -> bool:
+        return any(isinstance(m.get("content"), list)
+                   and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in m["content"])
+                   for m in messages)
+
+    def create(self, system: str, messages: list, tools: list):
+        usage = SimpleNamespace(input_tokens=10, output_tokens=5,
+                                cache_creation_input_tokens=0, cache_read_input_tokens=0)
+        if not self._has_tool_result(messages):
+            block = SimpleNamespace(type="tool_use", id="mock_1", name="get_schema", input={})
+        else:
+            block = SimpleNamespace(type="tool_use", id="mock_2", name="final_answer",
+                                    input={"answer": "0", "explanation": "mock answer"})
+        return SimpleNamespace(content=[block], stop_reason="tool_use", usage=usage)
+
+
+def get_model(name: str, mock: bool = False):
+    spec = MODEL_SPECS[name]
+    if mock:
+        return MockModel(spec)
+    if spec.provider == "openai":
+        return OpenAIModel(spec)
+    return AnthropicModel(spec)

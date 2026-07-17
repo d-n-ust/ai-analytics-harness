@@ -1,0 +1,1 @@
+"""Synthetic warehouse generation."""

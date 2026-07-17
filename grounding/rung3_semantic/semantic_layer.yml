@@ -1,0 +1,134 @@
+# Rung 3: the semantic layer.
+# Each metric is one governed definition. The agent selects a metric; the compiler
+# (harness/semantic.py) turns it into correct SQL over the star.
+#
+# Design note (important): the governed definitions encode the business's real rules,
+# including WHO counts. User-count and per-user metrics (active_users, power_users,
+# frequency, activation, ...) exclude internal/test accounts by default, because that
+# is what those numbers mean to leadership. This is exactly what a competent semantic
+# layer holds — so getting "active users" right is a rung-3 win, not a rung-4 one.
+# Raw activity *volume* (value_moments, new_signups) is population-neutral: it counts
+# what happened, so it includes everyone. The knowledge base (rung 4) is left for the
+# things a semantic layer genuinely cannot hold: coverage caveats, fuzzy-question
+# mapping, and world facts.
+
+metrics:
+
+  # --- volume metrics: population-neutral (include everyone) ---
+  value_moments:
+    description: "Number of value moments (completed habits) in the period. Raw activity volume — includes all users."
+    base: agg_active_days
+    agg: "sum(moments)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    supports_internal_filter: true
+
+  new_signups:
+    description: "Number of user signups in the period (raw — includes all accounts)."
+    base: dim_users
+    agg: "count(*)"
+    time_column: signup_date
+    dimensions: [region, channel, platform]
+    supports_internal_filter: true
+
+  # --- user-count / per-user metrics: exclude internal/test by definition ---
+  active_users:
+    description: "Distinct real users with at least one value moment in the period (excludes internal/test accounts)."
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  power_users:
+    description: "Distinct real users who logged 5+ value moments in a single day during the period (excludes internal/test)."
+    base: agg_active_days
+    agg: "count(distinct case when moments >= 5 then user_id end)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  days_per_user:
+    description: "Average active days per active user in the period (frequency; excludes internal/test)."
+    base: agg_active_days
+    agg: "count(*) * 1.0 / nullif(count(distinct user_id), 0)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  moments_per_day:
+    description: "Average value moments per active day (depth; excludes internal/test)."
+    base: agg_active_days
+    agg: "sum(moments) * 1.0 / nullif(count(*), 0)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  reminder_open_rate:
+    description: "Share of active days on which the user opened a reminder (a retention driver; excludes internal/test)."
+    base: agg_active_days
+    agg: "avg(had_reminder)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  activation_rate:
+    description: "Share of the signup cohort that reached a first value moment within 7 days (excludes internal/test)."
+    base: agg_user_activation
+    agg: "avg(CASE WHEN activated THEN 1 ELSE 0 END)"
+    time_column: signup_date
+    dimensions: [region, channel, platform]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  # --- subscription & spend metrics (internal accounts don't hold subscriptions) ---
+  mrr:
+    description: "Monthly recurring revenue from currently-active subscriptions (annual plans divided by 12)."
+    base: fct_subscriptions
+    agg: "sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  active_subscriptions:
+    description: "Count of currently-active subscriptions."
+    base: fct_subscriptions
+    agg: "count(*)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  paying_users:
+    description: "Distinct users with an active subscription."
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  arpu:
+    description: "Average MRR per paying user (annual plans divided by 12)."
+    base: fct_subscriptions
+    agg: "sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) * 1.0 / nullif(count(distinct user_id), 0)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  marketing_spend:
+    description: "Total marketing spend in the period."
+    base: fct_marketing_spend
+    agg: "sum(spend)"
+    time_column: spend_date
+    dimensions: [channel]
+
+  referrals:
+    description: "Number of referrals created in the period."
+    base: fct_referrals
+    agg: "count(*)"
+    time_column: referred_ts
+    filterable: [status]

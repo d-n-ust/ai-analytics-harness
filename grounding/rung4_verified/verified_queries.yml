@@ -1,0 +1,66 @@
+# Rung 4: verified example queries (a "VQR" — verified query repository).
+# Approved (question -> correct query) pairs that a human analyst has checked. They
+# teach the model, by concrete example, how to map a business question to the right
+# governed metric — including the coverage and world-fact rules, shown as scoped
+# examples rather than general prose. These are NOT the eval questions; they use
+# different questions/periods, so they demonstrate the *pattern*, not the answer.
+#
+# The bet vs. the free-text knowledge base (rung 5): a concrete example ("for THIS
+# question, run THIS") is applied more reliably and over-generalized less than a
+# stated rule the model has to decide when to apply.
+
+verified_queries:
+
+  # --- lookups & segments (map plain questions to metrics) ---
+  - q: "How many value moments were logged in May 2026?"
+    call: "query_metric(metric=value_moments, start=2026-05-01, end=2026-05-31)"
+
+  - q: "How many value moments came from Android users in May 2026?"
+    call: "query_metric(metric=value_moments, filters={platform: android}, start=2026-05-01, end=2026-05-31)"
+
+  - q: "How many users signed up in May 2026?"
+    call: "query_metric(metric=new_signups, start=2026-05-01, end=2026-05-31)"
+
+  # --- governed metrics (definitions, thresholds, populations are handled by the metric) ---
+  - q: "How many active users did we have in May 2026?"
+    call: "query_metric(metric=active_users, start=2026-05-01, end=2026-05-31)"
+    why: "The active_users metric already excludes internal/test accounts; don't add filters."
+
+  - q: "How many power users did we have in May 2026?"
+    call: "query_metric(metric=power_users, start=2026-05-01, end=2026-05-31)"
+
+  - q: "What was the activation rate for users who signed up in May 2026?"
+    call: "query_metric(metric=activation_rate, start=2026-05-01, end=2026-05-31)"
+
+  - q: "What is our MRR on the monthly plan?"
+    call: "query_metric(metric=mrr, filters={plan: monthly})"
+
+  - q: "How many paying users do we have?"
+    call: "query_metric(metric=paying_users)"
+
+  # --- reading vague questions (the mapping, shown as an example) ---
+  - q: "How is retention looking lately?"
+    call: "query_metric(metric=days_per_user, time_grain=week)"
+    why: "'Retention' here means days per user (frequency), not the active-user count."
+
+  - q: "How engaged are users this week?"
+    call: "query_metric(metric=value_moments, period=last_week) then query_metric(metric=active_users, period=last_week)"
+    why: "'Engagement' = weekly value moments and active users together."
+
+  # --- coverage caveat (APAC launch), shown as a scoped example ---
+  - q: "How many value moments has APAC generated since it launched?"
+    call: "query_metric(metric=value_moments, filters={region: APAC}, start=2026-05-01)"
+    why: "APAC launched 2026-05-01; anything earlier is a pre-launch test cohort."
+
+  - q: "How many active users does APAC have now?"
+    call: "query_metric(metric=active_users, filters={region: APAC}, start=2026-05-01)"
+    why: "Same APAC launch cutoff."
+
+  # --- world fact (partnerships is a test channel), shown scoped to acquisition ---
+  - q: "How many real-acquisition signups did we get in May 2026?"
+    call: "query_metric(metric=new_signups, filters={channel: [paid_search, referral, content_seo, organic]}, start=2026-05-01, end=2026-05-31)"
+    why: "The partnerships channel is a test integration, not real acquisition — exclude it here."
+
+  - q: "How much did we spend acquiring real users in May 2026?"
+    call: "query_metric(metric=marketing_spend, filters={channel: [paid_search, referral, content_seo, organic]}, start=2026-05-01, end=2026-05-31)"
+    why: "Exclude the partnerships test channel from real acquisition spend."

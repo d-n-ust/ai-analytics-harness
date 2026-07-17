@@ -1,0 +1,188 @@
+# The frozen question set. Five tiers, each chosen to first become answerable at a
+# specific rung. Same set runs unchanged against every rung and model.
+#
+# gold_sql is the canonical correct query over the clean star (numeric questions).
+# `grader` picks how an answer is scored: numeric (default), keywords (fuzzy mapping
+# questions — did it name the right metric), or diagnostic (did it find the driver +
+# cause). Gold numbers are computed by running gold_sql, never hand-typed.
+#
+# Design: the semantic layer (rung 3) holds every real *definition*, including who
+# counts (staff excluded from user metrics), the power-user threshold, and the
+# activation window. The knowledge base (rung 4) is left only with what a semantic
+# layer genuinely can't hold: coverage caveats, world facts, and fuzzy-question mapping.
+
+questions:
+
+  # ---- Tier 1 · lookup (first works at rung 2: clean names/enums). Volume = all users. ----
+  - id: t1_value_moments_june
+    tier: lookup
+    question: "How many habit completions (value moments) were logged in June 2026?"
+    gold_sql: "SELECT count(*) FROM fct_value_moments WHERE completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t1_signups_june
+    tier: lookup
+    question: "How many new users signed up in June 2026?"
+    gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t1_total_habits
+    tier: lookup
+    question: "How many habits have been created in total?"
+    gold_sql: "SELECT count(*) FROM dim_habits"
+    tolerance: 0.01
+
+  - id: t1_spend_june
+    tier: lookup
+    question: "What was our total marketing spend in June 2026?"
+    gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t1_ios_value_moments_june
+    tier: lookup
+    question: "How many value moments came from the iOS platform in June 2026?"
+    gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.platform = 'ios' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  # ---- Tier 2 · filtered / segmented ----
+  - id: t2_web_value_moments_june
+    tier: filtered
+    question: "How many value moments came from the web platform in June 2026?"
+    gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.platform = 'web' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t2_referral_signups_q2
+    tier: filtered
+    question: "How many users signed up through the referral channel in the second quarter of 2026 (April–June)?"
+    gold_sql: "SELECT count(*) FROM dim_users WHERE channel = 'referral' AND signup_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t2_paid_search_spend_q2
+    tier: filtered
+    question: "How much did we spend on paid search in the second quarter of 2026 (April–June)?"
+    gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel = 'paid_search' AND spend_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t2_americas_value_moments_june
+    tier: filtered
+    question: "How many value moments came from users in the Americas region in June 2026?"
+    gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.region = 'Americas' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.02
+
+  - id: t2_active_annual_subs
+    tier: filtered
+    question: "How many currently-active subscriptions are on the annual plan?"
+    gold_sql: "SELECT count(*) FROM fct_subscriptions WHERE is_active AND plan = 'annual'"
+    tolerance: 0.02
+
+  # ---- Tier 3 · governed metric (first works at rung 3). Definitions, thresholds, populations. ----
+  - id: t3_mrr
+    tier: metric
+    question: "What is our current MRR (monthly recurring revenue)?"
+    gold_sql: "SELECT round(sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END), 2) FROM fct_subscriptions WHERE is_active"
+    tolerance: 0.02
+    note: "Annual plans billed as a yearly lump (÷12), active subs only — the grain/definition trap."
+
+  - id: t3_arpu
+    tier: metric
+    question: "What is our ARPU (average monthly recurring revenue per paying user)?"
+    gold_sql: "SELECT round(sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) / nullif(count(DISTINCT user_id), 0), 2) FROM fct_subscriptions WHERE is_active"
+    tolerance: 0.03
+
+  - id: t3_active_users_last_week
+    tier: metric
+    question: "How many active users did we have last week?"
+    gold_sql: "SELECT count(DISTINCT f.user_id) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+    tolerance: 0.02
+    note: "The governed 'active users' definition excludes internal/test accounts. Raw SQL counts everyone."
+
+  - id: t3_power_users
+    tier: metric
+    question: "How many power users did we have in June 2026?"
+    gold_sql: "SELECT count(DISTINCT s.user_id) FROM (SELECT f.user_id, f.completed_date FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' GROUP BY f.user_id, f.completed_date HAVING count(*) >= 5) s"
+    tolerance: 0.05
+    note: "'Power user' = 5+ value moments in a single day, staff excluded. The threshold is only in the metric."
+
+  - id: t3_activation_rate_june
+    tier: metric
+    question: "What was the activation rate for users who signed up in June 2026?"
+    gold_sql: "SELECT round(avg(CASE WHEN activated THEN 1 ELSE 0 END), 4) FROM agg_user_activation WHERE NOT is_internal AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.03
+    note: "'Activated' = first value moment within 7 days of signup, staff excluded. The window is only in the metric."
+
+  # ---- Tier 4 · knowledge base (first works at rung 4). Coverage, world facts, fuzzy mapping. ----
+  - id: t4_apac_value_moments_q2
+    tier: knowledge
+    question: "How many value moments came from the APAC region in the second quarter of 2026 (April–June)?"
+    gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.region = 'APAC' AND f.completed_date BETWEEN DATE '2026-05-01' AND DATE '2026-06-30'"
+    tolerance: 0.04
+    note: "APAC launched 2026-05-01; pre-launch (April) activity is test data and must be excluded — a coverage caveat no metric holds."
+
+  - id: t4_real_signups_june
+    tier: knowledge
+    question: "How many signups came from real acquisition channels in June 2026?"
+    gold_sql: "SELECT count(*) FROM dim_users WHERE channel != 'partnerships' AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.03
+    note: "The 'partnerships' channel is an internal test integration, not real acquisition — a world fact only the KB carries."
+
+  - id: t4_real_acquisition_spend_june
+    tier: knowledge
+    question: "How much did we spend on real acquisition channels in June 2026?"
+    gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel != 'partnerships' AND spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.03
+    note: "Same world fact — partnerships spend isn't real acquisition spend."
+
+  - id: t4_retention_trend
+    tier: knowledge
+    question: "How has our retention been trending over the last couple of months?"
+    grader: keywords
+    gold_keywords: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+    note: "Fuzzy mapping: 'retention' means days per user (frequency), not active-user count. The metric layer has the number; only the KB maps the word to it."
+
+  - id: t4_business_health
+    tier: knowledge
+    question: "Is the app healthy right now — how would you tell?"
+    grader: keywords
+    gold_keywords: ["value moments", "north star", "weekly value"]
+    note: "Fuzzy mapping: health = the North Star (weekly value moments), not MRR or a single lookup."
+
+  # ---- Tier 5 · diagnostic / root cause (first works at rung 5). Graded on driver + cause. ----
+  - id: t5_why_drop
+    tier: diagnostic
+    grader: diagnostic
+    question: "Weekly value moments dropped last week. What caused it?"
+    gold_diagnostic:
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_engagement_drop
+    tier: diagnostic
+    grader: diagnostic
+    question: "Engagement fell last week. Which part of the business is responsible?"
+    gold_diagnostic:
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "retention", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_not_breadth
+    tier: diagnostic
+    grader: diagnostic
+    question: "Did our active user base shrink last week, or is something else going on with value moments?"
+    gold_diagnostic:
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_masked_by_growth
+    tier: diagnostic
+    grader: diagnostic
+    question: "Value moments came in soft last week even though we added users. What happened?"
+    gold_diagnostic:
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_which_lever
+    tier: diagnostic
+    grader: diagnostic
+    question: "Which part of the North Star weakened last week — breadth, frequency, or depth?"
+    gold_diagnostic:
+      driver: ["frequency", "days per user", "days/user", "days_per_user"]
+      cause: ["reminder", "notification"]

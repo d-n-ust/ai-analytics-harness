@@ -1,0 +1,40 @@
+# Rung 5: the metric tree.
+# The map of how the North Star is produced. Identity edges are exact arithmetic
+# (the parent equals the product of its children); influence edges are empirical
+# ("this drives that"), carry their evidence, and are read with hedging, never as
+# proven causation. The tree is what lets the agent answer "why did it move" by
+# decomposing the change instead of guessing.
+
+root: weekly_value_moments
+
+nodes:
+  weekly_value_moments: {metric: value_moments,      label: "Weekly value moments (North Star)"}
+  active_users:         {metric: active_users,       label: "Active users (breadth)"}
+  days_per_user:        {metric: days_per_user,      label: "Days per user (frequency)"}
+  moments_per_day:      {metric: moments_per_day,    label: "Moments per active day (depth)"}
+  reminder_open_rate:   {metric: reminder_open_rate, label: "Reminder open rate"}
+  new_signups:          {metric: new_signups,        label: "New signups"}
+  activation_rate:      {metric: activation_rate,    label: "Activation rate (D7)"}
+
+edges:
+  # Identity: weekly_value_moments = active_users x days_per_user x moments_per_day
+  - {parent: weekly_value_moments, child: active_users,    type: identity, op: multiply}
+  - {parent: weekly_value_moments, child: days_per_user,   type: identity, op: multiply}
+  - {parent: weekly_value_moments, child: moments_per_day, type: identity, op: multiply}
+
+  # Influence: soft drivers, hedged, with the evidence on the edge.
+  - parent: days_per_user
+    child: reminder_open_rate
+    type: influence
+    confidence: high
+    evidence: "Reminder opens precede return visits; frequency and reminder rate move together historically."
+  - parent: active_users
+    child: new_signups
+    type: influence
+    confidence: medium
+    evidence: "New signups add breadth, but most weekly actives are returning users, so the link is partial."
+  - parent: active_users
+    child: activation_rate
+    type: influence
+    confidence: medium
+    evidence: "Higher D7 activation turns more of each signup cohort into recurring active users."

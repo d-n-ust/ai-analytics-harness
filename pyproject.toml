@@ -1,0 +1,23 @@
+[project]
+name = "ai-analytics-harness"
+version = "0.1.0"
+description = "A controlled lab experiment: how much does structure (a schema, a semantic layer, a knowledge base, a metric tree) improve an LLM analyst's answers over messy data?"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+dependencies = [
+    "duckdb>=1.1",
+    "anthropic>=0.40",
+    "openai>=1.40",
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "faker>=30",
+    "pyyaml>=6",
+    "python-dotenv>=1.0",
+    "rich>=13",
+]
+
+[tool.uv]
+# This is a runnable app, not an installable library — install deps only.
+package = false
