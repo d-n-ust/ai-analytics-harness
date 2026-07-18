@@ -26,7 +26,7 @@ TIERS = ["lookup", "filtered", "metric", "knowledge", "diagnostic"]
 
 
 def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=(1, 2, 3, 4, 5, 6),
-                   only=None, sample: int | None = None) -> None:
+                   only=None, sample: int | None = None, repeats: int = 1) -> None:
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()
@@ -50,26 +50,27 @@ def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=
         for rung in rungs:
             set_star(con, rung >= 2)
             grounding = build_grounding(con, rung)
-            for q in questions:
-                try:
-                    ans = run_agent(q["question"], grounding, model)
-                except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
-                    ans = Answer(q["question"], rung, model_name, None, error=f"exception: {exc}")
-                g = grade(ans, q, golds[q["id"]])
-                rows.append({
-                    "qid": q["id"], "tier": q["tier"], "rung": rung, "model": model_name,
-                    "question": q["question"], "gold": golds[q["id"]],
-                    "answer": ans.answer, "explanation": ans.explanation,
-                    "correct": g["correct"], "executed": g["executed"],
-                    "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
-                    "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
-                    "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
-                    "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
-                })
-                raw_f.write(json.dumps(rows[-1], default=str) + "\n")
-                raw_f.flush()
-                mark = "✓" if g["correct"] else ("~" if g["abstained"] else "✗")
-                print(f"  [{model_name} r{rung} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
+            for rep in range(repeats):
+                for q in questions:
+                    try:
+                        ans = run_agent(q["question"], grounding, model)
+                    except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
+                        ans = Answer(q["question"], rung, model_name, None, error=f"exception: {exc}")
+                    g = grade(ans, q, golds[q["id"]])
+                    rows.append({
+                        "qid": q["id"], "tier": q["tier"], "rung": rung, "model": model_name, "rep": rep,
+                        "question": q["question"], "gold": golds[q["id"]],
+                        "answer": ans.answer, "explanation": ans.explanation,
+                        "correct": g["correct"], "executed": g["executed"],
+                        "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+                        "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
+                        "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
+                        "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
+                    })
+                    raw_f.write(json.dumps(rows[-1], default=str) + "\n")
+                    raw_f.flush()
+                    mark = "✓" if g["correct"] else ("~" if g["abstained"] else "✗")
+                    print(f"  [{model_name} r{rung} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
 
     raw_f.close()
     _write_and_summarize(rows, list(models), list(rungs), mock)
@@ -97,15 +98,32 @@ def _write_and_summarize(rows, models, rungs, mock) -> None:
     by = lambda **f: [r for r in rows                    # noqa: E731 — tiny local filter
                       if all(r[k] == v for k, v in f.items())]
 
+    reps = len({r.get("rep", 0) for r in rows}) or 1
+    nq = len(rows) // (len(models) * len(rungs) * reps) if reps else 0
     lines = [f"# Results — AI analytics harness{'  (MOCK)' if mock else ''}",
              f"_Generated {dt.date.today()}. {len(rows)} runs "
-             f"({len(models)} models x {len(rungs)} rungs x {len(rows) // (len(models) * len(rungs))} questions)._",
-             "", "## Accuracy by rung", "",
+             f"({len(models)} models x {len(rungs)} rungs x {nq} questions x {reps} reps)._",
+             "", "## Accuracy by rung (pooled over reps)", "",
              "| rung | " + " | ".join(models) + " |",
              "|" + "---|" * (len(models) + 1)]
     for rung in rungs:
         cells = " | ".join(_rate(by(model=m, rung=rung)) for m in models)
         lines.append(f"| {rung} · {RUNG_NAMES[rung]} | {cells} |")
+
+    if reps > 1:  # per-rung mean ± sd across reps — the error bars
+        lines += ["", "## Accuracy by rung — mean ± sd across reps", "",
+                  "| rung | " + " | ".join(models) + " |", "|" + "---|" * (len(models) + 1)]
+        for rung in rungs:
+            cells = []
+            for m in models:
+                accs = []
+                for rep in sorted({r["rep"] for r in by(model=m, rung=rung)}):
+                    rr = by(model=m, rung=rung, rep=rep)
+                    accs.append(100 * sum(x["correct"] for x in rr) / len(rr))
+                mean = sum(accs) / len(accs)
+                sd = (sum((a - mean) ** 2 for a in accs) / (len(accs) - 1)) ** 0.5 if len(accs) > 1 else 0.0
+                cells.append(f"{mean:.0f}% ± {sd:.0f} ({min(accs):.0f}–{max(accs):.0f})")
+            lines.append(f"| {rung} · {RUNG_NAMES[rung]} | " + " | ".join(cells) + " |")
 
     for m in models:
         lines += ["", f"## Question-type unlock — {m} (correct-rate by tier x rung)", "",

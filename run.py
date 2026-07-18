@@ -34,6 +34,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
         rungs=[int(r) for r in args.rungs.split(",") if r.strip()],
         only=[q.strip() for q in args.only.split(",") if q.strip()] if args.only else None,
         sample=args.sample,
+        repeats=args.repeats,
     )
 
 
@@ -57,6 +58,8 @@ def main() -> None:
     sp.add_argument("--rungs", default="1,2,3,4,5,6")
     sp.add_argument("--only", default=None, help="comma-separated question ids (a quick subset)")
     sp.add_argument("--sample", type=int, default=None, help="run only the first N questions per tier")
+    sp.add_argument("--repeats", type=int, default=1,
+                    help="repeat the whole grid N times so each rung gets a mean and a spread")
     sp.set_defaults(func=cmd_eval)
 
     args = p.parse_args()
