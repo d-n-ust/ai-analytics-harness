@@ -1,8 +1,8 @@
 """CLI for the AI-analytics-harness experiment.
 
     python run.py data                              # (re)generate the messy warehouse
-    python run.py ask "how many active users?" --rung 3 --model small
-    python run.py eval [--mock] [--models small,large] [--rungs 1,2,3,4,5]
+    python run.py ask "how many active users?" --rung 3 --model gpt
+    python run.py eval [--mock] [--models gpt,mini] [--repeats 5] [--rungs 1,2,3,4,5,6]
 """
 
 from __future__ import annotations
@@ -48,13 +48,13 @@ def main() -> None:
     sp = sub.add_parser("ask", help="ask one question at one rung")
     sp.add_argument("question")
     sp.add_argument("--rung", type=int, required=True, choices=[1, 2, 3, 4, 5, 6])
-    sp.add_argument("--model", default="haiku", choices=["haiku", "sonnet", "gpt"])
+    sp.add_argument("--model", default="gpt", choices=["haiku", "sonnet", "gpt", "mini", "luna"])
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("eval", help="run the full experiment")
     sp.add_argument("--mock", action="store_true",
                     help="use a deterministic mock model (no API key needed)")
-    sp.add_argument("--models", default="haiku,sonnet,gpt")
+    sp.add_argument("--models", default="gpt,mini")
     sp.add_argument("--rungs", default="1,2,3,4,5,6")
     sp.add_argument("--only", default=None, help="comma-separated question ids (a quick subset)")
     sp.add_argument("--sample", type=int, default=None, help="run only the first N questions per tier")

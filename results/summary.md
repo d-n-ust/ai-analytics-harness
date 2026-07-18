@@ -1,59 +1,72 @@
 # Results — AI analytics harness
-_Generated 2026-07-17. 150 runs (1 models x 6 rungs x 25 questions)._
 
-## Accuracy by rung
+_1500 runs: 2 models (gpt = GPT-5.6, mini = GPT-5.4-mini) x 6 rungs x 25 questions x 5 reps._
+_The aggregates below are the committed record; regenerate the raw per-run rows with `make eval`._
 
-| rung | luna |
-|---|---|
-| 1 · messy data | 9/25 (36%) |
-| 2 · star schema | 10/25 (40%) |
-| 3 · semantic layer | 16/25 (64%) |
-| 4 · + verified examples | 19/25 (76%) |
-| 5 · + knowledge base | 20/25 (80%) |
-| 6 · + metric tree | 24/25 (96%) |
+## Accuracy by rung (pooled over reps)
 
-## Question-type unlock — luna (correct-rate by tier x rung)
+| rung | gpt | mini |
+|---|---|---|
+| 1 · messy data | 50/125 (40%) | 27/125 (22%) |
+| 2 · star schema | 57/125 (46%) | 43/125 (34%) |
+| 3 · semantic layer | 82/125 (66%) | 67/125 (54%) |
+| 4 · + verified examples | 101/125 (81%) | 96/125 (77%) |
+| 5 · + knowledge base | 98/125 (78%) | 94/125 (75%) |
+| 6 · + metric tree | 115/125 (92%) | 98/125 (78%) |
+
+## Accuracy by rung — mean ± sd across reps
+
+| rung | gpt | mini |
+|---|---|---|
+| 1 · messy data | 40% ± 6 (32–48) | 22% ± 2 (20–24) |
+| 2 · star schema | 46% ± 4 (40–48) | 34% ± 4 (32–40) |
+| 3 · semantic layer | 66% ± 4 (60–68) | 54% ± 7 (44–60) |
+| 4 · + verified examples | 81% ± 2 (80–84) | 77% ± 4 (72–84) |
+| 5 · + knowledge base | 78% ± 2 (76–80) | 75% ± 3 (72–80) |
+| 6 · + metric tree | 92% ± 3 (88–96) | 78% ± 5 (72–84) |
+
+## Question-type unlock — gpt (correct-rate by tier x rung)
 
 | tier | r1 | r2 | r3 | r4 | r5 | r6 |
 |---|---|---|---|---|---|---|
-| lookup | 3/5 | 5/5 | 5/5 | 5/5 | 5/5 | 5/5 |
-| filtered | 4/5 | 4/5 | 5/5 | 5/5 | 5/5 | 5/5 |
-| metric | 2/5 | 1/5 | 5/5 | 5/5 | 5/5 | 5/5 |
-| knowledge | 0/5 | 0/5 | 1/5 | 4/5 | 5/5 | 5/5 |
-| diagnostic | 0/5 | 0/5 | 0/5 | 0/5 | 0/5 | 4/5 |
+| lookup | 24/25 | 20/25 | 25/25 | 25/25 | 25/25 | 25/25 |
+| filtered | 14/25 | 19/25 | 25/25 | 25/25 | 25/25 | 25/25 |
+| metric | 10/25 | 18/25 | 25/25 | 25/25 | 25/25 | 25/25 |
+| knowledge | 2/25 | 0/25 | 4/25 | 25/25 | 23/25 | 22/25 |
+| diagnostic | 0/25 | 0/25 | 3/25 | 1/25 | 0/25 | 18/25 |
+
+## Question-type unlock — mini (correct-rate by tier x rung)
+
+| tier | r1 | r2 | r3 | r4 | r5 | r6 |
+|---|---|---|---|---|---|---|
+| lookup | 19/25 | 20/25 | 19/25 | 23/25 | 21/25 | 20/25 |
+| filtered | 7/25 | 20/25 | 19/25 | 25/25 | 25/25 | 25/25 |
+| metric | 1/25 | 2/25 | 19/25 | 25/25 | 25/25 | 25/25 |
+| knowledge | 0/25 | 1/25 | 7/25 | 20/25 | 22/25 | 20/25 |
+| diagnostic | 0/25 | 0/25 | 3/25 | 3/25 | 1/25 | 8/25 |
 
 ## Confidently wrong (a number, not an abstention, but wrong)
 
+A representative sample; regenerate the full list with `make eval`.
+
 | model | rung | qid | answer | gold |
 |---|---|---|---|---|
-| luna | 1 | t1_total_habits | 7138 | 7467.0 |
-| luna | 1 | t1_ios_value_moments_june | 9245 | 5648.0 |
-| luna | 1 | t2_americas_value_moments_june | 5149 | 5386.0 |
-| luna | 1 | t3_arpu | 30.857358490566032 | 7.24 |
-| luna | 1 | t3_power_users | 496 | 151.0 |
-| luna | 1 | t3_activation_rate_june | 76.85% | 0.5322 |
-| luna | 1 | t4_apac_value_moments_q2 | 958 | 3852.0 |
-| luna | 1 | t4_real_signups_june | 487 | 453.0 |
-| luna | 1 | t4_real_acquisition_spend_june | 19138.25 | 18267.17 |
-| luna | 1 | t4_retention_trend | Retention was broadly stable to slightly declining: 4-week retention averaged 52.5% for April–May cohorts, ranging from 44.6% to 57.9%. It peaked around late April/early May (56–57%) and fell to 46.1% for the June 1 cohort and 26.9% for June 8; the latter is likely incomplete because the data ends July 12. | None |
-| luna | 1 | t4_business_health | Yes—based on the available product signals, the app appears healthy for the latest complete week (2026-07-06 to 2026-07-12). | None |
-| luna | 2 | t2_referral_signups_q2 | 234 | 243.0 |
-| luna | 2 | t3_mrr | 11448.08 | 2685.08 |
-| luna | 2 | t3_arpu | 30.58192634560908 | 7.24 |
-| luna | 2 | t3_activation_rate_june | 76.79558011049724% | 0.5322 |
-| luna | 2 | t4_apac_value_moments_q2 | 4355 | 3852.0 |
-| luna | 2 | t4_real_signups_june | 433 | 453.0 |
-| luna | 2 | t4_real_acquisition_spend_june | 21013.20 | 18267.17 |
-| luna | 2 | t4_retention_trend | Retention was broadly stable: weekly active-user retention ranged from 34.9% to 38.0% across May 4–July 6, 2026. It dipped through early June, then recovered and ended at 36.8% on July 6 versus 35.8% on May 4 (+1.0 percentage point). | None |
-| luna | 2 | t4_business_health | The app looks mixed—not clearly healthy yet. | None |
-| luna | 3 | t4_apac_value_moments_q2 | 4355 | 3852.0 |
-| luna | 3 | t4_real_signups_june | 543 | 453.0 |
-| luna | 3 | t4_real_acquisition_spend_june | 21013.20 | 18267.17 |
-| luna | 3 | t4_retention_trend | Retention has been volatile rather than consistently improving. Weekly D7 retention ranged from 34.3% to 58.0%: 40.7% (May 11), 37.3% (May 18), 51.1% (May 25), 34.3% (Jun 1), 58.0% (Jun 8), 52.7% (Jun 15), and 56.3% (Jun 22). D28 retention was 49.5%–51.1% for the May cohorts, fell to 45.1% for Jun 1 and 26.9% for Jun 8; later cohorts are not mature enough to assess D28. | None |
-| luna | 4 | t4_apac_value_moments_q2 | 4355 | 3852.0 |
+| gpt | 1 | t3_active_users_last_week | 919 | 886.0 |
+| gpt | 1 | t3_activation_rate_june | 76.85% | 0.5322 |
+| gpt | 1 | t2_paid_search_spend_q2 | 27166.93 | 36875.98 |
+| gpt | 1 | t4_apac_value_moments_q2 | 4355 | 3852.0 |
+| gpt | 2 | t3_activation_rate_june | 100.0% | 0.5322 |
+| gpt | 2 | t3_power_users | 184 | 151.0 |
+| mini | 1 | t3_mrr | 11448.08 | 2685.08 |
+| mini | 1 | t3_activation_rate_june | 76.85% | 0.5322 |
+| mini | 1 | t1_ios_value_moments_june | 16209 | 5648.0 |
+| mini | 1 | t4_real_acquisition_spend_june | 21013.20 | 18267.17 |
+| mini | 3 | t1_spend_june | 210940.52 | 21013.2 |
+| mini | 6 | t1_total_habits | 2500 | 7467.0 |
 
 ## Cost
 
 | model | total tokens (in/out) | est. USD |
 |---|---|---|
-| luna | 771,565 / 37,605 | $1.07 |
+| gpt | 3,442,227 / 190,312 | $6.21 |
+| mini | 4,095,728 / 191,791 | $1.41 |

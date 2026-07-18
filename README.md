@@ -1,8 +1,8 @@
 # The AI analyst needs a spine
 
 A controlled lab experiment: build one small AI "analyst" that answers business
-questions over data, then answer the **same questions five times** while changing
-only the *structure* underneath it. Hold the model and the questions fixed. Watch
+questions over data, then answer the **same questions at each of six levels of
+structure**, changing only that structure. Hold the model and the questions fixed. Watch
 what each layer of structure buys you.
 
 The claim being tested: **a modern model is already good enough. What it lacks is
@@ -10,9 +10,10 @@ not intelligence, it's context — and context is exactly the thing a data team
 builds.**
 
 > Companion to two essays: [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
-> (the argument) and the write-up this repo is the evidence for (the experiment).
+> (the argument) and [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
+> (the experiment this repo is the evidence for).
 
-## The five rungs
+## The six rungs
 
 Each rung adds exactly one thing to the *same* agent. Nothing else changes.
 
@@ -21,11 +22,15 @@ Each rung adds exactly one thing to the *same* agent. Nothing else changes.
 | 1 | **Messy data** | raw tables: cryptic names, dirty values, no docs | — (baseline) | ~none reliably |
 | 2 | **Star schema** | clean `dim_` / `fct_` models, sane names, typed values | wrong tables, hallucinated columns | simple lookups |
 | 3 | **Semantic layer** | governed metrics + join paths (a YAML compiled to SQL) | wrong grain, ungoverned metric math | filtered / segmented metrics |
-| 4 | **+ Knowledge base** | business glossary, rules, example question→query pairs | "the rules that live in Slack" — definitions, exclusions | definitional ("active user *here* means…") |
-| 5 | **+ Metric tree** | the driver graph (identity + influence edges) | can't structure *why did X move* at all | diagnostic / root-cause |
+| 4 | **+ Verified examples** | approved question→query pairs, each a scoped call into the governed metrics | vague phrasings and world-facts a metric can't hold (the APAC launch cutoff, the partnerships test channel) | business-knowledge questions |
+| 5 | **+ Knowledge base** | the *same* business rules again, as free-text prose (stacked on the examples) | — (the control: does prose deliver what an example does?) | none it didn't already |
+| 6 | **+ Metric tree** | the driver graph (identity + influence edges) | can't structure *why did X move* at all | diagnostic / root-cause |
 
-Rungs 1–3 buy **accuracy**. Rung 4 buys **the definitions accuracy can't see**.
-Rung 5 buys **usefulness** — the jump from "what was the number" to "why did it move."
+Rungs 1–3 buy **accuracy**. Rung 4 buys **the definitions and world-facts accuracy can't
+see**, delivered as concrete, scoped examples. Rung 5 re-delivers the *same* knowledge as
+free-text prose to test one thing — does prose hold up as reliably as an example? (In the runs
+it never does.) Rung 6 buys **usefulness**: the jump from "what was the number" to "why did it
+move."
 
 ## The dataset
 
@@ -47,19 +52,23 @@ make install      # uv sync
 make data         # generate data/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
-cp .env.example .env && $EDITOR .env   # set ANTHROPIC_API_KEY
-make eval         # the real experiment: 25 questions x 5 rungs x {small, large}
+cp .env.example .env && $EDITOR .env   # set OPENAI_API_KEY (and ANTHROPIC_API_KEY for haiku/sonnet)
+make eval         # the real experiment: 25 questions x 6 rungs x 2 models x 5 reps
 ```
 
 Ask a single question at a single rung:
 
 ```bash
-make ask Q="how many active users do we have?" RUNG=3 MODEL=small
+make ask Q="how many active users do we have?" RUNG=3 MODEL=gpt
 ```
+
+The write-up runs two OpenAI models five times each (`--repeats 5`, for the error bars):
+**gpt** (GPT-5.6, the flagship) and **mini** (GPT-5.4-mini, the cheap one). Anthropic **haiku**
+and **sonnet** are wired up too — swap any into `--models`.
 
 ## How answers are graded
 
-The 25 questions are tagged by tier (lookup / filtered / multi-join / definitional
+The 25 questions are tagged by tier (lookup / filtered / metric / knowledge
 / diagnostic). Each has a hand-written gold SQL, a gold number, and a tolerance
 note. Grading is deliberately layered, because "did the SQL run" is not "is this
 the right business answer":
@@ -84,16 +93,38 @@ are wrong more often than anyone admits.
 
 ```
 data/         synthetic warehouse generator (messy raw + clean star)
-grounding/    the five rungs: star models, semantic layer, knowledge base, metric tree
+grounding/    per-rung grounding: star schema, semantic layer, verified examples, knowledge base, metric tree
 harness/      the agent: tool-loop, self-correction, semantic compiler, tree walk
-eval/         the 25 questions, gold answers, and the grader
-results/      generated results + the summary the write-up draws on
+evaluation/   the 25 questions, gold answers, and the grader
+results/      summary.md the write-up draws on (raw rows regenerate with make eval)
 run.py        CLI: data | ask | eval
 ```
 
 ## Results
 
-_Filled in after the run — see `results/summary.md`._
+The full run — 2 models × 6 rungs × 25 questions × 5 reps — is in
+[`results/summary.md`](results/summary.md). Accuracy climbs as structure is added, and each jump
+lands on a rung:
+
+| rung | gpt (GPT-5.6) | mini (GPT-5.4-mini) |
+|---|---|---|
+| 1 · messy data | 40% ± 6 | 22% ± 2 |
+| 2 · star schema | 46% ± 4 | 34% ± 4 |
+| 3 · semantic layer | 66% ± 4 | 54% ± 7 |
+| 4 · + verified examples | 81% ± 2 | 77% ± 4 |
+| 5 · + knowledge base | 78% ± 2 | 75% ± 3 |
+| 6 · + metric tree | 92% ± 3 | 78% ± 5 |
+
+- **The semantic layer is the turning point** — the biggest jump (rung 2→3) is where the model
+  stops guessing definitions.
+- **Verified examples deliver business knowledge; a free-text knowledge base doesn't** — rung 5
+  never beat rung 4 across five runs (it cost ~2 points), the only rung that never earned its place.
+- **"Why did it move" needs the metric tree** — gpt's diagnostic answers go from 3/25 at the
+  semantic layer to 18/25 with the tree; mini can read a governed number but still can't reason
+  about the why (8/25).
+
+Numbers are one 5-rep run; re-running moves them a point or two (the ± is that spread). The
+write-up this backs: **[Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)**.
 
 ## License
 

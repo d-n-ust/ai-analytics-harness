@@ -10,5 +10,8 @@ __pycache__/
 data/*.duckdb
 data/*.duckdb.wal
 
+# Generated per-run rows (large; regenerate with `make eval`). summary.md is the committed record.
+results/raw.jsonl
+
 # OS
 .DS_Store
