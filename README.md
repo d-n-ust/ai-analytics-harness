@@ -1,4 +1,4 @@
-# The AI analyst needs a spine
+# Agentic Analytics: How Much Does Grounding Actually Buy You?
 
 A controlled lab experiment: build one small AI "analyst" that answers business
 questions over data, then answer the **same questions at each of six levels of
