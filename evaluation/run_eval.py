@@ -82,6 +82,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                             "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
                             "correct": g["correct"], "executed": g["executed"],
                             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+                            "fabricated": g["fabricated"],
                             "reason_match": g["reason_match"], "score": g["score"],
                             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
@@ -121,9 +122,10 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     reps = len({r.get("rep", 0) for r in rows}) or 1
     rrungs = sorted({r.get("rrung", 1) for r in rows})
     nq = len(rows) // (len(models) * len(rungs) * len(rrungs) * reps) if reps else 0
+    rr_bit = f" x {len(rrungs)} reliability-rungs" if len(rrungs) > 1 else ""
     lines = [f"# Results — AI analytics harness{'  (MOCK)' if mock else ''}",
              f"_Generated {dt.date.today()}. {len(rows)} runs "
-             f"({len(models)} models x {len(rungs)} rungs x {nq} questions x {reps} reps)._",
+             f"({len(models)} models x {len(rungs)} rungs{rr_bit} x {nq} questions x {reps} reps)._",
              "", "## Accuracy by rung (pooled over reps)", "",
              "| rung | " + " | ".join(models) + " |",
              "|" + "---|" * (len(models) + 1)]
@@ -163,8 +165,8 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     for m in models:
         lines += ["", f"## Refusal & fabrication — {m}", "",
                   "| rung·R | precision on answered | coverage | refused (answerable) | "
-                  "fabricated (unanswerable) | refused w/ right reason | clarified | total score |",
-                  "|" + "---|" * 8]
+                  "fabricated (unanswerable) | refused w/ right reason | clarified | errors | total score |",
+                  "|" + "---|" * 9]
         for rung in rungs:
           for rrung in rrungs:
             mr = by(model=m, rung=rung, rrung=rrung)
@@ -172,20 +174,24 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
                 continue
             ans_q = [r for r in mr if r["tier"] != "unanswerable"]
             una_q = [r for r in mr if r["tier"] == "unanswerable"]
-            answered = [r for r in ans_q if r["outcome"] == "answer"]
+            # Denominators exclude infrastructure errors — a crash is not a behaviour.
+            ans_valid = [r for r in ans_q if r["outcome"] != "error"]
+            una_valid = [r for r in una_q if r["outcome"] != "error"]
+            answered = [r for r in ans_valid if r["outcome"] == "answer"]
             prec = (f"{sum(r['correct'] for r in answered)}/{len(answered)}"
                     if answered else "-")
-            cov = f"{len(answered)}/{len(ans_q)}" if ans_q else "-"
-            ref_ans = sum(r["outcome"] == "refuse" for r in ans_q)
-            fab = (f"{sum(r['outcome'] == 'answer' for r in una_q)}/{len(una_q)}"
-                   if una_q else "-")
-            right_reason = (f"{sum(bool(r['reason_match']) for r in una_q)}"
-                            f"/{sum(r['outcome'] == 'refuse' for r in una_q)}"
-                            if una_q else "-")
+            cov = f"{len(answered)}/{len(ans_valid)}" if ans_valid else "-"
+            ref_ans = sum(r["outcome"] == "refuse" for r in ans_valid)
+            fab = (f"{sum(r.get('fabricated') for r in una_valid)}/{len(una_valid)}"
+                   if una_valid else "-")
+            right_reason = (f"{sum(bool(r['reason_match']) for r in una_valid)}"
+                            f"/{sum(r['outcome'] == 'refuse' for r in una_valid)}"
+                            if una_valid else "-")
             clar = sum(r["outcome"] == "clarify" for r in mr)
+            errs = sum(r["outcome"] == "error" for r in mr)
             score = sum(r["score"] for r in mr)
             lines.append(f"| {rung}·R{rrung} | {prec} | {cov} | {ref_ans} | {fab} | "
-                         f"{right_reason} | {clar} | {score:+.1f} |")
+                         f"{right_reason} | {clar} | {errs} | {score:+.1f} |")
 
     lines += ["", "## Confidently wrong (a number, not an abstention, but wrong)", "",
               "| model | rung | qid | answer | gold |", "|---|---|---|---|---|"]

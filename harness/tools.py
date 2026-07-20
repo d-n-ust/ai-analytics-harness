@@ -132,11 +132,12 @@ _CHECK_METRIC = {
 
 _CHECK_COVERAGE = {
     "name": "check_coverage",
-    "description": "Check whether data coverage exists for a period (and optional region).",
+    "description": "Check whether data coverage exists for a period (and optional region). "
+                   "Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {"type": "object", "properties": {
         "start": {"type": "string", "description": "YYYY-MM-DD"},
-        "end": {"type": "string", "description": "YYYY-MM-DD"},
-        "region": {"type": "string"}}},
+        "end": {"type": "string", "description": "YYYY-MM-DD (end of the range)"},
+        "region": {"type": "string"}}, "required": ["start", "end"]},
 }
 
 _CHECK_POPULATION = {
@@ -149,7 +150,8 @@ _CHECK_CAUSAL = {
     "name": "check_causal_evidence",
     "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
     "input_schema": {"type": "object", "properties": {
-        "driver": {"type": "string"}, "outcome": {"type": "string"}}},
+        "driver": {"type": "string"}, "outcome": {"type": "string"}},
+        "required": ["driver", "outcome"]},
 }
 
 _GET_METRIC_TREE = {

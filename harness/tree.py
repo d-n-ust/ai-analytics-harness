@@ -48,17 +48,30 @@ class MetricTree:
 
     def causal_evidence(self, driver: str | None = None, outcome: str | None = None) -> tuple[bool, str]:
         """Answerability check: does the tree carry an edge linking driver to outcome?
-        Matches loosely on node names; either argument may be omitted."""
+        Both a driver and an outcome are required — an omitted term is not a wildcard
+        (that would trivially match every edge). A found influence edge reports its
+        confidence, so a low-confidence link is not mistaken for proof."""
+        if not (driver and driver.strip()) or not (outcome and outcome.strip()):
+            return False, ("name both a driver and an outcome to check. Encoded edges: "
+                           + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
+
         def matches(term, node):
-            t = "".join(c if c.isalnum() else "_" for c in (term or "").lower()).strip("_")
-            return (not term) or t == node or node in t or t in node
+            t = "".join(c if c.isalnum() else "_" for c in term.lower()).strip("_")
+            return t == node or node in t or t in node
+
         for e in self.edges:
             if matches(driver, e["child"]) and matches(outcome, e["parent"]):
-                return True, (f"edge {e['parent']} <- {e['child']} "
-                              f"[{e['type']}, {e.get('confidence', 'exact')}]: "
-                              f"{e.get('evidence', 'identity arithmetic')}")
-        return False, (f"no encoded edge links {driver or 'any driver'} to "
-                       f"{outcome or 'any outcome'}. Edges exist only for: "
+                if e["type"] == "identity":
+                    return True, (f"{e['parent']} = ... x {e['child']} (identity, exact arithmetic).")
+                conf = e.get("confidence", "unknown")
+                proven = conf in ("high",)
+                lead = "weak, correlational evidence" if not proven else "evidence"
+                return proven, (f"{lead} — edge {e['parent']} <- {e['child']} "
+                                f"[influence, confidence: {conf}]: {e.get('evidence', '')} "
+                                "An influence edge is not proof of causation; a low-confidence "
+                                "edge is not a basis for a confident causal claim.")
+        return False, (f"no encoded edge links {driver!r} to {outcome!r}. "
+                       "Edges exist only for: "
                        + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
 
     def describe(self) -> str:
@@ -78,8 +91,11 @@ class MetricTree:
         node = node or self.root
         if node not in self.nodes:
             raise TreeError(f"unknown node {node!r}. Nodes: {', '.join(self.nodes)}")
-        # The official North Star is the internal-excluded population.
-        filters = {"is_internal": False} if filters is None else filters
+        # The official North Star is the internal-excluded population. Any caller
+        # filter is layered ON TOP of that exclusion, never instead of it — otherwise
+        # the parent (population-neutral) and children (internal-excluded) would be
+        # computed over different populations and the identity shares would not sum to 1.
+        filters = {"is_internal": False, **(filters or {})}
 
         def val(metric, period):
             return self.layer.scalar(metric, period=period, filters=filters)

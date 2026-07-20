@@ -13,6 +13,7 @@ optional time column for ranges/grains, and a whitelist of filterable dimensions
 from __future__ import annotations
 
 import datetime as dt
+import re
 from pathlib import Path
 
 import yaml
@@ -35,12 +36,41 @@ def _literal(value) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def _norm(term: str) -> str:
-    """Normalise a free-text term for catalog matching: 'Churn Risk Score' -> 'churn_risk_score'."""
-    out = "".join(c if c.isalnum() else "_" for c in (term or "").strip().lower())
-    while "__" in out:
-        out = out.replace("__", "_")
-    return out.strip("_")
+def _iso(value, label: str) -> str:
+    """Re-parse a date to canonical ISO before it touches SQL. Anything that isn't a
+    clean date (including injection payloads) raises rather than reaching the query."""
+    try:
+        return dt.date.fromisoformat(str(value)).isoformat()
+    except ValueError as exc:
+        raise SemanticError(f"{label} date {value!r} is not a valid YYYY-MM-DD.") from exc
+
+
+# Filler words that don't change which governed object a term refers to.
+_STOP = {"the", "our", "a", "an", "of", "per", "rate", "count", "number", "total",
+         "average", "avg", "score", "in", "for", "by"}
+
+
+def _tokens(s: str) -> set[str]:
+    return {t for t in re.split(r"[^a-z0-9]+", (s or "").lower()) if t}
+
+
+def _match_catalog(term: str, names) -> str | None:
+    """Return the catalog name a free-text term denotes, or None.
+
+    Strict on purpose: a term matches a name only when it *is* that name plus at
+    most filler words (every name token appears in the term, and every term token
+    is either a name token or filler). This refuses composites like "MRR growth
+    rate" (→ None) that bare-substring matching wrongly accepted, at the cost of
+    some true synonyms ("monthly recurring revenue" → None) — a false NO costs
+    measurable coverage, a false YES invites fabrication."""
+    tt = _tokens(term)
+    if not tt:
+        return None
+    for name in names:
+        nt = _tokens(name)
+        if nt and nt <= tt and tt <= (nt | _STOP):
+            return name
+    return None
 
 
 class SemanticLayer:
@@ -56,40 +86,50 @@ class SemanticLayer:
     # the excuse check, and (later) the gate and the rule audit.
 
     def metric_exists(self, term: str) -> tuple[bool, str]:
-        t = _norm(term)
-        if not t:
+        if not _tokens(term):
             return False, "empty term."
-        for name in self.metrics:
-            if t == name or name in t or t in name:
-                return True, f"governed metric {name!r} matches {term!r}."
+        name = _match_catalog(term, self.metrics)
+        if name:
+            return True, f"governed metric {name!r} matches {term!r}."
         return False, (f"no governed definition matches {term!r}. "
                        f"Catalog: {', '.join(self.metrics)}.")
 
     def in_coverage(self, start=None, end=None, region=None) -> tuple[bool, str]:
+        """Is the whole period inside data coverage (and the region's launch window)?
+        A period that only partly overlaps coverage is a NO — a partial answer over a
+        clipped window is exactly the pre-launch-inclusive trap the check exists to
+        catch. A missing end is treated as a point at `start`."""
         cov = self.governance.get("coverage", {})
         d0, d1 = cov.get("data_start"), cov.get("data_end")
         try:
             s = dt.date.fromisoformat(str(start)) if start else None
-            e = dt.date.fromisoformat(str(end)) if end else None
+            e = dt.date.fromisoformat(str(end)) if end else s   # start-only => a point
         except ValueError:
             return False, f"unparseable dates {start!r}..{end!r} (use YYYY-MM-DD)."
-        if e and d0 and e < d0:
-            return False, f"period ends {e}, before data starts {d0}."
-        if s and d1 and s > d1:
-            return False, f"period starts {s}, after data ends {d1}."
+        if s is None and e is None:
+            return False, "no period given; pass start (and end)."
+        lo = s if s is not None else e
+        hi = e if e is not None else s
+        if d0 and lo < d0:
+            return False, (f"period begins {lo}, before data starts {d0}. "
+                           f"Restrict the period to on/after {d0}.")
+        if d1 and hi > d1:
+            return False, f"period ends {hi}, after data ends {d1}."
         if region:
             win = {str(k).lower(): v for k, v in cov.get("regions", {}).items()}.get(str(region).lower())
-            if win and e and e < win["starts"]:
-                return False, (f"{region} coverage starts {win['starts']}; the period ends {e}. "
-                               "Earlier rows are pre-launch test data.")
-        return True, f"period within coverage ({d0}..{d1})."
+            if win and lo < win["starts"]:
+                return False, (f"{region} coverage starts {win['starts']}; the period begins {lo}. "
+                               "Rows before launch are pre-launch test data — restrict to on/after "
+                               f"{win['starts']}.")
+        return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
 
     def population_defined(self, term: str) -> tuple[bool, str]:
-        t = _norm(term)
         pops = [str(p) for p in self.governance.get("populations", [])]
-        for p in pops:
-            if t == p or p in t or t in p:
-                return True, f"governed population {p!r} matches {term!r}."
+        if not _tokens(term):
+            return False, "empty term."
+        name = _match_catalog(term, pops)
+        if name:
+            return True, f"governed population {name!r} matches {term!r}."
         return False, f"no governed population matches {term!r}. Defined: {', '.join(pops)}."
 
     # -- introspection the agent sees -------------------------------------- #
@@ -129,6 +169,8 @@ class SemanticLayer:
         if time_grain:
             if not time_col:
                 raise SemanticError(f"metric {name!r} has no time dimension to grain by.")
+            if time_grain not in ("day", "week", "month"):
+                raise SemanticError(f"time_grain {time_grain!r} must be day, week, or month.")
             select.append(f"date_trunc('{time_grain}', {time_col})::date AS period")
             group.append("period")
         for d in group_by or []:
@@ -141,13 +183,18 @@ class SemanticLayer:
 
         where = list(m.get("default_filters", []))
         if period is not None:
-            start, end = resolve_period(period)
+            try:
+                start, end = resolve_period(period)
+            except ValueError as exc:
+                raise SemanticError(str(exc)) from exc
         if (start or end) and not time_col:
             raise SemanticError(f"metric {name!r} is point-in-time; it takes no period.")
+        # Dates are re-parsed to ISO before interpolation — never trust the raw string
+        # in SQL (the governed path must not be injectable).
         if start and time_col:
-            where.append(f"{time_col} >= DATE '{start}'")
+            where.append(f"{time_col} >= DATE '{_iso(start, 'start')}'")
         if end and time_col:
-            where.append(f"{time_col} <= DATE '{end}'")
+            where.append(f"{time_col} <= DATE '{_iso(end, 'end')}'")
 
         allowed = self._allowed_filters(m)
         for col, val in (filters or {}).items():
