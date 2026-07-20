@@ -52,19 +52,19 @@ make install      # uv sync
 make data         # generate data/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
-cp .env.example .env && $EDITOR .env   # set OPENAI_API_KEY (and ANTHROPIC_API_KEY for haiku/sonnet)
+cp .env.example .env && $EDITOR .env   # set OPENAI_API_KEY (and ANTHROPIC_API_KEY for the claude-* models)
 make eval         # the real experiment: 25 questions x 6 rungs x 2 models x 5 reps
 ```
 
 Ask a single question at a single rung:
 
 ```bash
-make ask Q="how many active users do we have?" RUNG=3 MODEL=gpt
+make ask Q="how many active users do we have?" RUNG=3 MODEL=gpt-5.6-terra
 ```
 
 The write-up runs two OpenAI models five times each (`--repeats 5`, for the error bars):
-**gpt** (GPT-5.6, the flagship) and **mini** (GPT-5.4-mini, the cheap one). Anthropic **haiku**
-and **sonnet** are wired up too — swap any into `--models`.
+**gpt-5.6-terra** (the flagship) and **gpt-5.4-mini** (the cheap one). Anthropic **claude-haiku-4-5**
+and **claude-sonnet-5** are wired up too — swap any into `--models`.
 
 ## How answers are graded
 
@@ -106,7 +106,7 @@ The full run — 2 models × 6 rungs × 25 questions × 5 reps — is in
 [`results/summary.md`](results/summary.md). Accuracy climbs as structure is added, and each jump
 lands on a rung:
 
-| rung | gpt (GPT-5.6) | mini (GPT-5.4-mini) |
+| rung | gpt-5.6-terra | gpt-5.4-mini |
 |---|---|---|
 | 1 · messy data | 40% ± 6 | 22% ± 2 |
 | 2 · star schema | 46% ± 4 | 34% ± 4 |
@@ -119,8 +119,8 @@ lands on a rung:
   stops guessing definitions.
 - **Verified examples deliver business knowledge; a free-text knowledge base doesn't** — rung 5
   never beat rung 4 across five runs (it cost ~2 points), the only rung that never earned its place.
-- **"Why did it move" needs the metric tree** — gpt's diagnostic answers go from 3/25 at the
-  semantic layer to 18/25 with the tree; mini can read a governed number but still can't reason
+- **"Why did it move" needs the metric tree** — gpt-5.6-terra's diagnostic answers go from 3/25 at the
+  semantic layer to 18/25 with the tree; gpt-5.4-mini can read a governed number but still can't reason
   about the why (8/25).
 
 Numbers are one 5-rep run; re-running moves them a point or two (the ± is that spread). The

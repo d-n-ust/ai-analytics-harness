@@ -39,7 +39,7 @@ def _new_run_dir(models, mock: bool) -> Path:
     return run_dir
 
 
-def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=(1, 2, 3, 4, 5, 6),
+def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1) -> None:
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)

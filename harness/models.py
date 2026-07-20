@@ -31,18 +31,24 @@ class ModelSpec:
     supports_reasoning_effort: bool = True
 
 
-MODEL_SPECS: dict[str, ModelSpec] = {
+def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
+          thinking: dict | None = None, **kw) -> ModelSpec:
+    return ModelSpec(model_id, model_id, inp, out, provider, thinking, **kw)
+
+
+# Keyed by the full model id — the same string appears on the CLI, in every result
+# row, and in every summary, so nothing ever needs an alias decoder ring.
+MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # Sonnet 5 runs adaptive thinking unless disabled; Haiku 4.5 has none to disable.
-    "haiku": ModelSpec("haiku", "claude-haiku-4-5", 1.0, 5.0, "anthropic", None),
-    "sonnet": ModelSpec("sonnet", "claude-sonnet-5", 3.0, 15.0, "anthropic", {"type": "disabled"}),
-    # OpenAI. Prices are placeholders (mini is far cheaper than the flagship).
-    "gpt": ModelSpec("gpt", "gpt-5.6-terra", 1.25, 10.0, "openai", None),
-    "mini": ModelSpec("mini", "gpt-5.4-mini", 0.25, 2.0, "openai", None),
-    "luna": ModelSpec("luna", "gpt-5.6-luna", 1.0, 8.0, "openai", None),  # price a placeholder; tier unknown
+    _spec("claude-haiku-4-5", 1.0, 5.0, "anthropic"),
+    _spec("claude-sonnet-5", 3.0, 15.0, "anthropic", {"type": "disabled"}),
+    # OpenAI. Prices are placeholders (gpt-5.4-mini is far cheaper than the flagship).
+    _spec("gpt-5.6-terra", 1.25, 10.0),
+    _spec("gpt-5.4-mini", 0.25, 2.0),
+    _spec("gpt-5.6-luna", 1.0, 8.0),  # price a placeholder; tier unknown
     # Cheap legacy model for pilot runs.
-    "gpt41mini": ModelSpec("gpt41mini", "gpt-4.1-mini", 0.4, 1.6, "openai", None,
-                           supports_reasoning_effort=False),
-}
+    _spec("gpt-4.1-mini", 0.4, 1.6, supports_reasoning_effort=False),
+]}
 
 
 def _load_env() -> None:
