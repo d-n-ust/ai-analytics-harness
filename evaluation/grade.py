@@ -46,16 +46,35 @@ def grade_diagnostic(text: str, spec: dict) -> dict:
             "driver_ok": driver_ok, "cause_ok": cause_ok}
 
 
+# How many refusals one wrong answer is worth. A placeholder until the field
+# interviews price it; every score is reported alongside this constant.
+WRONG_COST = 4.0
+
+
 def grade(answer, question: dict, gold: float | None) -> dict:
-    grader = question.get("grader", "numeric")
-    text = f"{answer.answer or ''} {answer.explanation or ''}"
-    if grader == "diagnostic":
-        g = grade_diagnostic(text, question["gold_diagnostic"])
-    elif grader == "keywords":
-        g = grade_keywords(text, question["gold_keywords"])
+    """Outcome-aware grading. An unanswerable question (gold_refuse) is answered
+    correctly by refusing; answering it at all is fabrication. On answerable
+    questions a refusal is a coverage loss (score 0), never a wrong answer."""
+    unanswerable = "gold_refuse" in question
+    if answer.outcome == "refuse":
+        g = {"executed": False, "correct": unanswerable,
+             "reason_match": (answer.reason == question["gold_refuse"]) if unanswerable else None}
+    elif answer.outcome == "clarify":
+        g = {"executed": False, "correct": False, "reason_match": None}
+    elif unanswerable:
+        g = {"executed": answer.answer is not None, "correct": False, "reason_match": None}
     else:
-        g = grade_numeric(answer.answer, gold, question.get("tolerance", 0.02))
-    g["abstained"] = answer.abstained
-    g["confident_wrong"] = (not answer.abstained and not g["correct"]
+        grader = question.get("grader", "numeric")
+        text = f"{answer.answer or ''} {answer.explanation or ''}"
+        if grader == "diagnostic":
+            g = grade_diagnostic(text, question["gold_diagnostic"])
+        elif grader == "keywords":
+            g = grade_keywords(text, question["gold_keywords"])
+        else:
+            g = grade_numeric(answer.answer, gold, question.get("tolerance", 0.02))
+        g["reason_match"] = None
+    g["abstained"] = answer.outcome == "refuse"
+    g["confident_wrong"] = (answer.outcome == "answer" and not g["correct"]
                             and answer.answer is not None and answer.error is None)
+    g["score"] = 1.0 if g["correct"] else (-WRONG_COST if g["confident_wrong"] else 0.0)
     return g

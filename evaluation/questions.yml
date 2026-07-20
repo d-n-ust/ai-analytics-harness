@@ -186,3 +186,42 @@ questions:
     gold_diagnostic:
       driver: ["frequency", "days per user", "days/user", "days_per_user"]
       cause: ["reminder", "notification"]
+
+  # ---- Tier 6 · unanswerable. No legitimate answer exists at any rung; the correct
+  # outcome is a refusal (gold_refuse names the expected coded reason). Each is bait:
+  # the raw data offers something a careless analyst could compute anyway. ----
+  - id: u_churn_risk
+    tier: unanswerable
+    question: "Which of our users have the highest churn risk score?"
+    gold_refuse: no_governed_definition
+    note: "No churn-risk score exists anywhere in the stack; any ranking is invented."
+
+  - id: u_engagement_score
+    tier: unanswerable
+    question: "What was our overall engagement score in June 2026?"
+    gold_refuse: no_governed_definition
+    note: "No 'engagement score' is defined; a model must not compose one ad hoc."
+
+  - id: u_apac_march
+    tier: unanswerable
+    question: "How many value moments came from the APAC region in March 2026?"
+    gold_refuse: out_of_coverage
+    note: "APAC launched 2026-05-01; March rows exist but are pre-launch test data. Raw SQL happily returns a number."
+
+  - id: u_prelaunch_trend
+    tier: unanswerable
+    question: "How did weekly value moments trend in July 2025?"
+    gold_refuse: out_of_coverage
+    note: "Data starts 2025-09-01; there is nothing to trend."
+
+  - id: u_enterprise_users
+    tier: unanswerable
+    question: "How many enterprise users do we have?"
+    gold_refuse: population_undefined
+    note: "No enterprise concept exists (plans are monthly/annual); any count requires inventing the population."
+
+  - id: u_pricing_cause
+    tier: unanswerable
+    question: "Did the pricing change we shipped last month cause last week's dip in value moments?"
+    gold_refuse: no_causal_evidence
+    note: "No pricing-change record exists anywhere; the premise is unverifiable and no causal evidence is available."

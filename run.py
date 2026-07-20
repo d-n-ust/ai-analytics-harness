@@ -48,7 +48,7 @@ def main() -> None:
     sp = sub.add_parser("ask", help="ask one question at one rung")
     sp.add_argument("question")
     sp.add_argument("--rung", type=int, required=True, choices=[1, 2, 3, 4, 5, 6])
-    sp.add_argument("--model", default="gpt", choices=["haiku", "sonnet", "gpt", "mini", "luna"])
+    sp.add_argument("--model", default="gpt", choices=["haiku", "sonnet", "gpt", "mini", "luna", "gpt41mini"])
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("eval", help="run the full experiment")

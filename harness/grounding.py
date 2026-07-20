@@ -33,9 +33,10 @@ _BASE = (
     "Rules:\n"
     "- Always compute numbers with the tools. Never guess, round from memory, or estimate a number.\n"
     "- Explore with get_schema / describe_table before writing SQL if you are unsure.\n"
-    "- When you are confident, call final_answer with the value and a one-line explanation.\n"
-    "- If the data cannot answer the question reliably, call final_answer and say so rather "
-    "than inventing a number. A truthful 'I can't' beats a confident wrong answer."
+    "- End with exactly one terminal tool: `answer` when the data supports a reliable answer; "
+    "`refuse` when it does not — give the coded reason and name what is missing; `clarify` when "
+    "the question is too ambiguous to answer either way.\n"
+    "- A truthful refusal beats a confident wrong answer."
 )
 
 _RUNG_NOTES = {

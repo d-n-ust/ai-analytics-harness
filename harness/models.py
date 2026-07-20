@@ -27,6 +27,8 @@ class ModelSpec:
     output_price: float     # USD per 1M output tokens
     provider: str = "anthropic"
     thinking: dict | None = None   # Anthropic only
+    # OpenAI only: whether the API accepts reasoning_effort (gpt-4.x predates it).
+    supports_reasoning_effort: bool = True
 
 
 MODEL_SPECS: dict[str, ModelSpec] = {
@@ -37,6 +39,9 @@ MODEL_SPECS: dict[str, ModelSpec] = {
     "gpt": ModelSpec("gpt", "gpt-5.6-terra", 1.25, 10.0, "openai", None),
     "mini": ModelSpec("mini", "gpt-5.4-mini", 0.25, 2.0, "openai", None),
     "luna": ModelSpec("luna", "gpt-5.6-luna", 1.0, 8.0, "openai", None),  # price a placeholder; tier unknown
+    # Cheap legacy model for pilot runs.
+    "gpt41mini": ModelSpec("gpt41mini", "gpt-4.1-mini", 0.4, 1.6, "openai", None,
+                           supports_reasoning_effort=False),
 }
 
 
@@ -113,14 +118,16 @@ class OpenAIModel:
                               "parameters": t["input_schema"]}} for t in tools]
 
     def create(self, system: str, messages: list, tools: list):
-        resp = self.client.chat.completions.create(
+        kw = dict(
             model=self.spec.model_id,
             messages=self._to_openai_messages(system, messages),
             tools=self._to_openai_tools(tools),
             tool_choice="auto",
             max_completion_tokens=MAX_TOKENS,
-            reasoning_effort=self.reasoning,
         )
+        if self.spec.supports_reasoning_effort:
+            kw["reasoning_effort"] = self.reasoning
+        resp = self.client.chat.completions.create(**kw)
         msg = resp.choices[0].message
         blocks = []
         if msg.content:
@@ -159,7 +166,7 @@ class MockModel:
         if not self._has_tool_result(messages):
             block = SimpleNamespace(type="tool_use", id="mock_1", name="get_schema", input={})
         else:
-            block = SimpleNamespace(type="tool_use", id="mock_2", name="final_answer",
+            block = SimpleNamespace(type="tool_use", id="mock_2", name="answer",
                                     input={"answer": "0", "explanation": "mock answer"})
         return SimpleNamespace(content=[block], stop_reason="tool_use", usage=usage)
 

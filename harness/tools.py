@@ -2,8 +2,9 @@
 
 Every tool returns a plain string (plus an is_error flag) — the string is what the
 model reads. Numbers are always computed here or by the semantic layer / tree, never
-invented by the model. `final_answer` is defined here so the model can see it, but the
-agent loop (not this dispatcher) handles it, because it ends the run.
+invented by the model. The terminal tools (`answer` / `refuse` / `clarify`) are defined
+here so the model can see them, but the agent loop (not this dispatcher) handles them,
+because they end the run.
 """
 
 from __future__ import annotations
@@ -14,12 +15,16 @@ from .semantic import SemanticError, SemanticLayer
 from .tree import MetricTree, TreeError
 from .warehouse import QueryError, describe_table, run_query, schema_text
 
-_FINAL_ANSWER = {
-    "name": "final_answer",
-    "description": ("Submit your final answer and end. Put the direct value in `answer` "
+# The three terminal tools. Every run ends through exactly one of them, so the
+# outcome is a typed field, never a phrase to be text-matched out of prose.
+REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage",
+                   "population_undefined", "no_causal_evidence", "other"]
+
+_ANSWER = {
+    "name": "answer",
+    "description": ("Submit the final answer and end. Put the direct value in `answer` "
                     "(a number for numeric questions), and a one-line justification in "
-                    "`explanation`. If the data cannot answer the question reliably, set "
-                    "answer to 'I cannot answer this reliably' and say why."),
+                    "`explanation`."),
     "input_schema": {
         "type": "object",
         "properties": {
@@ -27,6 +32,36 @@ _FINAL_ANSWER = {
             "explanation": {"type": "string", "description": "One line on how you got it."},
         },
         "required": ["answer", "explanation"],
+    },
+}
+
+_REFUSE = {
+    "name": "refuse",
+    "description": ("Decline to answer and end, because no reliable answer exists in the "
+                    "available data. Give the coded reason and name the specific thing that "
+                    "is missing, so the claim can be checked."),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "reason": {"type": "string", "enum": REFUSAL_REASONS},
+            "missing": {"type": "string",
+                        "description": "The specific definition, coverage window, population, or evidence that is missing."},
+            "explanation": {"type": "string", "description": "One line: why this cannot be answered reliably."},
+        },
+        "required": ["reason", "missing"],
+    },
+}
+
+_CLARIFY = {
+    "name": "clarify",
+    "description": ("End by asking one clarifying question, because the question is ambiguous "
+                    "and materially different readings would give different answers."),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "question": {"type": "string", "description": "The single clarifying question to ask."},
+        },
+        "required": ["question"],
     },
 }
 
@@ -134,7 +169,7 @@ class Toolbox:
             specs += [_LIST_METRICS, _QUERY_METRIC]
         if self.rung >= 6:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-        specs.append(_FINAL_ANSWER)
+        specs += [_ANSWER, _REFUSE, _CLARIFY]
         return specs
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool]:

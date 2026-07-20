@@ -1,21 +1,20 @@
 """The agent loop: a minimal tool-use cycle with self-correction.
 
 Call the model; run the tools it asks for; feed results (including errors, which is
-what lets it self-correct) back; stop when it calls final_answer or a cap is hit. This
-loop is identical at every rung — only the grounding it receives changes.
+what lets it self-correct) back; stop when it calls a terminal tool or a cap is hit.
+This loop is identical at every rung — only the grounding it receives changes.
+
+Every run ends through one of three terminal tools — answer, refuse, clarify — so the
+outcome is a typed field on the Answer. There is no phrase-matching: a refusal is a
+`refuse` call carrying a coded reason and the named missing thing, never a sentence
+someone has to grep for.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-_ABSTAIN_MARKERS = ("cannot answer", "can't answer", "cannot be answered", "don't know",
-                    "do not know", "unable to", "not able to", "no data")
-
-
-def _looks_like_abstain(text: str) -> bool:
-    t = text.lower()
-    return any(m in t for m in _ABSTAIN_MARKERS)
+TERMINAL_TOOLS = ("answer", "refuse", "clarify")
 
 
 @dataclass
@@ -25,7 +24,10 @@ class Answer:
     model: str
     answer: str | None
     explanation: str = ""
-    abstained: bool = False
+    outcome: str = "answer"        # answer | refuse | clarify | error
+    reason: str | None = None      # refuse only: the coded reason
+    missing: str | None = None     # refuse only: what the model says is missing
+    abstained: bool = False        # convenience mirror of outcome == "refuse"
     tool_calls: int = 0
     iterations: int = 0
     input_tokens: int = 0
@@ -51,10 +53,6 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
         in_tok += getattr(u, "input_tokens", 0) or 0
         out_tok += getattr(u, "output_tokens", 0) or 0
 
-        if getattr(resp, "stop_reason", None) == "refusal":
-            return answer(answer=None, explanation="model refused", abstained=True,
-                          iterations=it + 1, error="refusal")
-
         blocks = list(resp.content)
         messages.append({"role": "assistant", "content": blocks})
 
@@ -64,8 +62,8 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
             if bt == "text":
                 text_out.append(getattr(b, "text", ""))
             elif bt == "tool_use":
-                if b.name == "final_answer":
-                    final = b.input or {}
+                if b.name in TERMINAL_TOOLS:
+                    final = final or (b.name, b.input or {})
                 else:
                     tool_calls += 1
                     content, is_err = grounding.toolbox.dispatch(b.name, b.input or {})
@@ -75,9 +73,17 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
                                          "content": content, "is_error": is_err})
 
         if final is not None:
-            ans = str(final.get("answer", "")).strip()
-            return answer(answer=ans, explanation=str(final.get("explanation", "")).strip(),
-                          abstained=_looks_like_abstain(ans), iterations=it + 1)
+            name, kw = final
+            if name == "answer":
+                return answer(answer=str(kw.get("answer", "")).strip(),
+                              explanation=str(kw.get("explanation", "")).strip(),
+                              outcome="answer", iterations=it + 1)
+            if name == "refuse":
+                return answer(answer=None, explanation=str(kw.get("explanation", "")).strip(),
+                              outcome="refuse", reason=kw.get("reason"),
+                              missing=kw.get("missing"), abstained=True, iterations=it + 1)
+            return answer(answer=None, explanation=str(kw.get("question", "")).strip(),
+                          outcome="clarify", iterations=it + 1)
 
         if tool_results:
             messages.append({"role": "user", "content": tool_results})
@@ -85,9 +91,10 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
             nudges += 1
             if nudges > 1:
                 txt = " ".join(text_out).strip()
-                return answer(answer=txt or None, explanation="(never called final_answer)",
-                              iterations=it + 1, error="no_final_answer")
+                return answer(answer=txt or None, explanation="(never called a terminal tool)",
+                              outcome="error", iterations=it + 1, error="no_final_answer")
             messages.append({"role": "user",
-                             "content": "Submit your answer by calling the final_answer tool."})
+                             "content": "Finish by calling one terminal tool: answer, refuse, or clarify."})
 
-    return answer(answer=None, explanation="", iterations=max_iters, error="max_iterations")
+    return answer(answer=None, explanation="", outcome="error",
+                  iterations=max_iters, error="max_iterations")

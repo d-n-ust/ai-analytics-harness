@@ -22,7 +22,21 @@ from .gold import compute_gold, load_questions
 from .grade import grade
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-TIERS = ["lookup", "filtered", "metric", "knowledge", "diagnostic"]
+TIERS = ["lookup", "filtered", "metric", "knowledge", "diagnostic", "unanswerable"]
+
+
+def _new_run_dir(models, mock: bool) -> Path:
+    """Every run gets its own directory; nothing ever overwrites a previous run.
+    (The v1 layout wrote results/raw.jsonl in place — one `make smoke` destroyed
+    the published run's rows.)"""
+    label = "mock" if mock else "-".join(models)
+    stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir = RESULTS_DIR / "runs" / f"{stamp}-{label}"
+    run_dir.mkdir(parents=True)
+    latest = RESULTS_DIR / "latest"
+    latest.unlink(missing_ok=True)
+    latest.symlink_to(run_dir.relative_to(RESULTS_DIR), target_is_directory=True)
+    return run_dir
 
 
 def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=(1, 2, 3, 4, 5, 6),
@@ -43,8 +57,8 @@ def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=
         questions = subset
 
     rows: list[dict] = []
-    RESULTS_DIR.mkdir(exist_ok=True)
-    raw_f = (RESULTS_DIR / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
+    run_dir = _new_run_dir(models, mock)
+    raw_f = (run_dir / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
     for model_name in models:
         model = get_model(model_name, mock=mock)
         for rung in rungs:
@@ -61,19 +75,22 @@ def run_experiment(mock: bool = False, models=("haiku", "sonnet", "gpt"), rungs=
                         "qid": q["id"], "tier": q["tier"], "rung": rung, "model": model_name, "rep": rep,
                         "question": q["question"], "gold": golds[q["id"]],
                         "answer": ans.answer, "explanation": ans.explanation,
+                        "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
                         "correct": g["correct"], "executed": g["executed"],
                         "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+                        "reason_match": g["reason_match"], "score": g["score"],
                         "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
                         "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
                         "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
                     })
                     raw_f.write(json.dumps(rows[-1], default=str) + "\n")
                     raw_f.flush()
-                    mark = "✓" if g["correct"] else ("~" if g["abstained"] else "✗")
+                    mark = {"refuse": "~", "clarify": "?"}.get(
+                        ans.outcome, "✓" if g["correct"] else "✗")
                     print(f"  [{model_name} r{rung} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
 
     raw_f.close()
-    _write_and_summarize(rows, list(models), list(rungs), mock)
+    _write_and_summarize(rows, list(models), list(rungs), mock, run_dir)
 
 
 # --------------------------------------------------------------------------- #
@@ -93,8 +110,7 @@ def _cost(rows) -> float:
     return total
 
 
-def _write_and_summarize(rows, models, rungs, mock) -> None:
-    RESULTS_DIR.mkdir(exist_ok=True)  # raw.jsonl already written incrementally
+def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     by = lambda **f: [r for r in rows                    # noqa: E731 — tiny local filter
                       if all(r[k] == v for k, v in f.items())]
 
@@ -137,6 +153,31 @@ def _write_and_summarize(rows, models, rungs, mock) -> None:
                 cells.append(f"{c}/{len(sub)}" if sub else "-")
             lines.append(f"| {tier} | " + " | ".join(cells) + " |")
 
+    # The decomposed view: never pool answerable and unanswerable into one rate.
+    for m in models:
+        lines += ["", f"## Refusal & fabrication — {m}", "",
+                  "| rung | precision on answered | coverage | refused (answerable) | "
+                  "fabricated (unanswerable) | refused w/ right reason | clarified | total score |",
+                  "|" + "---|" * 8]
+        for rung in rungs:
+            mr = by(model=m, rung=rung)
+            ans_q = [r for r in mr if r["tier"] != "unanswerable"]
+            una_q = [r for r in mr if r["tier"] == "unanswerable"]
+            answered = [r for r in ans_q if r["outcome"] == "answer"]
+            prec = (f"{sum(r['correct'] for r in answered)}/{len(answered)}"
+                    if answered else "-")
+            cov = f"{len(answered)}/{len(ans_q)}" if ans_q else "-"
+            ref_ans = sum(r["outcome"] == "refuse" for r in ans_q)
+            fab = (f"{sum(r['outcome'] == 'answer' for r in una_q)}/{len(una_q)}"
+                   if una_q else "-")
+            right_reason = (f"{sum(bool(r['reason_match']) for r in una_q)}"
+                            f"/{sum(r['outcome'] == 'refuse' for r in una_q)}"
+                            if una_q else "-")
+            clar = sum(r["outcome"] == "clarify" for r in mr)
+            score = sum(r["score"] for r in mr)
+            lines.append(f"| {rung} | {prec} | {cov} | {ref_ans} | {fab} | "
+                         f"{right_reason} | {clar} | {score:+.1f} |")
+
     lines += ["", "## Confidently wrong (a number, not an abstention, but wrong)", "",
               "| model | rung | qid | answer | gold |", "|---|---|---|---|---|"]
     for r in rows:
@@ -151,9 +192,9 @@ def _write_and_summarize(rows, models, rungs, mock) -> None:
         ot = sum(r["output_tokens"] for r in mr)
         lines.append(f"| {m} | {it:,} / {ot:,} | ${_cost(mr):.2f} |")
 
-    (RESULTS_DIR / "summary.md").write_text("\n".join(lines) + "\n")
+    (run_dir / "summary.md").write_text("\n".join(lines) + "\n")
 
     print("\n" + "\n".join(lines[:6 + len(rungs)]))
-    print(f"\nWrote {RESULTS_DIR / 'summary.md'} and {RESULTS_DIR / 'raw.jsonl'}")
+    print(f"\nWrote {run_dir / 'summary.md'} and {run_dir / 'raw.jsonl'}")
     if not mock:
         print(f"Total estimated cost: ${_cost(rows):.2f}")
