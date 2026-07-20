@@ -111,7 +111,9 @@ class OpenAIModel:
                     elif getattr(b, "type", None) == "tool_use":
                         calls.append({"id": b.id, "type": "function",
                                       "function": {"name": b.name, "arguments": json.dumps(b.input or {})}})
-                msg = {"role": "assistant", "content": "".join(text) or None}
+                # Content must always be a string: some models emit empty assistant
+                # turns, and a null content without tool_calls is a 400.
+                msg = {"role": "assistant", "content": "".join(text)}
                 if calls:
                     msg["tool_calls"] = calls
                 out.append(msg)

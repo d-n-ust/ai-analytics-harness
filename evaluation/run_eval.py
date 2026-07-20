@@ -71,7 +71,8 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                         try:
                             ans = run_agent(q["question"], grounding, model)
                         except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
-                            ans = Answer(q["question"], rung, model_name, None, error=f"exception: {exc}")
+                            ans = Answer(q["question"], rung, model_name, None,
+                                         outcome="error", error=f"exception: {exc}")
                         g = grade(ans, q, golds[q["id"]])
                         rows.append({
                             "qid": q["id"], "tier": q["tier"], "rung": rung, "rrung": rrung,
