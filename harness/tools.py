@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 
+from .config import resolve_period
 from .semantic import SemanticError, SemanticLayer
 from .tree import MetricTree, TreeError
 from .warehouse import QueryError, describe_table, run_query, schema_text
@@ -190,8 +191,13 @@ class Toolbox:
     """Holds the live warehouse/semantic/tree handles and exposes the tools for a rung.
 
     `rung` gates grounding (what the agent knows); `rrung` gates reliability
-    (what the agent may do about not knowing): 0 = no refuse tool, 1+ = typed
-    refusal available, 3+ = the answerability checks callable by the model."""
+    (what the agent may do about not knowing):
+      0 = no refuse tool · 1+ = typed refusal · 3+ = check_* tools callable ·
+      4+ = the interception GATE (governed calls validated; out-of-coverage /
+           undefined requests are blocked by the system, not the model) ·
+      5+ = the FENCE (raw SQL removed, so every data path is a gated governed call).
+    The gate and fence are structural: they hold regardless of what the model does,
+    which is why they can be proven exhaustively without an LLM (see tests/)."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
                  tree: MetricTree | None = None, rrung: int = 1):
@@ -200,11 +206,15 @@ class Toolbox:
         self.rrung = rrung
         self.semantic = semantic
         self.tree = tree
+        self.gate = rrung >= 4          # validate governed calls; block on failure
+        self.fence = rrung >= 5         # no raw SQL — governed metrics only
 
     def specs(self) -> list[dict]:
-        specs = [_GET_SCHEMA, _DESCRIBE_TABLE, _RUN_SQL]
+        specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
+        if not self.fence:
+            specs.append(_RUN_SQL)
         if self.rung >= 3:
-            specs += [_LIST_METRICS, _QUERY_METRIC]
+            specs += [_LIST_METRICS, self._query_metric_spec()]
         if self.rung >= 6:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
         if self.rrung >= 3 and self.semantic is not None:
@@ -214,6 +224,37 @@ class Toolbox:
             specs.append(_REFUSE)
         specs.append(_CLARIFY)
         return specs
+
+    def _query_metric_spec(self) -> dict:
+        """At the gate rung, constrain `metric` to the actual catalog (a closed menu):
+        the model cannot even *name* a metric that does not exist."""
+        if not (self.gate and self.semantic is not None):
+            return _QUERY_METRIC
+        props = dict(_QUERY_METRIC["input_schema"]["properties"])
+        props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
+        return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
+
+    def _gate_block(self, name: str, args: dict) -> str | None:
+        """The interception gate: before a governed data call runs, verify the period
+        (and region) are inside coverage. Returns a block message, or None to allow.
+        The gate needs no LLM — given a call, the verdict is deterministic."""
+        if not self.gate or self.semantic is None or name != "query_metric":
+            return None
+        filters = args.get("filters") or {}
+        region = filters.get("region")
+        start, end, period = args.get("start"), args.get("end"), args.get("period")
+        if period:
+            try:
+                start, end = resolve_period(period)
+            except ValueError:
+                return None  # let compile() surface the period error
+        if not (start or end or region):
+            return None
+        ok, detail = self.semantic.in_coverage(start, end, region)
+        if not ok:
+            return (f"BLOCKED by governance — {detail} This request is outside data coverage and "
+                    "cannot be served; refuse (out_of_coverage) or query within coverage.")
+        return None
 
     @staticmethod
     def _verdict(ok: bool, detail: str) -> str:
@@ -233,6 +274,9 @@ class Toolbox:
             if name == "list_metrics":
                 return self.semantic.list_metrics_text(), False
             if name == "query_metric":
+                block = self._gate_block(name, args)
+                if block is not None:
+                    return block, True
                 cols, rows = self.semantic.query(
                     args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
                     time_grain=args.get("time_grain"), start=args.get("start"),

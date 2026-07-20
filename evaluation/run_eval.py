@@ -146,7 +146,8 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     # thesis is visible here — the wrong column falls, the I-don't-know column rises,
     # the right column holds.
     RR_LABEL = {0: "R0 · no I-don't-know", 1: "R1 · can refuse",
-                2: "R2 · +told cost", 3: "R3 · +can check"}
+                2: "R2 · +told cost", 3: "R3 · +can check",
+                4: "R4 · +gate (enforced)", 5: "R5 · +fence (no raw SQL)"}
     for m in models:
         lines += ["", f"## Response mix — {m}  (right / wrong / I-don't-know)", "",
                   "_Every response to every question, bucketed. Lower **wrong** is the goal; "

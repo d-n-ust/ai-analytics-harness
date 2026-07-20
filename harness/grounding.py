@@ -50,6 +50,14 @@ _RRUNG_PRICE = ("\n- Scoring: a correct answer scores +1, a refusal 0, a wrong a
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, population "
                  "definitions, and causal edges.")
+# R4+ (gate) and R5+ (fence) are structural: these lines only *describe* the enforced
+# environment so the agent doesn't waste turns — the guarantee is in the tooling, not
+# the prompt. Removing these lines would not let a fabrication through.
+_RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an undefined metric or "
+                  "for data outside coverage is blocked and returns no number — you cannot retrieve "
+                  "what the governed layer refuses.")
+_RRUNG_FENCE = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
+                "question cannot be answered that way, refuse.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -97,6 +105,10 @@ def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
         system += _RRUNG_PRICE
     if rrung >= 3:
         system += _RRUNG_CHECKS
+    if rrung >= 4:
+        system += _RRUNG_ENFORCE
+    if rrung >= 5:
+        system += _RRUNG_FENCE
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:
         system += _RUNG_NOTES[3]
