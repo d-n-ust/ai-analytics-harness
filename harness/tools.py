@@ -121,6 +121,37 @@ _QUERY_METRIC = {
     },
 }
 
+# Answerability checks exposed to the model (reliability rung 3+). Each is one
+# deterministic lookup against governance metadata — the same checks the excuse
+# check and the gate run; here the model may run them itself before committing.
+_CHECK_METRIC = {
+    "name": "check_metric_exists",
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {"type": "object", "properties": {"term": {"type": "string"}}, "required": ["term"]},
+}
+
+_CHECK_COVERAGE = {
+    "name": "check_coverage",
+    "description": "Check whether data coverage exists for a period (and optional region).",
+    "input_schema": {"type": "object", "properties": {
+        "start": {"type": "string", "description": "YYYY-MM-DD"},
+        "end": {"type": "string", "description": "YYYY-MM-DD"},
+        "region": {"type": "string"}}},
+}
+
+_CHECK_POPULATION = {
+    "name": "check_population_defined",
+    "description": "Check whether a population term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {"type": "object", "properties": {"term": {"type": "string"}}, "required": ["term"]},
+}
+
+_CHECK_CAUSAL = {
+    "name": "check_causal_evidence",
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {"type": "object", "properties": {
+        "driver": {"type": "string"}, "outcome": {"type": "string"}}},
+}
+
 _GET_METRIC_TREE = {
     "name": "get_metric_tree",
     "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
@@ -154,12 +185,17 @@ def _fmt_rows(columns, rows) -> str:
 
 
 class Toolbox:
-    """Holds the live warehouse/semantic/tree handles and exposes the tools for a rung."""
+    """Holds the live warehouse/semantic/tree handles and exposes the tools for a rung.
+
+    `rung` gates grounding (what the agent knows); `rrung` gates reliability
+    (what the agent may do about not knowing): 0 = no refuse tool, 1+ = typed
+    refusal available, 3+ = the answerability checks callable by the model."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
-                 tree: MetricTree | None = None):
+                 tree: MetricTree | None = None, rrung: int = 1):
         self.con = con
         self.rung = rung
+        self.rrung = rrung
         self.semantic = semantic
         self.tree = tree
 
@@ -169,8 +205,17 @@ class Toolbox:
             specs += [_LIST_METRICS, _QUERY_METRIC]
         if self.rung >= 6:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-        specs += [_ANSWER, _REFUSE, _CLARIFY]
+        if self.rrung >= 3 and self.semantic is not None:
+            specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_POPULATION, _CHECK_CAUSAL]
+        specs.append(_ANSWER)
+        if self.rrung >= 1:
+            specs.append(_REFUSE)
+        specs.append(_CLARIFY)
         return specs
+
+    @staticmethod
+    def _verdict(ok: bool, detail: str) -> str:
+        return ("YES — " if ok else "NO — ") + detail
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool]:
         """Run a tool. Returns (text, is_error). Errors come back as the DB/semantic
@@ -191,6 +236,18 @@ class Toolbox:
                     time_grain=args.get("time_grain"), start=args.get("start"),
                     end=args.get("end"), period=args.get("period"))
                 return _fmt_rows(cols, rows), False
+            if name == "check_metric_exists":
+                return self._verdict(*self.semantic.metric_exists(args["term"])), False
+            if name == "check_coverage":
+                return self._verdict(*self.semantic.in_coverage(
+                    args.get("start"), args.get("end"), args.get("region"))), False
+            if name == "check_population_defined":
+                return self._verdict(*self.semantic.population_defined(args["term"])), False
+            if name == "check_causal_evidence":
+                if self.tree is None:
+                    return "NO — no metric tree at this rung; no causal evidence is encoded.", False
+                return self._verdict(*self.tree.causal_evidence(
+                    args.get("driver"), args.get("outcome"))), False
             if name == "get_metric_tree":
                 return self.tree.describe(), False
             if name == "explain_change":

@@ -33,11 +33,23 @@ _BASE = (
     "Rules:\n"
     "- Always compute numbers with the tools. Never guess, round from memory, or estimate a number.\n"
     "- Explore with get_schema / describe_table before writing SQL if you are unsure.\n"
-    "- End with exactly one terminal tool: `answer` when the data supports a reliable answer; "
-    "`refuse` when it does not — give the coded reason and name what is missing; `clarify` when "
-    "the question is too ambiguous to answer either way.\n"
-    "- A truthful refusal beats a confident wrong answer."
 )
+
+# The reliability ladder's prompt component: what the agent is told about ending a
+# task. R0 has no refusal channel; R1 adds it; R2 prices it; R3 offers the checks.
+_RRUNG_TERMINAL = {
+    0: ("- End with the `answer` tool: the value plus a one-line explanation. If the question "
+        "is too ambiguous to attempt, end with `clarify`."),
+    1: ("- End with exactly one terminal tool: `answer` when the data supports a reliable answer; "
+        "`refuse` when it does not — give the coded reason and name what is missing; `clarify` when "
+        "the question is too ambiguous to answer either way.\n"
+        "- A truthful refusal beats a confident wrong answer."),
+}
+_RRUNG_PRICE = ("\n- Scoring: a correct answer scores +1, a refusal 0, a wrong answer -4. "
+                "A wrong answer costs four refusals.")
+_RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
+                 "tools: they consult the governed catalog, coverage windows, population "
+                 "definitions, and causal edges.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -74,12 +86,17 @@ def _knowledge_block() -> str:
 @dataclass
 class Grounding:
     rung: int
+    rrung: int
     system: str
     toolbox: Toolbox
 
 
-def build_grounding(con, rung: int) -> Grounding:
-    system = _BASE
+def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
+    system = _BASE + _RRUNG_TERMINAL[min(rrung, 1)]
+    if rrung >= 2:
+        system += _RRUNG_PRICE
+    if rrung >= 3:
+        system += _RRUNG_CHECKS
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:
         system += _RUNG_NOTES[3]
@@ -92,4 +109,5 @@ def build_grounding(con, rung: int) -> Grounding:
 
     semantic = SemanticLayer(con) if rung >= 3 else None
     tree = MetricTree(semantic) if rung >= 6 else None
-    return Grounding(rung=rung, system=system, toolbox=Toolbox(con, rung, semantic, tree))
+    return Grounding(rung=rung, rrung=rrung, system=system,
+                     toolbox=Toolbox(con, rung, semantic, tree, rrung))

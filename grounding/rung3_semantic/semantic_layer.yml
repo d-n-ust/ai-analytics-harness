@@ -132,3 +132,19 @@ metrics:
     agg: "count(*)"
     time_column: referred_ts
     filterable: [status]
+
+# --- Governance metadata: the facts the answerability checks consult. ---
+# Coverage windows and governed populations were previously prose in the knowledge
+# base (or nowhere); here they are data, so a checker can return true/false.
+governance:
+  coverage:
+    data_start: 2025-09-01        # first signups in the warehouse
+    data_end: 2026-07-12          # last complete ISO week
+    regions:
+      APAC: {starts: 2026-05-01}  # earlier APAC rows are pre-launch test data
+  populations:                     # population terms with a governed definition
+    - all_users
+    - internal
+    - non_internal
+    - premium
+    - power_users

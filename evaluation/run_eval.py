@@ -40,7 +40,8 @@ def _new_run_dir(models, mock: bool) -> Path:
 
 
 def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra"), rungs=(1, 2, 3, 4, 5, 6),
-                   only=None, sample: int | None = None, repeats: int = 1) -> None:
+                   only=None, sample: int | None = None, repeats: int = 1,
+                   rrungs=(1,)) -> None:
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()
@@ -63,31 +64,33 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
         model = get_model(model_name, mock=mock)
         for rung in rungs:
             set_star(con, rung >= 2)
-            grounding = build_grounding(con, rung)
-            for rep in range(repeats):
-                for q in questions:
-                    try:
-                        ans = run_agent(q["question"], grounding, model)
-                    except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
-                        ans = Answer(q["question"], rung, model_name, None, error=f"exception: {exc}")
-                    g = grade(ans, q, golds[q["id"]])
-                    rows.append({
-                        "qid": q["id"], "tier": q["tier"], "rung": rung, "model": model_name, "rep": rep,
-                        "question": q["question"], "gold": golds[q["id"]],
-                        "answer": ans.answer, "explanation": ans.explanation,
-                        "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
-                        "correct": g["correct"], "executed": g["executed"],
-                        "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
-                        "reason_match": g["reason_match"], "score": g["score"],
-                        "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
-                        "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
-                        "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
-                    })
-                    raw_f.write(json.dumps(rows[-1], default=str) + "\n")
-                    raw_f.flush()
-                    mark = {"refuse": "~", "clarify": "?"}.get(
-                        ans.outcome, "✓" if g["correct"] else "✗")
-                    print(f"  [{model_name} r{rung} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
+            for rrung in rrungs:
+                grounding = build_grounding(con, rung, rrung)
+                for rep in range(repeats):
+                    for q in questions:
+                        try:
+                            ans = run_agent(q["question"], grounding, model)
+                        except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
+                            ans = Answer(q["question"], rung, model_name, None, error=f"exception: {exc}")
+                        g = grade(ans, q, golds[q["id"]])
+                        rows.append({
+                            "qid": q["id"], "tier": q["tier"], "rung": rung, "rrung": rrung,
+                            "model": model_name, "rep": rep,
+                            "question": q["question"], "gold": golds[q["id"]],
+                            "answer": ans.answer, "explanation": ans.explanation,
+                            "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
+                            "correct": g["correct"], "executed": g["executed"],
+                            "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+                            "reason_match": g["reason_match"], "score": g["score"],
+                            "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
+                            "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
+                            "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
+                        })
+                        raw_f.write(json.dumps(rows[-1], default=str) + "\n")
+                        raw_f.flush()
+                        mark = {"refuse": "~", "clarify": "?"}.get(
+                            ans.outcome, "✓" if g["correct"] else "✗")
+                        print(f"  [{model_name} r{rung} R{rrung} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
 
     raw_f.close()
     _write_and_summarize(rows, list(models), list(rungs), mock, run_dir)
@@ -115,7 +118,8 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
                       if all(r[k] == v for k, v in f.items())]
 
     reps = len({r.get("rep", 0) for r in rows}) or 1
-    nq = len(rows) // (len(models) * len(rungs) * reps) if reps else 0
+    rrungs = sorted({r.get("rrung", 1) for r in rows})
+    nq = len(rows) // (len(models) * len(rungs) * len(rrungs) * reps) if reps else 0
     lines = [f"# Results — AI analytics harness{'  (MOCK)' if mock else ''}",
              f"_Generated {dt.date.today()}. {len(rows)} runs "
              f"({len(models)} models x {len(rungs)} rungs x {nq} questions x {reps} reps)._",
@@ -154,13 +158,17 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
             lines.append(f"| {tier} | " + " | ".join(cells) + " |")
 
     # The decomposed view: never pool answerable and unanswerable into one rate.
+    # One row per (grounding rung, reliability rung) pair.
     for m in models:
         lines += ["", f"## Refusal & fabrication — {m}", "",
-                  "| rung | precision on answered | coverage | refused (answerable) | "
+                  "| rung·R | precision on answered | coverage | refused (answerable) | "
                   "fabricated (unanswerable) | refused w/ right reason | clarified | total score |",
                   "|" + "---|" * 8]
         for rung in rungs:
-            mr = by(model=m, rung=rung)
+          for rrung in rrungs:
+            mr = by(model=m, rung=rung, rrung=rrung)
+            if not mr:
+                continue
             ans_q = [r for r in mr if r["tier"] != "unanswerable"]
             una_q = [r for r in mr if r["tier"] == "unanswerable"]
             answered = [r for r in ans_q if r["outcome"] == "answer"]
@@ -175,7 +183,7 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
                             if una_q else "-")
             clar = sum(r["outcome"] == "clarify" for r in mr)
             score = sum(r["score"] for r in mr)
-            lines.append(f"| {rung} | {prec} | {cov} | {ref_ans} | {fab} | "
+            lines.append(f"| {rung}·R{rrung} | {prec} | {cov} | {ref_ans} | {fab} | "
                          f"{right_reason} | {clar} | {score:+.1f} |")
 
     lines += ["", "## Confidently wrong (a number, not an abstention, but wrong)", "",

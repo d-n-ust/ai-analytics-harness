@@ -26,8 +26,8 @@ edges:
   - parent: days_per_user
     child: reminder_open_rate
     type: influence
-    confidence: high
-    evidence: "Reminder opens precede return visits; frequency and reminder rate move together historically."
+    confidence: low
+    evidence: "Co-moved in one anomaly week only; across normal weeks the correlation is ~0. No independent evidence of a causal link."
   - parent: active_users
     child: new_signups
     type: influence

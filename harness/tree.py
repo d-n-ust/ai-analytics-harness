@@ -46,6 +46,21 @@ class MetricTree:
     def _children(self, node: str, kind: str) -> list[dict]:
         return [e for e in self.edges if e["parent"] == node and e["type"] == kind]
 
+    def causal_evidence(self, driver: str | None = None, outcome: str | None = None) -> tuple[bool, str]:
+        """Answerability check: does the tree carry an edge linking driver to outcome?
+        Matches loosely on node names; either argument may be omitted."""
+        def matches(term, node):
+            t = "".join(c if c.isalnum() else "_" for c in (term or "").lower()).strip("_")
+            return (not term) or t == node or node in t or t in node
+        for e in self.edges:
+            if matches(driver, e["child"]) and matches(outcome, e["parent"]):
+                return True, (f"edge {e['parent']} <- {e['child']} "
+                              f"[{e['type']}, {e.get('confidence', 'exact')}]: "
+                              f"{e.get('evidence', 'identity arithmetic')}")
+        return False, (f"no encoded edge links {driver or 'any driver'} to "
+                       f"{outcome or 'any outcome'}. Edges exist only for: "
+                       + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
+
     def describe(self) -> str:
         lines = [f"Metric tree (root: {self.root}):"]
         for node in self.nodes:
