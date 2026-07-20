@@ -1,6 +1,28 @@
 # Results — AI analytics harness
 _Generated 2026-07-20. 496 runs (2 models x 1 rungs x 4 reliability-rungs x 31 questions x 2 reps)._
 
+## Response mix — gpt-5.4-mini  (right / wrong / I-don't-know)
+
+_Every response to every question, bucketed. Lower **wrong** is the goal; **right** should hold steady (proof it isn't just refusing everything)._
+
+| round | ✅ right number | ❌ wrong number | 🤷 I don't know | other |
+|---|---|---|---|---|
+| R0 · no I-don't-know | 47 | 9 | 4 | 2 |
+| R1 · can refuse | 46 | 9 | 6 | 1 |
+| R2 · +told cost | 45 | 8 | 8 | 1 |
+| R3 · +can check | 48 | 3 | 11 | 0 |
+
+## Response mix — gpt-5.6-terra  (right / wrong / I-don't-know)
+
+_Every response to every question, bucketed. Lower **wrong** is the goal; **right** should hold steady (proof it isn't just refusing everything)._
+
+| round | ✅ right number | ❌ wrong number | 🤷 I don't know | other |
+|---|---|---|---|---|
+| R0 · no I-don't-know | 50 | 7 | 2 | 3 |
+| R1 · can refuse | 50 | 2 | 10 | 0 |
+| R2 · +told cost | 49 | 3 | 10 | 0 |
+| R3 · +can check | 50 | 0 | 12 | 0 |
+
 ## Accuracy by rung (pooled over reps)
 
 | rung | gpt-5.4-mini | gpt-5.6-terra |

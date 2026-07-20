@@ -115,6 +115,21 @@ def _cost(rows) -> float:
     return total
 
 
+def _bucket(r) -> str:
+    """The one lens every result reduces to: for any question, the agent either gave a
+    right number, a wrong number, or said 'I don't know'. 'other' = a crash, or an
+    answer with no number (abstention prose)."""
+    if r["outcome"] == "error":
+        return "other"
+    if r["outcome"] in ("refuse", "clarify"):
+        return "idk"
+    if r["correct"]:
+        return "right"
+    if r["confident_wrong"]:
+        return "wrong"       # answered with a number, and it was wrong
+    return "other"
+
+
 def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     by = lambda **f: [r for r in rows                    # noqa: E731 — tiny local filter
                       if all(r[k] == v for k, v in f.items())]
@@ -125,8 +140,27 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     rr_bit = f" x {len(rrungs)} reliability-rungs" if len(rrungs) > 1 else ""
     lines = [f"# Results — AI analytics harness{'  (MOCK)' if mock else ''}",
              f"_Generated {dt.date.today()}. {len(rows)} runs "
-             f"({len(models)} models x {len(rungs)} rungs{rr_bit} x {nq} questions x {reps} reps)._",
-             "", "## Accuracy by rung (pooled over reps)", "",
+             f"({len(models)} models x {len(rungs)} rungs{rr_bit} x {nq} questions x {reps} reps)._"]
+
+    # The headline lens: right / wrong / I-don't-know, per reliability rung. The whole
+    # thesis is visible here — the wrong column falls, the I-don't-know column rises,
+    # the right column holds.
+    RR_LABEL = {0: "R0 · no I-don't-know", 1: "R1 · can refuse",
+                2: "R2 · +told cost", 3: "R3 · +can check"}
+    for m in models:
+        lines += ["", f"## Response mix — {m}  (right / wrong / I-don't-know)", "",
+                  "_Every response to every question, bucketed. Lower **wrong** is the goal; "
+                  "**right** should hold steady (proof it isn't just refusing everything)._", "",
+                  "| round | ✅ right number | ❌ wrong number | 🤷 I don't know | other |",
+                  "|" + "---|" * 5]
+        for rr in rrungs:
+            b = {"right": 0, "wrong": 0, "idk": 0, "other": 0}
+            for r in by(model=m, rrung=rr):
+                b[_bucket(r)] += 1
+            lines.append(f"| {RR_LABEL.get(rr, f'R{rr}')} | {b['right']} | {b['wrong']} "
+                         f"| {b['idk']} | {b['other']} |")
+
+    lines += ["", "## Accuracy by rung (pooled over reps)", "",
              "| rung | " + " | ".join(models) + " |",
              "|" + "---|" * (len(models) + 1)]
     for rung in rungs:
