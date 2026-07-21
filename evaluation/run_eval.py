@@ -232,7 +232,9 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     # One row per (grounding rung, reliability rung) pair.
     for m in models:
         lines += ["", f"## Refusal & fabrication — {m}", "",
-                  "| rung·R | precision on answered | coverage | refused (answerable) | "
+                  "_`over-refused` = answerable questions the system declined (the price of the "
+                  "gate/fence); `fabricated` = a number asserted for a question with no valid answer._", "",
+                  "| rung·R | precision on answered | coverage | over-refused (answerable) | "
                   "fabricated (unanswerable) | refused w/ right reason | clarified | errors | total score |",
                   "|" + "---|" * 9]
         exp_refuse = lambda r: r.get("expected_refuse", r["tier"] == "unanswerable")  # noqa: E731
@@ -264,6 +266,26 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
             score = sum(r["score"] for r in mr)
             lines.append(f"| {rung}·R{rrung} | {prec} | {cov} | {ref_ans} | {fab} | "
                          f"{right_reason} | {clar} | {errs} | {score:+.1f} |")
+
+    # The correctness ceiling: on the valid-but-wrong tier, the tempting wrong answer is
+    # itself a VALID governed number, so the gate/fence can't catch it. This tier is
+    # where "structure makes wrong impossible" stops being true.
+    vbw = [r for r in rows if r["tier"] == "valid_but_wrong"]
+    if vbw:
+        for m in models:
+            lines += ["", f"## Valid-but-wrong tier — {m}  (the correctness ceiling structure can't reach)", "",
+                      "| rung·R | ✅ right | ❌ wrong number | 🤷 over-refused |",
+                      "|" + "---|" * 4]
+            for rung in rungs:
+              for rrung in rrungs:
+                cell = [r for r in vbw if r["model"] == m and r["rung"] == rung and r["rrung"] == rrung
+                        and r["outcome"] != "error"]
+                if not cell:
+                    continue
+                right = sum(r["correct"] for r in cell)
+                wrong = sum(_bucket(r) == "wrong" for r in cell)
+                oref = sum(r["outcome"] in ("refuse", "clarify") for r in cell)
+                lines.append(f"| {rung}·R{rrung} | {right} | {wrong} | {oref} |")
 
     lines += ["", "## Wrong numbers (asserted a number that was wrong)", "",
               "| model | rung·R | qid | answer | gold |", "|---|---|---|---|---|"]

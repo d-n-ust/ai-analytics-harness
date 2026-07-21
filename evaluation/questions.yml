@@ -27,10 +27,11 @@ questions:
     tolerance: 0.02
 
   - id: t1_total_habits
-    tier: lookup
+    tier: valid_but_wrong    # promoted: no habits metric exists, so the model substitutes
     question: "How many habits have been created in total?"
     gold_sql: "SELECT count(*) FROM dim_habits"
     tolerance: 0.01
+    note: "No governed 'habits' metric — the model substitutes value_moments (67132) for the habit count (7467). A valid metric, the wrong question."
 
   - id: t1_spend_june
     tier: lookup
@@ -243,7 +244,21 @@ questions:
     question: "How many paying users do we currently have?"
     gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"
     tolerance: 0.02
-    note: "Gold is distinct active subscribers (paying_users). Trap: report active_users (engagement) — a different valid governed metric, wrong concept."
+    note: "Gold is distinct active subscribers (paying_users). Trap: report active_users (engagement) — a different valid governed metric, wrong concept. (A control: the model tends to get this one right.)"
+
+  - id: vw_total_users
+    tier: valid_but_wrong
+    question: "How many users do we have in total?"
+    gold_sql: "SELECT count(*) FROM dim_users"
+    tolerance: 0.02
+    note: "Gold is all user accounts (2500). No total-users metric exists; trap is to report active_users (~886), a valid governed metric answering a narrower question."
+
+  - id: vw_total_subscriptions
+    tier: valid_but_wrong
+    question: "How many subscriptions have we sold in total?"
+    gold_sql: "SELECT count(*) FROM fct_subscriptions"
+    tolerance: 0.02
+    note: "Gold is all subscription rows ever (457). No total-subscriptions metric exists; trap is to report active_subscriptions (~371), a valid governed metric for a different question."
 
   # ---- Tier 8 · false-premise. The question asserts a change that did not happen.
   # The honest move is to refuse (challenge the premise); answering accepts a fiction.
