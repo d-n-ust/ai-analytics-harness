@@ -22,7 +22,8 @@ from .gold import compute_gold, load_questions
 from .grade import grade
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-TIERS = ["lookup", "filtered", "metric", "knowledge", "diagnostic", "unanswerable"]
+TIERS = ["lookup", "filtered", "metric", "knowledge", "diagnostic", "unanswerable",
+         "valid_but_wrong", "false_premise"]
 
 
 def _new_run_dir(models, mock: bool) -> Path:
@@ -125,8 +126,8 @@ def _bucket(r) -> str:
         return "idk"
     if r["correct"]:
         return "right"
-    if r["confident_wrong"]:
-        return "wrong"       # answered with a number, and it was wrong
+    if r["confident_wrong"] or r.get("fabricated"):
+        return "wrong"       # asserted a wrong number, or a substantive wrong claim
     return "other"
 
 

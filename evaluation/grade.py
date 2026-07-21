@@ -87,11 +87,14 @@ def grade(answer, question: dict, gold: float | None) -> dict:
             g = grade_numeric(answer.answer, gold, question.get("tolerance", 0.02))
         g["reason_match"] = None
     g["abstained"] = answer.outcome == "refuse"
-    # Fabrication is asserting a *number* that is wrong (or any number for an
-    # unanswerable question). Abstention prose through the answer channel ("no data")
-    # has no number: it's a protocol miss, not a fabrication, and carries no penalty.
+    # `confident_wrong` (the hard -4) is reserved for asserting a *number* that is wrong.
+    # `fabricated` is broader: answering an unanswerable question with something
+    # substantive — a number, or a claim long enough to be a real answer (a false-
+    # premise "why" story). A short abstention through the answer channel ("no data")
+    # is neither: a protocol miss, not a fabrication.
+    substantive = has_number or len((answer.answer or "").strip()) > 20
     g["confident_wrong"] = (answer.outcome == "answer" and not g["correct"]
                             and has_number and answer.error is None)
-    g["fabricated"] = unanswerable and answer.outcome == "answer" and has_number
+    g["fabricated"] = unanswerable and answer.outcome == "answer" and substantive
     g["score"] = 1.0 if g["correct"] else (-WRONG_COST if g["confident_wrong"] else 0.0)
     return g

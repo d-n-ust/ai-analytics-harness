@@ -18,8 +18,8 @@ from .warehouse import QueryError, describe_table, run_query, schema_text
 
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.
-REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage",
-                   "population_undefined", "no_causal_evidence", "other"]
+REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "population_undefined",
+                   "no_causal_evidence", "false_premise", "other"]
 
 _ANSWER = {
     "name": "answer",
