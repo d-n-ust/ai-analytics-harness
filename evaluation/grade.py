@@ -66,7 +66,9 @@ def grade(answer, question: dict, gold: float | None) -> dict:
     crashed (outcome=error) are infrastructure failures, scored 0 and never counted as
     a model behaviour."""
     unanswerable = "gold_refuse" in question
+    is_false_premise = question.get("gold_refuse") == "false_premise"
     has_number = extract_number(answer.answer) is not None
+    needs_judge = False
     if answer.outcome == "error":
         g = {"executed": False, "correct": False, "reason_match": None}
     elif answer.outcome == "refuse":
@@ -74,6 +76,15 @@ def grade(answer, question: dict, gold: float | None) -> dict:
              "reason_match": (answer.reason == question["gold_refuse"]) if unanswerable else None}
     elif answer.outcome == "clarify":
         g = {"executed": False, "correct": False, "reason_match": None}
+    elif unanswerable and is_false_premise:
+        # A false-premise question answered through the answer channel may be a *correct
+        # rebuttal* ("no, it didn't collapse — it rose") or a *fabricated cause* for a
+        # non-event. A heuristic can't tell them apart, so the grader abstains rather
+        # than guess — the row is flagged for a human/judge and counted as neither
+        # correct nor fabricated. (The grader saying "I don't know" instead of a
+        # confident wrong label is the whole thesis, applied to itself.)
+        needs_judge = True
+        g = {"executed": True, "correct": False, "reason_match": None}
     elif unanswerable:
         g = {"executed": answer.answer is not None, "correct": False, "reason_match": None}
     else:
@@ -86,15 +97,16 @@ def grade(answer, question: dict, gold: float | None) -> dict:
         else:
             g = grade_numeric(answer.answer, gold, question.get("tolerance", 0.02))
         g["reason_match"] = None
+    g["needs_judge"] = needs_judge
     g["abstained"] = answer.outcome == "refuse"
     # `confident_wrong` (the hard -4) is reserved for asserting a *number* that is wrong.
     # `fabricated` is broader: answering an unanswerable question with something
-    # substantive — a number, or a claim long enough to be a real answer (a false-
-    # premise "why" story). A short abstention through the answer channel ("no data")
-    # is neither: a protocol miss, not a fabrication.
+    # substantive — a number, or a claim long enough to be a real answer. But NOT the
+    # false-premise rows the grader deferred (needs_judge): those aren't auto-scored.
     substantive = has_number or len((answer.answer or "").strip()) > 20
     g["confident_wrong"] = (answer.outcome == "answer" and not g["correct"]
                             and has_number and answer.error is None)
-    g["fabricated"] = unanswerable and answer.outcome == "answer" and substantive
+    g["fabricated"] = (unanswerable and answer.outcome == "answer"
+                       and substantive and not needs_judge)
     g["score"] = 1.0 if g["correct"] else (-WRONG_COST if g["confident_wrong"] else 0.0)
     return g

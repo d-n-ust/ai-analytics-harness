@@ -83,7 +83,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                             "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
                             "correct": g["correct"], "executed": g["executed"],
                             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
-                            "fabricated": g["fabricated"],
+                            "fabricated": g["fabricated"], "needs_judge": g.get("needs_judge", False),
                             "reason_match": g["reason_match"], "score": g["score"],
                             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
