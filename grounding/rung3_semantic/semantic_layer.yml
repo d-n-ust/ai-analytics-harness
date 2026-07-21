@@ -141,7 +141,9 @@ governance:
     data_start: 2025-09-01        # first signups in the warehouse
     data_end: 2026-07-12          # last complete ISO week
     regions:
-      APAC: {starts: 2026-05-01}  # earlier APAC rows are pre-launch test data
+      # earlier APAC rows are pre-launch test data. `countries` lets a coverage check
+      # resolve region from the country dimension too, so PH/ID/IN can't sneak past.
+      APAC: {starts: 2026-05-01, countries: [PH, ID, IN]}
   populations:                     # population terms with a governed definition
     - all_users
     - internal

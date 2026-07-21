@@ -25,12 +25,16 @@ UNGOVERNED_METRICS = [
     "nps", "", "  ", "value_moments; DROP TABLE u", "engagement_score' OR '1'='1",
 ]
 UNGOVERNED_POPULATIONS = ["enterprise users", "enterprise", "smb", "vip customers", "", "us"]
-# (region, start, end) periods that fall outside coverage and must be blocked.
+# (filters, start, end) that fall outside coverage and must be blocked. The country
+# cases are the ones a region-only gate missed — an equally-available dimension.
 OUT_OF_COVERAGE = [
-    ("APAC", "2026-03-01", "2026-03-31"),   # before APAC launch (2026-05-01)
-    ("APAC", "2026-04-01", "2026-06-30"),   # straddles launch
-    (None, "2025-07-01", "2025-07-31"),     # before data starts (2025-09-01)
-    (None, "2024-01-01", "2024-12-31"),     # long before data
+    ({"region": "APAC"}, "2026-03-01", "2026-03-31"),   # before APAC launch (2026-05-01)
+    ({"region": "APAC"}, "2026-04-01", "2026-06-30"),   # straddles launch
+    ({"country": "PH"}, "2026-03-01", "2026-03-31"),    # APAC by country — the bypass
+    ({"country": "ID"}, "2026-04-01", "2026-06-30"),    # APAC by country, straddle
+    ({"country": "IN"}, "2026-03-15", "2026-03-20"),    # APAC by country
+    (None, "2025-07-01", "2025-07-31"),                 # before data starts (2025-09-01)
+    (None, "2024-01-01", "2024-12-31"),                 # long before data
 ]
 
 
@@ -67,13 +71,13 @@ def prove():
     #    even when the metric itself is real. This is the worst-case agent trying to
     #    pull legitimate metrics over illegitimate periods.
     gate_tb = build_grounding(con, rung=6, rrung=4).toolbox
-    for region, start, end in OUT_OF_COVERAGE:
+    for filt, start, end in OUT_OF_COVERAGE:
         args = {"metric": "value_moments", "start": start, "end": end}
-        if region:
-            args["filters"] = {"region": region}
+        if filt:
+            args["filters"] = filt
         text, is_err = gate_tb.dispatch("query_metric", args)
         _check(is_err and text.startswith("BLOCKED"),
-               f"gate let an out-of-coverage call through: {region} {start}..{end} -> {text[:60]}")
+               f"gate let an out-of-coverage call through: {filt} {start}..{end} -> {text[:60]}")
         passed += 1
     # ...and still serves a legitimate in-coverage call (the gate isn't just refuse-all).
     text, is_err = gate_tb.dispatch("query_metric", {"metric": "value_moments",

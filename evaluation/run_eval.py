@@ -84,6 +84,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                             "correct": g["correct"], "executed": g["executed"],
                             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
                             "fabricated": g["fabricated"], "needs_judge": g.get("needs_judge", False),
+                            "bucket": g["bucket"], "expected_refuse": g["expected_refuse"],
                             "reason_match": g["reason_match"], "score": g["score"],
                             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
@@ -97,6 +98,32 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
 
     raw_f.close()
     _write_and_summarize(rows, list(models), list(rungs), mock, run_dir)
+
+
+def regrade_run(run_dir: Path) -> None:
+    """Re-grade a finished run from its stored answers (no model calls) and regenerate
+    its summary. This is how a grade.py change reaches every past number — the model
+    outputs are immutable; only the verdicts derived from them change."""
+    from .gold import load_questions
+    qmap = {q["id"]: q for q in load_questions()}
+    raw = run_dir / "raw.jsonl"
+    rows = [json.loads(line) for line in raw.open()]
+    for r in rows:
+        ans = Answer(question=r["question"], rung=r["rung"], model=r["model"],
+                     answer=r["answer"], explanation=r.get("explanation", "") or "",
+                     outcome=r.get("outcome", "answer"), reason=r.get("reason"),
+                     missing=r.get("missing"), error=r.get("error"))
+        g = grade(ans, qmap[r["qid"]], r.get("gold"))
+        r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
+                                    "fabricated", "needs_judge", "bucket", "expected_refuse",
+                                    "reason_match", "driver_ok", "cause_ok", "score")})
+    with raw.open("w") as f:
+        for r in rows:
+            f.write(json.dumps(r, default=str) + "\n")
+    models = sorted({r["model"] for r in rows})
+    rungs = sorted({r["rung"] for r in rows})
+    _write_and_summarize(rows, models, rungs, False, run_dir)
+    print(f"regraded {len(rows)} rows in {run_dir}")
 
 
 # --------------------------------------------------------------------------- #
@@ -117,17 +144,21 @@ def _cost(rows) -> float:
 
 
 def _bucket(r) -> str:
-    """The one lens every result reduces to: for any question, the agent either gave a
-    right number, a wrong number, or said 'I don't know'. 'other' = a crash, or an
-    answer with no number (abstention prose)."""
+    """The one lens every result reduces to. The bucket is decided once, in grade(),
+    and stored on the row — this reads it (older rows without the field fall back to a
+    minimal reconstruction)."""
+    if r.get("bucket"):
+        return r["bucket"]
     if r["outcome"] == "error":
-        return "other"
+        return "error"
     if r["outcome"] in ("refuse", "clarify"):
         return "idk"
+    if r.get("needs_judge"):
+        return "deferred"
     if r["correct"]:
         return "right"
     if r["confident_wrong"] or r.get("fabricated"):
-        return "wrong"       # asserted a wrong number, or a substantive wrong claim
+        return "wrong"
     return "other"
 
 
@@ -152,15 +183,16 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     for m in models:
         lines += ["", f"## Response mix — {m}  (right / wrong / I-don't-know)", "",
                   "_Every response to every question, bucketed. Lower **wrong** is the goal; "
-                  "**right** should hold steady (proof it isn't just refusing everything)._", "",
-                  "| round | ✅ right number | ❌ wrong number | 🤷 I don't know | other |",
-                  "|" + "---|" * 5]
+                  "**right** should hold steady (proof it isn't just refusing everything). "
+                  "`deferred` = false-premise answers awaiting a judge; `err` = infra failures._", "",
+                  "| round | ✅ right number | ❌ wrong number | 🤷 I don't know | deferred | other | err |",
+                  "|" + "---|" * 7]
         for rr in rrungs:
-            b = {"right": 0, "wrong": 0, "idk": 0, "other": 0}
+            b = {"right": 0, "wrong": 0, "idk": 0, "deferred": 0, "other": 0, "error": 0}
             for r in by(model=m, rrung=rr):
                 b[_bucket(r)] += 1
             lines.append(f"| {RR_LABEL.get(rr, f'R{rr}')} | {b['right']} | {b['wrong']} "
-                         f"| {b['idk']} | {b['other']} |")
+                         f"| {b['idk']} | {b['deferred']} | {b['other']} | {b['error']} |")
 
     lines += ["", "## Accuracy by rung (pooled over reps)", "",
              "| rung | " + " | ".join(models) + " |",
@@ -203,37 +235,42 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
                   "| rung·R | precision on answered | coverage | refused (answerable) | "
                   "fabricated (unanswerable) | refused w/ right reason | clarified | errors | total score |",
                   "|" + "---|" * 9]
+        exp_refuse = lambda r: r.get("expected_refuse", r["tier"] == "unanswerable")  # noqa: E731
         for rung in rungs:
           for rrung in rrungs:
             mr = by(model=m, rung=rung, rrung=rrung)
             if not mr:
                 continue
-            ans_q = [r for r in mr if r["tier"] != "unanswerable"]
-            una_q = [r for r in mr if r["tier"] == "unanswerable"]
-            # Denominators exclude infrastructure errors — a crash is not a behaviour.
+            # Answerable vs expected-to-refuse is decided by the gold, not the tier
+            # string — false_premise is expected-refuse even though its tier isn't
+            # literally "unanswerable".
+            ans_q = [r for r in mr if not exp_refuse(r)]
+            una_q = [r for r in mr if exp_refuse(r)]
+            # Denominators exclude infra errors (a crash isn't a behaviour) and deferred
+            # rows (a judge hasn't ruled yet).
             ans_valid = [r for r in ans_q if r["outcome"] != "error"]
-            una_valid = [r for r in una_q if r["outcome"] != "error"]
+            una_scored = [r for r in una_q if r["outcome"] != "error" and not r.get("needs_judge")]
             answered = [r for r in ans_valid if r["outcome"] == "answer"]
-            prec = (f"{sum(r['correct'] for r in answered)}/{len(answered)}"
-                    if answered else "-")
+            prec = (f"{sum(r['correct'] for r in answered)}/{len(answered)}" if answered else "-")
             cov = f"{len(answered)}/{len(ans_valid)}" if ans_valid else "-"
             ref_ans = sum(r["outcome"] == "refuse" for r in ans_valid)
-            fab = (f"{sum(r.get('fabricated') for r in una_valid)}/{len(una_valid)}"
-                   if una_valid else "-")
-            right_reason = (f"{sum(bool(r['reason_match']) for r in una_valid)}"
-                            f"/{sum(r['outcome'] == 'refuse' for r in una_valid)}"
-                            if una_valid else "-")
+            fab = (f"{sum(r.get('fabricated') for r in una_scored)}/{len(una_scored)}"
+                   if una_scored else "-")
+            right_reason = (f"{sum(bool(r['reason_match']) for r in una_scored)}"
+                            f"/{sum(r['outcome'] == 'refuse' for r in una_scored)}"
+                            if una_scored else "-")
             clar = sum(r["outcome"] == "clarify" for r in mr)
             errs = sum(r["outcome"] == "error" for r in mr)
             score = sum(r["score"] for r in mr)
             lines.append(f"| {rung}·R{rrung} | {prec} | {cov} | {ref_ans} | {fab} | "
                          f"{right_reason} | {clar} | {errs} | {score:+.1f} |")
 
-    lines += ["", "## Confidently wrong (a number, not an abstention, but wrong)", "",
-              "| model | rung | qid | answer | gold |", "|---|---|---|---|---|"]
+    lines += ["", "## Wrong numbers (asserted a number that was wrong)", "",
+              "| model | rung·R | qid | answer | gold |", "|---|---|---|---|---|"]
     for r in rows:
-        if r["confident_wrong"] and r["tier"] != "diagnostic":
-            lines.append(f"| {r['model']} | {r['rung']} | {r['qid']} | {r['answer']} | {r['gold']} |")
+        if _bucket(r) == "wrong":
+            lines.append(f"| {r['model']} | {r['rung']}·R{r.get('rrung',1)} | {r['qid']} "
+                         f"| {r['answer']} | {r['gold']} |")
 
     lines += ["", "## Cost", "",
               "| model | total tokens (in/out) | est. USD |", "|---|---|---|"]

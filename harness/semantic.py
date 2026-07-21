@@ -94,11 +94,26 @@ class SemanticLayer:
         return False, (f"no governed definition matches {term!r}. "
                        f"Catalog: {', '.join(self.metrics)}.")
 
-    def in_coverage(self, start=None, end=None, region=None) -> tuple[bool, str]:
+    def _region_of(self, region, country):
+        """A region's launch window also governs its countries — so a country filter
+        (PH) is resolved to its region (APAC) before the coverage check, closing the
+        dimension that would otherwise bypass the gate."""
+        if region:
+            return region
+        if country:
+            c = str(country).upper()
+            for name, win in self.governance.get("coverage", {}).get("regions", {}).items():
+                if c in [str(x).upper() for x in win.get("countries", [])]:
+                    return name
+        return None
+
+    def in_coverage(self, start=None, end=None, region=None, country=None) -> tuple[bool, str]:
         """Is the whole period inside data coverage (and the region's launch window)?
         A period that only partly overlaps coverage is a NO — a partial answer over a
         clipped window is exactly the pre-launch-inclusive trap the check exists to
-        catch. A missing end is treated as a point at `start`."""
+        catch. A missing end is treated as a point at `start`. A country filter is
+        resolved to its region, so PH/ID/IN inherit APAC's launch window."""
+        region = self._region_of(region, country)
         cov = self.governance.get("coverage", {})
         d0, d1 = cov.get("data_start"), cov.get("data_end")
         try:

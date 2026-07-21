@@ -241,16 +241,16 @@ class Toolbox:
         if not self.gate or self.semantic is None or name != "query_metric":
             return None
         filters = args.get("filters") or {}
-        region = filters.get("region")
+        region, country = filters.get("region"), filters.get("country")
         start, end, period = args.get("start"), args.get("end"), args.get("period")
         if period:
             try:
                 start, end = resolve_period(period)
             except ValueError:
                 return None  # let compile() surface the period error
-        if not (start or end or region):
+        if not (start or end or region or country):
             return None
-        ok, detail = self.semantic.in_coverage(start, end, region)
+        ok, detail = self.semantic.in_coverage(start, end, region, country)
         if not ok:
             return (f"BLOCKED by governance — {detail} This request is outside data coverage and "
                     "cannot be served; refuse (out_of_coverage) or query within coverage.")
@@ -286,7 +286,8 @@ class Toolbox:
                 return self._verdict(*self.semantic.metric_exists(args["term"])), False
             if name == "check_coverage":
                 return self._verdict(*self.semantic.in_coverage(
-                    args.get("start"), args.get("end"), args.get("region"))), False
+                    args.get("start"), args.get("end"),
+                    args.get("region"), args.get("country"))), False
             if name == "check_population_defined":
                 return self._verdict(*self.semantic.population_defined(args["term"])), False
             if name == "check_causal_evidence":

@@ -25,6 +25,15 @@ def cmd_ask(args: argparse.Namespace) -> None:
     ask_one(question=args.question, rung=args.rung, model=args.model, verbose=True)
 
 
+def cmd_regrade(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from evaluation.run_eval import RESULTS_DIR, regrade_run
+
+    run_dir = Path(args.run) if args.run else (RESULTS_DIR / "latest").resolve()
+    regrade_run(run_dir)
+
+
 def cmd_eval(args: argparse.Namespace) -> None:
     from evaluation.run_eval import run_experiment
 
@@ -64,8 +73,14 @@ def main() -> None:
     sp.add_argument("--repeats", type=int, default=1,
                     help="repeat the whole grid N times so each rung gets a mean and a spread")
     sp.add_argument("--rrungs", default="1",
-                    help="reliability rungs (0=no refuse tool, 1=typed refusal, 2=+priced prompt, 3=+check tools)")
+                    help="reliability rungs (0=no refuse, 1=typed refusal, 2=+priced prompt, "
+                         "3=+check tools, 4=+gate/enforced, 5=+fence/no-raw-sql)")
     sp.set_defaults(func=cmd_eval)
+
+    sp = sub.add_parser("regrade", help="re-grade a finished run from stored answers "
+                                        "(no model calls) and regenerate its summary")
+    sp.add_argument("--run", default=None, help="run dir (default: results/latest)")
+    sp.set_defaults(func=cmd_regrade)
 
     args = p.parse_args()
     args.func(args)
