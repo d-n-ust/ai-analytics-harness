@@ -250,6 +250,9 @@ def test_value_resolver():
         assert False, "expected SemanticError"
     except SemanticError:
         pass
+    # below the resolve rung (resolve=False) the raw value is used as-is — the pre-R6 bug
+    raw = sem.compile("active_users", filters={"platform": "iPhone"}, resolve=False)
+    assert "platform = 'iPhone'" in raw
 
 
 def test_grain_of_call():
@@ -279,16 +282,21 @@ def test_toolbox_wiring_and_rung_gate():
     steps = [_qm("active_users", 2100, period="all")]
     q = "How many users do we have in total?"
 
+    # the granular rung flags gate each step separately
+    assert Toolbox(con, 6, sem, None, 5).resolve is False and Toolbox(con, 6, sem, None, 6).resolve is True
+    assert Toolbox(con, 6, sem, None, 6).spec_check is False and Toolbox(con, 6, sem, None, 7).spec_check is True
+    assert Toolbox(con, 6, sem, None, 7).result_sanity is False and Toolbox(con, 6, sem, None, 8).result_sanity is True
+
+    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)
+    ok, reason, missing, _ = tb7.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
+    assert not ok and reason == "population_undefined" and missing, "R7 spec check must refuse the floor case"
+
     tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)
-    ok, reason, missing, _ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
-    assert not ok and reason == "population_undefined" and missing, "R6 must refuse the floor case"
+    ok6, *_ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
+    assert ok6, "spec check must be OFF below rrung 7"
 
-    tb5 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=5)
-    ok5, *_ = tb5.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
-    assert ok5, "verify must be OFF below rrung 6"
-
-    ok_nomodel, *_ = tb6.verify_answer(q, "2100", steps, None, "active_users")
-    assert ok_nomodel, "with no model to decompose, verify must not fire"
+    ok_nomodel, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users")
+    assert ok_nomodel, "with no model to decompose, spec check must not fire"
 
 
 if __name__ == "__main__":

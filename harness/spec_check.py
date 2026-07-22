@@ -198,38 +198,46 @@ def result_sanity(metric_def: dict, value) -> tuple[bool, str, str, str]:
 
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
-                  decompose, source_metric: str | None = None) -> tuple[bool, str, str, str]:
+                  decompose, source_metric: str | None = None,
+                  run_sanity: bool = True, run_spec: bool = True) -> tuple[bool, str, str, str]:
     """Return (ok, reason, missing, explanation). ok=False means convert the answer into
     a refuse; `missing` is the short slot fact, `explanation` the sentence.
 
-    `decompose` is a callable(question) -> required_spec dict. It is injected so the
-    deterministic half (metric_spec + comparison) is provable without a model call: the
-    real caller passes an isolated LLM decomposer, the tests pass a stub. `source_metric`
-    is the model's typed provenance declaration (preferred over value-linking)."""
+    Two independent output checks, each toggled by its own rung so their deltas are
+    measured separately: `run_sanity` (R8, the returned value is well-formed) and
+    `run_spec` (R7, the metric matches the question). `decompose` is a callable
+    (question) -> required_spec dict, injected so the comparison is provable without a
+    model call. `source_metric` is the model's typed provenance declaration."""
     if semantic is None or not answer_text:
         return True, "", "", ""
     metric, args, value = _provenance(answer_text, steps, source_metric, semantic.metrics)
     if metric is None:
         if parse_numbers(answer_text):     # a numeric answer we can't attribute -> measure it
             _log.info("spec check: numeric answer with no usable source_metric; not verified")
-        return True, "", "", ""                    # no governed metric to check against
-    ok_r, reason_r, missing_r, expl_r = result_sanity(semantic.metrics[metric], value)
-    if not ok_r:                                   # the returned value is empty or impossible
-        return False, reason_r, missing_r, expl_r
-    required = decompose(question) or {}
-    if not required:
-        _log.warning("spec decomposer returned no spec for question: %r", question)
-        return True, "", "", ""                    # forced tool failed — don't guess
-    answer = {**metric_spec(semantic.metrics[metric]), "grain": grain_of_call(args)}
-    slot, want, got = first_mismatch(required, answer)
-    if slot is None:
-        return True, "", "", ""
-    missing = f"{slot} '{want}' (the answer's metric {metric} is '{got}')"
-    explanation = (f"the question asks for a '{want}' {slot}, but the number came from "
-                   f"{metric}, whose {slot} is '{got}' — a governed metric for a different "
-                   "question. No governed metric matches what was asked, so refuse rather "
-                   "than report a near-miss as the answer.")
-    return False, _REASON[slot], missing, explanation
+        return True, "", "", ""            # no governed metric to check against
+    metric_def = semantic.metrics[metric]
+
+    if run_sanity:                         # R8: the returned value is empty or impossible
+        ok_r, reason_r, missing_r, expl_r = result_sanity(metric_def, value)
+        if not ok_r:
+            return False, reason_r, missing_r, expl_r
+
+    if run_spec and decompose is not None:  # R7: the metric answers a different question
+        required = decompose(question) or {}
+        if not required:
+            _log.warning("spec decomposer returned no spec for question: %r", question)
+            return True, "", "", ""
+        answer = {**metric_spec(metric_def), "grain": grain_of_call(args)}
+        slot, want, got = first_mismatch(required, answer)
+        if slot is not None:
+            missing = f"{slot} '{want}' (the answer's metric {metric} is '{got}')"
+            explanation = (f"the question asks for a '{want}' {slot}, but the number came from "
+                           f"{metric}, whose {slot} is '{got}' — a governed metric for a different "
+                           "question. No governed metric matches what was asked, so refuse rather "
+                           "than report a near-miss as the answer.")
+            return False, _REASON[slot], missing, explanation
+
+    return True, "", "", ""
 
 
 # --- the isolated decomposer: question -> required spec (one model call, no catalog) -

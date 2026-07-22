@@ -208,9 +208,14 @@ class Toolbox:
         self.rrung = rrung
         self.semantic = semantic
         self.tree = tree
-        self.gate = rrung >= 4          # validate governed calls; block on failure
-        self.fence = rrung >= 5         # no raw SQL — governed metrics only
-        self.verify = rrung >= 6        # R6+: semantic check on the answer before it is served
+        # The reliability ladder, granular so each step's effect is measured separately.
+        # Input-enforcement family (stop a bad number being computed):
+        self.gate = rrung >= 4          # R4: block out-of-coverage governed calls
+        self.fence = rrung >= 5         # R5: no raw SQL — governed metrics only
+        self.resolve = rrung >= 6       # R6: resolve/validate free-text filter values
+        # Output-verification family (stop a bad number being served):
+        self.spec_check = rrung >= 7    # R7: the answer's metric must match the question
+        self.result_sanity = rrung >= 8 # R8: the returned value must be well-formed
 
     def specs(self) -> list[dict]:
         specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
@@ -243,7 +248,7 @@ class Toolbox:
         Declaring it (a typed claim) is more reliable than reconstructing it by matching
         the value back to a step — which cannot separate two metrics that return the same
         number. Optional, so non-metric answers (a driver, a knowledge fact) still fit."""
-        if not (self.verify and self.semantic is not None):
+        if not (self.spec_check and self.semantic is not None):
             return _ANSWER
         props = dict(_ANSWER["input_schema"]["properties"])
         props["source_metric"] = {
@@ -280,18 +285,20 @@ class Toolbox:
 
     def verify_answer(self, question: str, answer_text: str | None, steps: list,
                       model=None, source_metric: str | None = None) -> tuple[bool, str, str, str]:
-        """Spec decomposition (rrung>=6): does the metric behind the answer match what the
-        question asked? Returns (ok, reason, missing, explanation); ok=False means convert
-        the answer to a refuse. The comparison lives in spec_check — this only wires in the
-        live semantic layer and an isolated decomposer (a fresh model call, no catalog).
-        `source_metric` is the model's typed provenance declaration on the answer tool.
-        Off below rrung 6, or when no model is available to decompose the question."""
-        if not self.verify or self.semantic is None or model is None:
+        """The output-verification checks on an answer before it is served: result-sanity
+        (R8: the value is well-formed) and spec decomposition (R7: the metric matches the
+        question). Returns (ok, reason, missing, explanation); ok=False converts the answer
+        to a refuse. Each is gated by its own rung, so the two deltas are measured
+        separately. The comparison lives in spec_check; this wires in the live layer and an
+        isolated decomposer. Off below rrung 7, or with no model to decompose the question."""
+        if self.semantic is None or not (self.spec_check or self.result_sanity):
             return True, "", "", ""
+        decompose = (lambda q: spec_check.decompose_question(model, q, self.semantic.ontology)) \
+            if (self.spec_check and model is not None) else None
         return spec_check.verify_answer(
-            self.semantic, question, answer_text, steps,
-            decompose=lambda q: spec_check.decompose_question(model, q, self.semantic.ontology),
-            source_metric=source_metric)
+            self.semantic, question, answer_text, steps, decompose=decompose,
+            source_metric=source_metric,
+            run_sanity=self.result_sanity, run_spec=self.spec_check and model is not None)
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool]:
         """Run a tool. Returns (text, is_error). Errors come back as the DB/semantic
@@ -313,7 +320,7 @@ class Toolbox:
                 cols, rows = self.semantic.query(
                     args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
                     time_grain=args.get("time_grain"), start=args.get("start"),
-                    end=args.get("end"), period=args.get("period"))
+                    end=args.get("end"), period=args.get("period"), resolve=self.resolve)
                 return _fmt_rows(cols, rows), False
             if name == "check_metric_exists":
                 return self._verdict(*self.semantic.metric_exists(args["term"])), False

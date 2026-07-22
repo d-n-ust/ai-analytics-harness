@@ -61,16 +61,25 @@ _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an un
                   "what the governed layer refuses.")
 _RRUNG_FENCE = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
                 "question cannot be answered that way, refuse.")
-# R6+: the answer is verified before it is served. Like the gate, this is structural —
-# the check runs in the harness regardless of what the model does; the prompt line only
-# tells the model so it doesn't waste turns answering a slightly-different question.
-_RRUNG_VERIFY = ("\n- Answers are checked before they are served: the metric behind your number must "
-                 "match what the question asks for — the same entity, the same population, and the "
-                 "same measure and grain. A valid metric that answers a slightly different question "
-                 "(active users for the user total, value moments for the habit count) is rejected. "
-                 "If no governed metric matches what was asked, refuse rather than report a near-miss.\n"
-                 "- When your answer is a number from a governed metric, name that metric in the "
-                 "answer's `source_metric` field, so the check knows exactly which definition produced it.")
+# R6-R8: the output-verification family, split so each step's effect is measured on its
+# own. Like the gate, these are structural — the checks run regardless of what the model
+# does; the prompt lines only tell it so it doesn't waste turns.
+# R6 — value resolution (a query-time guard, sibling of the gate/fence):
+_RRUNG_RESOLVE = ("\n- Filter values are matched to governed members: name a segment in plain terms "
+                  "('iOS', 'the annual plan') and it is resolved to the governed value; a value that "
+                  "matches no governed member is rejected rather than returning an empty result.")
+# R7 — spec decomposition (the answer's metric must match the question):
+_RRUNG_SPEC = ("\n- Answers are checked before they are served: the metric behind your number must "
+               "match what the question asks for — the same entity, population, measure, and grain. "
+               "A valid metric that answers a slightly different question (active users for the user "
+               "total, value moments for the habit count) is rejected; if no governed metric matches "
+               "what was asked, refuse rather than report a near-miss.\n"
+               "- When your answer is a number from a governed metric, name that metric in the "
+               "answer's `source_metric` field, so the check knows exactly which definition produced it.")
+# R8 — result-sanity (the returned value must be well-formed):
+_RRUNG_SANITY = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
+                 "a value impossible for its unit (a share above 100, a negative count), is rejected "
+                 "instead of being reported.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -123,7 +132,11 @@ def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
     if rrung >= 5:
         system += _RRUNG_FENCE
     if rrung >= 6:
-        system += _RRUNG_VERIFY
+        system += _RRUNG_RESOLVE
+    if rrung >= 7:
+        system += _RRUNG_SPEC
+    if rrung >= 8:
+        system += _RRUNG_SANITY
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:
         system += _RUNG_NOTES[3]

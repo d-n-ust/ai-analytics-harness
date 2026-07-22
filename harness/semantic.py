@@ -209,7 +209,7 @@ class SemanticLayer:
         return allowed
 
     def compile(self, name, group_by=None, filters=None, time_grain=None,
-                start=None, end=None, period=None) -> str:
+                start=None, end=None, period=None, resolve=True) -> str:
         if name not in self.metrics:
             raise SemanticError(
                 f"unknown metric {name!r}. Available: {', '.join(self.metrics)}")
@@ -252,20 +252,25 @@ class SemanticLayer:
             if col not in allowed:
                 raise SemanticError(
                     f"cannot filter {name!r} by {col!r}. Allowed: {sorted(allowed)}")
-            # resolve each free-text value to its governed member, or refuse an unknown one
+            # R6: resolve each free-text value to its governed member, or refuse an unknown
+            # one. Below the resolve rung (resolve=False) the raw value is used as-is, so an
+            # unrecognised or mis-cased value quietly returns an empty slice — the failure
+            # the resolver exists to close.
             vals = list(val) if isinstance(val, (list, tuple)) else [val]
-            canon = []
-            for v in vals:
-                c = self.resolve_member(col, v)
-                if c is None:
-                    known = ", ".join(self.governance.get("dimensions", {}).get(col, {}))
-                    raise SemanticError(
-                        f"no governed value matches {v!r} for {col!r}. Known {col}: {known}.")
-                canon.append(c)
+            if resolve:
+                canon = []
+                for v in vals:
+                    c = self.resolve_member(col, v)
+                    if c is None:
+                        known = ", ".join(self.governance.get("dimensions", {}).get(col, {}))
+                        raise SemanticError(
+                            f"no governed value matches {v!r} for {col!r}. Known {col}: {known}.")
+                    canon.append(c)
+                vals = canon
             if isinstance(val, (list, tuple)):
-                where.append(f"{col} IN ({', '.join(_literal(v) for v in canon)})")
+                where.append(f"{col} IN ({', '.join(_literal(v) for v in vals)})")
             else:
-                where.append(f"{col} = {_literal(canon[0])}")
+                where.append(f"{col} = {_literal(vals[0])}")
 
         sql = f"SELECT {', '.join(select)} FROM {m['base']}"
         if where:
