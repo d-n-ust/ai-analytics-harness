@@ -43,6 +43,9 @@ _RRUNG_TERMINAL = {
     1: ("- End with exactly one terminal tool: `answer` when the data supports a reliable answer; "
         "`refuse` when it does not — give the coded reason and name what is missing; `clarify` when "
         "the question is too ambiguous to answer either way.\n"
+        "- If a question assumes something untrue — a change that didn't happen, an event that never "
+        "occurred — do not accept the premise and answer around it: `refuse` with reason "
+        "`false_premise`, and put the correction in `missing` (e.g. \"it didn't fall — it rose to 227\").\n"
         "- A truthful refusal beats a confident wrong answer."),
 }
 _RRUNG_PRICE = ("\n- Scoring: a correct answer scores +1, a refusal 0, a wrong answer -4. "
@@ -58,6 +61,16 @@ _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an un
                   "what the governed layer refuses.")
 _RRUNG_FENCE = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
                 "question cannot be answered that way, refuse.")
+# R6+: the answer is verified before it is served. Like the gate, this is structural —
+# the check runs in the harness regardless of what the model does; the prompt line only
+# tells the model so it doesn't waste turns answering a slightly-different question.
+_RRUNG_VERIFY = ("\n- Answers are checked before they are served: the metric behind your number must "
+                 "match what the question asks for — the same entity, the same population, and the "
+                 "same measure and grain. A valid metric that answers a slightly different question "
+                 "(active users for the user total, value moments for the habit count) is rejected. "
+                 "If no governed metric matches what was asked, refuse rather than report a near-miss.\n"
+                 "- When your answer is a number from a governed metric, name that metric in the "
+                 "answer's `source_metric` field, so the check knows exactly which definition produced it.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -109,6 +122,8 @@ def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
         system += _RRUNG_ENFORCE
     if rrung >= 5:
         system += _RRUNG_FENCE
+    if rrung >= 6:
+        system += _RRUNG_VERIFY
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:
         system += _RUNG_NOTES[3]

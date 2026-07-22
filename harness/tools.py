@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 
+from . import spec_check
 from .config import resolve_period
 from .semantic import SemanticError, SemanticLayer
 from .tree import MetricTree, TreeError
@@ -19,7 +20,8 @@ from .warehouse import QueryError, describe_table, run_query, schema_text
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "population_undefined",
-                   "no_causal_evidence", "false_premise", "other"]
+                   "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
+                   "result_empty", "implausible_value", "other"]
 
 _ANSWER = {
     "name": "answer",
@@ -208,6 +210,7 @@ class Toolbox:
         self.tree = tree
         self.gate = rrung >= 4          # validate governed calls; block on failure
         self.fence = rrung >= 5         # no raw SQL — governed metrics only
+        self.verify = rrung >= 6        # R6+: semantic check on the answer before it is served
 
     def specs(self) -> list[dict]:
         specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
@@ -219,7 +222,7 @@ class Toolbox:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
         if self.rrung >= 3 and self.semantic is not None:
             specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_POPULATION, _CHECK_CAUSAL]
-        specs.append(_ANSWER)
+        specs.append(self._answer_spec())
         if self.rrung >= 1:
             specs.append(_REFUSE)
         specs.append(_CLARIFY)
@@ -233,6 +236,21 @@ class Toolbox:
         props = dict(_QUERY_METRIC["input_schema"]["properties"])
         props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
         return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
+
+    def _answer_spec(self) -> dict:
+        """At the spec-decomposition rung, the answer carries its own provenance: the
+        governed metric the number came from, from the same closed menu as query_metric.
+        Declaring it (a typed claim) is more reliable than reconstructing it by matching
+        the value back to a step — which cannot separate two metrics that return the same
+        number. Optional, so non-metric answers (a driver, a knowledge fact) still fit."""
+        if not (self.verify and self.semantic is not None):
+            return _ANSWER
+        props = dict(_ANSWER["input_schema"]["properties"])
+        props["source_metric"] = {
+            "type": "string", "enum": list(self.semantic.metrics),
+            "description": "If this answer is a number from a governed metric, the metric "
+                           "it came from (as passed to query_metric). Omit for non-metric answers."}
+        return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
 
     def _gate_block(self, name: str, args: dict) -> str | None:
         """The interception gate: before a governed data call runs, verify the period
@@ -259,6 +277,21 @@ class Toolbox:
     @staticmethod
     def _verdict(ok: bool, detail: str) -> str:
         return ("YES — " if ok else "NO — ") + detail
+
+    def verify_answer(self, question: str, answer_text: str | None, steps: list,
+                      model=None, source_metric: str | None = None) -> tuple[bool, str, str, str]:
+        """Spec decomposition (rrung>=6): does the metric behind the answer match what the
+        question asked? Returns (ok, reason, missing, explanation); ok=False means convert
+        the answer to a refuse. The comparison lives in spec_check — this only wires in the
+        live semantic layer and an isolated decomposer (a fresh model call, no catalog).
+        `source_metric` is the model's typed provenance declaration on the answer tool.
+        Off below rrung 6, or when no model is available to decompose the question."""
+        if not self.verify or self.semantic is None or model is None:
+            return True, "", "", ""
+        return spec_check.verify_answer(
+            self.semantic, question, answer_text, steps,
+            decompose=lambda q: spec_check.decompose_question(model, q, self.semantic.ontology),
+            source_metric=source_metric)
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool]:
         """Run a tool. Returns (text, is_error). Errors come back as the DB/semantic

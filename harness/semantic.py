@@ -54,6 +54,12 @@ def _tokens(s: str) -> set[str]:
     return {t for t in re.split(r"[^a-z0-9]+", (s or "").lower()) if t}
 
 
+def _norm_value(v) -> str:
+    """Canonicalise a dimension value for matching: lowercase, and treat spaces,
+    underscores, and hyphens alike, so 'paid_search' == 'paid search' == 'Paid-Search'."""
+    return re.sub(r"[\s_\-]+", " ", str(v).strip().lower())
+
+
 def _match_catalog(term: str, names) -> str | None:
     """Return the catalog name a free-text term denotes, or None.
 
@@ -79,6 +85,17 @@ class SemanticLayer:
         self.spec = yaml.safe_load(spec_path.read_text())
         self.metrics: dict[str, dict] = self.spec["metrics"]
         self.governance: dict = self.spec.get("governance", {})
+
+    @property
+    def ontology(self) -> dict:
+        """The R6 spec-check vocabulary: the entities and population segments the
+        isolated decomposer may name (each with a short gloss). A superset of the
+        metrics — it carries entities like `habits` that have no governed metric — so a
+        question can name something we cannot answer. The decomposer sees this, never
+        the metric inventory."""
+        o = self.governance.get("ontology", {}) or {}
+        return {"entities": dict(o.get("entities", {}) or {}),
+                "populations": dict(o.get("populations", {}) or {})}
 
     # -- answerability API: one boolean check per refusal reason ------------ #
     # Each check consults exactly one piece of governance metadata and returns
@@ -138,8 +155,24 @@ class SemanticLayer:
                                f"{win['starts']}.")
         return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
 
+    def resolve_member(self, dimension: str, value):
+        """Map a free-text filter value onto the canonical governed member of a dimension,
+        via its members + synonyms (case/space/underscore-insensitive) — "iPhone" ->
+        platform=ios. Returns the canonical value, or None when the dimension HAS a governed
+        vocabulary but nothing matches (an undefined value; the caller refuses rather than
+        querying a slice that doesn't exist). A dimension with no governed member list
+        passes its value through unchanged (e.g. a boolean flag like is_internal)."""
+        members = self.governance.get("dimensions", {}).get(dimension)
+        if not members:
+            return value
+        want = _norm_value(value)
+        for canonical, synonyms in members.items():
+            if want == _norm_value(canonical) or any(want == _norm_value(s) for s in synonyms):
+                return canonical
+        return None
+
     def population_defined(self, term: str) -> tuple[bool, str]:
-        pops = [str(p) for p in self.governance.get("populations", [])]
+        pops = [str(p) for p in self.governance.get("answerable_terms", [])]
         if not _tokens(term):
             return False, "empty term."
         name = _match_catalog(term, pops)
@@ -153,6 +186,9 @@ class SemanticLayer:
         for name, m in self.metrics.items():
             dims = m.get("dimensions", [])
             bits = [f"- {name}: {m['description']}"]
+            syn = m.get("synonyms", [])
+            if syn:
+                bits.append(f"    also called: {', '.join(syn)}")
             if dims:
                 bits.append(f"    group_by / filter dimensions: {', '.join(dims)}")
             if m.get("supports_internal_filter"):
@@ -216,10 +252,20 @@ class SemanticLayer:
             if col not in allowed:
                 raise SemanticError(
                     f"cannot filter {name!r} by {col!r}. Allowed: {sorted(allowed)}")
+            # resolve each free-text value to its governed member, or refuse an unknown one
+            vals = list(val) if isinstance(val, (list, tuple)) else [val]
+            canon = []
+            for v in vals:
+                c = self.resolve_member(col, v)
+                if c is None:
+                    known = ", ".join(self.governance.get("dimensions", {}).get(col, {}))
+                    raise SemanticError(
+                        f"no governed value matches {v!r} for {col!r}. Known {col}: {known}.")
+                canon.append(c)
             if isinstance(val, (list, tuple)):
-                where.append(f"{col} IN ({', '.join(_literal(v) for v in val)})")
+                where.append(f"{col} IN ({', '.join(_literal(v) for v in canon)})")
             else:
-                where.append(f"{col} = {_literal(val)}")
+                where.append(f"{col} = {_literal(canon[0])}")
 
         sql = f"SELECT {', '.join(select)} FROM {m['base']}"
         if where:

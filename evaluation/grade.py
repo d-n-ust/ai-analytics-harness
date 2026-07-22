@@ -31,23 +31,20 @@ from __future__ import annotations
 
 import re
 
+from harness.numbers import parse_numbers as _numbers
+
+
+def _mentions(text: str, keywords: list[str]) -> bool:
+    """Does the text name any of these keywords, at a word boundary? A LEADING boundary
+    (not a raw substring) so a keyword can't match mid-word — "active" must not fire on
+    "inactive" — while inflections and plurals still count ("reminder" hits "reminders").
+    Multi-word phrases and separators (days/user) match literally."""
+    t = (text or "").lower()
+    return any(re.search(r"\b" + re.escape(k.lower()), t) for k in keywords)
+
 # How many refusals one wrong answer is worth — a placeholder until field interviews
 # price it; reported alongside every score.
 WRONG_COST = 4.0
-
-
-def _numbers(text: str | None) -> list[float]:
-    """Every number in the text. Grading against ALL of them (not just the first)
-    fixes a leading date being read as the answer ("June 2026" -> 2026)."""
-    if not text:
-        return []
-    out = []
-    for m in re.findall(r"-?\d+\.?\d*", text.replace(",", "").replace("$", "")):
-        try:
-            out.append(float(m))
-        except ValueError:
-            pass
-    return out
 
 
 def extract_number(text: str | None) -> float | None:
@@ -70,14 +67,12 @@ def grade_numeric(answer_text: str | None, gold: float | None, tol: float) -> di
 
 
 def grade_keywords(text: str, keywords: list[str]) -> dict:
-    t = text.lower()
-    return {"executed": True, "correct": any(k in t for k in keywords)}
+    return {"executed": True, "correct": _mentions(text, keywords)}
 
 
 def grade_diagnostic(text: str, spec: dict) -> dict:
-    t = text.lower()
-    driver_ok = any(k in t for k in spec.get("driver", []))
-    cause_ok = any(k in t for k in spec.get("cause", []))  # descriptive only, not a gate
+    driver_ok = _mentions(text, spec.get("driver", []))
+    cause_ok = _mentions(text, spec.get("cause", []))  # descriptive only, not a gate
     return {"executed": True, "correct": driver_ok,
             "driver_ok": driver_ok, "cause_ok": cause_ok}
 

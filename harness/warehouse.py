@@ -105,13 +105,22 @@ class QueryError(Exception):
 def run_query(con, sql: str, max_rows: int = 100) -> tuple[list[str], list[tuple]]:
     """Run a read-only query. Returns (column_names, rows). Raises QueryError with
     the database's own message on failure — that message is what the agent's
-    self-correction loop feeds back to the model."""
-    stripped = sql.strip().rstrip(";").strip()
-    lowered = stripped.lower()
-    if not (lowered.startswith("select") or lowered.startswith("with")):
+    self-correction loop feeds back to the model.
+
+    Read-only is enforced by the DuckDB PARSER, not a string prefix: the statement's
+    classified type must be SELECT. This blocks INSERT/UPDATE/DELETE/CREATE/COPY/ATTACH
+    (each a distinct StatementType) even when they hide behind a leading comment or CTE,
+    which a `startswith('select')` check would miss — and it needs exactly one statement,
+    so a chained write is impossible."""
+    stripped = sql.strip()
+    try:
+        statements = con.extract_statements(stripped)
+    except Exception as exc:  # a parse error — surface it to the model verbatim
+        raise QueryError(str(exc)) from exc
+    if len(statements) != 1:
+        raise QueryError("Run a single statement.")
+    if statements[0].type != duckdb.StatementType.SELECT:
         raise QueryError("Only read-only SELECT/WITH queries are allowed.")
-    if ";" in stripped:
-        raise QueryError("Run a single statement (no semicolons).")
     try:
         cur = con.execute(stripped)
         columns = [d[0] for d in cur.description]

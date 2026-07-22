@@ -68,11 +68,18 @@ class AnthropicModel:
         self.spec = spec
         self.client = anthropic.Anthropic()
 
-    def create(self, system: str, messages: list, tools: list):
+    def create(self, system: str, messages: list, tools: list,
+               force_tool: str | None = None, temperature: float | None = None):
         kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS,
                   system=system, messages=messages, tools=tools)
         if self.spec.thinking is not None:
             kw["thinking"] = self.spec.thinking
+        if force_tool:
+            kw["tool_choice"] = {"type": "tool", "name": force_tool}
+        # temperature is only settable when extended thinking is off (all our specs).
+        if temperature is not None and (self.spec.thinking is None
+                                        or self.spec.thinking.get("type") == "disabled"):
+            kw["temperature"] = temperature
         return self.client.messages.create(**kw)
 
 
@@ -125,16 +132,20 @@ class OpenAIModel:
                  "function": {"name": t["name"], "description": t.get("description", ""),
                               "parameters": t["input_schema"]}} for t in tools]
 
-    def create(self, system: str, messages: list, tools: list):
+    def create(self, system: str, messages: list, tools: list,
+               force_tool: str | None = None, temperature: float | None = None):
         kw = dict(
             model=self.spec.model_id,
             messages=self._to_openai_messages(system, messages),
             tools=self._to_openai_tools(tools),
-            tool_choice="auto",
+            tool_choice=({"type": "function", "function": {"name": force_tool}}
+                         if force_tool else "auto"),
             max_completion_tokens=MAX_TOKENS,
         )
         if self.spec.supports_reasoning_effort:
-            kw["reasoning_effort"] = self.reasoning
+            kw["reasoning_effort"] = self.reasoning       # reasoning models: no temperature knob
+        elif temperature is not None:
+            kw["temperature"] = temperature               # legacy models take temperature
         resp = self.client.chat.completions.create(**kw)
         msg = resp.choices[0].message
         blocks = []
@@ -168,7 +179,8 @@ class MockModel:
                    and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in m["content"])
                    for m in messages)
 
-    def create(self, system: str, messages: list, tools: list):
+    def create(self, system: str, messages: list, tools: list,
+               force_tool: str | None = None, temperature: float | None = None):
         usage = SimpleNamespace(input_tokens=10, output_tokens=5,
                                 cache_creation_input_tokens=0, cache_read_input_tokens=0)
         if not self._has_tool_result(messages):
