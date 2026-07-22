@@ -77,7 +77,7 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
             if name == "answer":
                 ans_text = str(kw.get("answer", "")).strip()
                 ok, reason, missing, explanation = grounding.toolbox.verify_answer(
-                    question, ans_text, steps, model, kw.get("source_metric"))
+                    question, ans_text, steps, model, kw.get("source_metric"), kw.get("value"))
                 if not ok:                       # R6+: a failed spec check becomes a refusal
                     return answer(answer=None, explanation=explanation, outcome="refuse",
                                   reason=reason, missing=missing, abstained=True, iterations=it + 1)

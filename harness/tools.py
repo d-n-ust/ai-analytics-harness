@@ -243,18 +243,24 @@ class Toolbox:
         return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
 
     def _answer_spec(self) -> dict:
-        """At the spec-decomposition rung, the answer carries its own provenance: the
-        governed metric the number came from, from the same closed menu as query_metric.
-        Declaring it (a typed claim) is more reliable than reconstructing it by matching
-        the value back to a step — which cannot separate two metrics that return the same
-        number. Optional, so non-metric answers (a driver, a knowledge fact) still fit."""
+        """At the spec-decomposition rung the answer carries its own TYPED provenance: the
+        numeric `value` (a real number, so the checks read the answer instead of parsing it
+        back out of prose) and the governed `source_metric` it came from (the same closed
+        menu as query_metric). Both are the model's typed claims, more reliable than
+        reconstructing them from the answer text. A prose / diagnostic answer leaves `value`
+        unset, so the output checks stand down rather than force a spec onto words."""
         if not (self.spec_check and self.semantic is not None):
             return _ANSWER
         props = dict(_ANSWER["input_schema"]["properties"])
+        props["value"] = {
+            "type": "number",
+            "description": "If your answer is a single number, repeat it here as a number "
+                           "(not text). Leave it out for a non-numeric answer (an assessment, "
+                           "a driver, a list) — the value check then does not apply."}
         props["source_metric"] = {
             "type": "string", "enum": list(self.semantic.metrics),
-            "description": "If this answer is a number from a governed metric, the metric "
-                           "it came from (as passed to query_metric). Omit for non-metric answers."}
+            "description": "If `value` came from a governed metric, name that metric (as passed "
+                           "to query_metric). Omit for a derived or non-metric answer."}
         return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
 
     def _gate_block(self, name: str, args: dict) -> str | None:
@@ -283,8 +289,8 @@ class Toolbox:
     def _verdict(ok: bool, detail: str) -> str:
         return ("YES — " if ok else "NO — ") + detail
 
-    def verify_answer(self, question: str, answer_text: str | None, steps: list,
-                      model=None, source_metric: str | None = None) -> tuple[bool, str, str, str]:
+    def verify_answer(self, question: str, answer_text: str | None, steps: list, model=None,
+                      source_metric: str | None = None, declared_value=None) -> tuple[bool, str, str, str]:
         """The output-verification checks on an answer before it is served: result-sanity
         (R8: the value is well-formed) and spec decomposition (R7: the metric matches the
         question). Returns (ok, reason, missing, explanation); ok=False converts the answer
@@ -297,7 +303,7 @@ class Toolbox:
             if (self.spec_check and model is not None) else None
         return spec_check.verify_answer(
             self.semantic, question, answer_text, steps, decompose=decompose,
-            source_metric=source_metric,
+            source_metric=source_metric, declared_value=declared_value,
             run_sanity=self.result_sanity, run_spec=self.spec_check and model is not None)
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool]:

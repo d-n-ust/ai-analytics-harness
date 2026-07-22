@@ -74,8 +74,10 @@ _RRUNG_SPEC = ("\n- Answers are checked before they are served: the metric behin
                "A valid metric that answers a slightly different question (active users for the user "
                "total, value moments for the habit count) is rejected; if no governed metric matches "
                "what was asked, refuse rather than report a near-miss.\n"
-               "- When your answer is a number from a governed metric, name that metric in the "
-               "answer's `source_metric` field, so the check knows exactly which definition produced it.")
+               "- When your answer is a single number, put that number in the answer's `value` "
+               "field, and if it came from a governed metric name that metric in `source_metric`, "
+               "so the check reads exactly what you served and which definition produced it. A "
+               "non-numeric answer (an assessment, a driver) leaves `value` out and is not checked.")
 # R8 — result-sanity (the returned value must be well-formed):
 _RRUNG_SANITY = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
                  "a value impossible for its unit (a share above 100, a negative count), is rejected "

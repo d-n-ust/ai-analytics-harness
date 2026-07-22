@@ -47,7 +47,7 @@ _log = logging.getLogger(__name__)
 # MEASURES and GRAINS are universal query properties (every business has count/sum/ratio
 # and total/period/breakdown), derived not authored, so they live here, not in the layer.
 MEASURES = ["count", "count_distinct", "sum", "avg", "ratio", "other"]
-GRAINS = ["total", "period", "per_dimension"]
+GRAINS = ["total", "period"]
 
 
 def _norm(s: str) -> str:
@@ -98,13 +98,13 @@ def metric_spec(m: dict) -> dict:
 
 
 def grain_of_call(args: dict) -> str:
-    """The reporting scope the answer was computed at, read from the query_metric
-    arguments: a breakdown, a bounded window, or an all-time / as-of-now total. (This
-    folds the time window into the scope; a WHERE-window is not a Kimball group-by grain,
-    but for the purpose of 'did you answer the scope that was asked' it belongs here.)"""
+    """The reporting scope of the SINGLE value the answer serves: a bounded time window
+    (period) or an all-time / current total. A `group_by` or `time_grain` shapes the QUERY
+    the model ran to get there — a filter-by-member, or a breakdown it then read one figure
+    from — but it does not make the one reported number a breakdown. So only the time
+    window sets the scope; the query's shape is ignored (this fixes refusing a correct
+    total just because the model grouped the data on the way to it)."""
     args = args or {}
-    if args.get("group_by") or args.get("time_grain"):
-        return "per_dimension"
     period = args.get("period")
     if (period and period != "all") or args.get("start") or args.get("end"):
         return "period"
@@ -156,25 +156,25 @@ def _num_match(a: float, b: float) -> bool:
     return abs(a - b) <= max(0.5, 0.005 * abs(b))
 
 
-def _provenance(answer_text: str, steps: list, source_metric, metrics):
+def _provenance(declared_value, steps: list, source_metric, metrics):
     """Which governed metric produced the answer, its call args, and the value it returned
     — taken ONLY from the model's typed `source_metric` declaration, never inferred from the
     answer text. When that metric was queried more than once (say a breakdown and a total),
-    value-matching selects WHICH of ITS OWN calls produced the reported number, so the grain
-    and the governed value are read from the right call. That is picking a call of an
-    already-known metric, not guessing the metric — a value shared by two different metrics
-    can never mislink, because the metric is declared. Returns (metric, args, value), or
-    (None, None, None) when nothing verifiable was declared."""
+    the model's typed `declared_value` selects WHICH of ITS OWN calls produced the reported
+    number, so the grain and the governed value are read from the right call. That is picking
+    a call of an already-known metric, not guessing the metric — a value shared by two
+    different metrics can never mislink, because the metric is declared. Returns
+    (metric, args, value), or (None, None, None) when nothing verifiable was declared."""
     if source_metric not in metrics:
         return None, None, None
     calls = [s for s in (steps or []) if s.get("tool") == "query_metric"
              and (s.get("args") or {}).get("metric") == source_metric]
     if not calls:
         return None, None, None
-    wanted = parse_numbers(answer_text)
     best = next((s for s in reversed(calls)
-                 if any(_num_match(a, b) for a in wanted
-                        for b in parse_numbers(s.get("result")))), calls[-1])
+                 if declared_value is not None
+                 and any(_num_match(declared_value, b) for b in parse_numbers(s.get("result")))),
+                calls[-1])
     governed = parse_numbers(best.get("result"))
     return source_metric, (best.get("args") or {}), (governed[0] if governed else None)
 
@@ -198,7 +198,7 @@ def result_sanity(metric_def: dict, value) -> tuple[bool, str, str, str]:
 
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
-                  decompose, source_metric: str | None = None,
+                  decompose, source_metric: str | None = None, declared_value=None,
                   run_sanity: bool = True, run_spec: bool = True) -> tuple[bool, str, str, str]:
     """Return (ok, reason, missing, explanation). ok=False means convert the answer into
     a refuse; `missing` is the short slot fact, `explanation` the sentence.
@@ -207,13 +207,15 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     measured separately: `run_sanity` (R8, the returned value is well-formed) and
     `run_spec` (R7, the metric matches the question). `decompose` is a callable
     (question) -> required_spec dict, injected so the comparison is provable without a
-    model call. `source_metric` is the model's typed provenance declaration."""
-    if semantic is None or not answer_text:
+    model call. `source_metric` and `declared_value` are the model's typed provenance: the
+    metric it used and the number it served. The checks apply to a NUMERIC metric answer,
+    so a prose / diagnostic answer (no `declared_value`) is passed through untouched — the
+    scope is read from the typed field, never guessed from the answer text."""
+    if semantic is None or not answer_text or declared_value is None:
         return True, "", "", ""
-    metric, args, value = _provenance(answer_text, steps, source_metric, semantic.metrics)
-    if metric is None:
-        if parse_numbers(answer_text):     # a numeric answer we can't attribute -> measure it
-            _log.info("spec check: numeric answer with no usable source_metric; not verified")
+    metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
+    if metric is None:                     # a numeric answer we can't attribute -> measure it
+        _log.info("spec check: numeric answer with no usable source_metric; not verified")
         return True, "", "", ""            # no governed metric to check against
     metric_def = semantic.metrics[metric]
 
@@ -222,7 +224,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         if not ok_r:
             return False, reason_r, missing_r, expl_r
 
-    if run_spec and decompose is not None:  # R7: the metric answers a different question
+    if run_spec and decompose is not None:  # R7: does this metric answer a different question?
         required = decompose(question) or {}
         if not required:
             _log.warning("spec decomposer returned no spec for question: %r", question)
@@ -273,8 +275,7 @@ _DECOMPOSE_SYSTEM = (
     "measure — count or count_distinct for 'how many'; sum for a total amount of money or "
     "units; avg or ratio for a rate, share, percentage, or average-per.\n\n"
     "grain — total for an all-time or current total with no time window; period when the "
-    "question names a window (last week, in June, this quarter, year to date); per_dimension "
-    "when it asks for a breakdown (by region, per week, split by plan).\n\n"
+    "question names a time window (last week, in June, this quarter, year to date).\n\n"
     "Worked examples (unrelated domains, to show the mapping):\n"
     "Q: How many employees do we have?\n"
     "   entity=other, population=all, measure=count, grain=total\n"
@@ -284,8 +285,8 @@ _DECOMPOSE_SYSTEM = (
     "   entity=other, population=paying, measure=count_distinct, grain=total\n"
     "Q: What was the average order value in June?\n"
     "   entity=revenue, population=all, measure=ratio, grain=period\n"
-    "Q: How much did we spend on ads, by channel?\n"
-    "   entity=spend, population=all, measure=sum, grain=per_dimension\n"
+    "Q: How much did we spend on ads last quarter?\n"
+    "   entity=spend, population=all, measure=sum, grain=period\n"
 )
 
 

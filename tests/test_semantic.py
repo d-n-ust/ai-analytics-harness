@@ -110,8 +110,10 @@ def test_comparison_deterministic():
     sem = SemanticLayer(con)
     for label, q, ans, steps, required, expect_refuse, expect_reason in CASES:
         source = steps[0]["args"]["metric"]                # the model's typed provenance
+        nums = spec_check.parse_numbers(ans)               # the model's typed `value`
         ok, reason, missing, _ = spec_check.verify_answer(
-            sem, q, ans, steps, decompose=lambda _q, r=required: r, source_metric=source)
+            sem, q, ans, steps, decompose=lambda _q, r=required: r,
+            source_metric=source, declared_value=(nums[0] if nums else None))
         refused = not ok
         assert refused == expect_refuse, (
             f"{label}: expected {'refuse' if expect_refuse else 'allow'}, "
@@ -167,15 +169,15 @@ def test_provenance_is_typed_not_guessed():
     # active_users queried twice; the reported 886 picks the last_week call (grain), not the total.
     steps = [_qm("active_users", 2100, period="all"),
              _qm("active_users", 886, period="last_week")]
-    m, args, val = spec_check._provenance("886", steps, "active_users", metrics)
+    m, args, val = spec_check._provenance(886, steps, "active_users", metrics)
     assert m == "active_users" and args.get("period") == "last_week" and val == 886, (m, args, val)
     # a value shared across metrics never mislinks — the declared metric wins either way
     coll = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]
-    assert spec_check._provenance("371", coll, "paying_users", metrics)[0] == "paying_users"
-    assert spec_check._provenance("371", coll, "active_subscriptions", metrics)[0] == "active_subscriptions"
+    assert spec_check._provenance(371, coll, "paying_users", metrics)[0] == "paying_users"
+    assert spec_check._provenance(371, coll, "active_subscriptions", metrics)[0] == "active_subscriptions"
     # no declaration, or a declared-but-unqueried metric -> nothing to verify
-    assert spec_check._provenance("371", coll, None, metrics) == (None, None, None)
-    assert spec_check._provenance("371", coll, "mrr", metrics) == (None, None, None)
+    assert spec_check._provenance(371, coll, None, metrics) == (None, None, None)
+    assert spec_check._provenance(371, coll, "mrr", metrics) == (None, None, None)
 
 
 def test_typed_provenance_drives_the_check():
@@ -189,14 +191,15 @@ def test_typed_provenance_drives_the_check():
     steps = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]   # both 371
     # declared correctly -> paying_users (users/paying) -> allow
     ok, *_ = spec_check.verify_answer(sem, q, "371", steps, lambda _q: required,
-                                      source_metric="paying_users")
+                                      source_metric="paying_users", declared_value=371)
     assert ok, "declared paying_users -> allow"
     # if the model declares the wrong metric it used, the check faithfully refuses on it
     ok2, reason2, *_ = spec_check.verify_answer(sem, q, "371", steps, lambda _q: required,
-                                                source_metric="active_subscriptions")
+                                                source_metric="active_subscriptions", declared_value=371)
     assert not ok2 and reason2 == "no_governed_definition", "entity subscriptions != users -> refuse"
     # no declaration -> not verified, no guessing -> allow
-    ok3, *_ = spec_check.verify_answer(sem, q, "371", steps, lambda _q: required, source_metric=None)
+    ok3, *_ = spec_check.verify_answer(sem, q, "371", steps, lambda _q: required,
+                                       source_metric=None, declared_value=371)
     assert ok3, "no provenance declared -> not verified"
 
 
@@ -208,19 +211,19 @@ def test_result_sanity_catches_degenerate_values():
     ok_spec = {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "total"}
     # the governed query returned no value, but the model answered a number -> result_empty
     empty_steps = [_qm("active_users", None, period="last_week")]
-    ok, reason, *_ = spec_check.verify_answer(sem, "How many active users last week?", "5",
-                                              empty_steps, lambda _q: ok_spec, source_metric="active_users")
+    ok, reason, *_ = spec_check.verify_answer(sem, "How many active users last week?", "5", empty_steps,
+                                              lambda _q: ok_spec, source_metric="active_users", declared_value=5)
     assert not ok and reason == "result_empty", (ok, reason)
     # a share metric returning 150 is impossible
     share_steps = [_qm("reminder_open_rate", 150)]
-    ok2, reason2, *_ = spec_check.verify_answer(sem, "What is the reminder open rate?", "150",
-                                                share_steps, lambda _q: ok_spec, source_metric="reminder_open_rate")
+    ok2, reason2, *_ = spec_check.verify_answer(sem, "What is the reminder open rate?", "150", share_steps,
+                                                lambda _q: ok_spec, source_metric="reminder_open_rate", declared_value=150)
     assert not ok2 and reason2 == "implausible_value", (ok2, reason2)
     # a normal value passes sanity (and this spec matches, so it's allowed)
     good_steps = [_qm("active_users", 886, period="last_week")]
     good_spec = {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "period"}
-    ok3, *_ = spec_check.verify_answer(sem, "How many active users last week?", "886",
-                                       good_steps, lambda _q: good_spec, source_metric="active_users")
+    ok3, *_ = spec_check.verify_answer(sem, "How many active users last week?", "886", good_steps,
+                                       lambda _q: good_spec, source_metric="active_users", declared_value=886)
     assert ok3
 
 
@@ -260,8 +263,34 @@ def test_grain_of_call():
     assert spec_check.grain_of_call({"period": "all"}) == "total"
     assert spec_check.grain_of_call({"period": "last_week"}) == "period"
     assert spec_check.grain_of_call({"start": "2026-01-01"}) == "period"
-    assert spec_check.grain_of_call({"group_by": ["region"]}) == "per_dimension"
-    assert spec_check.grain_of_call({"time_grain": "week"}) == "per_dimension"
+    # a group_by / time_grain shapes the QUERY, not the single answer -> ignored (the fix)
+    assert spec_check.grain_of_call({"group_by": ["region"]}) == "total"
+    assert spec_check.grain_of_call({"time_grain": "week"}) == "total"
+    assert spec_check.grain_of_call({"time_grain": "week", "period": "last_week"}) == "period"
+
+
+def test_spec_check_skips_prose_answers():
+    """The check applies to a NUMERIC answer, identified by the typed `value` field — not by
+    parsing the text. A prose judgement or a diagnostic narrative leaves `value` unset
+    (declared_value=None), so the check stands down even with a source_metric declared and
+    the metric's number sitting in the prose."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    wrong_spec = {"entity": "sessions", "population": "all", "measure": "count", "grain": "total"}
+    steps = [_qm("value_moments", 67132, period="all")]
+    # a prose health verdict: no declared value -> skip
+    ok, *_ = spec_check.verify_answer(sem, "Is the app healthy?", "No — mixed early-warning signals",
+                                      steps, lambda _q: wrong_spec, source_metric="value_moments")
+    assert ok, "prose answer (no declared value) must skip the spec check"
+    # a diagnostic narrative that literally contains 67132: still skipped, because value is unset
+    narrative = "No; value moments were 67132 all-time but active users rose from 836 to 886"
+    ok2, *_ = spec_check.verify_answer(sem, "What happened?", narrative, steps,
+                                       lambda _q: wrong_spec, source_metric="value_moments")
+    assert ok2, "diagnostic narrative (no declared value) must skip the spec check"
+    # but a real numeric answer (value set) is still checked and refused on a genuine mismatch
+    ok3, *_ = spec_check.verify_answer(sem, "How many value moments?", "67132", steps,
+                                       lambda _q: wrong_spec, source_metric="value_moments", declared_value=67132)
+    assert not ok3, "a declared numeric value must still be checked"
 
 
 class _FakeModel:
@@ -288,15 +317,19 @@ def test_toolbox_wiring_and_rung_gate():
     assert Toolbox(con, 6, sem, None, 7).result_sanity is False and Toolbox(con, 6, sem, None, 8).result_sanity is True
 
     tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)
-    ok, reason, missing, _ = tb7.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
+    ok, reason, missing, _ = tb7.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
     assert not ok and reason == "population_undefined" and missing, "R7 spec check must refuse the floor case"
 
     tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)
-    ok6, *_ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users")
+    ok6, *_ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
     assert ok6, "spec check must be OFF below rrung 7"
 
-    ok_nomodel, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users")
+    ok_nomodel, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
     assert ok_nomodel, "with no model to decompose, spec check must not fire"
+
+    # a prose answer (no typed value) is passed through untouched even at rrung 7
+    ok_prose, *_ = tb7.verify_answer(q, "healthy overall", steps, _FakeModel(), "active_users", None)
+    assert ok_prose, "no declared value -> spec check stands down"
 
 
 if __name__ == "__main__":
@@ -310,6 +343,7 @@ if __name__ == "__main__":
     test_coerce_out_of_vocab_to_other()
     test_value_resolver()
     test_grain_of_call()
+    test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()
     print(f"OK - spec check: {len(CASES)} comparison cases + derivation + additivity + "
           "ontology + typed-provenance + coercion + grain + wiring/gating all pass.")

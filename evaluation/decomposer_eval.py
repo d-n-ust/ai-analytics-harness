@@ -88,7 +88,8 @@ def main():
         spec = spec_check.decompose_question(model, question, sem.ontology)   # the only live call
         ok, reason, _, _ = spec_check.verify_answer(
             sem, question, str(value), [_qm(metric, value, **args)],
-            decompose=lambda _q, s=spec: s, source_metric=metric)   # rung 6 declares provenance
+            decompose=lambda _q, s=spec: s, source_metric=metric,   # rung 6 declares provenance
+            declared_value=value)                                    # ...and the served number (typed)
         verdict = "allow" if ok else "refuse"
         good = verdict == gold
         correct += good
