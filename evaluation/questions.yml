@@ -356,3 +356,45 @@ questions:
     question: "Which acquisition channel gives us the best return - revenue per dollar spent, by channel?"
     gold_refuse: no_causal_evidence
     note: "MRR isn't attributed to channels (channel slices activity/signups; plan slices revenue) and no spend-to-revenue causal link exists. Trap: divide mrr by marketing_spend per channel."
+
+  # ---- Tier 10 · red-team hard (BLIND-authored by an agent that saw only the public data
+  # dictionary, never the checks). Crafted so R5 (fence) still serves a WRONG number, giving
+  # R6 (value resolution) and R7 (spec decomposition) something to catch. ----
+  - id: rt_ipados_open_rate
+    tier: rt_phantom
+    question: "Can you compare reminder open rate on iPadOS vs iOS over the last 30 days?"
+    gold_refuse: other
+    note: "R6 target. iPadOS is not a governed platform member (only ios/android/web); filtering by it returns an empty slice. The resolver should reject it, not report a phantom 0%."
+  - id: rt_north_america_actives
+    tier: rt_phantom
+    question: "How many active users did we have in North America last month?"
+    gold_refuse: other
+    note: "R6 target. 'North America' is not a governed region (only APAC/Americas/EMEA); should be rejected, not silently mapped to Americas."
+  - id: rt_paid_social_activation
+    tier: rt_phantom
+    question: "What was our activation rate from the paid_social channel in June 2026?"
+    gold_refuse: other
+    note: "R6 target. paid_social is not a governed channel (the only paid channel is paid_search); empty slice."
+  - id: rt_mexico_signups
+    tier: rt_phantom
+    question: "How many signups came from Mexico in the second quarter of 2026?"
+    gold_refuse: other
+    note: "R6 target. Mexico/MX is not a covered country (only BR/DE/FR/GB/ID/IN/PH/US); empty filter."
+  - id: rt_total_subs_ever
+    tier: valid_but_wrong
+    question: "How many subscriptions have we sold in total since launch?"
+    gold_sql: "SELECT count(*) FROM fct_subscriptions"
+    tolerance: 0.02
+    note: "R7 target. Gold is all subscription rows (457). Trap: active_subscriptions (371, currently-active only) — valid metric, wrong population."
+  - id: rt_activation_count_june
+    tier: valid_but_wrong
+    question: "How many people who signed up in June 2026 reached their first completed habit within a week?"
+    gold_sql: "SELECT sum(CASE WHEN activated THEN 1 ELSE 0 END) FROM agg_user_activation WHERE NOT is_internal AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+    tolerance: 0.03
+    note: "R7 target. Gold is the activated COUNT (289). Trap: activation_rate (a share ~0.6) reported as the count — a measure mismatch (rate vs amount)."
+  - id: rt_arpu_annual
+    tier: valid_but_wrong
+    question: "On average, how much does each paying customer pay us per year?"
+    gold_sql: "SELECT round(12 * sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) / nullif(count(DISTINCT user_id), 0), 2) FROM fct_subscriptions WHERE is_active"
+    tolerance: 0.03
+    note: "R7 target, KNOWN-GAP negative test. Gold is annual per user (86.88 = arpu x 12). Trap: report arpu (7.24, a MONTHLY figure) as the yearly amount — a time-BASIS mismatch the current spec check does NOT catch (no basis slot)."

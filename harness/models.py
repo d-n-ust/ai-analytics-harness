@@ -45,6 +45,7 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # OpenAI. Prices are placeholders (gpt-5.4-mini is far cheaper than the flagship).
     _spec("gpt-5.6-terra", 1.25, 10.0),
     _spec("gpt-5.4-mini", 0.25, 2.0),
+    _spec("gpt-5-mini", 0.08, 0.70),  # cheaper reasoning mini; prices PLACEHOLDER — confirm real ones
     _spec("gpt-5.6-luna", 1.0, 8.0),  # price a placeholder; tier unknown
     # Cheap legacy model for pilot runs.
     _spec("gpt-4.1-mini", 0.4, 1.6, supports_reasoning_effort=False),

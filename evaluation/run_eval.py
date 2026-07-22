@@ -294,6 +294,24 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
             lines.append(f"| {r['model']} | {r['rung']}·R{r.get('rrung',1)} | {r['qid']} "
                          f"| {r['answer']} | {r['gold']} |")
 
+    lines += ["", "## Tokens per rung", "",
+              "_tokens by rung: total across all runs at that rung, plus the per-run mean. "
+              "Higher rungs cost more (more context; the spec decomposer adds a call at R7+)._", "",
+              "| model | rung·R | runs | total in | total out | total tokens | mean/run | mean tool-calls |",
+              "|---|---|---|---|---|---|---|---|"]
+    for m in models:
+        for rung in rungs:
+          for rrung in rrungs:
+            mr = by(model=m, rung=rung, rrung=rrung)
+            if not mr:
+                continue
+            n = len(mr)
+            ti = sum(r["input_tokens"] for r in mr)
+            to = sum(r["output_tokens"] for r in mr)
+            mc = sum(r.get("tool_calls", 0) for r in mr) / n
+            lines.append(f"| {m} | {rung}·R{rrung} | {n} | {ti:,} | {to:,} | {ti + to:,} | "
+                         f"{(ti + to) / n:,.0f} | {mc:.1f} |")
+
     lines += ["", "## Cost", "",
               "| model | total tokens (in/out) | est. USD |", "|---|---|---|"]
     for m in models:
