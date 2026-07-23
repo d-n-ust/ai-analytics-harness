@@ -340,6 +340,7 @@ class Toolbox:
         unrequested-predicate check are retired from the ladder — the verifier subsumes them — but
         remain in spec_check as tested building blocks / comparison cells.
         Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
+        self.last_verdict = None      # one verdict per answer; the Toolbox outlives the question
         if self.semantic is None or not (self.output_validation or self.single_metric
                                          or self.trajectory_verify):
             return True, "", "", ""
@@ -365,8 +366,16 @@ class Toolbox:
                 period=a.get("period"), resolve=self.resolve)
             window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
                                          if (a.get("start") or a.get("end")) else None)
-            return verifier.verify_trajectory(model, question, metric, metric_def, sql, gov_value,
-                                              claim, applied_filters=a.get("filters"), time_window=window)
+            ok, mismatch, reason = verifier.verify_trajectory(
+                model, question, metric, metric_def, sql, gov_value,
+                claim, applied_filters=a.get("filters"), time_window=window)
+            # Persist the judge's own verdict WITH the evidence it saw, so its error rate can
+            # later be scored against human labels. A judge you cannot score is just an
+            # unverified opinion — and every "0 confident-wrong" claim rests on this one.
+            self.last_verdict = {"answers_question": ok, "mismatch": mismatch, "reason": reason,
+                                 "metric": metric, "sql": sql, "applied_filters": a.get("filters"),
+                                 "time_window": window, "governed_value": gov_value, "claim": claim}
+            return ok, mismatch, reason
         return run
 
     def dispatch(self, name: str, args: dict) -> tuple[str, bool, list | None]:
