@@ -215,25 +215,20 @@ class Toolbox:
         self.rrung = rrung
         self.semantic = semantic
         self.tree = tree
-        # The reliability ladder, granular so each step's effect is measured separately.
-        # Input-enforcement family (stop a bad number being computed):
-        self.gate = rrung >= 4          # R4: block out-of-coverage governed calls
-        self.tool_restriction = rrung >= 5         # R5: no raw SQL — governed metrics only
-        self.resolve = rrung >= 6       # R6: resolve/validate free-text filter values
-        # Output-verification family (stop a bad number being served):
-        self.spec_check = rrung in (7, 8)  # R7/R8: the 4-slot intent parser (isolated model call)
-        self.output_validation = rrung >= 8    # R8: the returned value must be well-formed
-        # Governed-only "iteration 1" bundle (rrung 9+): replaces the 4-slot intent parser with a
-        # deterministic core plus transparency. R9 = transparency + single-metric enforcement;
-        # R10 = + unrequested-predicate check (an isolated intent read of which filters the question asked for).
-        self.show_sql = rrung >= 9      # R9: show the model the exact compiled SQL for each result
-        self.scope_echo = rrung >= 9      # R9: show a plain [scope] line (flags a narrowed subset)
-        self.single_metric = rrung >= 9 # the served number must BE one governed metric's result
-        self.predicate_check = rrung == 10  # R10: a filter the question didn't ask for = a wrong subset
-        # R11: the trajectory verifier — inspects {question, definition, SQL, added filters, result}
-        # and refuses when the metric doesn't answer the question (wrong thing/kind/scope/definition).
-        # Subsumes the scope + measure + definition checks in one, so predicate_check turns off here.
-        self.trajectory_verify = rrung >= 11
+        # The reliability ladder, re-ordered logically (R0 no guardrails; R1 abstention = the
+        # refuse tool; R2 answerability check tools). The cost nudge, the 4-slot spec check, and
+        # the unrequested-predicate check are retired from the ladder — the verifier subsumes the
+        # latter two. Each guardrail's effect is still measured on its own rung.
+        # Input guardrails (deterministic — stop a bad number being computed):
+        self.gate = rrung >= 3          # R3: block out-of-coverage governed calls
+        self.tool_restriction = rrung >= 4  # R4: no raw SQL — governed metrics only
+        self.resolve = rrung >= 5       # R5: resolve/validate free-text filter values to governed members
+        # Answer discipline + output guardrails (stop a bad number being served):
+        self.show_sql = rrung >= 6      # R6: show the model the compiled SQL...
+        self.scope_echo = rrung >= 6    # R6: ...and a plain [scope] line (flags a narrowed subset)
+        self.single_metric = rrung >= 7  # R7: the served number must BE one governed metric's result
+        self.output_validation = rrung >= 8  # R8: the returned value must be well-formed
+        self.trajectory_verify = rrung >= 9  # R9: the metric must actually answer the question
 
     def specs(self) -> list[dict]:
         specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
@@ -243,7 +238,7 @@ class Toolbox:
             specs += [_LIST_METRICS, self._query_metric_spec()]
         if self.rung >= 6:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-        if self.rrung >= 3 and self.semantic is not None:
+        if self.rrung >= 2 and self.semantic is not None:   # R2: answerability check tools
             specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
         specs.append(self._answer_spec())
         if self.rrung >= 1:
@@ -267,7 +262,7 @@ class Toolbox:
         menu as query_metric). Both are the model's typed claims, more reliable than
         reconstructing them from the answer text. A prose / diagnostic answer leaves `value`
         unset, so the output checks stand down rather than force a spec onto words."""
-        if not ((self.spec_check or self.single_metric) and self.semantic is not None):
+        if not (self.single_metric and self.semantic is not None):
             return _ANSWER
         props = dict(_ANSWER["input_schema"]["properties"])
         props["value"] = {
@@ -310,27 +305,24 @@ class Toolbox:
     def verify_answer(self, question: str, answer_text: str | None, steps: list, model=None,
                       source_metric: str | None = None, declared_value=None,
                       verifier_model=None) -> tuple[bool, str, str, str]:
-        """The output-verification checks on an answer before it is served, each gated by its own
-        rung so their deltas are measured separately: output validation (R8, well-formed value), the
-        4-slot spec intent parser (R7/R8), single-metric enforcement (R9, the number must BE one
-        governed result), and unrequested-predicate check (R10, no filter the question didn't ask for).
+        """The output guardrails on an answer before it is served, each gated by its own rung so
+        their deltas are measured separately: single-metric enforcement (R7, the number must BE one
+        governed result), output validation (R8, well-formed value), and the trajectory verifier
+        (R9, the metric must actually answer the question). The 4-slot spec check and the
+        unrequested-predicate check are retired from the ladder — the verifier subsumes them — but
+        remain in spec_check as tested building blocks / comparison cells.
         Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
-        if self.semantic is None or not (self.spec_check or self.output_validation or self.single_metric
-                                         or self.predicate_check or self.trajectory_verify):
+        if self.semantic is None or not (self.output_validation or self.single_metric
+                                         or self.trajectory_verify):
             return True, "", "", ""
-        decompose = (lambda q: spec_check.parse_intent(model, q, self.semantic.ontology)) \
-            if (self.spec_check and model is not None) else None
-        scope_decompose = (lambda q: spec_check.parse_scope(model, q, self.semantic.dimensions)) \
-            if (self.predicate_check and model is not None) else None
         # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
         vmodel = verifier_model or model
         verify_traj = self._trajectory_verifier(vmodel) if (self.trajectory_verify and vmodel) else None
         return spec_check.verify_answer(
-            self.semantic, question, answer_text, steps, decompose=decompose,
+            self.semantic, question, answer_text, steps,
             source_metric=source_metric, declared_value=declared_value,
-            run_output_validation=self.output_validation, run_spec=self.spec_check and model is not None,
-            run_single_metric=self.single_metric, scope_decompose=scope_decompose,
-            verify_traj=verify_traj)
+            run_output_validation=self.output_validation,
+            run_single_metric=self.single_metric, verify_traj=verify_traj)
 
     def _trajectory_verifier(self, model):
         """A callable (question, metric, metric_def, call_args, governed_value, claim) -> verdict,

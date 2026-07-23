@@ -73,11 +73,10 @@ def main() -> None:
     sp.add_argument("--repeats", type=int, default=1,
                     help="repeat the whole grid N times so each rung gets a mean and a spread")
     sp.add_argument("--rrungs", default="1",
-                    help="reliability rungs — voice: 0=no refuse, 1=typed refusal; nudges: "
-                         "2=+priced prompt, 3=+check tools; input guards: 4=+gate (input guardrail), 5=+tool-restriction, "
-                         "6=+value-resolution; output checks: 7=+spec-decomposition, 8=+output validation; "
-                         "governed-only iteration (replaces the decomposer): 9=+transparency+single-metric, "
-                         "10=+unrequested-predicate check, 11=+trajectory-verifier")
+                    help="reliability rungs (re-ordered): 0=no guardrails, 1=abstention; nudge: "
+                         "2=+check tools; input guardrails: 3=+gate, 4=+tool-restriction, "
+                         "5=+member-resolution; output: 6=+transparency, 7=+single-metric, "
+                         "8=+output-validation, 9=+trajectory-verifier")
     sp.set_defaults(func=cmd_eval)
 
     sp = sub.add_parser("regrade", help="re-grade a finished run from stored answers "

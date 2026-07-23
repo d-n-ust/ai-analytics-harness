@@ -356,25 +356,25 @@ def test_toolbox_wiring_and_rung_gate():
     steps = [_qm("active_users", 2100, period="all")]
     q = "How many users do we have in total?"
 
-    # the granular rung flags gate each step separately
-    assert Toolbox(con, 6, sem, None, 5).resolve is False and Toolbox(con, 6, sem, None, 6).resolve is True
-    assert Toolbox(con, 6, sem, None, 6).spec_check is False and Toolbox(con, 6, sem, None, 7).spec_check is True
+    # the re-ordered ladder gates each guardrail on its own rung
+    assert Toolbox(con, 6, sem, None, 4).resolve is False and Toolbox(con, 6, sem, None, 5).resolve is True
+    assert Toolbox(con, 6, sem, None, 6).single_metric is False and Toolbox(con, 6, sem, None, 7).single_metric is True
     assert Toolbox(con, 6, sem, None, 7).output_validation is False and Toolbox(con, 6, sem, None, 8).output_validation is True
+    assert Toolbox(con, 6, sem, None, 8).trajectory_verify is False and Toolbox(con, 6, sem, None, 9).trajectory_verify is True
 
-    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)
-    ok, reason, missing, _ = tb7.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
-    assert not ok and reason == "segment_undefined" and missing, "R7 spec check must refuse the floor case"
+    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)   # single-metric on (deterministic; no model needed)
+    ok, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
+    assert ok, "a direct governed result passes single-metric"
+    okd, reasond, *_ = tb7.verify_answer(q, "999", steps, None, "active_users", 999)
+    assert not okd and reasond == "out_of_scope", "a hand-derived value (matches no governed result) refuses at R7"
 
-    tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)
-    ok6, *_ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
-    assert ok6, "spec check must be OFF below rrung 7"
+    tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)   # single-metric OFF
+    ok6, *_ = tb6.verify_answer(q, "999", steps, None, "active_users", 999)
+    assert ok6, "single-metric must be OFF below rrung 7"
 
-    ok_nomodel, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
-    assert ok_nomodel, "with no model to decompose, spec check must not fire"
-
-    # a prose answer (no typed value) is passed through untouched even at rrung 7
-    ok_prose, *_ = tb7.verify_answer(q, "healthy overall", steps, _FakeModel(), "active_users", None)
-    assert ok_prose, "no declared value -> spec check stands down"
+    # a prose answer (no typed value) is passed through untouched
+    ok_prose, *_ = tb7.verify_answer(q, "healthy overall", steps, None, "active_users", None)
+    assert ok_prose, "no declared value -> output guardrails stand down"
 
 
 if __name__ == "__main__":

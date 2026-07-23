@@ -145,26 +145,25 @@ class Grounding:
 
 
 def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
+    # The re-ordered ladder: R1 abstention, R2 check tools, R3-R5 input guardrails, R6 transparency,
+    # R7 single-metric, R8 output validation, R9 verifier. The cost nudge, the 4-slot spec check, and
+    # the unrequested-predicate check are retired (the verifier subsumes the latter two).
     system = _BASE + _RRUNG_TERMINAL[min(rrung, 1)]
     if rrung >= 2:
-        system += _RRUNG_PRICE
-    if rrung >= 3:
         system += _RRUNG_CHECKS
-    if rrung >= 4:
+    if rrung >= 3:
         system += _RRUNG_ENFORCE
-    if rrung >= 5:
+    if rrung >= 4:
         system += _RRUNG_TOOL_RESTRICTION
-    if rrung >= 6:
+    if rrung >= 5:
         system += _RRUNG_RESOLVE
-    if rrung in (7, 8):                      # the 4-slot intent parser lives only at R7/R8
-        system += _RRUNG_SPEC + _RRUNG_PROVENANCE
+    if rrung >= 6:
+        system += _RRUNG_TRANSPARENCY
+    if rrung >= 7:
+        system += _RRUNG_PROVENANCE + _RRUNG_SINGLE_METRIC
     if rrung >= 8:
         system += _RRUNG_OUTPUT_VALIDATION
-    if rrung >= 9:                           # governed-only iteration replaces the intent parser
-        system += _RRUNG_PROVENANCE + _RRUNG_TRANSPARENCY + _RRUNG_SINGLE_METRIC
-    if rrung == 10:                          # unrequested-predicate check is folded into the verifier at R11
-        system += _RRUNG_SCOPE
-    if rrung >= 11:
+    if rrung >= 9:
         system += _RRUNG_VERIFIER
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:

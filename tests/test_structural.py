@@ -67,10 +67,10 @@ def prove():
         except SemanticError:
             passed += 1
 
-    # 3. The interception GATE (rrung 4) blocks every out-of-coverage governed call,
+    # 3. The interception GATE (rrung 3) blocks every out-of-coverage governed call,
     #    even when the metric itself is real. This is the worst-case agent trying to
     #    pull legitimate metrics over illegitimate periods.
-    gate_tb = build_grounding(con, rung=6, rrung=4).toolbox
+    gate_tb = build_grounding(con, rung=6, rrung=3).toolbox
     for filt, start, end in OUT_OF_COVERAGE:
         args = {"metric": "value_moments", "start": start, "end": end}
         if filt:
@@ -85,14 +85,14 @@ def prove():
     _check(not is_err and "value" in text, "gate wrongly blocked a valid in-coverage call")
     passed += 1
 
-    # 4. The FENCE (rrung 5) removes raw SQL entirely — no arbitrary-query escape hatch.
-    fence_names = {t["name"] for t in build_grounding(con, rung=6, rrung=5).toolbox.specs()}
-    _check("run_sql" not in fence_names, "fence did not remove run_sql")
-    _check("query_metric" in fence_names, "fence removed the governed path too")
+    # 4. The tool restriction (rrung 4) removes raw SQL entirely — no arbitrary-query escape hatch.
+    fenced_names = {t["name"] for t in build_grounding(con, rung=6, rrung=4).toolbox.specs()}
+    _check("run_sql" not in fenced_names, "tool restriction did not remove run_sql")
+    _check("query_metric" in fenced_names, "tool restriction removed the governed path too")
     passed += 1
-    # Below the fence, raw SQL is present (so the contrast is real).
-    r4_names = {t["name"] for t in build_grounding(con, rung=6, rrung=4).toolbox.specs()}
-    _check("run_sql" in r4_names, "run_sql should still exist at R4 (the override path)")
+    # Below the tool restriction (R3, gate only), raw SQL is present (so the contrast is real).
+    r3_names = {t["name"] for t in build_grounding(con, rung=6, rrung=3).toolbox.specs()}
+    _check("run_sql" in r3_names, "run_sql should still exist at R3 (the override path)")
     passed += 1
 
     # 5. The catalog enum is closed at the gate: the model is offered only real metrics.
