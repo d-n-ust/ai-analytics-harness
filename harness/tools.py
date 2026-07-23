@@ -21,7 +21,7 @@ from .warehouse import QueryError, describe_table, run_query, schema_text
 # outcome is a typed field, never a phrase to be text-matched out of prose.
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
                    "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                   "result_empty", "implausible_value", "other"]
+                   "ungoverned_dimension_value", "result_empty", "implausible_value", "other"]
 
 _ANSWER = {
     "name": "answer",

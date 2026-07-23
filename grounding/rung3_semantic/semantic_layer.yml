@@ -271,9 +271,12 @@ governance:
       web: ["web", "browser", "desktop", "website"]
       unknown: ["unknown", "unattributed"]
     region:
-      APAC: ["apac", "asia", "asia pacific"]
-      Americas: ["americas", "america", "north america", "na", "latam"]
-      EMEA: ["emea", "europe", "eu", "middle east", "africa"]
+      # Synonyms are true EQUIVALENTS only, never sub-regions. A hyponym (e.g. "north
+      # america" is a proper subset of Americas) must resolve to None -> refuse, not
+      # silently widen to the parent and answer a different question.
+      APAC: ["apac", "asia pacific"]
+      Americas: ["americas", "america"]
+      EMEA: ["emea"]
     plan:
       annual: ["annual", "yearly", "year", "annual plan"]
       monthly: ["monthly", "month", "monthly plan"]

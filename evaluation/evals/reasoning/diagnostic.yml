@@ -1,0 +1,42 @@
+# Diagnostic / root cause — graded on naming the right driver (breadth vs frequency vs depth).
+# `cause` is descriptive only (the generated world has no reminder->activity cause); not a gate.
+cases:
+  - id: t5_why_drop
+    tier: diagnostic
+    question: "Weekly value moments dropped last week. What caused it?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_engagement_drop
+    tier: diagnostic
+    question: "Engagement fell last week. Which part of the business is responsible?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "retention", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_not_breadth
+    tier: diagnostic
+    question: "Did our active user base shrink last week, or is something else going on with value moments?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_masked_by_growth
+    tier: diagnostic
+    question: "Value moments came in soft last week even though we added users. What happened?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_which_lever
+    tier: diagnostic
+    question: "Which part of the North Star weakened last week — breadth, frequency, or depth?"
+    expect:
+      type: diagnostic
+      driver: ["frequency", "days per user", "days/user", "days_per_user"]
+      cause: ["reminder", "notification"]

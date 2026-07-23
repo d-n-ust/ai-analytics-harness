@@ -1,0 +1,35 @@
+# Phantom dimension value — the question filters by a value that is not a governed member
+# (a platform / region / channel / country that doesn't exist). The resolver must reject it,
+# not silently widen to a parent. Correct outcome: refuse (ungoverned_dimension_value).
+cases:
+  - id: rt_ipados_open_rate
+    tier: rt_phantom
+    question: "Can you compare reminder open rate on iPadOS vs iOS over the last 30 days?"
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    note: "iPadOS is not a governed platform member (only ios/android/web); filtering by it returns an empty slice. Reject it, don't report a phantom 0%."
+
+  - id: rt_north_america_actives
+    tier: rt_phantom
+    question: "How many active users did we have in North America last month?"
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    note: "'North America' is a proper subset of the governed region 'Americas'; must be rejected, not silently mapped to Americas (504)."
+
+  - id: rt_paid_social_activation
+    tier: rt_phantom
+    question: "What was our activation rate from the paid_social channel in June 2026?"
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    note: "paid_social is not a governed channel (the only paid channel is paid_search); empty slice."
+
+  - id: rt_mexico_signups
+    tier: rt_phantom
+    question: "How many signups came from Mexico in the second quarter of 2026?"
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    note: "Mexico/MX is not a covered country (only BR/DE/FR/GB/ID/IN/PH/US); empty filter."

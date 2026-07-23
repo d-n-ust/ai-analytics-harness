@@ -27,6 +27,7 @@ class Answer:
     outcome: str = "answer"        # answer | refuse | clarify | error
     reason: str | None = None      # refuse only: the coded reason
     missing: str | None = None     # refuse only: what the model says is missing
+    source_metric: str | None = None  # answer only: the governed metric the value came from
     abstained: bool = False        # convenience mirror of outcome == "refuse"
     tool_calls: int = 0
     iterations: int = 0
@@ -84,7 +85,8 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                                   reason=reason, missing=missing, abstained=True, iterations=it + 1)
                 return answer(answer=ans_text,
                               explanation=str(kw.get("explanation", "")).strip(),
-                              outcome="answer", iterations=it + 1)
+                              outcome="answer", iterations=it + 1,
+                              source_metric=kw.get("source_metric"))
             if name == "refuse":
                 return answer(answer=None, explanation=str(kw.get("explanation", "")).strip(),
                               outcome="refuse", reason=kw.get("reason"),

@@ -1,30 +1,20 @@
-"""Grade one response, and assign it to exactly one bucket.
+"""Grade one response against its declared `expect`, and assign it to one bucket.
 
-Every response reduces to a single `bucket` — the one lens the whole project reports:
+The case declares what a correct response IS (`expect.type`); the grader reads it — it
+never infers the expected outcome from a tier string. The two correct shapes:
 
-  right      answered, and correct (a right number, or the right driver/metric)
-  wrong      asserted a WRONG NUMBER: a wrong value on an answerable question, or any
-             number on a question that has no valid answer (fabrication)
-  idk        refused or clarified — "I don't know", by form (a correct refusal of an
-             impossible question is still `bucket=idk`; its correctness is tracked in
-             `correct`)
-  deferred   a false-premise question answered through the answer channel — a correct
-             rebuttal ("it didn't collapse — it rose") and a fabricated cause look
-             alike to a heuristic, so the grader abstains and a human/judge rules
-  other      a non-number wrong answer (a wrong *analysis*, or abstention prose like
-             "I can't compute that" typed through the answer channel — a protocol
-             miss, not a fabrication)
-  error      an infrastructure failure (crash / API error); never a model behaviour
+  metric_answer   a number within tolerance of the independent gold_sql, from the right
+                  governed metric (source_metric, when the model declares it)
+  refuse          a refusal carrying the expected coded reason; for such a case ANY served
+                  number is a miss (a wrong number, or a right one reached off-governance)
 
-`bucket` is the single source of truth; `confident_wrong`, `fabricated`, `correct`,
-and `score` are consistent with it by construction. This replaces a pile of
-independent heuristics that disagreed with each other.
+Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
 
-Graders (question `grader` field): numeric (default) checks whether ANY number in the
-answer matches gold within tolerance (robust to a leading date, e.g. "in June 2026,
-MRR was 2685"); keywords names the right metric; diagnostic names the right *driver*
-(not a cause — the generated world has no reminder->activity cause; see
-data/generate.py and audit/generator_check.py).
+Every response still reduces to one `bucket` — the single lens the project reports:
+  right / wrong (a wrong or fabricated number) / idk (refused or clarified) /
+  deferred (a false-premise answered through the answer channel — judge rules) /
+  other (a non-number miss) / error (infrastructure failure).
+`confident_wrong`, `fabricated`, `correct`, and `score` are consistent with `bucket`.
 """
 
 from __future__ import annotations
@@ -35,10 +25,8 @@ from harness.numbers import parse_numbers as _numbers
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:
-    """Does the text name any of these keywords, at a word boundary? A LEADING boundary
-    (not a raw substring) so a keyword can't match mid-word — "active" must not fire on
-    "inactive" — while inflections and plurals still count ("reminder" hits "reminders").
-    Multi-word phrases and separators (days/user) match literally."""
+    """Does the text name any keyword, at a LEADING word boundary (not a raw substring) so
+    'active' can't fire on 'inactive', while plurals/inflections still count?"""
     t = (text or "").lower()
     return any(re.search(r"\b" + re.escape(k.lower()), t) for k in keywords)
 
@@ -77,50 +65,71 @@ def grade_diagnostic(text: str, spec: dict) -> dict:
             "driver_ok": driver_ok, "cause_ok": cause_ok}
 
 
-def grade(answer, question: dict, gold: float | None) -> dict:
+def _metric_match(answer, expect: dict):
+    """True/False when both the expected metric and the answer's declared source_metric are
+    known; None when there's nothing to compare (no expected metric, or the model didn't
+    declare one — the enriched answer tool only carries source_metric at the higher rungs)."""
+    want = expect.get("metric")
+    got = getattr(answer, "source_metric", None)
+    if not want or got is None:
+        return None
+    return str(got).strip().lower() == str(want).strip().lower()
+
+
+def grade(answer, case: dict, gold: float | None) -> dict:
     outcome = answer.outcome
-    unanswerable = "gold_refuse" in question
-    is_false_premise = question.get("gold_refuse") == "false_premise"
-    grader = question.get("grader", "numeric")
+    expect = case["expect"]
+    etype = expect["type"]
+    expects_refusal = etype == "refuse"
+    is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
+    tol = expect.get("tolerance", 0.02)
     has_number = bool(_numbers(answer.answer))
 
     correct = fabricated = confident_wrong = needs_judge = executed = False
-    reason_match = driver_ok = cause_ok = None
+    reason_match = driver_ok = cause_ok = metric_match = None
 
     if outcome == "error":
         bucket = "error"
     elif outcome == "refuse":
-        correct = unanswerable                    # refusing an unanswerable question is the right call
-        reason_match = (answer.reason == question["gold_refuse"]) if unanswerable else None
-        bucket = "idk"                            # by form, a refusal is "I don't know"
-    elif outcome == "clarify":
+        if expects_refusal:                          # the right call — check it named the right reason
+            reason_match = answer.reason == expect["reason"]
+            correct = reason_match
+        # else: over-refused an answerable question -> correct stays False
         bucket = "idk"
-    elif unanswerable and is_false_premise:
-        needs_judge = True                        # rebuttal vs accepted-premise — defer to a judge
+    elif outcome == "clarify":
+        correct = etype == "clarify"
+        bucket = "idk"
+    elif is_false_premise:
+        needs_judge = True                           # rebuttal vs accepted-premise — a judge rules
         bucket = "deferred"
-    elif unanswerable:
-        if has_number:                            # a number for a question with no valid answer
-            fabricated = True
+    elif expects_refusal:                            # answered when it should have refused
+        if has_number:
             bucket = "wrong"
-        else:                                     # "I can't compute that" through the answer channel
-            bucket = "other"                      # a protocol miss, not a fabrication
-    else:                                         # answerable, answered
+            if gold is None:
+                fabricated = True                    # no valid number exists -> pure fabrication
+            elif not grade_numeric(answer.answer, gold, tol)["correct"]:
+                confident_wrong = True               # served a WRONG number
+            # else: numerically right but derived when it should have refused -> wrong, unflagged
+        else:
+            bucket = "other"                         # abstention prose through the answer channel
+    else:                                            # answerable, answered
         executed = True
-        if grader == "diagnostic":
-            g = grade_diagnostic(f"{answer.answer or ''} {answer.explanation or ''}",
-                                 question["gold_diagnostic"])
+        if etype == "diagnostic":
+            g = grade_diagnostic(f"{answer.answer or ''} {answer.explanation or ''}", expect)
             correct, driver_ok, cause_ok = g["correct"], g["driver_ok"], g["cause_ok"]
             bucket = "right" if correct else "other"     # a wrong *analysis* is not a wrong *number*
-        elif grader == "keywords":
+        elif etype == "keywords":
             correct = grade_keywords(f"{answer.answer or ''} {answer.explanation or ''}",
-                                     question["gold_keywords"])["correct"]
+                                     expect["keywords"])["correct"]
             bucket = "right" if correct else "other"
-        else:                                            # numeric
-            correct = grade_numeric(answer.answer, gold, question.get("tolerance", 0.02))["correct"]
+        else:                                            # metric_answer
+            num_ok = grade_numeric(answer.answer, gold, tol)["correct"]
+            metric_match = _metric_match(answer, expect)
+            correct = num_ok and metric_match is not False   # only a KNOWN metric mismatch fails
             if correct:
                 bucket = "right"
-            elif has_number:                             # asserted a wrong number
-                confident_wrong = True
+            elif has_number:
+                confident_wrong = True                       # asserted a wrong number
                 bucket = "wrong"
             else:
                 bucket = "other"
@@ -129,7 +138,8 @@ def grade(answer, question: dict, gold: float | None) -> dict:
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         "abstained": outcome == "refuse", "confident_wrong": confident_wrong,
-        "fabricated": fabricated, "needs_judge": needs_judge, "expected_refuse": unanswerable,
-        "reason_match": reason_match, "driver_ok": driver_ok, "cause_ok": cause_ok,
+        "fabricated": fabricated, "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        "reason_match": reason_match, "metric_match": metric_match,
+        "driver_ok": driver_ok, "cause_ok": cause_ok,
         "score": 1.0 if correct else (-WRONG_COST if wrong_number else 0.0),
     }

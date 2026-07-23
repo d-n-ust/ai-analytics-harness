@@ -244,10 +244,13 @@ def test_value_resolver():
     from harness.semantic import SemanticError
     sem = SemanticLayer(open_warehouse())
     assert sem.resolve_member("platform", "iPhone") == "ios"
-    assert sem.resolve_member("region", "europe") == "EMEA"
+    assert sem.resolve_member("region", "americas") == "Americas"        # true synonym resolves
     assert sem.resolve_member("plan", "yearly") == "annual"
     assert sem.resolve_member("channel", "paid search") == "paid_search"
     assert sem.resolve_member("platform", "Blackberry") is None          # no governed member
+    # A hyponym (sub-region) is NOT a synonym: it must refuse, not widen to the parent.
+    assert sem.resolve_member("region", "North America") is None
+    assert sem.resolve_member("region", "europe") is None
     assert sem.resolve_member("is_internal", False) is False             # no vocab -> pass through
     # the compiler rewrites the value to its canonical member ...
     sql = sem.compile("active_users", filters={"platform": "iPhone"}, period="last_week")

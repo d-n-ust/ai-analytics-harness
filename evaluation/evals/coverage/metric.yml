@@ -1,0 +1,50 @@
+# Governed metric — the definition (grain, threshold, staff-exclusion) lives in the layer.
+cases:
+  - id: t3_mrr
+    tier: metric
+    question: "What is our current MRR (monthly recurring revenue)?"
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END), 2) FROM fct_subscriptions WHERE is_active"
+      tolerance: 0.02
+    note: "Annual plans billed as a yearly lump (÷12), active subs only — the grain/definition trap."
+
+  - id: t3_arpu
+    tier: metric
+    question: "What is our ARPU (average monthly recurring revenue per paying user)?"
+    expect:
+      type: metric_answer
+      metric: arpu
+      gold_sql: "SELECT round(sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) / nullif(count(DISTINCT user_id), 0), 2) FROM fct_subscriptions WHERE is_active"
+      tolerance: 0.03
+
+  - id: t3_active_users_last_week
+    tier: metric
+    question: "How many active users did we have last week?"
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT count(DISTINCT f.user_id) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: "The governed 'active users' definition excludes internal/test accounts. Raw SQL counts everyone."
+
+  - id: t3_power_users
+    tier: metric
+    question: "How many power users did we have in June 2026?"
+    expect:
+      type: metric_answer
+      metric: power_users
+      gold_sql: "SELECT count(DISTINCT s.user_id) FROM (SELECT f.user_id, f.completed_date FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' GROUP BY f.user_id, f.completed_date HAVING count(*) >= 5) s"
+      tolerance: 0.05
+    note: "'Power user' = 5+ value moments in a single day, staff excluded. The threshold is only in the metric."
+
+  - id: t3_activation_rate_june
+    tier: metric
+    question: "What was the activation rate for users who signed up in June 2026?"
+    expect:
+      type: metric_answer
+      metric: activation_rate
+      gold_sql: "SELECT round(avg(CASE WHEN activated THEN 1 ELSE 0 END), 4) FROM agg_user_activation WHERE NOT is_internal AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.03
+    note: "'Activated' = first value moment within 7 days of signup, staff excluded. The window is only in the metric."
