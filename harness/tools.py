@@ -21,7 +21,8 @@ from .warehouse import QueryError, describe_table, run_query, schema_text
 # outcome is a typed field, never a phrase to be text-matched out of prose.
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
                    "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                   "ungoverned_dimension_value", "result_empty", "implausible_value", "other"]
+                   "dimension_not_supported", "ungoverned_dimension_value",
+                   "result_empty", "implausible_value", "other"]
 
 _ANSWER = {
     "name": "answer",
@@ -230,16 +231,22 @@ class Toolbox:
         self.output_validation = rrung >= 8  # R8: the returned value must be well-formed
         self.trajectory_verify = rrung >= 9  # R9: the metric must actually answer the question
 
-    def specs(self) -> list[dict]:
-        specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
-        if not self.tool_restriction:
-            specs.append(_RUN_SQL)
-        if self.rung >= 3:
-            specs += [_LIST_METRICS, self._query_metric_spec()]
-        if self.rung >= 6:
-            specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-        if self.rrung >= 2 and self.semantic is not None:   # R2: answerability check tools
-            specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
+    def specs(self, terminal_only: bool = False) -> list[dict]:
+        """The action space. `terminal_only` withdraws every data tool, leaving just the exit
+        tools — used to CLOSE a run that has stopped calling tools or is about to hit the
+        iteration cap, so it ends through the typed protocol instead of dying as an untyped
+        error row. Removing the choice is structural; nudging the model in prose is not."""
+        specs: list[dict] = []
+        if not terminal_only:
+            specs += [_GET_SCHEMA, _DESCRIBE_TABLE]
+            if not self.tool_restriction:
+                specs.append(_RUN_SQL)
+            if self.rung >= 3:
+                specs += [_LIST_METRICS, self._query_metric_spec()]
+            if self.rung >= 6:
+                specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
+            if self.rrung >= 2 and self.semantic is not None:   # R2: answerability check tools
+                specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
         specs.append(self._answer_spec())
         if self.rrung >= 1:
             specs.append(_REFUSE)
@@ -288,7 +295,14 @@ class Toolbox:
         # never sees the "known members" list it would otherwise substitute a sibling from — the
         # failure that served Americas (504) for a "North America" question.
         if self.resolve:
+            allowed = self.semantic.allowed_filters(args.get("metric"))
             for col, val in filters.items():
+                # Two distinct failures, two reasons: the metric has no such DIMENSION, or the
+                # dimension is fine but the VALUE is not a governed member.
+                if allowed is not None and col not in allowed:
+                    return (f"BLOCKED by governance — {args.get('metric')!r} has no governed "
+                            f"dimension {col!r} (it can be sliced by: {sorted(allowed)}). Do NOT "
+                            "substitute a different dimension; refuse (dimension_not_supported).")
                 for v in (val if isinstance(val, (list, tuple)) else [val]):
                     if self.semantic.resolve_member(col, v) is None:
                         return (f"BLOCKED by governance — {v!r} is not a governed member of {col!r} "

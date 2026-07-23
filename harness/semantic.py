@@ -161,6 +161,12 @@ class SemanticLayer:
                                f"{win['starts']}.")
         return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
 
+    def allowed_filters(self, metric: str) -> set[str] | None:
+        """The dimensions a metric may be filtered by — governed metadata, read once from the
+        definition. None when the metric is unknown (the caller then has nothing to check)."""
+        m = self.metrics.get(metric)
+        return self._allowed_filters(m) if m else None
+
     def resolve_member(self, dimension: str, value):
         """Map a free-text filter value onto the canonical governed member of a dimension,
         via its members + synonyms (case/space/underscore-insensitive) — "iPhone" ->

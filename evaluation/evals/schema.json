@@ -33,7 +33,8 @@
             "reason": {
               "enum": ["no_governed_definition", "out_of_coverage", "segment_undefined",
                        "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                       "ungoverned_dimension_value", "out_of_scope", "other"]
+                       "dimension_not_supported", "ungoverned_dimension_value",
+                       "result_empty", "implausible_value", "out_of_scope", "other"]
             },
             "gold_sql": { "type": "string", "description": "Provenance only (the trap value); NOT graded as the answer." },
             "tolerance": { "type": "number", "default": 0.02 }

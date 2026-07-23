@@ -82,13 +82,16 @@ class AnthropicModel:
         self.client = anthropic.Anthropic()
 
     def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None):
+               force_tool: str | None = None, temperature: float | None = None,
+               require_tool: bool = False):
         kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS,
                   system=system, messages=messages, tools=tools)
         if self.spec.thinking is not None:
             kw["thinking"] = self.spec.thinking
         if force_tool:
             kw["tool_choice"] = {"type": "tool", "name": force_tool}
+        elif require_tool:      # some tool, the model picks which (used to close a run)
+            kw["tool_choice"] = {"type": "any"}
         # temperature is only settable when extended thinking is off (all our specs).
         if temperature is not None and (self.spec.thinking is None
                                         or self.spec.thinking.get("type") == "disabled"):
@@ -159,13 +162,15 @@ class OpenAIModel:
         raise ValueError(f"deepseek-v4 reasoning must be none/high/max, got {r!r}")
 
     def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None):
+               force_tool: str | None = None, temperature: float | None = None,
+               require_tool: bool = False):
         kw = dict(
             model=self.spec.model_id,
             messages=self._to_openai_messages(system, messages),
             tools=self._to_openai_tools(tools),
-            tool_choice=({"type": "function", "function": {"name": force_tool}}
-                         if force_tool else "auto"),
+            # 'required' = some tool, the model picks which (used to close a run).
+            tool_choice=({"type": "function", "function": {"name": force_tool}} if force_tool
+                         else "required" if require_tool else "auto"),
             max_completion_tokens=MAX_TOKENS,
         )
         if self.spec.provider == "deepseek":
@@ -208,7 +213,8 @@ class MockModel:
                    for m in messages)
 
     def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None):
+               force_tool: str | None = None, temperature: float | None = None,
+               require_tool: bool = False):
         usage = SimpleNamespace(input_tokens=10, output_tokens=5,
                                 cache_creation_input_tokens=0, cache_read_input_tokens=0)
         if not self._has_tool_result(messages):

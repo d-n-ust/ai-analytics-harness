@@ -49,7 +49,14 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                       steps=steps, **kw)
 
     for it in range(max_iters):
-        resp = model.create(grounding.system, messages, grounding.toolbox.specs())
+        # Closing phase. Once the model has stopped calling tools, or on the last iteration,
+        # withdraw the data tools and require an exit call. A run then ends through the typed
+        # protocol (answer/refuse/clarify) instead of dying as an untyped error row — which is
+        # a lost measurement, not a model behaviour.
+        closing = nudges >= 1 or it == max_iters - 1
+        resp = model.create(grounding.system, messages,
+                            grounding.toolbox.specs(terminal_only=closing),
+                            require_tool=closing)
         u = getattr(resp, "usage", None)
         in_tok += getattr(u, "input_tokens", 0) or 0
         out_tok += getattr(u, "output_tokens", 0) or 0
