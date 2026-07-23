@@ -14,6 +14,7 @@ from pathlib import Path
 import yaml
 
 from .semantic import SemanticLayer
+from .guardrails import LADDER, Guardrails
 from .tools import Toolbox
 from .tree import MetricTree
 
@@ -142,28 +143,32 @@ class Grounding:
     rrung: int
     system: str
     toolbox: Toolbox
+    guardrails: Guardrails | None = None
 
 
-def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
-    # The re-ordered ladder: R1 abstention, R2 check tools, R3-R5 input guardrails, R6 transparency,
-    # R7 single-metric, R8 output validation, R9 verifier. The cost nudge, the 4-slot spec check, and
-    # the unrequested-predicate check are retired (the verifier subsumes the latter two).
-    system = _BASE + _RRUNG_TERMINAL[min(rrung, 1)]
-    if rrung >= 2:
+def build_grounding(con, rung: int, rrung: int = 1,
+                    guardrails: Guardrails | None = None) -> Grounding:
+    # `rrung` names a preset on the ladder; `guardrails` overrides it for an ablation cell.
+    # The prompt is assembled from the SAME set the Toolbox enforces, so a cell can never
+    # describe a control that is not running — that would make the measurement vary with
+    # the treatment, which is the one thing an ablation must not do.
+    g = guardrails if guardrails is not None else LADDER[rrung]
+    system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
+    if g.check_tools:
         system += _RRUNG_CHECKS
-    if rrung >= 3:
+    if g.gate:
         system += _RRUNG_ENFORCE
-    if rrung >= 4:
+    if g.tool_restriction:
         system += _RRUNG_TOOL_RESTRICTION
-    if rrung >= 5:
+    if g.resolve:
         system += _RRUNG_RESOLVE
-    if rrung >= 6:
+    if g.transparency:
         system += _RRUNG_TRANSPARENCY
-    if rrung >= 7:
+    if g.single_metric:
         system += _RRUNG_PROVENANCE + _RRUNG_SINGLE_METRIC
-    if rrung >= 8:
+    if g.output_validation:
         system += _RRUNG_OUTPUT_VALIDATION
-    if rrung >= 9:
+    if g.trajectory_verify:
         system += _RRUNG_VERIFIER
     system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
     if rung >= 3:
@@ -177,5 +182,5 @@ def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
 
     semantic = SemanticLayer(con) if rung >= 3 else None
     tree = MetricTree(semantic) if rung >= 6 else None
-    return Grounding(rung=rung, rrung=rrung, system=system,
-                     toolbox=Toolbox(con, rung, semantic, tree, rrung))
+    return Grounding(rung=rung, rrung=rrung, guardrails=g, system=system,
+                     toolbox=Toolbox(con, rung, semantic, tree, rrung, guardrails=g))

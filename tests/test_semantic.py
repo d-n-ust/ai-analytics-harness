@@ -355,6 +355,40 @@ class _FakeModel:
         return SimpleNamespace(content=[block])
 
 
+def test_ladder_presets_reproduce_the_rung_thresholds():
+    """The flag refactor must not move a single existing result: LADDER[n] has to switch on
+    exactly the controls the old `rrung >= N` comparisons did, for every rung."""
+    from harness.guardrails import LADDER
+    for n in range(10):
+        g = LADDER[n]
+        assert g.abstain is (n >= 1) and g.check_tools is (n >= 2)
+        assert g.gate is (n >= 3) and g.tool_restriction is (n >= 4)
+        assert g.resolve is (n >= 5) and g.transparency is (n >= 6)
+        assert g.single_metric is (n >= 7) and g.output_validation is (n >= 8)
+        assert g.trajectory_verify is (n >= 9)
+        assert g.label() == f"R{n}"
+
+
+def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
+    """The point of the refactor: a leave-one-out cell exists in the flag space (no single
+    rrung can express it), is self-labelling so a stored row says what produced it, and the
+    cells that measure a DIFFERENT system are named rather than silently reported."""
+    from harness.guardrails import LADDER, incoherent
+    con = open_warehouse()
+    cell = LADDER[9].without("resolve")
+
+    assert cell.trajectory_verify and not cell.resolve      # unreachable from any rrung
+    assert cell.label() == "R9-resolve"
+    assert incoherent(cell) is None
+    tb = Toolbox(con, 6, SemanticLayer(con), None, guardrails=cell)
+    assert tb.trajectory_verify is True and tb.resolve is False
+
+    # single-metric reads result_values, which only governed queries record
+    assert incoherent(LADDER[7].without("tool_restriction")) is not None
+    # the verifier judges a metric+SQL trajectory, which a hand-composed number lacks
+    assert incoherent(LADDER[9].without("single_metric")) is not None
+
+
 def test_gate_blocks_ungoverned_dimension_and_value():
     """R5, deterministic (no model call): the gate rejects a filter DIMENSION the metric does
     not have, and a filter VALUE that is not a governed member — each with its own coded
@@ -467,6 +501,8 @@ if __name__ == "__main__":
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()
+    test_ladder_presets_reproduce_the_rung_thresholds()
+    test_ablation_cell_is_expressible_and_incoherent_cells_are_named()
     test_gate_blocks_ungoverned_dimension_and_value()
     test_closing_phase_offers_only_exit_tools()
     test_verifier_is_refuse_only()

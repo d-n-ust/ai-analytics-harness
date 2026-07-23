@@ -13,6 +13,7 @@ import json
 
 from . import spec_check, verifier
 from .config import resolve_period
+from .guardrails import LADDER, Guardrails
 from .semantic import SemanticError, SemanticLayer
 from .tree import MetricTree, TreeError
 from .warehouse import QueryError, describe_table, run_query, schema_text
@@ -210,26 +211,40 @@ class Toolbox:
     which is why they can be proven exhaustively without an LLM (see tests/)."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
-                 tree: MetricTree | None = None, rrung: int = 1):
+                 tree: MetricTree | None = None, rrung: int = 1,
+                 guardrails: Guardrails | None = None):
         self.con = con
         self.rung = rung
         self.rrung = rrung
+        # `rrung` names a preset; `guardrails` overrides it for an ablation cell. Every control
+        # below is read from this one set, so a cell is expressible and self-describing.
+        self.g = guardrails if guardrails is not None else LADDER[rrung]
         self.semantic = semantic
         self.tree = tree
         # The reliability ladder, re-ordered logically (R0 no guardrails; R1 abstention = the
         # refuse tool; R2 answerability check tools). The cost nudge, the 4-slot spec check, and
         # the unrequested-predicate check are retired from the ladder — the verifier subsumes the
         # latter two. Each guardrail's effect is still measured on its own rung.
-        # Input guardrails (deterministic — stop a bad number being computed):
-        self.gate = rrung >= 3          # R3: block out-of-coverage governed calls
-        self.tool_restriction = rrung >= 4  # R4: no raw SQL — governed metrics only
-        self.resolve = rrung >= 5       # R5: resolve/validate free-text filter values to governed members
-        # Answer discipline + output guardrails (stop a bad number being served):
-        self.show_sql = rrung >= 6      # R6: show the model the compiled SQL...
-        self.scope_echo = rrung >= 6    # R6: ...and a plain [scope] line (flags a narrowed subset)
-        self.single_metric = rrung >= 7  # R7: the served number must BE one governed metric's result
-        self.output_validation = rrung >= 8  # R8: the returned value must be well-formed
-        self.trajectory_verify = rrung >= 9  # R9: the metric must actually answer the question
+        self.last_verdict = None
+
+    # Each control reads from the guardrail set, so call sites are unchanged. Input guardrails
+    # (stop a bad number being COMPUTED) then output guardrails (stop one being SERVED).
+    @property
+    def gate(self) -> bool: return self.g.gate                      # R3
+    @property
+    def tool_restriction(self) -> bool: return self.g.tool_restriction  # R4
+    @property
+    def resolve(self) -> bool: return self.g.resolve                # R5
+    @property
+    def show_sql(self) -> bool: return self.g.transparency          # R6: the compiled SQL...
+    @property
+    def scope_echo(self) -> bool: return self.g.transparency        # R6: ...and a scope line
+    @property
+    def single_metric(self) -> bool: return self.g.single_metric    # R7
+    @property
+    def output_validation(self) -> bool: return self.g.output_validation  # R8
+    @property
+    def trajectory_verify(self) -> bool: return self.g.trajectory_verify  # R9
 
     def specs(self, terminal_only: bool = False) -> list[dict]:
         """The action space. `terminal_only` withdraws every data tool, leaving just the exit
@@ -245,10 +260,10 @@ class Toolbox:
                 specs += [_LIST_METRICS, self._query_metric_spec()]
             if self.rung >= 6:
                 specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-            if self.rrung >= 2 and self.semantic is not None:   # R2: answerability check tools
+            if self.g.check_tools and self.semantic is not None:   # R2: answerability check tools
                 specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
         specs.append(self._answer_spec())
-        if self.rrung >= 1:
+        if self.g.abstain:
             specs.append(_REFUSE)
         specs.append(_CLARIFY)
         return specs

@@ -88,6 +88,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                         g = grade(ans, q, golds[q["id"]])
                         rows.append({
                             "qid": q["id"], "tier": q["tier"], "rung": rung, "rrung": rrung,
+                            "config": grounding.guardrails.label(),
                             "model": model_name, "rep": rep,
                             "question": q["question"], "gold": golds[q["id"]],
                             "answer": ans.answer, "explanation": ans.explanation,
