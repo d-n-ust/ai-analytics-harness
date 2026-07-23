@@ -239,11 +239,15 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         return True, "", "", ""
 
     if run_single_metric and not _is_direct_governed_value(declared_value, steps):
-        return (False, "out_of_scope",
-                "the answer is not a single governed metric result (it was derived or combined)",
+        # The served number is not any single governed result, so no governed DEFINITION answers
+        # the question as asked (ARR = mrr x 12, an activation count from a rate). Report that root
+        # cause, not a vague 'out_of_scope' — a coverage gap is one typed signal, so downstream
+        # (and a future planning agent) can label it and name the metric worth defining.
+        return (False, "no_governed_definition",
+                "no single governed metric produces this number as asked (it was derived or combined)",
                 "this number was composed by hand (a rate times a count, or two metrics added), not "
-                "read from one governed metric. Combining metrics is out of scope here — refuse "
-                "rather than serve a hand-built figure.")
+                "read from one governed metric. No governed definition covers what was asked — refuse "
+                "and name the metric that would need to exist, rather than serve a hand-built figure.")
 
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
     if metric is None:                     # a numeric answer we can't attribute -> measure it

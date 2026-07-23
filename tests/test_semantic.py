@@ -280,7 +280,9 @@ def test_single_metric_enforcement():
     ok2, reason2, *_ = spec_check.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
                                                 declared_value=235, run_output_validation=False, run_spec=False,
                                                 run_single_metric=True)
-    assert not ok2 and reason2 == "out_of_scope", "a hand-derived value must refuse out_of_scope"
+    # A hand-derived value means no single governed metric produces it -> report that root cause.
+    assert not ok2 and reason2 == "no_governed_definition", \
+        "a hand-derived value must refuse no_governed_definition"
 
 
 def test_predicate_check():
@@ -369,7 +371,8 @@ def test_toolbox_wiring_and_rung_gate():
     ok, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
     assert ok, "a direct governed result passes single-metric"
     okd, reasond, *_ = tb7.verify_answer(q, "999", steps, None, "active_users", 999)
-    assert not okd and reasond == "out_of_scope", "a hand-derived value (matches no governed result) refuses at R7"
+    assert not okd and reasond == "no_governed_definition", \
+        "a hand-derived value (matches no governed result) refuses no_governed_definition at R7"
 
     tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)   # single-metric OFF
     ok6, *_ = tb6.verify_answer(q, "999", steps, None, "active_users", 999)

@@ -277,12 +277,26 @@ class Toolbox:
         return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
 
     def _gate_block(self, name: str, args: dict) -> str | None:
-        """The interception gate: before a governed data call runs, verify the period
-        (and region) are inside coverage. Returns a block message, or None to allow.
-        The gate needs no LLM — given a call, the verdict is deterministic."""
-        if not self.gate or self.semantic is None or name != "query_metric":
+        """The interception gate: before a governed data call runs, verify every filter VALUE is a
+        governed member (R5) and the period/region are inside coverage (R3). Returns a block message
+        that names the coded refusal reason, or None to allow. The gate needs no LLM — given a call,
+        the verdict is deterministic."""
+        if self.semantic is None or name != "query_metric":
             return None
         filters = args.get("filters") or {}
+        # R5: an ungoverned filter value is blocked HERE, naming its own coded reason, so the model
+        # never sees the "known members" list it would otherwise substitute a sibling from — the
+        # failure that served Americas (504) for a "North America" question.
+        if self.resolve:
+            for col, val in filters.items():
+                for v in (val if isinstance(val, (list, tuple)) else [val]):
+                    if self.semantic.resolve_member(col, v) is None:
+                        return (f"BLOCKED by governance — {v!r} is not a governed member of {col!r} "
+                                "(it may be finer-grained than, or absent from, the governed "
+                                "vocabulary). Do NOT substitute a different member and do NOT answer "
+                                "for a broader slice; refuse (ungoverned_dimension_value).")
+        if not self.gate:
+            return None
         region, country = filters.get("region"), filters.get("country")
         start, end, period = args.get("start"), args.get("end"), args.get("period")
         if period:

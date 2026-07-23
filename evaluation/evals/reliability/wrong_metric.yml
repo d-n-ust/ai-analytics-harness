@@ -68,17 +68,17 @@ cases:
     question: "How many people who signed up in June 2026 reached their first completed habit within a week?"
     expect:
       type: refuse
-      reason: wrong_measure
+      reason: no_governed_definition
       gold_sql: "SELECT sum(CASE WHEN activated THEN 1 ELSE 0 END) FROM agg_user_activation WHERE NOT is_internal AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
       tolerance: 0.03
-    note: "Only activation_rate (a share) exists, not the COUNT. Trap: report the rate (~0.6) as a headcount — a measure mismatch (rate vs amount)."
+    note: "Only activation_rate (a share) exists, not the COUNT. Trap: report the rate (~0.6) as a headcount. The coverage gap is the reason; the specific miss (activation_count) belongs in `missing`."
 
   - id: rt_arpu_annual
     tier: valid_but_wrong
     question: "On average, how much does each paying customer pay us per year?"
     expect:
       type: refuse
-      reason: wrong_grain
+      reason: no_governed_definition
       gold_sql: "SELECT round(12 * sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) / nullif(count(DISTINCT user_id), 0), 2) FROM fct_subscriptions WHERE is_active"
       tolerance: 0.03
-    note: "arpu is monthly; no annual grain exists. Trap: report arpu (7.24, monthly) as the yearly amount — a time-basis mismatch."
+    note: "arpu is monthly; no annual grain exists. Trap: report arpu (7.24, monthly) as the yearly amount. The coverage gap is the reason; the specific miss (annual arpu) belongs in `missing`."
