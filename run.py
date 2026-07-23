@@ -60,7 +60,8 @@ def main() -> None:
     sp.add_argument("--rung", type=int, required=True, choices=[1, 2, 3, 4, 5, 6])
     sp.add_argument("--model", default="gpt-5.6-terra",
                     choices=["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra",
-                             "gpt-5.4-mini", "gpt-5.6-luna", "gpt-4.1-mini"])
+                             "gpt-5.4-mini", "gpt-5-mini", "gpt-5.6-luna", "gpt-4.1-mini",
+                             "deepseek-v4-flash", "deepseek-v4-pro"])
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("eval", help="run the full experiment")

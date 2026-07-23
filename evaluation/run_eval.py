@@ -68,7 +68,9 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
         # The trajectory verifier (rrung 11) runs as a careful checker at its own reasoning level,
         # independent of the main agent — a minimal-reasoning main agent must not make a
         # minimal-reasoning verifier (which false-refuses and misses). Default 'low'.
-        verifier_model = get_model(model_name, mock=mock,
+        # VERIFIER_MODEL lets the checker be a *different* model than the worker (e.g. a
+        # cheap main agent with a careful gpt-5-mini verifier); defaults to the main model.
+        verifier_model = get_model(os.environ.get("VERIFIER_MODEL", model_name), mock=mock,
                                    reasoning=os.environ.get("VERIFIER_REASONING", "low"))
         for rung in rungs:
             set_star(con, rung >= 2)

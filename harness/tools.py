@@ -396,4 +396,4 @@ class Toolbox:
         except (QueryError, SemanticError, TreeError) as exc:
             return f"Error: {exc}", True, None
         except KeyError as exc:
-            return f"Error: missing argument {exc}", True
+            return f"Error: missing argument {exc}", True, None

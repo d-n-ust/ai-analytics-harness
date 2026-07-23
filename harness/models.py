@@ -29,6 +29,10 @@ class ModelSpec:
     thinking: dict | None = None   # Anthropic only
     # OpenAI only: whether the API accepts reasoning_effort (gpt-4.x predates it).
     supports_reasoning_effort: bool = True
+    # OpenAI-compatible providers (e.g. DeepSeek) reuse the OpenAI wrapper but talk to a
+    # different endpoint/key. base_url=None means the OpenAI default endpoint.
+    base_url: str | None = None
+    api_key_env: str = "OPENAI_API_KEY"
 
 
 def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
@@ -49,6 +53,14 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     _spec("gpt-5.6-luna", 1.0, 8.0),  # price a placeholder; tier unknown
     # Cheap legacy model for pilot runs.
     _spec("gpt-4.1-mini", 0.4, 1.6, supports_reasoning_effort=False),
+    # DeepSeek V4 (OpenAI-compatible endpoint). Reasoning is a thinking on/off toggle
+    # plus reasoning_effort in {high,max}; our 'none' = non-thinking mode — see
+    # OpenAIModel._deepseek_reasoning. Prices are DeepSeek's real published rates
+    # (USD / 1M tokens, cache-miss input). Ids verified live against /models 2026-07-23.
+    _spec("deepseek-v4-flash", 0.14, 0.28, provider="deepseek",
+          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY"),
+    _spec("deepseek-v4-pro", 0.435, 0.87, provider="deepseek",
+          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY"),
 ]}
 
 
@@ -91,10 +103,10 @@ class OpenAIModel:
     def __init__(self, spec: ModelSpec):
         from openai import OpenAI
         _load_env()
-        if not os.environ.get("OPENAI_API_KEY"):
-            raise RuntimeError("OPENAI_API_KEY is not set (add it to .env).")
+        if not os.environ.get(spec.api_key_env):
+            raise RuntimeError(f"{spec.api_key_env} is not set (add it to .env).")
         self.spec = spec
-        self.client = OpenAI()
+        self.client = OpenAI(base_url=spec.base_url, api_key=os.environ[spec.api_key_env])
         # 'none' keeps reasoning off (comparable to the thinking-disabled Anthropic
         # models) and is required for function tools on gpt-5.6 via chat-completions.
         self.reasoning = os.environ.get("OPENAI_REASONING", "none")
@@ -133,6 +145,19 @@ class OpenAIModel:
                  "function": {"name": t["name"], "description": t.get("description", ""),
                               "parameters": t["input_schema"]}} for t in tools]
 
+    def _deepseek_reasoning(self) -> dict:
+        """DeepSeek V4's reasoning dialect: a nested thinking on/off toggle, plus a
+        top-level reasoning_effort that accepts only high/max. Our canonical 'none'
+        (the sloppy default) means non-thinking mode, NOT a reasoning_effort value.
+        Fail loudly on anything else so a stray flag can't silently run the wrong
+        config and corrupt the comparison."""
+        r = self.reasoning
+        if r in ("none", "off", "disabled"):
+            return {"extra_body": {"thinking": {"type": "disabled"}}}
+        if r in ("high", "max"):
+            return {"extra_body": {"thinking": {"type": "enabled"}}, "reasoning_effort": r}
+        raise ValueError(f"deepseek-v4 reasoning must be none/high/max, got {r!r}")
+
     def create(self, system: str, messages: list, tools: list,
                force_tool: str | None = None, temperature: float | None = None):
         kw = dict(
@@ -143,7 +168,9 @@ class OpenAIModel:
                          if force_tool else "auto"),
             max_completion_tokens=MAX_TOKENS,
         )
-        if self.spec.supports_reasoning_effort:
+        if self.spec.provider == "deepseek":
+            kw.update(self._deepseek_reasoning())         # thinking toggle + effort dialect
+        elif self.spec.supports_reasoning_effort:
             kw["reasoning_effort"] = self.reasoning       # reasoning models: no temperature knob
         elif temperature is not None:
             kw["temperature"] = temperature               # legacy models take temperature
@@ -198,7 +225,7 @@ def get_model(name: str, mock: bool = False, reasoning: str | None = None):
     spec = MODEL_SPECS[name]
     if mock:
         return MockModel(spec)
-    if spec.provider == "openai":
+    if spec.provider in ("openai", "deepseek"):
         model = OpenAIModel(spec)
         if reasoning is not None:
             model.reasoning = reasoning
