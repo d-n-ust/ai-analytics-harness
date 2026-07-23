@@ -355,6 +355,75 @@ class _FakeModel:
         return SimpleNamespace(content=[block])
 
 
+def test_gate_blocks_ungoverned_dimension_and_value():
+    """R5, deterministic (no model call): the gate rejects a filter DIMENSION the metric does
+    not have, and a filter VALUE that is not a governed member — each with its own coded
+    reason, before any query runs. The value case must NOT hand back a member list, or the
+    model substitutes a sibling from it (the failure that served Americas for 'North America')."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    tb = Toolbox(con, 6, sem, None, 5)                 # R5: member resolution on
+    window = {"start": "2026-06-01", "end": "2026-06-30"}
+
+    no_dim = tb._gate_block("query_metric", {"metric": "mrr", "filters": {"region": "Americas"}})
+    assert no_dim and "dimension_not_supported" in no_dim   # mrr is sliceable by plan only
+
+    bad_value = tb._gate_block(
+        "query_metric", {"metric": "active_users", "filters": {"region": "North America"}, **window})
+    assert bad_value and "ungoverned_dimension_value" in bad_value
+    assert "Americas" not in bad_value                 # no substitutable member list leaks back
+
+    # a governed dimension holding a governed member passes both checks
+    assert tb._gate_block(
+        "query_metric", {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
+
+    # below the resolve rung the value check is off — the pre-R5 hole, kept measurable
+    below = Toolbox(con, 6, sem, None, 4)
+    assert below._gate_block(
+        "query_metric", {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
+
+
+def test_closing_phase_offers_only_exit_tools():
+    """Non-termination: in the closing phase the action space is exit-only, so a run cannot keep
+    querying and cannot answer in bare prose — it must end through the typed protocol. Removing
+    the choice is structural; nudging the model in prose is not."""
+    con = open_warehouse()
+    tb = Toolbox(con, 6, SemanticLayer(con), None, 9)
+    full = {s["name"] for s in tb.specs()}
+    closing = {s["name"] for s in tb.specs(terminal_only=True)}
+    assert {"answer", "refuse", "clarify"} <= full
+    assert closing == {"answer", "refuse", "clarify"}
+    assert not (closing & {"query_metric", "run_sql", "get_schema", "list_metrics"})
+
+
+def test_verifier_is_refuse_only():
+    """R9 plumbing (no model call): the trajectory verifier can only DOWNGRADE. A passing verdict
+    leaves the answer untouched; a failing one converts it into a coded refusal. Because it can
+    never turn a bad answer into a good one, adding it cannot introduce a fabrication. It is also
+    handed the ANALYST's own call, so it judges the analyst's choices, not the definition."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    steps = [_qm("paying_users", 371)]
+    kw = dict(source_metric="paying_users", declared_value=371,
+              run_output_validation=False, run_single_metric=True)
+    seen: dict = {}
+
+    def passing(question, metric, metric_def, args, value, declared_value):
+        seen.update(metric=metric, args=args, declared=declared_value)
+        return True, "none", ""
+
+    ok, _, _, _ = spec_check.verify_answer(sem, "How many paying users?", "371", steps,
+                                           verify_traj=passing, **kw)
+    assert ok is True                                   # a passing verdict changes nothing
+    assert seen["metric"] == "paying_users" and seen["declared"] == 371
+    assert seen["args"] == {"metric": "paying_users"}   # the analyst's call, not the compiled SQL
+
+    ok, reason, _, _ = spec_check.verify_answer(
+        sem, "How many paying users?", "371", steps,
+        verify_traj=lambda *a: (False, "scope", "answers a different question"), **kw)
+    assert ok is False and reason == "out_of_scope"      # downgraded, with a coded reason
+
+
 def test_toolbox_wiring_and_rung_gate():
     con = open_warehouse()
     sem = SemanticLayer(con)
@@ -398,5 +467,8 @@ if __name__ == "__main__":
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()
+    test_gate_blocks_ungoverned_dimension_and_value()
+    test_closing_phase_offers_only_exit_tools()
+    test_verifier_is_refuse_only()
     print(f"OK - spec check: {len(CASES)} comparison cases + derivation + additivity + "
           "ontology + typed-provenance + coercion + grain + wiring/gating all pass.")
