@@ -115,6 +115,10 @@ def grain_of_call(args: dict) -> str:
 _SLOT_ORDER = ["entity", "population", "measure", "grain"]
 _REASON = {"entity": "no_governed_definition", "population": "population_undefined",
            "measure": "wrong_measure", "grain": "wrong_grain"}
+# The trajectory verifier's mismatch kind -> a refusal reason code, so its rejections read like
+# the deterministic checks' (kind=a measure error, scope=a subset, definition/thing=wrong metric).
+_V_REASON = {"kind": "wrong_measure", "grain": "wrong_grain", "scope": "out_of_scope",
+             "definition": "no_governed_definition", "thing": "no_governed_definition", "none": "other"}
 
 
 def _amount_or_rate(measure: str) -> str:
@@ -156,6 +160,26 @@ def _num_match(a: float, b: float) -> bool:
     return abs(a - b) <= max(0.5, 0.005 * abs(b))
 
 
+def _step_values(step: dict) -> list:
+    """The typed numeric results a query_metric step returned. Prefers the typed `result_values`
+    the dispatcher now records; falls back to parsing the display text only for older traces
+    (which had no typed field), so the checks never depend on scraping numbers out of prose/SQL."""
+    v = step.get("result_values")
+    if v is not None:
+        return [float(x) for x in v]
+    return parse_numbers(step.get("result"))
+
+
+def _is_direct_governed_value(declared_value, steps: list) -> bool:
+    """Single-metric test: is the served number the actual result of SOME governed query the
+    model ran? If it matches no governed result, the model built it by hand (a rate x a count,
+    metric A + metric B) — a composition that is out of scope for a one-metric answer."""
+    for s in steps or []:
+        if s.get("tool") == "query_metric" and any(_num_match(declared_value, b) for b in _step_values(s)):
+            return True
+    return False
+
+
 def _provenance(declared_value, steps: list, source_metric, metrics):
     """Which governed metric produced the answer, its call args, and the value it returned
     — taken ONLY from the model's typed `source_metric` declaration, never inferred from the
@@ -173,9 +197,9 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
         return None, None, None
     best = next((s for s in reversed(calls)
                  if declared_value is not None
-                 and any(_num_match(declared_value, b) for b in parse_numbers(s.get("result")))),
+                 and any(_num_match(declared_value, b) for b in _step_values(s))),
                 calls[-1])
-    governed = parse_numbers(best.get("result"))
+    governed = _step_values(best)
     return source_metric, (best.get("args") or {}), (governed[0] if governed else None)
 
 
@@ -198,21 +222,29 @@ def result_sanity(metric_def: dict, value) -> tuple[bool, str, str, str]:
 
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
-                  decompose, source_metric: str | None = None, declared_value=None,
-                  run_sanity: bool = True, run_spec: bool = True) -> tuple[bool, str, str, str]:
+                  decompose=None, source_metric: str | None = None, declared_value=None,
+                  run_sanity: bool = True, run_spec: bool = True,
+                  run_single_metric: bool = False, scope_decompose=None,
+                  verify_traj=None) -> tuple[bool, str, str, str]:
     """Return (ok, reason, missing, explanation). ok=False means convert the answer into
     a refuse; `missing` is the short slot fact, `explanation` the sentence.
 
-    Two independent output checks, each toggled by its own rung so their deltas are
-    measured separately: `run_sanity` (R8, the returned value is well-formed) and
-    `run_spec` (R7, the metric matches the question). `decompose` is a callable
-    (question) -> required_spec dict, injected so the comparison is provable without a
-    model call. `source_metric` and `declared_value` are the model's typed provenance: the
-    metric it used and the number it served. The checks apply to a NUMERIC metric answer,
-    so a prose / diagnostic answer (no `declared_value`) is passed through untouched — the
-    scope is read from the typed field, never guessed from the answer text."""
+    Independent output checks, each toggled by its own rung so their deltas are measured
+    separately: `run_single_metric` (R9, the served number must BE one governed result, not a
+    hand-composition), `run_sanity` (R8, well-formed value), `run_spec` (R7, the 4-slot decomposer
+    matches the metric to the question), and `scope_decompose` (R10, no filter the question didn't
+    ask for). `source_metric`/`declared_value` are the model's typed provenance. The checks apply to
+    a NUMERIC answer, so prose (no `declared_value`) passes through untouched."""
     if semantic is None or not answer_text or declared_value is None:
         return True, "", "", ""
+
+    if run_single_metric and not _is_direct_governed_value(declared_value, steps):
+        return (False, "out_of_scope",
+                "the answer is not a single governed metric result (it was derived or combined)",
+                "this number was composed by hand (a rate times a count, or two metrics added), not "
+                "read from one governed metric. Combining metrics is out of scope here — refuse "
+                "rather than serve a hand-built figure.")
+
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("spec check: numeric answer with no usable source_metric; not verified")
@@ -238,6 +270,22 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                            "question. No governed metric matches what was asked, so refuse rather "
                            "than report a near-miss as the answer.")
             return False, _REASON[slot], missing, explanation
+
+    if scope_decompose is not None:        # R10: did the model narrow scope the question didn't ask for?
+        requested = scope_decompose(question) or {}
+        dim = _unrequested_filter(args, requested)
+        if dim is not None:
+            return (False, "out_of_scope",
+                    f"the answer filtered by {dim!r}, which the question did not ask to restrict",
+                    f"the number was computed for a subset ({dim} was filtered), but the question "
+                    f"named no {dim} — so this is a slice, not what was asked. Answer the whole "
+                    "population the question implied, or refuse.")
+
+    if verify_traj is not None:            # R11: does this metric + SQL actually answer the question?
+        ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
+        if not ok_v:
+            return (False, _V_REASON.get(mismatch, "other"),
+                    f"verifier[{mismatch}]: {reason_v}"[:180], reason_v)
 
     return True, "", "", ""
 
@@ -322,4 +370,56 @@ def decompose_question(model, question: str, ontology: dict) -> dict:
     for b in getattr(resp, "content", []):
         if getattr(b, "type", None) == "tool_use" and b.name == "declare_spec":
             return _coerce(b.input or {}, entities, populations)
+    return {}
+
+
+def _unrequested_filter(args: dict, requested: dict):
+    """The first filter dimension the model applied that the question did not ask to restrict —
+    an unrequested narrowing (a total quietly turned into a subset). `is_internal` is exempt: it's
+    a hygiene exclusion (drop test/internal accounts), not a scope choice the question must name.
+    We check that a dimension was filtered at all; value-level mismatch is out of scope for now."""
+    applied = (args or {}).get("filters") or {}
+    for dim in applied:
+        if dim == "is_internal":
+            continue
+        if dim not in (requested or {}):
+            return dim
+    return None
+
+
+_DECLARE_SCOPE = {
+    "name": "declare_scope",
+    "description": "State which governed dimensions the question explicitly restricts, and to what.",
+    "input_schema": {"type": "object", "properties": {
+        "filters": {"type": "object",
+                    "additionalProperties": {"type": "array", "items": {"type": "string"}},
+                    "description": "Only dimensions the QUESTION explicitly names a value for "
+                                   "(e.g. {\"channel\": [\"paid search\"]}). An empty object means "
+                                   "the question asks for a total — no restriction."}},
+        "required": ["filters"]}}
+
+_SCOPE_SYSTEM = (
+    "You read a business question and state ONLY the scope it explicitly asks for: which governed "
+    "dimensions it restricts, and to what value(s). Governed dimensions: {dims}.\n"
+    "- If the question names a value for a dimension (\"on the annual plan\", \"in the US\", "
+    "\"paid-search signups\"), include it.\n"
+    "- If the question asks for a total or overall figure and names no dimension value, return an "
+    "empty filters object.\n"
+    "- NEVER invent a restriction the question does not state (do not exclude 'test' channels, "
+    "internal users, or anything the question is silent about). A time window (in June, last week) "
+    "is NOT a dimension filter — ignore it here.")
+
+
+def decompose_scope(model, question: str, dimensions: dict) -> dict:
+    """Isolated intent read: which governed dimensions does the QUESTION explicitly restrict?
+    Question-only (blind to the metric and the query the model ran), so it is an independent check
+    on scope. Returns {dimension: [values]} for the dimensions the question names; a dimension the
+    question does not mention is absent (meaning: do not filter it — answer the total)."""
+    dims = ", ".join(sorted(dimensions or {})) or "(none)"
+    resp = model.create(_SCOPE_SYSTEM.format(dims=dims),
+                        [{"role": "user", "content": question}],
+                        [_DECLARE_SCOPE], force_tool="declare_scope", temperature=0)
+    for b in getattr(resp, "content", []):
+        if getattr(b, "type", None) == "tool_use" and b.name == "declare_scope":
+            return (b.input or {}).get("filters") or {}
     return {}

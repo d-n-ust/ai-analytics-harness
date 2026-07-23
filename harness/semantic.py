@@ -97,6 +97,12 @@ class SemanticLayer:
         return {"entities": dict(o.get("entities", {}) or {}),
                 "populations": dict(o.get("populations", {}) or {})}
 
+    @property
+    def dimensions(self) -> dict:
+        """The governed dimensions a metric may be sliced by, with their members — the
+        vocabulary the isolated scope decomposer reads to say which slices a question asks for."""
+        return dict(self.governance.get("dimensions", {}) or {})
+
     # -- answerability API: one boolean check per refusal reason ------------ #
     # Each check consults exactly one piece of governance metadata and returns
     # (ok, detail). The same checks serve every caller: the model's check_* tools,
@@ -281,6 +287,38 @@ class SemanticLayer:
 
     def query(self, name, **kw) -> tuple[list[str], list[tuple]]:
         return run_query(self.con, self.compile(name, **kw))
+
+    def query_with_sql(self, name, **kw) -> tuple[str, list[str], list[tuple]]:
+        """Like query(), but also returns the compiled SQL, so the caller can show the model
+        exactly what was computed (transparency) — not just the number it must trust blindly."""
+        sql = self.compile(name, **kw)
+        cols, rows = run_query(self.con, sql)
+        return sql, cols, rows
+
+    def scope_line(self, name, filters=None, period=None, start=None, end=None,
+                   group_by=None, resolve=True) -> str:
+        """A one-line, plain statement of what a governed result actually covers — so a filter
+        that quietly narrows a 'total' into a subset is visible to the model, not buried in SQL.
+        Values are shown resolved (their governed member), or flagged UNKNOWN if unresolvable."""
+        m = self.metrics[name]
+        when = (f"period={period}" if period
+                else f"window {start or '…'}..{end or '…'}" if (start or end) else "all time")
+        if filters:
+            shown = []
+            for col, val in filters.items():
+                vals = list(val) if isinstance(val, (list, tuple)) else [val]
+                if resolve:
+                    vals = [self.resolve_member(col, v) or f"UNKNOWN({v})" for v in vals]
+                shown.append(f"{col}={vals}")
+            flt = "FILTERED to a subset by " + ", ".join(shown)
+        else:
+            flt = "no filters — the whole governed population"
+        line = f"covers: {when}; {flt}"
+        if m.get("default_filters"):
+            line += f"; the metric definition already restricts: {', '.join(m['default_filters'])}"
+        if group_by:
+            line += f"; broken down by {', '.join(group_by)}"
+        return line
 
     def scalar(self, name, *, filters=None, start=None, end=None, period=None):
         """One number for one metric over one period (used by the metric tree)."""

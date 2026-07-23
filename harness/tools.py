@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from . import spec_check
+from . import spec_check, verifier
 from .config import resolve_period
 from .semantic import SemanticError, SemanticLayer
 from .tree import MetricTree, TreeError
@@ -189,6 +189,13 @@ def _fmt_rows(columns, rows) -> str:
     return f"columns: {head}\n{body}{note}"
 
 
+def _numeric_cells(rows) -> list:
+    """The typed numeric values a governed query returned — so the output checks read the real
+    result, never a number parsed back out of the display text (which now also carries SQL)."""
+    return [float(c) for r in rows for c in r
+            if isinstance(c, (int, float)) and not isinstance(c, bool)]
+
+
 class Toolbox:
     """Holds the live warehouse/semantic/tree handles and exposes the tools for a rung.
 
@@ -214,8 +221,19 @@ class Toolbox:
         self.fence = rrung >= 5         # R5: no raw SQL — governed metrics only
         self.resolve = rrung >= 6       # R6: resolve/validate free-text filter values
         # Output-verification family (stop a bad number being served):
-        self.spec_check = rrung >= 7    # R7: the answer's metric must match the question
-        self.result_sanity = rrung >= 8 # R8: the returned value must be well-formed
+        self.spec_check = rrung in (7, 8)  # R7/R8: the 4-slot decomposer (isolated model call)
+        self.result_sanity = rrung >= 8    # R8: the returned value must be well-formed
+        # Governed-only "iteration 1" bundle (rrung 9+): replaces the 4-slot decomposer with a
+        # deterministic core plus transparency. R9 = transparency + single-metric enforcement;
+        # R10 = + scope fidelity (an isolated intent read of which filters the question asked for).
+        self.show_sql = rrung >= 9      # R9: show the model the exact compiled SQL for each result
+        self.receipts = rrung >= 9      # R9: show a plain [scope] line (flags a narrowed subset)
+        self.single_metric = rrung >= 9 # the served number must BE one governed metric's result
+        self.scope_fidelity = rrung == 10  # R10: a filter the question didn't ask for = a wrong subset
+        # R11: the trajectory verifier — inspects {question, definition, SQL, added filters, result}
+        # and refuses when the metric doesn't answer the question (wrong thing/kind/scope/definition).
+        # Subsumes the scope + measure + definition checks in one, so scope_fidelity turns off here.
+        self.trajectory_verify = rrung >= 11
 
     def specs(self) -> list[dict]:
         specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
@@ -249,7 +267,7 @@ class Toolbox:
         menu as query_metric). Both are the model's typed claims, more reliable than
         reconstructing them from the answer text. A prose / diagnostic answer leaves `value`
         unset, so the output checks stand down rather than force a spec onto words."""
-        if not (self.spec_check and self.semantic is not None):
+        if not ((self.spec_check or self.single_metric) and self.semantic is not None):
             return _ANSWER
         props = dict(_ANSWER["input_schema"]["properties"])
         props["value"] = {
@@ -290,66 +308,100 @@ class Toolbox:
         return ("YES — " if ok else "NO — ") + detail
 
     def verify_answer(self, question: str, answer_text: str | None, steps: list, model=None,
-                      source_metric: str | None = None, declared_value=None) -> tuple[bool, str, str, str]:
-        """The output-verification checks on an answer before it is served: result-sanity
-        (R8: the value is well-formed) and spec decomposition (R7: the metric matches the
-        question). Returns (ok, reason, missing, explanation); ok=False converts the answer
-        to a refuse. Each is gated by its own rung, so the two deltas are measured
-        separately. The comparison lives in spec_check; this wires in the live layer and an
-        isolated decomposer. Off below rrung 7, or with no model to decompose the question."""
-        if self.semantic is None or not (self.spec_check or self.result_sanity):
+                      source_metric: str | None = None, declared_value=None,
+                      verifier_model=None) -> tuple[bool, str, str, str]:
+        """The output-verification checks on an answer before it is served, each gated by its own
+        rung so their deltas are measured separately: result-sanity (R8, well-formed value), the
+        4-slot spec decomposer (R7/R8), single-metric enforcement (R9, the number must BE one
+        governed result), and scope fidelity (R10, no filter the question didn't ask for).
+        Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
+        if self.semantic is None or not (self.spec_check or self.result_sanity or self.single_metric
+                                         or self.scope_fidelity or self.trajectory_verify):
             return True, "", "", ""
         decompose = (lambda q: spec_check.decompose_question(model, q, self.semantic.ontology)) \
             if (self.spec_check and model is not None) else None
+        scope_decompose = (lambda q: spec_check.decompose_scope(model, q, self.semantic.dimensions)) \
+            if (self.scope_fidelity and model is not None) else None
+        # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
+        vmodel = verifier_model or model
+        verify_traj = self._trajectory_verifier(vmodel) if (self.trajectory_verify and vmodel) else None
         return spec_check.verify_answer(
             self.semantic, question, answer_text, steps, decompose=decompose,
             source_metric=source_metric, declared_value=declared_value,
-            run_sanity=self.result_sanity, run_spec=self.spec_check and model is not None)
+            run_sanity=self.result_sanity, run_spec=self.spec_check and model is not None,
+            run_single_metric=self.single_metric, scope_decompose=scope_decompose,
+            verify_traj=verify_traj)
 
-    def dispatch(self, name: str, args: dict) -> tuple[str, bool]:
-        """Run a tool. Returns (text, is_error). Errors come back as the DB/semantic
-        message so the model can self-correct."""
+    def _trajectory_verifier(self, model):
+        """A callable (question, metric, metric_def, call_args, governed_value, claim) -> verdict,
+        that recompiles the SQL the analyst ran and hands the verifier the analyst's ADDED filters
+        separately from the metric's definitional clauses (the separation the isolated test showed
+        is load-bearing)."""
+        def run(question, metric, metric_def, args, gov_value, claim):
+            a = args or {}
+            sql = self.semantic.compile(
+                metric, group_by=a.get("group_by"), filters=a.get("filters"),
+                time_grain=a.get("time_grain"), start=a.get("start"), end=a.get("end"),
+                period=a.get("period"), resolve=self.resolve)
+            window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
+                                         if (a.get("start") or a.get("end")) else None)
+            return verifier.verify_trajectory(model, question, metric, metric_def, sql, gov_value,
+                                              claim, applied_filters=a.get("filters"), time_window=window)
+        return run
+
+    def dispatch(self, name: str, args: dict) -> tuple[str, bool, list | None]:
+        """Run a tool. Returns (text, is_error, values): `text` is what the model reads, `values`
+        the typed numeric result of a governed query (None for other tools) so the output checks
+        never parse the display text. Errors come back as the DB/semantic message to self-correct."""
         try:
             if name == "get_schema":
-                return schema_text(self.con, self.rung), False
+                return schema_text(self.con, self.rung), False, None
             if name == "describe_table":
-                return describe_table(self.con, args["table"], self.rung), False
+                return describe_table(self.con, args["table"], self.rung), False, None
             if name == "run_sql":
                 cols, rows = run_query(self.con, args["query"])
-                return _fmt_rows(cols, rows), False
+                return _fmt_rows(cols, rows), False, None
             if name == "list_metrics":
-                return self.semantic.list_metrics_text(), False
+                return self.semantic.list_metrics_text(), False, None
             if name == "query_metric":
                 block = self._gate_block(name, args)
                 if block is not None:
-                    return block, True
-                cols, rows = self.semantic.query(
+                    return block, True, None
+                sql, cols, rows = self.semantic.query_with_sql(
                     args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
                     time_grain=args.get("time_grain"), start=args.get("start"),
                     end=args.get("end"), period=args.get("period"), resolve=self.resolve)
-                return _fmt_rows(cols, rows), False
+                text = _fmt_rows(cols, rows)
+                if self.receipts:       # R9+: a plain scope line, flagging a narrowed subset
+                    text += "\n[scope] " + self.semantic.scope_line(
+                        args["metric"], filters=args.get("filters"), period=args.get("period"),
+                        start=args.get("start"), end=args.get("end"),
+                        group_by=args.get("group_by"), resolve=self.resolve)
+                if self.show_sql:       # R9+: the exact compiled SQL
+                    text += f"\n[sql] {sql}"
+                return text, False, _numeric_cells(rows)
             if name == "check_metric_exists":
-                return self._verdict(*self.semantic.metric_exists(args["term"])), False
+                return self._verdict(*self.semantic.metric_exists(args["term"])), False, None
             if name == "check_coverage":
                 return self._verdict(*self.semantic.in_coverage(
                     args.get("start"), args.get("end"),
-                    args.get("region"), args.get("country"))), False
+                    args.get("region"), args.get("country"))), False, None
             if name == "check_population_defined":
-                return self._verdict(*self.semantic.population_defined(args["term"])), False
+                return self._verdict(*self.semantic.population_defined(args["term"])), False, None
             if name == "check_causal_evidence":
                 if self.tree is None:
-                    return "NO — no metric tree at this rung; no causal evidence is encoded.", False
+                    return "NO — no metric tree at this rung; no causal evidence is encoded.", False, None
                 return self._verdict(*self.tree.causal_evidence(
-                    args.get("driver"), args.get("outcome"))), False
+                    args.get("driver"), args.get("outcome"))), False, None
             if name == "get_metric_tree":
-                return self.tree.describe(), False
+                return self.tree.describe(), False, None
             if name == "explain_change":
                 out = self.tree.explain_change(
                     node=args.get("node"), period_a=args.get("period_a", "prev_week"),
                     period_b=args.get("period_b", "last_week"), filters=args.get("filters"))
-                return json.dumps(out, default=str, indent=2), False
-            return f"Unknown tool {name!r}.", True
+                return json.dumps(out, default=str, indent=2), False, None
+            return f"Unknown tool {name!r}.", True, None
         except (QueryError, SemanticError, TreeError) as exc:
-            return f"Error: {exc}", True
+            return f"Error: {exc}", True, None
         except KeyError as exc:
             return f"Error: missing argument {exc}", True

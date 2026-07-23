@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
+import time
 from collections import defaultdict
 from pathlib import Path
 
@@ -63,17 +65,24 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
     raw_f = (run_dir / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
     for model_name in models:
         model = get_model(model_name, mock=mock)
+        # The trajectory verifier (rrung 11) runs as a careful checker at its own reasoning level,
+        # independent of the main agent — a minimal-reasoning main agent must not make a
+        # minimal-reasoning verifier (which false-refuses and misses). Default 'low'.
+        verifier_model = get_model(model_name, mock=mock,
+                                   reasoning=os.environ.get("VERIFIER_REASONING", "low"))
         for rung in rungs:
             set_star(con, rung >= 2)
             for rrung in rrungs:
                 grounding = build_grounding(con, rung, rrung)
                 for rep in range(repeats):
                     for q in questions:
+                        t0 = time.perf_counter()
                         try:
-                            ans = run_agent(q["question"], grounding, model)
+                            ans = run_agent(q["question"], grounding, model, verifier_model=verifier_model)
                         except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
                             ans = Answer(q["question"], rung, model_name, None,
                                          outcome="error", error=f"exception: {exc}")
+                        elapsed_s = time.perf_counter() - t0   # wall-clock per run, for per-rung latency
                         g = grade(ans, q, golds[q["id"]])
                         rows.append({
                             "qid": q["id"], "tier": q["tier"], "rung": rung, "rrung": rrung,
@@ -88,7 +97,8 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                             "reason_match": g["reason_match"], "score": g["score"],
                             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
-                            "output_tokens": ans.output_tokens, "error": ans.error, "steps": ans.steps,
+                            "output_tokens": ans.output_tokens, "error": ans.error,
+                            "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
                         })
                         raw_f.write(json.dumps(rows[-1], default=str) + "\n")
                         raw_f.flush()
@@ -133,6 +143,15 @@ def _rate(rows) -> str:
     n = len(rows)
     c = sum(r["correct"] for r in rows)
     return f"{c}/{n} ({round(100 * c / n) if n else 0}%)"
+
+
+def _pctl(vals, p: float) -> float:
+    """Nearest-rank percentile (no numpy). p in [0,1]. Empty -> 0.0."""
+    if not vals:
+        return 0.0
+    s = sorted(vals)
+    k = max(0, min(len(s) - 1, round(p * (len(s) - 1))))
+    return s[k]
 
 
 def _cost(rows) -> float:
@@ -311,6 +330,24 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
             mc = sum(r.get("tool_calls", 0) for r in mr) / n
             lines.append(f"| {m} | {rung}·R{rrung} | {n} | {ti:,} | {to:,} | {ti + to:,} | "
                          f"{(ti + to) / n:,.0f} | {mc:.1f} |")
+
+    # Latency per rung — only when the run recorded timing (older runs skip this table).
+    if any(r.get("elapsed_s") is not None for r in rows):
+        lines += ["", "## Latency per rung (seconds)", "",
+                  "_wall-clock per run (all outcomes) from our SEQUENTIAL harness on a shared API — "
+                  "read the delta BETWEEN rungs (R7 adds the isolated decomposer model call), not the "
+                  "absolute value, which is not production-representative. gpt-5-mini is a reasoning "
+                  "model, so per-question reasoning time dominates and p90 over ~1 rep/rung is noisy._", "",
+                  "| model | rung·R | runs | mean | p90 | max |", "|---|---|---|---|---|---|"]
+        for m in models:
+            for rung in rungs:
+              for rrung in rrungs:
+                vals = [r["elapsed_s"] for r in by(model=m, rung=rung, rrung=rrung)
+                        if r.get("elapsed_s") is not None]
+                if not vals:
+                    continue
+                lines.append(f"| {m} | {rung}·R{rrung} | {len(vals)} | {sum(vals) / len(vals):.1f} | "
+                             f"{_pctl(vals, 0.90):.1f} | {max(vals):.1f} |")
 
     lines += ["", "## Cost", "",
               "| model | total tokens (in/out) | est. USD |", "|---|---|---|"]

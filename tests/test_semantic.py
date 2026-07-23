@@ -25,9 +25,14 @@ from harness.warehouse import open_warehouse
 
 
 def _qm(metric, value, **args):
-    """A recorded query_metric step returning one scalar, as the trace stores it."""
+    """A recorded query_metric step returning one scalar, as the trace stores it: the typed
+    `result_values` the dispatcher records, plus the display string."""
+    try:
+        vals = [float(value)]
+    except (TypeError, ValueError):
+        vals = []
     return {"tool": "query_metric", "args": {"metric": metric, **args},
-            "result": f"columns: value\n({value},)"}
+            "result": f"columns: value\n({value},)", "result_values": vals}
 
 
 # (label, question, answer, steps, required_spec, expect_refuse, expect_reason)
@@ -258,6 +263,46 @@ def test_value_resolver():
     assert "platform = 'iPhone'" in raw
 
 
+def test_single_metric_enforcement():
+    """R9: the served number must BE a governed result; a value composed by hand (rate x count)
+    matches no governed result and is refused out_of_scope."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
+             _qm("activation_rate", 0.529, start="2026-06-01", end="2026-06-30")]
+    ok, *_ = spec_check.verify_answer(sem, "how many signups?", "444", steps, source_metric="new_signups",
+                                      declared_value=444, run_sanity=False, run_spec=False, run_single_metric=True)
+    assert ok, "a direct governed result must pass single-metric"
+    # 235 = 444 * 0.529 matches no governed result -> refuse
+    ok2, reason2, *_ = spec_check.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
+                                                declared_value=235, run_sanity=False, run_spec=False,
+                                                run_single_metric=True)
+    assert not ok2 and reason2 == "out_of_scope", "a hand-derived value must refuse out_of_scope"
+
+
+def test_scope_fidelity():
+    """R10: a filter the question didn't ask for turns a total into a subset -> refuse; a filter the
+    question named passes; is_internal (hygiene) is exempt. scope_decompose is stubbed."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    spend = [_qm("marketing_spend", 18267.17, start="2026-06-01", end="2026-06-30",
+                 filters={"channel": ["paid_search", "referral", "content_seo", "organic"]})]
+    ok, reason, *_ = spec_check.verify_answer(
+        sem, "total marketing spend in June?", "18267.17", spend, source_metric="marketing_spend",
+        declared_value=18267.17, run_sanity=False, run_spec=False, scope_decompose=lambda _q: {})
+    assert not ok and reason == "out_of_scope", "an unrequested channel filter must refuse"
+    ok2, *_ = spec_check.verify_answer(
+        sem, "spend on paid search?", "18267.17", spend, source_metric="marketing_spend",
+        declared_value=18267.17, run_sanity=False, run_spec=False,
+        scope_decompose=lambda _q: {"channel": ["paid_search"]})
+    assert ok2, "a filter the question named must pass"
+    hygiene = [_qm("new_signups", 543, start="2026-06-01", end="2026-06-30", filters={"is_internal": False})]
+    ok3, *_ = spec_check.verify_answer(
+        sem, "how many signups in June?", "543", hygiene, source_metric="new_signups",
+        declared_value=543, run_sanity=False, run_spec=False, scope_decompose=lambda _q: {})
+    assert ok3, "is_internal must be exempt from scope fidelity"
+
+
 def test_grain_of_call():
     assert spec_check.grain_of_call({}) == "total"
     assert spec_check.grain_of_call({"period": "all"}) == "total"
@@ -342,6 +387,8 @@ if __name__ == "__main__":
     test_result_sanity_catches_degenerate_values()
     test_coerce_out_of_vocab_to_other()
     test_value_resolver()
+    test_single_metric_enforcement()
+    test_scope_fidelity()
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()

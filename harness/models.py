@@ -192,10 +192,15 @@ class MockModel:
         return SimpleNamespace(content=[block], stop_reason="tool_use", usage=usage)
 
 
-def get_model(name: str, mock: bool = False):
+def get_model(name: str, mock: bool = False, reasoning: str | None = None):
+    """`reasoning` overrides the effort for this instance (OpenAI only) — used to run the
+    verifier as a careful checker (e.g. 'low') even when the main agent runs at 'minimal'."""
     spec = MODEL_SPECS[name]
     if mock:
         return MockModel(spec)
     if spec.provider == "openai":
-        return OpenAIModel(spec)
+        model = OpenAIModel(spec)
+        if reasoning is not None:
+            model.reasoning = reasoning
+        return model
     return AnthropicModel(spec)

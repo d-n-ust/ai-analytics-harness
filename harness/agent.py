@@ -36,7 +36,7 @@ class Answer:
     steps: list = field(default_factory=list)
 
 
-def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
+def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
     messages: list = [{"role": "user", "content": question}]
     in_tok = out_tok = tool_calls = 0
     steps: list = []
@@ -66,9 +66,9 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
                     final = final or (b.name, b.input or {})
                 else:
                     tool_calls += 1
-                    content, is_err = grounding.toolbox.dispatch(b.name, b.input or {})
+                    content, is_err, values = grounding.toolbox.dispatch(b.name, b.input or {})
                     steps.append({"tool": b.name, "args": b.input, "error": is_err,
-                                  "result": content[:300]})
+                                  "result": content[:300], "result_values": values})
                     tool_results.append({"type": "tool_result", "tool_use_id": b.id,
                                          "content": content, "is_error": is_err})
 
@@ -77,7 +77,8 @@ def run_agent(question: str, grounding, model, max_iters: int = 8) -> Answer:
             if name == "answer":
                 ans_text = str(kw.get("answer", "")).strip()
                 ok, reason, missing, explanation = grounding.toolbox.verify_answer(
-                    question, ans_text, steps, model, kw.get("source_metric"), kw.get("value"))
+                    question, ans_text, steps, model, kw.get("source_metric"), kw.get("value"),
+                    verifier_model=verifier_model)
                 if not ok:                       # R6+: a failed spec check becomes a refusal
                     return answer(answer=None, explanation=explanation, outcome="refuse",
                                   reason=reason, missing=missing, abstained=True, iterations=it + 1)
