@@ -88,19 +88,19 @@ class SemanticLayer:
 
     @property
     def ontology(self) -> dict:
-        """The R6 spec-check vocabulary: the entities and population segments the
-        isolated decomposer may name (each with a short gloss). A superset of the
+        """The R6 spec-check vocabulary: the entities and segments the
+        isolated intent parser may name (each with a short gloss). A superset of the
         metrics — it carries entities like `habits` that have no governed metric — so a
-        question can name something we cannot answer. The decomposer sees this, never
+        question can name something we cannot answer. The intent parser sees this, never
         the metric inventory."""
         o = self.governance.get("ontology", {}) or {}
         return {"entities": dict(o.get("entities", {}) or {}),
-                "populations": dict(o.get("populations", {}) or {})}
+                "segments": dict(o.get("segments", {}) or {})}
 
     @property
     def dimensions(self) -> dict:
         """The governed dimensions a metric may be sliced by, with their members — the
-        vocabulary the isolated scope decomposer reads to say which slices a question asks for."""
+        vocabulary the isolated scope intent parser reads to say which slices a question asks for."""
         return dict(self.governance.get("dimensions", {}) or {})
 
     # -- answerability API: one boolean check per refusal reason ------------ #
@@ -177,14 +177,14 @@ class SemanticLayer:
                 return canonical
         return None
 
-    def population_defined(self, term: str) -> tuple[bool, str]:
+    def segment_defined(self, term: str) -> tuple[bool, str]:
         pops = [str(p) for p in self.governance.get("answerable_terms", [])]
         if not _tokens(term):
             return False, "empty term."
         name = _match_catalog(term, pops)
         if name:
-            return True, f"governed population {name!r} matches {term!r}."
-        return False, f"no governed population matches {term!r}. Defined: {', '.join(pops)}."
+            return True, f"governed segment {name!r} matches {term!r}."
+        return False, f"no governed segment matches {term!r}. Defined: {', '.join(pops)}."
 
     # -- introspection the agent sees -------------------------------------- #
     def list_metrics_text(self) -> str:
@@ -312,7 +312,7 @@ class SemanticLayer:
                 shown.append(f"{col}={vals}")
             flt = "FILTERED to a subset by " + ", ".join(shown)
         else:
-            flt = "no filters — the whole governed population"
+            flt = "no filters — the whole governed segment"
         line = f"covers: {when}; {flt}"
         if m.get("default_filters"):
             line += f"; the metric definition already restricts: {', '.join(m['default_filters'])}"

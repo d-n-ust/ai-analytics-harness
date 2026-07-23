@@ -315,7 +315,7 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
 
     lines += ["", "## Tokens per rung", "",
               "_tokens by rung: total across all runs at that rung, plus the per-run mean. "
-              "Higher rungs cost more (more context; the spec decomposer adds a call at R7+)._", "",
+              "Higher rungs cost more (more context; the spec intent parser adds a call at R7+)._", "",
               "| model | rung·R | runs | total in | total out | total tokens | mean/run | mean tool-calls |",
               "|---|---|---|---|---|---|---|---|"]
     for m in models:
@@ -335,7 +335,7 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     if any(r.get("elapsed_s") is not None for r in rows):
         lines += ["", "## Latency per rung (seconds)", "",
                   "_wall-clock per run (all outcomes) from our SEQUENTIAL harness on a shared API — "
-                  "read the delta BETWEEN rungs (R7 adds the isolated decomposer model call), not the "
+                  "read the delta BETWEEN rungs (R7 adds the isolated intent parser model call), not the "
                   "absolute value, which is not production-representative. gpt-5-mini is a reasoning "
                   "model, so per-question reasoning time dominates and p90 over ~1 rep/rung is noisy._", "",
                   "| model | rung·R | runs | mean | p90 | max |", "|---|---|---|---|---|---|"]

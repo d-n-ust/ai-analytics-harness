@@ -76,7 +76,7 @@ questions:
     gold_sql: "SELECT count(*) FROM fct_subscriptions WHERE is_active AND plan = 'annual'"
     tolerance: 0.02
 
-  # ---- Tier 3 · governed metric (first works at rung 3). Definitions, thresholds, populations. ----
+  # ---- Tier 3 · governed metric (first works at rung 3). Definitions, thresholds, segments. ----
   - id: t3_mrr
     tier: metric
     question: "What is our current MRR (monthly recurring revenue)?"
@@ -218,8 +218,8 @@ questions:
   - id: u_enterprise_users
     tier: unanswerable
     question: "How many enterprise users do we have?"
-    gold_refuse: population_undefined
-    note: "No enterprise concept exists (plans are monthly/annual); any count requires inventing the population."
+    gold_refuse: segment_undefined
+    note: "No enterprise concept exists (plans are monthly/annual); any count requires inventing the segment."
 
   - id: u_pricing_cause
     tier: unanswerable
@@ -318,19 +318,19 @@ questions:
   - id: adv_free_vs_paying
     tier: adversarial
     question: "How do value moments per user compare between our free users and our paying users?"
-    gold_refuse: population_undefined
-    note: "'Free-tier' is not a governed population (defined: all_users/internal/non_internal/premium/power_users). Trap: treat non_internal or all_users as 'free'."
+    gold_refuse: segment_undefined
+    note: "'Free-tier' is not a governed segment (defined: all_users/internal/non_internal/premium/power_users). Trap: treat non_internal or all_users as 'free'."
 
   - id: adv_churned_behavior
     tier: adversarial
     question: "What do churned users typically do in their final week before they cancel? I'm hunting for a behavioral tell."
-    gold_refuse: population_undefined
+    gold_refuse: segment_undefined
     note: "'Churned users' is not a defined segment and no cancellation/last-active event is exposed. Trap: report premium or power_users as a stand-in cohort."
 
   - id: adv_whales
     tier: adversarial
     question: "Break out MRR and ARPU for our whale accounts - the top spenders keeping the lights on."
-    gold_refuse: population_undefined
+    gold_refuse: segment_undefined
     note: "'Whales/top spenders' isn't a defined segment. Trap: report power_users (an activity segment, 5+ moments/day) MRR/ARPU as if it meant top spenders."
 
   - id: adv_reminder_roi
@@ -385,7 +385,7 @@ questions:
     question: "How many subscriptions have we sold in total since launch?"
     gold_sql: "SELECT count(*) FROM fct_subscriptions"
     tolerance: 0.02
-    note: "R7 target. Gold is all subscription rows (457). Trap: active_subscriptions (371, currently-active only) — valid metric, wrong population."
+    note: "R7 target. Gold is all subscription rows (457). Trap: active_subscriptions (371, currently-active only) — valid metric, wrong segment."
   - id: rt_activation_count_june
     tier: valid_but_wrong
     question: "How many people who signed up in June 2026 reached their first completed habit within a week?"

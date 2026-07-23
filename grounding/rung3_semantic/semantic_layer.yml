@@ -7,17 +7,17 @@
 # frequency, activation, ...) exclude internal/test accounts by default, because that
 # is what those numbers mean to leadership. This is exactly what a competent semantic
 # layer holds — so getting "active users" right is a rung-3 win, not a rung-4 one.
-# Raw activity *volume* (value_moments, new_signups) is population-neutral: it counts
+# Raw activity *volume* (value_moments, new_signups) is segment-neutral: it counts
 # what happened, so it includes everyone. The knowledge base (rung 4) is left for the
 # things a semantic layer genuinely cannot hold: coverage caveats, fuzzy-question
 # mapping, and world facts.
 #
-# entity + population (R6 semantic check): every metric also declares the governed
+# entity + segment (R6 semantic check): every metric also declares the governed
 # *entity* it measures (the thing one unit counts — MetricFlow's entity) and the named
-# *population segment* it restricts to (Cube's segment). These are first-class parts of
+# *segment segment* it restricts to (Cube's segment). These are first-class parts of
 # the definition, not a parallel copy: the measure family is still derived from `agg`,
 # and internal/test exclusion still lives in `default_filters`. The R6 check reads
-# entity + population + measure back and compares them, slot by slot, to what a question
+# entity + segment + measure back and compares them, slot by slot, to what a question
 # actually asks for — so a valid metric answering a slightly different question (active
 # users reported as the user total, value moments as the habit count) is caught.
 #
@@ -27,11 +27,11 @@
 
 metrics:
 
-  # --- volume metrics: population-neutral (include everyone) ---
+  # --- volume metrics: segment-neutral (include everyone) ---
   value_moments:
     description: "Number of value moments (completed habits) in the period. Raw activity volume — includes all users."
     entity: value_moments
-    population: all
+    segment: all
     unit: count
     synonyms: ["completed habits", "habit completions", "activity", "engagement events"]
     base: agg_active_days
@@ -43,7 +43,7 @@ metrics:
   new_signups:
     description: "Number of user signups in the period (raw — includes all accounts)."
     entity: signups
-    population: all
+    segment: all
     unit: count
     synonyms: ["signups", "new users", "registrations", "new accounts"]
     base: dim_users
@@ -56,7 +56,7 @@ metrics:
   active_users:
     description: "Distinct real users with at least one value moment in the period (excludes internal/test accounts)."
     entity: users
-    population: active
+    segment: active
     unit: count
     synonyms: ["active users", "actives", "engaged users", "MAU", "WAU"]
     base: agg_active_days
@@ -69,7 +69,7 @@ metrics:
   power_users:
     description: "Distinct real users who logged 5+ value moments in a single day during the period (excludes internal/test)."
     entity: users
-    population: power
+    segment: power
     unit: count
     synonyms: ["power users", "superusers", "highly engaged users"]
     base: agg_active_days
@@ -82,7 +82,7 @@ metrics:
   days_per_user:
     description: "Average active days per active user in the period (frequency; excludes internal/test)."
     entity: users
-    population: active
+    segment: active
     unit: ratio
     synonyms: ["frequency", "how often", "active days per user"]
     base: agg_active_days
@@ -95,7 +95,7 @@ metrics:
   moments_per_day:
     description: "Average value moments per active day (depth; excludes internal/test)."
     entity: value_moments
-    population: active
+    segment: active
     unit: ratio
     synonyms: ["depth", "intensity", "moments per active day"]
     base: agg_active_days
@@ -108,7 +108,7 @@ metrics:
   reminder_open_rate:
     description: "Share of active days on which the user opened a reminder (a retention driver; excludes internal/test)."
     entity: reminders
-    population: active
+    segment: active
     unit: share
     synonyms: ["reminder open rate", "notification open rate"]
     base: agg_active_days
@@ -121,7 +121,7 @@ metrics:
   activation_rate:
     description: "Share of the signup cohort that reached a first value moment within 7 days (excludes internal/test)."
     entity: users
-    population: signup_cohort
+    segment: signup_cohort
     unit: share
     synonyms: ["activation", "activation rate", "onboarding conversion"]
     base: agg_user_activation
@@ -135,7 +135,7 @@ metrics:
   mrr:
     description: "Monthly recurring revenue from currently-active subscriptions (annual plans divided by 12)."
     entity: revenue
-    population: active_subscription
+    segment: active_subscription
     unit: currency
     synonyms: ["MRR", "monthly recurring revenue"]
     base: fct_subscriptions
@@ -147,7 +147,7 @@ metrics:
   active_subscriptions:
     description: "Count of currently-active subscriptions."
     entity: subscriptions
-    population: active_subscription
+    segment: active_subscription
     unit: count
     synonyms: ["active subscriptions", "active subs"]
     base: fct_subscriptions
@@ -159,7 +159,7 @@ metrics:
   paying_users:
     description: "Distinct users with an active subscription."
     entity: users
-    population: paying
+    segment: paying
     unit: count
     synonyms: ["paying users", "paying customers", "subscribers", "paid users"]
     base: fct_subscriptions
@@ -171,7 +171,7 @@ metrics:
   arpu:
     description: "Average MRR per paying user (annual plans divided by 12)."
     entity: revenue
-    population: paying
+    segment: paying
     unit: currency
     synonyms: ["ARPU", "average revenue per user", "revenue per user"]
     base: fct_subscriptions
@@ -183,7 +183,7 @@ metrics:
   marketing_spend:
     description: "Total marketing spend in the period."
     entity: spend
-    population: all
+    segment: all
     unit: currency
     synonyms: ["marketing spend", "ad spend", "marketing cost"]
     base: fct_marketing_spend
@@ -194,7 +194,7 @@ metrics:
   referrals:
     description: "Number of referrals created in the period."
     entity: referrals
-    population: all
+    segment: all
     unit: count
     synonyms: ["referrals", "invites", "referred users"]
     base: fct_referrals
@@ -203,7 +203,7 @@ metrics:
     filterable: [status]
 
 # --- Governance metadata: the facts the answerability checks consult. ---
-# Coverage windows and governed populations were previously prose in the knowledge
+# Coverage windows and governed segments were previously prose in the knowledge
 # base (or nowhere); here they are data, so a checker can return true/false.
 governance:
   coverage:
@@ -213,9 +213,9 @@ governance:
       # earlier APAC rows are pre-launch test data. `countries` lets a coverage check
       # resolve region from the country dimension too, so PH/ID/IN can't sneak past.
       APAC: {starts: 2026-05-01, countries: [PH, ID, IN]}
-  # Answerability terms: population words a question might NAME that have a governed
-  # definition, consulted by check_population_defined / population_defined() at rung 3.
-  # (Distinct from the R6 ontology.populations below, which are the spec-check segments.)
+  # Answerability terms: segment words a question might NAME that have a governed
+  # definition, consulted by check_segment_defined / segment_defined() at rung 3.
+  # (Distinct from the R6 ontology.segments below, which are the spec-check segments.)
   answerable_terms:
     - all_users
     - internal
@@ -232,7 +232,7 @@ governance:
   # the inventory in disguise, so several un-metriced entities are listed on purpose.
   # Glosses are purely semantic (which business thing this is) and must NOT reveal whether
   # a metric exists or name a warehouse table — that would leak the inventory back in.
-  # Every metric's entity/population must appear here (enforced by tests/test_semantic.py).
+  # Every metric's entity/segment must appear here (enforced by tests/test_semantic.py).
   # Measures and grains are universal query properties, so they live in harness/spec_check.py.
   ontology:
     entities:
@@ -250,7 +250,7 @@ governance:
       referrals: "referral records"
       reminders: "reminder interactions"
       other: "anything not in this list"
-    populations:
+    segments:
       all: "the entire set of the entity, no restriction"
       active: "active / engaged users (activity in the period)"
       paying: "users with an active paid subscription"

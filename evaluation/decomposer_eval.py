@@ -1,9 +1,9 @@
-"""Blind eval of the spec-decomposition rung's one soft spot: the isolated decomposer
+"""Blind eval of the spec-decomposition rung's one soft spot: the isolated intent parser
 (question -> required spec). The comparator is deterministic and proven no-LLM in
 tests/test_semantic.py; this measures the part that isn't — how well the model reads a
-question into a spec — on questions the decomposer prompt was NOT written against.
+question into a spec — on questions the intent parser prompt was NOT written against.
 
-Blindness: the decomposer prompt (harness/spec_check.py) contains no in-domain phrasings
+Blindness: the intent parser prompt (harness/spec_check.py) contains no in-domain phrasings
 and only unrelated-domain worked examples. The questions below are fresh paraphrases and
 novel questions; the gold verdict is hand-labelled from a plain reading of each question,
 independent of the prompt. So a pass here is generalisation, not memorised phrasings.
@@ -15,10 +15,10 @@ What it reports (per the two things that matter for a refuse-only rung):
                      them), how many were wrongly refused — the cost side.
 
 Each item names the metric a model would answer with and the call it would make, so the
-same deterministic comparator the harness uses produces the verdict. Only the decomposer
+same deterministic comparator the harness uses produces the verdict. Only the intent parser
 is live (one model call per question).
 
-Run: PYTHONPATH=. .venv/bin/python evaluation/decomposer_eval.py [model]
+Run: PYTHONPATH=. .venv/bin/python evaluation/intent parser_eval.py [model]
 """
 
 from __future__ import annotations
@@ -82,10 +82,10 @@ def main():
     n_allow = len(ITEMS) - n_refuse
     over_refused = correct = 0
 
-    print(f"Blind decomposer eval — model={model_name}, n={len(ITEMS)} "
+    print(f"Blind intent parser eval — model={model_name}, n={len(ITEMS)} "
           f"({n_refuse} should-refuse, {n_allow} should-allow)\n")
     for question, metric, value, args, gold in ITEMS:
-        spec = spec_check.decompose_question(model, question, sem.ontology)   # the only live call
+        spec = spec_check.parse_intent(model, question, sem.ontology)   # the only live call
         ok, reason, _, _ = spec_check.verify_answer(
             sem, question, str(value), [_qm(metric, value, **args)],
             decompose=lambda _q, s=spec: s, source_metric=metric,   # rung 6 declares provenance
@@ -103,7 +103,7 @@ def main():
         mark = "ok " if good else "XX "
         tag = f"{verdict}" + (f"/{reason}" if reason else "")
         print(f"{mark}gold={gold:<7} got={tag:<26} [{metric}] {question}")
-        print(f"      spec: entity={spec.get('entity')} population={spec.get('population')} "
+        print(f"      spec: entity={spec.get('entity')} segment={spec.get('segment')} "
               f"measure={spec.get('measure')} grain={spec.get('grain')}"
               + ("  AMBIG" if spec.get("ambiguous") else ""))
 

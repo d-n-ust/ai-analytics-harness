@@ -1,6 +1,6 @@
 """Measure the value-binding seam: how well the deterministic resolver maps a free-text
 filter value in a question onto the governed dimension member — the NL->object binding
-the R6 spec check does NOT cover (it makes entity/population/measure/grain exact, but the
+the R6 spec check does NOT cover (it makes entity/segment/measure/grain exact, but the
 filter VALUES stay free text). This turns "the binding is the part you didn't measure"
 into two reported numbers:
 
@@ -31,7 +31,7 @@ CASES = [
     ("region", "North America", "Americas"), ("region", "the Americas", "Americas"),
     ("region", "Antarctica", None),
     ("plan", "annual", "annual"), ("plan", "yearly", "annual"), ("plan", "monthly plan", "monthly"),
-    ("plan", "premium", None),                       # premium is a population word, not a plan
+    ("plan", "premium", None),                       # premium is a segment word, not a plan
     ("channel", "paid search", "paid_search"), ("channel", "SEO", "content_seo"),
     ("channel", "referrals", "referral"), ("channel", "google ads", "paid_search"),
     ("channel", "email", None),                      # email isn't a governed channel

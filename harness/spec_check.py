@@ -1,6 +1,6 @@
 """Spec decomposition: does the metric behind the answer match what was asked?
 
-The valid-but-wrong floor is a real, governed metric answering a slightly different
+The wrong-metric selection is a real, governed metric answering a slightly different
 question — active users reported as the user total, value moments as the habit count.
 The structural rungs (gate, fence) check that a metric *exists* and is *accessible*;
 they never check its *meaning*. This module does.
@@ -8,22 +8,22 @@ they never check its *meaning*. This module does.
 It compares two structured specs, slot by slot:
 
   - the ANSWER's spec, read deterministically from the metric that produced the number:
-    its governed `entity` and `population` segment (declared in the semantic layer) plus
+    its governed `entity` and `segment` segment (declared in the semantic layer) plus
     the `measure` family (derived from the aggregate) and the `grain` of the call.
-  - the QUESTION's spec, produced by an isolated decomposer (`decompose_question`): one
+  - the QUESTION's spec, produced by an isolated intent parser (`parse_intent`): one
     model call, its own prompt, and NO access to the metric catalog — so it states what
     was *asked*, independent of what we happen to stock. A parser that can see the
     catalog anchors to it ("there's an active_users metric, so that must be the intent")
     and the check turns circular. Share the vocabulary; hide the inventory.
 
-Everything after the decomposer is deterministic and provable without a model call
+Everything after the intent parser is deterministic and provable without a model call
 (see tests/test_semantic.py). The check is refuse-only: a mismatch turns an answer into
 a refusal, it can never turn a refusal into an answer, so it can only add safety.
 
 The four slots are the lowest common denominator of every semantic layer — MetricFlow
 entities, Cube segments, measures, dimensions:
     entity      the thing one unit counts (users, subscriptions, value_moments, habits…)
-    population  the governed segment / behavioural restriction (all, active, paying…)
+    segment  the governed segment / behavioural restriction (all, active, paying…)
     measure     the aggregate family (count, count_distinct, sum, avg, ratio)
     grain       the reporting scope of the answer (total, period, per_dimension)
 """
@@ -38,8 +38,8 @@ from .numbers import parse_numbers
 _log = logging.getLogger(__name__)
 
 # --- vocabulary ---------------------------------------------------------------------
-# The BUSINESS vocabulary (which entities and population segments exist) is governed in
-# the semantic layer's `ontology` block and passed in at call time — the decomposer
+# The BUSINESS vocabulary (which entities and segments exist) is governed in
+# the semantic layer's `ontology` block and passed in at call time — the intent parser
 # picks from those enums, the metric side reads the same words back, so comparison is
 # exact equality. The ontology names entities with no metric (habits, sessions…) on
 # purpose, so a question about one is expressible and provably unanswerable.
@@ -91,9 +91,9 @@ def additivity_of(measure: str) -> str:
 
 def metric_spec(m: dict) -> dict:
     """The governed spec of a metric, read straight from its definition. entity and
-    population are first-class governed fields; measure derives from the aggregate."""
+    segment are first-class governed fields; measure derives from the aggregate."""
     return {"entity": m.get("entity", "other"),
-            "population": m.get("population", "all"),
+            "segment": m.get("segment", "all"),
             "measure": measure_of(m.get("agg", ""))}
 
 
@@ -112,8 +112,8 @@ def grain_of_call(args: dict) -> str:
 
 
 # --- the comparison (deterministic) ------------------------------------------------
-_SLOT_ORDER = ["entity", "population", "measure", "grain"]
-_REASON = {"entity": "no_governed_definition", "population": "population_undefined",
+_SLOT_ORDER = ["entity", "segment", "measure", "grain"]
+_REASON = {"entity": "no_governed_definition", "segment": "segment_undefined",
            "measure": "wrong_measure", "grain": "wrong_grain"}
 # The trajectory verifier's mismatch kind -> a refusal reason code, so its rejections read like
 # the deterministic checks' (kind=a measure error, scope=a subset, definition/thing=wrong metric).
@@ -141,10 +141,10 @@ def first_mismatch(required: dict, answer: dict):
             continue
         if slot == "measure" and _amount_or_rate(want) == _amount_or_rate(got):
             continue
-        if slot == "population" and required.get("measure") not in ("count", "count_distinct"):
-            # A population is *which entities you count*, so it only bites a COUNTING
+        if slot == "segment" and required.get("measure") not in ("count", "count_distinct"):
+            # A segment is *which entities you count*, so it only bites a COUNTING
             # question. "How much revenue / what rate" does not choose an entity
-            # population — its scope lives in the metric's own definition (MRR = active
+            # segment — its scope lives in the metric's own definition (MRR = active
             # subscriptions), so a named-metric question needn't restate a segment. We
             # key this off the QUESTION's measure, not the metric's, so a counting
             # question answered by a filtered SUM metric is still caught.
@@ -203,7 +203,7 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
     return source_metric, (best.get("args") or {}), (governed[0] if governed else None)
 
 
-def result_sanity(metric_def: dict, value) -> tuple[bool, str, str, str]:
+def output_validation(metric_def: dict, value) -> tuple[bool, str, str, str]:
     """Deterministic checks on the RETURNED value, not the metric selection: a governed
     query that came back empty/null, or a value impossible for its `unit`, must not be
     served as an answer. Refuse-only. This is where the spec check (which validates *which*
@@ -223,7 +223,7 @@ def result_sanity(metric_def: dict, value) -> tuple[bool, str, str, str]:
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   decompose=None, source_metric: str | None = None, declared_value=None,
-                  run_sanity: bool = True, run_spec: bool = True,
+                  run_output_validation: bool = True, run_spec: bool = True,
                   run_single_metric: bool = False, scope_decompose=None,
                   verify_traj=None) -> tuple[bool, str, str, str]:
     """Return (ok, reason, missing, explanation). ok=False means convert the answer into
@@ -231,7 +231,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 
     Independent output checks, each toggled by its own rung so their deltas are measured
     separately: `run_single_metric` (R9, the served number must BE one governed result, not a
-    hand-composition), `run_sanity` (R8, well-formed value), `run_spec` (R7, the 4-slot decomposer
+    hand-composition), `run_output_validation` (R8, well-formed value), `run_spec` (R7, the 4-slot intent parser
     matches the metric to the question), and `scope_decompose` (R10, no filter the question didn't
     ask for). `source_metric`/`declared_value` are the model's typed provenance. The checks apply to
     a NUMERIC answer, so prose (no `declared_value`) passes through untouched."""
@@ -251,15 +251,15 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         return True, "", "", ""            # no governed metric to check against
     metric_def = semantic.metrics[metric]
 
-    if run_sanity:                         # R8: the returned value is empty or impossible
-        ok_r, reason_r, missing_r, expl_r = result_sanity(metric_def, value)
+    if run_output_validation:                         # R8: the returned value is empty or impossible
+        ok_r, reason_r, missing_r, expl_r = output_validation(metric_def, value)
         if not ok_r:
             return False, reason_r, missing_r, expl_r
 
     if run_spec and decompose is not None:  # R7: does this metric answer a different question?
         required = decompose(question) or {}
         if not required:
-            _log.warning("spec decomposer returned no spec for question: %r", question)
+            _log.warning("spec intent parser returned no spec for question: %r", question)
             return True, "", "", ""
         answer = {**metric_spec(metric_def), "grain": grain_of_call(args)}
         slot, want, got = first_mismatch(required, answer)
@@ -279,7 +279,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                     f"the answer filtered by {dim!r}, which the question did not ask to restrict",
                     f"the number was computed for a subset ({dim} was filtered), but the question "
                     f"named no {dim} — so this is a slice, not what was asked. Answer the whole "
-                    "population the question implied, or refuse.")
+                    "segment the question implied, or refuse.")
 
     if verify_traj is not None:            # R11: does this metric + SQL actually answer the question?
         ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
@@ -290,8 +290,8 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     return True, "", "", ""
 
 
-# --- the isolated decomposer: question -> required spec (one model call, no catalog) -
-def _declare_spec(entities, populations) -> dict:
+# --- the isolated intent parser: question -> required spec (one model call, no catalog) -
+def _declare_spec(entities, segments) -> dict:
     return {
         "name": "declare_spec",
         "description": "Declare the structured request spec for the question.",
@@ -299,15 +299,15 @@ def _declare_spec(entities, populations) -> dict:
             "type": "object",
             "properties": {
                 "entity": {"type": "string", "enum": entities},
-                "population": {"type": "string", "enum": populations},
+                "segment": {"type": "string", "enum": segments},
                 "measure": {"type": "string", "enum": MEASURES},
                 "grain": {"type": "string", "enum": GRAINS},
             },
-            "required": ["entity", "population", "measure", "grain"],
+            "required": ["entity", "segment", "measure", "grain"],
         },
     }
 
-# The entity and population vocabularies are filled in from the layer's ontology; the
+# The entity and segment vocabularies are filled in from the layer's ontology; the
 # rules stay abstract and the worked examples are all unrelated domains, so nothing here
 # is tuned to the questions this check is measured on.
 _DECOMPOSE_SYSTEM = (
@@ -316,25 +316,25 @@ _DECOMPOSE_SYSTEM = (
     "ASKS FOR. You do not know which metrics exist and must not assume the question is "
     "answerable. Fill four slots, each from its fixed vocabulary.\n\n"
     "entity — the thing one unit counts or measures:\n{entities}\n\n"
-    "population — the segment the question restricts to. Default to 'all' (the entire set "
+    "segment — the segment the question restricts to. Default to 'all' (the entire set "
     "of the entity). Choose a narrower segment ONLY when the question explicitly restricts "
     "the set it is counting:\n"
-    "{populations}\n\n"
+    "{segments}\n\n"
     "measure — count or count_distinct for 'how many'; sum for a total amount of money or "
     "units; avg or ratio for a rate, share, percentage, or average-per.\n\n"
     "grain — total for an all-time or current total with no time window; period when the "
     "question names a time window (last week, in June, this quarter, year to date).\n\n"
     "Worked examples (unrelated domains, to show the mapping):\n"
     "Q: How many employees do we have?\n"
-    "   entity=other, population=all, measure=count, grain=total\n"
+    "   entity=other, segment=all, measure=count, grain=total\n"
     "Q: How many employees logged in last week?\n"
-    "   entity=other, population=active, measure=count_distinct, grain=period\n"
+    "   entity=other, segment=active, measure=count_distinct, grain=period\n"
     "Q: How many paying customers do we have right now?\n"
-    "   entity=other, population=paying, measure=count_distinct, grain=total\n"
+    "   entity=other, segment=paying, measure=count_distinct, grain=total\n"
     "Q: What was the average order value in June?\n"
-    "   entity=revenue, population=all, measure=ratio, grain=period\n"
+    "   entity=revenue, segment=all, measure=ratio, grain=period\n"
     "Q: How much did we spend on ads last quarter?\n"
-    "   entity=spend, population=all, measure=sum, grain=period\n"
+    "   entity=spend, segment=all, measure=sum, grain=period\n"
 )
 
 
@@ -342,11 +342,11 @@ def _bullets(vocab: dict) -> str:
     return "\n".join(f"  {name} — {gloss}" for name, gloss in vocab.items())
 
 
-def _coerce(spec: dict, entities, populations) -> dict:
+def _coerce(spec: dict, entities, segments) -> dict:
     """JSON-schema enums are not always hard-enforced by the provider; map any out-of-
     vocabulary slot value to 'other' so a hallucinated value is ignored by the comparison,
     never refused on. (Defines the bad-enum error out of existence.)"""
-    allowed = {"entity": set(entities), "population": set(populations),
+    allowed = {"entity": set(entities), "segment": set(segments),
                "measure": set(MEASURES), "grain": set(GRAINS)}
     out = dict(spec)
     for slot, ok in allowed.items():
@@ -355,21 +355,21 @@ def _coerce(spec: dict, entities, populations) -> dict:
     return out
 
 
-def decompose_question(model, question: str, ontology: dict) -> dict:
+def parse_intent(model, question: str, ontology: dict) -> dict:
     """Isolated question -> spec. Fresh model call whose prompt carries only the layer's
-    ontology (entities + population segments), never the metric catalog, and which is
+    ontology (entities + segments), never the metric catalog, and which is
     FORCED to call declare_spec at temperature 0. Returns the declared spec (out-of-vocab
     values coerced to 'other'), or {} if the forced call still produced nothing."""
     entities = ontology.get("entities", {})
-    populations = ontology.get("populations", {})
+    segments = ontology.get("segments", {})
     system = _DECOMPOSE_SYSTEM.format(entities=_bullets(entities),
-                                      populations=_bullets(populations))
+                                      segments=_bullets(segments))
     resp = model.create(system, [{"role": "user", "content": question}],
-                        [_declare_spec(list(entities), list(populations))],
+                        [_declare_spec(list(entities), list(segments))],
                         force_tool="declare_spec", temperature=0)
     for b in getattr(resp, "content", []):
         if getattr(b, "type", None) == "tool_use" and b.name == "declare_spec":
-            return _coerce(b.input or {}, entities, populations)
+            return _coerce(b.input or {}, entities, segments)
     return {}
 
 
@@ -410,7 +410,7 @@ _SCOPE_SYSTEM = (
     "is NOT a dimension filter — ignore it here.")
 
 
-def decompose_scope(model, question: str, dimensions: dict) -> dict:
+def parse_scope(model, question: str, dimensions: dict) -> dict:
     """Isolated intent read: which governed dimensions does the QUESTION explicitly restrict?
     Question-only (blind to the metric and the query the model ran), so it is an independent check
     on scope. Returns {dimension: [values]} for the dimensions the question names; a dimension the

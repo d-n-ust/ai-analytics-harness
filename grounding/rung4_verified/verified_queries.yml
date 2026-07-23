@@ -21,7 +21,7 @@ verified_queries:
   - q: "How many users signed up in May 2026?"
     call: "query_metric(metric=new_signups, start=2026-05-01, end=2026-05-31)"
 
-  # --- governed metrics (definitions, thresholds, populations are handled by the metric) ---
+  # --- governed metrics (definitions, thresholds, segments are handled by the metric) ---
   - q: "How many active users did we have in May 2026?"
     call: "query_metric(metric=active_users, start=2026-05-01, end=2026-05-31)"
     why: "The active_users metric already excludes internal/test accounts; don't add filters."

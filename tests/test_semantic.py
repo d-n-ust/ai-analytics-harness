@@ -1,13 +1,13 @@
 """No-LLM proof of the spec-decomposition check (rrung>=6).
 
 The check compares the metric behind an answer to what the question asked, slot by
-slot: entity / population / measure / grain. Two halves:
+slot: entity / segment / measure / grain. Two halves:
 
-  - deterministic (this test): read a metric's governed spec (entity + population +
+  - deterministic (this test): read a metric's governed spec (entity + segment +
     measure) from its definition, read the call's grain, link the answer number to the
     metric by VALUE, and compare to a required spec. Everything here is provable by
     construction, no model call — so the floor cases refuse and the controls do not.
-  - the isolated decomposer (question -> required spec) is the one model-driven step; it
+  - the isolated intent parser (question -> required spec) is the one model-driven step; it
     is injected here as a stub, so this test never touches an LLM. Its accuracy is
     measured separately by a blind red-team, not asserted here.
 
@@ -36,81 +36,81 @@ def _qm(metric, value, **args):
 
 
 # (label, question, answer, steps, required_spec, expect_refuse, expect_reason)
-# required_spec is what an honest decomposer produces from the question alone; the metric
+# required_spec is what an honest intent parser produces from the question alone; the metric
 # side is read from the live semantic layer, so a mismatch is a real one.
 CASES = [
     # ---- floor cases: a valid metric answering a slightly different question -------
-    ("total users -> active_users (population)",
+    ("total users -> active_users (segment)",
      "How many users do we have in total?", "2100",
      [_qm("active_users", 2100, period="all")],
-     {"entity": "users", "population": "all", "measure": "count", "grain": "total"},
-     True, "population_undefined"),
+     {"entity": "users", "segment": "all", "measure": "count", "grain": "total"},
+     True, "segment_undefined"),
 
-    ("total subscriptions -> active_subscriptions (population)",
+    ("total subscriptions -> active_subscriptions (segment)",
      "How many subscriptions have we sold in total?", "371",
      [_qm("active_subscriptions", 371)],
-     {"entity": "subscriptions", "population": "all", "measure": "count", "grain": "total"},
-     True, "population_undefined"),
+     {"entity": "subscriptions", "segment": "all", "measure": "count", "grain": "total"},
+     True, "segment_undefined"),
 
     ("total habits -> value_moments (entity)",
      "How many habits have been created in total?", "67132",
      [_qm("value_moments", 67132, period="all")],
-     {"entity": "habits", "population": "all", "measure": "count", "grain": "total"},
+     {"entity": "habits", "segment": "all", "measure": "count", "grain": "total"},
      True, "no_governed_definition"),
 
-    ("paying users -> active_users trap (population)",
+    ("paying users -> active_users trap (segment)",
      "How many paying users do we currently have?", "2100",
      [_qm("active_users", 2100, period="all")],
-     {"entity": "users", "population": "paying", "measure": "count_distinct", "grain": "total"},
-     True, "population_undefined"),
+     {"entity": "users", "segment": "paying", "measure": "count_distinct", "grain": "total"},
+     True, "segment_undefined"),
 
-    ("active value moments -> value_moments (population on a SUM)",
+    ("active value moments -> value_moments (segment on a SUM)",
      "How many value moments did active users generate?", "67132",
      [_qm("value_moments", 67132, period="all")],
-     {"entity": "value_moments", "population": "active", "measure": "count", "grain": "total"},
-     True, "population_undefined"),
+     {"entity": "value_moments", "segment": "active", "measure": "count", "grain": "total"},
+     True, "segment_undefined"),
 
     ("weekly window on a total question (grain)",
      "How many active users do we have in total?", "886",
      [_qm("active_users", 886, period="last_week")],
-     {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "total"},
+     {"entity": "users", "segment": "active", "measure": "count_distinct", "grain": "total"},
      True, "wrong_grain"),
 
     ("share answered by a count (measure: rate vs amount)",
      "What share of our users are power users?", "432",
      [_qm("power_users", 432, period="all")],
-     {"entity": "users", "population": "all", "measure": "ratio", "grain": "total"},
+     {"entity": "users", "segment": "all", "measure": "ratio", "grain": "total"},
      True, "wrong_measure"),
 
     # ---- controls that must NOT over-refuse ---------------------------------------
     ("active users last week (all slots match)",
      "How many active users did we have last week?", "886",
      [_qm("active_users", 886, period="last_week")],
-     {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "period"},
+     {"entity": "users", "segment": "active", "measure": "count_distinct", "grain": "period"},
      False, None),
 
     ("paying users answered by paying_users (correct)",
      "How many paying users do we currently have?", "371",
      [_qm("paying_users", 371)],
-     {"entity": "users", "population": "paying", "measure": "count_distinct", "grain": "total"},
+     {"entity": "users", "segment": "paying", "measure": "count_distinct", "grain": "total"},
      False, None),
 
     ("total value moments: count vs sum is same measure class",
      "How many value moments in total?", "67132",
      [_qm("value_moments", 67132, period="all")],
-     {"entity": "value_moments", "population": "all", "measure": "count", "grain": "total"},
+     {"entity": "value_moments", "segment": "all", "measure": "count", "grain": "total"},
      False, None),
 
-    ("MRR: a named money measure, so population is not compared",
+    ("MRR: a named money measure, so segment is not compared",
      "What is our current MRR?", "48210.50",
      [_qm("mrr", "48210.50")],
-     {"entity": "revenue", "population": "all", "measure": "sum", "grain": "total"},
+     {"entity": "revenue", "segment": "all", "measure": "sum", "grain": "total"},
      False, None),
 ]
 
 
 def test_comparison_deterministic():
-    """The floor refuses, the controls pass — with the decomposer stubbed out."""
+    """The floor refuses, the controls pass — with the intent parser stubbed out."""
     con = open_warehouse()
     sem = SemanticLayer(con)
     for label, q, ans, steps, required, expect_refuse, expect_reason in CASES:
@@ -129,7 +129,7 @@ def test_comparison_deterministic():
 
 
 def test_metric_spec_reads_the_definition():
-    """entity + population are read fields; measure is derived from the aggregate."""
+    """entity + segment are read fields; measure is derived from the aggregate."""
     con = open_warehouse()
     sem = SemanticLayer(con)
     expect = {
@@ -143,7 +143,7 @@ def test_metric_spec_reads_the_definition():
     }
     for name, (e, p, mm) in expect.items():
         s = spec_check.metric_spec(sem.metrics[name])
-        assert (s["entity"], s["population"], s["measure"]) == (e, p, mm), f"{name}: {s}"
+        assert (s["entity"], s["segment"], s["measure"]) == (e, p, mm), f"{name}: {s}"
 
 
 def test_additivity_derives_from_measure():
@@ -155,16 +155,16 @@ def test_additivity_derives_from_measure():
 
 
 def test_metrics_conform_to_ontology():
-    """Every metric's entity + population must be a value the ontology declares — so the
-    decomposer (which reads the ontology) and the metric side share one vocabulary and
+    """Every metric's entity + segment must be a value the ontology declares — so the
+    intent parser (which reads the ontology) and the metric side share one vocabulary and
     cannot drift apart."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    entities, populations = set(sem.ontology["entities"]), set(sem.ontology["populations"])
+    entities, segments = set(sem.ontology["entities"]), set(sem.ontology["segments"])
     assert "habits" in entities, "ontology must be a superset of the metrics (habits has no metric)"
     for name, m in sem.metrics.items():
         assert m.get("entity") in entities, f"{name}: entity {m.get('entity')!r} not in ontology"
-        assert m.get("population") in populations, f"{name}: population {m.get('population')!r} not in ontology"
+        assert m.get("segment") in segments, f"{name}: segment {m.get('segment')!r} not in ontology"
 
 
 def test_provenance_is_typed_not_guessed():
@@ -192,7 +192,7 @@ def test_typed_provenance_drives_the_check():
     con = open_warehouse()
     sem = SemanticLayer(con)
     q = "How many paying users do we currently have?"
-    required = {"entity": "users", "population": "paying", "measure": "count_distinct", "grain": "total"}
+    required = {"entity": "users", "segment": "paying", "measure": "count_distinct", "grain": "total"}
     steps = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]   # both 371
     # declared correctly -> paying_users (users/paying) -> allow
     ok, *_ = spec_check.verify_answer(sem, q, "371", steps, lambda _q: required,
@@ -208,12 +208,12 @@ def test_typed_provenance_drives_the_check():
     assert ok3, "no provenance declared -> not verified"
 
 
-def test_result_sanity_catches_degenerate_values():
+def test_output_validation_catches_degenerate_values():
     """The check on the returned value (not the metric selection): an empty/null result
     narrated as a number, a share out of range, or a negative count -> refuse."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    ok_spec = {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "total"}
+    ok_spec = {"entity": "users", "segment": "active", "measure": "count_distinct", "grain": "total"}
     # the governed query returned no value, but the model answered a number -> result_empty
     empty_steps = [_qm("active_users", None, period="last_week")]
     ok, reason, *_ = spec_check.verify_answer(sem, "How many active users last week?", "5", empty_steps,
@@ -226,16 +226,16 @@ def test_result_sanity_catches_degenerate_values():
     assert not ok2 and reason2 == "implausible_value", (ok2, reason2)
     # a normal value passes sanity (and this spec matches, so it's allowed)
     good_steps = [_qm("active_users", 886, period="last_week")]
-    good_spec = {"entity": "users", "population": "active", "measure": "count_distinct", "grain": "period"}
+    good_spec = {"entity": "users", "segment": "active", "measure": "count_distinct", "grain": "period"}
     ok3, *_ = spec_check.verify_answer(sem, "How many active users last week?", "886", good_steps,
                                        lambda _q: good_spec, source_metric="active_users", declared_value=886)
     assert ok3
 
 
 def test_coerce_out_of_vocab_to_other():
-    spec = {"entity": "frobnicate", "population": "all", "measure": "count", "grain": "total"}
+    spec = {"entity": "frobnicate", "segment": "all", "measure": "count", "grain": "total"}
     out = spec_check._coerce(spec, ["users", "other"], ["all", "other"])
-    assert out["entity"] == "other" and out["population"] == "all"
+    assert out["entity"] == "other" and out["segment"] == "all"
 
 
 def test_value_resolver():
@@ -271,16 +271,16 @@ def test_single_metric_enforcement():
     steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
              _qm("activation_rate", 0.529, start="2026-06-01", end="2026-06-30")]
     ok, *_ = spec_check.verify_answer(sem, "how many signups?", "444", steps, source_metric="new_signups",
-                                      declared_value=444, run_sanity=False, run_spec=False, run_single_metric=True)
+                                      declared_value=444, run_output_validation=False, run_spec=False, run_single_metric=True)
     assert ok, "a direct governed result must pass single-metric"
     # 235 = 444 * 0.529 matches no governed result -> refuse
     ok2, reason2, *_ = spec_check.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
-                                                declared_value=235, run_sanity=False, run_spec=False,
+                                                declared_value=235, run_output_validation=False, run_spec=False,
                                                 run_single_metric=True)
     assert not ok2 and reason2 == "out_of_scope", "a hand-derived value must refuse out_of_scope"
 
 
-def test_scope_fidelity():
+def test_predicate_check():
     """R10: a filter the question didn't ask for turns a total into a subset -> refuse; a filter the
     question named passes; is_internal (hygiene) is exempt. scope_decompose is stubbed."""
     con = open_warehouse()
@@ -289,17 +289,17 @@ def test_scope_fidelity():
                  filters={"channel": ["paid_search", "referral", "content_seo", "organic"]})]
     ok, reason, *_ = spec_check.verify_answer(
         sem, "total marketing spend in June?", "18267.17", spend, source_metric="marketing_spend",
-        declared_value=18267.17, run_sanity=False, run_spec=False, scope_decompose=lambda _q: {})
+        declared_value=18267.17, run_output_validation=False, run_spec=False, scope_decompose=lambda _q: {})
     assert not ok and reason == "out_of_scope", "an unrequested channel filter must refuse"
     ok2, *_ = spec_check.verify_answer(
         sem, "spend on paid search?", "18267.17", spend, source_metric="marketing_spend",
-        declared_value=18267.17, run_sanity=False, run_spec=False,
+        declared_value=18267.17, run_output_validation=False, run_spec=False,
         scope_decompose=lambda _q: {"channel": ["paid_search"]})
     assert ok2, "a filter the question named must pass"
     hygiene = [_qm("new_signups", 543, start="2026-06-01", end="2026-06-30", filters={"is_internal": False})]
     ok3, *_ = spec_check.verify_answer(
         sem, "how many signups in June?", "543", hygiene, source_metric="new_signups",
-        declared_value=543, run_sanity=False, run_spec=False, scope_decompose=lambda _q: {})
+        declared_value=543, run_output_validation=False, run_spec=False, scope_decompose=lambda _q: {})
     assert ok3, "is_internal must be exempt from scope fidelity"
 
 
@@ -321,7 +321,7 @@ def test_spec_check_skips_prose_answers():
     the metric's number sitting in the prose."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    wrong_spec = {"entity": "sessions", "population": "all", "measure": "count", "grain": "total"}
+    wrong_spec = {"entity": "sessions", "segment": "all", "measure": "count", "grain": "total"}
     steps = [_qm("value_moments", 67132, period="all")]
     # a prose health verdict: no declared value -> skip
     ok, *_ = spec_check.verify_answer(sem, "Is the app healthy?", "No — mixed early-warning signals",
@@ -345,7 +345,7 @@ class _FakeModel:
 
     def create(self, system, messages, tools, force_tool=None, temperature=None):
         block = SimpleNamespace(type="tool_use", id="d1", name="declare_spec",
-                                input={"entity": "users", "population": "all",
+                                input={"entity": "users", "segment": "all",
                                        "measure": "count", "grain": "total"})
         return SimpleNamespace(content=[block])
 
@@ -359,11 +359,11 @@ def test_toolbox_wiring_and_rung_gate():
     # the granular rung flags gate each step separately
     assert Toolbox(con, 6, sem, None, 5).resolve is False and Toolbox(con, 6, sem, None, 6).resolve is True
     assert Toolbox(con, 6, sem, None, 6).spec_check is False and Toolbox(con, 6, sem, None, 7).spec_check is True
-    assert Toolbox(con, 6, sem, None, 7).result_sanity is False and Toolbox(con, 6, sem, None, 8).result_sanity is True
+    assert Toolbox(con, 6, sem, None, 7).output_validation is False and Toolbox(con, 6, sem, None, 8).output_validation is True
 
     tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)
     ok, reason, missing, _ = tb7.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
-    assert not ok and reason == "population_undefined" and missing, "R7 spec check must refuse the floor case"
+    assert not ok and reason == "segment_undefined" and missing, "R7 spec check must refuse the floor case"
 
     tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)
     ok6, *_ = tb6.verify_answer(q, "2100", steps, _FakeModel(), "active_users", 2100)
@@ -384,11 +384,11 @@ if __name__ == "__main__":
     test_metrics_conform_to_ontology()
     test_provenance_is_typed_not_guessed()
     test_typed_provenance_drives_the_check()
-    test_result_sanity_catches_degenerate_values()
+    test_output_validation_catches_degenerate_values()
     test_coerce_out_of_vocab_to_other()
     test_value_resolver()
     test_single_metric_enforcement()
-    test_scope_fidelity()
+    test_predicate_check()
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()

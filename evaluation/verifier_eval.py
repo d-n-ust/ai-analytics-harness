@@ -3,11 +3,11 @@
 Each case is a REAL trajectory — the metric + call args are compiled to SQL and run against the
 warehouse, so the verifier sees the actual definition, SQL, and result. We hand-pick the exact
 cases that broke the other two mechanisms, so we can see whether trajectory-inspection catches the
-hard errors while passing the answers the decomposer (arpu) and the recompute judge (MRR) got wrong.
+hard errors while passing the answers the intent parser (arpu) and the recompute judge (MRR) got wrong.
 
   should FLAG:  spend narrowed to 4/5 channels; a RATE served for a 'how many' count; the 371/457
                 floor (currently-active metric for an all-time-total question)
-  should PASS:  the correct spend total; arpu (decomposer false-refused this); MRR (judge false-
+  should PASS:  the correct spend total; arpu (intent parser false-refused this); MRR (judge false-
                 overturned this); a plain count; a filter the question DID ask for (annual plan)
 
 Run:  OPENAI_REASONING=low python evaluation/verifier_eval.py

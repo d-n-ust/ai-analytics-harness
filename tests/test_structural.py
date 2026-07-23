@@ -24,7 +24,7 @@ UNGOVERNED_METRICS = [
     "churn_risk", "churn risk", "mrr growth rate", "active user count", "retention score",
     "nps", "", "  ", "value_moments; DROP TABLE u", "engagement_score' OR '1'='1",
 ]
-UNGOVERNED_POPULATIONS = ["enterprise users", "enterprise", "smb", "vip customers", "", "us"]
+UNGOVERNED_SEGMENTS = ["enterprise users", "enterprise", "smb", "vip customers", "", "us"]
 # (filters, start, end) that fall outside coverage and must be blocked. The country
 # cases are the ones a region-only gate missed — an equally-available dimension.
 OUT_OF_COVERAGE = [
@@ -54,9 +54,9 @@ def prove():
         ok, _ = sl.metric_exists(term)
         _check(not ok, f"metric_exists wrongly accepted {term!r}")
         passed += 1
-    for term in UNGOVERNED_POPULATIONS:
-        ok, _ = sl.population_defined(term)
-        _check(not ok, f"population_defined wrongly accepted {term!r}")
+    for term in UNGOVERNED_SEGMENTS:
+        ok, _ = sl.segment_defined(term)
+        _check(not ok, f"segment_defined wrongly accepted {term!r}")
         passed += 1
 
     # 2. The governed path is not injectable — a crafted date raises, never queries.

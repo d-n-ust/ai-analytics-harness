@@ -19,7 +19,7 @@ from .warehouse import QueryError, describe_table, run_query, schema_text
 
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.
-REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "population_undefined",
+REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
                    "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
                    "result_empty", "implausible_value", "other"]
 
@@ -48,7 +48,7 @@ _REFUSE = {
         "properties": {
             "reason": {"type": "string", "enum": REFUSAL_REASONS},
             "missing": {"type": "string",
-                        "description": "The specific definition, coverage window, population, or evidence that is missing."},
+                        "description": "The specific definition, coverage window, segment, or evidence that is missing."},
             "explanation": {"type": "string", "description": "One line: why this cannot be answered reliably."},
         },
         "required": ["reason", "missing"],
@@ -143,9 +143,9 @@ _CHECK_COVERAGE = {
         "region": {"type": "string"}}, "required": ["start", "end"]},
 }
 
-_CHECK_POPULATION = {
-    "name": "check_population_defined",
-    "description": "Check whether a population term (e.g. 'enterprise users') has a governed definition.",
+_CHECK_SEGMENT = {
+    "name": "check_segment_defined",
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
     "input_schema": {"type": "object", "properties": {"term": {"type": "string"}}, "required": ["term"]},
 }
 
@@ -218,33 +218,33 @@ class Toolbox:
         # The reliability ladder, granular so each step's effect is measured separately.
         # Input-enforcement family (stop a bad number being computed):
         self.gate = rrung >= 4          # R4: block out-of-coverage governed calls
-        self.fence = rrung >= 5         # R5: no raw SQL — governed metrics only
+        self.tool_restriction = rrung >= 5         # R5: no raw SQL — governed metrics only
         self.resolve = rrung >= 6       # R6: resolve/validate free-text filter values
         # Output-verification family (stop a bad number being served):
-        self.spec_check = rrung in (7, 8)  # R7/R8: the 4-slot decomposer (isolated model call)
-        self.result_sanity = rrung >= 8    # R8: the returned value must be well-formed
-        # Governed-only "iteration 1" bundle (rrung 9+): replaces the 4-slot decomposer with a
+        self.spec_check = rrung in (7, 8)  # R7/R8: the 4-slot intent parser (isolated model call)
+        self.output_validation = rrung >= 8    # R8: the returned value must be well-formed
+        # Governed-only "iteration 1" bundle (rrung 9+): replaces the 4-slot intent parser with a
         # deterministic core plus transparency. R9 = transparency + single-metric enforcement;
-        # R10 = + scope fidelity (an isolated intent read of which filters the question asked for).
+        # R10 = + unrequested-predicate check (an isolated intent read of which filters the question asked for).
         self.show_sql = rrung >= 9      # R9: show the model the exact compiled SQL for each result
-        self.receipts = rrung >= 9      # R9: show a plain [scope] line (flags a narrowed subset)
+        self.scope_echo = rrung >= 9      # R9: show a plain [scope] line (flags a narrowed subset)
         self.single_metric = rrung >= 9 # the served number must BE one governed metric's result
-        self.scope_fidelity = rrung == 10  # R10: a filter the question didn't ask for = a wrong subset
+        self.predicate_check = rrung == 10  # R10: a filter the question didn't ask for = a wrong subset
         # R11: the trajectory verifier — inspects {question, definition, SQL, added filters, result}
         # and refuses when the metric doesn't answer the question (wrong thing/kind/scope/definition).
-        # Subsumes the scope + measure + definition checks in one, so scope_fidelity turns off here.
+        # Subsumes the scope + measure + definition checks in one, so predicate_check turns off here.
         self.trajectory_verify = rrung >= 11
 
     def specs(self) -> list[dict]:
         specs = [_GET_SCHEMA, _DESCRIBE_TABLE]
-        if not self.fence:
+        if not self.tool_restriction:
             specs.append(_RUN_SQL)
         if self.rung >= 3:
             specs += [_LIST_METRICS, self._query_metric_spec()]
         if self.rung >= 6:
             specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
         if self.rrung >= 3 and self.semantic is not None:
-            specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_POPULATION, _CHECK_CAUSAL]
+            specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
         specs.append(self._answer_spec())
         if self.rrung >= 1:
             specs.append(_REFUSE)
@@ -311,24 +311,24 @@ class Toolbox:
                       source_metric: str | None = None, declared_value=None,
                       verifier_model=None) -> tuple[bool, str, str, str]:
         """The output-verification checks on an answer before it is served, each gated by its own
-        rung so their deltas are measured separately: result-sanity (R8, well-formed value), the
-        4-slot spec decomposer (R7/R8), single-metric enforcement (R9, the number must BE one
-        governed result), and scope fidelity (R10, no filter the question didn't ask for).
+        rung so their deltas are measured separately: output validation (R8, well-formed value), the
+        4-slot spec intent parser (R7/R8), single-metric enforcement (R9, the number must BE one
+        governed result), and unrequested-predicate check (R10, no filter the question didn't ask for).
         Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
-        if self.semantic is None or not (self.spec_check or self.result_sanity or self.single_metric
-                                         or self.scope_fidelity or self.trajectory_verify):
+        if self.semantic is None or not (self.spec_check or self.output_validation or self.single_metric
+                                         or self.predicate_check or self.trajectory_verify):
             return True, "", "", ""
-        decompose = (lambda q: spec_check.decompose_question(model, q, self.semantic.ontology)) \
+        decompose = (lambda q: spec_check.parse_intent(model, q, self.semantic.ontology)) \
             if (self.spec_check and model is not None) else None
-        scope_decompose = (lambda q: spec_check.decompose_scope(model, q, self.semantic.dimensions)) \
-            if (self.scope_fidelity and model is not None) else None
+        scope_decompose = (lambda q: spec_check.parse_scope(model, q, self.semantic.dimensions)) \
+            if (self.predicate_check and model is not None) else None
         # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
         vmodel = verifier_model or model
         verify_traj = self._trajectory_verifier(vmodel) if (self.trajectory_verify and vmodel) else None
         return spec_check.verify_answer(
             self.semantic, question, answer_text, steps, decompose=decompose,
             source_metric=source_metric, declared_value=declared_value,
-            run_sanity=self.result_sanity, run_spec=self.spec_check and model is not None,
+            run_output_validation=self.output_validation, run_spec=self.spec_check and model is not None,
             run_single_metric=self.single_metric, scope_decompose=scope_decompose,
             verify_traj=verify_traj)
 
@@ -372,7 +372,7 @@ class Toolbox:
                     time_grain=args.get("time_grain"), start=args.get("start"),
                     end=args.get("end"), period=args.get("period"), resolve=self.resolve)
                 text = _fmt_rows(cols, rows)
-                if self.receipts:       # R9+: a plain scope line, flagging a narrowed subset
+                if self.scope_echo:       # R9+: a plain scope line, flagging a narrowed subset
                     text += "\n[scope] " + self.semantic.scope_line(
                         args["metric"], filters=args.get("filters"), period=args.get("period"),
                         start=args.get("start"), end=args.get("end"),
@@ -386,8 +386,8 @@ class Toolbox:
                 return self._verdict(*self.semantic.in_coverage(
                     args.get("start"), args.get("end"),
                     args.get("region"), args.get("country"))), False, None
-            if name == "check_population_defined":
-                return self._verdict(*self.semantic.population_defined(args["term"])), False, None
+            if name == "check_segment_defined":
+                return self._verdict(*self.semantic.segment_defined(args["term"])), False, None
             if name == "check_causal_evidence":
                 if self.tree is None:
                     return "NO — no metric tree at this rung; no causal evidence is encoded.", False, None

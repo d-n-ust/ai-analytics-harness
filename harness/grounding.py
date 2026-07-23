@@ -51,7 +51,7 @@ _RRUNG_TERMINAL = {
 _RRUNG_PRICE = ("\n- Scoring: a correct answer scores +1, a refusal 0, a wrong answer -4. "
                 "A wrong answer costs four refusals.")
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
-                 "tools: they consult the governed catalog, coverage windows, population "
+                 "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
 # R4+ (gate) and R5+ (fence) are structural: these lines only *describe* the enforced
 # environment so the agent doesn't waste turns — the guarantee is in the tooling, not
@@ -59,7 +59,7 @@ _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability
 _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an undefined metric or "
                   "for data outside coverage is blocked and returns no number — you cannot retrieve "
                   "what the governed layer refuses.")
-_RRUNG_FENCE = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
+_RRUNG_TOOL_RESTRICTION = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
                 "question cannot be answered that way, refuse.")
 # R6-R8: the output-verification family, split so each step's effect is measured on its
 # own. Like the gate, these are structural — the checks run regardless of what the model
@@ -70,7 +70,7 @@ _RRUNG_RESOLVE = ("\n- Filter values are matched to governed members: name a seg
                   "matches no governed member is rejected rather than returning an empty result.")
 # R7/R8 — spec decomposition (the answer's metric must match the question):
 _RRUNG_SPEC = ("\n- Answers are checked before they are served: the metric behind your number must "
-               "match what the question asks for — the same entity, population, measure, and grain. "
+               "match what the question asks for — the same entity, segment, measure, and grain. "
                "A valid metric that answers a slightly different question (active users for the user "
                "total, value moments for the habit count) is rejected; if no governed metric matches "
                "what was asked, refuse rather than report a near-miss.")
@@ -79,12 +79,12 @@ _RRUNG_PROVENANCE = ("\n- When your answer is a single number, put that number i
                      "field, and if it came from a governed metric name that metric in `source_metric`, "
                      "so the check reads exactly what you served and which definition produced it. A "
                      "non-numeric answer (an assessment, a driver) leaves `value` out and is not checked.")
-# R8 — result-sanity (the returned value must be well-formed):
-_RRUNG_SANITY = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
+# R8 — output validation (the returned value must be well-formed):
+_RRUNG_OUTPUT_VALIDATION = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
                  "a value impossible for its unit (a share above 100, a negative count), is rejected "
                  "instead of being reported.")
 # R9 — the governed-only iteration: transparency + one-metric-per-answer.
-_RRUNG_TRANSPARENCY = ("\n- Every governed result now shows you a [scope] line (what population and time "
+_RRUNG_TRANSPARENCY = ("\n- Every governed result now shows you a [scope] line (what segment and time "
                        "window it actually covers) and the exact [sql]. Read them: if the scope is not "
                        "what the question asked for, fix the query or refuse — never report a number "
                        "whose scope doesn't match the question.")
@@ -92,7 +92,7 @@ _RRUNG_SINGLE_METRIC = ("\n- Answer with exactly ONE governed metric's own value
                         "by hand from several numbers (no rate times a count, no metric A plus metric B). "
                         "If answering would need a metric that doesn't exist, refuse (out_of_scope) rather "
                         "than derive it.")
-# R10 — scope fidelity:
+# R10 — unrequested-predicate check:
 _RRUNG_SCOPE = ("\n- Only filter a metric by a dimension the question explicitly names. For a total or "
                 "overall figure, apply NO filters — do not exclude channels, plans, regions, or accounts "
                 "the question did not mention. An unrequested filter makes the answer a subset, not the total.")
@@ -112,7 +112,7 @@ _RUNG_NOTES = {
         "fact tables (fct_*) with clear names, typed columns, and normalised values."),
     3: ("\n\nA semantic layer of governed metrics is available via list_metrics and query_metric. "
         "Prefer governed metrics for defined business measures (value moments, active users, MRR, "
-        "power users, activation, etc.) so the definition, threshold, and population are always "
+        "power users, activation, etc.) so the definition, threshold, and segment are always "
         "correct. You may still use run_sql for anything the metrics don't cover."),
     6: ("\n\nA metric tree is available. For diagnostic questions - why did a metric move, what is "
         "driving a change - call explain_change to decompose the movement through the tree, and "
@@ -153,16 +153,16 @@ def build_grounding(con, rung: int, rrung: int = 1) -> Grounding:
     if rrung >= 4:
         system += _RRUNG_ENFORCE
     if rrung >= 5:
-        system += _RRUNG_FENCE
+        system += _RRUNG_TOOL_RESTRICTION
     if rrung >= 6:
         system += _RRUNG_RESOLVE
-    if rrung in (7, 8):                      # the 4-slot decomposer lives only at R7/R8
+    if rrung in (7, 8):                      # the 4-slot intent parser lives only at R7/R8
         system += _RRUNG_SPEC + _RRUNG_PROVENANCE
     if rrung >= 8:
-        system += _RRUNG_SANITY
-    if rrung >= 9:                           # governed-only iteration replaces the decomposer
+        system += _RRUNG_OUTPUT_VALIDATION
+    if rrung >= 9:                           # governed-only iteration replaces the intent parser
         system += _RRUNG_PROVENANCE + _RRUNG_TRANSPARENCY + _RRUNG_SINGLE_METRIC
-    if rrung == 10:                          # scope-fidelity is folded into the verifier at R11
+    if rrung == 10:                          # unrequested-predicate check is folded into the verifier at R11
         system += _RRUNG_SCOPE
     if rrung >= 11:
         system += _RRUNG_VERIFIER

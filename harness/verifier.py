@@ -35,7 +35,7 @@ _VERIFY_SYSTEM = (
     "4. DEFINITION — does the metric's PURPOSE (its description) match the question's intent? For "
     "example, a point-in-time or 'current' metric does not answer an 'all-time / in total / ever' "
     "question. Judge the metric by its description and what it measures, NEVER by how it is computed "
-    "internally (a CASE, a division, a built-in population filter are the correct definition, not a "
+    "internally (a CASE, a division, a built-in segment filter are the correct definition, not a "
     "fault).\n\n"
     "Cite the specific definition text or the analyst's added filter that fails. Do not invent "
     "problems, and never object to the metric's internal computation. If all four checks pass, the "
@@ -66,7 +66,7 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
     md = metric_def or {}
     brief = (f"metric used: {metric_name}\n"
              f"  definition (correct by construction): {md.get('description', '(no description)')}\n"
-             f"  measures entity={md.get('entity')}, population={md.get('population')}, "
+             f"  measures entity={md.get('entity')}, segment={md.get('segment')}, "
              f"aggregation={md.get('agg')}, unit={md.get('unit')}\n"
              f"  analyst added (check these for scope): {applied_filters or 'none'}\n"
              f"  time window: {time_window or 'all time'}\n"
