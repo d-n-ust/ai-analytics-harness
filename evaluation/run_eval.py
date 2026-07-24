@@ -42,7 +42,7 @@ def _new_run_dir(models, mock: bool) -> Path:
     return run_dir
 
 
-def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra"), rungs=(1, 2, 3, 4, 5, 6),
+def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
                    rrungs=(1,), cells=None) -> None:
     from harness.guardrails import incoherent, parse_cell
