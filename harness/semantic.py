@@ -250,7 +250,7 @@ class SemanticLayer:
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
         segs = self.governance.get("segments", {}) or {}
         if segs:
-            lines.append("\nGoverned segments (pass segment=… to query_metric for a named population):")
+            lines.append("\nGoverned segments (pass segment=… to query_metric for a named reusable filter):")
             for name, s in segs.items():
                 also = f" (also: {', '.join(s.get('synonyms', []))})" if s.get("synonyms") else ""
                 lines.append(f"- {name}: {s.get('description', '')}{also}")

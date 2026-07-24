@@ -271,7 +271,7 @@ class Toolbox:
     def _query_metric_spec(self) -> dict:
         """Constrain `metric` to the catalog at the gate rung (a closed menu — the model
         cannot even *name* a metric that doesn't exist), and offer the governed `segment`
-        enum whenever the layer defines any (a named population filter like real_acquisition)."""
+        enum whenever the layer defines any (a named segment like real_acquisition)."""
         if self.semantic is None:
             return _QUERY_METRIC
         props = dict(_QUERY_METRIC["input_schema"]["properties"])
@@ -280,7 +280,7 @@ class Toolbox:
         segs = self.semantic.segment_names()
         if segs:
             props["segment"] = {"type": "string", "enum": segs,
-                                "description": "A governed named population filter (see list_metrics), "
+                                "description": "A governed named segment / reusable filter (see list_metrics), "
                                                "e.g. real_acquisition to exclude test channels."}
         return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
 
@@ -378,14 +378,14 @@ class Toolbox:
     def _governed_notes(self, args: dict) -> list[str]:
         """Governed modifications the LAYER applied to this query, so the verifier treats them as
         definitional rather than analyst scope-narrowing: a named segment (which restricts a
-        population, e.g. real_acquisition drops test channels), and a region's coverage window
+        segment, e.g. real_acquisition drops test channels), and a region's coverage window
         (a period clipped to on/after launch is governed, not an invented restriction)."""
         notes: list[str] = []
         sem, a = self.semantic, args or {}
         seg = a.get("segment")
         if seg and sem is not None:
             spec = sem.governance.get("segments", {}).get(seg, {})
-            notes.append(f"governed segment '{seg}' — {spec.get('description', 'a governed population filter')}")
+            notes.append(f"governed segment '{seg}' — {spec.get('description', 'a governed reusable filter')}")
         for region in [a.get("filters", {}).get("region")] if isinstance(a.get("filters"), dict) else []:
             member = {str(k).lower(): v for k, v in sem._members("region").items()}.get(str(region).lower()) if (region and sem) else None
             starts = sem._meta(member).get("available_from") if member else None
