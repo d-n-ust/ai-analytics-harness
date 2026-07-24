@@ -38,6 +38,10 @@ from agent.prompt import RUNG_NAMES
 
 from .grade import WRONG_COST
 
+# Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
+# surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
+ROW_SCHEMA_VERSION = 2
+
 
 # --------------------------------------------------------------------------- #
 # helpers
@@ -216,6 +220,8 @@ def aggregate(rows) -> dict:
                  "reps": reps, "n_rows": len(rows), "wrong_cost": WRONG_COST,
                  "prices_estimated": _prices_estimated(models),
                  "schema_version": first.get("schema_version"),
+                 "schema_current": ROW_SCHEMA_VERSION,
+                 "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "verifier": {"model": first.get("verifier_model"),
                               "reasoning": first.get("verifier_reasoning")}},
@@ -248,6 +254,8 @@ def render_markdown(summary: dict) -> str:
     v = meta.get("verifier") or {}
     L.append(f"_treatment: main reasoning **{meta.get('main_reasoning')}** · verifier "
              f"**{v.get('model')}**@{v.get('reasoning')} · row schema v{meta.get('schema_version')}._")
+    if meta.get("schema_skew"):
+        L.append(f"_⚠ schema skew: some rows predate v{meta.get('schema_current')} — missing fields read as None._")
 
     # 1. Selective prediction — the operating point per cell (the frontier as the ladder tightens)
     for m in meta["models"]:
@@ -382,6 +390,9 @@ def write(rows, run_dir: Path, mock: bool = False) -> dict:
         return {}
     summary = aggregate(rows)
     summary["meta"]["mock"] = mock
+    if summary["meta"].get("schema_skew"):
+        print(f"  WARNING: row-schema skew — some rows predate v{ROW_SCHEMA_VERSION}; missing fields "
+              "read as None. Re-run to refresh, or migrate before comparing across the boundary.")
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2, default=str))
     (run_dir / "summary.md").write_text(render_markdown(summary))
     return summary

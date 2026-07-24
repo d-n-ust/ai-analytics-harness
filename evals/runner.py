@@ -23,10 +23,6 @@ from .gold import compute_gold, load_questions
 from .grade import grade
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-# Bumped when the raw-row schema changes, so a stored run is self-describing and downstream
-# tooling (regrade, report, attribution) can detect skew. v2 adds the treatment fields
-# (main_reasoning / verifier_model / verifier_reasoning).
-ROW_SCHEMA_VERSION = 2
 
 
 def _new_run_dir(models, mock: bool) -> Path:
@@ -129,7 +125,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
                             "output_tokens": ans.output_tokens, "error": ans.error,
                             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
-                            "schema_version": ROW_SCHEMA_VERSION,
+                            "schema_version": report.ROW_SCHEMA_VERSION,
                             "main_reasoning": getattr(model, "reasoning", None),
                             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
                         })

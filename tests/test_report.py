@@ -71,6 +71,16 @@ def test_aggregate_arithmetic():
     assert cell["telemetry"]["in_tokens"] == 400
 
 
+def test_schema_skew_is_detected():
+    from evals.report import ROW_SCHEMA_VERSION
+    rows = _sample_rows()
+    for r in rows:
+        r["schema_version"] = ROW_SCHEMA_VERSION
+    assert report.aggregate(rows)["meta"]["schema_skew"] is False
+    rows[0]["schema_version"] = ROW_SCHEMA_VERSION - 1        # one stale row
+    assert report.aggregate(rows)["meta"]["schema_skew"] is True
+
+
 def test_summary_is_json_serialisable_and_renders():
     s = report.aggregate(_sample_rows())
     json.dumps(s)                              # the machine contract must serialise
@@ -82,5 +92,6 @@ def test_summary_is_json_serialisable_and_renders():
 
 if __name__ == "__main__":
     test_aggregate_arithmetic()
+    test_schema_skew_is_detected()
     test_summary_is_json_serialisable_and_renders()
     print("OK - report aggregator: arithmetic + json + render all pass.")
