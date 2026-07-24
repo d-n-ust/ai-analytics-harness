@@ -3,7 +3,8 @@
 > **Outcome (2026-07-24):** the Stage-2 pilot falsified the input-guardrail predictions —
 > removing them showed no effect because of **defense-in-depth redundancy** (a backstop covers
 > for each). LOO from the full stack is confounded here; the design pivoted to the cumulative
-> ladder + a restricted-Shapley attribution. Full write-up in `ablation_findings.md`.
+> ladder + a restricted-Shapley attribution. Full write-up lives in the decisionspine repo:
+> `docs/blog-research/component-attribution-findings.md`.
 
 
 Registered **2026-07-24**, before any ablation run. Model under test: **gpt-5-mini / minimal**
