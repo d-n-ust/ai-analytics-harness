@@ -1,36 +1,45 @@
-# Agentic Analytics: How Much Does Grounding Actually Buy You?
+# The AI-Analyst Harness
 
-A controlled lab experiment: build one small AI "analyst" that answers business
-questions over data, then answer the **same questions at each of six levels of
-structure**, changing only that structure. Hold the model and the questions fixed. Watch
-what each layer of structure buys you.
+A controlled lab for measuring what makes an LLM "analyst" **reliable** over data. Build one
+small agent that answers business questions over a warehouse, then change **one thing at a time**
+— holding the model and the questions fixed — and watch what it buys you.
 
-The claim being tested: **a modern model is already good enough. What it lacks is
-not intelligence, it's context — and context is exactly the thing a data team
-builds.**
+The harness runs **two experiments on the same rig**:
 
-> Companion to two essays: [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
-> (the argument) and [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
-> (the experiment this repo is the evidence for).
+1. **Grounding** — how much does *structure* (a schema, a semantic layer, a knowledge base, a
+   metric tree) improve a capable model's answers? *The six-rung grounding ladder.*
+2. **Reliability** — how much do *guardrails* (a typed refusal channel, a governance gate, a
+   raw-SQL fence, an answer verifier) cut **confident-wrong** answers and let the agent **refuse
+   safely** when it should? *The R0–R9 guardrail ladder.*
 
-## The six rungs
+Each experiment adds exactly one thing to the *same* agent and re-answers the **same 57 questions**.
+Nothing else changes, so every delta is attributable to that one change — not to prompt luck or
+question drift.
 
-Each rung adds exactly one thing to the *same* agent. Nothing else changes.
+> Companion essays: [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
+> and [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
+> (the grounding experiment); a reliability essay on typed refusal is forthcoming.
 
-| # | Rung | What the agent gets | Failure it removes | Question type it unlocks |
-|---|------|---------------------|--------------------|--------------------------|
-| 1 | **Messy data** | raw tables: cryptic names, dirty values, no docs | — (baseline) | ~none reliably |
-| 2 | **Star schema** | clean `dim_` / `fct_` models, sane names, typed values | wrong tables, hallucinated columns | simple lookups |
-| 3 | **Semantic layer** | governed metrics + join paths (a YAML compiled to SQL) | wrong grain, ungoverned metric math | filtered / segmented metrics |
-| 4 | **+ Verified examples** | approved question→query pairs, each a scoped call into the governed metrics | vague phrasings and world-facts a metric can't hold (the APAC launch cutoff, the partnerships test channel) | business-knowledge questions |
-| 5 | **+ Knowledge base** | the *same* business rules again, as free-text prose (stacked on the examples) | — (the control: does prose deliver what an example does?) | none it didn't already |
-| 6 | **+ Metric tree** | the driver graph (identity + influence edges) | can't structure *why did X move* at all | diagnostic / root-cause |
+## Anatomy — what's inside
 
-Rungs 1–3 buy **accuracy**. Rung 4 buys **the definitions and world-facts accuracy can't
-see**, delivered as concrete, scoped examples. Rung 5 re-delivers the *same* knowledge as
-free-text prose to test one thing — does prose hold up as reliably as an example? (In the runs
-it never does.) Rung 6 buys **usefulness**: the jump from "what was the number" to "why did it
-move."
+A canonical agent, named the way the field names it:
+
+- **Orchestrator** (`harness/agent.py`) — the control loop: call the model, run the tool it asks
+  for, feed the result back, stop on a terminal tool. The part that is *not* the model.
+- **Model** (`harness/models.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
+  DeepSeek behind one interface). The interchangeable part.
+- **Tools** (`harness/tools.py`) — the action space: governed metric queries, raw SQL (until the
+  fence removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
+  `clarify`, so every run ends in a *typed outcome*, never a sentence to grep.
+- **Context** (`harness/grounding.py` + `grounding/`) — what the agent is given: the star schema,
+  the semantic layer, verified example queries, the knowledge base, the metric tree. This is the
+  grounding-ladder axis.
+- **Guardrails** (`harness/guardrails.py`, `harness/verifier.py`) — the reliability stack: the gate,
+  the fence, member resolution, single-metric enforcement, output validation, the trajectory
+  verifier. Controls the system *enforces*, not behaviours the model chooses. This is the
+  reliability-ladder axis.
+- **Memory** — none, by design: each question is a fresh conversation.
+- **Observability** — typed outcomes + an expect-driven grader (below).
 
 ## The dataset
 
@@ -45,6 +54,51 @@ have a *computable* correct root cause, not a vibe.
 Everything is generated deterministically from a fixed seed, so the whole thing
 reproduces on a laptop with no warehouse to provision (DuckDB, one file).
 
+## Experiment 1 — the grounding ladder
+
+Each rung adds exactly one layer of structure to the *same* agent.
+
+| # | Rung | What the agent gets | Failure it removes | Unlocks |
+|---|------|---------------------|--------------------|---------|
+| 1 | **Messy data** | raw tables: cryptic names, dirty values, no docs | — (baseline) | ~none reliably |
+| 2 | **Star schema** | clean `dim_`/`fct_` models, typed values | wrong tables, hallucinated columns | simple lookups |
+| 3 | **Semantic layer** | governed metrics + join paths (YAML → SQL) | wrong grain, ungoverned metric math | filtered / segmented metrics |
+| 4 | **+ Verified examples** | approved question→query pairs | vague phrasings, world-facts a metric can't hold | business-knowledge questions |
+| 5 | **+ Knowledge base** | the *same* rules again, as free-text prose | — (the control: does prose match an example?) | none it didn't already |
+| 6 | **+ Metric tree** | the driver graph (identity + influence edges) | can't structure *why did X move* | diagnostic / root-cause |
+
+Rungs 1–3 buy **accuracy**; rung 4 buys **the definitions and world-facts accuracy can't see**;
+rung 5 re-delivers the same knowledge as prose to test whether prose holds up (in the runs it never
+beats the example); rung 6 buys **usefulness** — the jump from "what was the number" to "why it moved."
+
+## Experiment 2 — the reliability ladder
+
+The grounding ladder makes the agent *capable*. The reliability ladder makes it *trustworthy* —
+answer when the data supports it, and **refuse with a typed reason** when it does not, instead of
+serving a confident wrong number. Each rung switches on one guardrail (`harness/guardrails.py`):
+
+| Rung | Guardrail | What it stops |
+|---|---|---|
+| R0 | — | no refusal channel (baseline: it must answer) |
+| R1 | **abstain** | adds the typed `refuse` tool (coded reason + what's missing) |
+| R2 | **check_tools** | answerability checks the model may call first |
+| R3 | **gate** | blocks out-of-coverage / ungoverned governed calls |
+| R4 | **tool_restriction** | the *fence* — removes raw SQL; governed metrics only |
+| R5 | **resolve** | filter values must resolve to governed members |
+| R6 | **transparency** | shows the compiled SQL and a plain scope line |
+| R7 | **single_metric** | the served number must *be* one governed result |
+| R8 | **output_validation** | the returned value must be well-formed |
+| R9 | **trajectory_verify** | an LLM verifier checks the metric actually answers the question |
+
+Because the guardrails are *independent flags*, the harness can run the cumulative ladder **or** any
+individual ablation cell, so a control's contribution can be measured where it functions. The
+headline is a **selective-prediction** view — precision on the answered set at a stated coverage —
+reported separately from the fabrication rate, never pooled into one accuracy number. The 33
+reliability-tier questions (`valid_but_wrong`, `adversarial`, `unanswerable`, `rt_phantom`,
+`false_premise`) are where the guardrails discriminate; the 24 answerable-tier questions are shared
+with the grounding experiment. *Full reliability results and the per-component attribution are being
+finalized.*
+
 ## Run it
 
 ```bash
@@ -52,79 +106,81 @@ make install      # uv sync
 make data         # generate data/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
-cp .env.example .env && $EDITOR .env   # set OPENAI_API_KEY (and ANTHROPIC_API_KEY for the claude-* models)
-make eval         # the real experiment: 25 questions x 6 rungs x 2 models x 5 reps
+cp .env.example .env && $EDITOR .env   # OPENAI_API_KEY (and ANTHROPIC_API_KEY / DEEPSEEK_API_KEY as needed)
+make eval         # the grounding experiment: 57 questions x 6 rungs x {gpt-5.6-terra,gpt-5.4-mini} x 5 reps
 ```
 
-Ask a single question at a single rung:
+Vary the **reliability** ladder with `--rrungs`, or run explicit ablation cells with `--cells`:
+
+```bash
+python run.py eval --rungs 3 --rrungs 0,1,3,4,7,9      # hold grounding fixed, climb the guardrail ladder
+python run.py eval --rungs 3 --cells R9,R9-resolve      # R9 vs R9-minus-one-control
+```
+
+Ask a single question at one rung:
 
 ```bash
 make ask Q="how many active users do we have?" RUNG=3 MODEL=gpt-5.6-terra
 ```
 
-The write-up runs two OpenAI models five times each (`--repeats 5`, for the error bars):
-**gpt-5.6-terra** (the flagship) and **gpt-5.4-mini** (the cheap one). Anthropic **claude-haiku-4-5**
-and **claude-sonnet-5** are wired up too — swap any into `--models`.
+Models: **gpt-5.6-terra** (flagship) and **gpt-5.4-mini** (cheap) are the write-up pair; Anthropic
+**claude-haiku-4-5** / **claude-sonnet-5** and **deepseek-v4-flash** / **deepseek-v4-pro** are wired
+up too — swap any into `--models`.
 
 ## How answers are graded
 
-The 25 questions are tagged by tier (lookup / filtered / metric / knowledge
-/ diagnostic). Each has a hand-written gold SQL, a gold number, and a tolerance
-note. Grading is deliberately layered, because "did the SQL run" is not "is this
-the right business answer":
+Every run ends in one **typed outcome** — `answer`, `refuse`, or `clarify` — so grading never
+phrase-matches prose. Each of the 57 cases declares in YAML what a correct response *is* (an
+`expect` block); the grader reads that, it never infers the expected outcome from the tier:
 
-1. **Executed?** — did it return a result at all.
-2. **Correct within tolerance?** — numeric match against the gold answer.
-3. **Right for the right reason?** — an LLM-judge pass for the diagnostic tier,
-   scored against a gold decomposition (which driver moved, direction, rough size).
+- **`metric_answer`** — a number within tolerance of an independent gold SQL, from the right
+  governed metric (when the model declares its `source_metric`).
+- **`refuse`** — a refusal carrying the expected **coded reason**; for such a case *any* served
+  number is a miss (a confident-wrong, or a right number reached off-governance = a fabrication).
+- **`diagnostic`** / **`keywords`** — named the right driver / the right metric (an LLM judge for the
+  diagnostic tier, scored against a gold decomposition).
 
-The gold set is treated as fallible and sanity-checked — benchmark "gold" answers
-are wrong more often than anyone admits.
+Every response reduces to one bucket — **right / wrong / I-don't-know / deferred / other / error** —
+reported per rung. `confident_wrong` and `fabricated` are tracked separately: precision-on-answered,
+coverage, and fabrication are reported on their own denominators, never pooled. The LLM verifier is
+itself validated against held-out human labels before it is trusted. The gold set is treated as
+fallible and sanity-checked — benchmark "gold" is wrong more often than anyone admits.
 
 ## What this is and isn't
 
-- It **is** a minimal, honest, reproducible measurement of how much structure
-  helps a capable model, built with a few hundred lines of Python and SQL.
-- It is **not** a vendor benchmark or a claim about any product. Numbers computed
-  here are computed in code; the model writes queries, it never invents a figure.
-- Results are reported as they came out, including the surprises.
+- It **is** a minimal, honest, reproducible measurement of how much structure and how many guardrails
+  help a capable model, built with a few hundred lines of Python and SQL.
+- It is **not** a vendor benchmark or a claim about any product. Numbers computed here are computed
+  in code; the model writes queries, it never invents a figure.
+- Results are reported as they came out, including the surprises, and labelled with their n.
 
 ## Layout
 
 ```
 data/         synthetic warehouse generator (messy raw + clean star)
-grounding/    per-rung grounding: star schema, semantic layer, verified examples, knowledge base, metric tree
-harness/      the agent: tool-loop, self-correction, semantic compiler, tree walk
-evaluation/   the 25 questions, gold answers, and the grader
-results/      summary.md the write-up draws on (raw rows regenerate with make eval)
-run.py        CLI: data | ask | eval
+grounding/    per-rung context: star schema, semantic layer, verified examples, knowledge base, metric tree
+harness/      the agent: orchestrator loop, tools, model adapters, semantic compiler, tree walk,
+              guardrails, and the answer verifier
+evaluation/   the 57 questions (evals/), gold answers, and the expect-driven grader
+results/      per-run summaries (summary.md); raw rows regenerate with a run
+run.py        CLI: data | ask | eval | regrade
 ```
 
 ## Results
 
-The full run — 2 models × 6 rungs × 25 questions × 5 reps — is in
-[`results/summary.md`](results/summary.md). Accuracy climbs as structure is added, and each jump
-lands on a rung:
-
-| rung | gpt-5.6-terra | gpt-5.4-mini |
-|---|---|---|
-| 1 · messy data | 40% ± 6 | 22% ± 2 |
-| 2 · star schema | 46% ± 4 | 34% ± 4 |
-| 3 · semantic layer | 66% ± 4 | 54% ± 7 |
-| 4 · + verified examples | 81% ± 2 | 77% ± 4 |
-| 5 · + knowledge base | 78% ± 2 | 75% ± 3 |
-| 6 · + metric tree | 92% ± 3 | 78% ± 5 |
+The published grounding run is in [`results/summary.md`](results/summary.md) and the companion
+essay. The qualitative findings are robust across runs:
 
 - **The semantic layer is the turning point** — the biggest jump (rung 2→3) is where the model
   stops guessing definitions.
 - **Verified examples deliver business knowledge; a free-text knowledge base doesn't** — rung 5
-  never beat rung 4 across five runs (it cost ~2 points), the only rung that never earned its place.
-- **"Why did it move" needs the metric tree** — gpt-5.6-terra's diagnostic answers go from 3/25 at the
-  semantic layer to 18/25 with the tree; gpt-5.4-mini can read a governed number but still can't reason
-  about the why (8/25).
+  never beat rung 4, the only rung that never earned its place.
+- **"Why did it move" needs the metric tree** — diagnostic answers jump sharply once the tree is added.
 
-Numbers are one 5-rep run; re-running moves them a point or two (the ± is that spread). The
-write-up this backs: **[Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)**.
+The published grounding percentages were measured on an earlier 25-question set; the harness has
+since grown to the current **57 questions** and the **reliability axis**, and refreshed grounding +
+reliability numbers are being finalized. Every published number is labelled with its n; re-running a
+5-rep grid moves a rung a point or two.
 
 ## License
 
