@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# bench — the AI-analyst harness CLI.
+# Thin wrapper so `./bench <verb>` == `uv run python -m cli <verb>` from the repo root.
+exec uv run python -m cli "$@"

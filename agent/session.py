@@ -8,11 +8,11 @@ from .models import get_model
 from warehouse.warehouse import open_warehouse, set_star
 
 
-def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, mock: bool = False,
-            verbose: bool = False, con=None) -> Answer:
+def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrails=None,
+            mock: bool = False, verbose: bool = False, con=None) -> Answer:
     con = con or open_warehouse()
     set_star(con, rung >= 2)  # rung 1 is raw-only
-    grounding = build_grounding(con, rung)
+    grounding = build_grounding(con, rung, guardrails=guardrails)
     result = run_agent(question, grounding, get_model(model, mock=mock))
     if verbose:
         print(f"\nrung {rung} ({RUNG_NAMES[rung]}) · model={model}")
