@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields, replace
 
-__all__ = ["Guardrails", "LADDER", "LADDER_ORDER", "incoherent"]
+__all__ = ["Guardrails", "LADDER", "LADDER_ORDER", "incoherent", "parse_cell"]
 
 # The order the ladder switches them on. LADDER[n] = the first n of these.
 LADDER_ORDER = ["abstain", "check_tools", "gate", "tool_restriction", "resolve",
@@ -58,6 +58,20 @@ LADDER: dict[int, Guardrails] = {
     n: Guardrails(**{name: True for name in LADDER_ORDER[:n]})
     for n in range(len(LADDER_ORDER) + 1)
 }
+
+
+def parse_cell(spec: str) -> Guardrails:
+    """Parse an ablation-cell name into a Guardrails: 'R9' -> the full preset; 'R9-resolve' ->
+    R9 minus member resolution; 'R9-resolve-gate' -> minus both. The base must be a ladder
+    preset R0..R9; each removed name a real control. Used by the runner's --cells."""
+    parts = spec.split("-")
+    base = parts[0]
+    if not (base.startswith("R") and base[1:].isdigit()) or int(base[1:]) not in LADDER:
+        raise ValueError(f"cell {spec!r}: base must be a ladder preset R0..R{len(LADDER_ORDER)}")
+    for name in parts[1:]:
+        if name not in LADDER_ORDER:
+            raise ValueError(f"cell {spec!r}: unknown control {name!r}; valid: {LADDER_ORDER}")
+    return LADDER[int(base[1:])].without(*parts[1:])
 
 
 def incoherent(g: Guardrails) -> str | None:

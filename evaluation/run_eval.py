@@ -44,7 +44,8 @@ def _new_run_dir(models, mock: bool) -> Path:
 
 def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
-                   rrungs=(1,)) -> None:
+                   rrungs=(1,), cells=None) -> None:
+    from harness.guardrails import incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()
@@ -60,6 +61,20 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                 seen[q["tier"]] += 1
         questions = subset
 
+    # A "config" is (label, nominal-rrung, guardrails). --cells overrides the ladder presets with
+    # arbitrary ablation cells (R9-resolve, ...), skipping the ones incoherent() rejects.
+    if cells:
+        configs = []
+        for spec in cells:
+            g = parse_cell(spec)
+            bad = incoherent(g)
+            if bad:
+                print(f"  SKIP incoherent cell {spec}: {bad}", flush=True)
+                continue
+            configs.append((g.label(), int(spec.split("-")[0][1:]), g))
+    else:
+        configs = [(f"R{rr}", rr, None) for rr in rrungs]
+
     rows: list[dict] = []
     run_dir = _new_run_dir(models, mock)
     raw_f = (run_dir / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
@@ -74,8 +89,8 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                                    reasoning=os.environ.get("VERIFIER_REASONING", "low"))
         for rung in rungs:
             set_star(con, rung >= 2)
-            for rrung in rrungs:
-                grounding = build_grounding(con, rung, rrung)
+            for cfg_label, rrung, gr in configs:
+                grounding = build_grounding(con, rung, rrung, guardrails=gr)
                 for rep in range(repeats):
                     for q in questions:
                         t0 = time.perf_counter()
@@ -110,7 +125,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
                         raw_f.flush()
                         mark = {"refuse": "~", "clarify": "?"}.get(
                             ans.outcome, "✓" if g["correct"] else "✗")
-                        print(f"  [{model_name} r{rung} R{rrung} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
+                        print(f"  [{model_name} r{rung} {cfg_label} rep{rep} {q['tier'][:4]}] {mark} {q['id']}", flush=True)
 
     raw_f.close()
     _write_and_summarize(rows, list(models), list(rungs), mock, run_dir)
@@ -188,6 +203,9 @@ def _bucket(r) -> str:
 
 
 def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
+    if not rows:                                          # e.g. an --only that matched nothing
+        print("no rows to summarise (empty run)")
+        return
     by = lambda **f: [r for r in rows                    # noqa: E731 — tiny local filter
                       if all(r[k] == v for k, v in f.items())]
 

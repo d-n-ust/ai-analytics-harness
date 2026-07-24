@@ -45,6 +45,7 @@ def cmd_eval(args: argparse.Namespace) -> None:
         sample=args.sample,
         repeats=args.repeats,
         rrungs=[int(r) for r in args.rrungs.split(",") if r.strip()],
+        cells=[c.strip() for c in args.cells.split(",") if c.strip()] if args.cells else None,
     )
 
 
@@ -78,6 +79,10 @@ def main() -> None:
                          "2=+check tools; input guardrails: 3=+gate, 4=+tool-restriction, "
                          "5=+member-resolution; output: 6=+transparency, 7=+single-metric, "
                          "8=+output-validation, 9=+trajectory-verifier")
+    sp.add_argument("--cells", default=None,
+                    help="ablation cells (overrides --rrungs), e.g. "
+                         "'R9,R9-resolve,R9-trajectory_verify'. R9=full stack; R9-X = full minus X. "
+                         "Incoherent cells are skipped.")
     sp.set_defaults(func=cmd_eval)
 
     sp = sub.add_parser("regrade", help="re-grade a finished run from stored answers "
