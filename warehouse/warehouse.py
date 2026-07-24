@@ -61,7 +61,7 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     """Open the warehouse and (by default) create the star views on top of the raw tables."""
     if not DB_PATH.exists():
         raise FileNotFoundError(
-            f"{DB_PATH} not found — run `python run.py data` first."
+            f"{DB_PATH} not found — run `bench data` (or `make data`) first."
         )
     con = duckdb.connect(str(DB_PATH))
     if create_star_views:
