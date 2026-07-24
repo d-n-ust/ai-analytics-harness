@@ -15,11 +15,9 @@ Run:  OPENAI_REASONING=low python evaluation/verifier_eval.py
 
 from __future__ import annotations
 
-import sys
-
 from agent.models import get_model
-from semantic.semantic import SemanticLayer
 from agent.verifier import verify_trajectory
+from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 
 # (label, question, metric, call_args, should_flag)

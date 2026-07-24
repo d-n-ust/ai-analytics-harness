@@ -13,7 +13,7 @@ the directory tree *is* the reference architecture. Read it top (the consumer) t
  semantic         semantic/ — governed metrics, segments, the metric tree   ← the services layer
  data             warehouse/ — raw tables → clean dim_/fct_ views (DuckDB)
  ────────────────────────────────────────────────────────────────
- cross-cutting    observability (typed outcomes + eval/report.py) · guardrails (agent/) · memory: none
+ cross-cutting    observability (typed outcomes + evals/report.py) · guardrails (agent/) · memory: none
 ```
 
 ## The canonical components → files
@@ -26,7 +26,7 @@ the directory tree *is* the reference architecture. Read it top (the consumer) t
 | **Context** | everything assembled into the prompt: the system prompt + the grounding sources, built per rung. | `agent/prompt.py` reading `warehouse/` · `semantic/` · `context/` |
 | **Guardrails** | controls the system *enforces*: the gate, the fence (no raw SQL), member resolution, and the output checks (provenance, validation, the trajectory verifier). | `agent/guardrails.py`, `agent/verifier.py` |
 | **Memory** | none, by design — each question is a fresh conversation (stateless). | — |
-| **Observability** | typed outcomes on every run + the aggregator that turns stored rows into `summary.md` / `summary.json`. | `eval/report.py` |
+| **Observability** | typed outcomes on every run + the aggregator that turns stored rows into `summary.md` / `summary.json`. | `evals/report.py` |
 
 ## The request lifecycle
 
@@ -40,7 +40,7 @@ question
      }
   → terminal tool (answer | refuse | clarify)
   → output guardrails on the answer: provenance (R7) · validation (R8) · trajectory verify (R9)   (agent/verifier.py)
-  → typed outcome  → graded  → aggregated into a report   (eval/)
+  → typed outcome  → graded  → aggregated into a report   (evals/)
 ```
 
 The contracts between layers are where reliability lives — e.g. *"governed calls only, no raw SQL"*

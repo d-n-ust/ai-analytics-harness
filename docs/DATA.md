@@ -55,7 +55,7 @@ bench query "SELECT count(DISTINCT user_id) FROM fct_sessions
 bench ask "how many active users did we have last week?" --rung 3
 ```
 
-The gold answers behind the eval are computed the same way (independent gold SQL, `eval/gold.py`) and
+The gold answers behind the eval are computed the same way (independent gold SQL, `evals/gold.py`) and
 are treated as **fallible** — benchmark "gold" is wrong more often than anyone admits, so they are
 sanity-checked, not trusted.
 

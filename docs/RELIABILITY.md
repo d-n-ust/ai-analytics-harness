@@ -61,7 +61,7 @@ both are provable without a model (`tests/test_semantic.py`).
 
 ## How it's reported
 
-Rates are never pooled across the answerable / unanswerable split. Per config, `eval/report.py` emits:
+Rates are never pooled across the answerable / unanswerable split. Per config, `evals/report.py` emits:
 
 - a **selective-prediction operating point** — coverage (share answered) and risk (error among
   answered); the ladder traces a *frontier* as guardrails tighten (not a threshold-swept curve, so no

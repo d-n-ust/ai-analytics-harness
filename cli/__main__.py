@@ -29,7 +29,7 @@ def _split(s: str) -> list[str]:
 def _run_dir(arg):
     from pathlib import Path
 
-    from eval.runner import RESULTS_DIR
+    from evals.runner import RESULTS_DIR
     return Path(arg) if arg else (RESULTS_DIR / "latest").resolve()
 
 
@@ -60,7 +60,7 @@ def cmd_ask(a):
 
 
 def cmd_run(a):
-    from eval.runner import run_experiment
+    from evals.runner import run_experiment
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[int(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
                    rrungs=[int(r) for r in _split(a.rrungs)],
@@ -68,14 +68,14 @@ def cmd_run(a):
 
 
 def cmd_regrade(a):
-    from eval.runner import regrade_run
+    from evals.runner import regrade_run
     regrade_run(_run_dir(a.run))
 
 
 def cmd_report(a):
     import json
 
-    from eval import report
+    from evals import report
     run = _run_dir(a.run)
     rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
     report.write(rows, run)
