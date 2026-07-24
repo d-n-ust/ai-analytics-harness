@@ -40,7 +40,7 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 2
+ROW_SCHEMA_VERSION = 3   # v3: rows carry `off_governance` (right digits, ungoverned path)
 
 
 # --------------------------------------------------------------------------- #
