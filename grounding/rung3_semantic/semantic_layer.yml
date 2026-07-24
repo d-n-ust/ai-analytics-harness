@@ -212,11 +212,11 @@ governance:
     # A region's own launch window lives on the region dimension member below
     # (region.APAC.available_from), so availability is a property of the dimension, not a
     # separate coverage list. The coverage check reads it from there.
-  # Governed segments: named, reusable population filters a question maps onto — the
+  # Governed segments: named, reusable segment filters a question maps onto — the
   # Cube `segments` / LookML `sql_always_where` construct. `exclude_test: <dimension>`
   # drops every member of that dimension flagged `test: true`. Applied at query time via
   # query_metric(segment=...), so "real acquisition" is an enforced filter, not prose.
-  # (Distinct from ontology.segments below, the spec-check's abstract population words.)
+  # (Distinct from ontology.segments below, the spec-check's abstract segment words.)
   segments:
     real_acquisition:
       description: "Real acquisition only — excludes test-integration channels."
