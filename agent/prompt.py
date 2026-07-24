@@ -14,9 +14,10 @@ from pathlib import Path
 import yaml
 
 from semantic.semantic import SemanticLayer
+from semantic.tree import MetricTree
+
 from .guardrails import LADDER, Guardrails
 from .tools import Toolbox
-from semantic.tree import MetricTree
 
 _ROOT = Path(__file__).resolve().parent.parent
 _VERIFIED = _ROOT / "context" / "verified_queries.yml"

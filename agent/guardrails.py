@@ -49,7 +49,7 @@ class Guardrails:
                 return f"R{n}-{missing[0]}"
         return "+".join(on) if on else "none"
 
-    def without(self, *names: str) -> "Guardrails":
+    def without(self, *names: str) -> Guardrails:
         """This configuration minus one or more controls — the leave-one-out cell."""
         return replace(self, **{n: False for n in names})
 
