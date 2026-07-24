@@ -6,9 +6,9 @@ error rate is measured against held-out human labels; `verifier_eval.py` is a ha
 smoke test, not that measurement. This scores it from STORED runs: no re-running, no model
 calls, so the same rows can be re-scored whenever the label set grows.
 
-    sample:  uv run python evaluation/verifier_audit.py sample --run results/latest --n 20
+    sample:  uv run python evals/components/verifier_audit.py sample --run results/latest --n 20
              Writes a BLIND sheet (the verdict withheld) plus a hidden key file.
-    score:   uv run python evaluation/verifier_audit.py score
+    score:   uv run python evals/components/verifier_audit.py score
 
 Two error directions, and they cost different things:
     false-flag  the judge REFUSED an answer a human says is correct  -> lost coverage
@@ -25,7 +25,7 @@ from pathlib import Path
 
 import yaml
 
-LABELS_DIR = Path(__file__).resolve().parent / "labels"
+LABELS_DIR = Path(__file__).resolve().parent.parent / "labels"   # evals/labels (this file is in evals/components/)
 SHEET = LABELS_DIR / "verifier_sample.yml"
 KEY = LABELS_DIR / "verifier_sample.key.json"
 SEED = 20260724       # fixed, so the same run yields the same sample
