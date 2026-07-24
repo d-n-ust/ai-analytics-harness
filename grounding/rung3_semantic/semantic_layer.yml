@@ -209,10 +209,9 @@ governance:
   coverage:
     data_start: 2025-09-01        # first signups in the warehouse
     data_end: 2026-07-12          # last complete ISO week
-    regions:
-      # earlier APAC rows are pre-launch test data. `countries` lets a coverage check
-      # resolve region from the country dimension too, so PH/ID/IN can't sneak past.
-      APAC: {starts: 2026-05-01, countries: [PH, ID, IN]}
+    # A region's own launch window lives on the region dimension member below
+    # (region.APAC.available_from), so availability is a property of the dimension, not a
+    # separate coverage list. The coverage check reads it from there.
   # Answerability terms: segment words a question might NAME that have a governed
   # definition, consulted by check_segment_defined / segment_defined() at rung 3.
   # (Distinct from the R6 ontology.segments below, which are the spec-check segments.)
@@ -274,7 +273,15 @@ governance:
       # Synonyms are true EQUIVALENTS only, never sub-regions. A hyponym (e.g. "north
       # america" is a proper subset of Americas) must resolve to None -> refuse, not
       # silently widen to the parent and answer a different question.
-      APAC: ["apac", "asia pacific"]
+      #
+      # A member is either a synonym list (shorthand) or a dict that also carries
+      # metadata: `available_from` (a query whose period begins before this is refused —
+      # earlier rows are pre-launch test data) and `countries` (a country filter inherits
+      # this region's window, so PH/ID/IN can't sneak past the coverage check).
+      APAC:
+        synonyms: ["apac", "asia pacific"]
+        available_from: 2026-05-01
+        countries: [PH, ID, IN]
       Americas: ["americas", "america"]
       EMEA: ["emea"]
     plan:

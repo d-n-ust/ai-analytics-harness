@@ -117,16 +117,30 @@ class SemanticLayer:
         return False, (f"no governed definition matches {term!r}. "
                        f"Catalog: {', '.join(self.metrics)}.")
 
+    def _members(self, dimension: str) -> dict:
+        """The governed members of a dimension, {canonical: member}. A member is either a
+        synonym list (shorthand) or a dict carrying synonyms plus metadata (availability
+        window, member countries)."""
+        return self.governance.get("dimensions", {}).get(dimension, {}) or {}
+
+    @staticmethod
+    def _synonyms(member) -> list:
+        return member.get("synonyms", []) if isinstance(member, dict) else (member or [])
+
+    @staticmethod
+    def _meta(member) -> dict:
+        return member if isinstance(member, dict) else {}
+
     def _region_of(self, region, country):
         """A region's launch window also governs its countries — so a country filter
         (PH) is resolved to its region (APAC) before the coverage check, closing the
-        dimension that would otherwise bypass the gate."""
+        dimension that would otherwise bypass the gate. Read from the region dimension."""
         if region:
             return region
         if country:
             c = str(country).upper()
-            for name, win in self.governance.get("coverage", {}).get("regions", {}).items():
-                if c in [str(x).upper() for x in win.get("countries", [])]:
+            for name, member in self._members("region").items():
+                if c in [str(x).upper() for x in self._meta(member).get("countries", [])]:
                     return name
         return None
 
@@ -154,11 +168,12 @@ class SemanticLayer:
         if d1 and hi > d1:
             return False, f"period ends {hi}, after data ends {d1}."
         if region:
-            win = {str(k).lower(): v for k, v in cov.get("regions", {}).items()}.get(str(region).lower())
-            if win and lo < win["starts"]:
-                return False, (f"{region} coverage starts {win['starts']}; the period begins {lo}. "
+            member = {str(k).lower(): v for k, v in self._members("region").items()}.get(str(region).lower())
+            starts = self._meta(member).get("available_from")
+            if starts and lo < starts:
+                return False, (f"{region} coverage starts {starts}; the period begins {lo}. "
                                "Rows before launch are pre-launch test data — restrict to on/after "
-                               f"{win['starts']}.")
+                               f"{starts}.")
         return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
 
     def allowed_filters(self, metric: str) -> set[str] | None:
@@ -174,12 +189,12 @@ class SemanticLayer:
         vocabulary but nothing matches (an undefined value; the caller refuses rather than
         querying a slice that doesn't exist). A dimension with no governed member list
         passes its value through unchanged (e.g. a boolean flag like is_internal)."""
-        members = self.governance.get("dimensions", {}).get(dimension)
+        members = self._members(dimension)
         if not members:
             return value
         want = _norm_value(value)
-        for canonical, synonyms in members.items():
-            if want == _norm_value(canonical) or any(want == _norm_value(s) for s in synonyms):
+        for canonical, member in members.items():
+            if want == _norm_value(canonical) or any(want == _norm_value(s) for s in self._synonyms(member)):
                 return canonical
         return None
 

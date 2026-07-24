@@ -355,6 +355,25 @@ class _FakeModel:
         return SimpleNamespace(content=[block])
 
 
+def test_region_availability_is_read_from_the_dimension():
+    """Coverage windows live on the region dimension member (region.APAC.available_from),
+    not a separate coverage.regions list. A member is a synonym list OR a dict with
+    metadata; both resolve, and the launch window still gates by region and by country."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    # a dict member still resolves by canonical + synonym; a shorthand-list member too
+    assert sem.resolve_member("region", "asia pacific") == "APAC"
+    assert sem.resolve_member("region", "americas") == "Americas"
+    assert sem.resolve_member("region", "North America") is None      # hyponym still refused
+    # the launch window gates a pre-launch period, and a country filter inherits it
+    assert sem.in_coverage("2026-04-01", "2026-06-30", region="APAC")[0] is False
+    assert sem.in_coverage("2026-05-01", "2026-06-30", region="APAC")[0] is True
+    assert sem.in_coverage("2026-04-01", "2026-06-30", country="PH")[0] is False   # PH -> APAC
+    assert sem.in_coverage("2026-04-01", "2026-06-30", region="Americas")[0] is True  # no window
+    # and it is no longer read from a coverage.regions block
+    assert "regions" not in sem.governance.get("coverage", {})
+
+
 def test_ladder_presets_reproduce_the_rung_thresholds():
     """The flag refactor must not move a single existing result: LADDER[n] has to switch on
     exactly the controls the old `rrung >= N` comparisons did, for every rung."""
@@ -501,6 +520,7 @@ if __name__ == "__main__":
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()
+    test_region_availability_is_read_from_the_dimension()
     test_ladder_presets_reproduce_the_rung_thresholds()
     test_ablation_cell_is_expressible_and_incoherent_cells_are_named()
     test_gate_blocks_ungoverned_dimension_and_value()
