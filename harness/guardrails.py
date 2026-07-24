@@ -61,9 +61,17 @@ LADDER: dict[int, Guardrails] = {
 
 
 def parse_cell(spec: str) -> Guardrails:
-    """Parse an ablation-cell name into a Guardrails: 'R9' -> the full preset; 'R9-resolve' ->
-    R9 minus member resolution; 'R9-resolve-gate' -> minus both. The base must be a ladder
-    preset R0..R9; each removed name a real control. Used by the runner's --cells."""
+    """Parse an ablation-cell name into a Guardrails:
+      'R9'                      -> the full preset;
+      'R9-resolve'              -> R9 minus member resolution ('R9-resolve-gate' minus both);
+      'gate+single_metric+...'  -> exactly those controls on (an explicit set, for Shapley cells).
+    Used by the runner's --cells."""
+    if "+" in spec or spec in LADDER_ORDER:              # explicit set of ON controls
+        names = spec.split("+")
+        for name in names:
+            if name not in LADDER_ORDER:
+                raise ValueError(f"cell {spec!r}: unknown control {name!r}; valid: {LADDER_ORDER}")
+        return Guardrails(**{name: True for name in names})
     parts = spec.split("-")
     base = parts[0]
     if not (base.startswith("R") and base[1:].isdigit()) or int(base[1:]) not in LADDER:

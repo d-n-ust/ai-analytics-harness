@@ -71,7 +71,9 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
             if bad:
                 print(f"  SKIP incoherent cell {spec}: {bad}", flush=True)
                 continue
-            configs.append((g.label(), int(spec.split("-")[0][1:]), g))
+            base = spec.split("-")[0]                      # nominal rrung, for the row; label() is the truth
+            nominal = int(base[1:]) if base.startswith("R") and base[1:].isdigit() else 9
+            configs.append((g.label(), nominal, g))
     else:
         configs = [(f"R{rr}", rr, None) for rr in rrungs]
 
