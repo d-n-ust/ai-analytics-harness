@@ -13,7 +13,7 @@ implies in the written data:
      return more the next day? (In the generator, reminders are sprinkled at a
      flat rate onto already-active days, so any effect here is spurious.)
 
-Usage: python audit/generator_check.py
+Usage: python experiments/integrity-audit/generator_check.py
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import numpy as np
 
 ANOMALY_WEEK = "2026-07-06"
 
-con = duckdb.connect("data/warehouse.duckdb", read_only=True)
+con = duckdb.connect("warehouse/warehouse.duckdb", read_only=True)
 
 # Weekly grain: completes (etype=2) define active user-days; reminders are etype=3.
 weekly = con.execute("""
