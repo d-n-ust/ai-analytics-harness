@@ -375,6 +375,26 @@ class Toolbox:
             run_output_validation=self.output_validation,
             run_single_metric=self.single_metric, verify_traj=verify_traj)
 
+    def _governed_notes(self, args: dict) -> list[str]:
+        """Governed modifications the LAYER applied to this query, so the verifier treats them as
+        definitional rather than analyst scope-narrowing: a named segment (which restricts a
+        population, e.g. real_acquisition drops test channels), and a region's coverage window
+        (a period clipped to on/after launch is governed, not an invented restriction)."""
+        notes: list[str] = []
+        sem, a = self.semantic, args or {}
+        seg = a.get("segment")
+        if seg and sem is not None:
+            spec = sem.governance.get("segments", {}).get(seg, {})
+            notes.append(f"governed segment '{seg}' — {spec.get('description', 'a governed population filter')}")
+        for region in [a.get("filters", {}).get("region")] if isinstance(a.get("filters"), dict) else []:
+            member = {str(k).lower(): v for k, v in sem._members("region").items()}.get(str(region).lower()) if (region and sem) else None
+            starts = sem._meta(member).get("available_from") if member else None
+            if starts:
+                notes.append(f"region {region} data starts {starts}; months the question names before "
+                             f"this are out of coverage (pre-launch), so the in-coverage window "
+                             f"(on/after {starts}) IS the correct answer — excluding them is required, not narrowing")
+        return notes
+
     def _trajectory_verifier(self, model):
         """A callable (question, metric, metric_def, call_args, governed_value, claim) -> verdict,
         that recompiles the SQL the analyst ran and hands the verifier the analyst's ADDED filters
@@ -390,7 +410,8 @@ class Toolbox:
                                          if (a.get("start") or a.get("end")) else None)
             ok, mismatch, reason = verifier.verify_trajectory(
                 model, question, metric, metric_def, sql, gov_value,
-                claim, applied_filters=a.get("filters"), time_window=window)
+                claim, applied_filters=a.get("filters"), time_window=window,
+                governed_notes=self._governed_notes(a))
             # Persist the judge's own verdict WITH the evidence it saw, so its error rate can
             # later be scored against human labels. A judge you cannot score is just an
             # unverified opinion — and every "0 confident-wrong" claim rests on this one.

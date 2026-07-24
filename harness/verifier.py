@@ -37,9 +37,17 @@ _VERIFY_SYSTEM = (
     "question. Judge the metric by its description and what it measures, NEVER by how it is computed "
     "internally (a CASE, a division, a built-in segment filter are the correct definition, not a "
     "fault).\n\n"
+    "GOVERNED MODIFICATIONS (shown as 'governed modifications applied') are done by the LAYER, not "
+    "invented by the analyst, and are correct by construction — never flag them:\n"
+    "- A governed segment that restricts a population IS the right way to answer a question about "
+    "that population (e.g. a 'real acquisition' segment that drops test channels answers a question "
+    "about real acquisition — this is NOT an unrequested filter).\n"
+    "- A governed coverage window: if the question names a period that extends before it, the "
+    "in-coverage portion IS the correct answer. The out-of-coverage months are pre-launch/unavailable "
+    "data; excluding them is REQUIRED, so do NOT flag the answer for 'not covering' those months.\n\n"
     "Cite the specific definition text or the analyst's added filter that fails. Do not invent "
-    "problems, and never object to the metric's internal computation. If all four checks pass, the "
-    "answer stands."
+    "problems, and never object to the metric's internal computation or a governed modification. If "
+    "all four checks pass, the answer stands."
 )
 
 _REPORT = {
@@ -58,16 +66,22 @@ _REPORT = {
 
 def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
                       sql: str, result_value, claim_value, applied_filters=None,
-                      time_window=None) -> tuple[bool, str, str]:
+                      time_window=None, governed_notes=None) -> tuple[bool, str, str]:
     """Inspect one answer's trajectory. Returns (answers_question, mismatch_kind, reason).
     answers_question=False means the served number does not answer the question -> downgrade.
     `applied_filters` is what the ANALYST added for this query (not the metric's own definition),
-    so the scope check judges the analyst's choices, not the definition's built-in clauses."""
+    so the scope check judges the analyst's choices, not the definition's built-in clauses.
+    `governed_notes` are governed modifications the layer applied (a named segment, a coverage
+    window) — DEFINITIONAL, not the analyst's invention — so a governed narrowing (excluding a
+    test channel, dropping pre-launch data) is not mistaken for a scope error."""
     md = metric_def or {}
+    governed = "; ".join(governed_notes) if governed_notes else "none"
     brief = (f"metric used: {metric_name}\n"
              f"  definition (correct by construction): {md.get('description', '(no description)')}\n"
              f"  measures entity={md.get('entity')}, segment={md.get('segment')}, "
              f"aggregation={md.get('agg')}, unit={md.get('unit')}\n"
+             f"  governed modifications applied (DEFINITIONAL — the layer did this, not the analyst; "
+             f"do NOT treat as an invented restriction): {governed}\n"
              f"  analyst added (check these for scope): {applied_filters or 'none'}\n"
              f"  time window: {time_window or 'all time'}\n"
              f"  full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}\n"
