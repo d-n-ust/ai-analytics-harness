@@ -91,10 +91,10 @@ class MetricTree:
         node = node or self.root
         if node not in self.nodes:
             raise TreeError(f"unknown node {node!r}. Nodes: {', '.join(self.nodes)}")
-        # The official North Star is the internal-excluded population. Any caller
-        # filter is layered ON TOP of that exclusion, never instead of it — otherwise
-        # the parent (population-neutral) and children (internal-excluded) would be
-        # computed over different populations and the identity shares would not sum to 1.
+        # The official North Star is the internal-excluded row set. Any caller filter is
+        # layered ON TOP of that exclusion, never instead of it — otherwise the parent
+        # (exclusion not applied) and children (internal-excluded) would be computed over
+        # different row sets and the identity shares would not sum to 1.
         filters = {"is_internal": False, **(filters or {})}
 
         def val(metric, period):
