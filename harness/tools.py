@@ -201,7 +201,7 @@ def _numeric_cells(rows) -> list:
 class Toolbox:
     """Holds the live warehouse/semantic/tree handles and exposes the tools for a rung.
 
-    `rung` gates grounding (what the agent knows); `rrung` gates reliability
+    `rung` gates grounding (what the agent knows); the `guardrails` set gates reliability
     (what the agent may do about not knowing):
       0 = no refuse tool · 1+ = typed refusal · 2+ = check_* tools callable ·
       3+ = the interception GATE (governed calls validated; out-of-coverage /
@@ -211,20 +211,15 @@ class Toolbox:
     which is why they can be proven exhaustively without an LLM (see tests/)."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
-                 tree: MetricTree | None = None, rrung: int = 1,
-                 guardrails: Guardrails | None = None):
+                 tree: MetricTree | None = None, guardrails: Guardrails | None = None):
         self.con = con
         self.rung = rung
-        self.rrung = rrung
-        # `rrung` names a preset; `guardrails` overrides it for an ablation cell. Every control
-        # below is read from this one set, so a cell is expressible and self-describing.
-        self.g = guardrails if guardrails is not None else LADDER[rrung]
+        # Guardrails is the one primitive: which reliability controls are on. A ladder preset
+        # (LADDER[n]) and an ablation cell are both just a Guardrails set; every control below reads
+        # from it, so a cell is expressible and self-describing. Default R1 (abstention).
+        self.g = guardrails if guardrails is not None else LADDER[1]
         self.semantic = semantic
         self.tree = tree
-        # The reliability ladder, re-ordered logically (R0 no guardrails; R1 abstention = the
-        # refuse tool; R2 answerability check tools). The cost nudge, the 4-slot spec check, and
-        # the unrequested-predicate check are retired from the ladder — the verifier subsumes the
-        # latter two. Each guardrail's effect is still measured on its own rung.
         self.last_verdict = None
 
     # Each control reads from the guardrail set, so call sites are unchanged. Input guardrails

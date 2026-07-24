@@ -13,6 +13,7 @@ Run: uv run python -m pytest tests/test_structural.py -q     (or run this file d
 from __future__ import annotations
 
 from harness.grounding import build_grounding
+from harness.guardrails import LADDER
 from harness.semantic import SemanticError, SemanticLayer
 from harness.tree import MetricTree
 from harness.warehouse import open_warehouse
@@ -70,7 +71,7 @@ def prove():
     # 3. The interception GATE (rrung 3) blocks every out-of-coverage governed call,
     #    even when the metric itself is real. This is the worst-case agent trying to
     #    pull legitimate metrics over illegitimate periods.
-    gate_tb = build_grounding(con, rung=6, rrung=3).toolbox
+    gate_tb = build_grounding(con, rung=6, guardrails=LADDER[3]).toolbox
     for filt, start, end in OUT_OF_COVERAGE:
         args = {"metric": "value_moments", "start": start, "end": end}
         if filt:
@@ -86,12 +87,12 @@ def prove():
     passed += 1
 
     # 4. The tool restriction (rrung 4) removes raw SQL entirely — no arbitrary-query escape hatch.
-    fenced_names = {t["name"] for t in build_grounding(con, rung=6, rrung=4).toolbox.specs()}
+    fenced_names = {t["name"] for t in build_grounding(con, rung=6, guardrails=LADDER[4]).toolbox.specs()}
     _check("run_sql" not in fenced_names, "tool restriction did not remove run_sql")
     _check("query_metric" in fenced_names, "tool restriction removed the governed path too")
     passed += 1
     # Below the tool restriction (R3, gate only), raw SQL is present (so the contrast is real).
-    r3_names = {t["name"] for t in build_grounding(con, rung=6, rrung=3).toolbox.specs()}
+    r3_names = {t["name"] for t in build_grounding(con, rung=6, guardrails=LADDER[3]).toolbox.specs()}
     _check("run_sql" in r3_names, "run_sql should still exist at R3 (the override path)")
     passed += 1
 

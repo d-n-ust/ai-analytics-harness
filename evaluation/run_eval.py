@@ -42,7 +42,7 @@ def _new_run_dir(models, mock: bool) -> Path:
 def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
                    rrungs=(1,), cells=None) -> None:
-    from harness.guardrails import incoherent, parse_cell
+    from harness.guardrails import LADDER, incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()
@@ -72,7 +72,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             nominal = int(base[1:]) if base.startswith("R") and base[1:].isdigit() else 9
             configs.append((g.label(), nominal, g))
     else:
-        configs = [(f"R{rr}", rr, None) for rr in rrungs]
+        configs = [(f"R{rr}", rr, LADDER[rr]) for rr in rrungs]
 
     rows: list[dict] = []
     run_dir = _new_run_dir(models, mock)
@@ -89,7 +89,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         for rung in rungs:
             set_star(con, rung >= 2)
             for cfg_label, rrung, gr in configs:
-                grounding = build_grounding(con, rung, rrung, guardrails=gr)
+                grounding = build_grounding(con, rung, guardrails=gr)
                 for rep in range(repeats):
                     for q in questions:
                         t0 = time.perf_counter()

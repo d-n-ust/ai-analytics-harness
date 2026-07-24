@@ -130,19 +130,18 @@ def _knowledge_block() -> str:
 @dataclass
 class Grounding:
     rung: int
-    rrung: int
     system: str
     toolbox: Toolbox
     guardrails: Guardrails | None = None
 
 
-def build_grounding(con, rung: int, rrung: int = 1,
+def build_grounding(con, rung: int,
                     guardrails: Guardrails | None = None) -> Grounding:
-    # `rrung` names a preset on the ladder; `guardrails` overrides it for an ablation cell.
-    # The prompt is assembled from the SAME set the Toolbox enforces, so a cell can never
-    # describe a control that is not running — that would make the measurement vary with
-    # the treatment, which is the one thing an ablation must not do.
-    g = guardrails if guardrails is not None else LADDER[rrung]
+    # Guardrails is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
+    # ablation cell any Guardrails set. The prompt is assembled from the SAME set the Toolbox
+    # enforces, so a cell can never describe a control that is not running — that would make the
+    # measurement vary with the treatment, the one thing an ablation must not do.
+    g = guardrails if guardrails is not None else LADDER[1]
     system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
     if g.check_tools:
         system += _RRUNG_CHECKS
@@ -172,5 +171,5 @@ def build_grounding(con, rung: int, rrung: int = 1,
 
     semantic = SemanticLayer(con) if rung >= 3 else None
     tree = MetricTree(semantic) if rung >= 6 else None
-    return Grounding(rung=rung, rrung=rrung, guardrails=g, system=system,
-                     toolbox=Toolbox(con, rung, semantic, tree, rrung, guardrails=g))
+    return Grounding(rung=rung, guardrails=g, system=system,
+                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g))

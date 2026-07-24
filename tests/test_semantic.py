@@ -12,6 +12,7 @@ Run: uv run python -m pytest tests/test_semantic.py -q     (or run this file dir
 from __future__ import annotations
 
 from harness import verifier
+from harness.guardrails import LADDER
 from harness.semantic import SemanticError, SemanticLayer
 from harness.tools import Toolbox
 from harness.warehouse import open_warehouse
@@ -226,7 +227,7 @@ def test_gate_blocks_ungoverned_dimension_and_value():
     model substitutes a sibling from it (the failure that served Americas for 'North America')."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    tb = Toolbox(con, 6, sem, None, 5)                 # R5: member resolution on
+    tb = Toolbox(con, 6, sem, None, LADDER[5])                 # R5: member resolution on
     window = {"start": "2026-06-01", "end": "2026-06-30"}
 
     no_dim = tb._gate_block("query_metric", {"metric": "mrr", "filters": {"region": "Americas"}})
@@ -242,7 +243,7 @@ def test_gate_blocks_ungoverned_dimension_and_value():
         "query_metric", {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
 
     # below the resolve rung the value check is off — the pre-R5 hole, kept measurable
-    below = Toolbox(con, 6, sem, None, 4)
+    below = Toolbox(con, 6, sem, None, LADDER[4])
     assert below._gate_block(
         "query_metric", {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
 
@@ -252,7 +253,7 @@ def test_closing_phase_offers_only_exit_tools():
     querying and cannot answer in bare prose — it must end through the typed protocol. Removing
     the choice is structural; nudging the model in prose is not."""
     con = open_warehouse()
-    tb = Toolbox(con, 6, SemanticLayer(con), None, 9)
+    tb = Toolbox(con, 6, SemanticLayer(con), None, LADDER[9])
     full = {s["name"] for s in tb.specs()}
     closing = {s["name"] for s in tb.specs(terminal_only=True)}
     assert {"answer", "refuse", "clarify"} <= full
@@ -296,19 +297,19 @@ def test_toolbox_wiring_and_rung_gate():
     q = "How many users do we have in total?"
 
     # the re-ordered ladder gates each guardrail on its own rung
-    assert Toolbox(con, 6, sem, None, 4).resolve is False and Toolbox(con, 6, sem, None, 5).resolve is True
-    assert Toolbox(con, 6, sem, None, 6).single_metric is False and Toolbox(con, 6, sem, None, 7).single_metric is True
-    assert Toolbox(con, 6, sem, None, 7).output_validation is False and Toolbox(con, 6, sem, None, 8).output_validation is True
-    assert Toolbox(con, 6, sem, None, 8).trajectory_verify is False and Toolbox(con, 6, sem, None, 9).trajectory_verify is True
+    assert Toolbox(con, 6, sem, None, LADDER[4]).resolve is False and Toolbox(con, 6, sem, None, LADDER[5]).resolve is True
+    assert Toolbox(con, 6, sem, None, LADDER[6]).single_metric is False and Toolbox(con, 6, sem, None, LADDER[7]).single_metric is True
+    assert Toolbox(con, 6, sem, None, LADDER[7]).output_validation is False and Toolbox(con, 6, sem, None, LADDER[8]).output_validation is True
+    assert Toolbox(con, 6, sem, None, LADDER[8]).trajectory_verify is False and Toolbox(con, 6, sem, None, LADDER[9]).trajectory_verify is True
 
-    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=7)   # single-metric on (deterministic; no model needed)
+    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, guardrails=LADDER[7])   # single-metric on (deterministic; no model needed)
     ok, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
     assert ok, "a direct governed result passes single-metric"
     okd, reasond, *_ = tb7.verify_answer(q, "999", steps, None, "active_users", 999)
     assert not okd and reasond == "no_governed_definition", \
         "a hand-derived value (matches no governed result) refuses no_governed_definition at R7"
 
-    tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, rrung=6)   # single-metric OFF
+    tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, guardrails=LADDER[6])   # single-metric OFF
     ok6, *_ = tb6.verify_answer(q, "999", steps, None, "active_users", 999)
     assert ok6, "single-metric must be OFF below rrung 7"
 
