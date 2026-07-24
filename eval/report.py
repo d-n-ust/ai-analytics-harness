@@ -102,6 +102,7 @@ def _varied_axis(rows):
 # --------------------------------------------------------------------------- #
 def aggregate(rows) -> dict:
     axis, cell_of = _varied_axis(rows)
+    first = rows[0] if rows else {}     # the treatment is constant across a run
     models = list(dict.fromkeys(r["model"] for r in rows))
     cells = list(dict.fromkeys(cell_of(r) for r in rows))
     reps = len({r.get("rep", 0) for r in rows}) or 1
@@ -213,7 +214,11 @@ def aggregate(rows) -> dict:
     return {
         "meta": {"axis": axis, "models": models, "cells": cells, "n_questions": n_q,
                  "reps": reps, "n_rows": len(rows), "wrong_cost": WRONG_COST,
-                 "prices_estimated": _prices_estimated(models)},
+                 "prices_estimated": _prices_estimated(models),
+                 "schema_version": first.get("schema_version"),
+                 "main_reasoning": first.get("main_reasoning"),
+                 "verifier": {"model": first.get("verifier_model"),
+                              "reasoning": first.get("verifier_reasoning")}},
         "cells": {m: dict(c) for m, c in per_cell.items()},
         "wrong_rows": wrong_rows,
     }
@@ -240,6 +245,9 @@ def render_markdown(summary: dict) -> str:
          f"_Generated {dt.date.today()}. {meta['n_rows']} runs · {len(meta['models'])} model(s) · "
          f"{len(meta['cells'])} {axis}(s) · {meta['n_questions']} questions · {meta['reps']} rep(s). "
          f"Every number labelled with its n; rates never pooled across answerable/unanswerable._"]
+    v = meta.get("verifier") or {}
+    L.append(f"_treatment: main reasoning **{meta.get('main_reasoning')}** · verifier "
+             f"**{v.get('model')}**@{v.get('reasoning')} · row schema v{meta.get('schema_version')}._")
 
     # 1. Selective prediction — the operating point per cell (the frontier as the ladder tightens)
     for m in meta["models"]:

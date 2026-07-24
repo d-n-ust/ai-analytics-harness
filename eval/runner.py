@@ -23,6 +23,10 @@ from .grade import grade
 from . import report
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
+# Bumped when the raw-row schema changes, so a stored run is self-describing and downstream
+# tooling (regrade, report, attribution) can detect skew. v2 adds the treatment fields
+# (main_reasoning / verifier_model / verifier_reasoning).
+ROW_SCHEMA_VERSION = 2
 
 
 def _new_run_dir(models, mock: bool) -> Path:
@@ -41,7 +45,7 @@ def _new_run_dir(models, mock: bool) -> Path:
 
 def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
-                   rrungs=(1,), cells=None) -> None:
+                   rrungs=(1,), cells=None, reasoning: str | None = None) -> None:
     from agent.guardrails import LADDER, incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
@@ -77,15 +81,18 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     rows: list[dict] = []
     run_dir = _new_run_dir(models, mock)
     raw_f = (run_dir / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
+    # Reasoning effort is a treatment variable — an explicit run parameter (falling back to the
+    # OPENAI_REASONING env for back-compat), recorded on every row rather than left implicit.
+    main_reasoning = reasoning if reasoning is not None else os.environ.get("OPENAI_REASONING", "none")
+    verifier_reasoning = os.environ.get("VERIFIER_REASONING", "low")
     for model_name in models:
-        model = get_model(model_name, mock=mock)
+        model = get_model(model_name, mock=mock, reasoning=main_reasoning)
         # The trajectory verifier (R9) runs as a careful checker at its own reasoning level,
         # independent of the main agent — a minimal-reasoning main agent must not make a
         # minimal-reasoning verifier (which false-refuses and misses). Default 'low'.
-        # VERIFIER_MODEL lets the checker be a *different* model than the worker (e.g. a
-        # cheap main agent with a careful gpt-5-mini verifier); defaults to the main model.
-        verifier_model = get_model(os.environ.get("VERIFIER_MODEL", model_name), mock=mock,
-                                   reasoning=os.environ.get("VERIFIER_REASONING", "low"))
+        # VERIFIER_MODEL lets the checker be a *different* model than the worker; defaults to the worker.
+        verifier_used = os.environ.get("VERIFIER_MODEL") or model_name
+        verifier_model = get_model(verifier_used, mock=mock, reasoning=verifier_reasoning)
         for rung in rungs:
             set_star(con, rung >= 2)
             for cfg_label, rrung, gr in configs:
@@ -122,6 +129,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
                             "output_tokens": ans.output_tokens, "error": ans.error,
                             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
+                            "schema_version": ROW_SCHEMA_VERSION,
+                            "main_reasoning": getattr(model, "reasoning", None),
+                            "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
                         })
                         raw_f.write(json.dumps(rows[-1], default=str) + "\n")
                         raw_f.flush()

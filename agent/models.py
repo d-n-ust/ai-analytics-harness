@@ -89,6 +89,9 @@ class AnthropicModel:
             raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
         self.spec = spec
         self.client = anthropic.Anthropic(max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)
+        # A uniform reasoning label so a run can record its treatment. Anthropic reasoning is the
+        # thinking config (disabled on all our specs), so this is "off" unless thinking is enabled.
+        self.reasoning = "on" if (spec.thinking and spec.thinking.get("type") != "disabled") else "off"
 
     def create(self, system: str, messages: list, tools: list,
                force_tool: str | None = None, temperature: float | None = None,
@@ -215,6 +218,7 @@ class OpenAIModel:
 class MockModel:
     def __init__(self, spec: ModelSpec):
         self.spec = spec
+        self.reasoning = "mock"
 
     @staticmethod
     def _has_tool_result(messages: list) -> bool:

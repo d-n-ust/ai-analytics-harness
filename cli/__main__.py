@@ -63,7 +63,7 @@ def cmd_run(a):
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[int(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
                    rrungs=[int(r) for r in _split(a.rrungs)],
-                   cells=_split(a.cells) if a.cells else None)
+                   cells=_split(a.cells) if a.cells else None, reasoning=a.reasoning)
 
 
 def cmd_regrade(a):
@@ -124,6 +124,8 @@ def main() -> None:
     sp.add_argument("--only", default=None, help="comma-separated question ids (a quick subset)")
     sp.add_argument("--sample", type=int, default=None, help="first N questions per tier")
     sp.add_argument("--repeats", type=int, default=1, help="repeat the grid N times (mean + spread)")
+    sp.add_argument("--reasoning", default=None,
+                    help="main-model reasoning effort (e.g. minimal/low/high); default OPENAI_REASONING env")
     sp.set_defaults(func=cmd_run)
 
     sp = sub.add_parser("regrade", help="re-grade a finished run from stored answers (no model calls)")
