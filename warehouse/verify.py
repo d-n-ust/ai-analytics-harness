@@ -42,7 +42,7 @@ def main() -> None:
     prev = None
     print(f"{'week':>12} {'wvm':>7} {'d_wvm%':>7} {'users':>6} {'days/u':>7} "
           f"{'d_days%':>8} {'mom/day':>8}")
-    for wk, wvm, users, uad, dpu, mpd in rows[-10:]:
+    for wk, wvm, users, _uad, dpu, mpd in rows[-10:]:
         dw = f"{100*(wvm/prev[0]-1):+.1f}" if prev else "   --"
         dd = f"{100*(dpu/prev[1]-1):+.1f}" if prev else "   --"
         flag = "  <-- anomaly" if str(wk) == "2026-07-06" else ""

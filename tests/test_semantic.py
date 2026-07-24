@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from agent import verifier
 from agent.guardrails import LADDER
-from semantic.semantic import SemanticError, SemanticLayer
 from agent.tools import Toolbox
+from semantic.semantic import SemanticError, SemanticLayer
 from warehouse.warehouse import open_warehouse
 
 
@@ -100,7 +100,7 @@ def test_value_resolver():
     # ... and refuses an unresolvable one rather than querying an empty slice
     try:
         sem.compile("active_users", filters={"platform": "Blackberry"})
-        assert False, "expected SemanticError"
+        raise AssertionError("expected SemanticError")
     except SemanticError:
         pass
     # below the resolve rung (resolve=False) the raw value is used as-is — the pre-R5 bug
@@ -162,7 +162,7 @@ def test_governed_segment_excludes_test_members():
 
     try:
         sem.compile("new_signups", segment="not_a_segment")
-        assert False, "expected SemanticError for an unknown segment"
+        raise AssertionError("expected SemanticError for an unknown segment")
     except SemanticError:
         pass
 

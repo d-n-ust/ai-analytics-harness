@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from warehouse.warehouse import open_warehouse, set_star
+
+from .models import get_model
 from .orchestrator import Answer, run_agent
 from .prompt import RUNG_NAMES, build_grounding
-from .models import get_model
-from warehouse.warehouse import open_warehouse, set_star
 
 
 def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrails=None,

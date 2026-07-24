@@ -1,0 +1,26 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Lint (ruff)
+        run: uvx ruff check .
+
+      - name: Generate the deterministic warehouse
+        run: uv run python -m cli data
+
+      - name: Run the no-LLM test suite
+        run: uv run python -m cli test

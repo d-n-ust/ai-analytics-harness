@@ -21,3 +21,15 @@ dependencies = [
 [tool.uv]
 # This is a runnable app, not an installable library — install deps only.
 package = false
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+# Historical audit scripts and generated run artifacts are not part of the live surface.
+extend-exclude = ["experiments", "results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Many governed prompts and docstrings are intentionally long single strings; length isn't the
+# signal here. Keep the correctness rules (F/B), import order (I), and modern-Python (UP).
+ignore = ["E501"]

@@ -28,12 +28,13 @@ def _split(s: str) -> list[str]:
 
 def _run_dir(arg):
     from pathlib import Path
+
     from eval.runner import RESULTS_DIR
     return Path(arg) if arg else (RESULTS_DIR / "latest").resolve()
 
 
 def cmd_data(a):
-    from warehouse.generate import generate, OUT_PATH
+    from warehouse.generate import OUT_PATH, generate
     counts = generate()
     print(f"wrote {OUT_PATH}")
     for name, n in counts.items():
@@ -73,6 +74,7 @@ def cmd_regrade(a):
 
 def cmd_report(a):
     import json
+
     from eval import report
     run = _run_dir(a.run)
     rows = [json.loads(line) for line in (run / "raw.jsonl").open()]

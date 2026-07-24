@@ -33,8 +33,8 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from agent.prompt import RUNG_NAMES
 from agent.models import MODEL_SPECS
+from agent.prompt import RUNG_NAMES
 
 from .grade import WRONG_COST
 
@@ -259,7 +259,8 @@ def render_markdown(summary: dict) -> str:
               f"| {axis} | coverage | precision (answered) | risk | grounded (unanswerable) | n |",
               "|" + "---|" * 6]
         for c in _cells_for(summary, m):
-            d = summary["cells"][m][c]; sel = d["selective"]
+            d = summary["cells"][m][c]
+            sel = d["selective"]
             L.append(f"| {c} | {_pct(sel['coverage'])} | {_pct(sel['precision_on_answered'])} "
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
@@ -284,7 +285,8 @@ def render_markdown(summary: dict) -> str:
               f"| {axis} | ✅ right | ❌ wrong | 🤷 idk | deferred | other | err | score |",
               "|" + "---|" * 8]
         for c in _cells_for(summary, m):
-            o = summary["cells"][m][c]["outcomes"]; sc = summary["cells"][m][c]["score"]
+            o = summary["cells"][m][c]["outcomes"]
+            sc = summary["cells"][m][c]["score"]
             L.append(f"| {c} | {o['right']} | {o['wrong']} | {o['idk']} | {o['deferred']} "
                      f"| {o['other']} | {o['error']} | {sc:+g} |")
 
@@ -350,7 +352,8 @@ def render_markdown(summary: dict) -> str:
               f"| {axis} | in tok | out tok | est. USD{star} | lat p50 | p90 | p99 |",
               "|" + "---|" * 7]
         for c in _cells_for(summary, m):
-            t = summary["cells"][m][c]["telemetry"]; lat = t["latency_s"]
+            t = summary["cells"][m][c]["telemetry"]
+            lat = t["latency_s"]
 
             def _s(x):
                 return "—" if x is None else f"{x:.1f}"
