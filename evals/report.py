@@ -77,6 +77,29 @@ def _expected_refuse(r: dict) -> bool:
     return r.get("expected_refuse", r.get("tier") == "unanswerable")
 
 
+def _rates(rs) -> dict:
+    """The three headline selective-prediction rates for a set of rows, each on its own
+    denominator (answerable vs unanswerable) — None when that denominator is empty. Used both
+    pooled and per-rep, so a rep's spread is measured exactly like the pooled point estimate."""
+    ans_valid = [r for r in rs if not _expected_refuse(r) and r["outcome"] != "error"]
+    answered = [r for r in ans_valid if r["outcome"] == "answer"]
+    una = [r for r in rs if _expected_refuse(r) and r["outcome"] != "error" and not r.get("needs_judge")]
+    return {
+        "coverage": len(answered) / len(ans_valid) if ans_valid else None,
+        "precision": sum(bool(r.get("correct")) for r in answered) / len(answered) if answered else None,
+        "grounded": 1 - sum(bool(r.get("fabricated")) for r in una) / len(una) if una else None,
+    }
+
+
+def _std(vals) -> float | None:
+    """Sample standard deviation of the non-None values; None if fewer than two (no spread)."""
+    xs = [v for v in vals if v is not None]
+    if len(xs) < 2:
+        return None
+    m = sum(xs) / len(xs)
+    return (sum((x - m) ** 2 for x in xs) / (len(xs) - 1)) ** 0.5
+
+
 def _usd(rows) -> float:
     total = 0.0
     for r in rows:
@@ -204,6 +227,10 @@ def aggregate(rows) -> dict:
                 t["refused_ok" if _expected_refuse(r) else "refused_over"] += 1
 
         lat = [r["elapsed_s"] for r in rs if r.get("elapsed_s") is not None]
+        # per-rep spread — each rep re-measured with _rates so a rung-to-rung delta can be told
+        # from run-to-run noise (a single value per metric when repeats == 1)
+        reps_seen = sorted({r.get("rep", 0) for r in rs})
+        rep_rates = [_rates([r for r in rs if r.get("rep", 0) == k]) for k in reps_seen]
         per_cell[m][cell] = {
             "n": n,
             "outcomes": outcomes,
@@ -233,6 +260,10 @@ def aggregate(rows) -> dict:
                               "p50": _pctl(lat, 0.50), "p90": _pctl(lat, 0.90), "p99": _pctl(lat, 0.99)},
             },
             "score": round(sum(r.get("score", 0) for r in rs), 1),
+            "per_rep": {"n": len(reps_seen),
+                        "precision": [rr["precision"] for rr in rep_rates],
+                        "grounded": [rr["grounded"] for rr in rep_rates],
+                        "coverage": [rr["coverage"] for rr in rep_rates]},
         }
 
     wrong_rows = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"], "tier": r.get("tier"),
@@ -265,6 +296,17 @@ def _pct(x) -> str:
     return "—" if x is None else f"{x * 100:.0f}%"
 
 
+def _band(vals) -> tuple:
+    """Render per-rep values two ways: the raw per-rep list, and 'mean ±sd' (sd omitted for a
+    single rep). Percentage-formatted; '—' when every rep is None."""
+    per = " / ".join(_pct(v) for v in vals)
+    xs = [v for v in vals if v is not None]
+    if not xs:
+        return "—", "—"
+    sd = _std(vals)
+    return per, _pct(sum(xs) / len(xs)) + (f" ±{sd * 100:.0f}" if sd is not None else "")
+
+
 def _cells_for(summary, m):
     """Cells for a model, in the run's cell order."""
     present = summary["cells"].get(m, {})
@@ -292,6 +334,24 @@ def render_markdown(summary: dict) -> str:
     elif "verifier_validation" in meta:      # write() set it, but no record exists on disk
         L.append("_verifier: NOT VALIDATED against human labels — run evals/components/verifier_audit.py._")
 
+    # 0b. Cross-model leaderboard — key metrics at each model's final operating point (only with >1 model)
+    if len(meta["models"]) > 1:
+        L += ["", "## Model comparison  (at each model's final operating point)", "",
+              "_One row per model, read at its **last cell** (best grounding / tightest guardrail). "
+              "coverage / precision / grounded as defined below; score is the cost-weighted total; "
+              "$ is the estimated upper bound._", "",
+              f"| model | final cell | coverage | precision | grounded | score | est. ${star} |",
+              "|---|---|---|---|---|---|---|"]
+        for m in meta["models"]:
+            cells = _cells_for(summary, m)
+            if not cells:
+                continue
+            d = summary["cells"][m][cells[-1]]
+            sel = d["selective"]
+            L.append(f"| {m} | {cells[-1]} | {_pct(sel['coverage'])} | {_pct(sel['precision_on_answered'])} "
+                     f"| {_pct(d['correctness_axes']['groundedness'])} | {d['score']:+g} "
+                     f"| ${d['telemetry']['usd']:.2f}{star} |")
+
     # 1. Selective prediction — the operating point per cell (the frontier as the ladder tightens)
     for m in meta["models"]:
         L += ["", f"## Selective prediction — {m}", "",
@@ -307,6 +367,20 @@ def render_markdown(summary: dict) -> str:
             L.append(f"| {c} | {_pct(sel['coverage'])} | {_pct(sel['precision_on_answered'])} "
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
+
+    # 1b. Reproducibility across reps — is a rung step real, or run-to-run noise? (only with reps > 1)
+    if meta.get("reps", 1) > 1:
+        for m in meta["models"]:
+            L += ["", f"## Reproducibility across reps — {m}  ({meta['reps']} reps)", "",
+                  "_Precision and grounded measured **separately per rep**, then mean ±sample-std. If two "
+                  "rungs' means sit within each other's ±band, the step between them is inside the noise._",
+                  "", f"| {axis} | precision / rep | mean ±sd | grounded / rep | mean ±sd |",
+                  "|" + "---|" * 5]
+            for c in _cells_for(summary, m):
+                rp = summary["cells"][m][c]["per_rep"]
+                p_per, p_ms = _band(rp["precision"])
+                g_per, g_ms = _band(rp["grounded"])
+                L.append(f"| {c} | {p_per} | {p_ms} | {g_per} | {g_ms} |")
 
     # 2. The three correctness axes, kept separate
     for m in meta["models"]:

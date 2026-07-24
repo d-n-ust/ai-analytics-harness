@@ -93,10 +93,34 @@ def test_summary_is_json_serialisable_and_renders():
     for section in ("## Selective prediction", "## Correctness axes", "## Outcomes",
                     "## Refusals by coded reason", "## Agent behaviour", "## Telemetry"):
         assert section in md, f"missing section: {section}"
+    # single model, single rep -> the comparison + reproducibility sections stay hidden
+    assert "## Model comparison" not in md
+    assert "## Reproducibility across reps" not in md
+
+
+def test_per_rep_spread_is_measured_per_rep():
+    # same answerable question, two reps: rep 0 right, rep 1 wrong -> per-rep precision [1.0, 0.0],
+    # NOT the pooled 0.5 — the spread is what tells a real rung step from run-to-run noise
+    rows = [_row(qid="a", rep=0, correct=True, bucket="right"),
+            _row(qid="a", rep=1, correct=False, bucket="wrong", confident_wrong=True, answer="5")]
+    s = report.aggregate(rows)
+    assert s["meta"]["reps"] == 2
+    pr = s["cells"]["m"]["R9"]["per_rep"]
+    assert pr["n"] == 2 and pr["precision"] == [1.0, 0.0]
+    assert "## Reproducibility across reps" in report.render_markdown(s)
+
+
+def test_cross_model_leaderboard_only_multi_model():
+    rows = [_row(qid="a", model="m1"),
+            _row(qid="a", model="m2", correct=False, bucket="wrong", confident_wrong=True, answer="5")]
+    md = report.render_markdown(report.aggregate(rows))
+    assert "## Model comparison" in md and "m1" in md and "m2" in md
 
 
 if __name__ == "__main__":
     test_aggregate_arithmetic()
     test_schema_skew_is_detected()
     test_summary_is_json_serialisable_and_renders()
-    print("OK - report aggregator: arithmetic + json + render all pass.")
+    test_per_rep_spread_is_measured_per_rep()
+    test_cross_model_leaderboard_only_multi_model()
+    print("OK - report aggregator: arithmetic + json + render + spread + leaderboard all pass.")
