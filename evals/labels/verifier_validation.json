@@ -1,0 +1,13 @@
+{
+  "labelled": 21,
+  "method": "out-of-sample panel audit (3 Claude judges, blind to the verifier verdict)",
+  "run": "20260724-130237-gpt-5-mini",
+  "agreement": 20,
+  "miss": 0,
+  "miss_rate": 0.0,
+  "false_flag": 0,
+  "false_flag_rate": 0.0,
+  "note": "Panel disagreed with the verifier on 1/21 (P019); on manual review the panel was wrong and the verifier correct, so 0 confirmed verifier errors. Consensus != truth: directional at n=21.",
+  "prompt_fingerprint": "pre-workstream-C",
+  "date": "2026-07-24"
+}

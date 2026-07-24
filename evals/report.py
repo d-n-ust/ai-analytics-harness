@@ -91,6 +91,21 @@ def _prices_estimated(models) -> bool:
     return any(not getattr(MODEL_SPECS.get(m), "price_confirmed", False) for m in models)
 
 
+def _verifier_validation() -> dict | None:
+    """The last recorded validation of the trajectory judge (evals/labels/verifier_validation.json),
+    annotated with whether the verifier's prompt has changed since — i.e. whether it is STALE. A
+    refuse-only critic you cannot score is just an opinion, so an unvalidated or stale verifier is
+    surfaced in the report, never assumed good."""
+    from agent.verifier import prompt_fingerprint
+    path = Path(__file__).resolve().parent / "labels" / "verifier_validation.json"
+    if not path.exists():
+        return None
+    v = json.loads(path.read_text())
+    v["current_fingerprint"] = prompt_fingerprint()
+    v["stale"] = v.get("prompt_fingerprint") != v["current_fingerprint"]
+    return v
+
+
 def _varied_axis(rows):
     """Which axis the run varied — the report's primary key. `config` (the guardrail cell) when it
     varies; otherwise the grounding `rung`. Returns (axis_name, cell_label_fn)."""
@@ -256,6 +271,13 @@ def render_markdown(summary: dict) -> str:
              f"**{v.get('model')}**@{v.get('reasoning')} · row schema v{meta.get('schema_version')}._")
     if meta.get("schema_skew"):
         L.append(f"_⚠ schema skew: some rows predate v{meta.get('schema_current')} — missing fields read as None._")
+    vv = meta.get("verifier_validation")
+    if vv:
+        flag = " ⚠ STALE — the verifier prompt changed since; re-audit" if vv.get("stale") else ""
+        L.append(f"_verifier validated: n={vv.get('labelled')} · miss-rate {vv.get('miss_rate')} · "
+                 f"false-flag {vv.get('false_flag_rate')} (audit {vv.get('date')}){flag}._")
+    elif "verifier_validation" in meta:      # write() set it, but no record exists on disk
+        L.append("_verifier: NOT VALIDATED against human labels — run evals/components/verifier_audit.py._")
 
     # 1. Selective prediction — the operating point per cell (the frontier as the ladder tightens)
     for m in meta["models"]:
@@ -390,6 +412,7 @@ def write(rows, run_dir: Path, mock: bool = False) -> dict:
         return {}
     summary = aggregate(rows)
     summary["meta"]["mock"] = mock
+    summary["meta"]["verifier_validation"] = _verifier_validation()
     if summary["meta"].get("schema_skew"):
         print(f"  WARNING: row-schema skew — some rows predate v{ROW_SCHEMA_VERSION}; missing fields "
               "read as None. Re-run to refresh, or migrate before comparing across the boundary.")

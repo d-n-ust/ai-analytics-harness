@@ -125,6 +125,20 @@ def cmd_score(args) -> None:
     print(f"  FALSE-FLAG  : {ff}/{n_fail or 1} of judged-FAIL   -> a correct answer was refused")
     print(f"\nn={n}. Directional at this size — report the n with any rate.")
 
+    # Persist the validation, fingerprinted with the verifier prompt that was scored, so the report
+    # can flag it stale the moment the prompt changes. This is what makes the "0 confident-wrong"
+    # headline self-checking instead of resting on an unverifiable assumption.
+    from datetime import date
+
+    from agent.verifier import prompt_fingerprint
+    record = {"labelled": n, "agreement": agree,
+              "miss": miss, "miss_rate": round(miss / (n_pass or 1), 3),
+              "false_flag": ff, "false_flag_rate": round(ff / (n_fail or 1), 3),
+              "prompt_fingerprint": prompt_fingerprint(),
+              "run": key[labelled[0]["id"]]["run"], "date": date.today().isoformat()}
+    (LABELS_DIR / "verifier_validation.json").write_text(json.dumps(record, indent=2))
+    print(f"wrote {LABELS_DIR / 'verifier_validation.json'}  (fingerprint {record['prompt_fingerprint']})")
+
 
 def main() -> None:
     p = argparse.ArgumentParser(prog="verifier_audit.py")

@@ -17,6 +17,7 @@ not-correct; none can ever rescue a refusal, so they can only add safety.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 
 from .numbers import parse_numbers
@@ -87,6 +88,14 @@ _REPORT = {
                    "description": "one concrete sentence citing the failing definition text or SQL "
                                   "clause (or, if it passes, why)"}},
         "required": ["answers_question", "mismatch", "reason"]}}
+
+
+def prompt_fingerprint() -> str:
+    """A short, stable hash of the verifier's behaviour-defining surface — its system prompt plus
+    the mismatch enum. It changes iff the judge's spec changes, so a stored validation can be
+    flagged STALE the moment the prompt is edited (as Workstream C did)."""
+    enum = _REPORT["input_schema"]["properties"]["mismatch"]["enum"]
+    return hashlib.sha256((_VERIFY_SYSTEM + "|" + ",".join(enum)).encode()).hexdigest()[:12]
 
 
 def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
