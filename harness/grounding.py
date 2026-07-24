@@ -37,7 +37,8 @@ _BASE = (
 )
 
 # The reliability ladder's prompt component: what the agent is told about ending a
-# task. R0 has no refusal channel; R1 adds it; R2 prices it; R3 offers the checks.
+# task. R0 (abstain off) has no refusal channel; R1 adds the typed refuse tool. Each
+# later control appends its own prompt line in build_grounding, gated by its flag.
 _RRUNG_TERMINAL = {
     0: ("- End with the `answer` tool: the value plus a one-line explanation. If the question "
         "is too ambiguous to attempt, end with `clarify`."),
@@ -52,18 +53,19 @@ _RRUNG_TERMINAL = {
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
-# R4+ (gate) and R5+ (fence) are structural: these lines only *describe* the enforced
-# environment so the agent doesn't waste turns — the guarantee is in the tooling, not
-# the prompt. Removing these lines would not let a fabrication through.
+# gate (R3) and the fence / tool_restriction (R4) are structural: these lines only
+# *describe* the enforced environment so the agent doesn't waste turns — the guarantee
+# is in the tooling, not the prompt. Removing these lines would not let a fabrication through.
 _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an undefined metric or "
                   "for data outside coverage is blocked and returns no number — you cannot retrieve "
                   "what the governed layer refuses.")
 _RRUNG_TOOL_RESTRICTION = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
                 "question cannot be answered that way, refuse.")
-# R6-R8: the output-verification family, split so each step's effect is measured on its
-# own. Like the gate, these are structural — the checks run regardless of what the model
-# does; the prompt lines only tell it so it doesn't waste turns.
-# R6 — value resolution (a query-time guard, sibling of the gate/fence):
+# resolve (R5) then the output family — transparency (R6), single_metric (R7),
+# output_validation (R8) — split so each step's effect is measured on its own. Like the
+# gate, these are structural: the checks run regardless of what the model does; the
+# prompt lines only tell it so it doesn't waste turns.
+# resolve (R5) — value resolution (a query-time guard, sibling of the gate/fence):
 _RRUNG_RESOLVE = ("\n- Filter values are matched to governed members: name a segment in plain terms "
                   "('iOS', 'the annual plan') and it is resolved to the governed value; a value that "
                   "matches no governed member is rejected rather than returning an empty result.")
@@ -76,7 +78,7 @@ _RRUNG_PROVENANCE = ("\n- When your answer is a single number, put that number i
 _RRUNG_OUTPUT_VALIDATION = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
                  "a value impossible for its unit (a share above 100, a negative count), is rejected "
                  "instead of being reported.")
-# R9 — the governed-only iteration: transparency + one-metric-per-answer.
+# transparency (R6) + single_metric (R7) — the served number is shown, and constrained to one governed result.
 _RRUNG_TRANSPARENCY = ("\n- Every governed result now shows you a [scope] line (what segment and time "
                        "window it actually covers) and the exact [sql]. Read them: if the scope is not "
                        "what the question asked for, fix the query or refuse — never report a number "
@@ -85,7 +87,7 @@ _RRUNG_SINGLE_METRIC = ("\n- Answer with exactly ONE governed metric's own value
                         "by hand from several numbers (no rate times a count, no metric A plus metric B). "
                         "If answering would need a metric that doesn't exist, refuse (out_of_scope) rather "
                         "than derive it.")
-# R11 — trajectory verifier:
+# trajectory_verify (R9) — the verifier:
 _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you used, its definition, the "
                    "exact SQL, and the filters you added, and checks they truly answer the question: the "
                    "right thing, the right KIND of number (a count for 'how many', an amount for 'how "

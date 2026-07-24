@@ -203,10 +203,10 @@ class Toolbox:
 
     `rung` gates grounding (what the agent knows); `rrung` gates reliability
     (what the agent may do about not knowing):
-      0 = no refuse tool · 1+ = typed refusal · 3+ = check_* tools callable ·
-      4+ = the interception GATE (governed calls validated; out-of-coverage /
+      0 = no refuse tool · 1+ = typed refusal · 2+ = check_* tools callable ·
+      3+ = the interception GATE (governed calls validated; out-of-coverage /
            undefined requests are blocked by the system, not the model) ·
-      5+ = the FENCE (raw SQL removed, so every data path is a gated governed call).
+      4+ = the FENCE (raw SQL removed, so every data path is a gated governed call).
     The gate and fence are structural: they hold regardless of what the model does,
     which is why they can be proven exhaustively without an LLM (see tests/)."""
 
@@ -445,12 +445,12 @@ class Toolbox:
                     end=args.get("end"), period=args.get("period"), resolve=self.resolve,
                     segment=args.get("segment"))
                 text = _fmt_rows(cols, rows)
-                if self.scope_echo:       # R9+: a plain scope line, flagging a narrowed subset
+                if self.scope_echo:       # R6 (transparency): a plain scope line, flagging a narrowed subset
                     text += "\n[scope] " + self.semantic.scope_line(
                         args["metric"], filters=args.get("filters"), period=args.get("period"),
                         start=args.get("start"), end=args.get("end"),
                         group_by=args.get("group_by"), resolve=self.resolve)
-                if self.show_sql:       # R9+: the exact compiled SQL
+                if self.show_sql:       # R6 (transparency): the exact compiled SQL
                     text += f"\n[sql] {sql}"
                 return text, False, _numeric_cells(rows)
             if name == "check_metric_exists":

@@ -82,7 +82,7 @@ def run_experiment(mock: bool = False, models=("claude-haiku-4-5", "claude-sonne
     raw_f = (run_dir / "raw.jsonl").open("w")  # written incrementally, so a stop keeps progress
     for model_name in models:
         model = get_model(model_name, mock=mock)
-        # The trajectory verifier (rrung 11) runs as a careful checker at its own reasoning level,
+        # The trajectory verifier (R9) runs as a careful checker at its own reasoning level,
         # independent of the main agent — a minimal-reasoning main agent must not make a
         # minimal-reasoning verifier (which false-refuses and misses). Default 'low'.
         # VERIFIER_MODEL lets the checker be a *different* model than the worker (e.g. a
@@ -222,9 +222,10 @@ def _write_and_summarize(rows, models, rungs, mock, run_dir: Path) -> None:
     # The headline lens: right / wrong / I-don't-know, per reliability rung. The whole
     # thesis is visible here — the wrong column falls, the I-don't-know column rises,
     # the right column holds.
-    RR_LABEL = {0: "R0 · no I-don't-know", 1: "R1 · can refuse",
-                2: "R2 · +told cost", 3: "R3 · +can check",
-                4: "R4 · +gate (enforced)", 5: "R5 · +fence (no raw SQL)"}
+    RR_LABEL = {0: "R0 · no refusal", 1: "R1 · +refuse", 2: "R2 · +check tools",
+                3: "R3 · +gate", 4: "R4 · +fence (no raw SQL)", 5: "R5 · +resolve",
+                6: "R6 · +transparency", 7: "R7 · +single-metric",
+                8: "R8 · +output-validation", 9: "R9 · +verifier"}
     for m in models:
         lines += ["", f"## Response mix — {m}  (right / wrong / I-don't-know)", "",
                   "_Every response to every question, bucketed. Lower **wrong** is the goal; "
