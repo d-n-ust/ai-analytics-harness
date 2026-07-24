@@ -1,0 +1,3751 @@
+{
+  "meta": {
+    "axis": "config",
+    "models": [
+      "gpt-5-mini"
+    ],
+    "cells": [
+      "abstain+check_tools+transparency",
+      "abstain+check_tools+transparency+output_validation",
+      "abstain+check_tools+resolve+transparency",
+      "abstain+check_tools+resolve+transparency+output_validation",
+      "abstain+check_tools+tool_restriction+transparency",
+      "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "abstain+check_tools+tool_restriction+transparency+single_metric+trajectory_verify",
+      "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation",
+      "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation+trajectory_verify",
+      "R6-gate",
+      "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "R7-gate",
+      "abstain+check_tools+tool_restriction+resolve+transparency+single_metric+trajectory_verify",
+      "R8-gate",
+      "R9-gate",
+      "abstain+check_tools+gate+transparency",
+      "abstain+check_tools+gate+transparency+output_validation",
+      "R6-tool_restriction",
+      "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "R6-resolve",
+      "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "R7-resolve",
+      "abstain+check_tools+gate+tool_restriction+transparency+single_metric+trajectory_verify",
+      "R8-resolve",
+      "R9-resolve",
+      "R6",
+      "R8-single_metric",
+      "R7",
+      "R9-output_validation",
+      "R8",
+      "R9"
+    ],
+    "n_questions": 12,
+    "reps": 1,
+    "n_rows": 384,
+    "wrong_cost": 4.0,
+    "prices_estimated": true,
+    "mock": false
+  },
+  "cells": {
+    "gpt-5-mini": {
+      "abstain+check_tools+transparency": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 10,
+          "idk": 1,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.7272727272727273,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.5,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 1.0,
+            "check_metric_exists": 0.33,
+            "run_sql": 0.25,
+            "check_coverage": 0.25,
+            "describe_table": 0.17,
+            "check_segment_defined": 0.08,
+            "get_schema": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 206725,
+          "out_tokens": 2568,
+          "usd": 0.0183,
+          "latency_s": {
+            "mean": 11.0,
+            "p50": 8.738,
+            "p90": 19.223,
+            "p99": 20.717
+          }
+        },
+        "score": -27.0
+      },
+      "abstain+check_tools+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.8181818181818181,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.25,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 1.0,
+            "check_metric_exists": 0.33,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.17,
+            "run_sql": 0.08,
+            "get_schema": 0.08,
+            "describe_table": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 193404,
+          "out_tokens": 2291,
+          "usd": 0.0171,
+          "latency_s": {
+            "mean": 9.2,
+            "p50": 8.015,
+            "p90": 12.284,
+            "p99": 22.453
+          }
+        },
+        "score": -19.0
+      },
+      "abstain+check_tools+resolve+transparency": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.58,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 1.0,
+            "check_segment_defined": 0.17,
+            "check_metric_exists": 0.17
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 156353,
+          "out_tokens": 1870,
+          "usd": 0.0138,
+          "latency_s": {
+            "mean": 6.7,
+            "p50": 6.5,
+            "p90": 8.971,
+            "p99": 10.181
+          }
+        },
+        "score": -9.0
+      },
+      "abstain+check_tools+resolve+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.33,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 0.92,
+            "check_coverage": 0.33,
+            "check_segment_defined": 0.25,
+            "check_metric_exists": 0.17,
+            "get_schema": 0.17,
+            "run_sql": 0.17,
+            "describe_table": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 194958,
+          "out_tokens": 2271,
+          "usd": 0.0172,
+          "latency_s": {
+            "mean": 9.7,
+            "p50": 9.723,
+            "p90": 16.39,
+            "p99": 16.638
+          }
+        },
+        "score": -10.0
+      },
+      "abstain+check_tools+tool_restriction+transparency": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 8,
+          "idk": 3,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.8181818181818181,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 2,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.58,
+          "tools_per_run": {
+            "query_metric": 1.67,
+            "list_metrics": 1.0,
+            "check_metric_exists": 0.25,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.17,
+            "describe_table": 0.17,
+            "get_schema": 0.17
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 218249,
+          "out_tokens": 2701,
+          "usd": 0.0194,
+          "latency_s": {
+            "mean": 10.5,
+            "p50": 9.864,
+            "p90": 16.052,
+            "p99": 20.394
+          }
+        },
+        "score": -15.0
+      },
+      "abstain+check_tools+tool_restriction+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 8,
+          "idk": 3,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.8181818181818181,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.83,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 0.92,
+            "check_coverage": 0.33,
+            "check_metric_exists": 0.25,
+            "check_segment_defined": 0.17
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 173989,
+          "out_tokens": 2182,
+          "usd": 0.0154,
+          "latency_s": {
+            "mean": 7.7,
+            "p50": 8.136,
+            "p90": 10.771,
+            "p99": 12.943
+          }
+        },
+        "score": -23.0
+      },
+      "abstain+check_tools+tool_restriction+transparency+single_metric": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 6,
+          "idk": 5,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 3
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 5,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 2,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.42,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 0.92,
+            "check_coverage": 0.08,
+            "check_segment_defined": 0.08,
+            "check_metric_exists": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 158107,
+          "out_tokens": 1876,
+          "usd": 0.014,
+          "latency_s": {
+            "mean": 5.2,
+            "p50": 4.439,
+            "p90": 9.231,
+            "p99": 10.587
+          }
+        },
+        "score": -21.0
+      },
+      "abstain+check_tools+tool_restriction+transparency+single_metric+trajectory_verify": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 8
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.58,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 0.92,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.08,
+            "check_metric_exists": 0.08
+          },
+          "trajectory": {
+            "pass": 1,
+            "fail": 5
+          }
+        },
+        "telemetry": {
+          "in_tokens": 175781,
+          "out_tokens": 2317,
+          "usd": 0.0157,
+          "latency_s": {
+            "mean": 8.9,
+            "p50": 9.282,
+            "p90": 11.187,
+            "p99": 14.098
+          }
+        },
+        "score": 8.0
+      },
+      "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 3,
+          "idk": 8,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 5
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 4,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.92,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 1.0,
+            "check_metric_exists": 0.42,
+            "check_coverage": 0.17,
+            "check_segment_defined": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 192491,
+          "out_tokens": 2295,
+          "usd": 0.017,
+          "latency_s": {
+            "mean": 6.4,
+            "p50": 5.134,
+            "p90": 10.079,
+            "p99": 10.096
+          }
+        },
+        "score": -7.0
+      },
+      "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation+trajectory_verify": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 10,
+          "deferred": 0,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 8
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "out_of_scope": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.83,
+          "tools_per_run": {
+            "query_metric": 1.5,
+            "list_metrics": 0.83,
+            "check_metric_exists": 0.33,
+            "check_segment_defined": 0.08,
+            "check_coverage": 0.08
+          },
+          "trajectory": {
+            "fail": 4,
+            "pass": 1
+          }
+        },
+        "telemetry": {
+          "in_tokens": 195158,
+          "out_tokens": 6520,
+          "usd": 0.0202,
+          "latency_s": {
+            "mean": 13.1,
+            "p50": 10.197,
+            "p90": 13.196,
+            "p99": 54.177
+          }
+        },
+        "score": 8.0
+      },
+      "R6-gate": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 6,
+          "idk": 5,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 5,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.67,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 1.0,
+            "check_segment_defined": 0.17,
+            "check_metric_exists": 0.17,
+            "check_coverage": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 159162,
+          "out_tokens": 1917,
+          "usd": 0.0141,
+          "latency_s": {
+            "mean": 7.1,
+            "p50": 6.428,
+            "p90": 10.348,
+            "p99": 14.105
+          }
+        },
+        "score": -17.0
+      },
+      "abstain+check_tools+tool_restriction+resolve+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 6,
+          "idk": 5,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 2
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 2,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "no_governed_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.17,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 0.92,
+            "check_segment_defined": 0.33,
+            "check_metric_exists": 0.33,
+            "check_coverage": 0.17,
+            "get_schema": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 189655,
+          "out_tokens": 2391,
+          "usd": 0.0168,
+          "latency_s": {
+            "mean": 8.8,
+            "p50": 9.821,
+            "p90": 14.485,
+            "p99": 17.371
+          }
+        },
+        "score": -8.0
+      },
+      "R7-gate": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 3,
+          "idk": 8,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 4
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.67,
+          "tools_per_run": {
+            "list_metrics": 1.0,
+            "query_metric": 1.0,
+            "check_segment_defined": 0.42,
+            "check_metric_exists": 0.25
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 188978,
+          "out_tokens": 2127,
+          "usd": 0.0166,
+          "latency_s": {
+            "mean": 7.9,
+            "p50": 6.308,
+            "p90": 11.685,
+            "p99": 17.962
+          }
+        },
+        "score": -6.0
+      },
+      "abstain+check_tools+tool_restriction+resolve+transparency+single_metric+trajectory_verify": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 7
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 6,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.92,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 1.0,
+            "check_segment_defined": 0.42,
+            "check_metric_exists": 0.25,
+            "check_coverage": 0.08
+          },
+          "trajectory": {
+            "pass": 1,
+            "fail": 5
+          }
+        },
+        "telemetry": {
+          "in_tokens": 194674,
+          "out_tokens": 2127,
+          "usd": 0.0171,
+          "latency_s": {
+            "mean": 9.9,
+            "p50": 9.616,
+            "p90": 13.116,
+            "p99": 16.505
+          }
+        },
+        "score": 8.0
+      },
+      "R8-gate": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 4,
+          "idk": 7,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 3
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.42,
+          "tools_per_run": {
+            "query_metric": 0.92,
+            "list_metrics": 0.92,
+            "check_segment_defined": 0.33,
+            "check_metric_exists": 0.25
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 161656,
+          "out_tokens": 1949,
+          "usd": 0.0143,
+          "latency_s": {
+            "mean": 6.4,
+            "p50": 5.628,
+            "p90": 10.459,
+            "p99": 10.587
+          }
+        },
+        "score": -11.0
+      },
+      "R9-gate": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 7
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 6,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.75,
+          "tools_per_run": {
+            "query_metric": 1.08,
+            "list_metrics": 1.0,
+            "check_metric_exists": 0.33,
+            "check_segment_defined": 0.25,
+            "check_coverage": 0.08
+          },
+          "trajectory": {
+            "pass": 1,
+            "fail": 5
+          }
+        },
+        "telemetry": {
+          "in_tokens": 198157,
+          "out_tokens": 2108,
+          "usd": 0.0173,
+          "latency_s": {
+            "mean": 10.8,
+            "p50": 11.024,
+            "p90": 20.625,
+            "p99": 22.773
+          }
+        },
+        "score": 9.0
+      },
+      "abstain+check_tools+gate+transparency": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 2
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.58,
+          "tools_per_run": {
+            "query_metric": 1.42,
+            "list_metrics": 0.92,
+            "check_metric_exists": 0.75,
+            "check_coverage": 0.17,
+            "check_segment_defined": 0.17,
+            "run_sql": 0.08,
+            "get_schema": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 234020,
+          "out_tokens": 2831,
+          "usd": 0.0207,
+          "latency_s": {
+            "mean": 8.8,
+            "p50": 8.945,
+            "p90": 13.222,
+            "p99": 16.636
+          }
+        },
+        "score": -18.0
+      },
+      "abstain+check_tools+gate+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.0,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 0.92,
+            "check_metric_exists": 0.25,
+            "check_coverage": 0.17,
+            "run_sql": 0.17,
+            "get_schema": 0.17,
+            "check_segment_defined": 0.08,
+            "describe_table": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 186748,
+          "out_tokens": 2401,
+          "usd": 0.0166,
+          "latency_s": {
+            "mean": 7.8,
+            "p50": 7.4,
+            "p90": 13.186,
+            "p99": 13.43
+          }
+        },
+        "score": -19.0
+      },
+      "R6-tool_restriction": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.5,
+          "tools_per_run": {
+            "query_metric": 0.92,
+            "list_metrics": 0.83,
+            "check_segment_defined": 0.33,
+            "check_metric_exists": 0.25,
+            "get_schema": 0.08,
+            "run_sql": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 168503,
+          "out_tokens": 2027,
+          "usd": 0.0149,
+          "latency_s": {
+            "mean": 6.9,
+            "p50": 6.572,
+            "p90": 9.296,
+            "p99": 14.176
+          }
+        },
+        "score": -9.0
+      },
+      "abstain+check_tools+gate+resolve+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.83,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 1.0,
+            "check_segment_defined": 0.33,
+            "check_metric_exists": 0.17,
+            "run_sql": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 186222,
+          "out_tokens": 2234,
+          "usd": 0.0165,
+          "latency_s": {
+            "mean": 7.1,
+            "p50": 6.162,
+            "p90": 11.103,
+            "p99": 15.607
+          }
+        },
+        "score": -12.0
+      },
+      "R6-resolve": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 8,
+          "idk": 3,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.33,
+          "tools_per_run": {
+            "query_metric": 1.67,
+            "list_metrics": 0.83,
+            "check_metric_exists": 0.33,
+            "check_segment_defined": 0.25,
+            "check_coverage": 0.17,
+            "describe_table": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 213848,
+          "out_tokens": 2649,
+          "usd": 0.019,
+          "latency_s": {
+            "mean": 9.0,
+            "p50": 9.146,
+            "p90": 12.745,
+            "p99": 15.823
+          }
+        },
+        "score": -19.0
+      },
+      "abstain+check_tools+gate+tool_restriction+transparency+output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 5,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.67,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 1.0,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.17,
+            "check_metric_exists": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 166784,
+          "out_tokens": 2374,
+          "usd": 0.015,
+          "latency_s": {
+            "mean": 7.2,
+            "p50": 6.255,
+            "p90": 12.905,
+            "p99": 13.798
+          }
+        },
+        "score": -23.0
+      },
+      "R7-resolve": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 3,
+          "idk": 8,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 4
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 3,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.42,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 0.67,
+            "check_metric_exists": 0.25,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.17
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 170607,
+          "out_tokens": 2472,
+          "usd": 0.0154,
+          "latency_s": {
+            "mean": 6.9,
+            "p50": 6.285,
+            "p90": 12.731,
+            "p99": 13.119
+          }
+        },
+        "score": -8.0
+      },
+      "abstain+check_tools+gate+tool_restriction+transparency+single_metric+trajectory_verify": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 7
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 6,
+            "wrong_reason": 3,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.5,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 0.92,
+            "check_coverage": 0.17,
+            "check_metric_exists": 0.17,
+            "check_segment_defined": 0.08
+          },
+          "trajectory": {
+            "pass": 1,
+            "fail": 5
+          }
+        },
+        "telemetry": {
+          "in_tokens": 164413,
+          "out_tokens": 1775,
+          "usd": 0.0144,
+          "latency_s": {
+            "mean": 8.3,
+            "p50": 8.604,
+            "p90": 10.55,
+            "p99": 11.042
+          }
+        },
+        "score": 7.0
+      },
+      "R8-resolve": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 4,
+          "idk": 7,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 3
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.5,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 0.83,
+            "check_metric_exists": 0.25,
+            "check_coverage": 0.08,
+            "check_segment_defined": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 168217,
+          "out_tokens": 2184,
+          "usd": 0.015,
+          "latency_s": {
+            "mean": 7.4,
+            "p50": 5.925,
+            "p90": 10.47,
+            "p99": 11.976
+          }
+        },
+        "score": -13.0
+      },
+      "R9-resolve": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 1,
+          "idk": 10,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 7
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 0.9090909090909091,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 6,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.67,
+          "tools_per_run": {
+            "query_metric": 1.5,
+            "list_metrics": 0.75,
+            "check_segment_defined": 0.17,
+            "check_metric_exists": 0.17,
+            "check_coverage": 0.08
+          },
+          "trajectory": {
+            "pass": 2,
+            "fail": 5
+          }
+        },
+        "telemetry": {
+          "in_tokens": 209027,
+          "out_tokens": 2474,
+          "usd": 0.0185,
+          "latency_s": {
+            "mean": 10.5,
+            "p50": 10.103,
+            "p90": 17.083,
+            "p99": 17.274
+          }
+        },
+        "score": 3.0
+      },
+      "R6": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 7,
+          "idk": 4,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.25,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 0.83,
+            "check_segment_defined": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 139766,
+          "out_tokens": 1734,
+          "usd": 0.0124,
+          "latency_s": {
+            "mean": 6.4,
+            "p50": 6.472,
+            "p90": 9.665,
+            "p99": 10.46
+          }
+        },
+        "score": -12.0
+      },
+      "R8-single_metric": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 6,
+          "idk": 5,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 1
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.83,
+          "tools_per_run": {
+            "query_metric": 1.42,
+            "list_metrics": 0.83,
+            "check_segment_defined": 0.33,
+            "check_metric_exists": 0.25
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 181723,
+          "out_tokens": 2186,
+          "usd": 0.0161,
+          "latency_s": {
+            "mean": 8.2,
+            "p50": 7.704,
+            "p90": 15.519,
+            "p99": 17.224
+          }
+        },
+        "score": -8.0
+      },
+      "R7": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 3,
+          "idk": 8,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 5
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 1.92,
+          "tools_per_run": {
+            "query_metric": 0.92,
+            "list_metrics": 0.67,
+            "check_metric_exists": 0.25,
+            "check_segment_defined": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 138355,
+          "out_tokens": 1685,
+          "usd": 0.0122,
+          "latency_s": {
+            "mean": 5.2,
+            "p50": 4.948,
+            "p90": 8.121,
+            "p99": 8.301
+          }
+        },
+        "score": -4.0
+      },
+      "R9-output_validation": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 8
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 1.92,
+          "tools_per_run": {
+            "list_metrics": 0.92,
+            "query_metric": 0.92,
+            "check_metric_exists": 0.08
+          },
+          "trajectory": {
+            "fail": 4,
+            "pass": 1
+          }
+        },
+        "telemetry": {
+          "in_tokens": 137595,
+          "out_tokens": 1599,
+          "usd": 0.0121,
+          "latency_s": {
+            "mean": 7.3,
+            "p50": 6.503,
+            "p90": 9.819,
+            "p99": 11.464
+          }
+        },
+        "score": 10.0
+      },
+      "R8": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 4,
+          "idk": 7,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 4
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.0,
+          "tools_per_run": {
+            "query_metric": 1.0,
+            "list_metrics": 0.75,
+            "check_segment_defined": 0.17,
+            "check_coverage": 0.08
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 136873,
+          "out_tokens": 1620,
+          "usd": 0.0121,
+          "latency_s": {
+            "mean": 5.8,
+            "p50": 5.039,
+            "p90": 10.53,
+            "p99": 11.096
+          }
+        },
+        "score": -9.0
+      },
+      "R9": {
+        "n": 12,
+        "outcomes": {
+          "right": 1,
+          "wrong": 0,
+          "idk": 11,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2
+          },
+          "valid_but_wrong": {
+            "n": 8,
+            "correct": 6
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 1,
+          "answerable": 1
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_measure": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 2.42,
+          "tools_per_run": {
+            "query_metric": 1.0,
+            "list_metrics": 0.83,
+            "check_segment_defined": 0.25,
+            "check_coverage": 0.17,
+            "check_metric_exists": 0.17
+          },
+          "trajectory": {
+            "pass": 1,
+            "fail": 4
+          }
+        },
+        "telemetry": {
+          "in_tokens": 184778,
+          "out_tokens": 2125,
+          "usd": 0.0163,
+          "latency_s": {
+            "mean": 8.9,
+            "p50": 8.714,
+            "p90": 11.132,
+            "p99": 15.686
+          }
+        },
+        "score": 8.0
+      }
+    }
+  },
+  "wrong_rows": [
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iOS: 40.27% vs Android: 37.75%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_north_america_actives",
+      "answer": "24,182",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_mexico_signups",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t1_total_habits",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_activation_count_june",
+      "answer": "0.5322283609576427",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.24 per month (\u2248 $86.85 per year)",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iOS: 40.27% ; iPadOS: not separately reported \u2014  platform-level data only reports 'ios' and 'android'",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "rt_mexico_signups",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "7.237403414195867",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_total_users",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_activation_count_june",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_arpu_annual",
+      "answer": "86.8488409699504",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "t1_total_habits",
+      "answer": "7,467",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92000000001",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "vw_total_users",
+      "answer": "2,500",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "7.237403414195867",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_north_america_actives",
+      "answer": "49,213",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_paid_social_activation",
+      "answer": "21.3%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_total_users",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_activation_count_june",
+      "answer": "294",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_arpu_annual",
+      "answer": "87.00",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iOS: 40.27%, iPadOS: (no separate iPadOS rows)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "rt_north_america_actives",
+      "answer": "125,482",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "53.22283609576427",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iPadOS: 40.35% vs iOS: 40.35% (over last 30 days)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric",
+      "qid": "rt_activation_count_june",
+      "answer": "53.22%",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371 active subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+single_metric+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "rt_activation_count_june",
+      "answer": "0.5322283609576427",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-gate",
+      "qid": "rt_arpu_annual",
+      "answer": "7.237403414195867",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iOS: 40.87% vs iPadOS: no governed segment",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "294",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-gate",
+      "qid": "t1_total_habits",
+      "answer": "67,132 habits have been created in total.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-gate",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-gate",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-gate",
+      "qid": "t1_total_habits",
+      "answer": "Total habits created (value moments / completed habits): 67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-gate",
+      "qid": "vw_total_subscriptions",
+      "answer": "371 active subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-gate",
+      "qid": "rt_total_subs_ever",
+      "answer": "371 subscriptions active now (active_subscriptions)",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-gate",
+      "qid": "rt_arpu_annual",
+      "answer": "7.2374034141958665",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "rt_paid_social_activation",
+      "answer": "20.4%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "rt_activation_count_june",
+      "answer": "53.22%",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency",
+      "qid": "rt_arpu_annual",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "rt_north_america_actives",
+      "answer": "18,742",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "t1_total_habits",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "53.22%",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.237403414195867",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "t1_total_habits",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_total_users",
+      "answer": "2,500 users",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_activation_count_june",
+      "answer": "0.5322283609576427",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.24 per month (\u2248 $86.85 per year)",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "t1_total_habits",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+resolve+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_north_america_actives",
+      "answer": "184,732",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "t1_total_habits",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_arr",
+      "answer": "32221. - ARR = MRR * 12",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_total_users",
+      "answer": "2,100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_activation_count_june",
+      "answer": "293",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_arpu_annual",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "rt_ipados_open_rate",
+      "answer": "iOS: 0.4026931709 (40.27%); iPadOS: not available in governed platform breakdown",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "t1_total_habits",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "rt_activation_count_june",
+      "answer": "0.5322283609576427",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+gate+tool_restriction+transparency+output_validation",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.237403414195867 per month (ARPU - average MRR per paying user).",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "rt_activation_count_june",
+      "answer": "53.22283609576427%",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-resolve",
+      "qid": "rt_north_america_actives",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "t1_total_habits",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_activation_count_june",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.24 per month, which annualizes to $86.85 per paying customer per year",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "t1_total_habits",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "vw_arr",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "vw_total_subscriptions",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "rt_activation_count_june",
+      "answer": "293",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-single_metric",
+      "qid": "rt_arpu_annual",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "vw_total_users",
+      "answer": "We have 2,100 distinct active users (non-internal) in total.",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "vw_total_subscriptions",
+      "answer": "We have 371 active subscriptions in total.",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "rt_total_subs_ever",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "t1_total_habits",
+      "answer": "67,132 habits (value moments) have been created in total.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "vw_total_users",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "vw_total_subscriptions",
+      "answer": "371 active subscriptions (point-in-time).",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "rt_total_subs_ever",
+      "answer": "371 subscriptions sold since launch (currently active subscriptions).",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    }
+  ]
+}

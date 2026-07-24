@@ -178,7 +178,7 @@ experiments.
 
 ## Results
 
-The published grounding run is in [`results/summary.md`](results/summary.md) and the companion
+The published grounding run is in [`results/published/grounding/summary.md`](results/published/grounding/summary.md) and the companion
 essay. The qualitative findings are robust across runs:
 
 - **The semantic layer is the turning point** — the biggest jump (rung 2→3) is where the model
