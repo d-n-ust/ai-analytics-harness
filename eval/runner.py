@@ -96,8 +96,11 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                         try:
                             ans = run_agent(q["question"], grounding, model, verifier_model=verifier_model)
                         except Exception as exc:  # noqa: BLE001 — one bad question shouldn't kill the run
+                            # Record the exception TYPE so a persistent API failure (RateLimitError,
+                            # APITimeoutError — after the SDK's retries are exhausted) is distinguishable
+                            # from a code bug (KeyError, …) when analysing error rows.
                             ans = Answer(q["question"], rung, model_name, None,
-                                         outcome="error", error=f"exception: {exc}")
+                                         outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
                         elapsed_s = time.perf_counter() - t0   # wall-clock per run, for per-rung latency
                         g = grade(ans, q, golds[q["id"]])
                         rows.append({

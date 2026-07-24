@@ -17,6 +17,13 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 
 MAX_TOKENS = 4096
+# Transient provider failures (429 / 5xx / connection / timeout) must not become
+# data-corrupting error rows. Lean on the provider SDKs' own tested exponential-backoff-
+# with-jitter over exactly those classes, raised well above their default of 2; a call that
+# still fails after this is a *persistent* failure, not flakiness, and becomes an honest
+# error row (distinguishable by exception type in the run's rows).
+MAX_RETRIES = 6
+REQUEST_TIMEOUT = 120.0   # seconds — caps a hung request so a sequential run can't stall forever
 
 
 @dataclass(frozen=True)
@@ -81,7 +88,7 @@ class AnthropicModel:
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
         self.spec = spec
-        self.client = anthropic.Anthropic()
+        self.client = anthropic.Anthropic(max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)
 
     def create(self, system: str, messages: list, tools: list,
                force_tool: str | None = None, temperature: float | None = None,
@@ -111,7 +118,8 @@ class OpenAIModel:
         if not os.environ.get(spec.api_key_env):
             raise RuntimeError(f"{spec.api_key_env} is not set (add it to .env).")
         self.spec = spec
-        self.client = OpenAI(base_url=spec.base_url, api_key=os.environ[spec.api_key_env])
+        self.client = OpenAI(base_url=spec.base_url, api_key=os.environ[spec.api_key_env],
+                             max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)
         # 'none' keeps reasoning off (comparable to the thinking-disabled Anthropic
         # models) and is required for function tools on gpt-5.6 via chat-completions.
         self.reasoning = os.environ.get("OPENAI_REASONING", "none")
