@@ -49,8 +49,6 @@ _RRUNG_TERMINAL = {
         "`false_premise`, and put the correction in `missing` (e.g. \"it didn't fall — it rose to 227\").\n"
         "- A truthful refusal beats a confident wrong answer."),
 }
-_RRUNG_PRICE = ("\n- Scoring: a correct answer scores +1, a refusal 0, a wrong answer -4. "
-                "A wrong answer costs four refusals.")
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
@@ -69,12 +67,6 @@ _RRUNG_TOOL_RESTRICTION = ("\n- Raw SQL is not available. All data must come thr
 _RRUNG_RESOLVE = ("\n- Filter values are matched to governed members: name a segment in plain terms "
                   "('iOS', 'the annual plan') and it is resolved to the governed value; a value that "
                   "matches no governed member is rejected rather than returning an empty result.")
-# R7/R8 — spec decomposition (the answer's metric must match the question):
-_RRUNG_SPEC = ("\n- Answers are checked before they are served: the metric behind your number must "
-               "match what the question asks for — the same entity, segment, measure, and grain. "
-               "A valid metric that answers a slightly different question (active users for the user "
-               "total, value moments for the habit count) is rejected; if no governed metric matches "
-               "what was asked, refuse rather than report a near-miss.")
 # The typed provenance fields — read by every output check that inspects the served number:
 _RRUNG_PROVENANCE = ("\n- When your answer is a single number, put that number in the answer's `value` "
                      "field, and if it came from a governed metric name that metric in `source_metric`, "
@@ -93,10 +85,6 @@ _RRUNG_SINGLE_METRIC = ("\n- Answer with exactly ONE governed metric's own value
                         "by hand from several numbers (no rate times a count, no metric A plus metric B). "
                         "If answering would need a metric that doesn't exist, refuse (out_of_scope) rather "
                         "than derive it.")
-# R10 — unrequested-predicate check:
-_RRUNG_SCOPE = ("\n- Only filter a metric by a dimension the question explicitly names. For a total or "
-                "overall figure, apply NO filters — do not exclude channels, plans, regions, or accounts "
-                "the question did not mention. An unrequested filter makes the answer a subset, not the total.")
 # R11 — trajectory verifier:
 _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you used, its definition, the "
                    "exact SQL, and the filters you added, and checks they truly answer the question: the "
