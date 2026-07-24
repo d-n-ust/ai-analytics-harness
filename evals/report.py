@@ -18,8 +18,8 @@ split (RAG-eval's central lesson):
   - two-level agent metrics: the per-tool call profile (call-level) and the trajectory verdict
     (task-level).
   - consolidated telemetry: tokens, estimated USD (starred when the price is a placeholder), and
-    latency p50/p90/p99 (a SEQUENTIAL harness on a shared API — read deltas between cells, not
-    absolutes).
+    latency p50/p90/p99 (wall-clock on a shared API; a concurrent run overlaps requests, so the
+    percentiles include queueing under load — read deltas between cells, not absolutes).
 
 The typed reject option (scoring WHICH reason a refusal carries, not just answered-vs-abstained) is
 an extension of selective prediction; the confusion counts are primary and the cost-weighted `score`
@@ -170,10 +170,13 @@ def aggregate(rows) -> dict:
                 reasons[code]["wrong_reason"] += 1
 
         wrong = [r for r in rs if _bucket(r) == "wrong"]
+        # The first three PARTITION every wrong answer (mutually exclusive, sum to len(wrong));
+        # wrong_metric is a SUBSET of confident_wrong, scored only where metric_match is known.
         wrong_by_type = {
-            "fabricated": sum(bool(r.get("fabricated")) for r in wrong),         # groundedness fail
-            "confident_wrong": sum(bool(r.get("confident_wrong")) for r in wrong),  # correctness fail
-            "wrong_metric": sum(r.get("metric_match") is False for r in wrong),  # relevancy fail
+            "fabricated": sum(bool(r.get("fabricated")) for r in wrong),          # groundedness fail
+            "confident_wrong": sum(bool(r.get("confident_wrong")) for r in wrong),   # correctness fail
+            "off_governance": sum(bool(r.get("off_governance")) for r in wrong),  # right digits, off-path
+            "wrong_metric": sum(r.get("metric_match") is False for r in wrong),   # relevancy fail (⊆ conf-wrong)
         }
 
         # agent: per-tool call profile (call-level) + trajectory verdict (task-level)
@@ -187,11 +190,18 @@ def aggregate(rows) -> dict:
             if isinstance(v, dict) and "answers_question" in v:
                 traj["pass" if v["answers_question"] else "fail"] += 1
 
-        by_tier: dict = defaultdict(lambda: {"n": 0, "correct": 0})
+        # Per question-type: n, and the full response split — so "which kinds of question does
+        # each rung get right / wrong / refuse (rightly or not)" is answerable from one place.
+        by_tier: dict = defaultdict(lambda: {"n": 0, "correct": 0, "wrong": 0,
+                                             "refused_ok": 0, "refused_over": 0})
         for r in rs:
             t = by_tier[r.get("tier", "?")]
             t["n"] += 1
             t["correct"] += bool(r.get("correct"))
+            if _bucket(r) == "wrong":
+                t["wrong"] += 1
+            if r.get("outcome") == "refuse":
+                t["refused_ok" if _expected_refuse(r) else "refused_over"] += 1
 
         lat = [r["elapsed_s"] for r in rs if r.get("elapsed_s") is not None]
         per_cell[m][cell] = {
@@ -225,9 +235,11 @@ def aggregate(rows) -> dict:
             "score": round(sum(r.get("score", 0) for r in rs), 1),
         }
 
-    wrong_rows = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"],
+    wrong_rows = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"], "tier": r.get("tier"),
                    "answer": r.get("answer"), "gold": r.get("gold"),
-                   "type": "fabricated" if r.get("fabricated") else "confident_wrong"}
+                   "type": ("fabricated" if r.get("fabricated") else
+                            "confident_wrong" if r.get("confident_wrong") else
+                            "off_governance" if r.get("off_governance") else "wrong")}
                   for r in rows if _bucket(r) == "wrong"]
 
     return {
@@ -238,6 +250,7 @@ def aggregate(rows) -> dict:
                  "schema_current": ROW_SCHEMA_VERSION,
                  "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
                  "main_reasoning": first.get("main_reasoning"),
+                 "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
                  "verifier": {"model": first.get("verifier_model"),
                               "reasoning": first.get("verifier_reasoning")}},
         "cells": {m: dict(c) for m, c in per_cell.items()},
@@ -302,10 +315,15 @@ def render_markdown(summary: dict) -> str:
               "**correctness**: is the value right. **relevancy**: does the metric answer the asked "
               "question (wrong-metric selection). Different failures, different columns._", "",
               f"| {axis} | groundedness | answer-correctness | answer-relevancy |", "|" + "---|" * 4]
+        scored = meta.get("relevancy_scored")
         for c in _cells_for(summary, m):
             ax = summary["cells"][m][c]["correctness_axes"]
-            L.append(f"| {c} | {_pct(ax['groundedness'])} | {_pct(ax['answer_correctness'])} "
-                     f"| {_pct(ax['answer_relevancy'])} |")
+            rel = _pct(ax["answer_relevancy"]) if scored else "n/a (R7+)"
+            L.append(f"| {c} | {_pct(ax['groundedness'])} | {_pct(ax['answer_correctness'])} | {rel} |")
+        if not scored:
+            L.append("\n_answer-relevancy is **n/a** here: it reads the model's declared `source_metric`, "
+                     "which the answer tool only collects under the R7 single-metric guardrail. A grounding "
+                     "run doesn't produce it — relevancy comes online in the reliability ladder (R7+)._")
 
     # 3. Outcomes — the core confusion counts + the cost-weighted score (derived view)
     for m in meta["models"]:
@@ -332,6 +350,41 @@ def render_markdown(summary: dict) -> str:
             L.append(f"| {c} | " + " | ".join(
                 (f"{bt[t]['correct']}/{bt[t]['n']}" if t in bt else "·") for t in tiers) + " |")
 
+    # 3c. Wrong answers by question-type — where the wrong answers concentrate (count by tier)
+    for m in meta["models"]:
+        tiers = sorted({t for c in _cells_for(summary, m) for t in summary["cells"][m][c]["by_tier"]})
+        if not tiers:
+            continue
+        L += ["", f"## Wrong answers by question-type — {m}  (wrong count by tier)", "",
+              "_Which KINDS of question produced a wrong answer at each rung (· = none). Read with the "
+              "failure-mode table below (fabricated / confident-wrong / off-governance) for the how._", "",
+              f"| {axis} | " + " | ".join(tiers) + " |", "|" + "---|" * (len(tiers) + 1)]
+        for c in _cells_for(summary, m):
+            bt = summary["cells"][m][c]["by_tier"]
+            L.append(f"| {c} | " + " | ".join(
+                (str(bt[t]["wrong"]) if t in bt and bt[t]["wrong"] else "·") for t in tiers) + " |")
+
+    # 3d. Refusals by question-type — which kinds of question got refused, and whether rightly
+    for m in meta["models"]:
+        tiers = sorted({t for c in _cells_for(summary, m) for t in summary["cells"][m][c]["by_tier"]})
+        if not tiers:
+            continue
+        L += ["", f"## Refusals by question-type — {m}  (✓ refused a trap / ✗ over-refused an answerable)",
+              "", "_The refusal split by question kind: ✓ = correctly refused an unanswerable/trap; "
+              "✗ = over-refused a question that had an answer (lost coverage). · = no refusals._", "",
+              f"| {axis} | " + " | ".join(tiers) + " |", "|" + "---|" * (len(tiers) + 1)]
+        for c in _cells_for(summary, m):
+            bt = summary["cells"][m][c]["by_tier"]
+            cells = []
+            for t in tiers:
+                ok, over = (bt[t]["refused_ok"], bt[t]["refused_over"]) if t in bt else (0, 0)
+                if not ok and not over:
+                    cells.append("·")
+                else:
+                    cells.append((f"{ok}✓" if ok else "") + ("/" if ok and over else "")
+                                 + (f"{over}✗" if over else ""))
+            L.append(f"| {c} | " + " | ".join(cells) + " |")
+
     # 4. Failure-mode pivot — refusals by coded reason; wrong by type
     for m in meta["models"]:
         codes = sorted({code for c in _cells_for(summary, m)
@@ -353,11 +406,19 @@ def render_markdown(summary: dict) -> str:
                 L.append(f"| {c} | " + " | ".join(cellstr) + " |")
             L += ["", "_key: matched✓ / wrong-reason✗ / over-refused-answerable-o_"]
         L += ["", f"## Wrong answers by type — {m}", "",
-              f"| {axis} | fabricated (grounded) | confident-wrong (correct) | wrong-metric (relevant) |",
-              "|" + "---|" * 4]
+              "_The first three columns **partition** every wrong answer — they sum to ❌ wrong. "
+              "**fabricated** = invented a number where none exists (groundedness); **confident-wrong** "
+              "= asserted a wrong number (correctness); **off-governance** = right digits reached off the "
+              "governed path when the answer was to refuse. **wrong-metric** is a *subset* of "
+              "confident-wrong (a relevancy miss), scored only where the model declares source_metric "
+              "(R7+)._", "",
+              f"| {axis} | fabricated | confident-wrong | off-governance | of which wrong-metric |",
+              "|" + "---|" * 5]
         for c in _cells_for(summary, m):
             w = summary["cells"][m][c]["wrong_by_type"]
-            L.append(f"| {c} | {w['fabricated']} | {w['confident_wrong']} | {w['wrong_metric']} |")
+            wm = w["wrong_metric"] if meta.get("relevancy_scored") else "n/a"
+            L.append(f"| {c} | {w['fabricated']} | {w['confident_wrong']} "
+                     f"| {w.get('off_governance', 0)} | {wm} |")
 
     # 5. Agent behaviour — tool-call profile (call-level) + trajectory verdicts (task-level)
     for m in meta["models"]:
@@ -376,9 +437,11 @@ def render_markdown(summary: dict) -> str:
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:
         L += ["", f"## Telemetry — {m}", "",
-              f"_USD is **estimated**{' (★ = placeholder price)' if meta['prices_estimated'] else ''}. "
-              "Latency is wall-clock from a SEQUENTIAL harness on a shared API — read the delta BETWEEN "
-              "cells, not the absolute._", "",
+              "_USD is **estimated** — full input price, no prompt-cache discount, so it is an upper "
+              f"bound{' · ★ = placeholder price' if meta['prices_estimated'] else ''}. "
+              "Latency is wall-clock on a shared API; a concurrent run (--concurrency > 1) overlaps "
+              "requests, so p50/p90/p99 include queueing under load — read the delta BETWEEN cells, "
+              "not the absolute._", "",
               f"| {axis} | in tok | out tok | est. USD{star} | lat p50 | p90 | p99 |",
               "|" + "---|" * 7]
         for c in _cells_for(summary, m):
@@ -393,9 +456,10 @@ def render_markdown(summary: dict) -> str:
     # 7. Drill-down — every wrong number
     if summary["wrong_rows"]:
         L += ["", "## Wrong numbers (asserted a number that was wrong)", "",
-              "| model | cell | qid | type | answer | gold |", "|---|---|---|---|---|---|"]
+              "| model | cell | qid | question-type | failure | answer | gold |",
+              "|---|---|---|---|---|---|---|"]
         for w in summary["wrong_rows"]:
-            L.append(f"| {w['model']} | {w['cell']} | {w['qid']} | {w['type']} "
+            L.append(f"| {w['model']} | {w['cell']} | {w['qid']} | {w.get('tier','?')} | {w['type']} "
                      f"| {w['answer']} | {w['gold']} |")
 
     return "\n".join(L) + "\n"

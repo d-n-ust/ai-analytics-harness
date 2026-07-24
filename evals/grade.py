@@ -85,7 +85,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     tol = expect.get("tolerance", 0.02)
     has_number = bool(_numbers(answer.answer))
 
-    correct = fabricated = confident_wrong = needs_judge = executed = False
+    correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
     reason_match = driver_ok = cause_ok = metric_match = None
 
     if outcome == "error":
@@ -109,7 +109,10 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                 fabricated = True                    # no valid number exists -> pure fabrication
             elif not grade_numeric(answer.answer, gold, tol)["correct"]:
                 confident_wrong = True               # served a WRONG number
-            # else: numerically right but derived when it should have refused -> wrong, unflagged
+            else:
+                off_governance = True                # the provenance value, but reached off the
+                                                     # governed path when the answer was to refuse:
+                                                     # right digits, ungoverned path (still wrong)
         else:
             bucket = "other"                         # abstention prose through the answer channel
     else:                                            # answerable, answered
@@ -138,7 +141,8 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         "abstained": outcome == "refuse", "confident_wrong": confident_wrong,
-        "fabricated": fabricated, "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        "fabricated": fabricated, "off_governance": off_governance,
+        "needs_judge": needs_judge, "expected_refuse": expects_refusal,
         "reason_match": reason_match, "metric_match": metric_match,
         "driver_ok": driver_ok, "cause_ok": cause_ok,
         "score": 1.0 if correct else (-WRONG_COST if wrong_number else 0.0),

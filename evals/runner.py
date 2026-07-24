@@ -179,11 +179,13 @@ def regrade_run(run_dir: Path) -> None:
         ans = Answer(question=r["question"], rung=r["rung"], model=r["model"],
                      answer=r["answer"], explanation=r.get("explanation", "") or "",
                      outcome=r.get("outcome", "answer"), reason=r.get("reason"),
-                     missing=r.get("missing"), error=r.get("error"))
+                     missing=r.get("missing"), error=r.get("error"),
+                     source_metric=r.get("source_metric"))   # so metric_match re-grades faithfully
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
-                                    "fabricated", "needs_judge", "bucket", "expected_refuse",
-                                    "reason_match", "driver_ok", "cause_ok", "score")})
+                                    "fabricated", "off_governance", "needs_judge", "bucket",
+                                    "expected_refuse", "reason_match", "metric_match",
+                                    "driver_ok", "cause_ok", "score")})
     with raw.open("w") as f:
         for r in rows:
             f.write(json.dumps(r, default=str) + "\n")

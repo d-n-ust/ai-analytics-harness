@@ -64,7 +64,12 @@ def test_aggregate_arithmetic():
     assert cell["refusal_reasons"]["out_of_coverage"] == {"matched": 1, "wrong_reason": 0, "over_refused": 0}
 
     # wrong-by-type separates groundedness vs correctness failures
-    assert cell["wrong_by_type"] == {"fabricated": 1, "confident_wrong": 1, "wrong_metric": 0}
+    wbt = cell["wrong_by_type"]
+    assert wbt == {"fabricated": 1, "confident_wrong": 1, "off_governance": 0, "wrong_metric": 0}
+    # the three primary types PARTITION the wrong bucket — they must sum to the wrong count, so
+    # no wrong answer is ever silently uncounted (wrong_metric is a subset, excluded from the sum)
+    assert (wbt["fabricated"] + wbt["confident_wrong"] + wbt["off_governance"]
+            == cell["outcomes"]["wrong"])
 
     # agent telemetry + tool profile
     assert cell["agent"]["tools_per_run"]["query_metric"] == 1.0
