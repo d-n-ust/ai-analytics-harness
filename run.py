@@ -11,7 +11,7 @@ import argparse
 
 
 def cmd_data(args: argparse.Namespace) -> None:
-    from data.generate import generate, OUT_PATH
+    from warehouse.generate import generate, OUT_PATH
 
     counts = generate()
     print(f"wrote {OUT_PATH}")
@@ -20,7 +20,7 @@ def cmd_data(args: argparse.Namespace) -> None:
 
 
 def cmd_ask(args: argparse.Namespace) -> None:
-    from harness.experiment import ask_one
+    from agent.session import ask_one
 
     ask_one(question=args.question, rung=args.rung, model=args.model, verbose=True)
 
@@ -28,14 +28,14 @@ def cmd_ask(args: argparse.Namespace) -> None:
 def cmd_regrade(args: argparse.Namespace) -> None:
     from pathlib import Path
 
-    from evaluation.run_eval import RESULTS_DIR, regrade_run
+    from eval.runner import RESULTS_DIR, regrade_run
 
     run_dir = Path(args.run) if args.run else (RESULTS_DIR / "latest").resolve()
     regrade_run(run_dir)
 
 
 def cmd_eval(args: argparse.Namespace) -> None:
-    from evaluation.run_eval import run_experiment
+    from eval.runner import run_experiment
 
     run_experiment(
         mock=args.mock,

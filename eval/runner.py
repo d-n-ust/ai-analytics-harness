@@ -13,10 +13,10 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
-from harness.agent import Answer, run_agent
-from harness.grounding import RUNG_NAMES, build_grounding
-from harness.models import MODEL_SPECS, get_model
-from harness.warehouse import open_warehouse, set_star
+from agent.orchestrator import Answer, run_agent
+from agent.prompt import RUNG_NAMES, build_grounding
+from agent.models import MODEL_SPECS, get_model
+from warehouse.warehouse import open_warehouse, set_star
 
 from .gold import compute_gold, load_questions
 from .grade import grade
@@ -42,7 +42,7 @@ def _new_run_dir(models, mock: bool) -> Path:
 def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
                    rrungs=(1,), cells=None) -> None:
-    from harness.guardrails import LADDER, incoherent, parse_cell
+    from agent.guardrails import LADDER, incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()

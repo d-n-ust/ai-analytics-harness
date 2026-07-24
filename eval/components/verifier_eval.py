@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import sys
 
-from harness.models import get_model
-from harness.semantic import SemanticLayer
-from harness.verifier import verify_trajectory
-from harness.warehouse import open_warehouse
+from agent.models import get_model
+from semantic.semantic import SemanticLayer
+from agent.verifier import verify_trajectory
+from warehouse.warehouse import open_warehouse
 
 # (label, question, metric, call_args, should_flag)
 CASES = [

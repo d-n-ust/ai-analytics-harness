@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from evaluation import report
+from eval import report
 
 
 def _row(**kw):

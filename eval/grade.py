@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 
-from harness.numbers import parse_numbers as _numbers
+from agent.numbers import parse_numbers as _numbers
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:

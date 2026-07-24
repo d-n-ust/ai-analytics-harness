@@ -13,9 +13,9 @@ from pathlib import Path
 
 import yaml
 
-from harness.tools import REFUSAL_REASONS
+from agent.tools import REFUSAL_REASONS
 
-EVALS_DIR = Path(__file__).resolve().parent / "evals"
+EVALS_DIR = Path(__file__).resolve().parent / "cases"
 _EXPECT_TYPES = {"metric_answer", "refuse", "diagnostic", "keywords", "clarify"}
 
 

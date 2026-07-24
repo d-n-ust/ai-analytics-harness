@@ -13,9 +13,9 @@ from pathlib import Path
 
 import duckdb
 
-_ROOT = Path(__file__).resolve().parent.parent
-DB_PATH = _ROOT / "data" / "warehouse.duckdb"
-STAR_SQL = _ROOT / "grounding" / "rung2_star" / "star.sql"
+_HERE = Path(__file__).resolve().parent
+DB_PATH = _HERE / "warehouse.duckdb"      # the generated warehouse (gitignored)
+STAR_SQL = _HERE / "star.sql"             # the clean dim_/fct_ views over the raw tables
 
 RAW_TABLES = ("u", "hab", "evt", "subs", "spend", "ref")
 STAR_TABLES = (

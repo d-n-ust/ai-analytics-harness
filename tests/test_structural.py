@@ -12,11 +12,11 @@ Run: uv run python -m pytest tests/test_structural.py -q     (or run this file d
 
 from __future__ import annotations
 
-from harness.grounding import build_grounding
-from harness.guardrails import LADDER
-from harness.semantic import SemanticError, SemanticLayer
-from harness.tree import MetricTree
-from harness.warehouse import open_warehouse
+from agent.prompt import build_grounding
+from agent.guardrails import LADDER
+from semantic.semantic import SemanticError, SemanticLayer
+from semantic.tree import MetricTree
+from warehouse.warehouse import open_warehouse
 
 # Terms that must never resolve to a governed object — the six impossible questions'
 # subjects, plus spelling/garbage/injection variants an adversary would try.

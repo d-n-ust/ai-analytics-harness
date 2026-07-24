@@ -7,8 +7,8 @@ __pycache__/
 .venv/
 
 # Generated warehouse (regenerate with `make data` — it's deterministic)
-data/*.duckdb
-data/*.duckdb.wal
+warehouse/*.duckdb
+warehouse/*.duckdb.wal
 
 # Generated per-run rows (large; regenerate with `make eval`). summary.md is the committed record.
 results/raw.jsonl

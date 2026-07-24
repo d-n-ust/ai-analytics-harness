@@ -18,10 +18,10 @@ from pathlib import Path
 
 import yaml
 
-from .config import NAMED_PERIODS, resolve_period
-from .warehouse import run_query
+from warehouse.config import NAMED_PERIODS, resolve_period
+from warehouse.warehouse import run_query
 
-SPEC_PATH = Path(__file__).resolve().parent.parent / "grounding" / "rung3_semantic" / "semantic_layer.yml"
+SPEC_PATH = Path(__file__).resolve().parent / "semantic_layer.yml"
 
 
 class SemanticError(Exception):

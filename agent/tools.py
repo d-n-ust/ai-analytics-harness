@@ -12,11 +12,11 @@ from __future__ import annotations
 import json
 
 from . import verifier
-from .config import resolve_period
+from warehouse.config import resolve_period
 from .guardrails import LADDER, Guardrails
-from .semantic import SemanticError, SemanticLayer
-from .tree import MetricTree, TreeError
-from .warehouse import QueryError, describe_table, run_query, schema_text
+from semantic.semantic import SemanticError, SemanticLayer
+from semantic.tree import MetricTree, TreeError
+from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.

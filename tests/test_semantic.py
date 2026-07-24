@@ -11,11 +11,11 @@ Run: uv run python -m pytest tests/test_semantic.py -q     (or run this file dir
 
 from __future__ import annotations
 
-from harness import verifier
-from harness.guardrails import LADDER
-from harness.semantic import SemanticError, SemanticLayer
-from harness.tools import Toolbox
-from harness.warehouse import open_warehouse
+from agent import verifier
+from agent.guardrails import LADDER
+from semantic.semantic import SemanticError, SemanticLayer
+from agent.tools import Toolbox
+from warehouse.warehouse import open_warehouse
 
 
 def _qm(metric, value, **args):
@@ -189,7 +189,7 @@ def test_region_availability_is_read_from_the_dimension():
 def test_ladder_presets_reproduce_the_rung_thresholds():
     """The flag refactor must not move a single existing result: LADDER[n] has to switch on
     exactly the controls the old `rrung >= N` comparisons did, for every rung."""
-    from harness.guardrails import LADDER
+    from agent.guardrails import LADDER
     for n in range(10):
         g = LADDER[n]
         assert g.abstain is (n >= 1) and g.check_tools is (n >= 2)
@@ -204,7 +204,7 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     """The point of the refactor: a leave-one-out cell exists in the flag space (no single
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
-    from harness.guardrails import LADDER, incoherent
+    from agent.guardrails import LADDER, incoherent
     con = open_warehouse()
     cell = LADDER[9].without("resolve")
 

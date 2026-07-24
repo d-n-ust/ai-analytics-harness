@@ -20,7 +20,7 @@ from pathlib import Path
 
 import yaml
 
-SPEC_PATH = Path(__file__).resolve().parent.parent / "grounding" / "rung6_tree" / "metric_tree.yml"
+SPEC_PATH = Path(__file__).resolve().parent / "metric_tree.yml"
 
 
 class TreeError(Exception):

@@ -18,8 +18,8 @@ Run: PYTHONPATH=. .venv/bin/python evaluation/resolver_eval.py
 
 from __future__ import annotations
 
-from harness.semantic import SemanticLayer
-from harness.warehouse import open_warehouse
+from semantic.semantic import SemanticLayer
+from warehouse.warehouse import open_warehouse
 
 # (dimension, value-as-a-user-would-type-it, expected member or None to mean "refuse")
 CASES = [

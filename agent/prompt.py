@@ -13,14 +13,14 @@ from pathlib import Path
 
 import yaml
 
-from .semantic import SemanticLayer
+from semantic.semantic import SemanticLayer
 from .guardrails import LADDER, Guardrails
 from .tools import Toolbox
-from .tree import MetricTree
+from semantic.tree import MetricTree
 
 _ROOT = Path(__file__).resolve().parent.parent
-_VERIFIED = _ROOT / "grounding" / "rung4_verified" / "verified_queries.yml"
-_KB = _ROOT / "grounding" / "rung5_knowledge" / "knowledge_base.md"
+_VERIFIED = _ROOT / "context" / "verified_queries.yml"
+_KB = _ROOT / "context" / "knowledge_base.md"
 
 RUNG_NAMES = {
     1: "messy data", 2: "star schema", 3: "semantic layer",

@@ -9,7 +9,7 @@ dim_/fct_/agg_ names the eval SQL uses are views created at runtime, so use this
 
 import sys
 
-from harness.warehouse import open_warehouse
+from warehouse.warehouse import open_warehouse
 
 if len(sys.argv) < 2:
     con = open_warehouse(create_star_views=True)
