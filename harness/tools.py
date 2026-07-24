@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 
-from . import spec_check, verifier
+from . import verifier
 from .config import resolve_period
 from .guardrails import LADDER, Guardrails
 from .semantic import SemanticError, SemanticLayer
@@ -358,9 +358,7 @@ class Toolbox:
         """The output guardrails on an answer before it is served, each gated by its own rung so
         their deltas are measured separately: single-metric enforcement (R7, the number must BE one
         governed result), output validation (R8, well-formed value), and the trajectory verifier
-        (R9, the metric must actually answer the question). The 4-slot spec check and the
-        unrequested-predicate check are retired from the ladder — the verifier subsumes them — but
-        remain in spec_check as tested building blocks / comparison cells.
+        (R9, the metric must actually answer the question). All three live in harness/verifier.py.
         Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
         self.last_verdict = None      # one verdict per answer; the Toolbox outlives the question
         if self.semantic is None or not (self.output_validation or self.single_metric
@@ -369,7 +367,7 @@ class Toolbox:
         # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
         vmodel = verifier_model or model
         verify_traj = self._trajectory_verifier(vmodel) if (self.trajectory_verify and vmodel) else None
-        return spec_check.verify_answer(
+        return verifier.verify_answer(
             self.semantic, question, answer_text, steps,
             source_metric=source_metric, declared_value=declared_value,
             run_output_validation=self.output_validation,

@@ -85,8 +85,8 @@ _RRUNG_TRANSPARENCY = ("\n- Every governed result now shows you a [scope] line (
                        "whose scope doesn't match the question.")
 _RRUNG_SINGLE_METRIC = ("\n- Answer with exactly ONE governed metric's own value. Do not build the answer "
                         "by hand from several numbers (no rate times a count, no metric A plus metric B). "
-                        "If answering would need a metric that doesn't exist, refuse (out_of_scope) rather "
-                        "than derive it.")
+                        "If answering would need a metric that doesn't exist, refuse "
+                        "(no_governed_definition) rather than derive it.")
 # trajectory_verify (R9) — the verifier:
 _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you used, its definition, the "
                    "exact SQL, and the filters you added, and checks they truly answer the question: the "
