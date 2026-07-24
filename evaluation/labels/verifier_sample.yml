@@ -1,8 +1,4 @@
-# BLIND labelling sheet for the trajectory verifier.
-# For each case, read the question and what the analyst computed, then set
-#   human: yes   -> the served answer DOES answer the question
-#   human: no    -> it does not (wrong thing / wrong scope / wrong kind / wrong definition)
-# The judge's own verdict is deliberately withheld; it lives in the key file.
+# BLIND labelling sheet for the trajectory verifier (labels filled in).
 cases:
 - id: V001
   question: How many habit completions (value moments) were logged in June 2026?
@@ -13,7 +9,7 @@ cases:
     <= DATE '2026-06-30'
   query_result: 16041.0
   served_answer: 16041
-  human: ''
+  human: 'yes'
 - id: V002
   question: How many value moments came from the APAC region in the second quarter of 2026 (April–June)?
   metric_used: value_moments
@@ -24,7 +20,7 @@ cases:
     <= DATE '2026-06-30' AND region = 'APAC'
   query_result: 3852.0
   served_answer: 3852
-  human: ''
+  human: 'yes'
 - id: V003
   question: Is the app healthy right now — how would you tell?
   metric_used: value_moments
@@ -34,7 +30,7 @@ cases:
     <= DATE '2026-07-12'
   query_result: 3785.0
   served_answer: 3785
-  human: ''
+  human: 'no'
 - id: V004
   question: How many subscriptions have we sold in total?
   metric_used: active_subscriptions
@@ -43,7 +39,7 @@ cases:
   sql: SELECT count(*) AS value FROM fct_subscriptions WHERE is_active
   query_result: 371.0
   served_answer: 371
-  human: ''
+  human: 'no'
 - id: V005
   question: Why did APAC value moments collapse to near zero in June 2026?
   metric_used: value_moments
@@ -56,7 +52,7 @@ cases:
     is_internal = false GROUP BY period ORDER BY period
   query_result: 43.0
   served_answer: 140
-  human: ''
+  human: 'no'
 - id: V006
   question: How many users do we have in total?
   metric_used: active_users
@@ -65,7 +61,7 @@ cases:
   sql: SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal
   query_result: 2100.0
   served_answer: 2100
-  human: ''
+  human: 'no'
 - id: V007
   question: How has our retention been trending over the last couple of months?
   metric_used: days_per_user
@@ -76,7 +72,7 @@ cases:
     AND active_date <= DATE '2026-07-12' GROUP BY period ORDER BY period
   query_result: 1.5346820809248556
   served_answer: 2.270880361173815
-  human: ''
+  human: 'no'
 - id: V008
   question: How many signups came from real acquisition channels in June 2026?
   metric_used: new_signups
@@ -91,7 +87,7 @@ cases:
     <= DATE '2026-06-30' AND channel IN ('paid_search', 'referral', 'content_seo', 'organic')
   query_result: 453.0
   served_answer: 453
-  human: ''
+  human: 'yes'
 - id: V009
   question: How many users do we have in total?
   metric_used: active_users
@@ -100,7 +96,7 @@ cases:
   sql: SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal
   query_result: 2100.0
   served_answer: 2100
-  human: ''
+  human: 'no'
 - id: V010
   question: How many currently-active subscriptions are on the annual plan?
   metric_used: active_subscriptions
@@ -110,7 +106,7 @@ cases:
   sql: SELECT count(*) AS value FROM fct_subscriptions WHERE is_active AND plan = 'annual'
   query_result: 134.0
   served_answer: 134
-  human: ''
+  human: 'yes'
 - id: V011
   question: How many subscriptions have we sold in total since launch?
   metric_used: active_subscriptions
@@ -119,7 +115,7 @@ cases:
   sql: SELECT count(*) AS value FROM fct_subscriptions WHERE is_active
   query_result: 371.0
   served_answer: 371
-  human: ''
+  human: 'no'
 - id: V012
   question: How many value moments came from users in the Americas region in June 2026?
   metric_used: value_moments
@@ -130,7 +126,7 @@ cases:
     <= DATE '2026-06-30' AND region = 'Americas'
   query_result: 5386.0
   served_answer: 5386
-  human: ''
+  human: 'yes'
 - id: V013
   question: Did our active user base shrink last week, or is something else going on with value moments?
   metric_used: active_users
@@ -140,7 +136,7 @@ cases:
     >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12'
   query_result: 886.0
   served_answer: 886
-  human: ''
+  human: 'no'
 - id: V014
   question: How many new users signed up in June 2026?
   metric_used: new_signups
@@ -150,7 +146,7 @@ cases:
     <= DATE '2026-06-30'
   query_result: 553.0
   served_answer: 553
-  human: ''
+  human: 'yes'
 - id: V015
   question: How many users signed up through the referral channel in the second quarter of 2026 (April–June)?
   metric_used: new_signups
@@ -161,7 +157,7 @@ cases:
     <= DATE '2026-06-30' AND channel = 'referral'
   query_result: 243.0
   served_answer: 243
-  human: ''
+  human: 'yes'
 - id: V016
   question: What is our ARPU (average monthly recurring revenue per paying user)?
   metric_used: arpu
@@ -171,7 +167,7 @@ cases:
     nullif(count(distinct user_id), 0) AS value FROM fct_subscriptions WHERE is_active
   query_result: 7.2374034141958665
   served_answer: 7.237403414195867
-  human: ''
+  human: 'yes'
 - id: V017
   question: What was our total marketing spend in June 2026?
   metric_used: marketing_spend
@@ -181,7 +177,7 @@ cases:
     <= DATE '2026-06-30'
   query_result: 21013.199999999997
   served_answer: 21013.2
-  human: ''
+  human: 'yes'
 - id: V018
   question: What was the activation rate for users who signed up in June 2026?
   metric_used: activation_rate
@@ -191,7 +187,7 @@ cases:
     AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30'
   query_result: 0.5322283609576427
   served_answer: 0.5322283609576427
-  human: ''
+  human: 'yes'
 - id: V019
   question: How many people who signed up in June 2026 reached their first completed habit within a week?
   metric_used: activation_rate
@@ -202,7 +198,7 @@ cases:
     AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false
   query_result: 0.5322283609576427
   served_answer: 0.5322283609576427
-  human: ''
+  human: 'no'
 - id: V020
   question: What is our current MRR (monthly recurring revenue)?
   metric_used: mrr
@@ -212,4 +208,4 @@ cases:
     FROM fct_subscriptions WHERE is_active
   query_result: 2685.0766666666664
   served_answer: 2685.0766666666664
-  human: ''
+  human: 'yes'
