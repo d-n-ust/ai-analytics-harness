@@ -33,6 +33,8 @@ class ModelSpec:
     # different endpoint/key. base_url=None means the OpenAI default endpoint.
     base_url: str | None = None
     api_key_env: str = "OPENAI_API_KEY"
+    # False = the price above is a PLACEHOLDER (starred as estimated in the cost report).
+    price_confirmed: bool = False
 
 
 def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
@@ -58,9 +60,9 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # OpenAIModel._deepseek_reasoning. Prices are DeepSeek's real published rates
     # (USD / 1M tokens, cache-miss input). Ids verified live against /models 2026-07-23.
     _spec("deepseek-v4-flash", 0.14, 0.28, provider="deepseek",
-          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY"),
+          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY", price_confirmed=True),
     _spec("deepseek-v4-pro", 0.435, 0.87, provider="deepseek",
-          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY"),
+          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY", price_confirmed=True),
 ]}
 
 
