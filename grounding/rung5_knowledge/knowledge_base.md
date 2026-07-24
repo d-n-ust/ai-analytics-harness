@@ -18,12 +18,11 @@ about the world, and how to read vague questions.
   cohort** — not real users. Exclude it from any APAC analysis (filter APAC activity to on/
   after 2026-05-01). A number that includes pre-launch APAC data is overstated.
 
-## World facts (things no table records)
+## Governed segments (facts now enforced by the layer, not this note)
 
-- **The `partnerships` channel is not a real acquisition source.** It is currently a single
-  internal test integration wired up during a partner pilot. Exclude it from signup,
-  acquisition, and marketing-spend reporting — those users and that spend aren't real
-  acquisition. (The data still labels them `partnerships`; only this note tells you to drop them.)
+- **"Real acquisition" excludes test-integration channels.** This is governed: call
+  `query_metric(..., segment=real_acquisition)` for signup/acquisition/spend figures that
+  should drop test channels. You don't need to know *which* channels are test — the layer does.
 
 ## Reading vague questions (mapping business language to metrics)
 

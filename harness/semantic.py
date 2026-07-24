@@ -176,6 +176,28 @@ class SemanticLayer:
                                f"{starts}.")
         return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
 
+    def segment_names(self) -> list[str]:
+        return list(self.governance.get("segments", {}) or {})
+
+    def test_members(self, dimension: str) -> list:
+        """Canonical members of a dimension flagged `test: true` — governed data, so 'is this
+        a test channel' is a lookup, not a rule the model has to remember."""
+        return [name for name, m in self._members(dimension).items() if self._meta(m).get("test")]
+
+    def _segment_where(self, segment: str) -> str:
+        """Compile a governed segment to a WHERE clause. Today's one form is `exclude_test`,
+        which drops a dimension's test members; the segment is definitional, not an analyst
+        filter, so downstream scope checks treat it as part of the definition."""
+        spec = self.governance.get("segments", {}).get(segment)
+        if spec is None:
+            raise SemanticError(
+                f"unknown segment {segment!r}. Governed segments: {', '.join(self.segment_names()) or '(none)'}.")
+        dim = spec.get("exclude_test")
+        if dim:
+            drop = self.test_members(dim)
+            return f"{dim} NOT IN ({', '.join(_literal(v) for v in drop)})" if drop else ""
+        return ""
+
     def allowed_filters(self, metric: str) -> set[str] | None:
         """The dimensions a metric may be filtered by — governed metadata, read once from the
         definition. None when the metric is unknown (the caller then has nothing to check)."""
@@ -226,6 +248,12 @@ class SemanticLayer:
                 bits.append("    point-in-time (as of now); no period filter")
             lines.append("\n".join(bits))
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
+        segs = self.governance.get("segments", {}) or {}
+        if segs:
+            lines.append("\nGoverned segments (pass segment=… to query_metric for a named population):")
+            for name, s in segs.items():
+                also = f" (also: {', '.join(s.get('synonyms', []))})" if s.get("synonyms") else ""
+                lines.append(f"- {name}: {s.get('description', '')}{also}")
         return "\n".join(lines)
 
     # -- compilation ------------------------------------------------------- #
@@ -236,7 +264,7 @@ class SemanticLayer:
         return allowed
 
     def compile(self, name, group_by=None, filters=None, time_grain=None,
-                start=None, end=None, period=None, resolve=True) -> str:
+                start=None, end=None, period=None, resolve=True, segment=None) -> str:
         if name not in self.metrics:
             raise SemanticError(
                 f"unknown metric {name!r}. Available: {', '.join(self.metrics)}")
@@ -260,6 +288,10 @@ class SemanticLayer:
         select.append(f"{m['agg']} AS value")
 
         where = list(m.get("default_filters", []))
+        if segment:
+            clause = self._segment_where(segment)   # a governed named filter (e.g. real_acquisition)
+            if clause:
+                where.append(clause)
         if period is not None:
             try:
                 start, end = resolve_period(period)

@@ -269,12 +269,19 @@ class Toolbox:
         return specs
 
     def _query_metric_spec(self) -> dict:
-        """At the gate rung, constrain `metric` to the actual catalog (a closed menu):
-        the model cannot even *name* a metric that does not exist."""
-        if not (self.gate and self.semantic is not None):
+        """Constrain `metric` to the catalog at the gate rung (a closed menu — the model
+        cannot even *name* a metric that doesn't exist), and offer the governed `segment`
+        enum whenever the layer defines any (a named population filter like real_acquisition)."""
+        if self.semantic is None:
             return _QUERY_METRIC
         props = dict(_QUERY_METRIC["input_schema"]["properties"])
-        props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
+        if self.gate:
+            props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
+        segs = self.semantic.segment_names()
+        if segs:
+            props["segment"] = {"type": "string", "enum": segs,
+                                "description": "A governed named population filter (see list_metrics), "
+                                               "e.g. real_acquisition to exclude test channels."}
         return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
 
     def _answer_spec(self) -> dict:
@@ -378,7 +385,7 @@ class Toolbox:
             sql = self.semantic.compile(
                 metric, group_by=a.get("group_by"), filters=a.get("filters"),
                 time_grain=a.get("time_grain"), start=a.get("start"), end=a.get("end"),
-                period=a.get("period"), resolve=self.resolve)
+                period=a.get("period"), resolve=self.resolve, segment=a.get("segment"))
             window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
                                          if (a.get("start") or a.get("end")) else None)
             ok, mismatch, reason = verifier.verify_trajectory(
@@ -414,7 +421,8 @@ class Toolbox:
                 sql, cols, rows = self.semantic.query_with_sql(
                     args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
                     time_grain=args.get("time_grain"), start=args.get("start"),
-                    end=args.get("end"), period=args.get("period"), resolve=self.resolve)
+                    end=args.get("end"), period=args.get("period"), resolve=self.resolve,
+                    segment=args.get("segment"))
                 text = _fmt_rows(cols, rows)
                 if self.scope_echo:       # R9+: a plain scope line, flagging a narrowed subset
                     text += "\n[scope] " + self.semantic.scope_line(

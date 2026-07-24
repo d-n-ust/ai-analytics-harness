@@ -19,7 +19,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from harness import spec_check
-from harness.semantic import SemanticLayer
+from harness.semantic import SemanticError, SemanticLayer
 from harness.tools import Toolbox
 from harness.warehouse import open_warehouse
 
@@ -355,6 +355,28 @@ class _FakeModel:
         return SimpleNamespace(content=[block])
 
 
+def test_governed_segment_excludes_test_members():
+    """A 'test' channel is governed data, and the real_acquisition segment enforces the
+    exclusion at query time — so excluding test channels is a layer guarantee, not a
+    knowledge-base note the model must remember and apply."""
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    assert sem.test_members("channel") == ["partnerships"]      # the test integration, flagged in data
+    assert "real_acquisition" in sem.segment_names()
+
+    sql = sem.compile("new_signups", start="2026-06-01", end="2026-06-30", segment="real_acquisition")
+    assert "channel NOT IN ('partnerships')" in sql
+    _, _, seg = sem.query_with_sql("new_signups", start="2026-06-01", end="2026-06-30", segment="real_acquisition")
+    _, _, allc = sem.query_with_sql("new_signups", start="2026-06-01", end="2026-06-30")
+    assert seg[0][0] < allc[0][0]                                # the segment really drops rows (453 < 553)
+
+    try:
+        sem.compile("new_signups", segment="not_a_segment")
+        assert False, "expected SemanticError for an unknown segment"
+    except SemanticError:
+        pass
+
+
 def test_region_availability_is_read_from_the_dimension():
     """Coverage windows live on the region dimension member (region.APAC.available_from),
     not a separate coverage.regions list. A member is a synonym list OR a dict with
@@ -520,6 +542,7 @@ if __name__ == "__main__":
     test_grain_of_call()
     test_spec_check_skips_prose_answers()
     test_toolbox_wiring_and_rung_gate()
+    test_governed_segment_excludes_test_members()
     test_region_availability_is_read_from_the_dimension()
     test_ladder_presets_reproduce_the_rung_thresholds()
     test_ablation_cell_is_expressible_and_incoherent_cells_are_named()

@@ -212,6 +212,17 @@ governance:
     # A region's own launch window lives on the region dimension member below
     # (region.APAC.available_from), so availability is a property of the dimension, not a
     # separate coverage list. The coverage check reads it from there.
+  # Governed segments: named, reusable population filters a question maps onto — the
+  # Cube `segments` / LookML `sql_always_where` construct. `exclude_test: <dimension>`
+  # drops every member of that dimension flagged `test: true`. Applied at query time via
+  # query_metric(segment=...), so "real acquisition" is an enforced filter, not prose.
+  # (Distinct from ontology.segments below, the spec-check's abstract population words.)
+  segments:
+    real_acquisition:
+      description: "Real acquisition only — excludes test-integration channels."
+      synonyms: ["real acquisition", "real channels", "real acquisition channels"]
+      exclude_test: channel
+
   # Answerability terms: segment words a question might NAME that have a governed
   # definition, consulted by check_segment_defined / segment_defined() at rung 3.
   # (Distinct from the R6 ontology.segments below, which are the spec-check segments.)
@@ -291,7 +302,12 @@ governance:
       paid_search: ["paid search", "sem", "ppc", "google ads", "paid"]
       organic: ["organic", "direct"]
       content_seo: ["content", "seo", "content marketing", "blog"]
-      partnerships: ["partnerships", "partners", "partner"]
+      # `test: true` marks a channel that isn't real acquisition (a test integration).
+      # Governed, so the exclusion is enforced by the real_acquisition segment below —
+      # not a knowledge-base note the model has to remember and choose to apply.
+      partnerships:
+        synonyms: ["partnerships", "partners", "partner"]
+        test: true
       referral: ["referral", "referrals", "word of mouth", "invites"]
     country:
       US: ["us", "usa", "united states"]
