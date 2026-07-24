@@ -1,5 +1,13 @@
 # R6+ — Semantic Tests: design & roadmap
 
+> **Superseded historical design note — kept for the reasoning, not as current documentation.**
+> This planned an R6–R11 "semantic ladder"; the reliability ladder that actually shipped is
+> **R0–R9** (see [`docs/RELIABILITY.md`](../docs/RELIABILITY.md)). Several mechanisms below were not
+> built as described, and the deterministic 4-slot check that *was* built has since been **retired**
+> (the LLM trajectory verifier subsumes it). Paths/names here (`grounding.py`, `_RRUNG_PRICE`,
+> `rrung`) are pre-refactor. Its lasting value is the reasoning — the generation-vs-verification
+> asymmetry, the floor-vs-lever split, and the "wrong metric for the question" failure class.
+
 Working notes for the **next rungs** of the reliability ladder. Each mechanism below is
 its own rung: it adds exactly one capability, and it gets measured for its own
 incremental boost, the same way R1–R5 each added one thing. Some may prove duds (the way
