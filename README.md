@@ -24,17 +24,17 @@ question drift.
 
 A canonical agent, named the way the field names it:
 
-- **Orchestrator** (`harness/agent.py`) — the control loop: call the model, run the tool it asks
+- **Orchestrator** (`agent/orchestrator.py`) — the control loop: call the model, run the tool it asks
   for, feed the result back, stop on a terminal tool. The part that is *not* the model.
-- **Model** (`harness/models.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
+- **Model** (`agent/models.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
   DeepSeek behind one interface). The interchangeable part.
-- **Tools** (`harness/tools.py`) — the action space: governed metric queries, raw SQL (until the
+- **Tools** (`agent/tools.py`) — the action space: governed metric queries, raw SQL (until the
   fence removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
   `clarify`, so every run ends in a *typed outcome*, never a sentence to grep.
-- **Context** (`harness/grounding.py` + `grounding/`) — what the agent is given: the star schema,
-  the semantic layer, verified example queries, the knowledge base, the metric tree. This is the
-  grounding-ladder axis.
-- **Guardrails** (`harness/guardrails.py`, `harness/verifier.py`) — the reliability stack: the gate,
+- **Context** (`agent/prompt.py`, over `warehouse/` · `semantic/` · `context/`) — what the agent is
+  given: the star schema, the semantic layer, verified example queries, the knowledge base, the
+  metric tree. This is the grounding-ladder axis.
+- **Guardrails** (`agent/guardrails.py`, `agent/verifier.py`) — the reliability stack: the gate,
   the fence, member resolution, single-metric enforcement, output validation, the trajectory
   verifier. Controls the system *enforces*, not behaviours the model chooses. This is the
   reliability-ladder axis.
@@ -75,7 +75,7 @@ beats the example); rung 6 buys **usefulness** — the jump from "what was the n
 
 The grounding ladder makes the agent *capable*. The reliability ladder makes it *trustworthy* —
 answer when the data supports it, and **refuse with a typed reason** when it does not, instead of
-serving a confident wrong number. Each rung switches on one guardrail (`harness/guardrails.py`):
+serving a confident wrong number. Each rung switches on one guardrail (`agent/guardrails.py`):
 
 | Rung | Guardrail | What it stops |
 |---|---|---|
@@ -103,18 +103,21 @@ finalized.*
 
 ```bash
 make install      # uv sync
-make data         # generate data/warehouse.duckdb (deterministic)
+make data         # generate warehouse/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
 cp .env.example .env && $EDITOR .env   # OPENAI_API_KEY (and ANTHROPIC_API_KEY / DEEPSEEK_API_KEY as needed)
 make eval         # the grounding experiment: 57 questions x 6 rungs x {gpt-5.6-terra,gpt-5.4-mini} x 5 reps
 ```
 
-Vary the **reliability** ladder with `--rrungs`, or run explicit ablation cells with `--cells`:
+Everything runs through one CLI — `./bench <verb>` (a thin wrapper over `python -m cli`):
+`data · verify · query · ask · run · regrade · report · test`. Vary the **reliability** ladder
+with `--rrungs`, or run explicit ablation cells with `--cells`:
 
 ```bash
-python run.py eval --rungs 3 --rrungs 0,1,3,4,7,9      # hold grounding fixed, climb the guardrail ladder
-python run.py eval --rungs 3 --cells R9,R9-resolve      # R9 vs R9-minus-one-control
+./bench run --rungs 3 --rrungs 0,1,3,4,7,9    # hold grounding fixed, climb the guardrail ladder
+./bench run --rungs 3 --cells R9,R9-resolve   # R9 vs R9-minus-one-control
+./bench ask "how many active users?" --rung 3 --guardrails R9   # one question at any cell
 ```
 
 Ask a single question at one rung:
@@ -157,14 +160,21 @@ fallible and sanity-checked — benchmark "gold" is wrong more often than anyone
 ## Layout
 
 ```
-data/         synthetic warehouse generator (messy raw + clean star)
-grounding/    per-rung context: star schema, semantic layer, verified examples, knowledge base, metric tree
-harness/      the agent: orchestrator loop, tools, model adapters, semantic compiler, tree walk,
+warehouse/    the data platform: generator, DuckDB I/O, star schema (dim_/fct_ views)
+semantic/     the governed model: the semantic layer (metrics/segments) + the metric tree
+context/      what the agent is GIVEN: verified example queries + the knowledge base (text, no code)
+agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
               guardrails, and the answer verifier
-evaluation/   the 57 questions (evals/), gold answers, and the expect-driven grader
-results/      per-run summaries (summary.md); raw rows regenerate with a run
-run.py        CLI: data | ask | eval | regrade
+eval/         the 57 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
+cli/          the `bench` entry point (one dispatcher over every verb)
+experiments/  pre-registrations + findings logs
+docs/         ANATOMY · DATA · GROUNDING · RELIABILITY
+results/      per-run summaries; raw rows regenerate with a run
 ```
+
+See [`docs/ANATOMY.md`](docs/ANATOMY.md) for the file→component map, and
+[`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the two
+experiments.
 
 ## Results
 
