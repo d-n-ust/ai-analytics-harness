@@ -125,7 +125,8 @@ def row(label, m):
 
 # --- 1. reliability ladder ---
 out("## 1. Reliability ladder — orchestrator **gpt-5-mini @ minimal** · verifier **gpt-5-mini @ low** · n=3")
-out("| config " + COLS); out(SEP)
+out("| config " + COLS)
+out(SEP)
 for rr in range(10):
     out(row(f"R{rr}", metrics(cell_rows(RELIAB, rr))))
 out("_The **confident-wrong cliff**: cw/rep stays ~4–6 from R0 through R7, then drops only at **R8 "
@@ -138,7 +139,8 @@ out("## 1b. The four-cell frame — reliability ladder (same setup as §1)")
 out("_**Trust the YES** (it answered) = precision (right value) + relevancy (right metric). "
     "**Trust the NO** (it refused) = grounded (refusal warranted) + reason-accuracy (right coded reason). "
     "relevancy reads the model's declared source_metric, collected only at R7+._")
-out("| config | precision | relevancy | grounded | reason-accuracy |"); out("|---|---|---|---|---|")
+out("| config | precision | relevancy | grounded | reason-accuracy |")
+out("|---|---|---|---|---|")
 for rr in range(10):
     m = metrics(cell_rows(RELIAB, rr))
     rel = pct(m["relevancy"]) if m["relevancy"] is not None else "n/a"
@@ -147,7 +149,8 @@ out()
 
 # --- 2. grounding ladder ---
 out("## 2. Grounding ladder — orchestrator **gpt-5-mini @ minimal** · no verifier (grounding run) · n=3")
-out("| rung " + COLS); out(SEP)
+out("| rung " + COLS)
+out(SEP)
 RN = {1: "messy", 2: "star", 3: "semantic", 4: "+examples", 5: "+KB", 6: "+tree"}
 for rg in range(1, 7):
     out(row(f"R{rg} {RN[rg]}", metrics(rung_rows(GROUND, rg))))
@@ -157,7 +160,8 @@ out()
 out("## 3. Orchestrator reasoning study — minimal vs low vs high (verifier held **gpt-5-mini @ low**)")
 out("_Only the ORCHESTRATOR's reasoning changes; the verifier is constant. conf-wrong & fabricated are "
     "per-rep counts. minimal=n3, low=n3 at R3/R5/R7 (n1 at R9), high=n1, terra shown for reference (n1)._")
-out("| cell | ORCHESTRATOR | cov | precision | grounded | cw/rep | fab/rep |"); out("|---|---|---|---|---|---|---|")
+out("| cell | ORCHESTRATOR | cov | precision | grounded | cw/rep | fab/rep |")
+out("|---|---|---|---|---|---|---|")
 LOW = {3: LOW3_3, 5: LOW3_57, 7: LOW3_57, 9: LOW1}
 for rr in (3, 5, 7, 9):
     setups = [("gpt-5-mini @ minimal", cell_rows(RELIAB, rr)),
@@ -197,9 +201,11 @@ out("## 4. Verifier comparison at R9 — gpt-5-mini vs gpt-5.6-terra (both @ low
 out("_Orchestrator is gpt-5.6-terra @ none for both. Only the VERIFIER model differs; verifier reasoning "
     "held at **low** (its reasoning LEVEL was not swept). CAVEAT: the worker re-sampled and its API path "
     "changed (chat→responses) between the two, so this is directional, not a clean verifier-only swap._")
-out("| verifier (model @ reasoning) | cov | precision | grounded | verdicts pass/fail |"); out("|---|---|---|---|---|")
+out("| verifier (model @ reasoning) | cov | precision | grounded | verdicts pass/fail |")
+out("|---|---|---|---|---|")
 out("| gpt-5-mini @ low | 68% | 100% | 100% | 16 / 3 |")
-r9 = metrics(cell_rows(TERRA, 9)); p, f = vpassfail(cell_rows(TERRA, 9))
+r9 = metrics(cell_rows(TERRA, 9))
+p, f = vpassfail(cell_rows(TERRA, 9))
 out(f"| gpt-5.6-terra @ low | {pct(r9['cov'])} | {pct(r9['prec'])} | {pct(r9['grd'])} | {p} / {f} |")
 out("_The two verifiers land on essentially the same R9 (100% precision, 100% grounded, ~65% coverage) — a "
     "stronger, matched-to-worker verifier did not change the outcome._")
@@ -211,7 +217,8 @@ out("| run | orchestrator | rows | in tok | out tok | cached | est $ | lat p50 |
 out("|---|---|---|---|---|---|---|---|---|---|")
 for name, rows in [("reliability ladder", RELIAB), ("grounding ladder", GROUND), ("terra ladder", TERRA),
                    ("reasoning low", LOW1), ("reasoning high", HIGH1)]:
-    m = metrics(rows); o, _, _ = cfg(rows)
+    m = metrics(rows)
+    o, _, _ = cfg(rows)
     out(f"| {name} | {o[0]}@{o[1]} | {m['n']:,} | {m['intok']:,} | {m['outtok']:,} | {m['cachepct']*100:.0f}% "
         f"| ${m['usd']:.2f} | {lat(m['p50'])} | {lat(m['p90'])} | {lat(m['p99'])} |")
 out("\n_USD: terra is cache-discounted real; mini runs predate cache capture → upper bound. Latency wall-clock at "
