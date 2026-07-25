@@ -42,6 +42,9 @@ class ModelSpec:
     api_key_env: str = "OPENAI_API_KEY"
     # False = the price above is a PLACEHOLDER (starred as estimated in the cost report).
     price_confirmed: bool = False
+    # gpt-5.6 rejects function tools + reasoning_effort on /v1/chat/completions; it needs the
+    # Responses API (/v1/responses). True routes this model's calls through _create_responses.
+    use_responses_api: bool = False
 
 
 def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
@@ -58,7 +61,7 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # OpenAI. Prices are placeholders (gpt-5.4-mini is far cheaper than the flagship).
     # OpenAI list price, corroborated across aipricing.guru + pricepertoken + OpenRouter (2026-07-25);
     # cached input reads at $0.25/1M (10% of input), captured per-call so USD is real, not an upper bound.
-    _spec("gpt-5.6-terra", 2.50, 15.0, price_confirmed=True),
+    _spec("gpt-5.6-terra", 2.50, 15.0, price_confirmed=True, use_responses_api=True),
     _spec("gpt-5.4-mini", 0.25, 2.0),
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
     _spec("gpt-5-mini", 0.25, 2.0, price_confirmed=True),
@@ -164,6 +167,77 @@ class OpenAIModel:
                  "function": {"name": t["name"], "description": t.get("description", ""),
                               "parameters": t["input_schema"]}} for t in tools]
 
+    # ----- Responses API (/v1/responses) — for gpt-5.6 tools + reasoning ----------------------- #
+    @staticmethod
+    def _to_responses_tools(tools: list) -> list:
+        """Responses tools are FLAT — no nested "function" wrapper (unlike chat-completions)."""
+        return [{"type": "function", "name": t["name"], "description": t.get("description", ""),
+                 "parameters": t["input_schema"]} for t in tools]
+
+    @staticmethod
+    def _to_responses_input(messages: list) -> list:
+        """Same internal block shape as _to_openai_messages, different wire format: a flat input
+        list where a tool call is a `function_call` item and a tool result is a `function_call_output`
+        item (linked by call_id), rather than assistant.tool_calls + a `tool` role."""
+        out: list = []
+        for m in messages:
+            role, content = m["role"], m["content"]
+            if role == "user" and isinstance(content, str):
+                out.append({"role": "user", "content": content})
+            elif role == "user":                                  # tool_result blocks
+                for b in content:
+                    if isinstance(b, dict) and b.get("type") == "tool_result":
+                        out.append({"type": "function_call_output",
+                                    "call_id": b["tool_use_id"], "output": str(b["content"])})
+            elif role == "assistant":                             # our SimpleNamespace blocks
+                for b in content:
+                    if getattr(b, "type", None) == "text" and (b.text or ""):
+                        out.append({"role": "assistant", "content": b.text})
+                    elif getattr(b, "type", None) == "tool_use":
+                        out.append({"type": "function_call", "call_id": b.id, "name": b.name,
+                                    "arguments": json.dumps(b.input or {})})
+        return out
+
+    def _create_responses(self, system: str, messages: list, tools: list,
+                          force_tool: str | None, require_tool: bool):
+        """gpt-5.6 path. Same in/out contract as create(); the Responses API is the only surface
+        that accepts function tools together with reasoning_effort. reasoning items are dropped
+        from the returned transcript (they are the model's private trace)."""
+        kw = dict(
+            model=self.spec.model_id,
+            instructions=system,
+            input=self._to_responses_input(messages),
+            tools=self._to_responses_tools(tools),
+            tool_choice=({"type": "function", "name": force_tool} if force_tool
+                         else "required" if require_tool else "auto"),
+            max_output_tokens=MAX_TOKENS,
+            store=False,
+        )
+        if self.spec.supports_reasoning_effort:
+            kw["reasoning"] = {"effort": self.reasoning}          # none / low / medium / high
+        resp = self.client.responses.create(**kw)
+        blocks = []
+        for item in resp.output:
+            t = getattr(item, "type", None)
+            if t == "message":
+                for part in (getattr(item, "content", None) or []):
+                    if getattr(part, "type", None) == "output_text":
+                        blocks.append(SimpleNamespace(type="text", text=part.text))
+            elif t == "function_call":
+                try:
+                    args = json.loads(item.arguments or "{}")
+                except json.JSONDecodeError:
+                    args = {}
+                blocks.append(SimpleNamespace(type="tool_use", id=item.call_id,
+                                              name=item.name, input=args))
+        stop = "tool_use" if any(getattr(b, "type", None) == "tool_use" for b in blocks) else "end_turn"
+        u = resp.usage
+        cached = getattr(getattr(u, "input_tokens_details", None), "cached_tokens", 0) or 0
+        usage = SimpleNamespace(input_tokens=getattr(u, "input_tokens", 0),
+                                output_tokens=getattr(u, "output_tokens", 0),
+                                cache_creation_input_tokens=0, cache_read_input_tokens=cached)
+        return SimpleNamespace(content=blocks, stop_reason=stop, usage=usage)
+
     def _deepseek_reasoning(self) -> dict:
         """DeepSeek V4's reasoning dialect: a nested thinking on/off toggle, plus a
         top-level reasoning_effort that accepts only high/max. Our canonical 'none'
@@ -180,6 +254,8 @@ class OpenAIModel:
     def create(self, system: str, messages: list, tools: list,
                force_tool: str | None = None, temperature: float | None = None,
                require_tool: bool = False):
+        if self.spec.use_responses_api:                           # gpt-5.6: tools + reasoning
+            return self._create_responses(system, messages, tools, force_tool, require_tool)
         kw = dict(
             model=self.spec.model_id,
             messages=self._to_openai_messages(system, messages),

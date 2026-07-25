@@ -71,6 +71,36 @@ def test_tools_schema_mapping():
     assert out[0]["function"]["parameters"] == {"type": "object", "properties": {"x": {"type": "string"}}}
 
 
+# ----- Responses API adapter (gpt-5.6: tools + reasoning) ----------------------------------- #
+def test_responses_input_user_string():
+    assert OpenAIModel._to_responses_input([{"role": "user", "content": "hi"}]) == \
+        [{"role": "user", "content": "hi"}]
+
+
+def test_responses_input_threads_tool_call_and_result_by_call_id():
+    # Responses uses function_call / function_call_output items linked by call_id — NOT chat's
+    # assistant.tool_calls + a `tool` role. A broken linkage here is a silent paid-run failure.
+    msgs = [{"role": "assistant",
+             "content": [_text("look"), _tool_use("c1", "query_metric", {"metric": "mrr"})]},
+            {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "c1", "content": "42"}]}]
+    out = OpenAIModel._to_responses_input(msgs)
+    assert {"role": "assistant", "content": "look"} in out
+    fc = next(i for i in out if i.get("type") == "function_call")
+    assert fc["call_id"] == "c1" and fc["name"] == "query_metric"
+    assert json.loads(fc["arguments"]) == {"metric": "mrr"}
+    fo = next(i for i in out if i.get("type") == "function_call_output")
+    assert fo["call_id"] == "c1" and fo["output"] == "42"
+
+
+def test_responses_tools_are_flat():
+    tools = [{"name": "answer", "description": "end",
+              "input_schema": {"type": "object", "properties": {"x": {"type": "string"}}}}]
+    out = OpenAIModel._to_responses_tools(tools)
+    assert out[0]["type"] == "function" and out[0]["name"] == "answer"
+    assert "function" not in out[0]                       # flat — no nested wrapper
+    assert out[0]["parameters"]["properties"] == {"x": {"type": "string"}}
+
+
 if __name__ == "__main__":
     test_system_and_user_string()
     test_assistant_text_plus_tool_use_roundtrips()
@@ -78,4 +108,7 @@ if __name__ == "__main__":
     test_tool_result_maps_to_tool_role()
     test_tool_use_with_no_input_is_empty_object()
     test_tools_schema_mapping()
-    print("OK - openai adapter: message-shape + tool-schema conversions all pass.")
+    test_responses_input_user_string()
+    test_responses_input_threads_tool_call_and_result_by_call_id()
+    test_responses_tools_are_flat()
+    print("OK - openai adapter: chat + responses shape conversions all pass.")
