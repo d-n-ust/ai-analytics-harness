@@ -35,20 +35,21 @@ class Answer:
     iterations: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    cached_tokens: int = 0          # OpenAI prompt-cache HITS (a subset of input_tokens, billed ~10%)
     error: str | None = None
     steps: list = field(default_factory=list)
 
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
     messages: list = [{"role": "user", "content": question}]
-    in_tok = out_tok = tool_calls = 0
+    in_tok = out_tok = cached_tok = tool_calls = 0
     steps: list = []
     nudges = 0
 
     def answer(**kw) -> Answer:
         return Answer(question=question, rung=grounding.rung, model=model.spec.name,
                       tool_calls=tool_calls, input_tokens=in_tok, output_tokens=out_tok,
-                      steps=steps, **kw)
+                      cached_tokens=cached_tok, steps=steps, **kw)
 
     for it in range(max_iters):
         # Closing phase. Once the model has stopped calling tools, or on the last iteration,
@@ -62,6 +63,7 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         u = getattr(resp, "usage", None)
         in_tok += getattr(u, "input_tokens", 0) or 0
         out_tok += getattr(u, "output_tokens", 0) or 0
+        cached_tok += getattr(u, "cache_read_input_tokens", 0) or 0
 
         blocks = list(resp.content)
         messages.append({"role": "assistant", "content": blocks})

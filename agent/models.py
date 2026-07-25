@@ -56,7 +56,9 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     _spec("claude-haiku-4-5", 1.0, 5.0, "anthropic"),
     _spec("claude-sonnet-5", 3.0, 15.0, "anthropic", {"type": "disabled"}),
     # OpenAI. Prices are placeholders (gpt-5.4-mini is far cheaper than the flagship).
-    _spec("gpt-5.6-terra", 1.25, 10.0),
+    # OpenAI list price, corroborated across aipricing.guru + pricepertoken + OpenRouter (2026-07-25);
+    # cached input reads at $0.25/1M (10% of input), captured per-call so USD is real, not an upper bound.
+    _spec("gpt-5.6-terra", 2.50, 15.0, price_confirmed=True),
     _spec("gpt-5.4-mini", 0.25, 2.0),
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
     _spec("gpt-5-mini", 0.25, 2.0, price_confirmed=True),
@@ -207,9 +209,13 @@ class OpenAIModel:
                                           name=tc.function.name, input=args))
         stop = "tool_use" if msg.tool_calls else "end_turn"
         u = resp.usage
+        # OpenAI reports cache HITS in prompt_tokens_details.cached_tokens (a subset of prompt_tokens),
+        # billed at ~10% of input. Capturing it turns the USD estimate from an upper bound into the
+        # real cost. Caching itself is automatic server-side; there is nothing to switch on.
+        cached = getattr(getattr(u, "prompt_tokens_details", None), "cached_tokens", 0) or 0
         usage = SimpleNamespace(input_tokens=getattr(u, "prompt_tokens", 0),
                                 output_tokens=getattr(u, "completion_tokens", 0),
-                                cache_creation_input_tokens=0, cache_read_input_tokens=0)
+                                cache_creation_input_tokens=0, cache_read_input_tokens=cached)
         return SimpleNamespace(content=blocks, stop_reason=stop, usage=usage)
 
 

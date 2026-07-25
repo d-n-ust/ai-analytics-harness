@@ -40,7 +40,9 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 3   # v3: rows carry `off_governance` (right digits, ungoverned path)
+ROW_SCHEMA_VERSION = 4   # v4: rows carry `cached_tokens` (prompt-cache hits, for real USD)
+
+CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
 
 # --------------------------------------------------------------------------- #
@@ -101,11 +103,17 @@ def _std(vals) -> float | None:
 
 
 def _usd(rows) -> float:
+    """Real cost when cache hits are recorded: the cached slice of input bills at 10%, the rest at
+    full price. Rows without `cached_tokens` (pre-v4, or non-OpenAI) treat cached as 0 → upper bound."""
     total = 0.0
     for r in rows:
         spec = MODEL_SPECS.get(r["model"])
         if spec:
-            total += (r["input_tokens"] * spec.input_price + r["output_tokens"] * spec.output_price) / 1e6
+            cached = r.get("cached_tokens", 0) or 0
+            fresh = max(0, r["input_tokens"] - cached)
+            total += (fresh * spec.input_price
+                      + cached * spec.input_price * CACHED_INPUT_DISCOUNT
+                      + r["output_tokens"] * spec.output_price) / 1e6
     return total
 
 
@@ -255,6 +263,7 @@ def aggregate(rows) -> dict:
             "telemetry": {
                 "in_tokens": sum(r["input_tokens"] for r in rs),
                 "out_tokens": sum(r["output_tokens"] for r in rs),
+                "cached_tokens": sum(r.get("cached_tokens", 0) or 0 for r in rs),
                 "usd": round(_usd(rs), 4),
                 "latency_s": {"mean": round(sum(lat) / len(lat), 1) if lat else None,
                               "p50": _pctl(lat, 0.50), "p90": _pctl(lat, 0.90), "p99": _pctl(lat, 0.99)},
@@ -282,6 +291,7 @@ def aggregate(rows) -> dict:
                  "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
+                 "cache_measured": any(r.get("cached_tokens") for r in rows),
                  "verifier": {"model": first.get("verifier_model"),
                               "reasoning": first.get("verifier_reasoning")}},
         "cells": {m: dict(c) for m, c in per_cell.items()},
@@ -510,21 +520,24 @@ def render_markdown(summary: dict) -> str:
 
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:
+        usd_note = ("reflects the **measured** prompt-cache discount (cache hits billed at 10% of input)"
+                    if meta.get("cache_measured") else
+                    "is an **upper bound** — no cache hits recorded, so full input price is applied")
         L += ["", f"## Telemetry — {m}", "",
-              "_USD is **estimated** — full input price, no prompt-cache discount, so it is an upper "
-              f"bound{' · ★ = placeholder price' if meta['prices_estimated'] else ''}. "
-              "Latency is wall-clock on a shared API; a concurrent run (--concurrency > 1) overlaps "
-              "requests, so p50/p90/p99 include queueing under load — read the delta BETWEEN cells, "
-              "not the absolute._", "",
-              f"| {axis} | in tok | out tok | est. USD{star} | lat p50 | p90 | p99 |",
-              "|" + "---|" * 7]
+              f"_USD {usd_note}{' · ★ = placeholder price' if meta['prices_estimated'] else ''}. "
+              "**cached** = share of input tokens served from the prompt cache. Latency is wall-clock "
+              "on a shared API; a concurrent run (--concurrency > 1) overlaps requests, so p50/p90/p99 "
+              "include queueing under load — read the delta BETWEEN cells, not the absolute._", "",
+              f"| {axis} | in tok | out tok | cached | est. USD{star} | lat p50 | p90 | p99 |",
+              "|" + "---|" * 8]
         for c in _cells_for(summary, m):
             t = summary["cells"][m][c]["telemetry"]
             lat = t["latency_s"]
+            cpct = f"{t.get('cached_tokens', 0) / t['in_tokens']:.0%}" if t.get("in_tokens") else "—"
 
             def _s(x):
                 return "—" if x is None else f"{x:.1f}"
-            L.append(f"| {c} | {t['in_tokens']:,} | {t['out_tokens']:,} | ${t['usd']:.2f}{star} "
+            L.append(f"| {c} | {t['in_tokens']:,} | {t['out_tokens']:,} | {cpct} | ${t['usd']:.2f}{star} "
                      f"| {_s(lat['p50'])} | {_s(lat['p90'])} | {_s(lat['p99'])} |")
 
     # 7. Drill-down — every wrong number
