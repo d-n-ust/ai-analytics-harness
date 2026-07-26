@@ -35,9 +35,24 @@ _V_REASON = {kind: f"verifier_wrong_{kind}" for kind in
 # Deterministic output checks: provenance (single-metric, R7) + validation (R8)
 # --------------------------------------------------------------------------- #
 def num_match(a: float, b: float) -> bool:
-    """Two reported numbers are the same value, tolerant of rounding but not of distinct
-    integers (886 != 18866, and adjacent counts 371 != 372 stay distinct)."""
-    return abs(a - b) <= max(0.5, 0.005 * abs(b))
+    """Is one of these numbers a ROUNDING of the other?
+
+    This is an identity test, not an approximation test — single_metric asks whether the served
+    number IS a governed result, and the only difference it should forgive is the model writing
+    2685.08 for 2685.0766666.
+
+    It used to be a tolerance band, `abs(a - b) <= max(0.5, 0.005 * abs(b))`, which failed at
+    both ends. The 0.5 floor is large for a ratio: days_per_user 2.27 and 2.69 — two different
+    weeks — counted as the same number, and the check validated whichever it happened to reach
+    first. The 0.5% term is large for a count: 371 and 372 matched, which the old docstring
+    explicitly promised they would not.
+
+    Rounding to significant figures is deliberately not forgiven. A model writing 2690 for
+    2685.08 has not served a governed result; it has served an approximation of one, and this
+    guardrail exists to tell those apart."""
+    if a == b:
+        return True
+    return any(a == round(b, k) or b == round(a, k) for k in range(7))
 
 
 def step_values(step: dict) -> list:

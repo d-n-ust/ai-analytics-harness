@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+import textwrap
 
 from agent.guardrails import GUARDRAILS, Position, parse_cell
 
@@ -148,11 +149,16 @@ def _step_lines(step: dict, width: int, paint) -> list[str]:
     return lines
 
 
-def _outcome_lines(row: dict, paint) -> list[str]:
+def _outcome_lines(row: dict, width: int, paint) -> list[str]:
     outcome = row.get("outcome", "?")
     colour = {"answer": "ok", "refuse": "warn", "clarify": "cyan", "error": "bad"}.get(outcome, "dim")
-    said = row.get("answer") or row.get("explanation") or ""
-    lines = [f"  {paint(outcome.upper(), colour)}  {_short(said, 92)}"]
+    # The served answer is the one thing in a trace that is never cut. Everything else here is
+    # evidence about it and can be summarised; this IS the output, and a trace that hides half
+    # of it cannot be used to check the half it shows. Long text wraps instead.
+    said = " ".join(str(row.get("answer") or row.get("explanation") or "").split())
+    body = textwrap.wrap(said, max(40, width - 10)) or [""]
+    lines = [f"  {paint(outcome.upper(), colour)}  {body[0]}"]
+    lines += [f"          {line}" for line in body[1:]]
     if row.get("declared_value") is not None:
         typed = f"value={row['declared_value']:g}"
         if row.get("source_metric"):
@@ -219,5 +225,5 @@ def render(row: dict, colour: bool | None = None) -> str:
         parts.append(f"tools {sum(tool_timed):.0f}ms")
     if not (timed or tool_timed):
         parts.append("no timings recorded")
-    foot = [rule] + _outcome_lines(row, paint) + [f"  {paint(' · '.join(parts), 'dim')}", rule]
+    foot = [rule] + _outcome_lines(row, width, paint) + [f"  {paint(' · '.join(parts), 'dim')}", rule]
     return "\n".join(head + [""] + body + foot)

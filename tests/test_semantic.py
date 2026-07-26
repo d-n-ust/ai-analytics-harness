@@ -208,6 +208,26 @@ def test_the_judge_stance_is_a_treatment_with_two_levels():
             os.environ["VERIFIER_STANCE"] = before
 
 
+def test_a_served_number_must_be_a_rounding_of_a_governed_one():
+    """single_metric asks whether the served number IS a governed result. The only difference it
+    should forgive is display rounding — 2685.08 for 2685.0766666.
+
+    The old tolerance band failed at both ends. Its 0.5 absolute floor is huge for a ratio, so
+    days_per_user 2.27 and 2.69 (two different weeks) counted as the same number and the checks
+    validated whichever they reached first. Its 0.5% term is huge for a count, so 371 and 372
+    matched — which the docstring explicitly promised they would not."""
+    from agent.guardrails.after import num_match
+
+    for a, b in [(2685.08, 2685.0766666), (886, 886.0), (5648, 5648), (0.53, 0.5299999999)]:
+        assert num_match(a, b), f"{a} is a rounding of {b} and must match"
+    for a, b in [(2.27088, 2.68852),        # two weeks of the same ratio metric
+                 (371, 372),                # adjacent counts
+                 (0.53, 0.99),              # two different shares
+                 (2690, 2685.0766),         # rounded to significant figures, not a governed value
+                 (886, 18866)]:
+        assert not num_match(a, b), f"{a} is NOT a rounding of {b} and must not match"
+
+
 def test_metrics_conform_to_ontology():
     """Every metric's entity + segment must be a value the ontology declares, so the metric
     definitions stay in one governed vocabulary."""
@@ -518,6 +538,7 @@ if __name__ == "__main__":
     test_provenance_reads_the_row_the_answer_came_from()
     test_dispatcher_records_the_measure_not_every_cell()
     test_the_judge_stance_is_a_treatment_with_two_levels()
+    test_a_served_number_must_be_a_rounding_of_a_governed_one()
     test_metrics_conform_to_ontology()
     test_output_validation_catches_degenerate_values()
     test_value_resolver()
