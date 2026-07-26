@@ -141,6 +141,19 @@ def _verifier_validation() -> dict | None:
     return v
 
 
+def _verifier_vs_gold() -> dict | None:
+    """The judge scored against the independent gold, if that has been computed
+    (evals/components/verifier_vs_gold.py). Carries the fingerprint it was measured on, so a
+    score taken against a different verifier prompt is flagged rather than read as current."""
+    from agent.guardrails.judge import prompt_fingerprint
+    path = Path(__file__).resolve().parent / "labels" / "verifier_vs_gold.json"
+    if not path.exists():
+        return None
+    v = json.loads(path.read_text())
+    v["current_fingerprint"] = prompt_fingerprint()
+    return v
+
+
 def _varied_axis(rows):
     """Which axis the run varied — the report's primary key. `config` (the guardrail cell) when it
     varies; otherwise the grounding `rung`. Returns (axis_name, cell_label_fn)."""
@@ -359,6 +372,17 @@ def render_markdown(summary: dict) -> str:
                  f"false-flag {vv.get('false_flag_rate')} (audit {vv.get('date')}){flag}._")
     elif "verifier_validation" in meta:      # write() set it, but no record exists on disk
         L.append("_verifier: NOT VALIDATED against human labels — run evals/components/verifier_audit.py._")
+    # The cheap, always-current complement: every numeric question carries a gold_sql computed
+    # straight off the fact tables, so the judge can be scored on those rows with no labelling
+    # and no model calls. It does not replace the panel — diagnostic and keyword rows have no
+    # numeric gold and stay unscored — but it never goes stale the way labels do.
+    vg = meta.get("verifier_vs_gold")
+    if vg:
+        fresh = "" if vg.get("prompt_fingerprint") == vg.get("current_fingerprint") else \
+            " ⚠ measured on a DIFFERENT verifier prompt"
+        L.append(f"_verifier vs independent gold: n={vg['n']} · agreement {vg['agreement']:.1%} · "
+                 f"false-flag {vg['false_flag_rate']:.1%} · catch {vg['catch_rate']:.1%} "
+                 f"(numeric questions only; gold_sql bypasses the semantic layer){fresh}._")
 
     # 0b. Cross-model leaderboard — key metrics at each model's final operating point (only with >1 model)
     if len(meta["models"]) > 1:
@@ -580,6 +604,7 @@ def write(rows, run_dir: Path, mock: bool = False) -> dict:
     summary = aggregate(rows)
     summary["meta"]["mock"] = mock
     summary["meta"]["verifier_validation"] = _verifier_validation()
+    summary["meta"]["verifier_vs_gold"] = _verifier_vs_gold()
     if summary["meta"].get("schema_skew"):
         print(f"  WARNING: row-schema skew — some rows predate v{ROW_SCHEMA_VERSION}; missing fields "
               "read as None. Re-run to refresh, or migrate before comparing across the boundary.")

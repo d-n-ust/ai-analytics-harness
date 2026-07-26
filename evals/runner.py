@@ -147,6 +147,11 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "value_recovered": ans.value_recovered,
             "verifier_verdict": ans.verifier_verdict, "score": g["score"],
             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
+            # How many times round the orchestrator loop. A multi-step loop multiplies
+            # per-step error, so the step count is the denominator for that — and it was
+            # carried on the Answer, threaded through every exit, and then dropped here,
+            # leaving `iterations` null in every row ever written.
+            "iterations": ans.iterations,
             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
             "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,

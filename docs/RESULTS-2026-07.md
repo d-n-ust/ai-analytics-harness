@@ -47,6 +47,49 @@ single most important reporting decision here.
 
 Pooling these into one accuracy number hides the entire finding, so nothing here pools them.
 
+### How each question is graded, and where that is weak
+
+| grading | questions | rows/cell | how |
+|---|---|---|---|
+| `refuse` | 31 | 93 | did it decline, and name the expected coded reason |
+| `metric_answer` | 17 | 51 | is the number within tolerance of an **independent** `gold_sql` |
+| `diagnostic` / `keywords` | 9 | 27 | **keyword match over prose** |
+
+`metric_answer` is the strong one: `gold_sql` computes the answer straight from the fact tables
+and never touches the semantic layer the agent used, so a wrong metric definition cannot make a
+wrong answer look right.
+
+**27 of 171 rows per cell are scored by keyword match over free text**, and that is the weakest
+instrument here — a keyword grader rewards saying the word, not being right. It does not drive
+the headline results: coverage, precision and groundedness are computed on numeric and refusal
+rows, and the answerable/reliability split moves by tens of rows where this could move a handful.
+But `diagnostic` figures quoted on their own carry that caveat, and the honest fix is a validated
+judge for prose answers rather than a longer keyword list.
+
+### Is the verifier itself trustworthy?
+
+R9's numbers depend on an LLM judge, so its error rate is a first-class number rather than an
+assumption. Two measurements, and they answer different questions:
+
+| | n | agreement | false-flag | catch | status |
+|---|---|---|---|---|---|
+| human panel (`verifier_audit.py`) | 37 | 92% | 10% | — | **invalidated** — 7 cases were judged on the wrong number, and the blind sheet carried the same wrong value, so both sides used corrupted evidence |
+| independent gold (`verifier_vs_gold.py`) | **177** | **95.5%** | **5.0%** | **97.4%** | current, recomputed against the live prompt |
+
+The gold-based score exists because the panel goes stale every time the judge's prompt changes —
+five times in this series alone — while `gold_sql` is already there on every numeric question and
+costs nothing to re-score. It refused **7 of 139 correct answers** and caught **37 of 38 wrong
+ones**.
+
+Two limits, stated because they decide what this does and does not settle:
+
+- It covers only rows with a numeric gold — **177 of 202 judged decisions**. Diagnostic and
+  keyword rows have no numeric gold, so the judge's behaviour on exactly the prose questions
+  above is still unscored. That is the labelling job worth doing.
+- `gold_sql` is an independent **computation**, not an independent **judgement**. It kills "the
+  semantic layer graded its own homework" — the gold never passes through it — and it does not
+  kill "the author graded their own homework."
+
 ### What the metrics mean
 
 - **coverage** — of the answerable questions, the share the agent actually answered.

@@ -289,6 +289,37 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
             f"causal grading must apply to the {role} branch too: a lookup can name a driver"
 
 
+def test_every_measured_field_reaches_the_row():
+    """Whatever an analysis will need later has to be computable from the stored rows, and a
+    field that is carried but never written is worse than one that was never added: it reads as
+    measured and is null.
+
+    `iterations` was that. It is set on the Answer at every exit, threaded through the
+    orchestrator, and then omitted by the row writer — so the step count a compounding-error
+    analysis needs was null in all 684 rows of the grounding ladder, and model calls had to be
+    re-derived from `turns` instead.
+
+    This holds the writer to the Answer's own field list, so the next one cannot be dropped
+    silently. NO LLM."""
+    import dataclasses
+
+    from agent.loop import Answer
+
+    src = (Path(__file__).resolve().parent.parent / "evals" / "runner.py").read_text()
+    carried = {f.name for f in dataclasses.fields(Answer)}
+    # Fields the row deliberately renames, derives, or leaves out — each with its reason, so
+    # "not written" is always a decision on the record rather than an oversight.
+    ELSEWHERE = {
+        "question", "rung", "model",        # written from the case/config, not the Answer
+        "answer", "explanation", "outcome", "reason", "missing",   # written explicitly above
+        "abstained",                        # the grader's, not the Answer's mirror of it
+    }
+    for name in sorted(carried - ELSEWHERE):
+        assert f'"{name}"' in src, (
+            f"Answer.{name} is measured but never written to the row — a null field that reads "
+            f"as a measurement. Write it, or delete it from Answer.")
+
+
 def test_a_filter_that_restates_the_definition_narrows_nothing():
     """The judge is shown the analyst's added filters and told to treat an unrequested one as a
     narrowing. Sound — and wrong when the filter narrows nothing.
