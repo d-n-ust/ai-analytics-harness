@@ -51,17 +51,10 @@ cases:
       reason: no_governed_definition
       gold_sql: "SELECT count(*) FROM fct_subscriptions"
       tolerance: 0.02
-    note: "No total-subscriptions metric. Trap: report active_subscriptions (371, currently-active) — valid metric, wrong segment."
+    note: "No total-subscriptions metric. Trap: report active_subscriptions (371, currently-active) — valid metric, wrong segment.
+      rt_total_subs_ever asked this same question re-phrased, with the same gold and the same trap, and was dropped:
+      seven questions in this tier already test no_governed_definition, and a second phrasing of one of them measures phrasing, not governance."
 
-  - id: rt_total_subs_ever
-    tier: valid_but_wrong
-    question: "How many subscriptions have we sold in total since launch?"
-    expect:
-      type: refuse
-      reason: no_governed_definition
-      gold_sql: "SELECT count(*) FROM fct_subscriptions"
-      tolerance: 0.02
-    note: "Same as vw_total_subscriptions, re-phrased. Gold is all rows (457); trap is active_subscriptions (371)."
 
   - id: rt_activation_count_june
     tier: valid_but_wrong

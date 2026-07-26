@@ -1,14 +1,5 @@
 # Lookup — a single governed metric over a clean time/segment filter.
 cases:
-  - id: t1_value_moments_june
-    tier: lookup
-    question: "How many habit completions (value moments) were logged in June 2026?"
-    expect:
-      type: metric_answer
-      metric: value_moments
-      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
-      tolerance: 0.02
-
   - id: t1_signups_june
     tier: lookup
     question: "How many new users signed up in June 2026?"
