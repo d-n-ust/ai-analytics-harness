@@ -429,8 +429,13 @@ def test_verifier_is_refuse_only():
     v = verifier.verify_answer(
         sem, "How many paying users?", "371", steps,
         verify_traj=lambda *a: (False, "scope", "answers a different question"), **kw)
-    # downgraded to a GOVERNED reason (scope -> other; the old out_of_scope was not in REFUSAL_REASONS)
-    assert v.allowed is False and v.reason == "other"
+    # The judge names its OWN finding rather than casting it onto the model's refusal vocabulary.
+    # `scope` used to become `other`, which threw the finding away and then had it graded against
+    # a code the judge could not produce. Its codes must stay out of the refuse tool's enum.
+    from agent.outcomes import REFUSAL_REASONS, VERIFIER_REASONS
+    assert v.allowed is False and v.reason == "verifier_wrong_scope"
+    assert v.reason in VERIFIER_REASONS and v.reason not in REFUSAL_REASONS
+    assert v.guardrail == "trajectory_verify"
 
 
 def test_toolbox_wiring_and_rung_gate():
