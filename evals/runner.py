@@ -162,8 +162,19 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         verifier_model = get_model(verifier_used, mock=mock, reasoning=verifier_reasoning)
         for rung in rungs:
             set_star(con, rung >= 2)     # per-rung shared catalog state; the parallel unit is within a rung
+            # Coherence is a property of the PAIR, not of the cell alone: a control that needs
+            # the semantic layer measures nothing below rung 3. Filter here, where the rung is
+            # known, so an inert pair is skipped out loud instead of producing rows labelled
+            # with a control that could not run.
+            usable = []
+            for cfg_label, rrung, gr in configs:
+                bad = incoherent(gr, rung)
+                if bad:
+                    print(f"  SKIP rung {rung} x {cfg_label}: {bad}", flush=True)
+                    continue
+                usable.append((cfg_label, rrung, gr))
             work = [(rung, rrung, cfg_label, gr, rep, q)
-                    for cfg_label, rrung, gr in configs
+                    for cfg_label, rrung, gr in usable
                     for rep in range(repeats)
                     for q in questions]
             dispatch = partial(_run_one, model=model, model_name=model_name,

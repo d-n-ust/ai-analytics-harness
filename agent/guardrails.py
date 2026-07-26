@@ -82,13 +82,31 @@ def parse_cell(spec: str) -> Guardrails:
     return LADDER[int(base[1:])].without(*parts[1:])
 
 
-def incoherent(g: Guardrails) -> str | None:
+def incoherent(g: Guardrails, rung: int | None = None) -> str | None:
     """Some cells measure a DIFFERENT system rather than a missing control, and publishing one
-    as 'the contribution of X' would be wrong. Returns why, or None if the cell is sound."""
+    as 'the contribution of X' would be wrong. Returns why, or None if the cell is sound.
+
+    Pass `rung` to also check the pairing with the grounding. A control and the rung it acts on
+    are not independent axes: every reliability control above abstention operates on the
+    semantic layer, which does not exist below rung 3."""
     if g.single_metric and not g.tool_restriction:
         return ("single_metric without tool_restriction: the check reads result_values, which "
                 "only governed queries record, so every raw-SQL answer auto-refuses")
+    if g.output_validation and not g.single_metric:
+        return ("output_validation without single_metric: `value` and `source_metric` are only "
+                "offered on the answer tool under single_metric (tools._answer_spec), so no "
+                "answer can declare a number, verify_answer returns early on every one of them, "
+                "and the check never fires — a contribution of zero by construction rather than "
+                "by evidence")
     if g.trajectory_verify and not g.single_metric:
         return ("trajectory_verify without single_metric: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
+    if rung is not None and rung < 3:
+        beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
+        if beyond:
+            return (f"rung {rung} has no semantic layer, so {', '.join(beyond)} cannot act: the "
+                    "check_* tools are not offered, the gate has no governed call to intercept, "
+                    "and the output checks stand down. tool_restriction is worse than inert — it "
+                    "removes raw SQL while no governed path exists, leaving no way to reach data "
+                    "at all, so the cell measures a mute agent rather than a guarded one")
     return None

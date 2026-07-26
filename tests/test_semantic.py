@@ -274,12 +274,29 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
     from agent.guardrails import LADDER, incoherent
-    con = open_warehouse()
+    from agent.prompt import build_grounding
+    con = open_warehouse(create_star_views=True)
     cell = LADDER[9].without("resolve")
 
     assert cell.trajectory_verify and not cell.resolve      # unreachable from any rrung
     assert cell.label() == "R9-resolve"
     assert incoherent(cell) is None
+
+    # A cell whose control cannot fire is named, not reported. output_validation reads a `value`
+    # the answer tool only offers under single_metric, so without it the check is inert and its
+    # measured contribution would be zero by construction — 365 stored answers sat in such cells.
+    inert = LADDER[8].without("single_metric")
+    assert "output_validation without single_metric" in (incoherent(inert) or "")
+    # Coherence is a property of the (rung, cell) PAIR: every control above abstention acts on
+    # the semantic layer, which rung 1 and 2 do not have.
+    assert incoherent(LADDER[9], rung=6) is None and incoherent(LADDER[1], rung=1) is None
+    assert "no semantic layer" in (incoherent(LADDER[9], rung=2) or "")
+    for bad_rung in (1, 2):
+        try:
+            build_grounding(con, bad_rung, guardrails=LADDER[4])
+            raise AssertionError(f"rung {bad_rung} x R4 built a system with no data path at all")
+        except ValueError as exc:
+            assert "incoherent grounding" in str(exc)
     tb = Toolbox(con, 6, SemanticLayer(con), None, guardrails=cell)
     assert tb.trajectory_verify is True and tb.resolve is False
 

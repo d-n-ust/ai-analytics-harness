@@ -18,7 +18,7 @@ import yaml
 from semantic.semantic import SemanticLayer
 from semantic.tree import MetricTree
 
-from .guardrails import LADDER, Guardrails
+from .guardrails import LADDER, Guardrails, incoherent
 from .tools import Toolbox
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -157,6 +157,13 @@ def build_grounding(con, rung: int,
     # enforces, so a cell can never describe a control that is not running — that would make the
     # measurement vary with the treatment, the one thing an ablation must not do.
     g = guardrails if guardrails is not None else LADDER[1]
+    # Fail here rather than build a system that cannot do what its label says. An incoherent
+    # (rung, guardrails) pair still produces rows, and those rows are indistinguishable from
+    # real ones once written — the measurement would vary with the treatment, which is the one
+    # thing an ablation must not do.
+    bad = incoherent(g, rung)
+    if bad:
+        raise ValueError(f"incoherent grounding: rung {rung} with {g.label()} — {bad}")
     system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
     if g.check_tools:
         system += _RRUNG_CHECKS

@@ -29,8 +29,11 @@ from warehouse.warehouse import open_warehouse
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"
 
 # Rungs change the grounding; ladder presets change the action space. This grid touches every
-# prompt block and every gated tool at least once.
-GRID = [(rung, rrung) for rung in (1, 3, 6) for rrung in (0, 2, 4, 6, 9)]
+# prompt block and every gated tool at least once. Below rung 3 only abstention is coherent —
+# every other control acts on a semantic layer that isn't there — so the grid stops where
+# build_grounding now refuses rather than pinning a surface that cannot mean what it says.
+GRID = ([(1, rrung) for rrung in (0, 1)]
+        + [(rung, rrung) for rung in (3, 6) for rrung in (0, 2, 4, 6, 9)])
 
 
 def _render(con) -> str:
