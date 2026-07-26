@@ -133,7 +133,11 @@ def _verifier_validation() -> dict | None:
         return None
     v = json.loads(path.read_text())
     v["current_fingerprint"] = prompt_fingerprint()
-    v["stale"] = v.get("prompt_fingerprint") != v["current_fingerprint"]
+    # A validation goes stale when the judge's spec changes — and also when what the judge was
+    # SHOWN turns out to have been wrong, which no prompt hash can detect. `invalidated` carries
+    # that second case, so a record can be retired for a reason the fingerprint cannot see.
+    v["stale"] = (v.get("prompt_fingerprint") != v["current_fingerprint"]
+                  or bool(v.get("invalidated")))
     return v
 
 
@@ -338,7 +342,11 @@ def render_markdown(summary: dict) -> str:
         L.append(f"_⚠ schema skew: some rows predate v{meta.get('schema_current')} — missing fields read as None._")
     vv = meta.get("verifier_validation")
     if vv:
-        flag = " ⚠ STALE — the verifier prompt changed since; re-audit" if vv.get("stale") else ""
+        flag = ""
+        if vv.get("invalidated"):
+            flag = f" ⚠ INVALIDATED — {vv['invalidated']}; re-draw and re-label"
+        elif vv.get("stale"):
+            flag = " ⚠ STALE — the verifier prompt changed since; re-audit"
         L.append(f"_verifier validated: n={vv.get('labelled')} · miss-rate {vv.get('miss_rate')} · "
                  f"false-flag {vv.get('false_flag_rate')} (audit {vv.get('date')}){flag}._")
     elif "verifier_validation" in meta:      # write() set it, but no record exists on disk

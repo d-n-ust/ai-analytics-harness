@@ -47,6 +47,46 @@ def test_provenance_is_typed_not_guessed():
     assert verifier._provenance(371, coll, "mrr", metrics) == (None, None, None)
 
 
+def _breakdown(metric, pairs, **args):
+    """A recorded query_metric step for a BREAKDOWN — one row, and one number, per group."""
+    rows = "\n".join(f"({k!r}, {v})" for k, v in pairs)
+    return {"tool": "query_metric", "args": {"metric": metric, **args},
+            "result": f"columns: platform, value\n{rows}",
+            "result_values": [float(v) for _, v in pairs]}
+
+
+def test_provenance_reads_the_row_the_answer_came_from():
+    """A breakdown returns one number per group, and the model answers with one of them. The
+    checks must be handed THAT number: reading the first row instead means R8 range-checks a
+    figure nobody reported, the R9 judge is shown the wrong one, and the verdict stored so the
+    judge can later be scored records the wrong evidence."""
+    metrics = SemanticLayer(open_warehouse()).metrics
+    step = _breakdown("value_moments", [("android", 5190), ("ios", 5648), ("web", 4812)],
+                      group_by=["platform"], period="last_month")
+    _m, _args, val = verifier._provenance(4812, [step], "value_moments", metrics)
+    assert val == 4812, f"the answer served 4812; the checks were handed {val}"
+    _m, _args, val = verifier._provenance(5648, [step], "value_moments", metrics)
+    assert val == 5648, f"the answer served 5648; the checks were handed {val}"
+    # A declared number matching no row of a breakdown is not attributable to one of them.
+    assert verifier._provenance(9999, [step], "value_moments", metrics)[2] is None
+
+
+def test_dispatcher_records_the_measure_not_every_cell():
+    """`result_values` is the `value` column the compiler aliases the measure to — one number
+    per row. Recording every numeric cell instead loses which one is the measure, and lets a
+    numeric dimension member pass for a governed result."""
+    con = open_warehouse(create_star_views=True)
+    tb = Toolbox(con, 6, SemanticLayer(con), None, LADDER[5])
+    text, is_err, values = tb.dispatch("query_metric", {
+        "metric": "value_moments", "group_by": ["platform"], "period": "last_month"})
+    assert not is_err, text
+    rows = [ln for ln in text.splitlines() if ln.startswith("(")]
+    assert len(values) == len(rows), f"{len(values)} values recorded for {len(rows)} rows"
+    # each recorded value is that row's own measure, in row order
+    for row, v in zip(rows, values, strict=True):
+        assert row.rstrip(")").split(", ")[-1] == str(int(v)), (row, v)
+
+
 def test_metrics_conform_to_ontology():
     """Every metric's entity + segment must be a value the ontology declares, so the metric
     definitions stay in one governed vocabulary."""
@@ -320,6 +360,8 @@ def test_toolbox_wiring_and_rung_gate():
 
 if __name__ == "__main__":
     test_provenance_is_typed_not_guessed()
+    test_provenance_reads_the_row_the_answer_came_from()
+    test_dispatcher_records_the_measure_not_every_cell()
     test_metrics_conform_to_ontology()
     test_output_validation_catches_degenerate_values()
     test_value_resolver()

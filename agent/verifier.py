@@ -191,12 +191,20 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
              and (s.get("args") or {}).get("metric") == source_metric]
     if not calls:
         return None, None, None
-    best = next((s for s in reversed(calls)
-                 if declared_value is not None
-                 and any(_num_match(declared_value, b) for b in _step_values(s))),
-                calls[-1])
-    governed = _step_values(best)
-    return source_metric, (best.get("args") or {}), (governed[0] if governed else None)
+    for step in reversed(calls):
+        # The matching cell, not the call's first one: a breakdown returns a number per group,
+        # and the declared value says WHICH group the answer reported. Handing the checks the
+        # first row instead means R8 range-checks a figure nobody served and R9 judges it.
+        match = next((v for v in _step_values(step)
+                      if declared_value is not None and _num_match(declared_value, v)), None)
+        if match is not None:
+            return source_metric, (step.get("args") or {}), match
+    # Nothing the metric returned matches what was served. A single-row call is still
+    # unambiguous; from a breakdown there is no defensible "the governed value", so report
+    # none and let the checks refuse rather than validate an arbitrary row. (With R7 on this
+    # is unreachable: an unmatched value is already a hand-composition.)
+    last = _step_values(calls[-1])
+    return source_metric, (calls[-1].get("args") or {}), (last[0] if len(last) == 1 else None)
 
 
 def output_validation(metric_def: dict, value) -> tuple[bool, str, str, str]:

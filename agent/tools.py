@@ -191,11 +191,20 @@ def _fmt_rows(columns, rows) -> str:
     return f"columns: {head}\n{body}{note}"
 
 
-def _numeric_cells(rows) -> list:
-    """The typed numeric values a governed query returned — so the output checks read the real
-    result, never a number parsed back out of the display text (which now also carries SQL)."""
-    return [float(c) for r in rows for c in r
-            if isinstance(c, (int, float)) and not isinstance(c, bool)]
+def _measure_values(cols, rows) -> list:
+    """The numbers a governed query reported, one per row: the `value` column the compiler
+    always aliases the measure to.
+
+    Reading every numeric cell of every row instead loses which cell IS the measure, and the
+    checks downstream take the first one — so a breakdown handed them its first group's number
+    rather than the group the answer came from, and a numeric dimension member could pass for
+    a governed result. No `value` column means nothing verifiable came back, which fails the
+    provenance check closed rather than silently checking the wrong number."""
+    if "value" not in cols:
+        return []
+    i = cols.index("value")
+    return [float(r[i]) for r in rows
+            if isinstance(r[i], (int, float)) and not isinstance(r[i], bool)]
 
 
 class Toolbox:
@@ -447,7 +456,7 @@ class Toolbox:
                         group_by=args.get("group_by"), resolve=self.resolve)
                 if self.show_sql:       # R6 (transparency): the exact compiled SQL
                     text += f"\n[sql] {sql}"
-                return text, False, _numeric_cells(rows)
+                return text, False, _measure_values(cols, rows)
             if name == "check_metric_exists":
                 return self._verdict(*self.semantic.metric_exists(args["term"])), False, None
             if name == "check_coverage":
