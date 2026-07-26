@@ -290,6 +290,33 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         return Verdict.ok()                # no governed metric to check against
     metric_def = semantic.metrics[metric]
 
+    if value is None:
+        # `value is None` covers two conditions that look identical here and are not:
+        #
+        #   the query came back EMPTY and a number was narrated anyway  -> refuse (result_empty)
+        #   the number is a COMPARISON, so it is no single call's result -> stand down
+        #
+        # Telling them apart is whether the metric returned anything at all. Before comparisons
+        # were allowed, the second could not arise — such a number was refused a guardrail
+        # earlier — so the two were safely conflated, and R8 read "not attributable" as "empty".
+        queried = [s for s in steps or [] if s.get("tool") == "query_metric"
+                   and (s.get("args") or {}).get("metric") == metric]
+        if queried and not any(step_values(s) for s in queried):
+            if not run_output_validation:
+                return Verdict.ok()
+            verdict = output_validation(metric_def, None)
+            note(record, "output_validation", Position.AFTER, "refused", verdict.reason)
+            return verdict
+        # A percent change or a contribution share is not an instance of the metric's unit, so
+        # range-checking it against `count` or `ratio` measures nothing, and the judge has no
+        # single metric+SQL trajectory to inspect. Both stand down rather than refuse.
+        for name, on in (("output_validation", run_output_validation),
+                         ("trajectory_verify", verify_traj is not None)):
+            if on:
+                note(record, name, Position.AFTER, "stood down",
+                     "the served number is a comparison, not a single governed result")
+        return Verdict.ok()
+
     if run_output_validation:                         # R8: the returned value is empty or impossible
         verdict = output_validation(metric_def, value)
         note(record, "output_validation", Position.AFTER,
