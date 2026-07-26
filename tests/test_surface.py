@@ -24,7 +24,8 @@ from pathlib import Path
 from agent.conversation import Turn
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
-from agent.guardrails.judge import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
+from agent.guardrails.judge import (_EVIDENCE, _REPORT, _ROLE_REPORT, _ROLE_SYSTEM, _ROLE_USER,
+                                    _USER, prompt_fingerprint, verify_system, verify_trajectory)
 from warehouse.warehouse import open_warehouse
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"
@@ -51,6 +52,19 @@ def _render(con) -> str:
         out.append("")
     out.append("=== verifier ===")
     out.append(f"prompt_fingerprint: {prompt_fingerprint()}")
+    # The judge's instructions and verdict schema are RENDERED, not hashed like the agent's system
+    # prompt. The reason the agent's is hashed does not apply here — this one embeds no knowledge
+    # base, so it cannot rot — and it is the surface most often edited. Pinned only by a hash, the
+    # change that taught it to ask what a number is DOING would have shown up as one moved hex
+    # string, which is the opposite of what this file exists for.
+    out.append("--- role classifier ---")
+    out.append(_ROLE_SYSTEM)
+    out.append(json.dumps(_ROLE_REPORT, indent=2, sort_keys=True))
+    out.append(_ROLE_USER)
+    for role in ("the_answer", "evidence"):
+        out.append(f"--- checks · {role} ---")
+        out.append(verify_system(role))
+    out.append(json.dumps(_REPORT, indent=2, sort_keys=True))
     out.append(_USER.format(question="{question}", evidence=_EVIDENCE))
     return "\n".join(out) + "\n"
 
@@ -82,10 +96,11 @@ def _check_evidence_renders() -> None:
         "  time window: last_week\n"
         "  full SQL (for reference; its built-in clauses are definitional, not the analyst's): SELECT 1\n"
         "query result: 42\n"
-        "analyst's claimed answer: 42\n"
+        "the number the analyst declared: 42\n"
         # collapsed to one line: an answer's own newlines must not restructure the evidence
         # block, which is read positionally by the judge.
-        "the analyst's answer in full: 42 active users last week.")
+        "what the analyst actually served (THIS is the answer; the number above is one figure "
+        "inside it): 42 active users last week.")
     if spy.seen != expected:
         diff = "\n".join(difflib.unified_diff(expected.splitlines(), spy.seen.splitlines(),
                                               "expected", "rendered", lineterm=""))

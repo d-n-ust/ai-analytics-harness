@@ -229,6 +229,20 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 # --------------------------------------------------------------------------- #
 # The hook: run every AFTER guardrail on one completed answer.
 # --------------------------------------------------------------------------- #
+def served_text(args: dict) -> str:
+    """Everything the analyst said, as one string — the claim the judge is checking the number
+    against.
+
+    Both fields, because the answer tool splits one claim across them and which field holds the
+    substance varies: 'is the app healthy?' comes back with the assessment in `answer`, while
+    'which lever weakened?' answers `frequency` and puts the whole argument in `explanation`.
+    Shown only `answer`, the judge would be reading one word. evals/grade.py already scores
+    diagnostic and keyword cases on both fields for the same reason — this keeps the judge
+    checking the text the grader grades.
+    """
+    return " ".join(str(args.get(k) or "").strip() for k in ("answer", "explanation")).strip()
+
+
 def check(args: dict, declared, run, record=None) -> Verdict:
     """Put an answer through the AFTER guardrails. A refusing verdict turns the answer into a
     refusal carrying the coded reason it failed for.
@@ -248,7 +262,7 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     model = run.verifier_model or run.model
     verify_traj = _trajectory_verifier(run, model) if (g.trajectory_verify and model) else None
     return verify_answer(
-        semantic, run.question, run.answer_text, run.steps, record=record,
+        semantic, run.question, served_text(args), run.steps, record=record,
         source_metric=args.get("source_metric"), declared_value=declared,
         source_result=args.get("source_result"),
         run_output_validation=g.output_validation,
@@ -297,13 +311,14 @@ def _trajectory_verifier(run, model):
                                resolve=run.grounding.guardrails.resolve, segment=a.get("segment"))
         window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
                                      if (a.get("start") or a.get("end")) else None)
-        ok, mismatch, reason = judge.verify_trajectory(
+        j = judge.verify_trajectory(
             model, question, metric, metric_def, sql, gov_value, claim,
             applied_filters=a.get("filters"), time_window=window,
             governed_notes=governed_notes(a, semantic), claim_text=claim_text)
-        run.last_verdict = {"answers_question": ok, "mismatch": mismatch, "reason": reason,
+        run.last_verdict = {"answers_question": j.answers_question, "mismatch": j.mismatch,
+                            "reason": j.reason, "value_role": j.value_role,
                             "metric": metric, "sql": sql, "applied_filters": a.get("filters"),
                             "time_window": window, "governed_value": gov_value, "claim": claim,
                             "claim_text": claim_text}
-        return ok, mismatch, reason
+        return j.answers_question, j.mismatch, j.reason
     return go

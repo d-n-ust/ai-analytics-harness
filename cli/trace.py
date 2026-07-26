@@ -178,8 +178,12 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
     verdict = row.get("verifier_verdict")
     if verdict:
         ok = verdict.get("answers_question")
+        # The role is WHICH test the judge ran, so a verdict without it cannot be read: the same
+        # metric passes as evidence for a claim and fails as the answer to the question.
+        role = verdict.get("value_role")
         lines.append(f"  {paint('judge', 'bold')}    "
-                     + (paint("passed", "ok") if ok else paint(f"REJECTED · {verdict.get('mismatch')}", "bad")))
+                     + (paint("passed", "ok") if ok else paint(f"REJECTED · {verdict.get('mismatch')}", "bad"))
+                     + (paint(f"  · read the number as {role}", "dim") if role else ""))
         lines.append(f"          {paint(_short(verdict.get('reason'), 96), 'dim')}")
     if row.get("error"):
         lines.append(f"          {paint('error ' + str(row['error']), 'bad')}")

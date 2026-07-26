@@ -173,6 +173,67 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     assert used == set(Position), f"unused position(s): {set(Position) - used}"
 
 
+def test_the_judge_settles_what_the_number_is_doing_before_judging_it():
+    """The five checks compare the metric against the QUESTION's wording, which is the right test
+    only when the number IS the answer. Shown a bare 3785 against "weekly value moments dropped —
+    what caused it?", the judge could read it only as a proposed cause, observe correctly that a
+    count is not a cause, and reject: 19 of its 37 rejections in the R9 run, every diagnostic and
+    every keywords case among them.
+
+    So the role is asked FIRST and is required, and the answering model does not get to declare
+    it — a self-declared role is unfalsifiable and would be a one-word exit from the strict test,
+    while the judge's is scoreable against labels exactly as `mismatch` is. NO LLM: this pins the
+    contract (what is asked, what is required, what a silent judge defaults to), not the ruling."""
+    from agent.conversation import ToolCall, Turn
+    from agent.guardrails import judge
+
+    assert judge._ROLE_REPORT["input_schema"]["properties"]["value_role"]["enum"] \
+        == ["the_answer", "evidence"]
+
+    # The two branches are what make the role mean anything: the three checks that compare the
+    # metric with the QUESTION's wording cannot run on a figure that is merely cited.
+    answer_checks, evidence_checks = judge.verify_system(), judge.verify_system("evidence")
+    for absent in ("KIND", "DEFINITION", "SEGMENT"):
+        assert f"{absent} —" not in evidence_checks, \
+            f"{absent} compares the metric with the question, which a supporting figure never answers"
+    assert all(f"{present} —" in evidence_checks for present in ("THING", "SCOPE"))
+    assert answer_checks != evidence_checks and judge._STANCE["skeptical"] in evidence_checks, \
+        "the stance is shared across roles, or it stops being one treatment"
+
+    class _Model:
+        """Answers the role call and the verdict call from one script, so the test sees the two
+        as the judge issues them."""
+
+        def __init__(self, role, verdict):
+            self.role, self.verdict, self.systems = role, verdict, []
+
+        def respond(self, convo, tools, **kw):
+            self.systems.append(convo.system)
+            name = tools[0]["name"]
+            args = self.role if name == "report_role" else self.verdict
+            return Turn(tool_calls=[ToolCall("v1", name, args)] if args else [])
+
+    call = dict(question="why did it drop?", metric_name="m", metric_def={}, sql="SELECT 1",
+                result_value=1, claim_value=1, claim_text="It fell because frequency dropped.")
+    m = _Model({"value_role": "evidence"}, {"answers_question": False, "mismatch": "thing",
+                                            "reason": "r"})
+    j = judge.verify_trajectory(m, **call)
+    assert (j.answers_question, j.mismatch, j.value_role) == (False, "thing", "evidence")
+    assert m.systems == [judge._ROLE_SYSTEM, evidence_checks], \
+        "the role is classified first, and its answer picks the checks the verdict call runs"
+
+    # An answer with no sentence behind it (verifier_eval's synthetic trajectories) skips the
+    # classifier entirely and gets the strict checks — what every published run did.
+    m = _Model(None, {"answers_question": True, "mismatch": "none", "reason": ""})
+    assert judge.verify_trajectory(m, **{**call, "claim_text": None}).value_role == "the_answer"
+    assert m.systems == [answer_checks], "no sentence to classify, so no classifier call"
+
+    # Neither silence is read as the lenient outcome: the judge cannot veto (it is refuse-only),
+    # and a role that failed to arrive falls back to the strict test, never to evidence.
+    silent = judge.verify_trajectory(_Model(None, None), **call)
+    assert (silent.answers_question, silent.value_role) == (True, "the_answer")
+
+
 def test_the_judge_stance_is_a_treatment_with_two_levels():
     """The judge fires on 52% of the answers it sees, and its opening paragraph tells it to hunt
     for a reason to reject and pass only if it fails. That wording resists sycophancy — a plain

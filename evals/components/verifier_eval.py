@@ -56,9 +56,10 @@ def main():
         result = rows[0][-1] if rows else None
         window = args.get("period") or (f"{args.get('start')}..{args.get('end')}"
                                         if args.get("start") or args.get("end") else None)
-        answers, mismatch, reason = verify_trajectory(
+        j = verify_trajectory(
             model, question, metric, sem.metrics.get(metric), sql, result, result,
             applied_filters=args.get("filters"), time_window=window)
+        answers, mismatch, reason = j.answers_question, j.mismatch, j.reason
         flagged = not answers
         ok = flagged == should_flag
         right += ok
