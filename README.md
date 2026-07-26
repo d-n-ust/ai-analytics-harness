@@ -83,10 +83,10 @@ serving a confident wrong number. Each rung switches on one guardrail (`agent/gu
 | R1 | **abstain** | adds the typed `refuse` tool (coded reason + what's missing) |
 | R2 | **check_tools** | answerability checks the model may call first |
 | R3 | **gate** | blocks out-of-coverage / ungoverned governed calls |
-| R4 | **tool_restriction** | the *fence* — removes raw SQL; governed metrics only |
+| R4 | **tool_restriction** | removes raw SQL; every data path is a governed call |
 | R5 | **resolve** | filter values must resolve to governed members |
 | R6 | **transparency** | shows the compiled SQL and a plain scope line |
-| R7 | **single_metric** | the served number must *be* one governed result |
+| R7 | **governed_numbers** | compare, don't compose: the served number is a governed result, or a comparison of two of the *same* metric |
 | R8 | **output_validation** | the returned value must be well-formed |
 | R9 | **trajectory_verify** | an LLM verifier checks the metric actually answers the question |
 

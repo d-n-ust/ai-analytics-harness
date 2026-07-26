@@ -21,10 +21,10 @@ primitive, so any coherent configuration is expressible and self-describing.
 | R1 | `abstain` | adds the typed `refuse` tool (coded reason + what's missing) | prompt + protocol |
 | R2 | `check_tools` | answerability checks the model may call first | tools |
 | R3 | `gate` | blocks out-of-coverage / ungoverned governed calls | **input** (pre-execution) |
-| R4 | `tool_restriction` | the *fence* — removes raw SQL; governed metrics only | **input** |
+| R4 | `tool_restriction` | removes raw SQL; every data path is a governed call | **input** |
 | R5 | `resolve` | filter values must resolve to a governed member | input (query-time) |
 | R6 | `transparency` | shows the compiled SQL + a plain scope line | output (soft) |
-| R7 | `single_metric` | the served number must **be** one governed result | **output** (`agent/verifier.py`) |
+| R7 | `governed_numbers` | the served number must **be** a governed result, or a comparison of two of the **same** metric — never a composition of different ones | **output** (`agent/guardrails/after.py`) |
 | R8 | `output_validation` | the value must be well-formed (non-empty, in range) | **output** |
 | R9 | `trajectory_verify` | an LLM critic checks the metric actually answers the question | **output** |
 
