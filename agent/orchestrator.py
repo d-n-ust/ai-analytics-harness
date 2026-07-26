@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from . import verifier
 from .numbers import bare_number
 from .protocol import TERMINAL_TOOLS, Conversation, ToolCall, Turn, Usage
 
@@ -71,6 +72,9 @@ class _Run:
     steps: list = field(default_factory=list)
     usage: Usage = field(default_factory=Usage)
     tool_calls: int = 0
+    # One verdict per answer. It lives here, on the object that models exactly one
+    # question, rather than on a Toolbox that outlives it.
+    last_verdict: dict | None = None
 
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
@@ -98,6 +102,82 @@ class _Run:
         return self._record(answer=None, explanation=_line(args.get("question")),
                             outcome="clarify", iterations=iterations)
 
+    # -- the output guardrails, wired onto this run ------------------------- #
+    # verifier.py defines the CHECKS and stays pure — plain dicts in, verdict out. What lives
+    # here is the wiring that binds them to one live run: the semantic layer, the guardrail set,
+    # and a model to judge with. That belongs beside the answer's fate, not on the Toolbox, which
+    # had to keep `last_verdict` for a question it does not model.
+
+    def _check(self, text: str, args: dict, declared) -> tuple[bool, str, str, str]:
+        """Run the output guardrails on an answer, each gated separately so their deltas are
+        measured apart. Returns (ok, reason, missing, explanation); ok=False turns the answer
+        into a refusal."""
+        g, sem = self.grounding.guardrails, self.grounding.semantic
+        if sem is None or not (g.output_validation or g.single_metric or g.trajectory_verify):
+            return True, "", "", ""
+        # the judge is a careful checker — run it on its own (higher-reasoning) model when given
+        judge = self.verifier_model or self.model
+        verify_traj = self._trajectory_verifier(judge) if (g.trajectory_verify and judge) else None
+        return verifier.verify_answer(
+            sem, self.question, text, self.steps,
+            source_metric=args.get("source_metric"), declared_value=declared,
+            run_output_validation=g.output_validation,
+            run_single_metric=g.single_metric, verify_traj=verify_traj)
+
+    def _governed_notes(self, args: dict) -> list[str]:
+        """Modifications the LAYER applied to this query, so the judge reads them as definitional
+        rather than as the analyst narrowing scope: a named segment (real_acquisition drops test
+        channels), and a member's availability window (a period clipped to on/after launch is
+        governed, not invented).
+
+        Members come from the layer's own resolver, so a country scope earns its region's note and
+        a synonym is recognised — the same fix the input guardrail needed, for the same reason.
+        Only members the analyst NAMED get a note; a breakdown's members were not chosen, and the
+        gate has already refused any that fall outside coverage."""
+        sem, a = self.grounding.semantic, args or {}
+        if sem is None:
+            return []
+        notes = []
+        seg = a.get("segment")
+        if seg:
+            spec = sem.governance.get("segments", {}).get(seg, {})
+            notes.append(f"governed segment '{seg}' — "
+                         f"{spec.get('description', 'a governed reusable filter')}")
+        for dim, member in sem.scope_members(a.get("filters")):
+            starts = sem.available_from(dim, member)
+            if starts:
+                notes.append(f"{dim} {member} data starts {starts}; months the question names "
+                             f"before this are out of coverage (pre-launch), so the in-coverage "
+                             f"window (on/after {starts}) IS the correct answer — excluding them "
+                             "is required, not narrowing")
+        return notes
+
+    def _trajectory_verifier(self, model):
+        """A callable the judge is driven through: it recompiles the SQL the analyst ran and hands
+        over the analyst's ADDED filters separately from the metric's definitional clauses — the
+        separation an isolated test showed is load-bearing."""
+        def run(question, metric, metric_def, args, gov_value, claim):
+            a = args or {}
+            sem = self.grounding.semantic
+            sql = sem.compile(metric, group_by=a.get("group_by"), filters=a.get("filters"),
+                              time_grain=a.get("time_grain"), start=a.get("start"),
+                              end=a.get("end"), period=a.get("period"),
+                              resolve=self.grounding.guardrails.resolve, segment=a.get("segment"))
+            window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
+                                         if (a.get("start") or a.get("end")) else None)
+            ok, mismatch, reason = verifier.verify_trajectory(
+                model, question, metric, metric_def, sql, gov_value, claim,
+                applied_filters=a.get("filters"), time_window=window,
+                governed_notes=self._governed_notes(a))
+            # Keep the judge's verdict WITH the evidence it saw, so its error rate can later be
+            # scored against human labels. A judge you cannot score is an unverified opinion, and
+            # every "zero confident-wrong" claim rests on this one.
+            self.last_verdict = {"answers_question": ok, "mismatch": mismatch, "reason": reason,
+                                 "metric": metric, "sql": sql, "applied_filters": a.get("filters"),
+                                 "time_window": window, "governed_value": gov_value, "claim": claim}
+            return ok, mismatch, reason
+        return run
+
     def _served(self, args: dict, iterations: int) -> Answer:
         """An answer, put through the output guardrails before it is served. A failed check does
         not discard the run — it becomes a refusal carrying the coded reason it failed for."""
@@ -108,14 +188,12 @@ class _Run:
         # the model remembering to ask for it.
         recovered = None if args.get("value") is not None else bare_number(text)
         declared = args.get("value") if recovered is None else recovered
-        ok, reason, missing, explanation = self.grounding.toolbox.verify_answer(
-            self.question, text, self.steps, self.model, args.get("source_metric"), declared,
-            verifier_model=self.verifier_model)
+        ok, reason, missing, explanation = self._check(text, args, declared)
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
                       value_recovered=recovered is not None,
-                      verifier_verdict=self.grounding.toolbox.last_verdict)
+                      verifier_verdict=self.last_verdict)
         if not ok:
             return self._record(answer=None, explanation=explanation, outcome="refuse",
                                 reason=reason, missing=missing, abstained=True,

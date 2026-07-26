@@ -22,7 +22,7 @@ from semantic.tree import MetricTree, TreeError
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
-from . import input_guardrail, verifier
+from . import input_guardrail
 from .guardrails import LADDER, Guardrails
 from .protocol import ToolResult
 
@@ -349,7 +349,6 @@ class Toolbox:
         self.g = guardrails if guardrails is not None else LADDER[1]
         self.semantic = semantic
         self.tree = tree
-        self.last_verdict = None
 
     def specs(self, terminal_only: bool = False) -> list[dict]:
         """The action space. `terminal_only` withdraws every data tool, leaving just the exit
@@ -409,73 +408,6 @@ class Toolbox:
             "description": "If `value` came from a governed metric, name that metric (as passed "
                            "to query_metric). Omit for a derived or non-metric answer."}
         return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
-
-    def verify_answer(self, question: str, answer_text: str | None, steps: list, model=None,
-                      source_metric: str | None = None, declared_value=None,
-                      verifier_model=None) -> tuple[bool, str, str, str]:
-        """The output guardrails on an answer before it is served, each gated by its own rung so
-        their deltas are measured separately: single-metric enforcement (R7, the number must BE one
-        governed result), output validation (R8, well-formed value), and the trajectory verifier
-        (R9, the metric must actually answer the question). All three live in harness/verifier.py.
-        Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
-        self.last_verdict = None      # one verdict per answer; the Toolbox outlives the question
-        if self.semantic is None or not (self.g.output_validation or self.g.single_metric
-                                         or self.g.trajectory_verify):
-            return True, "", "", ""
-        # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
-        vmodel = verifier_model or model
-        verify_traj = self._trajectory_verifier(vmodel) if (self.g.trajectory_verify and vmodel) else None
-        return verifier.verify_answer(
-            self.semantic, question, answer_text, steps,
-            source_metric=source_metric, declared_value=declared_value,
-            run_output_validation=self.g.output_validation,
-            run_single_metric=self.g.single_metric, verify_traj=verify_traj)
-
-    def _governed_notes(self, args: dict) -> list[str]:
-        """Governed modifications the LAYER applied to this query, so the verifier treats them as
-        definitional rather than analyst scope-narrowing: a named segment (which restricts a
-        segment, e.g. real_acquisition drops test channels), and a region's coverage window
-        (a period clipped to on/after launch is governed, not an invented restriction)."""
-        notes: list[str] = []
-        sem, a = self.semantic, args or {}
-        seg = a.get("segment")
-        if seg and sem is not None:
-            spec = sem.governance.get("segments", {}).get(seg, {})
-            notes.append(f"governed segment '{seg}' — {spec.get('description', 'a governed reusable filter')}")
-        for region in [a.get("filters", {}).get("region")] if isinstance(a.get("filters"), dict) else []:
-            member = {str(k).lower(): v for k, v in sem._members("region").items()}.get(str(region).lower()) if (region and sem) else None
-            starts = sem._meta(member).get("available_from") if member else None
-            if starts:
-                notes.append(f"region {region} data starts {starts}; months the question names before "
-                             f"this are out of coverage (pre-launch), so the in-coverage window "
-                             f"(on/after {starts}) IS the correct answer — excluding them is required, not narrowing")
-        return notes
-
-    def _trajectory_verifier(self, model):
-        """A callable (question, metric, metric_def, call_args, governed_value, claim) -> verdict,
-        that recompiles the SQL the analyst ran and hands the verifier the analyst's ADDED filters
-        separately from the metric's definitional clauses (the separation the isolated test showed
-        is load-bearing)."""
-        def run(question, metric, metric_def, args, gov_value, claim):
-            a = args or {}
-            sql = self.semantic.compile(
-                metric, group_by=a.get("group_by"), filters=a.get("filters"),
-                time_grain=a.get("time_grain"), start=a.get("start"), end=a.get("end"),
-                period=a.get("period"), resolve=self.g.resolve, segment=a.get("segment"))
-            window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
-                                         if (a.get("start") or a.get("end")) else None)
-            ok, mismatch, reason = verifier.verify_trajectory(
-                model, question, metric, metric_def, sql, gov_value,
-                claim, applied_filters=a.get("filters"), time_window=window,
-                governed_notes=self._governed_notes(a))
-            # Persist the judge's own verdict WITH the evidence it saw, so its error rate can
-            # later be scored against human labels. A judge you cannot score is just an
-            # unverified opinion — and every "0 confident-wrong" claim rests on this one.
-            self.last_verdict = {"answers_question": ok, "mismatch": mismatch, "reason": reason,
-                                 "metric": metric, "sql": sql, "applied_filters": a.get("filters"),
-                                 "time_window": window, "governed_value": gov_value, "claim": claim}
-            return ok, mismatch, reason
-        return run
 
     def dispatch(self, name: str, args: dict) -> ToolResult:
         """Run one tool. Errors come back as the DB/semantic message rather than as exceptions,

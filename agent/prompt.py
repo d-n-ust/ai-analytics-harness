@@ -132,10 +132,14 @@ def _knowledge_block() -> str:
 
 @dataclass
 class Grounding:
+    """Everything one configuration gives the agent: what it is told, what it may do, and the
+    governed layer both are defined against."""
+
     rung: int
     system: str
     toolbox: Toolbox
     guardrails: Guardrails | None = None
+    semantic: SemanticLayer | None = None
 
     def fingerprint(self) -> str:
         """A short, stable hash of everything the model is shown: the assembled system prompt and
@@ -193,5 +197,5 @@ def build_grounding(con, rung: int,
 
     semantic = SemanticLayer(con) if rung >= 3 else None
     tree = MetricTree(semantic) if rung >= 6 else None
-    return Grounding(rung=rung, guardrails=g, system=system,
+    return Grounding(rung=rung, guardrails=g, system=system, semantic=semantic,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g))

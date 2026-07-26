@@ -104,16 +104,12 @@ def test_numeric_answers_cannot_skip_the_output_checks():
                   "no governed definition for engagement score", "", None]:
         assert bare_number(prose) is None, prose
 
-    # ...and the recovered number is then held to the single-metric check like any other.
-    con = open_warehouse(create_star_views=True)
-    sem = SemanticLayer(con)
-    tb = Toolbox(con, 6, sem, None, LADDER[9])
+    # A recovered number is then held to the same checks as a declared one — proved end to end
+    # in test_orchestrator.py, where the wiring lives. What belongs here is the attribution it
+    # depends on: an undeclared metric is inferred only when exactly one governed metric
+    # returned that number, so a value two metrics share can never mislink.
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
     steps = [_qm("active_users", 886, period="last_week")]
-    hand_built = bare_number("1772")          # 886 x 2 — matches no governed result
-    ok, reason, *_ = tb.verify_answer("how many active users?", "1772", steps, None, None,
-                                      hand_built)
-    assert not ok and reason == "no_governed_definition", (ok, reason)
-    # an undeclared metric is inferred when exactly one governed metric returned that number
     assert verifier._infer_source_metric(886, steps, sem.metrics) == "active_users"
     shared = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]
     assert verifier._infer_source_metric(371, shared, sem.metrics) is None, "ambiguous -> no link"
@@ -423,20 +419,25 @@ def test_toolbox_wiring_and_rung_gate():
         assert getattr(Toolbox(con, 6, sem, None, LADDER[n - 1]).g, control) is False
         assert getattr(Toolbox(con, 6, sem, None, LADDER[n]).g, control) is True
 
-    tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, guardrails=LADDER[7])   # single-metric on (deterministic; no model needed)
-    ok, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
-    assert ok, "a direct governed result passes single-metric"
-    okd, reasond, *_ = tb7.verify_answer(q, "999", steps, None, "active_users", 999)
-    assert not okd and reasond == "no_governed_definition", \
-        "a hand-derived value (matches no governed result) refuses no_governed_definition at R7"
+    # The single-metric check itself, deterministic and with no model needed. The wiring that
+    # switches it on for a live run moved to the orchestrator's _Run; what is asserted here is
+    # the rung it belongs to, and what it does when it fires.
+    def check(rrung, declared):
+        return verifier.verify_answer(
+            sem, q, str(declared), steps, source_metric="active_users", declared_value=declared,
+            run_single_metric=LADDER[rrung].single_metric,
+            run_output_validation=LADDER[rrung].output_validation)
 
-    tb6 = Toolbox(con, rung=6, semantic=sem, tree=None, guardrails=LADDER[6])   # single-metric OFF
-    ok6, *_ = tb6.verify_answer(q, "999", steps, None, "active_users", 999)
-    assert ok6, "single-metric must be OFF below rrung 7"
+    assert check(7, 2100)[0], "a direct governed result passes single-metric"
+    ok, reason, *_ = check(7, 999)
+    assert not ok and reason == "no_governed_definition", \
+        "a hand-derived value (matches no governed result) refuses no_governed_definition at R7"
+    assert check(6, 999)[0], "single-metric must be OFF below rrung 7"
 
     # a prose answer (no typed value) is passed through untouched
-    ok_prose, *_ = tb7.verify_answer(q, "healthy overall", steps, None, "active_users", None)
-    assert ok_prose, "no declared value -> output guardrails stand down"
+    assert verifier.verify_answer(sem, q, "healthy overall", steps, source_metric="active_users",
+                                  declared_value=None, run_single_metric=True)[0], \
+        "no declared value -> output guardrails stand down"
 
 
 if __name__ == "__main__":

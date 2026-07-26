@@ -233,6 +233,21 @@ class SemanticLayer:
                 bad.append((dim, member, detail))
         return bad
 
+    def available_from(self, dimension: str, member) -> object | None:
+        """When a governed member's data begins, or None if it has always been available.
+
+        The window lives on the dimension member (region.APAC.available_from), so this is the one
+        place that knows where to look — callers used to rebuild the case-insensitive lookup and
+        reach into _meta themselves, which is how one of them came to miss country entirely.
+
+        A country inherits its region's window, the same resolution the coverage check makes, so
+        a question scoped to PH is answerable on exactly the terms APAC is."""
+        if dimension == "country":
+            region = self._region_of(None, self.resolve_member("country", member) or member)
+            return self.available_from("region", region) if region else None
+        members = {str(k).lower(): v for k, v in self._members(dimension).items()}
+        return self._meta(members.get(str(member).lower())).get("available_from")
+
     def segment_names(self) -> list[str]:
         return list(self.governance.get("segments", {}) or {})
 
