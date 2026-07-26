@@ -330,8 +330,8 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     """The point of the refactor: a leave-one-out cell exists in the flag space (no single
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
+    from agent.grounding import build_grounding
     from agent.guardrails import LADDER, incoherent
-    from agent.prompt import build_grounding
     con = open_warehouse(create_star_views=True)
     cell = LADDER[9].without("resolve")
 

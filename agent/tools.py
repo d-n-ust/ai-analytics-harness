@@ -1,11 +1,19 @@
-"""The agent's tools, gated by rung.
+"""The agent's action space: every tool, and the code that runs it.
 
-Every tool returns a ToolResult: the text the model reads, whether it failed, and — for a
-governed query — the typed numbers it returned, so the output checks read the real result
-instead of parsing it back out of the display text. Numbers are always computed here or by
-the semantic layer / tree, never invented by the model. The terminal tools (`answer` / `refuse` / `clarify`) are defined
-here so the model can see them, but the agent loop (not this dispatcher) handles them,
-because they end the run.
+Each tool appears ONCE, as a schema paired with its handler. They used to be three places apart
+— a schema dict at the top, a gating line in specs(), a branch in a twelve-way if-chain 300
+lines below — with nothing linking them, and they drifted: check_coverage's handler read a
+`country` argument its schema never offered, so a model could not ask about the one dimension
+the coverage rules resolve through.
+
+A tool returns a ToolResult: the text the model reads, whether it failed, and — for a governed
+query — the typed numbers it returned, so the output guardrails read the real result instead of
+parsing it back out of the display text. Numbers are computed here or by the semantic layer /
+tree, never invented by the model.
+
+The terminal tools carry no handler, by design: they end the run, and the agent loop decides
+what they mean. Which tools are OFFERED is not decided here either — that is the ACTION_SPACE
+guardrails' job (guardrails/action_space.py), so the ladder stays readable in one place.
 """
 
 from __future__ import annotations
@@ -16,19 +24,12 @@ from dataclasses import dataclass
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree, TreeError
-
-# The three terminal tools. Every run ends through exactly one of them, so the
-# outcome is a typed field, never a phrase to be text-matched out of prose.
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
+from .outcomes import REFUSAL_REASONS
 from .protocol import ToolResult
-
-REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
-                   "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                   "dimension_not_supported", "ungoverned_dimension_value",
-                   "result_empty", "implausible_value", "other"]
 
 _ANSWER = {
     "name": "answer",

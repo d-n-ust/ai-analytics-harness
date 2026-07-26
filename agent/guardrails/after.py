@@ -35,13 +35,13 @@ _V_REASON = {"kind": "wrong_measure", "scope": "other",
 # --------------------------------------------------------------------------- #
 # Deterministic output checks: provenance (single-metric, R7) + validation (R8)
 # --------------------------------------------------------------------------- #
-def _num_match(a: float, b: float) -> bool:
+def num_match(a: float, b: float) -> bool:
     """Two reported numbers are the same value, tolerant of rounding but not of distinct
     integers (886 != 18866, and adjacent counts 371 != 372 stay distinct)."""
     return abs(a - b) <= max(0.5, 0.005 * abs(b))
 
 
-def _step_values(step: dict) -> list:
+def step_values(step: dict) -> list:
     """The typed numeric results a query_metric step returned. Prefers the typed `result_values`
     the dispatcher now records; falls back to parsing the display text only for older traces
     (which had no typed field), so the checks never depend on scraping numbers out of prose/SQL."""
@@ -56,7 +56,7 @@ def _is_direct_governed_value(declared_value, steps: list) -> bool:
     model ran? If it matches no governed result, the model built it by hand (a rate x a count,
     metric A + metric B) — a composition that is out of scope for a one-metric answer."""
     for s in steps or []:
-        if s.get("tool") == "query_metric" and any(_num_match(declared_value, b) for b in _step_values(s)):
+        if s.get("tool") == "query_metric" and any(num_match(declared_value, b) for b in step_values(s)):
             return True
     return False
 
@@ -80,15 +80,15 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
         # The matching cell, not the call's first one: a breakdown returns a number per group,
         # and the declared value says WHICH group the answer reported. Handing the checks the
         # first row instead means R8 range-checks a figure nobody served and R9 judges it.
-        match = next((v for v in _step_values(step)
-                      if declared_value is not None and _num_match(declared_value, v)), None)
+        match = next((v for v in step_values(step)
+                      if declared_value is not None and num_match(declared_value, v)), None)
         if match is not None:
             return source_metric, (step.get("args") or {}), match
     # Nothing the metric returned matches what was served. A single-row call is still
     # unambiguous; from a breakdown there is no defensible "the governed value", so report
     # none and let the checks refuse rather than validate an arbitrary row. (With R7 on this
     # is unreachable: an unmatched value is already a hand-composition.)
-    last = _step_values(calls[-1])
+    last = step_values(calls[-1])
     return source_metric, (calls[-1].get("args") or {}), (last[0] if len(last) == 1 else None)
 
 
@@ -103,7 +103,7 @@ def _infer_source_metric(declared_value, steps: list, metrics) -> str | None:
     same hole one level down."""
     hits = {(s.get("args") or {}).get("metric") for s in steps or []
             if s.get("tool") == "query_metric"
-            and any(_num_match(declared_value, v) for v in _step_values(s))}
+            and any(num_match(declared_value, v) for v in step_values(s))}
     named = {m for m in hits if m in metrics}
     return named.pop() if len(named) == 1 else None
 

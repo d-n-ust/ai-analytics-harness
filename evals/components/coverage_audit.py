@@ -33,7 +33,7 @@ from collections import Counter
 from pathlib import Path
 
 from agent.guardrails import parse_cell
-from agent.guardrails.after import _num_match, _step_values
+from agent.guardrails.after import num_match, step_values
 from agent.numbers import bare_number, parse_numbers
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from warehouse.warehouse import QueryError, open_warehouse, run_query
@@ -62,7 +62,7 @@ def _uncovered_values(step: dict, escaped: list[tuple], sl: SemanticLayer) -> li
     group_by = args.get("group_by") if isinstance(args.get("group_by"), list) else []
     dims = [d for d in group_by if d in COVERAGE_DIMS]
     if not dims:
-        return _step_values(step)
+        return step_values(step)
     try:
         sql = sl.compile(args["metric"], group_by=group_by, filters=args.get("filters"),
                          time_grain=args.get("time_grain"), start=args.get("start"),
@@ -112,8 +112,8 @@ def audit_coverage(rows: list[dict], sl: SemanticLayer) -> dict:
         for step, escaped in hits:
             vals = _uncovered_values(step, escaped, sl)
             if vals is None:
-                vals = _step_values(step)          # could not recompute: assume the worst
-            if any(_num_match(served, v) for v in vals):
+                vals = step_values(step)          # could not recompute: assume the worst
+            if any(num_match(served, v) for v in vals):
                 dependence[cfg] += 1
                 cases.append({"qid": row.get("qid"), "config": cfg, "model": row.get("model"),
                               "rung": row.get("rung"), "served": served,

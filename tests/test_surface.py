@@ -21,9 +21,9 @@ import json
 import sys
 from pathlib import Path
 
+from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.guardrails.judge import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
-from agent.prompt import build_grounding
 from agent.protocol import Turn
 from warehouse.warehouse import open_warehouse
 

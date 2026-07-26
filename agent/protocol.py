@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-# The three tools a run can END through. Every run exits by exactly one, so the outcome is a
-# typed field rather than a phrase to be matched out of prose.
-TERMINAL_TOOLS = ("answer", "refuse", "clarify")
+from .outcomes import TERMINAL_TOOLS
 
 
 @dataclass(frozen=True)

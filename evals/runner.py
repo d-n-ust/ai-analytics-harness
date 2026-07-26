@@ -16,9 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
 
-from agent.models import get_model
+from agent.grounding import build_grounding
 from agent.orchestrator import Answer, run_agent
-from agent.prompt import build_grounding
+from agent.providers import get_model
 from warehouse.warehouse import open_warehouse, set_star
 
 from . import report

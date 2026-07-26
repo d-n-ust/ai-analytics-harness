@@ -12,8 +12,8 @@ Run: uv run python -m pytest tests/test_structural.py -q     (or run this file d
 
 from __future__ import annotations
 
+from agent.grounding import build_grounding
 from agent.guardrails import LADDER
-from agent.prompt import build_grounding
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree
 from warehouse.warehouse import open_warehouse

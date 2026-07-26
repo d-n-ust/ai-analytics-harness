@@ -20,7 +20,8 @@ from dataclasses import dataclass, field
 
 from .guardrails import after
 from .numbers import bare_number
-from .protocol import TERMINAL_TOOLS, Conversation, ToolCall, Turn, Usage
+from .outcomes import TERMINAL_TOOLS, Answer
+from .protocol import Conversation, ToolCall, Turn, Usage
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
@@ -34,30 +35,6 @@ _TRACE_LIMIT = 4000
 def _line(value) -> str:
     """A model-supplied string as one clean line."""
     return str(value or "").strip()
-
-
-@dataclass
-class Answer:
-    question: str
-    rung: int
-    model: str
-    answer: str | None
-    explanation: str = ""
-    outcome: str = "answer"        # answer | refuse | clarify | error
-    reason: str | None = None      # refuse only: the coded reason
-    missing: str | None = None     # refuse only: what the model says is missing
-    source_metric: str | None = None  # answer only: the governed metric the value came from
-    declared_value: float | None = None  # answer only: the served number (None = prose)
-    value_recovered: bool = False   # the number came from the answer text, not the typed field
-    verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
-    abstained: bool = False        # convenience mirror of outcome == "refuse"
-    tool_calls: int = 0
-    iterations: int = 0
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cached_tokens: int = 0          # prompt-cache HITS (a subset of input_tokens, billed ~10%)
-    error: str | None = None
-    steps: list = field(default_factory=list)
 
 
 @dataclass

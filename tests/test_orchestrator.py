@@ -15,9 +15,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace as NS
 
+from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.orchestrator import run_agent
-from agent.prompt import build_grounding
 from agent.protocol import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from warehouse.warehouse import open_warehouse
 

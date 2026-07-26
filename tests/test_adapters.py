@@ -18,8 +18,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from agent.models import AnthropicModel, OpenAIModel, _anthropic_blocks
 from agent.protocol import Conversation, ToolCall, ToolResult, Turn
+from agent.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "wire_payloads.json"
 

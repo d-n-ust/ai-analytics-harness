@@ -89,30 +89,30 @@ class Guardrail:
 GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("abstain", Position.ACTION_SPACE,
               "adds the `refuse` tool to the list, giving the run a typed way to decline",
-              ("guardrails/action_space.py", "prompt.py")),
+              ("guardrails/action_space.py", "prompts.py")),
     Guardrail("check_tools", Position.ACTION_SPACE,
               "adds four answerability lookups (metric / coverage / segment / causal) to the list",
-              ("guardrails/action_space.py", "prompt.py")),
+              ("guardrails/action_space.py", "prompts.py")),
     Guardrail("coverage_check", Position.BEFORE,
               "runs before a governed query; refuses one whose scope falls outside coverage",
-              ("guardrails/before.py", "prompt.py")),
+              ("guardrails/before.py", "prompts.py")),
     Guardrail("tool_restriction", Position.ACTION_SPACE,
               "removes `run_sql` from the list, so every data path is a governed call",
-              ("guardrails/action_space.py", "prompt.py")),
+              ("guardrails/action_space.py", "prompts.py")),
     Guardrail("resolve", Position.BEFORE,
               "runs before a governed query; refuses a filter value that is not a governed member",
-              ("guardrails/before.py", "guardrails/disclosure.py", "tools.py", "prompt.py")),
+              ("guardrails/before.py", "guardrails/disclosure.py", "tools.py", "prompts.py")),
     Guardrail("transparency", Position.DISCLOSURE,
               "appends the covered scope and the exact SQL to every governed result",
-              ("guardrails/disclosure.py", "prompt.py")),
+              ("guardrails/disclosure.py", "prompts.py")),
     Guardrail("single_metric", Position.AFTER,
               "adds `value`/`source_metric` to the answer schema; the served number must BE one "
               "governed result",
-              ("guardrails/action_space.py", "guardrails/after.py", "prompt.py")),
+              ("guardrails/action_space.py", "guardrails/after.py", "prompts.py")),
     Guardrail("output_validation", Position.AFTER,
               "checks the served number is well-formed for its unit (no negative count, no share "
               "above 100, no empty result)",
-              ("guardrails/after.py", "prompt.py")),
+              ("guardrails/after.py", "prompts.py")),
     # `implemented_in` names the files that key off the FLAG, not every file involved: the judge
     # this one switches on lives in agent/verifier.py, which never reads the flag and so is not
     # listed. The distinction is enforced by test, and it is the useful one — it answers "where
@@ -120,7 +120,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("trajectory_verify", Position.AFTER,
               "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
               "the added filters, and rejects an answer to a different question",
-              ("guardrails/after.py", "prompt.py")),
+              ("guardrails/after.py", "prompts.py")),
 )
 
 LADDER_ORDER = [g.name for g in GUARDRAILS]

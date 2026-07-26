@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from warehouse.warehouse import open_warehouse, set_star
 
-from .models import get_model
+from .grounding import RUNG_NAMES, build_grounding
 from .orchestrator import Answer, run_agent
-from .prompt import RUNG_NAMES, build_grounding
+from .providers import get_model
 
 
 def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrails=None,

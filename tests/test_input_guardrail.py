@@ -30,8 +30,8 @@ import sys
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from agent.grounding import build_grounding
 from agent.guardrails import LADDER
-from agent.prompt import build_grounding
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 
