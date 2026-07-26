@@ -116,7 +116,30 @@ def prove():
     return passed
 
 
+def test_the_cli_imports_what_it_claims_to():
+    """Every CLI subcommand imports lazily, inside its handler, so a moved module breaks that one
+    command and nothing else — the whole suite stayed green while `bench ask` pointed at a module
+    that had been deleted. This resolves every import the CLI declares, at any nesting, and
+    checks the names actually exist."""
+    import ast
+    import importlib
+    import inspect
+
+    cli = importlib.import_module("cli.__main__")
+    checked = 0
+    for node in ast.walk(ast.parse(inspect.getsource(cli))):
+        if not isinstance(node, ast.ImportFrom) or not node.module:
+            continue
+        module = importlib.import_module(node.module)
+        for alias in node.names:
+            _check(hasattr(module, alias.name),
+                   f"cli imports {alias.name!r} from {node.module!r}, which does not have it")
+            checked += 1
+    _check(checked >= 8, f"expected the CLI's imports, found {checked}")
+
+
 if __name__ == "__main__":
+    test_the_cli_imports_what_it_claims_to()
     n = prove()
     print(f"OK — {n} structural assertions proved with no LLM.")
 

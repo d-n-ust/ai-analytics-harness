@@ -53,8 +53,8 @@ def cmd_query(a):
 
 
 def cmd_ask(a):
+    from agent import ask_one
     from agent.guardrails import parse_cell
-    from agent.session import ask_one
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails, verbose=True)
 
