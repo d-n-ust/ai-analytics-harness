@@ -1,0 +1,302 @@
+{
+  "method": "3 independent lenses (strict/pragmatic/skeptical), blind, unanimous-only; splits escalated to a human rather than resolved by majority",
+  "panel_model": "gpt-5.6-terra",
+  "prompt_fingerprint": "149da8f96078",
+  "source_runs": [
+    "results/runs/20260726-211115-gpt-5-mini/raw.jsonl",
+    "results/runs/20260726-202156-gpt-5-mini/raw.jsonl"
+  ],
+  "n_decisions": 13,
+  "n_settled": 12,
+  "n_escalated": 1,
+  "false_flag": 0,
+  "miss": 3,
+  "decisions": [
+    {
+      "qid": "t5_masked_by_growth",
+      "question": "Value moments came in soft last week even though we added users. What happened?",
+      "answer": "Value moments fell: 3,642 real value moments in last_week. Despite 121 new signups, active users were 886. Breakdown: days_per_user = 2.2709 (frequency) and moments_per_day = 1.8101 (depth). So the drop is explained by lower depth and modest active base \u2014 lower moments_per_day (1.81) means each active day produced fewer completions than usual. I pulled real_value_moments, new_signups, active_users, days_per_user and moments_per_day for 2026-07-06..2026-07-12 to support this. Queried governed metrics for last_week: real_value_moments=3642 [r1], new_signups=121 [r2], active_users=886 [r3], days_per_user=2.270880361173815 [r4], moments_per_day=1.8101391650099403 [r5]. The decline is primarily lower moments_per_day (depth) rather than fewer active users or signups.",
+      "judge_passed": true,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "The answer attributes the decline primarily to lower moments_per_day, but the provided figures contain no comparison to a prior period and therefore do not support identifying depth rather than days_per_user/frequency as the driver."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "The answer attributes the decline primarily to lower moments_per_day, but the provided figures contain no prior-period benchmark or decomposition showing that depth, rather than days_per_user (frequency), caused the softness."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The figures provide only one week's levels and do not support the claim that lower moments_per_day caused the decline or was the primary driver."
+        }
+      }
+    },
+    {
+      "qid": "t5_reminder_caused_it",
+      "question": "Reminder open rate fell sharply last week. Did that cause the drop in engagement?",
+      "answer": "Yes \u2014 the drop in reminder open rate likely explains most of the engagement decline. Reminder open rate fell from 42.56% (week of 2026-06-29) to 30.67% (week of 2026-07-06), a 28% relative drop, while real value moments fell from 4,133 to 3,642 (a 11.9% decline). Both figures come from governed metrics for the same weekly periods. I compared governed metrics: reminder_open_rate (r1 vs r2) and real_value_moments (r3 vs r4) for prev_week vs last_week; reminder opens fell 0.1189 (42.56%\u219230.67%), moments fell 491 (4,133\u21923,642).",
+      "judge_passed": true,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "The answer infers that reminder opens caused most of the engagement decline from same-period metric changes, but the figures establish only correlation, not causation."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "The figures show a temporal correlation but do not establish that the decline in reminder opens caused the engagement drop."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The answer makes an unsupported causal attribution ('likely explains most') from two coincident weekly metric changes, which establish correlation only."
+        }
+      }
+    },
+    {
+      "qid": "t5_which_lever",
+      "question": "Which part of the North Star weakened last week \u2014 breadth, frequency, or depth?",
+      "answer": "The number 2,903 is the governed metric 'real_value_moments' (Value moments from real users in the period) \u2014 that measures the overall North Star (breadth\u00d7frequency\u00d7depth), not 'breadth' alone. The analyst's sentence uses 2,903 to support the claim that breadth weakened the most, but the metric definition shows it is the total value_moments, so it does not directly measure the separate component 'breadth' (thing mismatch).",
+      "judge_passed": false,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "It does not identify the required driver (frequency/days per user) and instead critiques an unsupported breadth claim."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "It fails to identify the actual weakening driver, which the governed figures support as frequency (days per user), and instead only critiques an unsupported breadth claim."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The answer correctly identifies that the cited total North Star metric cannot establish breadth as the driver, and it fails to name the supported driver, frequency (days per user)."
+        }
+      }
+    },
+    {
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "answer": "Active users increased week-over-week, while total real value moments fell \u2014 the drop is driven by lower frequency (days per user) rather than fewer active users. active_users rose from 666 (prev_week) to 704 (last_week) while real_value_moments fell from 3,346 to 2,903; days_per_user fell from 2.746 to 2.311, showing lower per-user frequency. Sources: active_users [r2]->666 & [r1]->704; real_value_moments [r4]->3346 & [r3]->2903; days_per_user [r6]->2.7462462462462462 & [r5]->2.3110795454545454.",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The reported active-user, value-moment, and days-per-user figures match the governed values and correctly identify lower days per user as the driver."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "The answer correctly identifies lower days per user as the driver, and all cited week-over-week figures match the governed data."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The reported week-over-week figures support that active users increased while value moments and days per user decreased, identifying frequency as the driver."
+        }
+      }
+    },
+    {
+      "qid": "t5_why_drop",
+      "question": "Weekly value moments dropped last week. What caused it?",
+      "answer": "Weekly value moments fell by 491 (\u221211.9%) from 4,133 in the week of 2026-06-29 to 3,642 in the week of 2026-07-06. The drop was concentrated in EMEA (\u2212351, \u221218.0%) with smaller declines in Americas (\u221290, \u22127.3%) and APAC (\u221250, \u22125.2%). Comparing drivers: active users fell from 886 to 886? Wait compute active users prev_week total needed. Numbers taken from governed metric real_value_moments for prev_week [r4] and last_week [r3], and regional breakdowns [r2],[r1].",
+      "judge_passed": true,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "The response never identifies the required driver (days per user/frequency) and instead begins an unsupported, unfinished active-users comparison."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "It never identifies or supports the required driver (days per user/frequency), and instead includes an unresolved, nonsensical active-user comparison."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The answer never identifies the required driver (days per user/frequency) and instead provides unsupported regional attribution plus an unfinished active-users comparison."
+        }
+      }
+    },
+    {
+      "qid": "t4_business_health",
+      "question": "Is the app healthy right now \u2014 how would you tell?",
+      "answer": "Short answer: overall health slipped last week \u2014 weekly real value moments fell 11.9% vs. the prior week (from 4,133 to 3,642). Main reason: fewer active days per user (frequency) \u2014 days_per_user dropped ~16.4% and is the primary driver in the decomposition. I used the governed North Star metric real_value_moments for last_week (3,642) vs prev_week (4,133) and the tree decomposition of weekly_value_moments which attributes the decline mainly to a 16.4% fall in days_per_user (primary driver).",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The reported weekly real value moments decline, North Star values, and days_per_user decrease all match the governed figures, and the required concepts are explicitly addressed."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "The answer correctly identifies the governed North Star/value-moment decline, calculates the weekly change accurately, and attributes the primary decomposition driver to the supported fall in days per user."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The reported North Star and weekly value-moment totals match the governed figures, and the decomposition supports days_per_user as the largest negative contributor without claiming causal proof."
+        }
+      }
+    },
+    {
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "answer": "Active users did not shrink \u2014 they rose from 836 to 886 last week, while weekly value moments fell from 4,307 to 3,785 (\u2248-12%). The drop in value moments is driven mainly by a fall in days_per_user (weekly frequency) rather than fewer active users; identity decomposition shows days_per_user fell ~16.4% and is the primary driver. Queried governed metrics: active_users (prev_week r2 \u2192 836; last_week r1 \u2192 886) and value_moments (prev_week r4 \u2192 4,307; last_week r3 \u2192 3,785). explain_change on weekly_value_moments (r5) decomposes the -11.9% change and identifies days_per_user as the primary driver.",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The answer correctly reports that active users increased and identifies the governed decomposition\u2019s primary driver as the decline in days_per_user."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "The answer correctly identifies days_per_user (frequency) as the driver, and the active-user and value-moment changes match the governed figures and decomposition."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The reported active-user increase, value-moment decline, and days_per_user frequency decline are supported by the governed figures and correctly identify the requested driver."
+        }
+      }
+    },
+    {
+      "qid": "t5_region_or_broader",
+      "question": "Value moments dropped last week. Was it one region, or something broader?",
+      "answer": "It was broad \u2014 all regions fell and the decline was driven mainly by lower days-per-user (frequency). Governed metrics show global real value moments fell 4,133 \u2192 3,642 (\u221211.9%) last_week vs prev_week [real_value_moments r4]; EMEA, Americas, and APAC each declined (r1/r2). Decomposition (weekly_value_moments r3) attributes the drop primarily to days_per_user (\u221216.44%), while active_users rose (+5.98%) and moments_per_day was flat.",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The regional figures show declines in all three regions, and the decomposition directly identifies days_per_user as the main negative driver while users rose and moments per day was nearly flat."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "The regional figures show each region declined, and the decomposition supports lower days_per_user as the primary negative driver while users increased and moments_per_day was nearly flat."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The regional figures all decline, and the decomposition explicitly identifies days_per_user as the dominant negative contribution while active users rose and moments per day was essentially flat."
+        }
+      }
+    },
+    {
+      "qid": "t4_business_health",
+      "question": "Is the app healthy right now \u2014 how would you tell?",
+      "answer": "No \u2014 overall engagement (weekly real value moments) dropped last week vs the prior week, driven by a sharp fall in days_per_user despite a rise in active_users. Weekly real value moments fell from 4,133 (prev_week) to 3,642 (last_week), \u221211.88%; decomposition [r3] shows days_per_user fell \u221216.44% and was the primary driver while active_users rose +5.98%. Sources: metric queries [r1]=3642, [r2]=4133 and explain_change [r3].",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The answer correctly identifies weekly real value moments as the north-star/value metric, reports the supported week-over-week decline, and accurately attributes the primary decomposed driver to fewer days per user."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "It correctly uses weekly real value moments as the north-star health measure and the reported decline and decomposition are supported by the governed figures."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The answer correctly identifies weekly real value moments as the north-star outcome and accurately reports the computed week-over-week decline and decomposition without making an unsupported causal claim."
+        }
+      }
+    },
+    {
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "answer": "The metric 'active_users' counts distinct real users with \u22651 value moment in the period; it does not decompose total value moments into 'breadth' vs 'depth'. The analyst also states they \"did not decompose through the tree,\" so the claim that the drop is driven by lower moments_per_day (depth) is an unproven causal assertion not supported by the active_users metric definition or the provided decomposition.",
+      "judge_passed": false,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "It fails to name the supported driver\u2014days per user (frequency)\u2014and instead rejects the needed decomposition without addressing the governed figures."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "The answer explicitly declines to identify the required driver (days per user/frequency) and instead says the decomposition was not performed."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The answer refuses to identify days per user (frequency), which the computed figures require as the driver of the change rather than an unsupported claim about active-users breadth."
+        }
+      }
+    },
+    {
+      "qid": "t4_business_health",
+      "question": "Is the app healthy right now \u2014 how would you tell?",
+      "answer": "No \u2014 the app shows a meaningful drop in core engagement last week (real value moments fell). Weekly real value moments declined 11.88% from 4,133 (week ending 2026-07-05) to 3,642 (week ending 2026-07-12) per the governed metric weekly_value_moments; decomposition shows the decline was driven primarily by a 16.44% drop in days_per_user (frequency) despite active users rising 5.98%. Recommend investigating recent notification/reminder delivery and any product changes that week.",
+      "judge_passed": true,
+      "panel_says_serve": null,
+      "unanimous": false,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "The engagement decline and its arithmetic are supported, but the recommendation names notification/reminder delivery and product changes as likely investigation targets without evidence in the supplied decomposition."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "The computed figures support the weekly value-moment decline and its frequency decomposition, but they do not support attributing the decline to notification/reminder delivery or product changes."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The weekly value-moments decline and the stated active-user and days-per-user changes are supported by the governed figures; the investigation recommendation is framed as a hypothesis rather than a causal assertion."
+        }
+      }
+    },
+    {
+      "qid": "t5_reminder_caused_it",
+      "question": "Reminder open rate fell sharply last week. Did that cause the drop in engagement?",
+      "answer": "No \u2014 the drop in reminder open rate likely contributed but is not proven to be the cause. Weekly value moments fell 11.88% from 4,133 to 3,642; decomposition shows the primary driver was a 16.44% fall in days per user (frequency). Reminder open rate fell 27.95% (0.4256 \u2192 0.3067) and is an influence candidate with low causal confidence (co-moved in one anomaly week only). In short: reminder open rate moved with engagement and may have contributed, but the causal link is weak \u2014 days_per_user was the main proximate driver. Explained change: weekly value moments down 11.88% driven primarily by days_per_user (-16.44%); reminder_open_rate fell 27.95% but governance shows only low-confidence evidence tying it to value moments; numbers came from governed metrics.",
+      "judge_passed": true,
+      "panel_says_serve": true,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": true,
+          "reason": "The answer appropriately avoids claiming causation, accurately reports the governed changes, and characterizes the reminder-open relationship as low-confidence correlational evidence."
+        },
+        "pragmatic": {
+          "serve": true,
+          "reason": "The answer correctly treats the reminder open-rate relationship as unproven and its reported percentage changes match the governed figures."
+        },
+        "skeptical": {
+          "serve": true,
+          "reason": "The answer appropriately states that causation is not proven, accurately reports the governed changes, and frames reminder opens only as a low-confidence correlational candidate."
+        }
+      }
+    },
+    {
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "answer": "The analyst's sentence reports \u2018Active users increased from 836 to 886\u2019 as if representing all active users, but the analyst-added filter restricts the metric to non-internal/test accounts (analyst added: {'is_internal': False}; SQL contains AND is_internal = false). The sentence does not mention this exclusion, so the cited number silently narrows the population.",
+      "judge_passed": false,
+      "panel_says_serve": false,
+      "unanimous": true,
+      "votes": {
+        "strict": {
+          "serve": false,
+          "reason": "It fails to name the supported driver\u2014days per user/frequency\u2014and instead only critiques an undocumented population filter."
+        },
+        "pragmatic": {
+          "serve": false,
+          "reason": "It fails to identify the supported driver\u2014days per user/frequency\u2014which declined and explains the change in value moments."
+        },
+        "skeptical": {
+          "serve": false,
+          "reason": "The answer fails to identify the supported driver\u2014days per user/frequency\u2014and instead raises a population-filter caveat unrelated to the question\u2019s required decomposition."
+        }
+      }
+    }
+  ]
+}

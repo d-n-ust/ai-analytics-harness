@@ -125,18 +125,26 @@ def test_a_model_never_asks_for_an_effort_it_rejects():
     not what was requested."""
     from agent.models import MODEL_SPECS
 
+    # The two ladders are not nested, which is the whole reason a single floor cannot describe
+    # them: mini rejects `none`, terra rejects `minimal`, and each 400s on the other's word.
     mini = MODEL_SPECS["gpt-5-mini"]
-    assert mini.effort_for("none") == "minimal", "the floor is applied"
-    assert mini.effort_for("low") == "low", "an explicit effort above the floor is untouched"
+    terra = MODEL_SPECS["gpt-5.6-terra"]
+    assert mini.effort_for("none") == "minimal", "mini has no `none`; it runs at its weakest"
+    assert terra.effort_for("minimal") == "none", "terra has no `minimal`; it runs at its weakest"
+    assert mini.effort_for("low") == "low" and terra.effort_for("low") == "low", \
+        "an effort both accept is sent unchanged"
+    assert mini.effort_for("xhigh") == "high", "above the ceiling lands on the ceiling"
 
     for name, spec in MODEL_SPECS.items():
         if spec.provider == "anthropic":
             continue
-        sent = spec.effort_for("none")
-        assert sent != "none" or spec.lowest_effort == "none", name
-        # deepseek's dialect reads 'none' as non-thinking mode, so its floor stays 'none'
+        for requested in ("none", "minimal", "low", "medium", "high", "xhigh"):
+            sent = spec.effort_for(requested)
+            assert sent in spec.efforts, \
+                f"{name}: asked {requested!r}, would send {sent!r}, which it does not accept"
+        # deepseek's dialect reads 'none' as non-thinking mode, so its weakest stays 'none'
         if spec.provider == "deepseek":
-            assert sent == "none", f"{name}: deepseek reads 'none' as thinking-off"
+            assert spec.effort_for("none") == "none", f"{name}: deepseek reads 'none' as thinking-off"
 
 
 def test_tools_schema_mapping():

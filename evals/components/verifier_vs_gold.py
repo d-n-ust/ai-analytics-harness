@@ -4,19 +4,22 @@
 it is also the expensive one: it needs someone to label a blind sheet, and the labels go stale
 every time the judge's prompt changes — which, in the July series, was five times in a day.
 
-This is the cheap complement. Every `metric_answer` question carries a `gold_sql` that computes
-the answer straight from the fact tables, without touching the semantic layer the agent used. So
-for any judged row with a numeric gold, whether the answer was right is already known, and the
-judge's verdict can be SCORED rather than merely compared with what it said last time:
+This is the cheap complement. Two kinds of row already know whether the answer was right, so the
+judge's verdict can be SCORED rather than merely compared with what it said last time. A numeric
+question carries a `gold_sql` computed straight from the fact tables, without touching the
+semantic layer the agent used. An UNANSWERABLE question has no correct number at all, so any
+number served is wrong by construction — no tolerance, no label needed.
 
-    judge REFUSED an answer that matched gold   -> false flag   (lost coverage)
-    judge PASSED  an answer that missed gold    -> miss         (a served wrong number)
+    judge REFUSED an answer the gold says was right  -> false flag   (lost coverage)
+    judge PASSED  an answer the gold says was wrong  -> miss         (a served wrong number)
 
 No model calls, no labelling, and it re-runs over any stored run in a second. Two honest limits,
-both of which is why it complements the human panel rather than replacing it:
+which are why it complements the human panel rather than replacing it:
 
-  * It covers only rows with a numeric gold. Diagnostic and keyword questions have none, so the
-    judge's behaviour there is still unscored — those are exactly the rows the panel must label.
+  * It cannot see PROSE answers. Diagnostic and keyword questions are arguments, not figures, and
+    have no gold of either kind — the panel must label those. An instrument blind to a set of
+    rows must not report a number that implies otherwise, so they are excluded rather than
+    assumed correct.
   * `gold_sql` is an independent COMPUTATION, not an independent JUDGEMENT. It is written by the
     same hand that wrote the questions and the layer. It kills "the semantic layer graded its own
     homework" — the gold never goes through it — and it does not kill "the author graded their
@@ -29,6 +32,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 LABELS_DIR = Path(__file__).resolve().parent.parent / "labels"
@@ -36,22 +40,38 @@ OUT = LABELS_DIR / "verifier_vs_gold.json"
 
 
 def scored_rows(paths: list[str]) -> list[dict]:
-    """Judged rows where an independent gold says whether the answer was right."""
+    """Judged rows where something other than a human already says whether the answer was right.
+
+    Two such rows, and the second costs nothing extra:
+
+      * a numeric question with a `gold_sql` — the answer is right iff it matches, within the
+        grader's own tolerance so this cannot disagree with `correct` about rounding.
+      * an UNANSWERABLE question with no gold at all. No correct number exists, so any number
+        served is wrong by construction. That needs no tolerance and no label; a judge that
+        passed one missed.
+
+    What is left after both is the prose set — diagnostic and keyword questions where the answer
+    is an argument rather than a figure. Those are the rows a human panel has to label, and
+    keeping them out of this score is the point: an instrument that cannot see them should not
+    report a number that implies it did."""
     out = []
     for p in paths:
         for line in Path(p).open():
             r = json.loads(line)
             v = r.get("verifier_verdict")
-            gold, declared = r.get("gold"), r.get("declared_value")
-            if not v or v.get("answers_question") is None or gold is None or declared is None:
+            if not v or v.get("answers_question") is None:
                 continue
+            gold, declared = r.get("gold"), r.get("declared_value")
+            if gold is not None and declared is not None:
+                right, basis = abs(declared - gold) <= max(abs(gold) * 0.02, 1e-9), "gold_sql"
+            elif r.get("expected_refuse") and declared is not None:
+                right, basis = False, "unanswerable"      # no correct number exists
+            else:
+                continue                                   # prose — for the human panel
             out.append({
                 "qid": r["qid"], "rung": r["rung"], "config": r["config"], "rep": r.get("rep"),
                 "passed": bool(v["answers_question"]), "mismatch": v.get("mismatch"),
-                "value_role": v.get("value_role"),
-                # The tolerance the grader itself uses, so this agrees with `correct` by
-                # construction rather than by a second opinion about rounding.
-                "answer_right": abs(declared - gold) <= max(abs(gold) * 0.02, 1e-9),
+                "value_role": v.get("value_role"), "basis": basis, "answer_right": right,
             })
     return out
 
@@ -80,7 +100,10 @@ def main() -> None:
     s = score(rows)
 
     from agent.guardrails.judge import prompt_fingerprint
-    record = {"method": "independent gold_sql (no human labels; numeric questions only)",
+    by_basis = Counter(r["basis"] for r in rows)
+    record = {"method": "independent gold (no human labels): gold_sql on numeric questions, "
+                        "plus unanswerable questions where any served number is wrong",
+              "covers": dict(by_basis), "excludes": "prose answers (diagnostic/keywords)",
               "prompt_fingerprint": prompt_fingerprint(), "source_runs": paths, **s}
     LABELS_DIR.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(record, indent=2))
