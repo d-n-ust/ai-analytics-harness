@@ -20,6 +20,7 @@ verifier module worth keeping pure.
 from __future__ import annotations
 
 import logging
+from math import isclose
 
 from ..numbers import parse_numbers
 from . import Position, Verdict, judge, note
@@ -50,8 +51,16 @@ def num_match(a: float, b: float) -> bool:
 
     Rounding to significant figures is deliberately not forgiven. A model writing 2690 for
     2685.08 has not served a governed result; it has served an approximation of one, and this
-    guardrail exists to tell those apart."""
-    if a == b:
+    guardrail exists to tell those apart.
+
+    `isclose` is how the first test is written, not a tolerance added to it. The rounding ladder
+    asks whether one number is the ROUNDING of the other, which is false when both carry full
+    precision and differ only in the last bits — so a rate rendered as a percentage failed every
+    rung: the tree's -0.1644119797793533 times 100 is -16.441197977935328, the model served
+    -16.44119797793533, and the two differ by 3.55e-15. At 1e-12 this admits nothing the ladder
+    below would not already admit at k=6; it only stops float representation being mistaken for
+    a different number."""
+    if a == b or isclose(a, b, rel_tol=1e-12, abs_tol=1e-12):
         return True
     return any(a == round(b, k) or b == round(a, k) for k in range(7))
 

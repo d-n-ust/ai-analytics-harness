@@ -499,6 +499,17 @@ def test_governed_numbers_allows_comparison_and_refuses_composition():
         assert check(str(value), value, weeks, "value_moments").allowed, \
             f"{what} between two value_moments results is a comparison, not a composition"
 
+    # A rate rendered as a percentage must match the governed rate. Multiplying by 100 moves
+    # the last bits, and num_match's rounding ladder asks whether one number is the ROUNDING of
+    # the other — false when both carry full precision — so this failed every rung and refused
+    # three diagnostic answers whose figures the tree had computed.
+    pct = [_qm("days_per_user", 2.27, period="last_week")]
+    tree_pct = {"tool": "explain_change", "args": {"node": "days_per_user"}, "error": False,
+                "result": "", "result_values": [-0.1644119797793533]}
+    assert check("-16.44%", -16.44119797793533, [tree_pct]).allowed, \
+        "a governed rate x 100 is the same number, differently displayed"
+    assert not check("2.69", 2.69, pct).allowed, "but a different week is a different number"
+
     # The tree's own figures are governed results, whatever tool produced them — the check that
     # asked `tool == "query_metric"` could not see them and refused the whole decomposition.
     tree_step = {"tool": "explain_change", "args": {"node": "weekly_value_moments"},
