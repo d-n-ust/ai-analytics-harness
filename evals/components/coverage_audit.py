@@ -33,8 +33,8 @@ from collections import Counter
 from pathlib import Path
 
 from agent.guardrails import parse_cell
+from agent.guardrails.after import _num_match, _step_values
 from agent.numbers import bare_number, parse_numbers
-from agent.verifier import _num_match, _step_values
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from warehouse.warehouse import QueryError, open_warehouse, run_query
 

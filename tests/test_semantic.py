@@ -14,8 +14,9 @@ from __future__ import annotations
 import dataclasses
 from pathlib import Path
 
-from agent import input_guardrail, verifier
 from agent.guardrails import LADDER
+from agent.guardrails import after as verifier
+from agent.guardrails import before as input_guardrail
 from agent.numbers import bare_number
 from agent.protocol import TERMINAL_TOOLS
 from agent.tools import Toolbox
@@ -159,7 +160,7 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
         "the registry, the flag set and the ladder order must be the same nine, in one order"
 
-    root = Path(__file__).resolve().parent.parent
+    root = Path(__file__).resolve().parent.parent / "agent"
     for g in GUARDRAILS:
         assert isinstance(g.position, Position) and g.mechanism, g.name
         for rel in g.implemented_in:
@@ -372,21 +373,21 @@ def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
     tb = Toolbox(con, 6, sem, None, LADDER[5])                 # R5: member resolution on
     window = {"start": "2026-06-01", "end": "2026-06-30"}
 
-    no_dim = input_guardrail.block(sem, tb.g, {"metric": "mrr", "filters": {"region": "Americas"}})
+    no_dim = input_guardrail.check(sem, tb.g, {"metric": "mrr", "filters": {"region": "Americas"}})
     assert no_dim and "dimension_not_supported" in no_dim   # mrr is sliceable by plan only
 
-    bad_value = input_guardrail.block(
+    bad_value = input_guardrail.check(
         sem, tb.g, {"metric": "active_users", "filters": {"region": "North America"}, **window})
     assert bad_value and "ungoverned_dimension_value" in bad_value
     assert "Americas" not in bad_value                 # no substitutable member list leaks back
 
     # a governed dimension holding a governed member passes both checks
-    assert input_guardrail.block(
+    assert input_guardrail.check(
         sem, tb.g, {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
 
     # below the resolve rung the value check is off — the pre-R5 hole, kept measurable
     below = Toolbox(con, 6, sem, None, LADDER[4])
-    assert input_guardrail.block(
+    assert input_guardrail.check(
         sem, below.g, {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
 
 

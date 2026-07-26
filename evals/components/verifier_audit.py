@@ -130,7 +130,7 @@ def cmd_score(args) -> None:
     # headline self-checking instead of resting on an unverifiable assumption.
     from datetime import date
 
-    from agent.verifier import prompt_fingerprint
+    from agent.guardrails.judge import prompt_fingerprint
     record = {"labelled": n, "agreement": agree,
               "miss": miss, "miss_rate": round(miss / (n_pass or 1), 3),
               "false_flag": ff, "false_flag_rate": round(ff / (n_fail or 1), 3),

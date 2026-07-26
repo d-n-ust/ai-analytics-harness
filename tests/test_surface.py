@@ -22,9 +22,9 @@ import sys
 from pathlib import Path
 
 from agent.guardrails import LADDER
+from agent.guardrails.judge import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
 from agent.prompt import build_grounding
 from agent.protocol import Turn
-from agent.verifier import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
 from warehouse.warehouse import open_warehouse
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"

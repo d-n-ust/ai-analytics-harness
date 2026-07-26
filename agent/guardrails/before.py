@@ -1,8 +1,13 @@
-"""The input guardrail: what a governed call must satisfy BEFORE it runs.
+"""Guardrails at position BEFORE: what a governed call must satisfy before it runs.
 
-Not to be confused with guardrails.py, which says which guardrails are switched ON. This is what
-one of them does. Input guardrails stop a bad number being COMPUTED; the output guardrails (see
-verifier.py) stop one being SERVED.
+Industry calls these input guardrails — they stop a bad number being COMPUTED, where the AFTER
+guardrails stop one being SERVED. `Position.BEFORE` is the finer name: the ACTION_SPACE
+guardrails also act on the request, by removing the ability to make it at all.
+
+The dispatcher applies this to EVERY tool call, not only the governed one, so a tool added later
+is guarded without anybody remembering to guard it. For a call with no scope to check (raw SQL,
+a schema lookup) it is a no-op — which is itself the honest statement that raw SQL cannot be
+coverage-checked, and precisely why tool_restriction exists.
 
 Two checks live here, switched on separately so their contributions are measured apart:
 
@@ -23,7 +28,7 @@ by exhaustion (tests/test_structural.py) and as a property (tests/test_gate_prop
 from __future__ import annotations
 
 
-def block(semantic, guardrails, args: dict) -> str | None:
+def check(semantic, guardrails, args: dict) -> str | None:
     """A message naming the coded refusal reason, or None to let the call through.
 
     The message tells the model what to do about it, because a block it cannot interpret becomes

@@ -15,8 +15,8 @@ Run:  OPENAI_REASONING=low python evaluation/verifier_eval.py
 
 from __future__ import annotations
 
+from agent.guardrails.judge import verify_trajectory
 from agent.models import get_model
-from agent.verifier import verify_trajectory
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 

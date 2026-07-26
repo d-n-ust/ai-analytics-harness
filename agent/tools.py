@@ -22,8 +22,7 @@ from semantic.tree import MetricTree, TreeError
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
-from . import input_guardrail
-from .guardrails import LADDER, GuardrailSet
+from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
 from .protocol import ToolResult
 
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
@@ -243,24 +242,14 @@ def _list_metrics(tb, args) -> ToolResult:
 
 
 def _query_metric(tb, args) -> ToolResult:
-    """The governed data path. The input guardrail runs first, so a call that must not be
-    answered never reaches the warehouse; transparency then shows the model what it actually
-    got — the scope the number covers and the exact SQL — rather than a bare figure to trust."""
-    blocked = input_guardrail.block(tb.semantic, tb.g, args)
-    if blocked is not None:
-        return ToolResult(blocked, is_error=True)
+    """The governed data path: compile the metric to SQL, run it, return the rows plus the typed
+    measure values the AFTER guardrails read. The SQL travels with the result so DISCLOSURE can
+    show what actually ran; whether it is shown is not this function's business."""
     sql, cols, rows = tb.semantic.query_with_sql(
         args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
         time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),
         period=args.get("period"), resolve=tb.g.resolve, segment=args.get("segment"))
-    text = _fmt_rows(cols, rows)
-    if tb.g.transparency:
-        text += "\n[scope] " + tb.semantic.scope_line(
-            args["metric"], filters=args.get("filters"), period=args.get("period"),
-            start=args.get("start"), end=args.get("end"),
-            group_by=args.get("group_by"), resolve=tb.g.resolve)
-        text += f"\n[sql] {sql}"
-    return ToolResult(text, values=_measure_values(cols, rows))
+    return ToolResult(_fmt_rows(cols, rows), values=_measure_values(cols, rows), sql=sql)
 
 
 def _check_metric_exists(tb, args) -> ToolResult:
@@ -351,63 +340,10 @@ class Toolbox:
         self.tree = tree
 
     def specs(self, terminal_only: bool = False) -> list[dict]:
-        """The action space. `terminal_only` withdraws every data tool, leaving just the exit
-        tools — used to CLOSE a run that has stopped calling tools or is about to hit the
-        iteration cap, so it ends through the typed protocol instead of dying as an untyped
-        error row. Removing the choice is structural; nudging the model in prose is not."""
-        specs: list[dict] = []
-        if not terminal_only:
-            specs += [_GET_SCHEMA, _DESCRIBE_TABLE]
-            if not self.g.tool_restriction:
-                specs.append(_RUN_SQL)
-            if self.rung >= 3:
-                specs += [_LIST_METRICS, self._query_metric_spec()]
-            if self.rung >= 6:
-                specs += [_GET_METRIC_TREE, _EXPLAIN_CHANGE]
-            if self.g.check_tools and self.semantic is not None:   # R2: answerability check tools
-                specs += [_CHECK_METRIC, _CHECK_COVERAGE, _CHECK_SEGMENT, _CHECK_CAUSAL]
-        specs.append(self._answer_spec())
-        if self.g.abstain:
-            specs.append(_REFUSE)
-        specs.append(_CLARIFY)
-        return specs
-
-    def _query_metric_spec(self) -> dict:
-        """Constrain `metric` to the catalog once the coverage check is on (a closed menu — the model
-        cannot even *name* a metric that doesn't exist), and offer the governed `segment`
-        enum whenever the layer defines any (a named segment like real_acquisition)."""
-        if self.semantic is None:
-            return _QUERY_METRIC
-        props = dict(_QUERY_METRIC["input_schema"]["properties"])
-        if self.g.coverage_check:
-            props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
-        segs = self.semantic.segment_names()
-        if segs:
-            props["segment"] = {"type": "string", "enum": segs,
-                                "description": "A governed named segment / reusable filter (see list_metrics), "
-                                               "e.g. real_acquisition to exclude test channels."}
-        return {**_QUERY_METRIC, "input_schema": {**_QUERY_METRIC["input_schema"], "properties": props}}
-
-    def _answer_spec(self) -> dict:
-        """At the spec-decomposition rung the answer carries its own TYPED provenance: the
-        numeric `value` (a real number, so the checks read the answer instead of parsing it
-        back out of prose) and the governed `source_metric` it came from (the same closed
-        menu as query_metric). Both are the model's typed claims, more reliable than
-        reconstructing them from the answer text. A prose / diagnostic answer leaves `value`
-        unset, so the output checks stand down rather than force a spec onto words."""
-        if not (self.g.single_metric and self.semantic is not None):
-            return _ANSWER
-        props = dict(_ANSWER["input_schema"]["properties"])
-        props["value"] = {
-            "type": "number",
-            "description": "If your answer is a single number, repeat it here as a number "
-                           "(not text). Leave it out for a non-numeric answer (an assessment, "
-                           "a driver, a list) — the value check then does not apply."}
-        props["source_metric"] = {
-            "type": "string", "enum": list(self.semantic.metrics),
-            "description": "If `value` came from a governed metric, name that metric (as passed "
-                           "to query_metric). Omit for a derived or non-metric answer."}
-        return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
+        """The action space for this configuration — assembled by the ACTION_SPACE guardrails,
+        which is where the ladder is legible."""
+        return action_space.offer(TOOLS, self.rung, self.g, self.semantic,
+                                  terminal_only=terminal_only)
 
     def dispatch(self, name: str, args: dict) -> ToolResult:
         """Run one tool. Errors come back as the DB/semantic message rather than as exceptions,
@@ -416,8 +352,14 @@ class Toolbox:
         tool = TOOLS.get(name)
         if tool is None or tool.run is None:
             return ToolResult(f"Unknown tool {name!r}.", is_error=True)
+        # Every call passes the BEFORE guardrails and every result passes DISCLOSURE, rather than
+        # each handler remembering to ask. A tool added later is guarded by existing; for a call
+        # with no scope to check both are no-ops.
+        blocked = before.check(self.semantic, self.g, args)
+        if blocked is not None:
+            return ToolResult(blocked, is_error=True)
         try:
-            return tool.run(self, args)
+            return disclosure.annotate(tool.run(self, args), args, self.semantic, self.g)
         except (QueryError, SemanticError, TreeError) as exc:
             return ToolResult(f"Error: {exc}", is_error=True)
         except KeyError as exc:

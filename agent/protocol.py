@@ -40,6 +40,10 @@ class ToolResult:
     is_error: bool = False
     values: list | None = None
     call_id: str = ""
+    # The governed SQL behind this result, when there was one. Evidence, not display: the
+    # DISCLOSURE guardrail formats it for the model, and it is carried rather than recompiled
+    # so what the model is shown is what actually ran.
+    sql: str | None = None
 
     def for_call(self, call: ToolCall) -> ToolResult:
         return replace(self, call_id=call.id)

@@ -127,7 +127,7 @@ def _verifier_validation() -> dict | None:
     annotated with whether the verifier's prompt has changed since — i.e. whether it is STALE. A
     refuse-only critic you cannot score is just an opinion, so an unvalidated or stale verifier is
     surfaced in the report, never assumed good."""
-    from agent.verifier import prompt_fingerprint
+    from agent.guardrails.judge import prompt_fingerprint
     path = Path(__file__).resolve().parent / "labels" / "verifier_validation.json"
     if not path.exists():
         return None
