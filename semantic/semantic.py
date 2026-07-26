@@ -276,6 +276,47 @@ class SemanticLayer:
         m = self.metrics.get(metric)
         return self._allowed_filters(m) if m else None
 
+    def redundant_filters(self, metric: str, filters: dict | None) -> dict:
+        """Of the filters the analyst added, which ones the metric's DEFINITION already applies.
+
+        A filter that restates a definitional clause changes no rows. Asking for active_users
+        "excluding internal accounts" returns 886 either way, because the definition already
+        excludes them; asking the same of value_moments returns 3,642 instead of 3,785, because
+        that one does not.
+
+        This exists because the two are indistinguishable downstream. The trajectory judge is
+        shown the analyst's added filters and told to treat an unrequested one as a narrowing —
+        sound, and wrong for a filter that narrows nothing. It refused five correct answers that
+        way in one run of 171. The judge cannot tell without reading the definition, so the
+        definition is read here and the answer handed over.
+
+        DEFINITIONALLY redundant, not coincidentally so — the distinction decides the direction
+        this is allowed to be wrong in. A filter named here can never change a number, for any
+        data. A filter NOT named here may still leave a number unchanged this week and change it
+        next: new_signups carries no default_filters, so excluding internal accounts is a real
+        restriction even in a week where no internal account signed up. Only the first is safe to
+        tell a guardrail to disregard.
+
+        Only `default_filters` count, not the segment or the time window: those are governed
+        modifications the layer applies for its own reasons, already reported separately. A
+        clause this cannot parse is treated as NOT matching — the failure that costs a false
+        pass is worse than the one that costs a false flag.
+        """
+        m = self.metrics.get(metric)
+        if not m or not filters:
+            return {}
+        pinned: dict[str, bool] = {}
+        for clause in m.get("default_filters") or []:
+            # The whole vocabulary in the layer today: "NOT <col>" and "<col>". Anything else
+            # (a comparison, an IN list) is left alone rather than guessed at.
+            text = str(clause).strip()
+            negated = text.upper().startswith("NOT ")
+            column = text[4:].strip() if negated else text
+            if column.isidentifier():
+                pinned[column] = not negated
+        return {k: v for k, v in filters.items()
+                if k in pinned and isinstance(v, bool) and v is pinned[k]}
+
     def resolve_member(self, dimension: str, value):
         """Map a free-text filter value onto the canonical governed member of a dimension,
         via its members + synonyms (case/space/underscore-insensitive) — "iPhone" ->

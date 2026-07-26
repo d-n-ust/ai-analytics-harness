@@ -289,6 +289,57 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
             f"causal grading must apply to the {role} branch too: a lookup can name a driver"
 
 
+def test_a_filter_that_restates_the_definition_narrows_nothing():
+    """The judge is shown the analyst's added filters and told to treat an unrequested one as a
+    narrowing. Sound — and wrong when the filter narrows nothing.
+
+    Asking active_users to exclude internal accounts returns 886 either way, because the
+    definition already excludes them. Asking the same of value_moments returns 3,642 instead of
+    3,785, because that one does not. The judge cannot tell the two apart without reading the
+    definition, and it refused five correct answers on the difference in one run of 171.
+
+    DEFINITIONALLY redundant, not coincidentally so, and the direction matters: a filter named
+    redundant must be unable to change a number for ANY data. new_signups carries no default
+    filter, so excluding internal accounts is a real restriction even in a week where no internal
+    account signed up. NO LLM."""
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+    off = {"is_internal": False}
+
+    # Already in the definition -> redundant.
+    for metric in ("active_users", "power_users", "days_per_user", "activation_rate",
+                   "moments_per_day", "real_value_moments"):
+        assert sem.redundant_filters(metric, off), f"{metric} already excludes internal accounts"
+
+    # Not in the definition -> a real restriction, even where the data makes it a no-op today.
+    for metric in ("value_moments", "new_signups"):
+        assert not sem.redundant_filters(metric, off), \
+            f"{metric} has no such default; the filter restricts and the judge must see it"
+
+    # The soundness property: redundant implies the number cannot move.
+    for metric in ("active_users", "power_users", "days_per_user"):
+        assert sem.redundant_filters(metric, off)
+        plain = sem.scalar(metric, period="last_week")
+        filtered = sem.scalar(metric, filters=off, period="last_week")
+        assert abs(plain - filtered) < 1e-9, f"{metric} called redundant but the value moved"
+    # ...and where it is NOT redundant, the number really does move.
+    assert abs(sem.scalar("value_moments", period="last_week")
+               - sem.scalar("value_moments", filters=off, period="last_week")) > 1
+
+    # Only booleans that MATCH the definitional value count.
+    assert not sem.redundant_filters("active_users", {"is_internal": True}), \
+        "the opposite value is a real (and empty) restriction, not a restatement"
+    assert not sem.redundant_filters("active_users", {"region": "EMEA"})
+    assert sem.redundant_filters("active_users", None) == {}
+    assert sem.redundant_filters("no_such_metric", off) == {}
+
+    # And the judge is actually told, through the channel that already exists for
+    # "the layer did this, not the analyst".
+    notes = verifier.governed_notes({"metric": "active_users", "filters": off}, sem)
+    assert any("ALREADY applies it" in n for n in notes), notes
+    assert not any("ALREADY applies it" in n
+                   for n in verifier.governed_notes({"metric": "value_moments", "filters": off}, sem))
+
+
 def test_the_refusal_vocabulary_is_defined_where_it_is_used():
     """A typed protocol whose codes the model must infer from identifiers is a spelling test.
 

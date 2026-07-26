@@ -390,11 +390,22 @@ def governed_notes(args: dict, semantic) -> list[str]:
     Members come from the layer's own resolver, so a country scope earns its region's note and a
     synonym is recognised — the same fix the BEFORE guardrail needed, for the same reason. Only
     members the analyst NAMED get a note; a breakdown's members were not chosen, and the coverage
-    check has already refused any that fall outside it."""
+    check has already refused any that fall outside it.
+
+    A filter that RESTATES a definitional clause is reported here too. The judge is shown the
+    analyst's added filters and told to treat an unrequested one as a narrowing, which is sound
+    and is wrong when the filter narrows nothing: asking active_users to exclude internal
+    accounts returns 886 either way, because the definition already excludes them. It refused
+    five correct answers that way in one run of 171 — the largest single source of over-refusal
+    left at R9. The judge cannot tell without reading the definition, so the layer reads it."""
     a = args or {}
     if semantic is None:
         return []
     notes = []
+    for column, value in semantic.redundant_filters(a.get("metric"), a.get("filters")).items():
+        notes.append(f"the analyst asked for {column}={value}, but this metric's definition "
+                     f"ALREADY applies it — the filter changes no rows and the number is "
+                     f"identical without it. Do NOT read it as narrowing the scope")
     seg = a.get("segment")
     if seg:
         spec = semantic.governance.get("segments", {}).get(seg, {})
