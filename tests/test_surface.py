@@ -69,7 +69,8 @@ def _check_evidence_renders() -> None:
                       {"description": "d", "entity": "users", "segment": "active",
                        "agg": "count(*)", "unit": "count"},
                       "SELECT 1", 42, "42", applied_filters={"platform": "ios"},
-                      time_window="last_week", governed_notes=["note"])
+                      time_window="last_week", governed_notes=["note"],
+                      claim_text="42 active users\nlast week.")
     expected = (
         "QUESTION:\n  how many active users?\n\nWHAT THE ANALYST COMPUTED:\n"
         "metric used: active_users\n"
@@ -81,7 +82,10 @@ def _check_evidence_renders() -> None:
         "  time window: last_week\n"
         "  full SQL (for reference; its built-in clauses are definitional, not the analyst's): SELECT 1\n"
         "query result: 42\n"
-        "analyst's claimed answer: 42")
+        "analyst's claimed answer: 42\n"
+        # collapsed to one line: an answer's own newlines must not restructure the evidence
+        # block, which is read positionally by the judge.
+        "the analyst's answer in full: 42 active users last week.")
     if spy.seen != expected:
         diff = "\n".join(difflib.unified_diff(expected.splitlines(), spy.seen.splitlines(),
                                               "expected", "rendered", lineterm=""))

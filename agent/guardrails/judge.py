@@ -107,7 +107,8 @@ _EVIDENCE = (
     "  time window: {time_window}\n"
     "  full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}\n"
     "query result: {result_value}\n"
-    "analyst's claimed answer: {claim_value}"
+    "analyst's claimed answer: {claim_value}\n"
+    "the analyst's answer in full: {claim_text}"
 )
 _USER = "QUESTION:\n  {question}\n\nWHAT THE ANALYST COMPUTED:\n{evidence}"
 
@@ -139,14 +140,21 @@ def prompt_fingerprint() -> str:
 
 def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
                       sql: str, result_value, claim_value, applied_filters=None,
-                      time_window=None, governed_notes=None) -> tuple[bool, str, str]:
+                      time_window=None, governed_notes=None,
+                      claim_text: str | None = None) -> tuple[bool, str, str]:
     """Inspect one answer's trajectory. Returns (answers_question, mismatch_kind, reason).
     answers_question=False means the served number does not answer the question -> downgrade.
     `applied_filters` is what the ANALYST added for this query (not the metric's own definition),
     so the scope check judges the analyst's choices, not the definition's built-in clauses.
     `governed_notes` are governed modifications the layer applied (a named segment, a coverage
     window) — DEFINITIONAL, not the analyst's invention — so a governed narrowing (excluding a
-    test channel, dropping pre-launch data) is not mistaken for a scope error."""
+    test channel, dropping pre-launch data) is not mistaken for a scope error.
+
+    `claim_text` is the sentence the analyst actually served. Without it the judge sees a bare
+    number against a question and the only thing it can ask is "is this number the answer" — so
+    on 'what caused the drop?' it read 3785 as a proposed cause, found it was a count, and
+    rejected. The number was never the answer there; it was evidence FOR one, and a claim cannot
+    be checked without being shown."""
     md = metric_def or {}
     brief = _EVIDENCE.format(
         metric=metric_name, description=md.get("description", "(no description)"),
@@ -155,7 +163,8 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
         governed="; ".join(governed_notes) if governed_notes else "none",
         applied_filters=applied_filters or "none",
         time_window=time_window or "all time",
-        sql=sql, result_value=result_value, claim_value=claim_value)
+        sql=sql, result_value=result_value, claim_value=claim_value,
+        claim_text=" ".join((claim_text or "(not recorded)").split()))
     user = _USER.format(question=question, evidence=brief)
     turn = model.respond(Conversation.opening(verify_system(), user), [_REPORT],
                          force_tool="report_verdict", temperature=0)

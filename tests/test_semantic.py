@@ -179,21 +179,25 @@ def test_the_judge_stance_is_a_treatment_with_two_levels():
     "is this correct?" judge agrees with whatever it is shown — but it is also a known
     over-rejection instruction. Which effect dominates is measurable, so it is a treatment.
 
-    The default must reproduce the shipped prompt exactly, or every stored validation would be
-    invalidated by the refactor that made it swappable."""
+    The ABSOLUTE fingerprint is pinned by tests/golden/model_surface.txt, which renders a prompt
+    change as a reviewable diff. It was pinned here too, as a bare hash in an assert; one
+    deliberate edit then failed in two places, and the copy here could only say "it changed".
+    This owns the RELATIONSHIPS instead — which are what make the stance a treatment — so it
+    stays meaningful across every deliberate edit to the judge."""
     import os
 
     from agent.guardrails import judge
 
     before = os.environ.get("VERIFIER_STANCE")
     try:
+        os.environ.pop("VERIFIER_STANCE", None)
+        assert judge.stance_name() == "skeptical", \
+            "the shipped stance must be what an unset environment runs, or stored runs are unlabelled"
         os.environ["VERIFIER_STANCE"] = "skeptical"
-        assert judge.prompt_fingerprint() == "439c750bb4de", \
-            "the default stance no longer reproduces the prompt every stored run used"
-        skeptical = judge.verify_system()
+        skeptical, skeptical_fp = judge.verify_system(), judge.prompt_fingerprint()
         os.environ["VERIFIER_STANCE"] = "even_handed"
         even = judge.verify_system()
-        assert judge.prompt_fingerprint() != "439c750bb4de", "a stance must change the fingerprint"
+        assert judge.prompt_fingerprint() != skeptical_fp, "a stance must change the fingerprint"
         # only the stance differs; the five checks are shared, or the comparison measures two things
         assert skeptical.split("Ground EVERY")[1] == even.split("Ground EVERY")[1]
         os.environ["VERIFIER_STANCE"] = "nope"
@@ -471,15 +475,19 @@ def test_verifier_is_refuse_only():
               run_output_validation=False, run_single_metric=True)
     seen: dict = {}
 
-    def passing(question, metric, metric_def, args, value, declared_value):
-        seen.update(metric=metric, args=args, declared=declared_value)
+    def passing(question, metric, metric_def, args, value, declared_value, claim_text):
+        seen.update(metric=metric, args=args, declared=declared_value, claim=claim_text)
         return True, "none", ""
 
-    v = verifier.verify_answer(sem, "How many paying users?", "371", steps,
+    v = verifier.verify_answer(sem, "How many paying users?", "371 people pay us today.", steps,
                                          verify_traj=passing, **kw)
     assert v.allowed is True                            # a passing verdict changes nothing
     assert seen["metric"] == "paying_users" and seen["declared"] == 371
     assert seen["args"] == {"metric": "paying_users"}   # the analyst's call, not the compiled SQL
+    # The SENTENCE reaches the judge, not just the number. Shown a bare 371 against "what caused
+    # the drop?" the only question available to a judge is "is 371 the answer" — which is how it
+    # came to reject every diagnostic answer for citing a count.
+    assert seen["claim"] == "371 people pay us today."
 
     v = verifier.verify_answer(
         sem, "How many paying users?", "371", steps,

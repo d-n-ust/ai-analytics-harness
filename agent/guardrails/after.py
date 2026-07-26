@@ -214,7 +214,8 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
             return verdict
 
     if verify_traj is not None:            # R9: does this metric + SQL actually answer the question?
-        ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
+        ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value,
+                                               declared_value, answer_text)
         note(record, "trajectory_verify", Position.AFTER, "allowed" if ok_v else "refused",
              reason_v if not ok_v else "the judge found no mismatch")
         if not ok_v:
@@ -287,7 +288,7 @@ def _trajectory_verifier(run, model):
     """A callable the judge is driven through: it recompiles the SQL the analyst ran and hands
     over the analyst's ADDED filters separately from the metric's definitional clauses — the
     separation an isolated test showed is load-bearing."""
-    def go(question, metric, metric_def, args, gov_value, claim):
+    def go(question, metric, metric_def, args, gov_value, claim, claim_text):
         a = args or {}
         semantic = run.grounding.semantic
         sql = semantic.compile(metric, group_by=a.get("group_by"), filters=a.get("filters"),
@@ -299,9 +300,10 @@ def _trajectory_verifier(run, model):
         ok, mismatch, reason = judge.verify_trajectory(
             model, question, metric, metric_def, sql, gov_value, claim,
             applied_filters=a.get("filters"), time_window=window,
-            governed_notes=governed_notes(a, semantic))
+            governed_notes=governed_notes(a, semantic), claim_text=claim_text)
         run.last_verdict = {"answers_question": ok, "mismatch": mismatch, "reason": reason,
                             "metric": metric, "sql": sql, "applied_filters": a.get("filters"),
-                            "time_window": window, "governed_value": gov_value, "claim": claim}
+                            "time_window": window, "governed_value": gov_value, "claim": claim,
+                            "claim_text": claim_text}
         return ok, mismatch, reason
     return go

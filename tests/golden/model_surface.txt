@@ -2856,7 +2856,7 @@ system: sha256=400f056239ae chars=8612
 ]
 
 === verifier ===
-prompt_fingerprint: 439c750bb4de
+prompt_fingerprint: 4f70cc254a7c
 QUESTION:
   {question}
 
@@ -2870,3 +2870,4 @@ metric used: {metric}
   full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}
 query result: {result_value}
 analyst's claimed answer: {claim_value}
+the analyst's answer in full: {claim_text}
