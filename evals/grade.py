@@ -60,7 +60,7 @@ def grade_keywords(text: str, keywords: list[str]) -> dict:
 
 def grade_diagnostic(text: str, spec: dict) -> dict:
     driver_ok = _mentions(text, spec.get("driver", []))
-    cause_ok = _mentions(text, spec.get("cause", []))  # descriptive only, not a gate
+    cause_ok = _mentions(text, spec.get("cause", []))  # descriptive only, not a coverage check
     return {"executed": True, "correct": driver_ok,
             "driver_ok": driver_ok, "cause_ok": cause_ok}
 

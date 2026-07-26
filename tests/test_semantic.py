@@ -3,13 +3,16 @@
 The output guardrails (harness/verifier.py) run on a completed answer, gated by rung:
 provenance / single-metric (R7), output validation (R8), and the trajectory verifier (R9,
 stubbed here so the file never calls an LLM). Everything asserted below is deterministic and
-provable by construction. The rest exercises the semantic layer, the interception gate, and the
+provable by construction. The rest exercises the semantic layer, the coverage check, and the
 guardrail ladder.
 
 Run: uv run python -m pytest tests/test_semantic.py -q     (or run this file directly)
 """
 
 from __future__ import annotations
+
+import dataclasses
+from pathlib import Path
 
 from agent import input_guardrail, verifier
 from agent.guardrails import LADDER
@@ -119,7 +122,7 @@ def test_every_offered_tool_can_be_dispatched():
     """A tool's schema and the code that runs it were defined 300 lines apart with nothing
     linking them, so nothing stopped one existing without the other. Offered-but-undispatchable
     is a hallucination the model is invited to make; dispatchable-but-never-offered is dead code
-    pretending to be a control."""
+    pretending to be a guardrail."""
     con = open_warehouse(create_star_views=True)
     tb = Toolbox(con, 6, SemanticLayer(con), MetricTree(SemanticLayer(con)), LADDER[9])
     for spec in tb.specs():
@@ -130,18 +133,43 @@ def test_every_offered_tool_can_be_dispatched():
         assert not result.content.startswith("Unknown tool"), f"{name} is offered but not dispatchable"
 
 
-def test_the_check_tools_can_express_every_scope_the_gate_enforces():
+def test_the_check_tools_can_express_every_scope_the_guardrail_enforces():
     """A model told to pre-check answerability must be able to ask about the same scopes it will
-    then be judged on. check_coverage accepts a region but not a country, while the gate resolves
+    then be judged on. check_coverage accepts a region but not a country, while the coverage check resolves
     a country to its region — so a Philippines question pre-checks clean and is then blocked, and
-    at the rung where the check tools exist without the gate it is never caught at all."""
+    at the rung where the check tools exist without the coverage check it is never caught at all."""
     con = open_warehouse(create_star_views=True)
     tb = Toolbox(con, 6, SemanticLayer(con), None, LADDER[9])
     coverage = next(t for t in tb.specs() if t["name"] == "check_coverage")
     offered = set(coverage["input_schema"]["properties"])
     assert set(COVERAGE_DIMS) <= offered, (
-        f"check_coverage offers {sorted(offered)}; the gate judges "
+        f"check_coverage offers {sorted(offered)}; the coverage check judges "
         f"{sorted(COVERAGE_DIMS)} — the model cannot ask about {sorted(set(COVERAGE_DIMS) - offered)}")
+
+
+def test_the_guardrail_registry_matches_the_set_and_names_real_files():
+    """Nine guardrail flags sat in one file while their implementations lived in two to four
+    others, with nothing connecting them — so "what does this guardrail actually do" could only
+    be answered by grepping. The registry answers it, and this keeps the answer true: every flag
+    is described, in ladder order, and every file it claims to be implemented in exists and
+    mentions it."""
+    from agent.guardrails import GUARDRAILS, LADDER_ORDER, GuardrailSet, Position
+
+    declared = [f.name for f in dataclasses.fields(GuardrailSet)]
+    assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
+        "the registry, the flag set and the ladder order must be the same nine, in one order"
+
+    root = Path(__file__).resolve().parent.parent
+    for g in GUARDRAILS:
+        assert isinstance(g.position, Position) and g.mechanism, g.name
+        for rel in g.implemented_in:
+            path = root / rel
+            assert path.exists(), f"{g.name}: claims {rel}, which does not exist"
+            assert g.name in path.read_text(), f"{g.name}: {rel} never mentions it"
+
+    # Position is the distinction that carries information, so each one must be used.
+    used = {g.position for g in GUARDRAILS}
+    assert used == set(Position), f"unused position(s): {set(Position) - used}"
 
 
 def test_metrics_conform_to_ontology():
@@ -285,12 +313,12 @@ def test_region_availability_is_read_from_the_dimension():
 
 def test_ladder_presets_reproduce_the_rung_thresholds():
     """The flag refactor must not move a single existing result: LADDER[n] has to switch on
-    exactly the controls the old `rrung >= N` comparisons did, for every rung."""
+    exactly the guardrails the old `rrung >= N` comparisons did, for every rung."""
     from agent.guardrails import LADDER
     for n in range(10):
         g = LADDER[n]
         assert g.abstain is (n >= 1) and g.check_tools is (n >= 2)
-        assert g.gate is (n >= 3) and g.tool_restriction is (n >= 4)
+        assert g.coverage_check is (n >= 3) and g.tool_restriction is (n >= 4)
         assert g.resolve is (n >= 5) and g.transparency is (n >= 6)
         assert g.single_metric is (n >= 7) and g.output_validation is (n >= 8)
         assert g.trajectory_verify is (n >= 9)
@@ -310,12 +338,12 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     assert cell.label() == "R9-resolve"
     assert incoherent(cell) is None
 
-    # A cell whose control cannot fire is named, not reported. output_validation reads a `value`
+    # A cell whose guardrail cannot fire is named, not reported. output_validation reads a `value`
     # the answer tool only offers under single_metric, so without it the check is inert and its
     # measured contribution would be zero by construction — 365 stored answers sat in such cells.
     inert = LADDER[8].without("single_metric")
     assert "output_validation without single_metric" in (incoherent(inert) or "")
-    # Coherence is a property of the (rung, cell) PAIR: every control above abstention acts on
+    # Coherence is a property of the (rung, cell) PAIR: every guardrail above abstention acts on
     # the semantic layer, which rung 1 and 2 do not have.
     assert incoherent(LADDER[9], rung=6) is None and incoherent(LADDER[1], rung=1) is None
     assert "no semantic layer" in (incoherent(LADDER[9], rung=2) or "")
@@ -334,8 +362,8 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     assert incoherent(LADDER[9].without("single_metric")) is not None
 
 
-def test_gate_blocks_ungoverned_dimension_and_value():
-    """R5, deterministic (no model call): the gate rejects a filter DIMENSION the metric does
+def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
+    """R5, deterministic (no model call): the coverage check rejects a filter DIMENSION the metric does
     not have, and a filter VALUE that is not a governed member — each with its own coded
     reason, before any query runs. The value case must NOT hand back a member list, or the
     model substitutes a sibling from it (the failure that served Americas for 'North America')."""
@@ -413,11 +441,11 @@ def test_toolbox_wiring_and_rung_gate():
     # the re-ordered ladder gates each guardrail on its own rung
     assert Toolbox(con, 6, sem, None, LADDER[4]).g.resolve is False
     assert Toolbox(con, 6, sem, None, LADDER[5]).g.resolve is True
-    # Each control reaches the Toolbox from the guardrail set it was built with — the set IS the
+    # Each guardrail reaches the Toolbox from the guardrail set it was built with — the set IS the
     # configuration, so there is nothing to mirror onto the Toolbox and nothing to fall out of step.
-    for n, control in [(7, "single_metric"), (8, "output_validation"), (9, "trajectory_verify")]:
-        assert getattr(Toolbox(con, 6, sem, None, LADDER[n - 1]).g, control) is False
-        assert getattr(Toolbox(con, 6, sem, None, LADDER[n]).g, control) is True
+    for n, guardrail in [(7, "single_metric"), (8, "output_validation"), (9, "trajectory_verify")]:
+        assert getattr(Toolbox(con, 6, sem, None, LADDER[n - 1]).g, guardrail) is False
+        assert getattr(Toolbox(con, 6, sem, None, LADDER[n]).g, guardrail) is True
 
     # The single-metric check itself, deterministic and with no model needed. The wiring that
     # switches it on for a live run moved to the orchestrator's _Run; what is asserted here is
@@ -443,7 +471,8 @@ def test_toolbox_wiring_and_rung_gate():
 if __name__ == "__main__":
     test_provenance_is_typed_not_guessed()
     test_every_offered_tool_can_be_dispatched()
-    test_the_check_tools_can_express_every_scope_the_gate_enforces()
+    test_the_guardrail_registry_matches_the_set_and_names_real_files()
+    test_the_check_tools_can_express_every_scope_the_guardrail_enforces()
     test_numeric_answers_cannot_skip_the_output_checks()
     test_provenance_reads_the_row_the_answer_came_from()
     test_dispatcher_records_the_measure_not_every_cell()
@@ -456,8 +485,8 @@ if __name__ == "__main__":
     test_region_availability_is_read_from_the_dimension()
     test_ladder_presets_reproduce_the_rung_thresholds()
     test_ablation_cell_is_expressible_and_incoherent_cells_are_named()
-    test_gate_blocks_ungoverned_dimension_and_value()
+    test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value()
     test_closing_phase_offers_only_exit_tools()
     test_verifier_is_refuse_only()
     test_toolbox_wiring_and_rung_gate()
-    print("OK - output guardrails (provenance/validation/verifier) + semantic layer + gate + ladder: all pass.")
+    print("OK - output guardrails (provenance/validation/verifier) + semantic layer + input guardrail + ladder: all pass.")

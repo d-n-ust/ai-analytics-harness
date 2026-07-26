@@ -1,7 +1,7 @@
 """Adversarial proof of the structural guardrails — NO LLM.
 
 A prompt-based guardrail (rrung 1-3) can only be sampled: run the model N times,
-count. A structural guardrail (rrung 4-5: the gate and the fence) is a property of
+count. A structural guardrail (rrung 4-5: the coverage check and the tool restriction) is a property of
 the *system*, so it can be proven by exhaustion. This file is a deterministic
 "worst-case agent": it tries every fabrication path we can think of and asserts the
 guardrails block all of them. If a technique is truly structural, an omniscient,
@@ -27,7 +27,7 @@ UNGOVERNED_METRICS = [
 ]
 UNGOVERNED_SEGMENTS = ["enterprise users", "enterprise", "smb", "vip customers", "", "us"]
 # (scope, start, end) that fall outside coverage and must be blocked, where `scope` is merged
-# into the call. One scope can be named several ways, and a gate that reads only one of them
+# into the call. One scope can be named several ways, and a guardrail that reads only one of them
 # is not structural: the synonym and group_by rows below were all SERVED until the coverage
 # check moved onto the layer's resolved scope. tests/test_gate_properties.py generalises this
 # list into a property — a hand-written enumeration only ever proves what someone thought of.
@@ -88,13 +88,13 @@ def prove():
         res = gate_tb.dispatch("query_metric", args)
         text, is_err = res.content, res.is_error
         _check(is_err and text.startswith("BLOCKED"),
-               f"gate let an out-of-coverage call through: {scope} {start}..{end} -> {text[:60]}")
+               f"the input guardrail let an out-of-coverage call through: {scope} {start}..{end} -> {text[:60]}")
         passed += 1
-    # ...and still serves a legitimate in-coverage call (the gate isn't just refuse-all).
+    # ...and still serves a legitimate in-coverage call (the coverage check isn't just refuse-all).
     res = gate_tb.dispatch("query_metric", {"metric": "value_moments",
                                             "start": "2026-06-01", "end": "2026-06-30"})
     text, is_err = res.content, res.is_error
-    _check(not is_err and "value" in text, "gate wrongly blocked a valid in-coverage call")
+    _check(not is_err and "value" in text, "the input guardrail wrongly blocked a valid in-coverage call")
     passed += 1
 
     # 4. The tool restriction (rrung 4) removes raw SQL entirely — no arbitrary-query escape hatch.
@@ -102,12 +102,12 @@ def prove():
     _check("run_sql" not in fenced_names, "tool restriction did not remove run_sql")
     _check("query_metric" in fenced_names, "tool restriction removed the governed path too")
     passed += 1
-    # Below the tool restriction (R3, gate only), raw SQL is present (so the contrast is real).
+    # Below the tool restriction (R3, coverage check only), raw SQL is present (so the contrast is real).
     r3_names = {t["name"] for t in build_grounding(con, rung=6, guardrails=LADDER[3]).toolbox.specs()}
     _check("run_sql" in r3_names, "run_sql should still exist at R3 (the override path)")
     passed += 1
 
-    # 5. The catalog enum is closed at the gate: the model is offered only real metrics.
+    # 5. The catalog enum is closed at the coverage check: the model is offered only real metrics.
     qm = next(t for t in gate_tb.specs() if t["name"] == "query_metric")
     enum = qm["input_schema"]["properties"]["metric"].get("enum")
     _check(enum and set(enum) == set(sl.metrics), "query_metric enum is not the exact catalog")

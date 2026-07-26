@@ -1,8 +1,8 @@
 """What the two structural holes cost the stored runs. No model calls.
 
-Two controls turned out to be mounted where the failure mode isn't:
+Two guardrails turned out to be mounted where the failure mode isn't:
 
-  the GATE saw only `filters`, and only their raw text — so the same scope spelled as a
+  the coverage check saw only `filters`, and only their raw text — so the same scope spelled as a
   governed synonym ("asia pacific"), as a country synonym ("philippines"), or as a
   `group_by` breakdown reached the warehouse ungated;
 
@@ -10,9 +10,9 @@ Two controls turned out to be mounted where the failure mode isn't:
   so an answer that states a number in prose and leaves `value` unset skips all three.
 
 This scores both from stored rows, so the re-run scope is a measurement rather than a
-guess. For the gate it separates two very different things:
+guess. For the coverage check it separates two very different things:
 
-    EXPOSURE   the trajectory pulled a row the gate would have blocked as a direct query.
+    EXPOSURE   the trajectory pulled a row the coverage check would have blocked as a direct query.
                The model saw an out-of-coverage number.
     DEPENDENCE the number the run SERVED is one of those rows. Only these can move a
                graded outcome; the rest are near-misses.
@@ -44,8 +44,8 @@ RESULTS = Path(__file__).resolve().parent.parent.parent / "results"
 def _escapes_coverage(args: dict, sl: SemanticLayer) -> list[tuple]:
     """The governed members this call reports on that sit outside coverage.
 
-    This started as its own implementation, written before the gate had one, and now defers
-    to the layer's. Keeping the audit on the same answer as the gate is the point: a number
+    This started as its own implementation, written before the coverage check had one, and now defers
+    to the layer's. Keeping the audit on the same answer as the coverage check is the point: a number
     that measures the hole with different logic from the code that closes it can drift out of
     agreement without either side being obviously wrong."""
     return sl.coverage_violations(filters=args.get("filters"), group_by=args.get("group_by"),
@@ -90,7 +90,7 @@ def _served_number(row: dict):
     return nums[0] if len(nums) == 1 else None
 
 
-def audit_gate(rows: list[dict], sl: SemanticLayer) -> dict:
+def audit_coverage(rows: list[dict], sl: SemanticLayer) -> dict:
     exposure: Counter = Counter()
     dependence: Counter = Counter()
     cases: list[dict] = []
@@ -126,7 +126,7 @@ def audit_gate(rows: list[dict], sl: SemanticLayer) -> dict:
 
 
 def _guardrails(cfg: str):
-    """The Guardrails a stored row's config label denotes. `label()` is built to round-trip
+    """The GuardrailSet a stored row's config label denotes. `label()` is built to round-trip
     through parse_cell; anything older or hand-written returns None."""
     try:
         return parse_cell(cfg)
@@ -141,7 +141,7 @@ def audit_optout(rows: list[dict]) -> dict:
       INERT   the cell runs output_validation without single_metric, so `value` and
               `source_metric` are not in the answer schema at all (tools.py `_answer_spec`
               adds them only under single_metric). verify_answer early-returns on every
-              answer, so the control cannot fire. Its measured contribution is zero by
+              answer, so the guardrail cannot fire. Its measured contribution is zero by
               construction, not by evidence.
       OPTOUT  the field WAS offered and the model left it unset while giving an answer that
               IS a number, so it skipped checks that were live for its neighbours. Measured
@@ -196,22 +196,22 @@ def main() -> None:
 
     rows = load_rows(args.run)
     sl = SemanticLayer(open_warehouse(create_star_views=True))
-    gate = audit_gate(rows, sl)
+    coverage = audit_coverage(rows, sl)
     opt = audit_optout(rows)
 
     print(f"{len(rows)} stored rows\n")
-    print("GATE — trajectories that pulled an out-of-coverage governed row")
-    print(f"  exposure  : {sum(gate['exposure'].values())} runs saw one")
-    print(f"  DEPENDENCE: {sum(gate['dependence'].values())} runs SERVED one\n")
-    for cfg in sorted(gate["exposure"], key=lambda c: -gate["exposure"][c]):
-        dep = gate["dependence"].get(cfg, 0)
-        print(f"    {cfg:<28} exposure {gate['exposure'][cfg]:>4}   served {dep:>4}")
+    print("COVERAGE CHECK — trajectories that pulled an out-of-coverage governed row")
+    print(f"  exposure  : {sum(coverage['exposure'].values())} runs saw one")
+    print(f"  DEPENDENCE: {sum(coverage['dependence'].values())} runs SERVED one\n")
+    for cfg in sorted(coverage["exposure"], key=lambda c: -coverage["exposure"][c]):
+        dep = coverage["dependence"].get(cfg, 0)
+        print(f"    {cfg:<28} exposure {coverage['exposure'][cfg]:>4}   served {dep:>4}")
 
-    # Only a cell that HAS a gate can be said to have leaked; below it the same call is
-    # expected behaviour, and counting it would flatter the gate's measured contribution.
-    gated = [c for c in gate["cases"] if (_guardrails(c["config"]) or None) and _guardrails(c["config"]).gate]
+    # Only a cell that HAS a coverage check can be said to have leaked; below it the same call is
+    # expected behaviour, and counting it would flatter the coverage's measured contribution.
+    gated = [c for c in coverage["cases"] if (_guardrails(c["config"]) or None) and _guardrails(c["config"]).coverage_check]
     refusals_owed = [c for c in gated if c["expected_refuse"]]
-    print(f"\n  served at a cell WITH the gate on: {len(gated)}")
+    print(f"\n  served at a cell WITH the coverage check on: {len(gated)}")
     print(f"    of those, on questions whose gold demands a refusal: {len(refusals_owed)}")
     print("    (the rest served a number computed partly from out-of-coverage rows on a "
           "question that expects an answer — wrong figure, grade may not notice)")
@@ -233,8 +233,8 @@ def main() -> None:
     if args.json:
         Path(args.json).write_text(json.dumps(
             {"rows": len(rows),
-             "gate": {"exposure": dict(gate["exposure"]), "dependence": dict(gate["dependence"]),
-                      "cases": gate["cases"]},
+             "coverage_check": {"exposure": dict(coverage["exposure"]), "dependence": dict(coverage["dependence"]),
+                      "cases": coverage["cases"]},
              "optout": {"inert": dict(opt["inert"]), "optout": dict(opt["optout"]),
                         "eligible": dict(opt["eligible"]), "cases": opt["cases"]}},
             indent=2, default=str))

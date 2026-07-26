@@ -1,46 +1,130 @@
-"""Which reliability controls are switched on.
+"""The guardrails: what each one is, and which of them are switched on.
 
-The ladder is a set of NAMED PRESETS over this space, not the space itself. Deriving every
-control from one `rrung` integer made the cumulative climb the only expressible configuration
-— "everything except member resolution" could not be built at all, so no ablation could say
-what a single control contributes once the rest of the system is present.
+A guardrail here is never an abstraction. Each is a concrete mechanism — a tool added to or
+removed from the list the model is offered, a field added to a schema, a function that runs
+before or after the model acts. The registry below states the mechanism for every one, so
+"what does this guardrail actually do" is answered in the code rather than inferred from it.
 
-Both the Toolbox (which controls run) and the grounding (what the system prompt tells the
-model) key off the SAME set, so a cell can never tell the model about a guardrail that is not
-running — that would make the measurement vary with the treatment.
+What distinguishes them is WHERE they sit in a request, because that decides what they can
+prevent and how they fail (see Position). Everything else about them is implementation.
+
+Earlier revisions called these things guardrails, controls, gates and fences interchangeably,
+with the names growing per guardrail instead of per category — so `coverage_check` and
+`tool_restriction` had distinct coinages ("the gate", "the fence") while `resolve`, which works
+exactly like the first, had none. That implied a scheme which did not exist. One word now:
+guardrail. The categories are the four positions.
+
+A GuardrailSet says which are ON. It is the one primitive: a ladder preset (LADDER[n]) and an
+ablation cell are both just a set, so every cell is expressible and self-describing.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, fields, replace
+from enum import StrEnum
 
-__all__ = ["Guardrails", "LADDER", "LADDER_ORDER", "incoherent", "parse_cell"]
+__all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position",
+           "incoherent", "parse_cell"]
 
-# The order the ladder switches them on. LADDER[n] = the first n of these.
-LADDER_ORDER = ["abstain", "check_tools", "gate", "tool_restriction", "resolve",
-                "transparency", "single_metric", "output_validation", "trajectory_verify"]
+
+class Position(StrEnum):
+    """Where a guardrail sits in a request. This is the only distinction that carries
+    information, because it predicts the failure mode:
+
+    ACTION_SPACE  the request cannot be expressed at all. Cannot be talked around; equally,
+                  cannot express a conditional rule.
+    BEFORE        expressible, but it does not run. The model is told why and can adapt. Fails
+                  when a second path reaches the same data — which is how a scope blocked as a
+                  filter was once served as a breakdown.
+    DISCLOSURE    prevents nothing; tells the model what it actually got. Works only if the
+                  model reads it and acts.
+    AFTER         the number already exists; the question is whether it is served. Can only
+                  refuse, never rescue.
+    """
+
+    ACTION_SPACE = "action_space"
+    BEFORE = "before"
+    DISCLOSURE = "disclosure"
+    AFTER = "after"
 
 
 @dataclass(frozen=True)
-class Guardrails:
-    abstain: bool = False            # R1: the typed refuse tool exists at all
-    check_tools: bool = False        # R2: answerability check tools the model may call
-    gate: bool = False               # R3: block out-of-coverage / ungoverned governed calls
-    tool_restriction: bool = False   # R4: no raw SQL — governed metrics only
-    resolve: bool = False            # R5: filter values must resolve to governed members
-    transparency: bool = False       # R6: show the compiled SQL and a plain scope line
-    single_metric: bool = False      # R7: the served number must BE one governed result
-    output_validation: bool = False  # R8: the returned value must be well-formed
-    trajectory_verify: bool = False  # R9: the metric must actually answer the question
+class Guardrail:
+    """One guardrail, described by what it does rather than by what it is called."""
+
+    name: str
+    position: Position
+    mechanism: str                    # what actually happens, in one line
+    implemented_in: tuple[str, ...]   # every file that acts on this flag
+
+
+# The order the ladder switches them on; LADDER[n] enables the first n.
+# Every prompt also gains a line describing the guardrail — true of all nine, so it distinguishes
+# none of them, and it is listed as a mechanism only where the prompt line is ALL there is.
+GUARDRAILS: tuple[Guardrail, ...] = (
+    Guardrail("abstain", Position.ACTION_SPACE,
+              "adds the `refuse` tool to the list, giving the run a typed way to decline",
+              ("agent/tools.py", "agent/prompt.py")),
+    Guardrail("check_tools", Position.ACTION_SPACE,
+              "adds four answerability lookups (metric / coverage / segment / causal) to the list",
+              ("agent/tools.py", "agent/prompt.py")),
+    Guardrail("coverage_check", Position.BEFORE,
+              "runs before a governed query; refuses one whose scope falls outside coverage",
+              ("agent/input_guardrail.py", "agent/prompt.py")),
+    Guardrail("tool_restriction", Position.ACTION_SPACE,
+              "removes `run_sql` from the list, so every data path is a governed call",
+              ("agent/tools.py", "agent/prompt.py")),
+    Guardrail("resolve", Position.BEFORE,
+              "runs before a governed query; refuses a filter value that is not a governed member",
+              ("agent/input_guardrail.py", "agent/tools.py", "agent/prompt.py")),
+    Guardrail("transparency", Position.DISCLOSURE,
+              "appends the covered scope and the exact SQL to every governed result",
+              ("agent/tools.py", "agent/prompt.py")),
+    Guardrail("single_metric", Position.AFTER,
+              "adds `value`/`source_metric` to the answer schema; the served number must BE one "
+              "governed result",
+              ("agent/tools.py", "agent/orchestrator.py", "agent/prompt.py")),
+    Guardrail("output_validation", Position.AFTER,
+              "checks the served number is well-formed for its unit (no negative count, no share "
+              "above 100, no empty result)",
+              ("agent/orchestrator.py", "agent/prompt.py")),
+    # `implemented_in` names the files that key off the FLAG, not every file involved: the judge
+    # this one switches on lives in agent/verifier.py, which never reads the flag and so is not
+    # listed. The distinction is enforced by test, and it is the useful one — it answers "where
+    # would I look to change when this fires", not "what does it eventually call".
+    Guardrail("trajectory_verify", Position.AFTER,
+              "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
+              "the added filters, and rejects an answer to a different question",
+              ("agent/orchestrator.py", "agent/prompt.py")),
+)
+
+LADDER_ORDER = [g.name for g in GUARDRAILS]
+
+
+@dataclass(frozen=True)
+class GuardrailSet:
+    """Which guardrails are switched on. The fields are exactly GUARDRAILS, in ladder order —
+    tests/test_semantic.py holds the two in step, so the registry can never describe a guardrail
+    that does not exist or miss one that does."""
+
+    abstain: bool = False
+    check_tools: bool = False
+    coverage_check: bool = False
+    tool_restriction: bool = False
+    resolve: bool = False
+    transparency: bool = False
+    single_metric: bool = False
+    output_validation: bool = False
+    trajectory_verify: bool = False
 
     def label(self) -> str:
-        """A self-describing name for the cell, so a stored row says what produced it. Ladder
-        presets read as 'R7'; anything else lists its controls, e.g. 'R9-resolve'."""
+        """A self-describing name, so a stored row says what produced it. Ladder presets read as
+        'R7'; anything else lists its guardrails, e.g. 'R9-resolve'."""
         on = [f.name for f in fields(self) if getattr(self, f.name)]
         for n, preset in LADDER.items():
             if preset == self:
                 return f"R{n}"
-        for n, preset in LADDER.items():                   # a preset with one control removed
+        for n, preset in LADDER.items():                   # a preset with one guardrail removed
             missing = [f.name for f in fields(self)
                        if getattr(preset, f.name) and not getattr(self, f.name)]
             added = [f.name for f in fields(self)
@@ -49,46 +133,54 @@ class Guardrails:
                 return f"R{n}-{missing[0]}"
         return "+".join(on) if on else "none"
 
-    def without(self, *names: str) -> Guardrails:
-        """This configuration minus one or more controls — the leave-one-out cell."""
+    def without(self, *names: str) -> GuardrailSet:
+        """This set minus one or more guardrails — the leave-one-out cell."""
         return replace(self, **{n: False for n in names})
 
 
-LADDER: dict[int, Guardrails] = {
-    n: Guardrails(**{name: True for name in LADDER_ORDER[:n]})
+LADDER: dict[int, GuardrailSet] = {
+    n: GuardrailSet(**{name: True for name in LADDER_ORDER[:n]})
     for n in range(len(LADDER_ORDER) + 1)
 }
 
+# Runs stored before the terminology sweep label their cells with the old field name. Reading
+# them has to keep working — the coverage audit reads every row ever written.
+_LEGACY_NAMES = {"gate": "coverage_check"}
 
-def parse_cell(spec: str) -> Guardrails:
-    """Parse an ablation-cell name into a Guardrails:
+
+def parse_cell(spec: str) -> GuardrailSet:
+    """Parse an ablation-cell name into a GuardrailSet:
       'R9'                      -> the full preset;
-      'R9-resolve'              -> R9 minus member resolution ('R9-resolve-gate' minus both);
-      'gate+single_metric+...'  -> exactly those controls on (an explicit set, for Shapley cells).
+      'R9-resolve'              -> R9 minus member resolution ('R9-resolve-coverage_check' minus both);
+      'coverage_check+single_metric+...'  -> exactly those on (an explicit set, for Shapley cells).
     Used by the runner's --cells."""
-    if "+" in spec or spec in LADDER_ORDER:              # explicit set of ON controls
-        names = spec.split("+")
+    def canonical(name: str) -> str:
+        return _LEGACY_NAMES.get(name, name)
+
+    if "+" in spec or canonical(spec) in LADDER_ORDER:    # explicit set of ON guardrails
+        names = [canonical(n) for n in spec.split("+")]
         for name in names:
             if name not in LADDER_ORDER:
-                raise ValueError(f"cell {spec!r}: unknown control {name!r}; valid: {LADDER_ORDER}")
-        return Guardrails(**{name: True for name in names})
+                raise ValueError(f"cell {spec!r}: unknown guardrail {name!r}; valid: {LADDER_ORDER}")
+        return GuardrailSet(**{name: True for name in names})
     parts = spec.split("-")
     base = parts[0]
     if not (base.startswith("R") and base[1:].isdigit()) or int(base[1:]) not in LADDER:
         raise ValueError(f"cell {spec!r}: base must be a ladder preset R0..R{len(LADDER_ORDER)}")
-    for name in parts[1:]:
+    removed = [canonical(n) for n in parts[1:]]
+    for name in removed:
         if name not in LADDER_ORDER:
-            raise ValueError(f"cell {spec!r}: unknown control {name!r}; valid: {LADDER_ORDER}")
-    return LADDER[int(base[1:])].without(*parts[1:])
+            raise ValueError(f"cell {spec!r}: unknown guardrail {name!r}; valid: {LADDER_ORDER}")
+    return LADDER[int(base[1:])].without(*removed)
 
 
-def incoherent(g: Guardrails, rung: int | None = None) -> str | None:
-    """Some cells measure a DIFFERENT system rather than a missing control, and publishing one
+def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
+    """Some cells measure a DIFFERENT system rather than a missing guardrail, and publishing one
     as 'the contribution of X' would be wrong. Returns why, or None if the cell is sound.
 
-    Pass `rung` to also check the pairing with the grounding. A control and the rung it acts on
-    are not independent axes: every reliability control above abstention operates on the
-    semantic layer, which does not exist below rung 3."""
+    Pass `rung` to also check the pairing with the grounding. A guardrail and the rung it acts on
+    are not independent axes: every guardrail above abstention operates on the semantic layer,
+    which does not exist below rung 3."""
     if g.single_metric and not g.tool_restriction:
         return ("single_metric without tool_restriction: the check reads result_values, which "
                 "only governed queries record, so every raw-SQL answer auto-refuses")
@@ -105,8 +197,9 @@ def incoherent(g: Guardrails, rung: int | None = None) -> str | None:
         beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
         if beyond:
             return (f"rung {rung} has no semantic layer, so {', '.join(beyond)} cannot act: the "
-                    "check_* tools are not offered, the gate has no governed call to intercept, "
-                    "and the output checks stand down. tool_restriction is worse than inert — it "
-                    "removes raw SQL while no governed path exists, leaving no way to reach data "
-                    "at all, so the cell measures a mute agent rather than a guarded one")
+                    "check_* tools are not offered, the coverage check has no governed call to "
+                    "intercept, and the output guardrails stand down. tool_restriction is worse "
+                    "than inert — it removes raw SQL while no governed path exists, leaving no "
+                    "way to reach data at all, so the cell measures a mute agent rather than a "
+                    "guarded one")
     return None

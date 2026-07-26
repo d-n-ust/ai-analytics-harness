@@ -1,12 +1,12 @@
-"""The gate's guarantee as a PROPERTY, over a generated call space — NO LLM.
+"""The input guardrail's guarantee as a PROPERTY, over a generated call space — NO LLM.
 
-test_structural.py proves the gate against seven hand-picked calls. The guarantee it claims
+test_structural.py proves the coverage check against seven hand-picked calls. The guarantee it claims
 is universal — "they hold regardless of what the model does, which is why they can be proven
 exhaustively" — and a hand-written list can only ever prove the cases someone thought of.
 Both holes this file catches sit one keystroke from a case that WAS on the list: the same
 scope named by a governed synonym, and the same scope asked for as a breakdown.
 
-The property under test, stated without reference to how the gate is implemented:
+The property under test, stated without reference to how the coverage check is implemented:
 
     if a governed call is SERVED, then every governed member it reports a number ABOUT
     must be inside coverage for that call's window.
@@ -17,10 +17,10 @@ global total reports about no region in particular, which is why an unfiltered M
 is legitimately served while `region=APAC` in March is not.
 
 The oracle is `SemanticLayer.in_coverage` and `resolve_member`: both independently tested,
-and neither is the thing under test. The gate's defect is not that they are wrong, it is
-that the gate does not consult them for every way a scope can be named.
+and neither is the thing under test. The coverage check's defect is not that they are wrong, it is
+that the coverage check does not consult them for every way a scope can be named.
 
-    uv run python tests/test_gate_properties.py
+    uv run python tests/test_input_guardrail.py
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from warehouse.warehouse import open_warehouse
 
 _CON = open_warehouse(create_star_views=True)
 _SL = SemanticLayer(_CON)
-# gate + fence + member resolution: the configuration whose whole claim is that no
+# coverage check + tool restriction + member resolution: the configuration whose whole claim is that no
 # out-of-coverage number can be reached, by any route.
 _TB = build_grounding(_CON, rung=6, guardrails=LADDER[5]).toolbox
 
@@ -46,7 +46,7 @@ COVERAGE_DIMS = ("region", "country")
 # Metrics that are time-filterable AND sliceable by both coverage-bearing dimensions.
 METRICS = ["value_moments", "active_users", "power_users"]
 
-# Every one of these names the SAME governed scope: the APAC region. The gate must not
+# Every one of these names the SAME governed scope: the APAC region. The coverage check must not
 # care which spelling a question happens to use.
 APAC_NAMES = [("region", "APAC"), ("region", "apac"), ("region", "Asia Pacific"),
               ("region", "asia pacific"), ("country", "PH"), ("country", "philippines"),
@@ -92,7 +92,7 @@ def _serve(args: dict):
 
 def _reported_members(cols, rows, args) -> set:
     """The governed members this result reports a number ABOUT — read from the rows that came
-    back, not from the call's arguments, so the oracle cannot inherit the gate's blind spot."""
+    back, not from the call's arguments, so the oracle cannot inherit the coverage check's blind spot."""
     out = set()
     for dim in COVERAGE_DIMS:
         if dim in cols:
@@ -213,9 +213,9 @@ def main() -> int:
             first = str(exc).split("Falsifying example")[0].strip()
             print(f"  FAIL {fn.__name__}\n       " + first.replace("\n", "\n       ")[:700])
     if failed:
-        print(f"\n{failed} of {len(TESTS)} gate properties FAIL — the guarantee is not universal yet.")
+        print(f"\n{failed} of {len(TESTS)} input-guardrail properties FAIL — the guarantee is not universal yet.")
     else:
-        print(f"OK — {len(TESTS)} gate properties hold across the generated call space.")
+        print(f"OK — {len(TESTS)} input-guardrail properties hold across the generated call space.")
     return failed
 
 

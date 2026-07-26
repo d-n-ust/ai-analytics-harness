@@ -175,7 +175,7 @@ for rr in (3, 5, 7, 9):
         out(f"| R{rr} | {name} | {pct(m['cov'])} | {pct(m['prec'])} | {pct(m['grd'])} | {m['cw']:.1f} | {m['fab']:.1f} |")
     out("| | | | | | | |")
 out("_Read: minimal→low cuts confident-wrong ~19×/6×/4× at R3/R5/R7; low captures the gain (high ≈ low on "
-    "safety). Reasoning fixes wrong numbers (cw); guardrails fix invented ones (fab falls only once the fence/resolve arrive at R5)._")
+    "safety). Reasoning fixes wrong numbers (cw); guardrails fix invented ones (fab falls only once the tool restriction/resolve arrive at R5)._")
 out("_**high is n=1 with a lower effective n** — 12/171 rows timed out (rates computed on the clean rows) "
     "— so read the high column as directional, not equally-powered with minimal (n=3)._")
 out()
@@ -238,8 +238,8 @@ for rr in range(10):
     alltools |= set(c)
 order = sorted(alltools, key=lambda t: -sum(tc[rr].get(t, 0) for rr in range(10)))
 out("## 6. Tool usage — reliability ladder (orchestrator gpt-5-mini @ minimal, calls per run)")
-out("_· = unused. Watch run_sql (raw SQL) vanish at R4+ when the fence removes it, and the answerability "
-    "checks (check_coverage / check_metric_exists / check_segment) appear when the gate turns on (R2+)._")
+out("_· = unused. Watch run_sql (raw SQL) vanish at R4+ when the tool restriction removes it, and the answerability "
+    "checks (check_coverage / check_metric_exists / check_segment) appear when the coverage check turns on (R2+)._")
 out("| config | " + " | ".join(order) + " |")
 out("|---|" + "---|" * len(order))
 for rr in range(10):

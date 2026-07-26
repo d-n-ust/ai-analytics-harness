@@ -18,7 +18,7 @@ import yaml
 from semantic.semantic import SemanticLayer
 from semantic.tree import MetricTree
 
-from .guardrails import LADDER, Guardrails, incoherent
+from .guardrails import LADDER, GuardrailSet, incoherent
 from .tools import Toolbox
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -41,7 +41,7 @@ _BASE = (
 
 # The reliability ladder's prompt component: what the agent is told about ending a
 # task. R0 (abstain off) has no refusal channel; R1 adds the typed refuse tool. Each
-# later control appends its own prompt line in build_grounding, gated by its flag.
+# later guardrail appends its own prompt line in build_grounding, gated by its flag.
 _RRUNG_TERMINAL = {
     0: ("- End with the `answer` tool: the value plus a one-line explanation. If the question "
         "is too ambiguous to attempt, end with `clarify`."),
@@ -56,7 +56,7 @@ _RRUNG_TERMINAL = {
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
-# gate (R3) and the fence / tool_restriction (R4) are structural: these lines only
+# The coverage check (R3) and the tool restriction (R4) are structural: these lines only
 # *describe* the enforced environment so the agent doesn't waste turns — the guarantee
 # is in the tooling, not the prompt. Removing these lines would not let a fabrication through.
 _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an undefined metric or "
@@ -66,9 +66,9 @@ _RRUNG_TOOL_RESTRICTION = ("\n- Raw SQL is not available. All data must come thr
                 "question cannot be answered that way, refuse.")
 # resolve (R5) then the output family — transparency (R6), single_metric (R7),
 # output_validation (R8) — split so each step's effect is measured on its own. Like the
-# gate, these are structural: the checks run regardless of what the model does; the
+# coverage check, these are structural: the guardrails run regardless of what the model does; the
 # prompt lines only tell it so it doesn't waste turns.
-# resolve (R5) — value resolution (a query-time guard, sibling of the gate/fence):
+# resolve (R5) — value resolution (a query-time guard, sibling of the coverage check/tool restriction):
 _RRUNG_RESOLVE = ("\n- Filter values are matched to governed members: name a segment in plain terms "
                   "('iOS', 'the annual plan') and it is resolved to the governed value; a value that "
                   "matches no governed member is rejected rather than returning an empty result.")
@@ -138,7 +138,7 @@ class Grounding:
     rung: int
     system: str
     toolbox: Toolbox
-    guardrails: Guardrails | None = None
+    guardrails: GuardrailSet | None = None
     semantic: SemanticLayer | None = None
 
     def fingerprint(self) -> str:
@@ -155,10 +155,10 @@ class Grounding:
 
 
 def build_grounding(con, rung: int,
-                    guardrails: Guardrails | None = None) -> Grounding:
-    # Guardrails is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
-    # ablation cell any Guardrails set. The prompt is assembled from the SAME set the Toolbox
-    # enforces, so a cell can never describe a control that is not running — that would make the
+                    guardrails: GuardrailSet | None = None) -> Grounding:
+    # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
+    # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
+    # enforces, so a cell can never describe a guardrail that is not running — that would make the
     # measurement vary with the treatment, the one thing an ablation must not do.
     g = guardrails if guardrails is not None else LADDER[1]
     # Fail here rather than build a system that cannot do what its label says. An incoherent
@@ -171,7 +171,7 @@ def build_grounding(con, rung: int,
     system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
     if g.check_tools:
         system += _RRUNG_CHECKS
-    if g.gate:
+    if g.coverage_check:
         system += _RRUNG_ENFORCE
     if g.tool_restriction:
         system += _RRUNG_TOOL_RESTRICTION

@@ -108,7 +108,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             elapsed_s = time.perf_counter() - t0   # wall-clock per run, for per-rung latency
             config_label = grounding.guardrails.label()
             # Read the surface while the grounding is still live, next to the label it belongs
-            # with: the label says which controls were MEANT to be on, the fingerprint says
+            # with: the label says which guardrails were MEANT to be on, the fingerprint says
             # what the agent was actually shown.
             surface = grounding.fingerprint()
         finally:
@@ -162,10 +162,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         verifier_model = get_model(verifier_used, mock=mock, reasoning=verifier_reasoning)
         for rung in rungs:
             set_star(con, rung >= 2)     # per-rung shared catalog state; the parallel unit is within a rung
-            # Coherence is a property of the PAIR, not of the cell alone: a control that needs
+            # Coherence is a property of the PAIR, not of the cell alone: a guardrail that needs
             # the semantic layer measures nothing below rung 3. Filter here, where the rung is
             # known, so an inert pair is skipped out loud instead of producing rows labelled
-            # with a control that could not run.
+            # with a guardrail that could not run.
             usable = []
             for cfg_label, rrung, gr in configs:
                 bad = incoherent(gr, rung)

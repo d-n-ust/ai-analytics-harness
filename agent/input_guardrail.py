@@ -1,6 +1,6 @@
 """The input guardrail: what a governed call must satisfy BEFORE it runs.
 
-Not to be confused with guardrails.py, which says which controls are switched ON. This is what
+Not to be confused with guardrails.py, which says which guardrails are switched ON. This is what
 one of them does. Input guardrails stop a bad number being COMPUTED; the output guardrails (see
 verifier.py) stop one being SERVED.
 
@@ -52,7 +52,7 @@ def block(semantic, guardrails, args: dict) -> str | None:
                             "vocabulary). Do NOT substitute a different member and do NOT answer "
                             "for a broader slice; refuse (ungoverned_dimension_value).")
 
-    if not guardrails.gate:
+    if not guardrails.coverage_check:
         return None
     violations = semantic.coverage_violations(
         filters=filters, group_by=args.get("group_by"), start=args.get("start"),

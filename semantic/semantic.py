@@ -110,7 +110,7 @@ class SemanticLayer:
     # -- answerability API: one boolean check per refusal reason ------------ #
     # Each check consults exactly one piece of governance metadata and returns
     # (ok, detail). The same checks serve every caller: the model's check_* tools,
-    # the excuse check, and (later) the gate and the rule audit.
+    # the excuse check, and (later) the coverage check and the rule audit.
 
     def metric_exists(self, term: str) -> tuple[bool, str]:
         if not _tokens(term):
@@ -138,7 +138,7 @@ class SemanticLayer:
     def _region_of(self, region, country):
         """A region's launch window also governs its countries — so a country filter
         (PH) is resolved to its region (APAC) before the coverage check, closing the
-        dimension that would otherwise bypass the gate. Read from the region dimension."""
+        dimension that would otherwise bypass the coverage check. Read from the region dimension."""
         if region:
             return region
         if country:
@@ -183,7 +183,7 @@ class SemanticLayer:
     # -- the scope a governed call reports on ------------------------------- #
     # Coverage is a property of a governed MEMBER (a region's launch window), so "is this
     # call answerable" is really "which members does it report a number about, and is each
-    # of them covered". Naming that once means the gate, the verifier's governed notes and
+    # of them covered". Naming that once means the coverage check, the verifier's governed notes and
     # the audit read one answer instead of three partial ones — the split that let the same
     # scope be blocked when filtered and served when grouped.
 

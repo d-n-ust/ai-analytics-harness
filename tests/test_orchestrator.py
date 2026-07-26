@@ -6,7 +6,7 @@ real model calls, which meant they were exercised by luck.
 
 `Scripted` replays a fixed list of turns, so every branch is reachable on demand and the loop
 becomes deterministic. It also records the tool specs it was offered, which is how the closing
-phase — the control that stops a truncated run becoming a lost measurement — is checked at all.
+phase — the guardrail that stops a truncated run becoming a lost measurement — is checked at all.
 
 Run: uv run python tests/test_orchestrator.py
 """

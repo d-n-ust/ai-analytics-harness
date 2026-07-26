@@ -1,7 +1,7 @@
 """Exact restricted Shapley attribution over the 6 varied reliability components.
 
-Reads a config-lattice run (the coherent configs over the 6 varied controls, with
-abstain/check_tools/transparency held ON) and attributes each control's marginal contribution
+Reads a config-lattice run (the coherent configs over the 6 varied guardrails, with
+abstain/check_tools/transparency held ON) and attributes each guardrail's marginal contribution
 to two value functions by averaging over every legal ordering. No Monte-Carlo — exact, so the
 efficiency axiom (Σ Shapley = v(full) − v(none)) must hold to floating-point.
 
@@ -24,13 +24,13 @@ import itertools
 import json
 import sys
 
-from agent.guardrails import Guardrails, incoherent, parse_cell
+from agent.guardrails import GuardrailSet, incoherent, parse_cell
 
-VARIED = ["gate", "tool_restriction", "resolve", "single_metric", "output_validation", "trajectory_verify"]
+VARIED = ["coverage_check", "tool_restriction", "resolve", "single_metric", "output_validation", "trajectory_verify"]
 
 
 def coalition(config_label: str) -> frozenset:
-    """The set of VARIED controls ON in this config (constants abstain/check_tools/transparency ignored)."""
+    """The set of VARIED guardrails ON in this config (constants abstain/check_tools/transparency ignored)."""
     g = parse_cell(config_label)
     return frozenset(name for name in VARIED if getattr(g, name))
 
@@ -63,13 +63,13 @@ def legal_orderings() -> list[tuple]:
     out as `tool_restriction < single_metric < trajectory_verify`, which silently went out of
     date the moment a fourth incoherence was identified: output_validation reads a `value` the
     answer tool only offers under single_metric, so every prefix holding the first without the
-    second measures a control that cannot fire, and averaging those in drags its attribution
+    second measures a guardrail that cannot fire, and averaging those in drags its attribution
     toward zero — a fact about the harness reported as a fact about the guardrail."""
     def ok(order):
         on: set = set()
-        for control in order:
-            on.add(control)
-            if incoherent(Guardrails(**{n: True for n in on.union(CONSTANT)})):
+        for guardrail in order:
+            on.add(guardrail)
+            if incoherent(GuardrailSet(**{n: True for n in on.union(CONSTANT)})):
                 return False
         return True
     return [o for o in itertools.permutations(VARIED) if ok(o)]

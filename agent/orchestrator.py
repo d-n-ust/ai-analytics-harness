@@ -133,7 +133,7 @@ class _Run:
         Members come from the layer's own resolver, so a country scope earns its region's note and
         a synonym is recognised — the same fix the input guardrail needed, for the same reason.
         Only members the analyst NAMED get a note; a breakdown's members were not chosen, and the
-        gate has already refused any that fall outside coverage."""
+        coverage check has already refused any that fall outside it."""
         sem, a = self.grounding.semantic, args or {}
         if sem is None:
             return []

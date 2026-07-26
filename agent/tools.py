@@ -23,7 +23,7 @@ from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_row
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
 from . import input_guardrail
-from .guardrails import LADDER, Guardrails
+from .guardrails import LADDER, GuardrailSet
 from .protocol import ToolResult
 
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
@@ -134,7 +134,7 @@ _QUERY_METRIC = {
 
 # Answerability checks exposed to the model (reliability rung 3+). Each is one
 # deterministic lookup against governance metadata — the same checks the excuse
-# check and the gate run; here the model may run them itself before committing.
+# check and the coverage check run; here the model may run them itself before committing.
 _CHECK_METRIC = {
     "name": "check_metric_exists",
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -333,18 +333,18 @@ class Toolbox:
     `rung` gates grounding (what the agent knows); the `guardrails` set gates reliability
     (what the agent may do about not knowing):
       0 = no refuse tool · 1+ = typed refusal · 2+ = check_* tools callable ·
-      3+ = the interception GATE (governed calls validated; out-of-coverage /
+      3+ = the coverage check (governed calls validated; out-of-coverage /
            undefined requests are blocked by the system, not the model) ·
-      4+ = the FENCE (raw SQL removed, so every data path is a gated governed call).
-    The gate and fence are structural: they hold regardless of what the model does,
+      4+ = the tool restriction (raw SQL removed, so every data path is a gated governed call).
+    The coverage check and tool restriction are structural: they hold regardless of what the model does,
     which is why they can be proven exhaustively without an LLM (see tests/)."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
-                 tree: MetricTree | None = None, guardrails: Guardrails | None = None):
+                 tree: MetricTree | None = None, guardrails: GuardrailSet | None = None):
         self.con = con
         self.rung = rung
-        # Guardrails is the one primitive: which reliability controls are on. A ladder preset
-        # (LADDER[n]) and an ablation cell are both just a Guardrails set; every control below reads
+        # GuardrailSet is the one primitive: which reliability guardrails are on. A ladder preset
+        # (LADDER[n]) and an ablation cell are both just a GuardrailSet set; every guardrail below reads
         # from it, so a cell is expressible and self-describing. Default R1 (abstention).
         self.g = guardrails if guardrails is not None else LADDER[1]
         self.semantic = semantic
@@ -373,13 +373,13 @@ class Toolbox:
         return specs
 
     def _query_metric_spec(self) -> dict:
-        """Constrain `metric` to the catalog at the gate rung (a closed menu — the model
+        """Constrain `metric` to the catalog once the coverage check is on (a closed menu — the model
         cannot even *name* a metric that doesn't exist), and offer the governed `segment`
         enum whenever the layer defines any (a named segment like real_acquisition)."""
         if self.semantic is None:
             return _QUERY_METRIC
         props = dict(_QUERY_METRIC["input_schema"]["properties"])
-        if self.g.gate:
+        if self.g.coverage_check:
             props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
         segs = self.semantic.segment_names()
         if segs:
