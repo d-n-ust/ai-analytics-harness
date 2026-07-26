@@ -112,7 +112,7 @@ def main() -> None:
     sp.add_argument("--rung", type=int, required=True, choices=[1, 2, 3, 4, 5, 6])
     sp.add_argument("--guardrails", default=None,
                     help="reliability config: a preset (R0..R9) or an explicit cell "
-                         "(e.g. R9-resolve, or coverage check+resolve+single_metric). Default R1.")
+                         "(e.g. R9-resolve, or coverage_check+resolve+single_metric). Default R1.")
     sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
     sp.set_defaults(func=cmd_ask)
 

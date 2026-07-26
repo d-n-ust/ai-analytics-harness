@@ -16,7 +16,7 @@ it is returned untouched, so a governed tool added later discloses without anyon
 
 from __future__ import annotations
 
-from ..protocol import ToolResult
+from ..conversation import ToolResult
 
 
 def annotate(result: ToolResult, args: dict, semantic, guardrails) -> ToolResult:

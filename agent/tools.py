@@ -27,9 +27,9 @@ from semantic.tree import MetricTree, TreeError
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
+from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
 from .outcomes import REFUSAL_REASONS
-from .protocol import ToolResult
 
 _ANSWER = {
     "name": "answer",

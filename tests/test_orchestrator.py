@@ -15,10 +15,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace as NS
 
+from agent.conversation import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
-from agent.orchestrator import run_agent
-from agent.protocol import TERMINAL_TOOLS, ToolCall, Turn, Usage
+from agent.loop import run_agent
 from warehouse.warehouse import open_warehouse
 
 QM = {"metric": "active_users", "period": "last_week"}

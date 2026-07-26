@@ -18,8 +18,8 @@ from __future__ import annotations
 import json
 import os
 
+from .conversation import ToolCall, Turn, Usage
 from .models import MODEL_SPECS, ModelSpec
-from .protocol import ToolCall, Turn, Usage
 
 MAX_TOKENS = 4096
 # Transient provider failures (429 / 5xx / connection / timeout) must not become data-corrupting

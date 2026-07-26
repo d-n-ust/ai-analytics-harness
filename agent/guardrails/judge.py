@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import hashlib
 
-from ..protocol import Conversation
+from ..conversation import Conversation
 
 _VERIFY_SYSTEM = (
     "You verify an analytics answer. You are NOT asked to re-answer the question — you are shown "

@@ -21,10 +21,10 @@ import json
 import sys
 from pathlib import Path
 
+from agent.conversation import Turn
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.guardrails.judge import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
-from agent.protocol import Turn
 from warehouse.warehouse import open_warehouse
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"

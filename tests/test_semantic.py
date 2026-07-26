@@ -14,11 +14,11 @@ from __future__ import annotations
 import dataclasses
 from pathlib import Path
 
+from agent.conversation import TERMINAL_TOOLS
 from agent.guardrails import LADDER
 from agent.guardrails import after as verifier
 from agent.guardrails import before as input_guardrail
 from agent.numbers import bare_number
-from agent.protocol import TERMINAL_TOOLS
 from agent.tools import Toolbox
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from semantic.tree import MetricTree

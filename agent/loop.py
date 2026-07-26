@@ -18,10 +18,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .conversation import Conversation, ToolCall, Turn, Usage
 from .guardrails import after
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer
-from .protocol import Conversation, ToolCall, Turn, Usage
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
