@@ -26,16 +26,25 @@ UNGOVERNED_METRICS = [
     "nps", "", "  ", "value_moments; DROP TABLE u", "engagement_score' OR '1'='1",
 ]
 UNGOVERNED_SEGMENTS = ["enterprise users", "enterprise", "smb", "vip customers", "", "us"]
-# (filters, start, end) that fall outside coverage and must be blocked. The country
-# cases are the ones a region-only gate missed — an equally-available dimension.
+# (scope, start, end) that fall outside coverage and must be blocked, where `scope` is merged
+# into the call. One scope can be named several ways, and a gate that reads only one of them
+# is not structural: the synonym and group_by rows below were all SERVED until the coverage
+# check moved onto the layer's resolved scope. tests/test_gate_properties.py generalises this
+# list into a property — a hand-written enumeration only ever proves what someone thought of.
 OUT_OF_COVERAGE = [
-    ({"region": "APAC"}, "2026-03-01", "2026-03-31"),   # before APAC launch (2026-05-01)
-    ({"region": "APAC"}, "2026-04-01", "2026-06-30"),   # straddles launch
-    ({"country": "PH"}, "2026-03-01", "2026-03-31"),    # APAC by country — the bypass
-    ({"country": "ID"}, "2026-04-01", "2026-06-30"),    # APAC by country, straddle
-    ({"country": "IN"}, "2026-03-15", "2026-03-20"),    # APAC by country
-    (None, "2025-07-01", "2025-07-31"),                 # before data starts (2025-09-01)
-    (None, "2024-01-01", "2024-12-31"),                 # long before data
+    ({"filters": {"region": "APAC"}}, "2026-03-01", "2026-03-31"),   # before launch (2026-05-01)
+    ({"filters": {"region": "APAC"}}, "2026-04-01", "2026-06-30"),   # straddles launch
+    ({"filters": {"region": "asia pacific"}}, "2026-03-01", "2026-03-31"),  # by synonym
+    ({"filters": {"region": "Asia Pacific"}}, "2026-04-01", "2026-06-30"),  # by synonym, straddle
+    ({"filters": {"country": "PH"}}, "2026-03-01", "2026-03-31"),    # APAC by country
+    ({"filters": {"country": "ID"}}, "2026-04-01", "2026-06-30"),    # APAC by country, straddle
+    ({"filters": {"country": "IN"}}, "2026-03-15", "2026-03-20"),
+    ({"filters": {"country": "philippines"}}, "2026-03-01", "2026-03-31"),  # country by synonym
+    ({"group_by": ["region"]}, "2026-03-01", "2026-03-31"),          # the same number, as a row
+    ({"group_by": ["country"]}, "2026-04-01", "2026-06-30"),         # ditto, by country
+    ({"group_by": ["region"]}, None, None),                          # all time spans pre-launch
+    ({}, "2025-07-01", "2025-07-31"),                                # before data starts
+    ({}, "2024-01-01", "2024-12-31"),                                # long before data
 ]
 
 
@@ -72,13 +81,13 @@ def prove():
     #    even when the metric itself is real. This is the worst-case agent trying to
     #    pull legitimate metrics over illegitimate periods.
     gate_tb = build_grounding(con, rung=6, guardrails=LADDER[3]).toolbox
-    for filt, start, end in OUT_OF_COVERAGE:
-        args = {"metric": "value_moments", "start": start, "end": end}
-        if filt:
-            args["filters"] = filt
+    for scope, start, end in OUT_OF_COVERAGE:
+        args = {"metric": "value_moments", **scope}
+        if start:
+            args |= {"start": start, "end": end}
         text, is_err, _ = gate_tb.dispatch("query_metric", args)
         _check(is_err and text.startswith("BLOCKED"),
-               f"gate let an out-of-coverage call through: {filt} {start}..{end} -> {text[:60]}")
+               f"gate let an out-of-coverage call through: {scope} {start}..{end} -> {text[:60]}")
         passed += 1
     # ...and still serves a legitimate in-coverage call (the gate isn't just refuse-all).
     text, is_err, _ = gate_tb.dispatch("query_metric", {"metric": "value_moments",

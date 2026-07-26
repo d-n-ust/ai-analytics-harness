@@ -13,7 +13,6 @@ import json
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree, TreeError
-from warehouse.config import resolve_period
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
 from . import verifier
@@ -329,19 +328,21 @@ class Toolbox:
                                 "for a broader slice; refuse (ungoverned_dimension_value).")
         if not self.gate:
             return None
-        region, country = filters.get("region"), filters.get("country")
-        start, end, period = args.get("start"), args.get("end"), args.get("period")
-        if period:
-            try:
-                start, end = resolve_period(period)
-            except ValueError:
-                return None  # let compile() surface the period error
-        if not (start or end or region or country):
-            return None
-        ok, detail = self.semantic.in_coverage(start, end, region, country)
-        if not ok:
-            return (f"BLOCKED by governance — {detail} This request is outside data coverage and "
-                    "cannot be served; refuse (out_of_coverage) or query within coverage.")
+        # R3: every scope this call reports a number ABOUT must be inside coverage. The layer
+        # answers that — which member is named, however it is spelled, and whether a breakdown
+        # asks for all of them — because the same question is asked by the verifier's governed
+        # notes and by the audit, and three partial answers is how the same scope came to be
+        # blocked when filtered and served when grouped.
+        bad = self.semantic.coverage_violations(
+            filters=filters, group_by=args.get("group_by"), start=args.get("start"),
+            end=args.get("end"), period=args.get("period"))
+        if bad:
+            dim, member, detail = bad[0]
+            named = f"{dim} {member!r} — " if dim else ""
+            return (f"BLOCKED by governance — {named}{detail} This request is outside data "
+                    "coverage and cannot be served; refuse (out_of_coverage) or query within "
+                    "coverage. Asking for the same scope as a breakdown does not make it "
+                    "available.")
         return None
 
     @staticmethod

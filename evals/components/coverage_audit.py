@@ -35,53 +35,22 @@ from pathlib import Path
 from agent.guardrails import parse_cell
 from agent.numbers import parse_numbers
 from agent.verifier import _num_match, _step_values
-from semantic.semantic import SemanticError, SemanticLayer
-from warehouse.config import resolve_period
+from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from warehouse.warehouse import QueryError, open_warehouse, run_query
 
 RESULTS = Path(__file__).resolve().parent.parent.parent / "results"
-COVERAGE_DIMS = ("region", "country")   # the dimensions that carry an availability window
-
-
-def _window(args: dict, sl: SemanticLayer) -> tuple:
-    """The call's window as explicit dates. A call with no period spans ALL data, so it is
-    checked against the full coverage range — an all-time APAC total includes pre-launch
-    rows just as surely as an explicit March window does."""
-    start, end = args.get("start"), args.get("end")
-    if args.get("period"):
-        try:
-            start, end = resolve_period(args["period"])
-        except ValueError:
-            start = end = None
-    cov = sl.governance.get("coverage", {})
-    return (start or cov.get("data_start"), end or cov.get("data_end"))
-
-
-def _scope_pairs(args: dict, sl: SemanticLayer) -> list[tuple]:
-    """Every (region, country) this call's rows can come from, as GOVERNED members.
-
-    A filter names one member — resolved through the same synonym map the compiler uses,
-    which is the step the gate skipped. A `group_by` names them all: a breakdown row IS a
-    per-member number, so the call requests every member of that dimension."""
-    filters = args.get("filters") if isinstance(args.get("filters"), dict) else {}
-    group_by = args.get("group_by") if isinstance(args.get("group_by"), list) else []
-    pairs: list[tuple] = []
-    for dim in COVERAGE_DIMS:
-        slot = (lambda m: (m, None)) if dim == "region" else (lambda m: (None, m))
-        if dim in filters:
-            val = filters[dim]
-            for v in (val if isinstance(val, (list, tuple)) else [val]):
-                pairs.append(slot(sl.resolve_member(dim, v) or v))
-        elif dim in group_by:
-            pairs += [slot(m) for m in sl.dimensions.get(dim, {})]
-    return pairs or [(None, None)]
 
 
 def _escapes_coverage(args: dict, sl: SemanticLayer) -> list[tuple]:
-    """The (region, country) members this call reaches that sit outside coverage."""
-    start, end = _window(args, sl)
-    return [(r, c) for r, c in _scope_pairs(args, sl)
-            if not sl.in_coverage(start, end, r, c)[0]]
+    """The governed members this call reports on that sit outside coverage.
+
+    This started as its own implementation, written before the gate had one, and now defers
+    to the layer's. Keeping the audit on the same answer as the gate is the point: a number
+    that measures the hole with different logic from the code that closes it can drift out of
+    agreement without either side being obviously wrong."""
+    return sl.coverage_violations(filters=args.get("filters"), group_by=args.get("group_by"),
+                                  start=args.get("start"), end=args.get("end"),
+                                  period=args.get("period"))
 
 
 def _uncovered_values(step: dict, escaped: list[tuple], sl: SemanticLayer) -> list[float] | None:
@@ -102,7 +71,7 @@ def _uncovered_values(step: dict, escaped: list[tuple], sl: SemanticLayer) -> li
         cols, rows = run_query(sl.con, sql)
     except (SemanticError, QueryError, KeyError):
         return None
-    bad = {m for pair in escaped for m in pair if m is not None}
+    bad = {member for _dim, member, _why in escaped if member is not None}
     idx = {c: i for i, c in enumerate(cols)}
     out = []
     for row in rows:

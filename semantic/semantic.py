@@ -23,6 +23,10 @@ from warehouse.warehouse import run_query
 
 SPEC_PATH = Path(__file__).resolve().parent / "semantic_layer.yml"
 
+# The dimensions whose members carry an availability window, so a number reported about one
+# of them can be outside coverage even when the period itself is fine.
+COVERAGE_DIMS = ("region", "country")
+
 
 class SemanticError(Exception):
     """Raised for an unknown metric, dimension, or filter — surfaced to the agent."""
@@ -175,6 +179,59 @@ class SemanticLayer:
                                "Rows before launch are pre-launch test data — restrict to on/after "
                                f"{starts}.")
         return True, f"period {lo}..{hi} within coverage ({d0}..{d1})."
+
+    # -- the scope a governed call reports on ------------------------------- #
+    # Coverage is a property of a governed MEMBER (a region's launch window), so "is this
+    # call answerable" is really "which members does it report a number about, and is each
+    # of them covered". Naming that once means the gate, the verifier's governed notes and
+    # the audit read one answer instead of three partial ones — the split that let the same
+    # scope be blocked when filtered and served when grouped.
+
+    def resolve_window(self, start=None, end=None, period=None) -> tuple:
+        """The call's window as explicit dates. A call with NO period spans every row there
+        is, so it is checked against the full data range: an all-time APAC total carries
+        pre-launch rows just as surely as an explicit March one does. A period that will not
+        resolve is left to compile() to report."""
+        if period is not None:
+            try:
+                start, end = resolve_period(period)
+            except ValueError:
+                start = end = None
+        cov = self.governance.get("coverage", {})
+        return (start or cov.get("data_start"), end or cov.get("data_end"))
+
+    def scope_members(self, filters=None, group_by=None) -> list[tuple[str, str]]:
+        """Every governed member this call reports a number ABOUT.
+
+        A filter names one member — resolved through the same synonym map the compiler uses,
+        so `region="asia pacific"` is recognised as the APAC it will compile to. A `group_by`
+        names them all: a breakdown row IS that member's number, so asking for the breakdown
+        is asking for every member of the dimension."""
+        filters = filters if isinstance(filters, dict) else {}
+        group_by = group_by if isinstance(group_by, (list, tuple)) else []
+        out: list[tuple[str, str]] = []
+        for dim in COVERAGE_DIMS:
+            if dim in filters:
+                val = filters[dim]
+                for v in (val if isinstance(val, (list, tuple)) else [val]):
+                    out.append((dim, self.resolve_member(dim, v) or v))
+            elif dim in group_by:
+                out += [(dim, m) for m in self._members(dim)]
+        return out
+
+    def coverage_violations(self, filters=None, group_by=None,
+                            start=None, end=None, period=None) -> list[tuple]:
+        """Which scopes this call reports on fall outside coverage: [(dimension, member, why)].
+        Empty means every number it would return is answerable. A call naming no
+        coverage-bearing member is still checked against the data window itself."""
+        start, end = self.resolve_window(start, end, period)
+        bad = []
+        for dim, member in self.scope_members(filters, group_by) or [(None, None)]:
+            kw = {dim: member} if dim else {}
+            ok, detail = self.in_coverage(start, end, **kw)
+            if not ok:
+                bad.append((dim, member, detail))
+        return bad
 
     def segment_names(self) -> list[str]:
         return list(self.governance.get("segments", {}) or {})
