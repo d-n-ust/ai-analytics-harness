@@ -11,7 +11,7 @@ show what moved.
 |---|---|---|
 | 1 | Grounding ladder — what structure buys | **done** (2026-07-26) |
 | 2 | Reliability ladder — what guardrails buy | **done** (2026-07-26) |
-| 3 | Reasoning-effort sweep | pending |
+| 3 | Reasoning effort and model class | **done** (2026-07-26) |
 | 4 | Shapley attribution | pending |
 
 ---
@@ -330,10 +330,78 @@ nothing.
 
 ---
 
-## Experiment 3 — reasoning effort
+## Experiment 3 — reasoning effort and model class
 
-*Pending.* Every run in this document uses `minimal`. Whether the findings survive a more capable
-reasoning setting is untested, and it is the most obvious objection to all of it.
+**Question.** Everything above ran the cheapest model at its lowest reasoning setting. The obvious
+objection is that the whole finding is an artefact of a weak agent. Does it survive more reasoning,
+or a flagship model?
+
+**Design.** Rung 7 throughout, four configurations at R1 and R9, same 57 questions and reps.
+
+`run` — 5 cells × 171 rows · 2026-07-26 · **$2.83** · zero errors
+
+| cell | loop | verifier | | coverage | precision | groundedness | answerable | reliability | s/q | cost |
+|---|---|---|---|---|---|---|---|---|---|---|
+| a | mini @ minimal | — | R1 | 98.7% | 85.7% | 69.0% | 63/75 | 12/96 | 6.6 | $0.54 |
+| b | mini @ **low** | — | R1 | 93.6% | 87.7% | **90.2%** | 61/75 | 36/96 | 6.8 | $0.36 |
+| d | **terra** | — | R1 | 96.2% | 90.7% | 82.8% | **65/75** | 48/96 | **4.1** | $1.08 |
+| a | mini @ minimal | mini | R9 | 87.2% | 97.1% | 96.7% | 63/75 | 72/96 | 10.2 | $0.38 |
+| b | mini @ **low** | mini | R9 | 83.3% | 96.9% | **100%** | 60/75 | 62/96 | 9.3 | $0.26 |
+| c | mini @ minimal | **terra** | R9 | 87.2% | 98.5% | 96.7% | **64/75** | 73/96 | 8.2 | $0.32 |
+| d | **terra** | **terra** | R9 | 79.5% | **100%** | **100%** | 59/75 | **79/96** | **4.0** | $0.80 |
+
+### This qualifies Experiment 1, and the qualification matters
+
+Experiment 1 concluded *"better data buys accuracy, not honesty."* That stands for **structure** and
+it does **not** generalise to **capability**. At R1, with no guardrails at all:
+
+```
+groundedness   mini@minimal 69.0%  →  mini@low 90.2%  →  terra 82.8%
+reliability    12/96              →  36/96           →  48/96
+```
+
+A more capable agent *is* meaningfully more honest. Any claim that "the model can't be trusted to
+refuse" has to be narrowed to "the cheapest model at its lowest setting can't." That is a real
+correction to the framing, not a footnote.
+
+### But the conclusion survives, and the comparison is sharper than before
+
+> **A flagship model with no guardrails is worse than a cheap model with guardrails — and costs
+> three times as much.**
+
+```
+terra   · R1   groundedness 82.8%   reliability 48/96   $1.08
+mini    · R9   groundedness 96.7%   reliability 72/96   $0.38
+```
+
+Capability narrows the gap. It does not close it. Whatever a bigger model buys you, a mechanism
+that checks the answer buys more, for less.
+
+### Three secondary findings
+
+**A flagship verifier buys almost nothing.** Cell (c) swaps the judge for terra and moves
+reliability 72 → 73 and answerable 63 → 64. Within noise. The judge's job — does this metric answer
+this question — turns out not to need a frontier model, which is the cheap half of the stack to
+run.
+
+**A flagship loop trades coverage for safety.** Cell (d) at R9 reaches perfect precision and
+groundedness and the best reliability (79/96), but coverage falls to 79.5% and answerable to 59/75.
+It refuses more, including things it could have answered.
+
+**Terra is 2.5× faster per question** (4.0s vs 10.2s) despite being the larger model — it reaches an
+answer in fewer loop iterations. Latency here is a function of how many times round the loop, not
+model size.
+
+### One anomaly, and it is a grading artefact
+
+Cell (b) at R9 reaches **100% groundedness** yet its reliability score *drops* (72 → 62). It
+declines more, not less: 92 of 93 unanswerable questions versus 88. The difference is the channel —
+it used `clarify` 16 times against 6, and a clarify scores zero on a question whose expected
+outcome is `refuse`.
+
+More reasoning made it ask more clarifying questions, which is defensible behaviour scored as
+failure. This is the same artefact as `u_pricing_cause`, and it is now visible in a headline
+number rather than a single row.
 
 ---
 

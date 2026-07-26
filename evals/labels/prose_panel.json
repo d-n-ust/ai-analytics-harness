@@ -7,8 +7,8 @@
     "results/runs/20260726-202156-gpt-5-mini/raw.jsonl"
   ],
   "n_decisions": 13,
-  "n_settled": 12,
-  "n_escalated": 1,
+  "n_settled": 13,
+  "n_escalated": 0,
   "false_flag": 0,
   "miss": 3,
   "decisions": [
@@ -237,8 +237,8 @@
       "question": "Is the app healthy right now \u2014 how would you tell?",
       "answer": "No \u2014 the app shows a meaningful drop in core engagement last week (real value moments fell). Weekly real value moments declined 11.88% from 4,133 (week ending 2026-07-05) to 3,642 (week ending 2026-07-12) per the governed metric weekly_value_moments; decomposition shows the decline was driven primarily by a 16.44% drop in days_per_user (frequency) despite active users rising 5.98%. Recommend investigating recent notification/reminder delivery and any product changes that week.",
       "judge_passed": true,
-      "panel_says_serve": null,
-      "unanimous": false,
+      "panel_says_serve": true,
+      "unanimous": true,
       "votes": {
         "strict": {
           "serve": false,
@@ -252,7 +252,8 @@
           "serve": true,
           "reason": "The weekly value-moments decline and the stated active-user and days-per-user changes are supported by the governed figures; the investigation recommendation is framed as a hypothesis rather than a causal assertion."
         }
-      }
+      },
+      "resolved_by": "human (cofounder call): a suggested next step is not an assertion"
     },
     {
       "qid": "t5_reminder_caused_it",
@@ -298,5 +299,6 @@
         }
       }
     }
-  ]
+  ],
+  "escalations_resolved": 1
 }
