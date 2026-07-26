@@ -144,6 +144,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             # One entry per model call: where a run's latency actually goes, which the tool
             # steps alone cannot show.
             "turns": ans.turns,
+            # What every guardrail did, in order — so "which ones actually fired" is a count
+            # over stored runs rather than a re-derivation from the config label.
+            "acts": ans.acts,
             "schema_version": report.ROW_SCHEMA_VERSION,
             # What the model was actually shown, hashed — so a surface edit between runs is
             # visible in the rows rather than inferred from the git log.

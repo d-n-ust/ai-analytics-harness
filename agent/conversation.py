@@ -47,6 +47,7 @@ class ToolResult:
     # through English.
     reason: str = ""
     blocked_by: str = ""   # the guardrail that refused, when one did
+    acts: tuple = ()       # what every guardrail did on this call, in order
 
     def for_call(self, call: ToolCall) -> ToolResult:
         return replace(self, call_id=call.id)

@@ -57,6 +57,7 @@ class _Run:
     # One entry per model call: how long it took, what it asked for, what it cost. The tool
     # steps alone hide where a run's time goes, which for an agent is almost always here.
     turns: list = field(default_factory=list)
+    acts: list = field(default_factory=list)   # what the AFTER guardrails did to the answer
 
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
@@ -72,6 +73,7 @@ class _Run:
                                "result_values": result.values,
                                "blocked_reason": result.reason,
                                "blocked_by": result.blocked_by,
+                               "acts": [a.as_dict() for a in result.acts],
                                "ms": round((time.perf_counter() - t0) * 1000, 1)})
             results.append(result.for_call(call))
         return results
@@ -99,7 +101,9 @@ class _Run:
         recovered = None if args.get("value") is not None else bare_number(text)
         declared = args.get("value") if recovered is None else recovered
         self.answer_text = text
-        verdict = after.check(args, declared, self)
+        after_acts: list = []
+        verdict = after.check(args, declared, self, record=after_acts)
+        self.acts = [a.as_dict() for a in after_acts]
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
@@ -125,7 +129,8 @@ class _Run:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
-                      cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns, **kw)
+                      cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
+                      acts=self.acts, **kw)
 
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
@@ -139,10 +144,12 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         # protocol instead of dying as an untyped error row — which is a lost measurement, not
         # a model behaviour.
         closing = nudges >= 1 or it == max_iters - 1
-        offered = grounding.toolbox.specs(terminal_only=closing)
+        offer_acts: list = []
+        offered = grounding.toolbox.specs(terminal_only=closing, record=offer_acts)
         t0 = time.perf_counter()
         turn = model.respond(convo, offered, require_tool=closing)
-        run.turns.append({"ms": round((time.perf_counter() - t0) * 1000, 1),
+        run.turns.append({"acts": [a.as_dict() for a in offer_acts],
+                          "ms": round((time.perf_counter() - t0) * 1000, 1),
                           "tools_offered": len(offered), "closing": closing,
                           "calls": [c.name for c in turn.tool_calls],
                           "exit": turn.exit_call.name if turn.exit_call else None,

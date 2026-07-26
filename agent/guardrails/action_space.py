@@ -16,12 +16,14 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
+from . import Position, note
+
 _CHECK_TOOLS = ("check_metric_exists", "check_coverage",
                 "check_segment_defined", "check_causal_evidence")
 
 
 def offer(tools: dict, rung: int, guardrails, semantic=None,
-          *, terminal_only: bool = False) -> list[dict]:
+          *, terminal_only: bool = False, record=None) -> list[dict]:
     """The tool schemas this configuration offers the model.
 
     Two axes decide it, and they are not the same thing: `rung` is grounding — what the agent
@@ -36,25 +38,34 @@ def offer(tools: dict, rung: int, guardrails, semantic=None,
     """
     schema = lambda name: tools[name].schema        # noqa: E731 — a lookup, not a function
     offered: list[dict] = []
+    if terminal_only:
+        note(record, "(closing)", Position.ACTION_SPACE, "withdrew",
+             "every data tool — the run must end through a terminal tool")
     if not terminal_only:
         offered += [schema("get_schema"), schema("describe_table")]
-        if not guardrails.tool_restriction:
+        if guardrails.tool_restriction:
+            note(record, "tool_restriction", Position.ACTION_SPACE, "withdrew",
+                 "run_sql — every data path is a governed call")
+        else:
             offered.append(schema("run_sql"))
         if rung >= 3:
             offered += [schema("list_metrics"),
-                        query_metric_schema(schema("query_metric"), guardrails, semantic)]
+                        query_metric_schema(schema("query_metric"), guardrails, semantic, record)]
         if rung >= 6:
             offered += [schema("get_metric_tree"), schema("explain_change")]
         if guardrails.check_tools and semantic is not None:
             offered += [schema(name) for name in _CHECK_TOOLS]
-    offered.append(answer_schema(schema("answer"), guardrails, semantic))
+            note(record, "check_tools", Position.ACTION_SPACE, "applied",
+                 f"offered {len(_CHECK_TOOLS)} answerability lookups")
+    offered.append(answer_schema(schema("answer"), guardrails, semantic, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))
+        note(record, "abstain", Position.ACTION_SPACE, "applied", "offered the refuse tool")
     offered.append(schema("clarify"))
     return offered
 
 
-def query_metric_schema(base: dict, guardrails, semantic) -> dict:
+def query_metric_schema(base: dict, guardrails, semantic, record=None) -> dict:
     """Narrow the governed-query tool to what this configuration allows.
 
     Under the coverage check `metric` becomes a closed menu of the catalog, so the model cannot
@@ -67,6 +78,8 @@ def query_metric_schema(base: dict, guardrails, semantic) -> dict:
     props = dict(base["input_schema"]["properties"])
     if guardrails.coverage_check:
         props["metric"] = {**props["metric"], "enum": list(semantic.metrics)}
+        note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",
+             f"metric closed to the {len(semantic.metrics)}-metric catalog")
     segments = semantic.segment_names()
     if segments:
         props["segment"] = {
@@ -76,7 +89,7 @@ def query_metric_schema(base: dict, guardrails, semantic) -> dict:
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
 
 
-def answer_schema(base: dict, guardrails, semantic) -> dict:
+def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
     """Add typed provenance to the answer tool when the served number must be checked.
 
     `value` is the number as a number, so the AFTER guardrails read what was served instead of
@@ -97,6 +110,8 @@ def answer_schema(base: dict, guardrails, semantic) -> dict:
         "description": "If your answer is a single number, repeat it here as a number "
                        "(not text). Leave it out for a non-numeric answer (an assessment, "
                        "a driver, a list) — the value check then does not apply."}
+    note(record, "single_metric", Position.ACTION_SPACE, "narrowed",
+         "answer gained typed `value` + `source_metric`")
     props["source_metric"] = {
         "type": "string", "enum": list(semantic.metrics),
         "description": "If `value` came from a governed metric, name that metric (as passed "

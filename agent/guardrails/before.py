@@ -27,10 +27,10 @@ by exhaustion (tests/test_structural.py) and as a property (tests/test_gate_prop
 
 from __future__ import annotations
 
-from . import Verdict
+from . import Position, Verdict, note
 
 
-def check(semantic, guardrails, args: dict) -> Verdict:
+def check(semantic, guardrails, args: dict, record=None) -> Verdict:
     """Allow the call, or refuse it with a coded reason.
 
     Each refusal tells the model what to do about it — a block it cannot interpret becomes a
@@ -39,6 +39,17 @@ def check(semantic, guardrails, args: dict) -> Verdict:
     cannot drift apart."""
     if semantic is None:
         return Verdict.ok()
+    # These guardrails act on a governed query and nothing else. Saying so is the honest version
+    # of applying them to every call: a schema lookup has no scope to check, and raw SQL has one
+    # that cannot be read — which is the whole reason tool_restriction exists.
+    if "metric" not in (args or {}):
+        for name in ("resolve", "coverage_check"):
+            if getattr(guardrails, name):
+                note(record, name, Position.BEFORE, "stood down", "not a governed query")
+        return Verdict.ok()
+    # Each guardrail below reports what it did, so a trace shows the ones that let the call
+    # through as well as the one that stopped it. Silence would make "no guardrail ran" and
+    # "every guardrail passed" look identical, and they are not the same claim.
     filters = args.get("filters") or {}
     if not isinstance(filters, dict):
         return Verdict(False, "other", guardrail="resolve", detail="BLOCKED — `filters` must be an object mapping a dimension to a value, "
@@ -51,6 +62,7 @@ def check(semantic, guardrails, args: dict) -> Verdict:
             # dimension is fine but the VALUE is not a governed member.
             if allowed is not None and col not in allowed:
                 reason = "dimension_not_supported"
+                note(record, "resolve", Position.BEFORE, "refused", reason)
                 return Verdict(False, reason, guardrail="resolve", detail=
                                f"BLOCKED by governance — {args.get('metric')!r} has no governed "
                                f"dimension {col!r} (it can be sliced by: {sorted(allowed)}). Do "
@@ -58,6 +70,7 @@ def check(semantic, guardrails, args: dict) -> Verdict:
             for v in (val if isinstance(val, (list, tuple)) else [val]):
                 if semantic.resolve_member(col, v) is None:
                     reason = "ungoverned_dimension_value"
+                    note(record, "resolve", Position.BEFORE, "refused", reason)
                     return Verdict(False, reason, guardrail="resolve", detail=
                                    f"BLOCKED by governance — {v!r} is not a governed member of "
                                    f"{col!r} (it may be finer-grained than, or absent from, the "
@@ -65,6 +78,10 @@ def check(semantic, guardrails, args: dict) -> Verdict:
                                    "and do NOT answer for a broader slice; refuse "
                                    f"({reason}).")
 
+    if guardrails.resolve:
+        note(record, "resolve", Position.BEFORE, "allowed",
+             f"{len(filters)} filter value(s) resolve to governed members" if filters
+             else "no filters on this call")
     if not guardrails.coverage_check:
         return Verdict.ok()
     violations = semantic.coverage_violations(
@@ -74,10 +91,15 @@ def check(semantic, guardrails, args: dict) -> Verdict:
         dim, member, detail = violations[0]
         named = f"{dim} {member!r} — " if dim else ""
         reason = "out_of_coverage"
+        note(record, "coverage_check", Position.BEFORE, "refused", f"{dim} {member}: {reason}")
         return Verdict(False, reason, guardrail="coverage_check", detail=
                        f"BLOCKED by governance — {named}{detail} This request is outside data "
                        f"coverage and cannot be served; refuse ({reason}) or query within "
                        "coverage. Asking for the same scope as a breakdown does not make it "
                        "available.",
                        missing=f"{dim} {member}" if dim else "the requested period")
+    scopes = semantic.scope_members(filters, args.get("group_by")) or [(None, None)]
+    note(record, "coverage_check", Position.BEFORE, "allowed",
+         "the requested scope is inside coverage" if len(scopes) == 1
+         else f"all {len(scopes)} scopes are inside coverage")
     return Verdict.ok()

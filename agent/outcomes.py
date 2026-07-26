@@ -51,3 +51,4 @@ class Answer:
     error: str | None = None
     steps: list = field(default_factory=list)
     turns: list = field(default_factory=list)   # one per model call: latency, cost, what it asked
+    acts: list = field(default_factory=list)    # what the AFTER guardrails did to this answer

@@ -184,6 +184,40 @@ def test_the_trace_renders_every_run_shape_without_inventing_data():
     assert "\033[" not in archived
 
 
+def test_every_guardrail_reports_what_it_did():
+    """A trace has to show the guardrails that let a call THROUGH, not only the one that stopped
+    it — otherwise "no guardrail ran here" and "every guardrail passed" look identical, and they
+    are very different claims about a number.
+
+    Recorded rather than reconstructed: a renderer could infer most of this from the guardrail
+    set, but that is guardrail logic in a second place, which is how the coverage check came to
+    disagree with itself about countries."""
+    ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", ANSWER)], rrung=9)
+
+    opening = {a["guardrail"] for a in ans.turns[0]["acts"]}
+    assert {"tool_restriction", "coverage_check", "single_metric", "abstain"} <= opening
+
+    before = [a for a in ans.steps[0]["acts"] if a["position"] == "before"]
+    assert {a["guardrail"] for a in before} == {"resolve", "coverage_check"}
+    assert all(a["outcome"] == "allowed" for a in before), before
+
+    after = {a["guardrail"]: a["outcome"] for a in ans.acts}
+    assert after.get("single_metric") == "allowed" and after.get("output_validation") == "allowed"
+
+    # a blocked call names the guardrail that refused, in the same record
+    blocked, _ = _run([call("1", "query_metric", {"metric": "value_moments",
+                                                  "filters": {"region": "APAC"},
+                                                  "start": "2026-03-01", "end": "2026-03-31"})],
+                      [call("2", "refuse", {"reason": "out_of_coverage", "missing": "m"})], rrung=9)
+    acts = blocked.steps[0]["acts"]
+    assert any(a["guardrail"] == "coverage_check" and a["outcome"] == "refused" for a in acts), acts
+
+    # prose stands the numeric guardrails down rather than passing them silently
+    prose, _ = _run([call("1", "query_metric", QM)],
+                    [call("2", "answer", {"answer": "healthy", "explanation": "e"})], rrung=9)
+    assert {a["outcome"] for a in prose.acts} == {"stood down"}
+
+
 TESTS = [test_a_run_ends_through_one_typed_exit,
          test_output_checks_convert_an_answer_into_a_refusal,
          test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset,
@@ -193,7 +227,8 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_a_turn_carrying_both_a_call_and_an_exit_records_the_call,
          test_usage_accumulates_across_turns,
          test_a_turn_separates_the_exit_call_from_the_rest,
-         test_the_trace_renders_every_run_shape_without_inventing_data]
+         test_the_trace_renders_every_run_shape_without_inventing_data,
+         test_every_guardrail_reports_what_it_did]
 
 
 if __name__ == "__main__":

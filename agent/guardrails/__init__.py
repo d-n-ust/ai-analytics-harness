@@ -28,6 +28,37 @@ __all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position", "
 
 
 @dataclass(frozen=True)
+class Act:
+    """What one guardrail did, on one occasion. The unit of a trace.
+
+    Distinct from Verdict on purpose: a Verdict answers "may this proceed", which only two of
+    the four positions ask. An Act answers "what happened", which all four can. Collapsing them
+    would mean pretending an ACTION_SPACE guardrail that withdrew a tool had made a ruling.
+
+    These are recorded rather than reconstructed later. A renderer could infer most of them from
+    the guardrail set plus the step — but that puts guardrail logic in a second place, which is
+    exactly how the coverage check came to disagree with itself about countries.
+    """
+
+    guardrail: str
+    position: str
+    outcome: str          # allowed · refused · applied · withdrew · narrowed · stood down
+    detail: str = ""
+
+    def as_dict(self) -> dict:
+        return {"guardrail": self.guardrail, "position": str(self.position),
+                "outcome": self.outcome, "detail": self.detail}
+
+
+def note(record, guardrail: str, position, outcome: str, detail: str = "") -> None:
+    """Append an Act, when anyone is listening. Every hook takes an optional record and calls
+    this; passing None costs one comparison and is what the eval path does when nobody asked
+    for a trace."""
+    if record is not None:
+        record.append(Act(guardrail, str(position), outcome, detail))
+
+
+@dataclass(frozen=True)
 class Verdict:
     """What every guardrail returns: allow, or refuse with a CODED reason.
 

@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 
 from ..numbers import parse_numbers
-from . import Verdict, judge
+from . import Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ def output_validation(metric_def: dict, value) -> Verdict:
 
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
-                  source_metric: str | None = None, declared_value=None,
+                  record=None, source_metric: str | None = None, declared_value=None,
                   run_output_validation: bool = True, run_single_metric: bool = False,
                   verify_traj=None) -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
@@ -144,6 +144,9 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     if semantic is None or not answer_text or declared_value is None:
         return Verdict.ok()
 
+    if run_single_metric and _is_direct_governed_value(declared_value, steps):
+        note(record, "single_metric", Position.AFTER, "allowed",
+             "the served number is one governed result")
     if run_single_metric and not _is_direct_governed_value(declared_value, steps):
         # The served number is not any single governed result, so no governed DEFINITION answers
         # the question as asked (ARR = mrr x 12, an activation count from a rate). Report that root
@@ -167,11 +170,16 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 
     if run_output_validation:                         # R8: the returned value is empty or impossible
         verdict = output_validation(metric_def, value)
+        note(record, "output_validation", Position.AFTER,
+             "refused" if not verdict.allowed else "allowed",
+             verdict.reason or f"{value:g} is well-formed for a {metric_def.get('unit')}")
         if not verdict.allowed:
             return verdict
 
     if verify_traj is not None:            # R9: does this metric + SQL actually answer the question?
         ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
+        note(record, "trajectory_verify", Position.AFTER, "allowed" if ok_v else "refused",
+             reason_v if not ok_v else "the judge found no mismatch")
         if not ok_v:
             return Verdict(False, _V_REASON.get(mismatch, "other"), reason_v,
                            missing=f"verifier[{mismatch}]: {reason_v}"[:180],
@@ -183,7 +191,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 # --------------------------------------------------------------------------- #
 # The hook: run every AFTER guardrail on one completed answer.
 # --------------------------------------------------------------------------- #
-def check(args: dict, declared, run) -> Verdict:
+def check(args: dict, declared, run, record=None) -> Verdict:
     """Put an answer through the AFTER guardrails. A refusing verdict turns the answer into a
     refusal carrying the coded reason it failed for.
 
@@ -193,11 +201,16 @@ def check(args: dict, declared, run) -> Verdict:
     g, semantic = run.grounding.guardrails, run.grounding.semantic
     if semantic is None or not (g.output_validation or g.single_metric or g.trajectory_verify):
         return Verdict.ok()
+    if declared is None:
+        for name in ("single_metric", "output_validation", "trajectory_verify"):
+            if getattr(g, name):
+                note(record, name, Position.AFTER, "stood down", "the answer is prose, not a number")
+        return Verdict.ok()
     # the judge is a careful checker — run it on its own (higher-reasoning) model when given
     model = run.verifier_model or run.model
     verify_traj = _trajectory_verifier(run, model) if (g.trajectory_verify and model) else None
     return verify_answer(
-        semantic, run.question, run.answer_text, run.steps,
+        semantic, run.question, run.answer_text, run.steps, record=record,
         source_metric=args.get("source_metric"), declared_value=declared,
         run_output_validation=g.output_validation,
         run_single_metric=g.single_metric, verify_traj=verify_traj)

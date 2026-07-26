@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree, TreeError
@@ -340,11 +340,11 @@ class Toolbox:
         self.semantic = semantic
         self.tree = tree
 
-    def specs(self, terminal_only: bool = False) -> list[dict]:
+    def specs(self, terminal_only: bool = False, record=None) -> list[dict]:
         """The action space for this configuration — assembled by the ACTION_SPACE guardrails,
         which is where the ladder is legible."""
         return action_space.offer(TOOLS, self.rung, self.g, self.semantic,
-                                  terminal_only=terminal_only)
+                                  terminal_only=terminal_only, record=record)
 
     def dispatch(self, name: str, args: dict) -> ToolResult:
         """Run one tool. Errors come back as the DB/semantic message rather than as exceptions,
@@ -356,13 +356,16 @@ class Toolbox:
         # Every call passes the BEFORE guardrails and every result passes DISCLOSURE, rather than
         # each handler remembering to ask. A tool added later is guarded by existing; for a call
         # with no scope to check both are no-ops.
-        verdict = before.check(self.semantic, self.g, args)
+        acts: list = []
+        verdict = before.check(self.semantic, self.g, args, record=acts)
         if not verdict.allowed:
             return ToolResult(verdict.detail, is_error=True, reason=verdict.reason,
-                              blocked_by=verdict.guardrail)
+                              blocked_by=verdict.guardrail, acts=tuple(acts))
         try:
-            return disclosure.annotate(tool.run(self, args), args, self.semantic, self.g)
+            result = disclosure.annotate(tool.run(self, args), args, self.semantic, self.g,
+                                         record=acts)
+            return replace(result, acts=tuple(acts))
         except (QueryError, SemanticError, TreeError) as exc:
-            return ToolResult(f"Error: {exc}", is_error=True)
+            return ToolResult(f"Error: {exc}", is_error=True, acts=tuple(acts))
         except KeyError as exc:
-            return ToolResult(f"Error: missing argument {exc}", is_error=True)
+            return ToolResult(f"Error: missing argument {exc}", is_error=True, acts=tuple(acts))

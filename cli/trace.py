@@ -71,6 +71,7 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
     steps = list(row.get("steps") or [])
     turns = list(row.get("turns") or [])
     cursor = 0
+    previous_acts = turns[0].get("acts") if turns else None
     for i, turn in enumerate(turns, 1):
         ms = turn.get("ms")
         cost = f"{turn.get('in', 0)}+{turn.get('out', 0)} tok"
@@ -84,6 +85,12 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
         if turn.get("closing"):
             head += paint("  ← closing: exit tools only", "warn")
         out.append(head)
+        # The action space is the same on every turn until something withdraws a tool, so it is
+        # stated in the header and repeated here only when it actually changes. A trace that
+        # reprints five identical lines per turn buries the one turn where they differ.
+        if turn.get("acts") != previous_acts:
+            out += _act_lines(turn.get("acts"), paint, "      ")
+            previous_acts = turn.get("acts")
         for _name in turn.get("calls") or []:
             if cursor >= len(steps):
                 break
@@ -96,17 +103,42 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
     return out
 
 
+_MARK = {"refused": ("✗", "bad"), "withdrew": ("−", "cyan"), "narrowed": ("▸", "cyan"),
+         "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim")}
+
+
+def _act_lines(acts, paint, indent: str) -> list[str]:
+    """Every guardrail that ran, in order, whatever it decided.
+
+    The ones that let a call through matter as much as the one that stopped it: without them a
+    trace cannot distinguish "no guardrail ran here" from "every guardrail passed", and those
+    are very different claims about a number."""
+    lines = []
+    for a in acts or []:
+        glyph, colour = _MARK.get(a.get("outcome", ""), ("·", "dim"))
+        name = a.get("guardrail", "?")
+        detail = a.get("detail") or ""
+        lines.append(f"{indent}{paint(glyph, colour)} {paint(name, colour)} "
+                     f"{paint(a.get('outcome', ''), 'dim')}"
+                     + (f" {paint('· ' + _short(detail, 62), 'dim')}" if detail else ""))
+    return lines
+
+
 def _step_lines(step: dict, width: int, paint) -> list[str]:
     blocked_by, reason = step.get("blocked_by"), step.get("blocked_reason")
     failed = step.get("error")
     mark = paint("✗", "bad") if failed else paint("✓", "ok")
     ms = step.get("ms")
     timing = paint(f"{ms:>7.0f}ms" if ms is not None else "        —", "dim")
-    lines = [f"      {mark} {paint(step.get('tool', '?'), 'bold'):<24} {timing}  "
-             f"{paint(_short(step.get('args'), max(20, width - 58)), 'dim')}"]
+    lines = _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "before"],
+                       paint, "        ")
+    lines.append(f"      {mark} {paint(step.get('tool', '?'), 'bold'):<24} {timing}  "
+                 f"{paint(_short(step.get('args'), max(20, width - 58)), 'dim')}")
     if blocked_by:
         lines.append(f"          {paint('blocked by', 'bad')} {paint(blocked_by, 'bad')}"
                      f" → {paint(reason or '', 'bad')}")
+    lines += _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "disclosure"],
+                        paint, "        ")
     values = step.get("result_values")
     if values:
         shown = ", ".join(f"{v:g}" for v in values[:6]) + ("…" if len(values) > 6 else "")
@@ -119,7 +151,8 @@ def _step_lines(step: dict, width: int, paint) -> list[str]:
 def _outcome_lines(row: dict, paint) -> list[str]:
     outcome = row.get("outcome", "?")
     colour = {"answer": "ok", "refuse": "warn", "clarify": "cyan", "error": "bad"}.get(outcome, "dim")
-    lines = [f"  {paint(outcome.upper(), colour)}  {row.get('answer') or row.get('explanation') or ''}"]
+    said = row.get("answer") or row.get("explanation") or ""
+    lines = [f"  {paint(outcome.upper(), colour)}  {_short(said, 92)}"]
     if row.get("declared_value") is not None:
         typed = f"value={row['declared_value']:g}"
         if row.get("source_metric"):
@@ -133,6 +166,7 @@ def _outcome_lines(row: dict, paint) -> list[str]:
                      + (f"  {paint('← ' + by, 'cyan')}" if by else ""))
     if row.get("missing"):
         lines.append(f"          missing {paint(_short(row['missing'], 90), 'dim')}")
+    lines += _act_lines(row.get("acts"), paint, "        ")
     verdict = row.get("verifier_verdict")
     if verdict:
         ok = verdict.get("answers_question")
@@ -162,6 +196,10 @@ def render(row: dict, colour: bool | None = None) -> str:
             + (f" · {paint(str(row['main_reasoning']) + ' reasoning', 'dim')}"
                if row.get("main_reasoning") else "")]
     head += _guardrail_line(row.get("config") or "", paint)
+    opening = (row.get("turns") or [{}])[0].get("acts")
+    if opening:
+        head.append(f"  {paint('action space', 'dim')}")
+        head += _act_lines(opening, paint, "     ")
 
     body = _steps_and_turns(row, width, paint)
 

@@ -17,16 +17,22 @@ it is returned untouched, so a governed tool added later discloses without anyon
 from __future__ import annotations
 
 from ..conversation import ToolResult
+from . import Position, note
 
 
-def annotate(result: ToolResult, args: dict, semantic, guardrails) -> ToolResult:
+def annotate(result: ToolResult, args: dict, semantic, guardrails, record=None) -> ToolResult:
     """Append the scope and the compiled SQL to a governed result, when transparency is on."""
-    if not (guardrails.transparency and result.sql and semantic is not None):
+    if not guardrails.transparency:
+        return result
+    if not (result.sql and semantic is not None):
+        note(record, "transparency", Position.DISCLOSURE, "stood down",
+             "no governed SQL behind this result")
         return result
     scope = semantic.scope_line(
         args["metric"], filters=args.get("filters"), period=args.get("period"),
         start=args.get("start"), end=args.get("end"),
         group_by=args.get("group_by"), resolve=guardrails.resolve)
+    note(record, "transparency", Position.DISCLOSURE, "applied", "appended the scope line and SQL")
     return ToolResult(f"{result.content}\n[scope] {scope}\n[sql] {result.sql}",
                       is_error=result.is_error, values=result.values,
                       call_id=result.call_id, sql=result.sql)
