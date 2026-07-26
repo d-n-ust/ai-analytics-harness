@@ -173,6 +173,51 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     assert used == set(Position), f"unused position(s): {set(Position) - used}"
 
 
+def test_a_tree_node_reports_the_metric_it_names():
+    """The invariant the tree broke: asking the tree about a node and asking the layer about the
+    metric that node names must give the SAME number.
+
+    The root was declared as `value_moments` — which counts every account — while its three
+    identity children all exclude internal/test, and explain_change forced the exclusion onto the
+    parent too. So the tree reported 4,133 for a metric the layer said was 4,307, and an agent
+    answering "why did value moments drop?" quoted figures 4% away from `query_metric
+    value_moments`. Same word, two numbers, nothing to say which was meant.
+
+    The identity now closes because the DEFINITIONS agree, not because the tree re-filters: the
+    North Star is its own governed metric (real_value_moments) rather than a filter applied in a
+    second place. NO LLM."""
+    from semantic.tree import MetricTree
+
+    con = open_warehouse()
+    sem = SemanticLayer(con)
+    tree = MetricTree(sem)
+
+    for node, spec in tree.nodes.items():
+        metric = spec["metric"]
+        for period in ("prev_week", "last_week"):
+            via_tree = sem.scalar(metric, period=period)
+            _, rows = sem.query(metric, resolve=True, period=period)
+            assert rows and abs(via_tree - rows[0][-1]) < 1e-9, \
+                f"node {node} names {metric} but the tree and the layer disagree for {period}"
+
+    # The identity is an arithmetic CLAIM — parent = breadth x frequency x depth — so it has to
+    # close exactly, and it only can within one population.
+    for period in ("prev_week", "last_week"):
+        parent = sem.scalar("real_value_moments", period=period)
+        product = 1.0
+        for child in ("active_users", "days_per_user", "moments_per_day"):
+            product *= sem.scalar(child, period=period)
+        assert abs(parent - product) < 1e-6, \
+            f"{period}: identity does not close — {parent} vs {product}"
+
+    # And the raw all-accounts measure still exists and still differs, or the fix silently
+    # redefined what the lookup questions ask for (their gold_sql counts fct_value_moments
+    # unfiltered).
+    assert sem.scalar("value_moments", period="last_week") > sem.scalar("real_value_moments",
+                                                                       period="last_week"), \
+        "value_moments must keep its all-accounts meaning; the lookup golds count every row"
+
+
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set
     at it — which agreed only while every rung was a superset of the one below. Rung 7 breaks that

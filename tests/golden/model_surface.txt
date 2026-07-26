@@ -614,7 +614,7 @@ system: sha256=76e3834e8c5d chars=1612
   }
 ]
 
-=== rung 3 · R4 · fingerprint 9863db9b7c01 ===
+=== rung 3 · R4 · fingerprint 885d54faff1a ===
 system: sha256=f4f60a1534f5 chars=1927
 [
   {
@@ -672,6 +672,7 @@ system: sha256=f4f60a1534f5 chars=1927
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -881,7 +882,7 @@ system: sha256=f4f60a1534f5 chars=1927
   }
 ]
 
-=== rung 3 · R6 · fingerprint a26fae0fbca4 ===
+=== rung 3 · R6 · fingerprint 626e54f83db3 ===
 system: sha256=7ba8ed981940 chars=2438
 [
   {
@@ -939,6 +940,7 @@ system: sha256=7ba8ed981940 chars=2438
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -1148,7 +1150,7 @@ system: sha256=7ba8ed981940 chars=2438
   }
 ]
 
-=== rung 3 · R9 · fingerprint 45bb35390e10 ===
+=== rung 3 · R9 · fingerprint 72f781da14d0 ===
 system: sha256=a9db88aaeb44 chars=3717
 [
   {
@@ -1206,6 +1208,7 @@ system: sha256=a9db88aaeb44 chars=3717
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -1354,6 +1357,7 @@ system: sha256=a9db88aaeb44 chars=3717
           "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -1927,7 +1931,7 @@ system: sha256=5e2378bf5cd1 chars=6507
   }
 ]
 
-=== rung 6 · R4 · fingerprint 11b49793e22c ===
+=== rung 6 · R4 · fingerprint 38c73ac6bcda ===
 system: sha256=32641d7c1066 chars=6822
 [
   {
@@ -1985,6 +1989,7 @@ system: sha256=32641d7c1066 chars=6822
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -2227,7 +2232,7 @@ system: sha256=32641d7c1066 chars=6822
   }
 ]
 
-=== rung 6 · R6 · fingerprint 325aaeb9b9f6 ===
+=== rung 6 · R6 · fingerprint 55128610bcbc ===
 system: sha256=d317a18effa9 chars=7333
 [
   {
@@ -2285,6 +2290,7 @@ system: sha256=d317a18effa9 chars=7333
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -2527,7 +2533,7 @@ system: sha256=d317a18effa9 chars=7333
   }
 ]
 
-=== rung 6 · R9 · fingerprint 7c92473aac5b ===
+=== rung 6 · R9 · fingerprint e82ab0dab434 ===
 system: sha256=400f056239ae chars=8612
 [
   {
@@ -2585,6 +2591,7 @@ system: sha256=400f056239ae chars=8612
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -2766,6 +2773,7 @@ system: sha256=400f056239ae chars=8612
           "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -3339,7 +3347,7 @@ system: sha256=35608495f184 chars=1974
   }
 ]
 
-=== rung 7 · R4 · fingerprint 0c275aeb7bf7 ===
+=== rung 7 · R4 · fingerprint 56ef33d85811 ===
 system: sha256=d17deff1f014 chars=2289
 [
   {
@@ -3397,6 +3405,7 @@ system: sha256=d17deff1f014 chars=2289
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -3639,7 +3648,7 @@ system: sha256=d17deff1f014 chars=2289
   }
 ]
 
-=== rung 7 · R6 · fingerprint 527d1a1ffbc8 ===
+=== rung 7 · R6 · fingerprint ee8b6fb4e736 ===
 system: sha256=5d55c6166f26 chars=2800
 [
   {
@@ -3697,6 +3706,7 @@ system: sha256=5d55c6166f26 chars=2800
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -3939,7 +3949,7 @@ system: sha256=5d55c6166f26 chars=2800
   }
 ]
 
-=== rung 7 · R9 · fingerprint 36a6efb4b164 ===
+=== rung 7 · R9 · fingerprint b5bdf29bec78 ===
 system: sha256=4c4c297cd8ac chars=4079
 [
   {
@@ -3997,6 +4007,7 @@ system: sha256=4c4c297cd8ac chars=4079
           "description": "Metric name (see list_metrics).",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",
@@ -4178,6 +4189,7 @@ system: sha256=4c4c297cd8ac chars=4079
           "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
           "enum": [
             "value_moments",
+            "real_value_moments",
             "new_signups",
             "active_users",
             "power_users",

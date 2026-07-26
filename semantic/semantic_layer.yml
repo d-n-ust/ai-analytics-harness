@@ -40,6 +40,37 @@ metrics:
     dimensions: [region, platform, channel, country]
     supports_internal_filter: true
 
+  # The North Star, and the root of the metric tree. It is a SEPARATE definition from
+  # value_moments rather than a filter applied by the tree, because the tree's identity edge
+  # claims an arithmetic fact:
+  #
+  #     real_value_moments = active_users x days_per_user x moments_per_day
+  #
+  # That identity closes exactly — but only within ONE population. The tree used to root on
+  # value_moments, which counts every account, while all three children exclude internal/test.
+  # The parent was therefore 4,307 where its own children multiplied to 4,133, and an agent
+  # asked "why did value moments drop?" was told they fell to 3,642 while the governed metric
+  # said 3,785. Same name, two numbers, no way to tell which was meant.
+  #
+  # value_moments keeps its all-accounts meaning: the independent gold_sql for the lookup
+  # questions counts fct_value_moments unfiltered, so raw activity volume is what those ask for.
+  # A North Star is a different measure and gets its own row here, where every other definition
+  # lives — never a filter smuggled into the tree, which would put a metric's population in a
+  # second place.
+  real_value_moments:
+    description: "Value moments from real users in the period (excludes internal/test accounts).
+      The North Star: this is the metric the tree decomposes into breadth x frequency x depth."
+    entity: value_moments
+    segment: active
+    unit: count
+    synonyms: ["north star", "real value moments", "real habit completions"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
   new_signups:
     description: "Number of user signups in the period (raw — includes all accounts)."
     entity: signups

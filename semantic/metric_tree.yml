@@ -8,7 +8,9 @@
 root: weekly_value_moments
 
 nodes:
-  weekly_value_moments: {metric: value_moments,      label: "Weekly value moments (North Star)"}
+  # real_value_moments, NOT value_moments: the identity edges below multiply three children that
+  # all exclude internal/test accounts, and an identity that spans two populations is not one.
+  weekly_value_moments: {metric: real_value_moments, label: "Weekly value moments (North Star)"}
   active_users:         {metric: active_users,       label: "Active users (breadth)"}
   days_per_user:        {metric: days_per_user,      label: "Days per user (frequency)"}
   moments_per_day:      {metric: moments_per_day,    label: "Moments per active day (depth)"}

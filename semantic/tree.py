@@ -91,11 +91,16 @@ class MetricTree:
         node = node or self.root
         if node not in self.nodes:
             raise TreeError(f"unknown node {node!r}. Nodes: {', '.join(self.nodes)}")
-        # The official North Star is the internal-excluded row set. Any caller filter is
-        # layered ON TOP of that exclusion, never instead of it — otherwise the parent
-        # (exclusion not applied) and children (internal-excluded) would be computed over
-        # different row sets and the identity shares would not sum to 1.
-        filters = {"is_internal": False, **(filters or {})}
+        # No population is forced here. Each node's metric carries its own, and the identity
+        # closes because the DEFINITIONS agree — real_value_moments and its three children all
+        # exclude internal/test — not because this function remembers to filter.
+        #
+        # Forcing it here broke the invariant that matters more: a tree node reports the metric
+        # it names. The root named value_moments (every account, 4,307) and reported 4,133, so
+        # "why did value moments drop?" and "how many value moments?" answered with different
+        # numbers for the same word. A filter applied here is a metric definition living in a
+        # second place, and the second place always wins silently.
+        filters = filters or {}
 
         def val(metric, period):
             return self.layer.scalar(metric, period=period, filters=filters)
