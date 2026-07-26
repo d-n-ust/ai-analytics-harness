@@ -92,8 +92,17 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         bucket = "error"
     elif outcome == "refuse":
         if expects_refusal:                          # the right call — check it named the right reason
-            reason_match = answer.reason == expect["reason"]
-            correct = reason_match
+            if getattr(answer, "refused_by", "") == "trajectory_verify":
+                # The judge is scored on the ACTION, not the code. It answers a different
+                # question from the one the vocabulary asks: the question's expected reason says
+                # why the question is unanswerable, the judge says why THIS number failed to
+                # answer it. Grading one against the other measured nothing — 59% of its
+                # refusals expected a code it cannot produce. reason_match stays None so it is
+                # excluded from reason accuracy rather than counted as a miss.
+                correct = True
+            else:
+                reason_match = answer.reason == expect["reason"]
+                correct = reason_match
         # else: over-refused an answerable question -> correct stays False
         bucket = "idk"
     elif outcome == "clarify":

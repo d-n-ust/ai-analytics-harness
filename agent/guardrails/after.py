@@ -25,12 +25,11 @@ from . import Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)
 
-# The judge reports a finer mismatch KIND than the refusal vocabulary carries; this is the
-# coarsening. The kind itself is preserved on the stored verdict, so nothing is lost — the code
-# is what downstream grading counts, the kind is what a human reads.
-_V_REASON = {"kind": "wrong_measure", "scope": "other",
-             "definition": "no_governed_definition", "thing": "no_governed_definition",
-             "segment": "no_governed_definition", "none": "other"}
+# The judge's finding, named rather than cast onto the model's refusal vocabulary. It used to be
+# coarsened into REFUSAL_REASONS — three kinds onto no_governed_definition, scope onto `other` —
+# and then graded against what the question expected, which it mostly could not say.
+_V_REASON = {kind: f"verifier_wrong_{kind}" for kind in
+             ("thing", "kind", "scope", "definition", "segment")}
 
 # --------------------------------------------------------------------------- #
 # Deterministic output checks: provenance (single-metric, R7) + validation (R8)
@@ -181,7 +180,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         note(record, "trajectory_verify", Position.AFTER, "allowed" if ok_v else "refused",
              reason_v if not ok_v else "the judge found no mismatch")
         if not ok_v:
-            return Verdict(False, _V_REASON.get(mismatch, "other"), reason_v,
+            return Verdict(False, _V_REASON.get(mismatch, "verifier_other"), reason_v,
                            missing=f"verifier[{mismatch}]: {reason_v}"[:180],
                            guardrail="trajectory_verify")
 

@@ -23,6 +23,20 @@ REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefin
                    "dimension_not_supported", "ungoverned_dimension_value",
                    "result_empty", "implausible_value", "other"]
 
+# What the trajectory judge found, in ITS OWN terms. Assigned by the harness, never offered to
+# the model — like `clarify`, and for the same reason: a second route to the same outcome is an
+# ambiguity, and the refuse tool's enum is a treatment surface.
+#
+# These exist because the two vocabularies answer different questions. REFUSAL_REASONS says why
+# a QUESTION cannot be answered from governed data; the judge says why THIS NUMBER does not
+# answer it. Casting one onto the other lost most of the meaning — three of the judge's five
+# findings collapsed onto no_governed_definition and a fourth onto `other` — and then the result
+# was scored against the question's expected reason, which it could not express: nine of the
+# twelve refusal codes were unreachable, so 59% of judge-driven refusals were graded against a
+# code they were structurally incapable of producing.
+VERIFIER_REASONS = ["verifier_wrong_thing", "verifier_wrong_kind", "verifier_wrong_scope",
+                    "verifier_wrong_definition", "verifier_wrong_segment", "verifier_other"]
+
 
 @dataclass
 class Answer:

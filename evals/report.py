@@ -40,7 +40,7 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 10  # v10: a clarify abstains and carries reason='clarify'
+ROW_SCHEMA_VERSION = 11  # v11: judge refusals carry their own verifier_* reason codes
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
@@ -199,6 +199,12 @@ def aggregate(rows) -> dict:
             # Rows written before a clarify carried a reason still read correctly: the outcome
             # already says what the code would have.
             code = r.get("reason") or ("clarify" if r["outcome"] == "clarify" else "(none)")
+            # A judge-driven refusal is not scored on the reason it gave — its vocabulary
+            # answers a different question — so it gets its own rows rather than diluting the
+            # model's reason accuracy with misses it could not avoid.
+            if r.get("refused_by") == "trajectory_verify":
+                reasons[code]["matched" if _expected_refuse(r) else "over_refused"] += 1
+                continue
             if not _expected_refuse(r):
                 reasons[code]["over_refused"] += 1
             elif r.get("reason_match"):
