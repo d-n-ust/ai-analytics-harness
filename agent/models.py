@@ -1,12 +1,16 @@
-"""Model wrappers behind one interface, so the agent loop drives all three unchanged.
+"""Model wrappers behind one interface, so the agent loop drives all of them unchanged.
 
-The loop speaks Anthropic's block shape (content = [text | tool_use] blocks;
-tool_result messages). The Anthropic wrapper is native; the OpenAI wrapper is a thin
-adapter that translates that shape to and from OpenAI's chat-completions format. A
-mock model needs no key, for testing.
+Every adapter takes a `Conversation` and returns a `Turn` (see protocol.py). Each one owns its
+provider's wire format completely — rendering the conversation into it, and parsing the reply
+back out — and no provider's shape is visible anywhere else in the harness.
+
+Anthropic used to be the exception: its block shape WAS the internal representation, and the
+others were adapters "to and from" it. That made one vendor's API the harness's vocabulary. It
+now renders like everyone else, echoing the reply blocks it received (`Turn.raw`) so that
+round-tripping stays exact for parts we do not model.
 
 Extended thinking / reasoning is turned down on every model so the experiment's
-variable is the *context*, not the reasoning depth — and so the three are comparable.
+variable is the *context*, not the reasoning depth — and so the models are comparable.
 """
 
 from __future__ import annotations
@@ -14,7 +18,8 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from types import SimpleNamespace
+
+from .protocol import ToolCall, Turn, Usage
 
 MAX_TOKENS = 4096
 # Transient provider failures (429 / 5xx / connection / timeout) must not become
@@ -84,6 +89,24 @@ def _load_env() -> None:
     load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
+def _args(raw) -> dict:
+    """A tool call's arguments. A model that emits malformed JSON gets an empty call rather than
+    a crashed run — the tool then reports what was missing and the model can correct itself."""
+    try:
+        return json.loads(raw or "{}")
+    except json.JSONDecodeError:
+        return {}
+
+
+def _anthropic_blocks(turn: Turn) -> list:
+    """A turn as Anthropic content blocks, for a turn we built ourselves rather than received
+    (a test's script, a replay). The live path echoes `raw` instead."""
+    blocks = [{"type": "text", "text": turn.text}] if turn.text else []
+    calls = list(turn.tool_calls) + ([turn.exit_call] if turn.exit_call else [])
+    return blocks + [{"type": "tool_use", "id": c.id, "name": c.name, "input": c.args}
+                     for c in calls]
+
+
 # --------------------------------------------------------------------------- #
 # Anthropic
 # --------------------------------------------------------------------------- #
@@ -99,11 +122,29 @@ class AnthropicModel:
         # thinking config (disabled on all our specs), so this is "off" unless thinking is enabled.
         self.reasoning = "on" if (spec.thinking and spec.thinking.get("type") != "disabled") else "off"
 
-    def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None,
-               require_tool: bool = False):
-        kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS,
-                  system=system, messages=messages, tools=tools)
+    @staticmethod
+    def _render(convo) -> list:
+        """The conversation as Anthropic messages. An assistant turn is echoed from the reply
+        blocks the API itself returned (`raw`) whenever we have them, so round-tripping is exact
+        even for parts we do not model — a thinking block must come back verbatim or the next
+        request is rejected."""
+        out = []
+        for kind, item in convo.entries:
+            if kind == "user":
+                out.append({"role": "user", "content": item})
+            elif kind == "turn":
+                out.append({"role": "assistant", "content": item.raw if item.raw is not None
+                            else _anthropic_blocks(item)})
+            else:
+                out.append({"role": "user", "content": [
+                    {"type": "tool_result", "tool_use_id": r.call_id,
+                     "content": r.content, "is_error": r.is_error} for r in item]})
+        return out
+
+    def respond(self, convo, tools: list, force_tool: str | None = None,
+                temperature: float | None = None, require_tool: bool = False) -> Turn:
+        kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS, system=convo.system,
+                  messages=self._render(convo), tools=tools)
         if self.spec.thinking is not None:
             kw["thinking"] = self.spec.thinking
         if force_tool:
@@ -114,7 +155,18 @@ class AnthropicModel:
         if temperature is not None and (self.spec.thinking is None
                                         or self.spec.thinking.get("type") == "disabled"):
             kw["temperature"] = temperature
-        return self.client.messages.create(**kw)
+        resp = self.client.messages.create(**kw)
+        blocks = list(resp.content)
+        said, calls = [], []
+        for b in blocks:
+            if getattr(b, "type", None) == "text":
+                said.append(getattr(b, "text", "") or "")
+            elif getattr(b, "type", None) == "tool_use":
+                calls.append(ToolCall(b.id, b.name, b.input or {}))
+        u = getattr(resp, "usage", None)
+        usage = Usage(getattr(u, "input_tokens", 0) or 0, getattr(u, "output_tokens", 0) or 0,
+                      getattr(u, "cache_read_input_tokens", 0) or 0)
+        return Turn.of(" ".join(said).strip(), calls, usage, raw=blocks)
 
 
 # --------------------------------------------------------------------------- #
@@ -134,30 +186,25 @@ class OpenAIModel:
         self.reasoning = os.environ.get("OPENAI_REASONING", "none")
 
     @staticmethod
-    def _to_openai_messages(system: str, messages: list) -> list:
-        out = [{"role": "system", "content": system}]
-        for m in messages:
-            role, content = m["role"], m["content"]
-            if role == "user" and isinstance(content, str):
-                out.append({"role": "user", "content": content})
-            elif role == "user":  # a list of tool_result blocks
-                for b in content:
-                    if isinstance(b, dict) and b.get("type") == "tool_result":
-                        out.append({"role": "tool", "tool_call_id": b["tool_use_id"],
-                                    "content": str(b["content"])})
-            elif role == "assistant":  # a list of our own SimpleNamespace blocks
-                text, calls = [], []
-                for b in content:
-                    if getattr(b, "type", None) == "text":
-                        text.append(b.text or "")
-                    elif getattr(b, "type", None) == "tool_use":
-                        calls.append({"id": b.id, "type": "function",
-                                      "function": {"name": b.name, "arguments": json.dumps(b.input or {})}})
+    def _render_chat(convo) -> list:
+        out = [{"role": "system", "content": convo.system}]
+        for kind, item in convo.entries:
+            if kind == "user":
+                out.append({"role": "user", "content": item})
+            elif kind == "results":
+                for r in item:
+                    out.append({"role": "tool", "tool_call_id": r.call_id,
+                                "content": str(r.content)})
+            else:
+                calls = list(item.tool_calls) + ([item.exit_call] if item.exit_call else [])
                 # Content must always be a string: some models emit empty assistant
                 # turns, and a null content without tool_calls is a 400.
-                msg = {"role": "assistant", "content": "".join(text)}
+                msg = {"role": "assistant", "content": item.text}
                 if calls:
-                    msg["tool_calls"] = calls
+                    msg["tool_calls"] = [{"id": c.id, "type": "function",
+                                          "function": {"name": c.name,
+                                                       "arguments": json.dumps(c.args)}}
+                                         for c in calls]
                 out.append(msg)
         return out
 
@@ -175,38 +222,35 @@ class OpenAIModel:
                  "parameters": t["input_schema"]} for t in tools]
 
     @staticmethod
-    def _to_responses_input(messages: list) -> list:
-        """Same internal block shape as _to_openai_messages, different wire format: a flat input
-        list where a tool call is a `function_call` item and a tool result is a `function_call_output`
-        item (linked by call_id), rather than assistant.tool_calls + a `tool` role."""
+    def _render_responses(convo) -> list:
+        """Same conversation, different wire format: a flat input list where a tool call is a
+        `function_call` item and a tool result is a `function_call_output` item (linked by
+        call_id), rather than assistant.tool_calls plus a `tool` role."""
         out: list = []
-        for m in messages:
-            role, content = m["role"], m["content"]
-            if role == "user" and isinstance(content, str):
-                out.append({"role": "user", "content": content})
-            elif role == "user":                                  # tool_result blocks
-                for b in content:
-                    if isinstance(b, dict) and b.get("type") == "tool_result":
-                        out.append({"type": "function_call_output",
-                                    "call_id": b["tool_use_id"], "output": str(b["content"])})
-            elif role == "assistant":                             # our SimpleNamespace blocks
-                for b in content:
-                    if getattr(b, "type", None) == "text" and (b.text or ""):
-                        out.append({"role": "assistant", "content": b.text})
-                    elif getattr(b, "type", None) == "tool_use":
-                        out.append({"type": "function_call", "call_id": b.id, "name": b.name,
-                                    "arguments": json.dumps(b.input or {})})
+        for kind, item in convo.entries:
+            if kind == "user":
+                out.append({"role": "user", "content": item})
+            elif kind == "results":
+                for r in item:
+                    out.append({"type": "function_call_output", "call_id": r.call_id,
+                                "output": str(r.content)})
+            else:
+                if item.text:
+                    out.append({"role": "assistant", "content": item.text})
+                for c in list(item.tool_calls) + ([item.exit_call] if item.exit_call else []):
+                    out.append({"type": "function_call", "call_id": c.id, "name": c.name,
+                                "arguments": json.dumps(c.args)})
         return out
 
-    def _create_responses(self, system: str, messages: list, tools: list,
-                          force_tool: str | None, require_tool: bool):
-        """gpt-5.6 path. Same in/out contract as create(); the Responses API is the only surface
-        that accepts function tools together with reasoning_effort. reasoning items are dropped
-        from the returned transcript (they are the model's private trace)."""
+    def _respond_responses(self, convo, tools: list, force_tool: str | None,
+                           require_tool: bool) -> Turn:
+        """gpt-5.6 path. Same contract as respond(); the Responses API is the only surface that
+        accepts function tools together with reasoning_effort. reasoning items are dropped from
+        the returned transcript (they are the model's private trace)."""
         kw = dict(
             model=self.spec.model_id,
-            instructions=system,
-            input=self._to_responses_input(messages),
+            instructions=convo.system,
+            input=self._render_responses(convo),
             tools=self._to_responses_tools(tools),
             tool_choice=({"type": "function", "name": force_tool} if force_tool
                          else "required" if require_tool else "auto"),
@@ -216,27 +260,19 @@ class OpenAIModel:
         if self.spec.supports_reasoning_effort:
             kw["reasoning"] = {"effort": self.reasoning}          # none / low / medium / high
         resp = self.client.responses.create(**kw)
-        blocks = []
+        said, calls = [], []
         for item in resp.output:
             t = getattr(item, "type", None)
             if t == "message":
                 for part in (getattr(item, "content", None) or []):
                     if getattr(part, "type", None) == "output_text":
-                        blocks.append(SimpleNamespace(type="text", text=part.text))
+                        said.append(part.text or "")
             elif t == "function_call":
-                try:
-                    args = json.loads(item.arguments or "{}")
-                except json.JSONDecodeError:
-                    args = {}
-                blocks.append(SimpleNamespace(type="tool_use", id=item.call_id,
-                                              name=item.name, input=args))
-        stop = "tool_use" if any(getattr(b, "type", None) == "tool_use" for b in blocks) else "end_turn"
+                calls.append(ToolCall(item.call_id, item.name, _args(item.arguments)))
         u = resp.usage
         cached = getattr(getattr(u, "input_tokens_details", None), "cached_tokens", 0) or 0
-        usage = SimpleNamespace(input_tokens=getattr(u, "input_tokens", 0),
-                                output_tokens=getattr(u, "output_tokens", 0),
-                                cache_creation_input_tokens=0, cache_read_input_tokens=cached)
-        return SimpleNamespace(content=blocks, stop_reason=stop, usage=usage)
+        usage = Usage(getattr(u, "input_tokens", 0) or 0, getattr(u, "output_tokens", 0) or 0, cached)
+        return Turn.of(" ".join(said).strip(), calls, usage)
 
     def _deepseek_reasoning(self) -> dict:
         """DeepSeek V4's reasoning dialect: a nested thinking on/off toggle, plus a
@@ -251,14 +287,13 @@ class OpenAIModel:
             return {"extra_body": {"thinking": {"type": "enabled"}}, "reasoning_effort": r}
         raise ValueError(f"deepseek-v4 reasoning must be none/high/max, got {r!r}")
 
-    def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None,
-               require_tool: bool = False):
+    def respond(self, convo, tools: list, force_tool: str | None = None,
+                temperature: float | None = None, require_tool: bool = False) -> Turn:
         if self.spec.use_responses_api:                           # gpt-5.6: tools + reasoning
-            return self._create_responses(system, messages, tools, force_tool, require_tool)
+            return self._respond_responses(convo, tools, force_tool, require_tool)
         kw = dict(
             model=self.spec.model_id,
-            messages=self._to_openai_messages(system, messages),
+            messages=self._render_chat(convo),
             tools=self._to_openai_tools(tools),
             # 'required' = some tool, the model picks which (used to close a run).
             tool_choice=({"type": "function", "function": {"name": force_tool}} if force_tool
@@ -273,26 +308,16 @@ class OpenAIModel:
             kw["temperature"] = temperature               # legacy models take temperature
         resp = self.client.chat.completions.create(**kw)
         msg = resp.choices[0].message
-        blocks = []
-        if msg.content:
-            blocks.append(SimpleNamespace(type="text", text=msg.content))
-        for tc in (msg.tool_calls or []):
-            try:
-                args = json.loads(tc.function.arguments or "{}")
-            except json.JSONDecodeError:
-                args = {}
-            blocks.append(SimpleNamespace(type="tool_use", id=tc.id,
-                                          name=tc.function.name, input=args))
-        stop = "tool_use" if msg.tool_calls else "end_turn"
+        calls = [ToolCall(tc.id, tc.function.name, _args(tc.function.arguments))
+                 for tc in (msg.tool_calls or [])]
         u = resp.usage
         # OpenAI reports cache HITS in prompt_tokens_details.cached_tokens (a subset of prompt_tokens),
         # billed at ~10% of input. Capturing it turns the USD estimate from an upper bound into the
         # real cost. Caching itself is automatic server-side; there is nothing to switch on.
         cached = getattr(getattr(u, "prompt_tokens_details", None), "cached_tokens", 0) or 0
-        usage = SimpleNamespace(input_tokens=getattr(u, "prompt_tokens", 0),
-                                output_tokens=getattr(u, "completion_tokens", 0),
-                                cache_creation_input_tokens=0, cache_read_input_tokens=cached)
-        return SimpleNamespace(content=blocks, stop_reason=stop, usage=usage)
+        usage = Usage(getattr(u, "prompt_tokens", 0) or 0,
+                      getattr(u, "completion_tokens", 0) or 0, cached)
+        return Turn.of(msg.content or "", calls, usage)
 
 
 # --------------------------------------------------------------------------- #
@@ -303,23 +328,12 @@ class MockModel:
         self.spec = spec
         self.reasoning = "mock"
 
-    @staticmethod
-    def _has_tool_result(messages: list) -> bool:
-        return any(isinstance(m.get("content"), list)
-                   and any(isinstance(b, dict) and b.get("type") == "tool_result" for b in m["content"])
-                   for m in messages)
-
-    def create(self, system: str, messages: list, tools: list,
-               force_tool: str | None = None, temperature: float | None = None,
-               require_tool: bool = False):
-        usage = SimpleNamespace(input_tokens=10, output_tokens=5,
-                                cache_creation_input_tokens=0, cache_read_input_tokens=0)
-        if not self._has_tool_result(messages):
-            block = SimpleNamespace(type="tool_use", id="mock_1", name="get_schema", input={})
-        else:
-            block = SimpleNamespace(type="tool_use", id="mock_2", name="answer",
-                                    input={"answer": "0", "explanation": "mock answer"})
-        return SimpleNamespace(content=[block], stop_reason="tool_use", usage=usage)
+    def respond(self, convo, tools: list, force_tool: str | None = None,
+                temperature: float | None = None, require_tool: bool = False) -> Turn:
+        seen_a_result = any(kind == "results" for kind, _ in convo.entries)
+        call = (ToolCall("mock_2", "answer", {"answer": "0", "explanation": "mock answer"})
+                if seen_a_result else ToolCall("mock_1", "get_schema", {}))
+        return Turn.of("", [call], Usage(10, 5, 0))
 
 
 def get_model(name: str, mock: bool = False, reasoning: str | None = None):

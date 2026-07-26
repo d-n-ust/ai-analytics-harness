@@ -1,0 +1,142 @@
+{
+  "anthropic_messages": "identity \u2014 the loop's messages are passed through unchanged",
+  "openai_chat": [
+    {
+      "content": "You are a data analyst.",
+      "role": "system"
+    },
+    {
+      "content": "how many active users last week?",
+      "role": "user"
+    },
+    {
+      "content": "Let me check.",
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "function": {
+            "arguments": "{\"metric\": \"active_users\", \"period\": \"last_week\"}",
+            "name": "query_metric"
+          },
+          "id": "c1",
+          "type": "function"
+        },
+        {
+          "function": {
+            "arguments": "{\"table\": \"dim_users\"}",
+            "name": "describe_table"
+          },
+          "id": "c2",
+          "type": "function"
+        }
+      ]
+    },
+    {
+      "content": "columns: value\n(886,)",
+      "role": "tool",
+      "tool_call_id": "c1"
+    },
+    {
+      "content": "Error: unknown table",
+      "role": "tool",
+      "tool_call_id": "c2"
+    },
+    {
+      "content": "Finish by calling one terminal tool: answer, refuse, or clarify.",
+      "role": "user"
+    },
+    {
+      "content": "",
+      "role": "assistant"
+    },
+    {
+      "content": "",
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "function": {
+            "arguments": "{\"answer\": \"886\", \"value\": 886}",
+            "name": "answer"
+          },
+          "id": "c3",
+          "type": "function"
+        }
+      ]
+    }
+  ],
+  "openai_chat_tools": [
+    {
+      "function": {
+        "description": "end",
+        "name": "answer",
+        "parameters": {
+          "properties": {
+            "x": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "function"
+    }
+  ],
+  "responses_input": [
+    {
+      "content": "how many active users last week?",
+      "role": "user"
+    },
+    {
+      "content": "Let me check.",
+      "role": "assistant"
+    },
+    {
+      "arguments": "{\"metric\": \"active_users\", \"period\": \"last_week\"}",
+      "call_id": "c1",
+      "name": "query_metric",
+      "type": "function_call"
+    },
+    {
+      "arguments": "{\"table\": \"dim_users\"}",
+      "call_id": "c2",
+      "name": "describe_table",
+      "type": "function_call"
+    },
+    {
+      "call_id": "c1",
+      "output": "columns: value\n(886,)",
+      "type": "function_call_output"
+    },
+    {
+      "call_id": "c2",
+      "output": "Error: unknown table",
+      "type": "function_call_output"
+    },
+    {
+      "content": "Finish by calling one terminal tool: answer, refuse, or clarify.",
+      "role": "user"
+    },
+    {
+      "arguments": "{\"answer\": \"886\", \"value\": 886}",
+      "call_id": "c3",
+      "name": "answer",
+      "type": "function_call"
+    }
+  ],
+  "responses_tools": [
+    {
+      "description": "end",
+      "name": "answer",
+      "parameters": {
+        "properties": {
+          "x": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "function"
+    }
+  ],
+  "system": "You are a data analyst."
+}

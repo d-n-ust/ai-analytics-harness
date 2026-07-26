@@ -1,9 +1,14 @@
-"""Unit tests for the OpenAI adapter — no network, no API key.
+"""Unit tests for the provider adapters — no network, no API key.
 
-The adapter's message-shape conversion is the most bug-prone code in the harness: an empty
-assistant `content` is a provider 400, and a `tool_use` must round-trip to `tool_calls`. These
-are `@staticmethod`s, so they're pinned here with pure fixtures — a provider-SDK bump or a
-careless edit can't silently break a paid run.
+Rendering a conversation to a provider's wire format is the most bug-prone code in the harness:
+an empty assistant `content` is a 400, a tool call must round-trip to `tool_calls`, and the
+Responses API links a call to its result by `call_id` instead. A mistake here is a silent paid-run
+failure, so the shapes are pinned with pure fixtures.
+
+The golden test is the important one. `tests/golden/wire_payloads.json` was captured from the
+adapters BEFORE the conversation types existed, when each one walked hand-assembled message
+dicts. Rendering the same conversation through the new types must produce byte-identical
+payloads — that is what makes moving the boundary a refactor rather than a rewrite.
 
 Run: PYTHONPATH=. uv run python tests/test_adapters.py
 """
@@ -11,104 +16,123 @@ Run: PYTHONPATH=. uv run python tests/test_adapters.py
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
+from pathlib import Path
 
-from agent.models import OpenAIModel
+from agent.models import AnthropicModel, OpenAIModel, _anthropic_blocks
+from agent.protocol import Conversation, ToolCall, ToolResult, Turn
 
+GOLDEN = Path(__file__).resolve().parent / "golden" / "wire_payloads.json"
 
-def _text(t):
-    return SimpleNamespace(type="text", text=t)
-
-
-def _tool_use(tid, name, inp):
-    return SimpleNamespace(type="tool_use", id=tid, name=name, input=inp)
+TOOLS = [{"name": "answer", "description": "end",
+          "input_schema": {"type": "object", "properties": {"x": {"type": "string"}}}}]
 
 
-def test_system_and_user_string():
-    out = OpenAIModel._to_openai_messages("SYS", [{"role": "user", "content": "hi"}])
-    assert out[0] == {"role": "system", "content": "SYS"}
-    assert out[1] == {"role": "user", "content": "hi"}
+def _conversation() -> Conversation:
+    """The same conversation the golden was captured from: a question, a turn with text and two
+    tool calls, their results (one an error), a nudge, an empty turn, and a terminal call."""
+    convo = Conversation.opening("You are a data analyst.", "how many active users last week?")
+    c1 = ToolCall("c1", "query_metric", {"metric": "active_users", "period": "last_week"})
+    c2 = ToolCall("c2", "describe_table", {"table": "dim_users"})
+    convo.add(Turn.of("Let me check.", [c1, c2], usage=None))
+    convo.observe([ToolResult("columns: value\n(886,)").for_call(c1),
+                   ToolResult("Error: unknown table", is_error=True).for_call(c2)])
+    convo.say("Finish by calling one terminal tool: answer, refuse, or clarify.")
+    convo.add(Turn.of("", [], usage=None))
+    convo.add(Turn.of("", [ToolCall("c3", "answer", {"answer": "886", "value": 886})], usage=None))
+    return convo
 
 
-def test_assistant_text_plus_tool_use_roundtrips():
-    msgs = [{"role": "assistant",
-             "content": [_text("thinking"), _tool_use("t1", "query_metric", {"metric": "mrr"})]}]
-    a = OpenAIModel._to_openai_messages("S", msgs)[-1]
-    assert a["role"] == "assistant" and a["content"] == "thinking"
-    call = a["tool_calls"][0]
-    assert call["id"] == "t1" and call["type"] == "function"
-    assert call["function"]["name"] == "query_metric"
-    assert json.loads(call["function"]["arguments"]) == {"metric": "mrr"}
+def test_wire_payloads_are_unchanged_by_the_refactor():
+    """Every byte each provider receives, against what the pre-refactor adapters produced."""
+    golden = json.loads(GOLDEN.read_text())
+    convo = _conversation()
+    assert OpenAIModel._render_chat(convo) == golden["openai_chat"], "chat-completions drifted"
+    assert OpenAIModel._render_responses(convo) == golden["responses_input"], "responses drifted"
+    assert OpenAIModel._to_openai_tools(TOOLS) == golden["openai_chat_tools"]
+    assert OpenAIModel._to_responses_tools(TOOLS) == golden["responses_tools"]
 
 
 def test_empty_assistant_content_is_string_not_null():
-    # The null-content 400 guard: an assistant turn with no text and no tools must be content="".
-    a = OpenAIModel._to_openai_messages("S", [{"role": "assistant", "content": []}])[-1]
+    """The null-content 400 guard: a turn with no text and no tools must be content=""."""
+    convo = Conversation("S")
+    convo.add(Turn.of("", [], usage=None))
+    a = OpenAIModel._render_chat(convo)[-1]
     assert a == {"role": "assistant", "content": ""}   # never None
     assert "tool_calls" not in a                        # and no empty tool_calls key
 
 
-def test_tool_result_maps_to_tool_role():
-    msgs = [{"role": "user",
-             "content": [{"type": "tool_result", "tool_use_id": "t1", "content": "42 rows"}]}]
-    out = OpenAIModel._to_openai_messages("S", msgs)
-    assert out[-1] == {"role": "tool", "tool_call_id": "t1", "content": "42 rows"}
+def test_an_exit_call_is_rendered_like_any_other_call():
+    """A terminal call lives in its own field on the Turn, but on the wire it is just a tool
+    call — dropping it would leave the transcript claiming the model said nothing."""
+    convo = Conversation("S")
+    convo.add(Turn.of("done", [ToolCall("x", "answer", {"answer": "1"})], usage=None))
+    chat = OpenAIModel._render_chat(convo)[-1]
+    assert [c["function"]["name"] for c in chat["tool_calls"]] == ["answer"]
+    responses = OpenAIModel._render_responses(convo)
+    assert [i.get("name") for i in responses if i.get("type") == "function_call"] == ["answer"]
 
 
-def test_tool_use_with_no_input_is_empty_object():
-    msgs = [{"role": "assistant", "content": [_tool_use("t2", "list_metrics", None)]}]
-    a = OpenAIModel._to_openai_messages("S", msgs)[-1]
-    assert json.loads(a["tool_calls"][0]["function"]["arguments"]) == {}
-
-
-def test_tools_schema_mapping():
-    tools = [{"name": "answer", "description": "end",
-              "input_schema": {"type": "object", "properties": {"x": {"type": "string"}}}}]
-    out = OpenAIModel._to_openai_tools(tools)
-    assert out[0]["type"] == "function"
-    assert out[0]["function"]["name"] == "answer"
-    assert out[0]["function"]["description"] == "end"
-    assert out[0]["function"]["parameters"] == {"type": "object", "properties": {"x": {"type": "string"}}}
-
-
-# ----- Responses API adapter (gpt-5.6: tools + reasoning) ----------------------------------- #
-def test_responses_input_user_string():
-    assert OpenAIModel._to_responses_input([{"role": "user", "content": "hi"}]) == \
-        [{"role": "user", "content": "hi"}]
-
-
-def test_responses_input_threads_tool_call_and_result_by_call_id():
-    # Responses uses function_call / function_call_output items linked by call_id — NOT chat's
-    # assistant.tool_calls + a `tool` role. A broken linkage here is a silent paid-run failure.
-    msgs = [{"role": "assistant",
-             "content": [_text("look"), _tool_use("c1", "query_metric", {"metric": "mrr"})]},
-            {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "c1", "content": "42"}]}]
-    out = OpenAIModel._to_responses_input(msgs)
+def test_responses_threads_a_call_to_its_result_by_call_id():
+    """Responses uses function_call / function_call_output linked by call_id — NOT chat's
+    assistant.tool_calls plus a `tool` role. A broken linkage is a silent paid-run failure."""
+    convo = Conversation("S")
+    call = ToolCall("c1", "query_metric", {"metric": "mrr"})
+    convo.add(Turn.of("look", [call], usage=None))
+    convo.observe([ToolResult("42").for_call(call)])
+    out = OpenAIModel._render_responses(convo)
     assert {"role": "assistant", "content": "look"} in out
     fc = next(i for i in out if i.get("type") == "function_call")
-    assert fc["call_id"] == "c1" and fc["name"] == "query_metric"
-    assert json.loads(fc["arguments"]) == {"metric": "mrr"}
+    assert fc["call_id"] == "c1" and json.loads(fc["arguments"]) == {"metric": "mrr"}
     fo = next(i for i in out if i.get("type") == "function_call_output")
     assert fo["call_id"] == "c1" and fo["output"] == "42"
 
 
-def test_responses_tools_are_flat():
-    tools = [{"name": "answer", "description": "end",
-              "input_schema": {"type": "object", "properties": {"x": {"type": "string"}}}}]
-    out = OpenAIModel._to_responses_tools(tools)
-    assert out[0]["type"] == "function" and out[0]["name"] == "answer"
-    assert "function" not in out[0]                       # flat — no nested wrapper
-    assert out[0]["parameters"]["properties"] == {"x": {"type": "string"}}
+def test_anthropic_renders_like_every_other_provider():
+    """Anthropic used to be handed the loop's messages verbatim, which is how its block shape
+    became the harness's internal representation. It now renders from the same conversation."""
+    convo = _conversation()
+    msgs = AnthropicModel._render(convo)
+    assert msgs[0] == {"role": "user", "content": "how many active users last week?"}
+    assistant = msgs[1]["content"]
+    assert assistant[0] == {"type": "text", "text": "Let me check."}
+    assert [b["name"] for b in assistant[1:]] == ["query_metric", "describe_table"]
+    results = msgs[2]["content"]
+    assert results[0]["tool_use_id"] == "c1" and results[0]["is_error"] is False
+    assert results[1]["is_error"] is True
+
+
+def test_a_received_turn_is_echoed_back_verbatim():
+    """`raw` carries the provider's own reply blocks, so parts we do not model (a thinking block,
+    which Anthropic rejects the next request without) survive the round trip untouched."""
+    convo = Conversation("S")
+    opaque = [{"type": "thinking", "thinking": "...", "signature": "sig"},
+              {"type": "text", "text": "hello"}]
+    convo.add(Turn.of("hello", [], usage=None, raw=opaque))
+    assert AnthropicModel._render(convo)[-1]["content"] is opaque
+    # ...and a turn we built ourselves, with no raw, is rendered from its typed parts
+    convo2 = Conversation("S")
+    convo2.add(Turn.of("hi", [ToolCall("t", "get_schema", {})], usage=None))
+    assert _anthropic_blocks(convo2.entries[-1][1])[0] == {"type": "text", "text": "hi"}
+
+
+def test_tools_schema_mapping():
+    out = OpenAIModel._to_openai_tools(TOOLS)
+    assert out[0]["type"] == "function" and out[0]["function"]["name"] == "answer"
+    assert out[0]["function"]["parameters"] == TOOLS[0]["input_schema"]
+    flat = OpenAIModel._to_responses_tools(TOOLS)
+    assert flat[0]["name"] == "answer" and "function" not in flat[0]   # flat — no nested wrapper
+
+
+TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
+         test_empty_assistant_content_is_string_not_null,
+         test_an_exit_call_is_rendered_like_any_other_call,
+         test_responses_threads_a_call_to_its_result_by_call_id,
+         test_anthropic_renders_like_every_other_provider,
+         test_a_received_turn_is_echoed_back_verbatim,
+         test_tools_schema_mapping]
 
 
 if __name__ == "__main__":
-    test_system_and_user_string()
-    test_assistant_text_plus_tool_use_roundtrips()
-    test_empty_assistant_content_is_string_not_null()
-    test_tool_result_maps_to_tool_role()
-    test_tool_use_with_no_input_is_empty_object()
-    test_tools_schema_mapping()
-    test_responses_input_user_string()
-    test_responses_input_threads_tool_call_and_result_by_call_id()
-    test_responses_tools_are_flat()
-    print("OK - openai adapter: chat + responses shape conversions all pass.")
+    for fn in TESTS:
+        fn()
+    print(f"OK - adapters: {len(TESTS)} shape tests pass, wire payloads byte-identical to golden.")

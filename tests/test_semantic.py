@@ -78,8 +78,9 @@ def test_dispatcher_records_the_measure_not_every_cell():
     numeric dimension member pass for a governed result."""
     con = open_warehouse(create_star_views=True)
     tb = Toolbox(con, 6, SemanticLayer(con), None, LADDER[5])
-    text, is_err, values = tb.dispatch("query_metric", {
+    res = tb.dispatch("query_metric", {
         "metric": "value_moments", "group_by": ["platform"], "period": "last_month"})
+    text, is_err, values = res.content, res.is_error, res.values
     assert not is_err, text
     rows = [ln for ln in text.splitlines() if ln.startswith("(")]
     assert len(values) == len(rows), f"{len(values)} values recorded for {len(rows)} rows"

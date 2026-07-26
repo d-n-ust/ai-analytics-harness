@@ -9,9 +9,9 @@ outcome is a typed field on the Answer. There is no phrase-matching: a refusal i
 `refuse` call carrying a coded reason and the named missing thing, never a sentence
 someone has to grep for.
 
-The loop shows the CYCLE and nothing else. What a turn contains is read once into `Turn`;
-what an exit call MEANS lives on `_Run`, where it can be read on its own rather than
-three levels inside a `for`. Provider block shapes are confined to `Turn.read`.
+The loop shows the CYCLE and nothing else: ask, act, exit. What a turn contains arrives already
+typed (protocol.py); what an exit call MEANS lives on `_Run`, where it can be read on its own
+rather than three levels inside a `for`. No provider's wire shape appears in this file.
 """
 
 from __future__ import annotations
@@ -19,8 +19,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from .numbers import bare_number
+from .protocol import TERMINAL_TOOLS, Conversation, ToolCall, Turn, Usage
 
-TERMINAL_TOOLS = ("answer", "refuse", "clarify")
+__all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
 _CLOSING_NUDGE = "Finish by calling one terminal tool: answer, refuse, or clarify."
 # The tool result kept in the trace. The [scope] and [sql] lines land at the END of a result,
@@ -32,67 +33,6 @@ _TRACE_LIMIT = 4000
 def _line(value) -> str:
     """A model-supplied string as one clean line."""
     return str(value or "").strip()
-
-
-@dataclass(frozen=True)
-class Usage:
-    """Tokens for one turn, or for a whole run once summed.
-
-    `cached` is a SUBSET of `input` that the provider served from its prompt cache and bills at a
-    fraction of the price, so carrying it separately is what makes the cost report a real number
-    rather than an upper bound."""
-
-    input: int = 0
-    output: int = 0
-    cached: int = 0
-
-    @classmethod
-    def of(cls, response) -> Usage:
-        """Read one response's usage. A provider that reports nothing costs nothing here."""
-        u = getattr(response, "usage", None)
-        return cls(getattr(u, "input_tokens", 0) or 0,
-                   getattr(u, "output_tokens", 0) or 0,
-                   getattr(u, "cache_read_input_tokens", 0) or 0)
-
-    def __add__(self, other: Usage) -> Usage:
-        return Usage(self.input + other.input, self.output + other.output,
-                     self.cached + other.cached)
-
-
-@dataclass(frozen=True)
-class ToolCall:
-    id: str
-    name: str
-    args: dict
-
-
-@dataclass(frozen=True)
-class Turn:
-    """One model turn, read once into the three things the loop acts on: what it said, what it
-    wants run, and the terminal call that ends the run.
-
-    Reading the provider's blocks HERE is what keeps them out of the loop. `blocks` stays the
-    provider's own objects because the transcript is sent back verbatim."""
-
-    blocks: list
-    text: str
-    tool_calls: list
-    exit_call: tuple | None      # (name, args) — a run ends through exactly one
-
-    @classmethod
-    def read(cls, response) -> Turn:
-        blocks = list(response.content)
-        said, calls, exit_call = [], [], None
-        for b in blocks:
-            kind = getattr(b, "type", None)
-            if kind == "text":
-                said.append(getattr(b, "text", "") or "")
-            elif kind == "tool_use":
-                if b.name in TERMINAL_TOOLS:
-                    exit_call = exit_call or (b.name, b.input or {})
-                else:
-                    calls.append(ToolCall(b.id, b.name, b.input or {}))
-        return cls(blocks, " ".join(said).strip(), calls, exit_call)
 
 
 @dataclass
@@ -132,26 +72,26 @@ class _Run:
     usage: Usage = field(default_factory=Usage)
     tool_calls: int = 0
 
-    def execute(self, calls: list[ToolCall]) -> list[dict]:
+    def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
         Errors come back as results, not exceptions — being told what went wrong is what lets
         the model correct itself."""
         results = []
         for call in calls:
             self.tool_calls += 1
-            text, is_error, values = self.grounding.toolbox.dispatch(call.name, call.args)
-            self.steps.append({"tool": call.name, "args": call.args, "error": is_error,
-                               "result": text[:_TRACE_LIMIT], "result_values": values})
-            results.append({"type": "tool_result", "tool_use_id": call.id,
-                            "content": text, "is_error": is_error})
+            result = self.grounding.toolbox.dispatch(call.name, call.args)
+            self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
+                               "result": result.content[:_TRACE_LIMIT],
+                               "result_values": result.values})
+            results.append(result.for_call(call))
         return results
 
     # -- what an exit call means ------------------------------------------- #
-    def finish(self, exit_call: tuple, iterations: int) -> Answer:
-        name, args = exit_call
-        if name == "answer":
+    def finish(self, exit_call: ToolCall, iterations: int) -> Answer:
+        args = exit_call.args
+        if exit_call.name == "answer":
             return self._served(args, iterations)
-        if name == "refuse":
+        if exit_call.name == "refuse":
             return self._record(answer=None, explanation=_line(args.get("explanation")),
                                 outcome="refuse", reason=args.get("reason"),
                                 missing=args.get("missing"), abstained=True, iterations=iterations)
@@ -201,7 +141,7 @@ class _Run:
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
     run = _Run(question, grounding, model, verifier_model)
-    convo: list = [{"role": "user", "content": question}]
+    convo = Conversation.opening(grounding.system, question)
     nudges = 0
 
     for it in range(max_iters):
@@ -210,12 +150,10 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         # protocol instead of dying as an untyped error row — which is a lost measurement, not
         # a model behaviour.
         closing = nudges >= 1 or it == max_iters - 1
-        response = model.create(grounding.system, convo,
-                                grounding.toolbox.specs(terminal_only=closing),
-                                require_tool=closing)
-        run.usage += Usage.of(response)
-        turn = Turn.read(response)
-        convo.append({"role": "assistant", "content": turn.blocks})
+        turn = model.respond(convo, grounding.toolbox.specs(terminal_only=closing),
+                             require_tool=closing)
+        run.usage += turn.usage
+        convo.add(turn)
 
         # Tools first, then the exit. A single turn can carry both, and running the tools keeps
         # the trace honest about what the model asked for before it ended the run. (Whether such
@@ -225,11 +163,11 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         if turn.exit_call:
             return run.finish(turn.exit_call, it + 1)
         if results:
-            convo.append({"role": "user", "content": results})
+            convo.observe(results)
             continue
         nudges += 1
         if nudges > 1:
             return run.gave_up(turn.text, it + 1)
-        convo.append({"role": "user", "content": _CLOSING_NUDGE})
+        convo.say(_CLOSING_NUDGE)
 
     return run.exhausted(max_iters)

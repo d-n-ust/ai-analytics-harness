@@ -23,6 +23,7 @@ from pathlib import Path
 
 from agent.guardrails import LADDER
 from agent.prompt import build_grounding
+from agent.protocol import Turn
 from agent.verifier import _EVIDENCE, _USER, prompt_fingerprint, verify_trajectory
 from warehouse.warehouse import open_warehouse
 
@@ -59,9 +60,9 @@ def _check_evidence_renders() -> None:
     fingerprint change (its definition widened to cover the template) without re-labelling:
     the judge sees the same characters it saw when the stored validation was collected."""
     class _Spy:
-        def create(self, system, messages, tools, **kw):
-            self.seen = messages[0]["content"]
-            return type("R", (), {"content": []})()
+        def respond(self, convo, tools, **kw):
+            self.seen = convo.entries[0][1]
+            return Turn()
 
     spy = _Spy()
     verify_trajectory(spy, "how many active users?", "active_users",

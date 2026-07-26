@@ -75,8 +75,9 @@ def _call(metric: str, scope: str, spelling: str, start: str, end: str) -> dict:
 
 def _serve(args: dict):
     """(blocked, columns, rows) for one governed call through the real dispatcher."""
-    text, is_error, _ = _TB.dispatch("query_metric", args)
-    if is_error:
+    result = _TB.dispatch("query_metric", args)
+    text = result.content
+    if result.is_error:
         return True, [], []
     lines = text.split("\n")
     cols = [c.strip() for c in lines[0].removeprefix("columns:").split(",")]

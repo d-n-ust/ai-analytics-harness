@@ -85,13 +85,15 @@ def prove():
         args = {"metric": "value_moments", **scope}
         if start:
             args |= {"start": start, "end": end}
-        text, is_err, _ = gate_tb.dispatch("query_metric", args)
+        res = gate_tb.dispatch("query_metric", args)
+        text, is_err = res.content, res.is_error
         _check(is_err and text.startswith("BLOCKED"),
                f"gate let an out-of-coverage call through: {scope} {start}..{end} -> {text[:60]}")
         passed += 1
     # ...and still serves a legitimate in-coverage call (the gate isn't just refuse-all).
-    text, is_err, _ = gate_tb.dispatch("query_metric", {"metric": "value_moments",
-                                                        "start": "2026-06-01", "end": "2026-06-30"})
+    res = gate_tb.dispatch("query_metric", {"metric": "value_moments",
+                                            "start": "2026-06-01", "end": "2026-06-30"})
+    text, is_err = res.content, res.is_error
     _check(not is_err and "value" in text, "gate wrongly blocked a valid in-coverage call")
     passed += 1
 

@@ -1,8 +1,9 @@
 """The agent's tools, gated by rung.
 
-Every tool returns a plain string (plus an is_error flag) — the string is what the
-model reads. Numbers are always computed here or by the semantic layer / tree, never
-invented by the model. The terminal tools (`answer` / `refuse` / `clarify`) are defined
+Every tool returns a ToolResult: the text the model reads, whether it failed, and — for a
+governed query — the typed numbers it returned, so the output checks read the real result
+instead of parsing it back out of the display text. Numbers are always computed here or by
+the semantic layer / tree, never invented by the model. The terminal tools (`answer` / `refuse` / `clarify`) are defined
 here so the model can see them, but the agent loop (not this dispatcher) handles them,
 because they end the run.
 """
@@ -17,6 +18,7 @@ from warehouse.warehouse import QueryError, describe_table, run_query, schema_te
 
 from . import verifier
 from .guardrails import LADDER, Guardrails
+from .protocol import ToolResult
 
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.
@@ -425,24 +427,23 @@ class Toolbox:
             return ok, mismatch, reason
         return run
 
-    def dispatch(self, name: str, args: dict) -> tuple[str, bool, list | None]:
-        """Run a tool. Returns (text, is_error, values): `text` is what the model reads, `values`
-        the typed numeric result of a governed query (None for other tools) so the output checks
-        never parse the display text. Errors come back as the DB/semantic message to self-correct."""
+    def dispatch(self, name: str, args: dict) -> ToolResult:
+        """Run a tool. Errors come back as the DB/semantic message rather than as exceptions, so
+        the model is told what went wrong and can correct itself."""
         try:
             if name == "get_schema":
-                return schema_text(self.con, self.rung), False, None
+                return ToolResult(schema_text(self.con, self.rung))
             if name == "describe_table":
-                return describe_table(self.con, args["table"], self.rung), False, None
+                return ToolResult(describe_table(self.con, args["table"], self.rung))
             if name == "run_sql":
                 cols, rows = run_query(self.con, args["query"])
-                return _fmt_rows(cols, rows), False, None
+                return ToolResult(_fmt_rows(cols, rows))
             if name == "list_metrics":
-                return self.semantic.list_metrics_text(), False, None
+                return ToolResult(self.semantic.list_metrics_text())
             if name == "query_metric":
                 block = self._gate_block(name, args)
                 if block is not None:
-                    return block, True, None
+                    return ToolResult(block, is_error=True)
                 sql, cols, rows = self.semantic.query_with_sql(
                     args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
                     time_grain=args.get("time_grain"), start=args.get("start"),
@@ -456,29 +457,29 @@ class Toolbox:
                         group_by=args.get("group_by"), resolve=self.resolve)
                 if self.show_sql:       # R6 (transparency): the exact compiled SQL
                     text += f"\n[sql] {sql}"
-                return text, False, _measure_values(cols, rows)
+                return ToolResult(text, values=_measure_values(cols, rows))
             if name == "check_metric_exists":
-                return self._verdict(*self.semantic.metric_exists(args["term"])), False, None
+                return ToolResult(self._verdict(*self.semantic.metric_exists(args["term"])))
             if name == "check_coverage":
                 return self._verdict(*self.semantic.in_coverage(
                     args.get("start"), args.get("end"),
                     args.get("region"), args.get("country"))), False, None
             if name == "check_segment_defined":
-                return self._verdict(*self.semantic.segment_defined(args["term"])), False, None
+                return ToolResult(self._verdict(*self.semantic.segment_defined(args["term"])))
             if name == "check_causal_evidence":
                 if self.tree is None:
-                    return "NO — no metric tree at this rung; no causal evidence is encoded.", False, None
+                    return ToolResult("NO — no metric tree at this rung; no causal evidence is encoded.")
                 return self._verdict(*self.tree.causal_evidence(
                     args.get("driver"), args.get("outcome"))), False, None
             if name == "get_metric_tree":
-                return self.tree.describe(), False, None
+                return ToolResult(self.tree.describe())
             if name == "explain_change":
                 out = self.tree.explain_change(
                     node=args.get("node"), period_a=args.get("period_a", "prev_week"),
                     period_b=args.get("period_b", "last_week"), filters=args.get("filters"))
-                return json.dumps(out, default=str, indent=2), False, None
-            return f"Unknown tool {name!r}.", True, None
+                return ToolResult(json.dumps(out, default=str, indent=2))
+            return ToolResult(f"Unknown tool {name!r}.", is_error=True)
         except (QueryError, SemanticError, TreeError) as exc:
-            return f"Error: {exc}", True, None
+            return ToolResult(f"Error: {exc}", is_error=True)
         except KeyError as exc:
-            return f"Error: missing argument {exc}", True, None
+            return ToolResult(f"Error: missing argument {exc}", is_error=True)

@@ -16,8 +16,9 @@ from __future__ import annotations
 from types import SimpleNamespace as NS
 
 from agent.guardrails import LADDER
-from agent.orchestrator import TERMINAL_TOOLS, Turn, Usage, run_agent
+from agent.orchestrator import run_agent
 from agent.prompt import build_grounding
+from agent.protocol import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from warehouse.warehouse import open_warehouse
 
 QM = {"metric": "active_users", "period": "last_week"}
@@ -30,7 +31,7 @@ def text(t: str):
 
 
 def call(cid: str, name: str, args: dict):
-    return NS(type="tool_use", id=cid, name=name, input=args)
+    return NS(type="call", id=cid, name=name, args=args)
 
 
 class Scripted:
@@ -40,14 +41,13 @@ class Scripted:
         self.turns, self.n, self.spec = list(turns), 0, NS(name="scripted")
         self.tokens, self.offered = tokens, []
 
-    def create(self, system, messages, tools, force_tool=None, temperature=None,
-               require_tool=False):
+    def respond(self, convo, tools, force_tool=None, temperature=None, require_tool=False):
         self.offered.append({t["name"] for t in tools})
         blocks = self.turns[min(self.n, len(self.turns) - 1)]
         self.n += 1
-        i, o, c = self.tokens
-        return NS(content=blocks, stop_reason="tool_use",
-                  usage=NS(input_tokens=i, output_tokens=o, cache_read_input_tokens=c))
+        said = " ".join(b.text for b in blocks if b.type == "text").strip()
+        calls = [ToolCall(b.id, b.name, b.args) for b in blocks if b.type == "call"]
+        return Turn.of(said, calls, Usage(*self.tokens))
 
 
 def _run(*turns, rrung=8, max_iters=4, **kw):
@@ -135,19 +135,22 @@ def test_usage_accumulates_across_turns():
                   tokens=(100, 20, 5))
     assert (ans.input_tokens, ans.output_tokens, ans.cached_tokens) == (200, 40, 10)
     assert Usage(1, 2, 3) + Usage(10, 20, 30) == Usage(11, 22, 33)
-    assert Usage.of(NS()) == Usage(0, 0, 0), "a provider reporting nothing costs nothing"
+    assert Usage() == Usage(0, 0, 0), "a provider reporting nothing costs nothing"
 
 
-def test_turn_reads_a_response_once():
-    """The provider's block shape is confined to Turn.read; everything downstream asks the turn
-    what it wants, never asks an object what type it is."""
-    turn = Turn.read(NS(content=[text("a"), call("1", "query_metric", QM),
-                                 call("2", "answer", ANSWER), text("b")]))
+def test_a_turn_separates_the_exit_call_from_the_rest():
+    """Which tools END a run is the harness's business, not a provider's: an adapter hands over
+    the calls it saw and Turn.of decides, so no adapter needs to know what `answer` means."""
+    calls = [ToolCall("1", "query_metric", QM), ToolCall("2", "answer", ANSWER)]
+    turn = Turn.of("a b", calls, Usage())
     assert turn.text == "a b"
     assert [c.name for c in turn.tool_calls] == ["query_metric"]
-    assert turn.exit_call == ("answer", ANSWER)
-    empty = Turn.read(NS(content=[]))
-    assert empty.text == "" and empty.tool_calls == [] and empty.exit_call is None
+    assert turn.exit_call.name == "answer" and turn.exit_call.args == ANSWER
+    empty = Turn.of("", [], Usage())
+    assert empty.text == "" and empty.tool_calls == () and empty.exit_call is None
+    # two exit calls in one turn: the first wins, so an outcome never depends on block order
+    two = Turn.of("", [ToolCall("1", "refuse", {}), ToolCall("2", "answer", {})], Usage())
+    assert two.exit_call.name == "refuse" 
 
 
 TESTS = [test_a_run_ends_through_one_typed_exit,
@@ -158,7 +161,7 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_tool_errors_come_back_as_results_so_the_model_can_correct_itself,
          test_a_turn_carrying_both_a_call_and_an_exit_records_the_call,
          test_usage_accumulates_across_turns,
-         test_turn_reads_a_response_once]
+         test_a_turn_separates_the_exit_call_from_the_rest]
 
 
 if __name__ == "__main__":

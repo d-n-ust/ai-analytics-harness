@@ -21,6 +21,7 @@ import hashlib
 import logging
 
 from .numbers import parse_numbers
+from .protocol import Conversation
 
 _log = logging.getLogger(__name__)
 
@@ -138,12 +139,13 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
         time_window=time_window or "all time",
         sql=sql, result_value=result_value, claim_value=claim_value)
     user = _USER.format(question=question, evidence=brief)
-    resp = model.create(_VERIFY_SYSTEM, [{"role": "user", "content": user}],
-                        [_REPORT], force_tool="report_verdict", temperature=0)
-    for b in getattr(resp, "content", []):
-        if getattr(b, "type", None) == "tool_use" and b.name == "report_verdict":
-            inp = b.input or {}
-            return bool(inp.get("answers_question", True)), inp.get("mismatch", "none"), inp.get("reason", "")
+    turn = model.respond(Conversation.opening(_VERIFY_SYSTEM, user), [_REPORT],
+                         force_tool="report_verdict", temperature=0)
+    for call in turn.tool_calls:
+        if call.name == "report_verdict":
+            v = call.args
+            return bool(v.get("answers_question", True)), v.get("mismatch", "none"), v.get("reason", "")
+    # No verdict is not a veto: the judge is refuse-only, so silence leaves the answer standing.
     return True, "none", "verifier produced no verdict"
 
 
