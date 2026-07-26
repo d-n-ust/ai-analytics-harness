@@ -101,6 +101,21 @@ Two limits, stated because they decide what this does and does not settle:
 
 ---
 
+### The evidence behind every number here
+
+`results/runs/` is gitignored — 27 runs were produced in one day and per-run output is a dev
+iteration. Anything this document cites is promoted into `results/published/2026-07/`, gzipped,
+with `steps` and `turns` intact: those are 84% of a row's bytes and they are the point, because
+they are what lets someone re-derive a figure, replay a judge call, or check that a guardrail
+fired where the summary claims it did. Compressed, all seven runs are 1.4M.
+
+`results/published/MANIFEST.json` maps each archive to the claim it backs, and records the model,
+reasoning effort, rungs, configs, row-schema version and **surface fingerprint** — the last of
+these being what decides whether two cells were answering the same prompt at all.
+
+Every headline figure in this document was re-derived from those archives before publication, not
+from the working copies.
+
 ## Experiment 1 — the grounding ladder
 
 **Question.** How much does *structure* buy? Not guardrails — structure: a clean schema, a

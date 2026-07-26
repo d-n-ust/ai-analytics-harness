@@ -1,0 +1,320 @@
+{
+  "meta": {
+    "axis": "config",
+    "models": [
+      "gpt-5-mini"
+    ],
+    "cells": [
+      "R9"
+    ],
+    "n_questions": 57,
+    "reps": 3,
+    "n_rows": 171,
+    "wrong_cost": 4.0,
+    "prices_estimated": false,
+    "schema_version": 14,
+    "schema_current": 14,
+    "schema_skew": false,
+    "main_reasoning": "minimal",
+    "relevancy_scored": true,
+    "cache_measured": true,
+    "verifier": {
+      "model": "gpt-5.6-terra",
+      "reasoning": "low"
+    },
+    "mock": false,
+    "verifier_validation": {
+      "labelled": 37,
+      "agreement": 34,
+      "miss": 1,
+      "miss_rate": 0.059,
+      "false_flag": 2,
+      "false_flag_rate": 0.1,
+      "prompt_fingerprint": "439c750bb4de",
+      "superseded_fingerprint": "1b2752fac63a",
+      "run": "20260725-011850-gpt-5-mini",
+      "date": "2026-07-25",
+      "method": "3-Claude-judge panel (strict/pragmatic/skeptic, majority, blind); 3/37 split, all 2-1",
+      "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850).",
+      "restamp_note": "Fingerprint re-stamped 2026-07-26 WITHOUT re-labelling: its definition widened to cover the evidence template, which was extracted from an inline f-string. The rendered evidence is byte-identical \u2014 pinned by tests/test_surface.py::_check_evidence_renders \u2014 so these labels were collected against the same characters the judge sees now. A change to what the judge is SHOWN (not just how it is stored) does require re-labelling.",
+      "invalidated": "7 of the 37 cases were judged on the wrong number \u2014 _provenance handed the judge a breakdown's FIRST row instead of the row the answer served (e.g. V027/V029 t2_paid_search_spend_q2: judge shown 10643.22, answer served 36875.98). The blind sheet carried the same wrong `query_result`, so the human labels were formed against it too. Both sides of the comparison used corrupted evidence, so the 92% agreement / 6% miss / 10% false-flag rates below do not describe the judge as it now runs.",
+      "invalidated_date": "2026-07-26",
+      "invalidated_by": "provenance fix (agent/verifier.py::_provenance, agent/tools.py::_measure_values)",
+      "next_step": "Re-draw a blind sample from a post-fix R9 run and re-label; the rates above must not be quoted until then.",
+      "current_fingerprint": "149da8f96078",
+      "stale": true
+    },
+    "verifier_vs_gold": {
+      "method": "independent gold (no human labels): gold_sql on numeric questions, plus unanswerable questions where any served number is wrong",
+      "covers": {
+        "gold_sql": 177,
+        "unanswerable": 12
+      },
+      "excludes": "prose answers (diagnostic/keywords)",
+      "prompt_fingerprint": "149da8f96078",
+      "source_runs": [
+        "results/runs/20260726-211115-gpt-5-mini/raw.jsonl",
+        "results/runs/20260726-202156-gpt-5-mini/raw.jsonl"
+      ],
+      "n": 189,
+      "catch": 45,
+      "false_flag": 7,
+      "ok_pass": 132,
+      "miss": 5,
+      "agreement": 0.9365079365079365,
+      "false_flag_rate": 0.050359712230215826,
+      "catch_rate": 0.9,
+      "current_fingerprint": "149da8f96078"
+    }
+  },
+  "cells": {
+    "gpt-5-mini": {
+      "R9": {
+        "n": 171,
+        "outcomes": {
+          "right": 67,
+          "wrong": 3,
+          "idk": 96,
+          "deferred": 1,
+          "other": 4,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 39,
+            "correct": 25,
+            "wrong": 3,
+            "refused_ok": 32,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 21,
+            "correct": 20,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 6,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 15,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 5
+          },
+          "knowledge": {
+            "n": 15,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 3
+          },
+          "lookup": {
+            "n": 9,
+            "correct": 9,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 15,
+            "correct": 15,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 12,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 18,
+            "correct": 17,
+            "wrong": 0,
+            "refused_ok": 17,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 21,
+            "correct": 21,
+            "wrong": 0,
+            "refused_ok": 18,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8717948717948718,
+          "precision_on_answered": 0.9852941176470589,
+          "risk": 0.014705882352941124,
+          "answered": 68,
+          "answerable": 78
+        },
+        "correctness_axes": {
+          "groundedness": 0.967391304347826,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 0,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 2
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 6,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 26,
+            "wrong_reason": 7,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 11,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 7,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 10,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 5
+          },
+          "verifier_wrong_segment": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 1
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.31,
+          "tools_per_run": {
+            "query_metric": 1.17,
+            "list_metrics": 0.81,
+            "explain_change": 0.33,
+            "check_metric_exists": 0.28,
+            "check_segment_defined": 0.27,
+            "check_coverage": 0.2,
+            "get_metric_tree": 0.16,
+            "check_causal_evidence": 0.08,
+            "get_schema": 0.01
+          },
+          "trajectory": {
+            "pass": 50,
+            "fail": 16
+          }
+        },
+        "telemetry": {
+          "in_tokens": 2720475,
+          "out_tokens": 40243,
+          "cached_tokens": 1950208,
+          "usd": 0.3218,
+          "latency_s": {
+            "mean": 8.2,
+            "p50": 7.313,
+            "p90": 12.971,
+            "p99": 17.361
+          }
+        },
+        "score": 125.0,
+        "per_rep": {
+          "n": 3,
+          "precision": [
+            0.9523809523809523,
+            1.0,
+            1.0
+          ],
+          "grounded": [
+            0.9666666666666667,
+            0.967741935483871,
+            0.967741935483871
+          ],
+          "coverage": [
+            0.8076923076923077,
+            0.9615384615384616,
+            0.8461538461538461
+          ]
+        }
+      }
+    }
+  },
+  "wrong_rows": [
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (7-day avg DAU divided by trailing 28-day MAU) = 33.2%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "I need to know whether you want (A) the immediate point-in-time lift in MRR when the March price change went live, or (B) the cumulative additional MRR since the price change through our last full week of data (2026-07-12). Tell me A or B.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "June 2026 active users: 1,620; June 2025 active users: not available in coverage (data begins 2025-09-01)",
+      "gold": null,
+      "type": "fabricated"
+    }
+  ]
+}

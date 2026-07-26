@@ -1,0 +1,3124 @@
+{
+  "meta": {
+    "axis": "rung",
+    "models": [
+      "gpt-5-mini"
+    ],
+    "cells": [
+      "R1 \u00b7 messy data",
+      "R2 \u00b7 star schema",
+      "R3 \u00b7 semantic layer",
+      "R7 \u00b7 governed only \u2014 semantic layer + metric tree"
+    ],
+    "n_questions": 57,
+    "reps": 3,
+    "n_rows": 684,
+    "wrong_cost": 4.0,
+    "prices_estimated": false,
+    "schema_version": 14,
+    "schema_current": 14,
+    "schema_skew": false,
+    "main_reasoning": "minimal",
+    "relevancy_scored": false,
+    "cache_measured": true,
+    "verifier": {
+      "model": "gpt-5-mini",
+      "reasoning": "low"
+    },
+    "mock": false,
+    "verifier_validation": {
+      "labelled": 37,
+      "agreement": 34,
+      "miss": 1,
+      "miss_rate": 0.059,
+      "false_flag": 2,
+      "false_flag_rate": 0.1,
+      "prompt_fingerprint": "439c750bb4de",
+      "superseded_fingerprint": "1b2752fac63a",
+      "run": "20260725-011850-gpt-5-mini",
+      "date": "2026-07-25",
+      "method": "3-Claude-judge panel (strict/pragmatic/skeptic, majority, blind); 3/37 split, all 2-1",
+      "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850).",
+      "restamp_note": "Fingerprint re-stamped 2026-07-26 WITHOUT re-labelling: its definition widened to cover the evidence template, which was extracted from an inline f-string. The rendered evidence is byte-identical \u2014 pinned by tests/test_surface.py::_check_evidence_renders \u2014 so these labels were collected against the same characters the judge sees now. A change to what the judge is SHOWN (not just how it is stored) does require re-labelling.",
+      "invalidated": "7 of the 37 cases were judged on the wrong number \u2014 _provenance handed the judge a breakdown's FIRST row instead of the row the answer served (e.g. V027/V029 t2_paid_search_spend_q2: judge shown 10643.22, answer served 36875.98). The blind sheet carried the same wrong `query_result`, so the human labels were formed against it too. Both sides of the comparison used corrupted evidence, so the 92% agreement / 6% miss / 10% false-flag rates below do not describe the judge as it now runs.",
+      "invalidated_date": "2026-07-26",
+      "invalidated_by": "provenance fix (agent/verifier.py::_provenance, agent/tools.py::_measure_values)",
+      "next_step": "Re-draw a blind sample from a post-fix R9 run and re-label; the rates above must not be quoted until then.",
+      "current_fingerprint": "149da8f96078",
+      "stale": true
+    }
+  },
+  "cells": {
+    "gpt-5-mini": {
+      "R1 \u00b7 messy data": {
+        "n": 171,
+        "outcomes": {
+          "right": 28,
+          "wrong": 69,
+          "idk": 37,
+          "deferred": 6,
+          "other": 31,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 39,
+            "correct": 3,
+            "wrong": 24,
+            "refused_ok": 10,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 21,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 6,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 15,
+            "correct": 5,
+            "wrong": 5,
+            "refused_ok": 0,
+            "refused_over": 4
+          },
+          "knowledge": {
+            "n": 15,
+            "correct": 0,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 9,
+            "correct": 7,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 15,
+            "correct": 7,
+            "wrong": 5,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "rt_phantom": {
+            "n": 12,
+            "correct": 1,
+            "wrong": 5,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 18,
+            "correct": 3,
+            "wrong": 7,
+            "refused_ok": 7,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 21,
+            "correct": 3,
+            "wrong": 18,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8076923076923077,
+          "precision_on_answered": 0.4444444444444444,
+          "risk": 0.5555555555555556,
+          "answered": 63,
+          "answerable": 78
+        },
+        "correctness_axes": {
+          "groundedness": 0.5862068965517242,
+          "answer_correctness": 0.7619047619047619,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 36,
+          "confident_wrong": 19,
+          "off_governance": 14,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 7
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "false_premise": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 4
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 4,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 7,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 1,
+            "wrong_reason": 2,
+            "over_refused": 2
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 1,
+            "over_refused": 1
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 4.92,
+          "tools_per_run": {
+            "run_sql": 2.5,
+            "describe_table": 1.35,
+            "get_schema": 1.07
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 1376595,
+          "out_tokens": 100984,
+          "cached_tokens": 75904,
+          "usd": 0.529,
+          "latency_s": {
+            "mean": 9.4,
+            "p50": 8.25,
+            "p90": 15.151,
+            "p99": 23.552
+          }
+        },
+        "score": -185.0,
+        "per_rep": {
+          "n": 3,
+          "precision": [
+            0.38095238095238093,
+            0.5,
+            0.45
+          ],
+          "grounded": [
+            0.5517241379310345,
+            0.6551724137931034,
+            0.5517241379310345
+          ],
+          "coverage": [
+            0.8076923076923077,
+            0.8461538461538461,
+            0.7692307692307693
+          ]
+        }
+      },
+      "R2 \u00b7 star schema": {
+        "n": 171,
+        "outcomes": {
+          "right": 31,
+          "wrong": 80,
+          "idk": 34,
+          "deferred": 5,
+          "other": 21,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 39,
+            "correct": 2,
+            "wrong": 27,
+            "refused_ok": 8,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 21,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 3
+          },
+          "false_premise": {
+            "n": 6,
+            "correct": 1,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 15,
+            "correct": 12,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 15,
+            "correct": 3,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 9,
+            "correct": 7,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 15,
+            "correct": 2,
+            "wrong": 10,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "rt_phantom": {
+            "n": 12,
+            "correct": 0,
+            "wrong": 7,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 18,
+            "correct": 5,
+            "wrong": 7,
+            "refused_ok": 9,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 21,
+            "correct": 2,
+            "wrong": 18,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8846153846153846,
+          "precision_on_answered": 0.4492753623188406,
+          "risk": 0.5507246376811594,
+          "answered": 69,
+          "answerable": 78
+        },
+        "correctness_axes": {
+          "groundedness": 0.5340909090909092,
+          "answer_correctness": 0.6956521739130435,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 41,
+          "confident_wrong": 26,
+          "off_governance": 13,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 4
+          },
+          "false_premise": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "implausible_value": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 1,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 2
+          },
+          "out_of_coverage": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 7,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 2
+          },
+          "ungoverned_dimension_value": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.77,
+          "tools_per_run": {
+            "run_sql": 1.81,
+            "get_schema": 1.02,
+            "describe_table": 0.94
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 1099697,
+          "out_tokens": 84807,
+          "cached_tokens": 32512,
+          "usd": 0.4372,
+          "latency_s": {
+            "mean": 7.7,
+            "p50": 6.694,
+            "p90": 13.369,
+            "p99": 18.157
+          }
+        },
+        "score": -229.0,
+        "per_rep": {
+          "n": 3,
+          "precision": [
+            0.44,
+            0.36363636363636365,
+            0.5454545454545454
+          ],
+          "grounded": [
+            0.5666666666666667,
+            0.48275862068965514,
+            0.5517241379310345
+          ],
+          "coverage": [
+            0.9615384615384616,
+            0.8461538461538461,
+            0.8461538461538461
+          ]
+        }
+      },
+      "R3 \u00b7 semantic layer": {
+        "n": 171,
+        "outcomes": {
+          "right": 59,
+          "wrong": 54,
+          "idk": 40,
+          "deferred": 3,
+          "other": 14,
+          "error": 1
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 39,
+            "correct": 6,
+            "wrong": 14,
+            "refused_ok": 19,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 21,
+            "correct": 9,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "false_premise": {
+            "n": 6,
+            "correct": 1,
+            "wrong": 0,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 15,
+            "correct": 12,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 15,
+            "correct": 12,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 9,
+            "correct": 8,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 15,
+            "correct": 15,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 12,
+            "correct": 0,
+            "wrong": 7,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 18,
+            "correct": 4,
+            "wrong": 10,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 21,
+            "correct": 3,
+            "wrong": 16,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9743589743589743,
+          "precision_on_answered": 0.7763157894736842,
+          "risk": 0.22368421052631582,
+          "answered": 76,
+          "answerable": 78
+        },
+        "correctness_axes": {
+          "groundedness": 0.651685393258427,
+          "answer_correctness": 0.9078947368421053,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 31,
+          "confident_wrong": 10,
+          "off_governance": 13,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 5,
+            "over_refused": 0
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 0
+          },
+          "false_premise": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 9,
+            "over_refused": 2
+          },
+          "out_of_coverage": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 8,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 4.48,
+          "tools_per_run": {
+            "query_metric": 2.48,
+            "list_metrics": 1.23,
+            "run_sql": 0.37,
+            "get_schema": 0.23,
+            "describe_table": 0.17
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 2390722,
+          "out_tokens": 62207,
+          "cached_tokens": 432896,
+          "usd": 0.6247,
+          "latency_s": {
+            "mean": 7.7,
+            "p50": 7.897,
+            "p90": 10.735,
+            "p99": 12.652
+          }
+        },
+        "score": -94.0,
+        "per_rep": {
+          "n": 3,
+          "precision": [
+            0.8461538461538461,
+            0.72,
+            0.76
+          ],
+          "grounded": [
+            0.6666666666666667,
+            0.6333333333333333,
+            0.6551724137931034
+          ],
+          "coverage": [
+            1.0,
+            0.9615384615384616,
+            0.9615384615384616
+          ]
+        }
+      },
+      "R7 \u00b7 governed only \u2014 semantic layer + metric tree": {
+        "n": 171,
+        "outcomes": {
+          "right": 66,
+          "wrong": 53,
+          "idk": 37,
+          "deferred": 4,
+          "other": 9,
+          "error": 2
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 39,
+            "correct": 6,
+            "wrong": 11,
+            "refused_ok": 19,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 21,
+            "correct": 20,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 6,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 15,
+            "correct": 9,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 15,
+            "correct": 11,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 9,
+            "correct": 8,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 15,
+            "correct": 15,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 12,
+            "correct": 0,
+            "wrong": 7,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 18,
+            "correct": 3,
+            "wrong": 9,
+            "refused_ok": 7,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 21,
+            "correct": 3,
+            "wrong": 16,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9871794871794872,
+          "precision_on_answered": 0.8571428571428571,
+          "risk": 0.1428571428571429,
+          "answered": 77,
+          "answerable": 78
+        },
+        "correctness_axes": {
+          "groundedness": 0.6896551724137931,
+          "answer_correctness": 0.8701298701298701,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 27,
+          "confident_wrong": 13,
+          "off_governance": 13,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 8,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 5,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 10,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 4.19,
+          "tools_per_run": {
+            "query_metric": 1.63,
+            "list_metrics": 1.12,
+            "run_sql": 0.4,
+            "explain_change": 0.37,
+            "get_metric_tree": 0.3,
+            "get_schema": 0.26,
+            "describe_table": 0.12
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 2339541,
+          "out_tokens": 47527,
+          "cached_tokens": 626432,
+          "usd": 0.539,
+          "latency_s": {
+            "mean": 6.6,
+            "p50": 6.1,
+            "p90": 10.21,
+            "p99": 15.613
+          }
+        },
+        "score": -85.0,
+        "per_rep": {
+          "n": 3,
+          "precision": [
+            0.8461538461538461,
+            0.84,
+            0.8846153846153846
+          ],
+          "grounded": [
+            0.6551724137931034,
+            0.7407407407407407,
+            0.6774193548387097
+          ],
+          "coverage": [
+            1.0,
+            0.9615384615384616,
+            1.0
+          ]
+        }
+      }
+    }
+  },
+  "wrong_rows": [
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "165",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t2_paid_search_spend_q2",
+      "tier": "filtered",
+      "answer": "25442.33",
+      "gold": 36875.98,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t4_real_acquisition_spend_june",
+      "tier": "knowledge",
+      "answer": "21,013.20",
+      "gold": 18267.17,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "919",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t3_activation_rate_june",
+      "tier": "metric",
+      "answer": "74.3%",
+      "gold": 0.5322,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "16041",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.414",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_trial_to_paid",
+      "tier": "adversarial",
+      "answer": "8.401976935749589%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) is currently ~23.36% for July-to-date (2026-07-01 to 2026-07-12).  For recent months (month start):\n- 2026-07 (to 7/12): DAU/MAU = 0.2336 (avg DAU 315.8, MAU 1352)\n- 2026-06: 0.1715 (avg DAU 288.6, MAU 1683)\n- 2026-05: 0.1719 (avg DAU 215.9, MAU 1256)\n- 2026-04: 0.1678 (avg DAU 164.9, MAU 983)\n- 2026-03: 0.1709 (avg DAU 139.8, MAU 818)\n- 2026-02: 0.1777 (avg DAU 109.1, MAU 614)\n\nHow I got it: I computed daily unique active users (DAU) per calendar day from events through 2026-07-12, computed monthly unique users (MAU) per calendar month, averaged daily DAU across each month and divided by that month\u2019s MAU to produce the reported DAU/MAU (stickiness) per month.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "1683 vs 0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: 42.9564 value moments per user; Free users: 23.6660 value moments per user",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_churn_premium",
+      "tier": "adversarial",
+      "answer": "7.06% monthly churn (June 2026)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "$1,192.99 MRR; $56.81 ARPU",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "206",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "$6,556.96",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "Events per active user: 27.31 (events 45,973 \u00f7 active users 1,683)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "424",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "In the final week before cancelation, churned users (from subs with st=2) generated mostly completion/usage events: across 34 churned users with events in their last 7 days they produced 403 events total \u2014 224 of type 1, 139 of type 2, and 40 of type 3.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "199",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t2_web_value_moments_june",
+      "tier": "filtered",
+      "answer": "5364",
+      "gold": 4812.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t4_real_signups_june",
+      "tier": "knowledge",
+      "answer": "519",
+      "gold": 453.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "16209",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "919",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.00204",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU stickiness is roughly stable but not clearly deepening: In the last full week (week starting 2026-07-06) 36.24% of that week's MAU were active 3+ days that week, and 0.11% were active all 7 days. Over the prior 8 weeks the 3+ day stickiness ranged ~36%\u201352% and 7-day stickiness ranged ~0.1%\u20131.6% (weekly values shown below).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users typically show a spike in event type 1 (avg ~2.79 events) and moderate activity in type 2 (avg ~1.73) in their final 7 days; type 3 is low (~0.52) and other event types negligible.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "~95% of revenue is from users who received reminders (10,898.25 of 11,448.08 total = 95.2%)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: mean=39.97 value moments/user, median=29\nFree users:   mean=24.56 value moments/user, median=14",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "249",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "27.3161",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "The March price bump did not lift MRR; MRR was lower than a counterfactual holding February's average price per active user.\nUplift by month (actual \u2212 counterfactual):\n- Mar 2026: \u2212$288.93\n- Apr 2026: \u2212$727.70\n- May 2026: \u2212$1,120.55\n- Jun 2026: \u2212$1,371.56\n- Jul 2026: \u2212$1,860.33\n\nMethod: computed monthly MRR and active users from subs, used Feb 2026 average price-per-user as the counterfactual price for months March\u2013July, and reported actual minus counterfactual.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_churn_risk",
+      "tier": "unanswerable",
+      "answer": "List of users with highest churn risk (internal = 1.0): uids [41,155,191,205,229,242,310,321,332,342,445,455,498,503,511,738,768,769,777,796]",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "555",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "165",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t2_paid_search_spend_q2",
+      "tier": "filtered",
+      "answer": "29,063.04",
+      "gold": 36875.98,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$14,422.02 per year per paying customer",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "284",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "6,966",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "919",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t3_arpu",
+      "tier": "metric",
+      "answer": "$26.36",
+      "gold": 7.24,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.4139",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "June 2026: 1,683 active users; June 2025: 0 active users",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_trial_to_paid",
+      "tier": "adversarial",
+      "answer": "5.35%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Free users: 26.7674 value moments per user; Paying users: 26.5464 value moments per user",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "Whale MRR: $1,684.70; Whale ARPU: $80.22",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "Reminders drove $28,044.80 in subscription revenue (subscriptions that started within 7 days after a reminder event).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users in their final week most commonly continued to use the app but with reduced breadth \u2014 they averaged about 2.26 active days in the 7 days before cancellation, with mean event counts: etype 1 ~6.15 events, etype 2 ~3.82, etype 3 ~1.15. All 39 churned users generated events from the app; many also used widgets (30) and API (22). In short: they still interact shortly before cancelling, primarily through the app, but activity is concentrated on a small number of days and event types rather than sustained daily engagement.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "Recent weekly DAU/MAU (avg daily active / weekly MAU) for the last 8 weeks (weeks starting Monday):\n2026-05-18: 0.372\n2026-05-25: 0.378\n2026-06-01: 0.388\n2026-06-08: 0.392\n2026-06-15: 0.387\n2026-06-22: 0.390\n2026-06-29: 0.389\n2026-07-06: 0.325",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "249",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "The price bump did not lift MRR \u2014 MRR fell. Post-March average MRR (Apr\u2013Jun 2026) was $13,156.14 vs Feb 2026 MRR $14,347.51, a change of -$1,191.37 (\u22128.30%).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "413",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "97",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$96.03",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R1 \u00b7 messy data",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "275",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t2_web_value_moments_june",
+      "tier": "filtered",
+      "answer": "0",
+      "gold": 4812.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_real_acquisition_spend_june",
+      "tier": "knowledge",
+      "answer": "19138.25",
+      "gold": 18267.17,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "0",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_mrr",
+      "tier": "metric",
+      "answer": "$11,448.08",
+      "gold": 2685.08,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "919",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_activation_rate_june",
+      "tier": "metric",
+      "answer": "49.73%",
+      "gold": 0.5322,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "1683",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU stickiness is ~15.6% on 2026-07-12, down from ~19.5% on 2026-06-15 \u2014 trending downward over the last 4 weeks.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: 40.10 value moments per user on average; Free users: 25.02 value moments per user on average.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "Whales (top 5% by total billed in last 12 months): count = 21; combined MRR = $127.7408; ARPU (average MRR per whale) = $6.0829",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.41386246320112446",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "95.2%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churn_premium",
+      "tier": "adversarial",
+      "answer": "6.06%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "$1,313.86",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users typically show very low engagement in their final week: on average they have value-moments on 1.10 of the 7 days (median = 0 days), average 9.08 value-moments that week, receive 8.26 reminders, and have 2.65 active habits.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "9.531",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t2_web_value_moments_june",
+      "tier": "filtered",
+      "answer": "0",
+      "gold": 4812.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "34.92",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "279",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "0",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_mrr",
+      "tier": "metric",
+      "answer": "$11,448.08",
+      "gold": 2685.08,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_arpu",
+      "tier": "metric",
+      "answer": "$33.59",
+      "gold": 7.24,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_activation_rate_june",
+      "tier": "metric",
+      "answer": "82.1363%",
+      "gold": 0.5322,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "1134",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_trial_to_paid",
+      "tier": "adversarial",
+      "answer": "8.4843%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "June 2026: 1,683 active users; June 2025: 0 active users",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.3168531018267804",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users (ever_paid = 1) average 41.47 value moments per user, across 371 paying users (total 14,846 value moments). Free users (ever_paid = 0) average 68.93 value moments per user, across 42 free users (total 2,895 value moments). Users with no subscription record (NULL) average 27.75 value moments per user, across 2,087 users (total 49,391 value moments).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "$302.27",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "Whales (top 5% by lifetime spend) MRR = $127.74; Whales ARPU = $6.72",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (daily stickiness) is around 16\u201320% and has slightly declined in the most recent week.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churn_premium",
+      "tier": "adversarial",
+      "answer": "9.18% (for May 2026)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "Reminders drive an incremental ~ $17,510 in annualized revenue (rough estimate of attributable revenue) \u2014 see explanation.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "In the final 7 days before cancellation, churned users rarely record value moments: 55% (47 of 86) had zero recorded value moments in their final week; average value moments per user in that week = 1.73. About 45.3% had at least one value moment. 32.6% had at least one reminder during the week. Habit-archiving was rare (0.035 habits archived per user on average).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "532",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "275",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_churn_risk",
+      "tier": "unanswerable",
+      "answer": "I will provide the top users by churn risk score (computed from last 8 weeks of activity).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_real_acquisition_spend_june",
+      "tier": "knowledge",
+      "answer": "21013.20",
+      "gold": 18267.17,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_mrr",
+      "tier": "metric",
+      "answer": "11448.08",
+      "gold": 2685.08,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t4_real_signups_june",
+      "tier": "knowledge",
+      "answer": "329",
+      "gold": 453.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_active_users_last_week",
+      "tier": "metric",
+      "answer": "919",
+      "gold": 886.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t3_arpu",
+      "tier": "metric",
+      "answer": "33.60",
+      "gold": 7.24,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$34.92",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.3996",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (daily active users divided by 30\u2011day MAU) is about 18\u201319% lately.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "1,683 active users in June 2026; 0 active users in June 2025",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churn_premium",
+      "tier": "adversarial",
+      "answer": "June 2026: 9.02% churn (23 churned / 255 active at start)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: 40.02 value moments per user (avg), median 29\nFree users: 24.56 value moments per user (avg), median 14",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users in their final week are mostly inactive: they average ~1.02 active days (median 0), ~3.24 value moments (median 0), used ~0.86 distinct habits, and received ~2.98 reminders.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "MRR for whales: $192.67 per month; ARPU (average revenue per whale) = $9.63 per month.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "189",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_paid_social_activation",
+      "tier": "rt_phantom",
+      "answer": "0%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "$20,125.36",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "u_churn_risk",
+      "tier": "unanswerable",
+      "answer": "List of users with highest churn risk (score=100): user_ids [2,98,124,121,10,166,54,48,89,56,5,168,6,127,128,173,17,129,93,76,42,139,113,159,148,162,123,176,51,167,31,200,71,87,85,153,55,147,53,158,50,61,25,101,45,146,47,182,12,201]",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R2 \u00b7 star schema",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "33.62",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "LTV:CAC = 0.0092",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (weekly): 0.306 (30.6%)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "MRR and ARPU by plan \u2014 annual: MRR $796.64, ARPU $5.945; monthly: MRR $1,888.44, ARPU $7.968",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users in that week typically showed very low activity: on average they completed 0.75 habits in their final 7 days; 3 of 4 (75%) had zero habit completions in that final week. They received few reminders (avg 0.25 reminders; 1 of 4 saw any reminder), and no habits were archived in that week (0 archived).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504 active users",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "$2,657.84",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "15329",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "86.85 USD",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "We need to know which definition you want: cumulative signups (total accounts ever) or total active users (users with \u22651 value moment).",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4239",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "5374",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.128",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "0.36 (\u224836%) for week of 2026-07-06",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Most churned users were inactive in their final week: 3 of 4 (75%) had zero habit completions in the week before cancellation; average active days = 0.75 and average completions = 0.75.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "Top spenders (whales) defined as monthly-plan subscribers: MRR = 1,888.44; Paying users = 237; ARPU = 7.968101265822785. Annual-plan cohort: MRR = 796.6366666666664; Paying users = 134; ARPU = 5.945049751243779.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "$714.82",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_paid_social_activation",
+      "tier": "rt_phantom",
+      "answer": "No activation rate available for paid_social in June 2026",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "15,329 real value moments (North Star) in June 2026",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "86.85 USD per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4239",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.13",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_trial_to_paid",
+      "tier": "adversarial",
+      "answer": "0%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users typically do very little: in the final ISO week (2026-07-06 \u2014 2026-07-12) of available data, 4 users churned; they averaged 1.0 habit completion and 0.75 active days in that week, and 2 of the 4 had zero activity that week.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "MRR and ARPU for top-spend (whale) accounts by plan: \n- Monthly-plan whales: MRR = $1,888.44; Paying users = 237; ARPU = $7.9681\n- Annual-plan whales: MRR = $796.64; Paying users = 134; ARPU = $5.9450",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0 signups from Mexico in Q2 2026",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "16,041 value moments in June 2026",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0 enterprise users (active subscriptions)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "u_churn_risk",
+      "tier": "unanswerable",
+      "answer": "Top users by churn risk score (top 20): [1735, 626, 2473, 1686, 654, 1323, 1230, 31, 182, 1524, 1334, 2462, 1039, 2028, 864, 166, 418, 1597, 55, 204]",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "There are 2,500 total signed-up user accounts (all-time) and 2,100 distinct active users (all-time with \u22651 value moment).",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R3 \u00b7 semantic layer",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "5374",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "0.128",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) is ~0.095 for last week",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_last_week_oob",
+      "tier": "adversarial",
+      "answer": "No data for July 13\u201319, 2026",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Free users: 9.79 value moments per user in last week; Paying users: 9.81 value moments per user (last week).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "iOS reminder open rate is higher than iPadOS over the last 30 days: iOS = 0.403 (40.3%), iPadOS = 0.292 (29.2%); difference = 0.111 pp (11.1 percentage points)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "15329",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "455",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2500",
+      "gold": 2500.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24 per month \u2248 $86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "1166",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4239",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: 4.25 value moments per user; Free users: 4.09 value moments per user (week 2026-07-06 to 2026-07-12).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users are mixed: many stop doing any habits in their final week but a substantial share remain highly active. In our data (76 canceled subscriptions with ended_date): 42 users (55%) recorded zero habit completions in the 7 days up to cancellation; the median completions in that final week is 0 and the mean is 35.0 (driven by a small number of very active users). Average reminders seen in the final week was 46.5; none of these churned users had never completed a habit earlier (0 never-completed).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "iOS: 42.5% vs iPadOS: data not present",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "16041",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "371",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "240",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "1620 vs 0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "Paying users: 4.21 value moments per user; Free users: 4.09 value moments per user.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_ltv_cac",
+      "tier": "adversarial",
+      "answer": "LTV-to-CAC = 0.32",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU stickiness (DAU divided by MAU) for last full week (2026-07-06 \u2014 2026-07-12) is 0.546 (54.6%).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "adv_whales",
+      "tier": "adversarial",
+      "answer": "MRR: $2,685.08 total; ARPU: $7.24 per paying user",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "16041",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "iPadOS vs iOS reminder open rate (last 30 days)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "u_enterprise_users",
+      "tier": "unanswerable",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7 \u00b7 governed only \u2014 semantic layer + metric tree",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    }
+  ]
+}

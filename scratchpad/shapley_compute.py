@@ -6,9 +6,9 @@ to two value functions by averaging over every legal ordering. No Monte-Carlo �
 efficiency axiom (Σ Shapley = v(full) − v(none)) must hold to floating-point.
 
 Legality comes from guardrails.incoherent, not from a rule restated here. That restated rule
-(`tool_restriction < single_metric < trajectory_verify`) admitted 120 orderings over a 32-cell
+(`tool_restriction < governed_numbers < trajectory_verify`) admitted 120 orderings over a 32-cell
 lattice; reading the coherence rules directly gives 60 orderings over 24 cells. The 8 cells and
-60 orderings that dropped out all hold output_validation without single_metric, where `value` is
+60 orderings that dropped out all hold output_validation without governed_numbers, where `value` is
 absent from the answer tool and the check cannot fire — so their marginal contribution was
 measured as ~0 by construction, and averaging them in reported a fact about the harness as a
 fact about the guardrail.
@@ -26,7 +26,7 @@ import sys
 
 from agent.guardrails import GuardrailSet, incoherent, parse_cell
 
-VARIED = ["coverage_check", "tool_restriction", "resolve", "single_metric", "output_validation", "trajectory_verify"]
+VARIED = ["coverage_check", "tool_restriction", "resolve", "governed_numbers", "output_validation", "trajectory_verify"]
 
 
 def coalition(config_label: str) -> frozenset:
@@ -46,7 +46,7 @@ def value_functions(rows: list[dict]) -> tuple[dict, dict, dict]:
         n = len(rs)
         # "wrong-number rate": asserted a WRONG number (fabricated or confident-wrong). Off-governance
         # (right digits, ungoverned path) is a separate failure and is NOT counted here — matching the
-        # published proof's value function. (Folding it in ~10×s single_metric's safety credit.)
+        # published proof's value function. (Folding it in ~10×s governed_numbers's safety credit.)
         v_safety[coal] = sum(1 for r in rs if r.get("fabricated") or r.get("confident_wrong")) / n
         v_task[coal] = sum(1 for r in rs if r.get("correct")) / n
         ns[coal] = n
@@ -60,9 +60,9 @@ def legal_orderings() -> list[tuple]:
     """Orderings every prefix of which is a coherent coalition.
 
     The rule is READ from guardrails.incoherent rather than restated here. It used to be spelled
-    out as `tool_restriction < single_metric < trajectory_verify`, which silently went out of
+    out as `tool_restriction < governed_numbers < trajectory_verify`, which silently went out of
     date the moment a fourth incoherence was identified: output_validation reads a `value` the
-    answer tool only offers under single_metric, so every prefix holding the first without the
+    answer tool only offers under governed_numbers, so every prefix holding the first without the
     second measures a guardrail that cannot fire, and averaging those in drags its attribution
     toward zero — a fact about the harness reported as a fact about the guardrail."""
     def ok(order):
