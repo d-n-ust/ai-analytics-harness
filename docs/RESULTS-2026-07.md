@@ -103,18 +103,25 @@ Two limits, stated because they decide what this does and does not settle:
 
 ### The evidence behind every number here
 
-`results/runs/` is gitignored — 27 runs were produced in one day and per-run output is a dev
-iteration. Anything this document cites is promoted into `results/published/2026-07/`, gzipped,
-with `steps` and `turns` intact: those are 84% of a row's bytes and they are the point, because
-they are what lets someone re-derive a figure, replay a judge call, or check that a guardrail
-fired where the summary claims it did. Compressed, all seven runs are 1.4M.
+`results/runs/` is gitignored — 27 runs in one day, and per-run output is a dev iteration. What is
+tracked is the **measurements**, in `results/published/2026-07/`:
 
-`results/published/MANIFEST.json` maps each archive to the claim it backs, and records the model,
-reasoning effort, rungs, configs, row-schema version and **surface fingerprint** — the last of
-these being what decides whether two cells were answering the same prompt at all.
+| file | grain | what it holds |
+|---|---|---|
+| `cells.csv` | one row per (run, rung, config) | the selective-prediction point, both question families, buckets, refusal quality, judge behaviour, cost, tokens, latency p50/p90, tool and model calls, provenance adoption |
+| `tiers.csv` | one row per (cell, tier) | correct / n — which question types each cell wins and loses |
+| `tools.csv` | one row per (cell, tool) | calls per question — what the agent actually reached for |
 
-Every headline figure in this document was re-derived from those archives before publication, not
-from the working copies.
+**14.5KB for the whole series**, and every figure in this document was re-derived from those
+tables before publication. Each row carries the model, reasoning effort, verifier, schema version
+and **surface fingerprint**, so a reader can tell whether two cells were answering the same prompt
+— without which a comparison is a coincidence.
+
+What is deliberately not kept is the per-row traces. They are 84% of the bytes, and they are what
+you would need to audit an *individual answer* or replay a judge call. The trade is stated rather
+than hidden: these tables let you check a published figure and compare cells; they do not let you
+re-derive one from scratch. For that, re-run the cell — the fingerprint and treatment columns are
+what make that reproducible.
 
 ## Experiment 1 — the grounding ladder
 
