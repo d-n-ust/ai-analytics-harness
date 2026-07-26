@@ -78,7 +78,7 @@ system: sha256=59a42399fbd7 chars=757
   }
 ]
 
-=== rung 1 · R1 · fingerprint 1ba84bc308f4 ===
+=== rung 1 · R1 · fingerprint 22e542e7dabb ===
 system: sha256=4c657e0a749a chars=1175
 [
   {
@@ -153,6 +153,7 @@ system: sha256=4c657e0a749a chars=1175
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -348,7 +349,7 @@ system: sha256=6825ee4a8741 chars=1017
   }
 ]
 
-=== rung 3 · R2 · fingerprint 297d1999e085 ===
+=== rung 3 · R2 · fingerprint 5db0ccce89be ===
 system: sha256=76e3834e8c5d chars=1612
 [
   {
@@ -571,6 +572,7 @@ system: sha256=76e3834e8c5d chars=1612
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -614,7 +616,7 @@ system: sha256=76e3834e8c5d chars=1612
   }
 ]
 
-=== rung 3 · R4 · fingerprint 885d54faff1a ===
+=== rung 3 · R4 · fingerprint 89800a4fdbfc ===
 system: sha256=f4f60a1534f5 chars=1927
 [
   {
@@ -839,6 +841,7 @@ system: sha256=f4f60a1534f5 chars=1927
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -882,7 +885,7 @@ system: sha256=f4f60a1534f5 chars=1927
   }
 ]
 
-=== rung 3 · R6 · fingerprint 626e54f83db3 ===
+=== rung 3 · R6 · fingerprint b577695a967e ===
 system: sha256=7ba8ed981940 chars=2438
 [
   {
@@ -1107,6 +1110,7 @@ system: sha256=7ba8ed981940 chars=2438
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -1150,7 +1154,7 @@ system: sha256=7ba8ed981940 chars=2438
   }
 ]
 
-=== rung 3 · R9 · fingerprint 603f37211884 ===
+=== rung 3 · R9 · fingerprint 3bdda0d96d7e ===
 system: sha256=6c91697d4893 chars=3900
 [
   {
@@ -1404,6 +1408,7 @@ system: sha256=6c91697d4893 chars=3900
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -1632,7 +1637,7 @@ system: sha256=fdb0e4ee15d9 chars=5912
   }
 ]
 
-=== rung 6 · R2 · fingerprint 53faa58f3f30 ===
+=== rung 6 · R2 · fingerprint b7c351239176 ===
 system: sha256=5e2378bf5cd1 chars=6507
 [
   {
@@ -1888,6 +1893,7 @@ system: sha256=5e2378bf5cd1 chars=6507
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -1931,7 +1937,7 @@ system: sha256=5e2378bf5cd1 chars=6507
   }
 ]
 
-=== rung 6 · R4 · fingerprint 38c73ac6bcda ===
+=== rung 6 · R4 · fingerprint 4a874a0e9cef ===
 system: sha256=32641d7c1066 chars=6822
 [
   {
@@ -2189,6 +2195,7 @@ system: sha256=32641d7c1066 chars=6822
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -2232,7 +2239,7 @@ system: sha256=32641d7c1066 chars=6822
   }
 ]
 
-=== rung 6 · R6 · fingerprint 55128610bcbc ===
+=== rung 6 · R6 · fingerprint 29a87f835d22 ===
 system: sha256=d317a18effa9 chars=7333
 [
   {
@@ -2490,6 +2497,7 @@ system: sha256=d317a18effa9 chars=7333
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -2533,7 +2541,7 @@ system: sha256=d317a18effa9 chars=7333
   }
 ]
 
-=== rung 6 · R9 · fingerprint 7496fcfc0c2d ===
+=== rung 6 · R9 · fingerprint cc0a9baecdb7 ===
 system: sha256=c54366e6f531 chars=8795
 [
   {
@@ -2820,6 +2828,7 @@ system: sha256=c54366e6f531 chars=8795
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -3048,7 +3057,7 @@ system: sha256=ada7ce512af2 chars=1379
   }
 ]
 
-=== rung 7 · R2 · fingerprint 1f409e6bc3d6 ===
+=== rung 7 · R2 · fingerprint bf529f0379d4 ===
 system: sha256=35608495f184 chars=1974
 [
   {
@@ -3304,6 +3313,7 @@ system: sha256=35608495f184 chars=1974
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -3347,7 +3357,7 @@ system: sha256=35608495f184 chars=1974
   }
 ]
 
-=== rung 7 · R4 · fingerprint 56ef33d85811 ===
+=== rung 7 · R4 · fingerprint 59a78dd4e430 ===
 system: sha256=d17deff1f014 chars=2289
 [
   {
@@ -3605,6 +3615,7 @@ system: sha256=d17deff1f014 chars=2289
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -3648,7 +3659,7 @@ system: sha256=d17deff1f014 chars=2289
   }
 ]
 
-=== rung 7 · R6 · fingerprint ee8b6fb4e736 ===
+=== rung 7 · R6 · fingerprint 9eafbb803ab0 ===
 system: sha256=5d55c6166f26 chars=2800
 [
   {
@@ -3906,6 +3917,7 @@ system: sha256=5d55c6166f26 chars=2800
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",
@@ -3949,7 +3961,7 @@ system: sha256=5d55c6166f26 chars=2800
   }
 ]
 
-=== rung 7 · R9 · fingerprint d34f1184aa97 ===
+=== rung 7 · R9 · fingerprint 5e2d95ee5997 ===
 system: sha256=0c6e6e39093e chars=4262
 [
   {
@@ -4236,6 +4248,7 @@ system: sha256=0c6e6e39093e chars=4262
           "type": "string"
         },
         "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
             "out_of_coverage",

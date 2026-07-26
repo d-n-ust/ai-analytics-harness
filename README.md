@@ -8,8 +8,8 @@ The harness runs **two experiments on the same rig**:
 
 1. **Grounding** — how much does *structure* (a schema, a semantic layer, a knowledge base, a
    metric tree) improve a capable model's answers? *The six-rung grounding ladder.*
-2. **Reliability** — how much do *guardrails* (a typed refusal channel, a governance gate, a
-   raw-SQL fence, an answer verifier) cut **confident-wrong** answers and let the agent **refuse
+2. **Reliability** — how much do *guardrails* (a typed refusal channel, a coverage check, a
+   governed-only data path, an answer verifier) cut **confident-wrong** answers and let the agent **refuse
    safely** when it should? *The R0–R9 guardrail ladder.*
 
 Each experiment adds exactly one thing to the *same* agent and re-answers the **same 57 questions**.
@@ -24,19 +24,19 @@ question drift.
 
 A canonical agent, named the way the field names it:
 
-- **Orchestrator** (`agent/orchestrator.py`) — the control loop: call the model, run the tool it asks
+- **Orchestrator** (`agent/loop.py`) — the control loop: call the model, run the tool it asks
   for, feed the result back, stop on a terminal tool. The part that is *not* the model.
-- **Model** (`agent/models.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
+- **Model** (`agent/providers.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
   DeepSeek behind one interface). The interchangeable part.
-- **Tools** (`agent/tools.py`) — the action space: governed metric queries, raw SQL (until the
-  fence removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
+- **Tools** (`agent/tools.py`) — the action space: governed metric queries, raw SQL (until
+  `tool_restriction` removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
   `clarify`, so every run ends in a *typed outcome*, never a sentence to grep.
-- **Context** (`agent/prompt.py`, over `warehouse/` · `semantic/` · `context/`) — what the agent is
+- **Context** (`agent/prompts.py` + `agent/rungs.py`, over `warehouse/` · `semantic/` · `context/`) — what the agent is
   given: the star schema, the semantic layer, verified example queries, the knowledge base, the
   metric tree. This is the grounding-ladder axis.
-- **Guardrails** (`agent/guardrails.py`, `agent/verifier.py`) — the reliability stack: the gate,
-  the fence, member resolution, single-metric enforcement, output validation, the trajectory
-  verifier. Controls the system *enforces*, not behaviours the model chooses. This is the
+- **Guardrails** (`agent/guardrails/`) — the reliability stack, grouped by where each sits in a
+  request: the coverage check, the tool restriction, member resolution, governed_numbers, output validation, the trajectory
+  verifier. What the system *enforces*, not behaviours the model chooses. This is the
   reliability-ladder axis.
 - **Memory** — none, by design: each question is a fresh conversation.
 - **Observability** — typed outcomes + an expect-driven grader (below).
@@ -75,14 +75,14 @@ beats the example); rung 6 buys **usefulness** — the jump from "what was the n
 
 The grounding ladder makes the agent *capable*. The reliability ladder makes it *trustworthy* —
 answer when the data supports it, and **refuse with a typed reason** when it does not, instead of
-serving a confident wrong number. Each rung switches on one guardrail (`agent/guardrails.py`):
+serving a confident wrong number. Each rung switches on one guardrail (`agent/guardrails/__init__.py`):
 
 | Rung | Guardrail | What it stops |
 |---|---|---|
 | R0 | — | no refusal channel (baseline: it must answer) |
 | R1 | **abstain** | adds the typed `refuse` tool (coded reason + what's missing) |
 | R2 | **check_tools** | answerability checks the model may call first |
-| R3 | **gate** | blocks out-of-coverage / ungoverned governed calls |
+| R3 | **coverage_check** | blocks out-of-coverage / ungoverned governed calls |
 | R4 | **tool_restriction** | removes raw SQL; every data path is a governed call |
 | R5 | **resolve** | filter values must resolve to governed members |
 | R6 | **transparency** | shows the compiled SQL and a plain scope line |
@@ -91,7 +91,7 @@ serving a confident wrong number. Each rung switches on one guardrail (`agent/gu
 | R9 | **trajectory_verify** | an LLM verifier checks the metric actually answers the question |
 
 Because the guardrails are *independent flags*, the harness can run the cumulative ladder **or** any
-individual ablation cell, so a control's contribution can be measured where it functions. The
+individual ablation cell, so a guardrail's contribution can be measured where it functions. The
 headline is a **selective-prediction** view — precision on the answered set at a stated coverage —
 reported separately from the fabrication rate, never pooled into one accuracy number. The 33
 reliability-tier questions (`valid_but_wrong`, `adversarial`, `unanswerable`, `rt_phantom`,
@@ -116,7 +116,7 @@ with `--rrungs`, or run explicit ablation cells with `--cells`:
 
 ```bash
 ./bench run --rungs 3 --rrungs 0,1,3,4,7,9    # hold grounding fixed, climb the guardrail ladder
-./bench run --rungs 3 --cells R9,R9-resolve   # R9 vs R9-minus-one-control
+./bench run --rungs 3 --cells R9,R9-resolve   # R9 vs R9-minus-one-guardrail
 ./bench ask "how many active users?" --rung 3 --guardrails R9   # one question at any cell
 ```
 

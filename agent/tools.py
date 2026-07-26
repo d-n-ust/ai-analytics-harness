@@ -29,7 +29,7 @@ from warehouse.warehouse import QueryError, describe_table, run_query, schema_te
 
 from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
-from .outcomes import REFUSAL_REASONS
+from .outcomes import REASON_MEANINGS, REFUSAL_REASONS
 
 _ANSWER = {
     "name": "answer",
@@ -54,7 +54,15 @@ _REFUSE = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "reason": {"type": "string", "enum": REFUSAL_REASONS},
+            # The enum shipped undocumented, and the model guessed: `other` was chosen 26 times
+            # over a specific code that existed and fitted. The meanings live in outcomes.py
+            # beside the codes, so the vocabulary the model reads and the one the grader scores
+            # cannot drift apart.
+            "reason": {
+                "type": "string", "enum": REFUSAL_REASONS,
+                "description": ("Why this cannot be answered. Name the ROOT CAUSE, not the "
+                                "symptom:\n"
+                                + "\n".join(f"- {k}: {v}" for k, v in REASON_MEANINGS.items()))},
             "missing": {"type": "string",
                         "description": "The specific definition, coverage window, segment, or evidence that is missing."},
             "explanation": {"type": "string", "description": "One line: why this cannot be answered reliably."},
@@ -268,7 +276,15 @@ def _check_segment_defined(tb, args) -> ToolResult:
 
 def _check_causal_evidence(tb, args) -> ToolResult:
     if tb.tree is None:
-        return ToolResult("NO — no metric tree at this rung; no causal evidence is encoded.")
+        # UNKNOWN, not NO. Without a tree this configuration cannot tell whether a causal link
+        # exists — and it said "NO — no causal evidence is encoded", which is a claim about the
+        # world. A model reading NO concludes there is no link and refuses `no_causal_evidence`,
+        # a reason it has no grounds for. The absence of the instrument is not evidence of
+        # absence, and a check that cannot run must say so rather than answer.
+        return ToolResult("UNKNOWN — there is no metric tree at this rung, so causal links "
+                          "cannot be checked here. This is not evidence that no link exists: "
+                          "you cannot tell either way, so do not refuse for no_causal_evidence "
+                          "on the strength of this answer.")
     return ToolResult(_verdict(*tb.tree.causal_evidence(args.get("driver"), args.get("outcome"))))
 
 

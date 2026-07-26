@@ -289,6 +289,55 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
             f"causal grading must apply to the {role} branch too: a lookup can name a driver"
 
 
+def test_the_refusal_vocabulary_is_defined_where_it_is_used():
+    """A typed protocol whose codes the model must infer from identifiers is a spelling test.
+
+    The refuse tool offered twelve bare strings and no descriptions. Across 180 correct refusals
+    the model named a different code than the question expected 49% of the time, and picked
+    `other` — the catch-all — 26 times over a specific code that existed and fitted.
+
+    So the meanings live beside the codes, and the tool renders them: the vocabulary the model
+    reads and the one the grader scores cannot drift apart. NO LLM."""
+    from agent.outcomes import REASON_MEANINGS, REFUSAL_REASONS
+    from agent.tools import _REFUSE
+
+    assert list(REASON_MEANINGS) == REFUSAL_REASONS, "one list, or the two can disagree"
+    spec = _REFUSE["input_schema"]["properties"]["reason"]
+    assert spec["enum"] == REFUSAL_REASONS
+    for code, meaning in REASON_MEANINGS.items():
+        assert meaning and code in spec["description"], f"{code} reaches the model undocumented"
+        assert meaning in spec["description"], f"{code}'s meaning is not rendered"
+
+    # The two codes that describe what came BACK rather than why the question is unanswerable
+    # must say when they are the wrong choice — `result_empty` was given 32 times where a
+    # specific cause was expected.
+    assert "ONLY when you cannot say why" in REASON_MEANINGS["result_empty"]
+    assert "Prefer a specific reason" in REASON_MEANINGS["other"]
+
+
+def test_a_check_that_cannot_run_says_so():
+    """`check_causal_evidence` answered "NO — no causal evidence is encoded" when there was no
+    metric tree to check against. That is a claim about the world; the truth is "I cannot tell".
+    A model reading NO refuses for no_causal_evidence on grounds it does not have.
+
+    The absence of the instrument is not evidence of absence. NO LLM."""
+    from agent.tools import Toolbox
+
+    con = open_warehouse(create_star_views=True)
+    sem = SemanticLayer(con)
+    no_tree = Toolbox(con, 3, sem, None, LADDER[9])
+    out = no_tree.dispatch("check_causal_evidence",
+                           {"driver": "reminder_open_rate", "outcome": "days_per_user"}).content
+    assert out.startswith("UNKNOWN"), f"a check that cannot run must not answer NO: {out[:60]}"
+    assert "not evidence that no link exists" in out
+
+    with_tree = Toolbox(con, 7, sem, MetricTree(sem), LADDER[9])
+    real = with_tree.dispatch("check_causal_evidence",
+                              {"driver": "reminder_open_rate", "outcome": "days_per_user"}).content
+    assert not real.startswith("UNKNOWN"), "with a tree it must give a real verdict"
+    assert "confidence: low" in real, "and carry the edge's confidence, not just yes/no"
+
+
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set
     at it — which agreed only while every rung was a superset of the one below. Rung 7 breaks that
