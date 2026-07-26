@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from .numbers import bare_number
+
 TERMINAL_TOOLS = ("answer", "refuse", "clarify")
 
 
@@ -28,7 +30,8 @@ class Answer:
     reason: str | None = None      # refuse only: the coded reason
     missing: str | None = None     # refuse only: what the model says is missing
     source_metric: str | None = None  # answer only: the governed metric the value came from
-    declared_value: float | None = None  # answer only: the model's TYPED number (None = prose)
+    declared_value: float | None = None  # answer only: the served number (None = prose)
+    value_recovered: bool = False   # the number came from the answer text, not the typed field
     verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
     abstained: bool = False        # convenience mirror of outcome == "refuse"
     tool_calls: int = 0
@@ -91,12 +94,19 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
             name, kw = final
             if name == "answer":
                 ans_text = str(kw.get("answer", "")).strip()
+                # `value` is optional so a prose answer isn't forced to invent one — and a model
+                # that writes "3852" into `answer` and leaves it unset therefore stood every
+                # output check down. Recover that case here, so being checked is a property of
+                # the answer rather than of the model remembering to ask for it.
+                recovered = None if kw.get("value") is not None else bare_number(ans_text)
+                declared = kw.get("value") if recovered is None else recovered
                 ok, reason, missing, explanation = grounding.toolbox.verify_answer(
-                    question, ans_text, steps, model, kw.get("source_metric"), kw.get("value"),
+                    question, ans_text, steps, model, kw.get("source_metric"), declared,
                     verifier_model=verifier_model)
                 # Carry the model's typed claims and the judge's verdict onto the Answer, so a
                 # stored run is enough to score the judge later without re-running anything.
-                claims = dict(source_metric=kw.get("source_metric"), declared_value=kw.get("value"),
+                claims = dict(source_metric=kw.get("source_metric"), declared_value=declared,
+                              value_recovered=recovered is not None,
                               verifier_verdict=getattr(grounding.toolbox, "last_verdict", None))
                 if not ok:                       # R6+: a failed spec check becomes a refusal
                     return answer(answer=None, explanation=explanation, outcome="refuse",

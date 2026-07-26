@@ -33,7 +33,7 @@ from collections import Counter
 from pathlib import Path
 
 from agent.guardrails import parse_cell
-from agent.numbers import parse_numbers
+from agent.numbers import bare_number, parse_numbers
 from agent.verifier import _num_match, _step_values
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from warehouse.warehouse import QueryError, open_warehouse, run_query
@@ -143,8 +143,11 @@ def audit_optout(rows: list[dict]) -> dict:
               adds them only under single_metric). verify_answer early-returns on every
               answer, so the control cannot fire. Its measured contribution is zero by
               construction, not by evidence.
-      OPTOUT  the field WAS offered and the model left it unset while stating a number in
-              prose, so it skipped checks that were live for its neighbours.
+      OPTOUT  the field WAS offered and the model left it unset while giving an answer that
+              IS a number, so it skipped checks that were live for its neighbours. Measured
+              with the same detector the recovery uses, not "the text contains a digit" — a
+              prose answer quoting a figure was never in scope for the numeric checks, and
+              counting it inflates the hole.
     """
     inert: Counter = Counter()
     optout: Counter = Counter()
@@ -160,7 +163,7 @@ def audit_optout(rows: list[dict]) -> dict:
         eligible[cfg] += 1
         if not g.single_metric:                      # the schema never offered `value`
             inert[cfg] += 1
-        elif row.get("declared_value") is None and parse_numbers(row.get("answer")):
+        elif row.get("declared_value") is None and bare_number(row.get("answer")) is not None:
             optout[cfg] += 1
             cases.append({"qid": row.get("qid"), "config": cfg, "model": row.get("model"),
                           "answer": str(row.get("answer"))[:60],

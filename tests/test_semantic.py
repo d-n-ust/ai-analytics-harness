@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from agent import verifier
 from agent.guardrails import LADDER
+from agent.numbers import bare_number
 from agent.tools import Toolbox
 from semantic.semantic import SemanticError, SemanticLayer
 from warehouse.warehouse import open_warehouse
@@ -85,6 +86,34 @@ def test_dispatcher_records_the_measure_not_every_cell():
     # each recorded value is that row's own measure, in row order
     for row, v in zip(rows, values, strict=True):
         assert row.rstrip(")").split(", ")[-1] == str(int(v)), (row, v)
+
+
+def test_numeric_answers_cannot_skip_the_output_checks():
+    """`value` is optional so prose isn't forced to invent a number — which meant a model that
+    wrote the figure into `answer` and left the field unset skipped R7/R8/R9 entirely (~6% of
+    answers did). A numeric answer is now recovered and checked; prose that merely quotes a
+    figure is untouched, and the sign survives, because a negative count must still be caught."""
+    for text, want in [("3852", 3852.0), ("$36,875.98", 36875.98), ("280 value moments", 280.0),
+                       ("62%", 62.0), ("-3", -3.0), ("  472 ", 472.0)]:
+        assert bare_number(text) == want, (text, bare_number(text))
+    for prose in ["Weekly value moments fell 11.88% (from 4,196 to 3,698)",
+                  "iOS at 5,648 and Android at 5,190", "about 472",
+                  "no governed definition for engagement score", "", None]:
+        assert bare_number(prose) is None, prose
+
+    # ...and the recovered number is then held to the single-metric check like any other.
+    con = open_warehouse(create_star_views=True)
+    sem = SemanticLayer(con)
+    tb = Toolbox(con, 6, sem, None, LADDER[9])
+    steps = [_qm("active_users", 886, period="last_week")]
+    hand_built = bare_number("1772")          # 886 x 2 — matches no governed result
+    ok, reason, *_ = tb.verify_answer("how many active users?", "1772", steps, None, None,
+                                      hand_built)
+    assert not ok and reason == "no_governed_definition", (ok, reason)
+    # an undeclared metric is inferred when exactly one governed metric returned that number
+    assert verifier._infer_source_metric(886, steps, sem.metrics) == "active_users"
+    shared = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]
+    assert verifier._infer_source_metric(371, shared, sem.metrics) is None, "ambiguous -> no link"
 
 
 def test_metrics_conform_to_ontology():
@@ -360,6 +389,7 @@ def test_toolbox_wiring_and_rung_gate():
 
 if __name__ == "__main__":
     test_provenance_is_typed_not_guessed()
+    test_numeric_answers_cannot_skip_the_output_checks()
     test_provenance_reads_the_row_the_answer_came_from()
     test_dispatcher_records_the_measure_not_every_cell()
     test_metrics_conform_to_ontology()

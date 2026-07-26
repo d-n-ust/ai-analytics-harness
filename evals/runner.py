@@ -129,6 +129,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
             "source_metric": ans.source_metric,
             "declared_value": ans.declared_value,
+            # True when the number came from the answer text rather than the typed
+            # field — so "the model forgot to declare it" stays measurable after
+            # the recovery closed the hole it used to open.
+            "value_recovered": ans.value_recovered,
             "verifier_verdict": ans.verifier_verdict, "score": g["score"],
             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,

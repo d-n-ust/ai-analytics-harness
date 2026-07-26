@@ -207,6 +207,22 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
     return source_metric, (calls[-1].get("args") or {}), (last[0] if len(last) == 1 else None)
 
 
+def _infer_source_metric(declared_value, steps: list, metrics) -> str | None:
+    """The governed metric a served number came from, when exactly ONE of them produced it.
+
+    Provenance is normally the model's own typed declaration and never inferred, so that a value
+    two metrics happen to share cannot mislink. That property is preserved here by attributing
+    only when a single queried metric returned this number — there is then nothing to confuse it
+    with. Without this, an answer that names no `source_metric` (or a number recovered from the
+    answer text) satisfies R7 and then skips R8 and R9 for want of a declaration, which is the
+    same hole one level down."""
+    hits = {(s.get("args") or {}).get("metric") for s in steps or []
+            if s.get("tool") == "query_metric"
+            and any(_num_match(declared_value, v) for v in _step_values(s))}
+    named = {m for m in hits if m in metrics}
+    return named.pop() if len(named) == 1 else None
+
+
 def output_validation(metric_def: dict, value) -> tuple[bool, str, str, str]:
     """Deterministic checks on the RETURNED value, not the metric selection: a governed
     query that came back empty/null, or a value impossible for its `unit`, must not be
@@ -250,6 +266,8 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                 "read from one governed metric. No governed definition covers what was asked — refuse "
                 "and name the metric that would need to exist, rather than serve a hand-built figure.")
 
+    if source_metric is None:              # undeclared, but attributable when unambiguous
+        source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("output checks: numeric answer with no usable source_metric; not verified")
