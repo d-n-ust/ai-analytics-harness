@@ -87,8 +87,14 @@ class _Run:
             return self._record(answer=None, explanation=_line(args.get("explanation")),
                                 outcome="refuse", reason=args.get("reason"),
                                 missing=args.get("missing"), abstained=True, iterations=iterations)
+        # A clarify DECLINES — it serves no number — so it abstains and carries a coded reason,
+        # like any other decline. It keeps its own outcome rather than folding into `refuse`
+        # because the two differ in the one way that will matter next: a refusal is terminal,
+        # and a clarification is resumable. Collapsing them would erase the distinction a
+        # multi-turn flow is built on.
         return self._record(answer=None, explanation=_line(args.get("question")),
-                            outcome="clarify", iterations=iterations)
+                            outcome="clarify", reason="clarify", abstained=True,
+                            iterations=iterations)
 
     def _served(self, args: dict, iterations: int) -> Answer:
         """An answer, put through the output guardrails before it is served. A failed check does

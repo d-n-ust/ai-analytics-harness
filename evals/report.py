@@ -40,7 +40,7 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 9   # v9: guardrail `acts` on rows, turns and steps (the full trace)
+ROW_SCHEMA_VERSION = 10  # v10: a clarify abstains and carries reason='clarify'
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
@@ -194,9 +194,11 @@ def aggregate(rows) -> dict:
         # failure-mode reason pivot
         reasons: dict = defaultdict(lambda: {"matched": 0, "wrong_reason": 0, "over_refused": 0})
         for r in rs:
-            if r["outcome"] != "refuse":
+            if r["outcome"] not in ("refuse", "clarify"):
                 continue
-            code = r.get("reason") or "(none)"
+            # Rows written before a clarify carried a reason still read correctly: the outcome
+            # already says what the code would have.
+            code = r.get("reason") or ("clarify" if r["outcome"] == "clarify" else "(none)")
             if not _expected_refuse(r):
                 reasons[code]["over_refused"] += 1
             elif r.get("reason_match"):

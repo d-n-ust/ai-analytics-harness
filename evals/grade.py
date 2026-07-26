@@ -140,7 +140,9 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     wrong_number = confident_wrong or fabricated
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
-        "abstained": outcome == "refuse", "confident_wrong": confident_wrong,
+        # Both terminal declines abstain: neither serves a number, which is what the
+        # selective-prediction sense of the word means. `outcome` still tells them apart.
+        "abstained": outcome in ("refuse", "clarify"), "confident_wrong": confident_wrong,
         "fabricated": fabricated, "off_governance": off_governance,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
         "reason_match": reason_match, "metric_match": metric_match,
