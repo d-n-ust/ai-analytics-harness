@@ -13,14 +13,34 @@ and a re-answerer false-overturns correct governed numbers.
 from __future__ import annotations
 
 import hashlib
+import os
 
 from ..conversation import Conversation
 
-_VERIFY_SYSTEM = (
-    "You verify an analytics answer. You are NOT asked to re-answer the question — you are shown "
-    "exactly what the analyst computed, and your job is to find a CONCRETE reason the computed "
-    "number does NOT answer the question as asked. Report answers_question=true ONLY if you cannot "
-    "find one. Ground EVERY judgement in the metric DEFINITION you are given (its description, what "
+# The judge's STANCE — the one paragraph that tells it what it is looking for. It is separated
+# from the five checks because it is the only part under test: the asymmetric wording resists
+# sycophancy (a plain "is this correct?" judge agrees with whatever it is shown) but "find a
+# reason to reject, and pass only if you fail" is a known over-rejection instruction, and this
+# judge fires on 52% of the answers it sees. Which effect dominates is measurable, so it is a
+# treatment with two levels rather than a decision made in prose.
+_STANCE = {
+    # Shipped in every published run to date.
+    "skeptical": (
+        "You verify an analytics answer. You are NOT asked to re-answer the question — you are shown "
+        "exactly what the analyst computed, and your job is to find a CONCRETE reason the computed "
+        "number does NOT answer the question as asked. Report answers_question=true ONLY if you cannot "
+        "find one. "),
+    # Same task, no thumb on the scale: it is asked to decide, not to hunt.
+    "even_handed": (
+        "You verify an analytics answer. You are NOT asked to re-answer the question — you are shown "
+        "exactly what the analyst computed, and your job is to decide whether that number answers the "
+        "question as asked. Report answers_question=false only when you can point to a CONCRETE "
+        "mismatch, and answers_question=true when the number does answer it. Neither verdict is the "
+        "safe default. "),
+}
+
+_CHECKS = (
+    "Ground EVERY judgement in the metric DEFINITION you are given (its description, what "
     "it measures, and its unit) — never in assumptions about the domain. Run these five checks:\n"
     "1. THING — does what the metric measures, per its definition, match the thing the question asks "
     "about? If the question is about one entity and the metric measures a different one, that is a "
@@ -61,6 +81,19 @@ _VERIFY_SYSTEM = (
     "all five checks pass, the answer stands."
 )
 
+
+def stance_name() -> str:
+    """Which stance this process runs. A treatment variable, so it is read once and recorded on
+    every row rather than left to whatever the environment happened to hold."""
+    name = os.environ.get("VERIFIER_STANCE", "skeptical")
+    if name not in _STANCE:
+        raise ValueError(f"VERIFIER_STANCE={name!r}; expected one of {sorted(_STANCE)}")
+    return name
+
+
+def verify_system() -> str:
+    return _STANCE[stance_name()] + _CHECKS
+
 # The evidence the judge is shown, as a named template rather than an inline f-string — so
 # the fingerprint below can hash it. A judge's behaviour is set by its instructions AND by
 # what it is shown; changing either invalidates a validation, so both must be fingerprinted.
@@ -100,7 +133,7 @@ def prompt_fingerprint() -> str:
     Workstream C did). The evidence belongs in here: a judge shown different evidence is a
     different judge, even word-for-word identical instructions."""
     enum = _REPORT["input_schema"]["properties"]["mismatch"]["enum"]
-    surface = "|".join([_VERIFY_SYSTEM, ",".join(enum), _EVIDENCE, _USER])
+    surface = "|".join([verify_system(), ",".join(enum), _EVIDENCE, _USER])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -124,7 +157,7 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
         time_window=time_window or "all time",
         sql=sql, result_value=result_value, claim_value=claim_value)
     user = _USER.format(question=question, evidence=brief)
-    turn = model.respond(Conversation.opening(_VERIFY_SYSTEM, user), [_REPORT],
+    turn = model.respond(Conversation.opening(verify_system(), user), [_REPORT],
                          force_tool="report_verdict", temperature=0)
     for call in turn.tool_calls:
         if call.name == "report_verdict":

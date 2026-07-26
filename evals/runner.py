@@ -86,6 +86,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     # OPENAI_REASONING env for back-compat), recorded on every row rather than left implicit.
     main_reasoning = reasoning if reasoning is not None else os.environ.get("OPENAI_REASONING", "none")
     verifier_reasoning = os.environ.get("VERIFIER_REASONING", "low")
+    # The judge's stance is a treatment, so it is read once here and stamped on every row —
+    # not left to whatever the environment held when a given question ran.
+    from agent.guardrails.judge import stance_name
+    verifier_stance = stance_name()
 
     def _run_one(task, model, model_name, verifier_model, verifier_used):
         # Each task gets its OWN DuckDB cursor — a connection sharing the catalog, so it sees the
@@ -153,6 +157,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "surface_fingerprint": surface,
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
+            "verifier_stance": verifier_stance,
         }
         mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if g["correct"] else "✗")
         with write_lock:

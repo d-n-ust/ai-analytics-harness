@@ -173,6 +173,41 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     assert used == set(Position), f"unused position(s): {set(Position) - used}"
 
 
+def test_the_judge_stance_is_a_treatment_with_two_levels():
+    """The judge fires on 52% of the answers it sees, and its opening paragraph tells it to hunt
+    for a reason to reject and pass only if it fails. That wording resists sycophancy — a plain
+    "is this correct?" judge agrees with whatever it is shown — but it is also a known
+    over-rejection instruction. Which effect dominates is measurable, so it is a treatment.
+
+    The default must reproduce the shipped prompt exactly, or every stored validation would be
+    invalidated by the refactor that made it swappable."""
+    import os
+
+    from agent.guardrails import judge
+
+    before = os.environ.get("VERIFIER_STANCE")
+    try:
+        os.environ["VERIFIER_STANCE"] = "skeptical"
+        assert judge.prompt_fingerprint() == "439c750bb4de", \
+            "the default stance no longer reproduces the prompt every stored run used"
+        skeptical = judge.verify_system()
+        os.environ["VERIFIER_STANCE"] = "even_handed"
+        even = judge.verify_system()
+        assert judge.prompt_fingerprint() != "439c750bb4de", "a stance must change the fingerprint"
+        # only the stance differs; the five checks are shared, or the comparison measures two things
+        assert skeptical.split("Ground EVERY")[1] == even.split("Ground EVERY")[1]
+        os.environ["VERIFIER_STANCE"] = "nope"
+        try:
+            judge.stance_name()
+            raise AssertionError("an unknown stance must fail loudly, not fall back")
+        except ValueError:
+            pass
+    finally:
+        os.environ.pop("VERIFIER_STANCE", None)
+        if before is not None:
+            os.environ["VERIFIER_STANCE"] = before
+
+
 def test_metrics_conform_to_ontology():
     """Every metric's entity + segment must be a value the ontology declares, so the metric
     definitions stay in one governed vocabulary."""
@@ -482,6 +517,7 @@ if __name__ == "__main__":
     test_numeric_answers_cannot_skip_the_output_checks()
     test_provenance_reads_the_row_the_answer_came_from()
     test_dispatcher_records_the_measure_not_every_cell()
+    test_the_judge_stance_is_a_treatment_with_two_levels()
     test_metrics_conform_to_ontology()
     test_output_validation_catches_degenerate_values()
     test_value_resolver()
