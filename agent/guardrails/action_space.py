@@ -104,7 +104,7 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
     other side: an answer that IS a number is recovered and checked even when the field is
     empty (see numbers.bare_number).
     """
-    if not (guardrails.single_metric and semantic is not None):
+    if not (guardrails.governed_numbers and semantic is not None):
         return base
     props = dict(base["input_schema"]["properties"])
     props["value"] = {
@@ -112,7 +112,7 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
         "description": "If your answer is a single number, repeat it here as a number "
                        "(not text). Leave it out for a non-numeric answer (an assessment, "
                        "a driver, a list) — the value check then does not apply."}
-    note(record, "single_metric", Position.ACTION_SPACE, "narrowed",
+    note(record, "governed_numbers", Position.ACTION_SPACE, "narrowed",
          "answer gained typed `value` + `source_metric`")
     props["source_metric"] = {
         "type": "string", "enum": list(semantic.metrics),

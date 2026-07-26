@@ -195,14 +195,14 @@ def test_every_guardrail_reports_what_it_did():
     ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", ANSWER)], rrung=9)
 
     opening = {a["guardrail"] for a in ans.turns[0]["acts"]}
-    assert {"tool_restriction", "coverage_check", "single_metric", "abstain"} <= opening
+    assert {"tool_restriction", "coverage_check", "governed_numbers", "abstain"} <= opening
 
     before = [a for a in ans.steps[0]["acts"] if a["position"] == "before"]
     assert {a["guardrail"] for a in before} == {"resolve", "coverage_check"}
     assert all(a["outcome"] == "allowed" for a in before), before
 
     after = {a["guardrail"]: a["outcome"] for a in ans.acts}
-    assert after.get("single_metric") == "allowed" and after.get("output_validation") == "allowed"
+    assert after.get("governed_numbers") == "allowed" and after.get("output_validation") == "allowed"
 
     # a blocked call names the guardrail that refused, in the same record
     blocked, _ = _run([call("1", "query_metric", {"metric": "value_moments",

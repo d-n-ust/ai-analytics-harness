@@ -51,7 +51,7 @@ _RRUNG_ENFORCE = ("\n- Governance is enforced by the system: a request for an un
                   "what the governed layer refuses.")
 _RRUNG_TOOL_RESTRICTION = ("\n- Raw SQL is not available. All data must come through governed metrics; if a "
                 "question cannot be answered that way, refuse.")
-# resolve (R5) then the output family — transparency (R6), single_metric (R7),
+# resolve (R5) then the output family — transparency (R6), governed_numbers (R7),
 # output_validation (R8) — split so each step's effect is measured on its own. Like the
 # coverage check, these are structural: the guardrails run regardless of what the model does; the
 # prompt lines only tell it so it doesn't waste turns.
@@ -68,15 +68,17 @@ _RRUNG_PROVENANCE = ("\n- When your answer is a single number, put that number i
 _RRUNG_OUTPUT_VALIDATION = ("\n- A served number is checked for a well-formed result: an empty or null result, or "
                  "a value impossible for its unit (a share above 100, a negative count), is rejected "
                  "instead of being reported.")
-# transparency (R6) + single_metric (R7) — the served number is shown, and constrained to one governed result.
+# transparency (R6) + governed_numbers (R7) — the served number is shown, and must be governed.
 _RRUNG_TRANSPARENCY = ("\n- Every governed result now shows you a [scope] line (what segment and time "
                        "window it actually covers) and the exact [sql]. Read them: if the scope is not "
                        "what the question asked for, fix the query or refuse — never report a number "
                        "whose scope doesn't match the question.")
-_RRUNG_SINGLE_METRIC = ("\n- Answer with exactly ONE governed metric's own value. Do not build the answer "
-                        "by hand from several numbers (no rate times a count, no metric A plus metric B). "
-                        "If answering would need a metric that doesn't exist, refuse "
-                        "(no_governed_definition) rather than derive it.")
+_RRUNG_GOVERNED_NUMBERS = ("\n- The number you serve must be a governed result, or a comparison of TWO "
+                           "results of the SAME metric — its change, ratio or percent change between two "
+                           "periods or scopes. You may compare governed numbers; you may not compose new "
+                           "ones. Combining DIFFERENT metrics (a rate times a count, metric A over metric "
+                           "B) invents a measure nothing defines: if answering would need a metric that "
+                           "doesn't exist, refuse (no_governed_definition) rather than derive it.")
 # trajectory_verify (R9) — the verifier:
 _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you used, its definition, the "
                    "exact SQL, and the filters you added, and checks they truly answer the question: the "
@@ -138,8 +140,8 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_RESOLVE
     if g.transparency:
         system += _RRUNG_TRANSPARENCY
-    if g.single_metric:
-        system += _RRUNG_PROVENANCE + _RRUNG_SINGLE_METRIC
+    if g.governed_numbers:
+        system += _RRUNG_PROVENANCE + _RRUNG_GOVERNED_NUMBERS
     if g.output_validation:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:

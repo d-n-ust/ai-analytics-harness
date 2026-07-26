@@ -138,9 +138,9 @@ def audit_optout(rows: list[dict]) -> dict:
     """Answers at a check-bearing cell that never reached a check, split by WHY — two
     different defects that look identical in the rows:
 
-      INERT   the cell runs output_validation without single_metric, so `value` and
+      INERT   the cell runs output_validation without governed_numbers, so `value` and
               `source_metric` are not in the answer schema at all (tools.py `_answer_spec`
-              adds them only under single_metric). verify_answer early-returns on every
+              adds them only under governed_numbers). verify_answer early-returns on every
               answer, so the guardrail cannot fire. Its measured contribution is zero by
               construction, not by evidence.
       OPTOUT  the field WAS offered and the model left it unset while giving an answer that
@@ -158,10 +158,10 @@ def audit_optout(rows: list[dict]) -> dict:
         g = _guardrails(cfg)
         if g is None or row.get("outcome") != "answer":
             continue
-        if not (g.output_validation or g.single_metric or g.trajectory_verify):
+        if not (g.output_validation or g.governed_numbers or g.trajectory_verify):
             continue
         eligible[cfg] += 1
-        if not g.single_metric:                      # the schema never offered `value`
+        if not g.governed_numbers:                   # the schema never offered `value`
             inert[cfg] += 1
         elif row.get("declared_value") is None and bare_number(row.get("answer")) is not None:
             optout[cfg] += 1
@@ -227,7 +227,7 @@ def main() -> None:
     tot_i, tot_o, tot_e = (sum(opt["inert"].values()), sum(opt["optout"].values()),
                            sum(opt["eligible"].values()))
     print(f"  INERT  : {tot_i} of {tot_e} answers sat in a cell whose schema omits `value` — "
-          "output_validation without single_metric cannot fire at all")
+          "output_validation without governed_numbers cannot fire at all")
     print(f"  OPT-OUT: {tot_o} answers had the field and left it unset while stating a number")
 
     if args.json:

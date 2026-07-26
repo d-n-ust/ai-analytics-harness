@@ -141,7 +141,7 @@ def main() -> None:
                     help=f"grounding rung: {' '.join(f'{n}={r.name}' for n, r in RUNGS.items())}")
     sp.add_argument("--guardrails", default=None,
                     help="reliability config: a preset (R0..R9) or an explicit cell "
-                         "(e.g. R9-resolve, or coverage_check+resolve+single_metric). Default R1.")
+                         "(e.g. R9-resolve, or coverage_check+resolve+governed_numbers). Default R1.")
     sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")

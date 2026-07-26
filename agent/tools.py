@@ -286,7 +286,8 @@ def _decomposition_values(out: dict) -> list[float]:
 
     Without this, everything the tree produced was invisible to provenance: `explain_change`
     returned prose-shaped JSON and no values, so a diagnostic answer built on it could not be
-    traced by anything, and single_metric refused all of it as hand-composed. The numbers were
+    traced by anything, and governed_numbers' predecessor refused all of it as hand-composed.
+    The numbers were
     never hand-composed; nothing had written them down.
 
     Shares and percent changes are included, not just levels. They are the answer to "why did it

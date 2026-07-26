@@ -56,7 +56,7 @@ class Answer:
     abstained: bool = False        # convenience mirror of outcome == "refuse"
     # Which output guardrail turned this answer into a refusal, when one did. The reason code
     # cannot say on its own: the judge maps several mismatch kinds onto no_governed_definition,
-    # which is also single_metric's code.
+    # which is also governed_numbers' code.
     refused_by: str = ""
     tool_calls: int = 0
     iterations: int = 0

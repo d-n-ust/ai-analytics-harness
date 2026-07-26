@@ -127,7 +127,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "answer": ans.answer, "explanation": ans.explanation,
             "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
             # Which output guardrail downgraded the answer, when one did — the reason code
-            # cannot say on its own, because the judge shares single_metric's code.
+            # cannot say on its own, because the judge shares governed_numbers' code.
             "refused_by": ans.refused_by,
             "correct": g["correct"], "executed": g["executed"],
             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],

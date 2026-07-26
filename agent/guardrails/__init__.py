@@ -78,7 +78,7 @@ class Verdict:
     detail: str = ""
     missing: str = ""
     # WHICH guardrail decided this. The reason code alone cannot always say: the judge maps
-    # several of its mismatch kinds onto `no_governed_definition`, the same code single_metric
+    # several of its mismatch kinds onto `no_governed_definition`, the same code governed_numbers
     # uses, so an answer downgraded at R9 is indistinguishable from one downgraded at R7 unless
     # the guardrail names itself.
     guardrail: str = ""
@@ -141,9 +141,10 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("transparency", Position.DISCLOSURE,
               "appends the covered scope and the exact SQL to every governed result",
               ("guardrails/disclosure.py", "prompts.py")),
-    Guardrail("single_metric", Position.AFTER,
-              "adds `value`/`source_metric` to the answer schema; the served number must BE one "
-              "governed result",
+    Guardrail("governed_numbers", Position.AFTER,
+              "adds `value`/`source_metric` to the answer schema; the served number must be a "
+              "governed result, or a comparison of two of the SAME metric (a difference, ratio "
+              "or percent change) — never a composition of different ones",
               ("guardrails/action_space.py", "guardrails/after.py", "prompts.py")),
     Guardrail("output_validation", Position.AFTER,
               "checks the served number is well-formed for its unit (no negative count, no share "
@@ -174,7 +175,7 @@ class GuardrailSet:
     tool_restriction: bool = False
     resolve: bool = False
     transparency: bool = False
-    single_metric: bool = False
+    governed_numbers: bool = False
     output_validation: bool = False
     trajectory_verify: bool = False
 
@@ -206,14 +207,14 @@ LADDER: dict[int, GuardrailSet] = {
 
 # Runs stored before the terminology sweep label their cells with the old field name. Reading
 # them has to keep working — the coverage audit reads every row ever written.
-_LEGACY_NAMES = {"gate": "coverage_check"}
+_LEGACY_NAMES = {"gate": "coverage_check", "single_metric": "governed_numbers"}
 
 
 def parse_cell(spec: str) -> GuardrailSet:
     """Parse an ablation-cell name into a GuardrailSet:
       'R9'                      -> the full preset;
       'R9-resolve'              -> R9 minus member resolution ('R9-resolve-coverage_check' minus both);
-      'coverage_check+single_metric+...'  -> exactly those on (an explicit set, for Shapley cells).
+      'coverage_check+governed_numbers+...'  -> exactly those on (an explicit set, for Shapley cells).
     Used by the runner's --cells."""
     def canonical(name: str) -> str:
         return _LEGACY_NAMES.get(name, name)
@@ -245,17 +246,18 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
     from ..rungs import capabilities
-    if g.single_metric and not g.tool_restriction:
-        return ("single_metric without tool_restriction: the check reads result_values, which "
+    if g.governed_numbers and not g.tool_restriction:
+        return ("governed_numbers without tool_restriction: the check reads result_values, which "
                 "only governed queries record, so every raw-SQL answer auto-refuses")
-    if g.output_validation and not g.single_metric:
-        return ("output_validation without single_metric: `value` and `source_metric` are only "
-                "offered on the answer tool under single_metric (tools._answer_spec), so no "
+    if g.output_validation and not g.governed_numbers:
+        return ("output_validation without governed_numbers: `value` and `source_metric` are only "
+                "offered on the answer tool under governed_numbers (guardrails/action_space.py), "
+                "so no "
                 "answer can declare a number, verify_answer returns early on every one of them, "
                 "and the check never fires — a contribution of zero by construction rather than "
                 "by evidence")
-    if g.trajectory_verify and not g.single_metric:
-        return ("trajectory_verify without single_metric: the verifier judges a metric+SQL "
+    if g.trajectory_verify and not g.governed_numbers:
+        return ("trajectory_verify without governed_numbers: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
     if rung is not None and not capabilities(rung).semantic:
         beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]

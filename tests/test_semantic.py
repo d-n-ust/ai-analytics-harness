@@ -1,7 +1,7 @@
 """No-LLM proofs of the answer output-guardrails and the semantic layer.
 
 The output guardrails (harness/verifier.py) run on a completed answer, gated by rung:
-provenance / single-metric (R7), output validation (R8), and the trajectory verifier (R9,
+provenance / governed_numbers (R7), output validation (R8), and the trajectory verifier (R9,
 stubbed here so the file never calls an LLM). Everything asserted below is deterministic and
 provable by construction. The rest exercises the semantic layer, the coverage check, and the
 guardrail ladder.
@@ -223,7 +223,7 @@ def test_the_tree_writes_its_numbers_down():
 
     They were not. `explain_change` returned JSON and no `values`, so the loop gave it no handle
     and nothing downstream could see what it produced — a diagnostic answer built on the tree was
-    untraceable, and single_metric refused it as hand-composed. It never was: the tree derived
+    untraceable, and governed_numbers' predecessor refused it as hand-composed. It never was: the tree derived
     every figure deterministically from governed metrics through an identity it declares. Nothing
     had written them down.
 
@@ -383,7 +383,7 @@ def test_the_judge_stance_is_a_treatment_with_two_levels():
 
 
 def test_a_served_number_must_be_a_rounding_of_a_governed_one():
-    """single_metric asks whether the served number IS a governed result. The only difference it
+    """governed_numbers asks whether the served number IS a governed result. The only difference it
     should forgive is display rounding — 2685.08 for 2685.0766666.
 
     The old tolerance band failed at both ends. Its 0.5 absolute floor is huge for a ratio, so
@@ -463,23 +463,49 @@ def test_value_resolver():
     assert "platform = 'iPhone'" in raw
 
 
-def test_single_metric_enforcement():
-    """R7: the served number must BE a governed result; a value composed by hand (rate x count)
-    matches no governed result and is refused no_governed_definition."""
+def test_governed_numbers_allows_comparison_and_refuses_composition():
+    """R7: you may COMPARE governed numbers; you may not COMPOSE new ones.
+
+    The distinction cannot be drawn from the arithmetic. `ARR = mrr x 12` and `value moments fell
+    11.9%` are each one operation on a governed result, so a rule about the operation permits both
+    or neither. It is drawn from what the result CLAIMS TO BE: comparing one metric across two
+    scopes leaves its definition untouched — only the filter moved — while combining two different
+    metrics invents a measure nothing defines.
+
+    Its predecessor accepted only case (a), and restricted that to one tool. It refused the
+    diagnostic tier twelve times in fifteen at rung 7, where the tree had computed every figure.
+    NO LLM."""
     con = open_warehouse()
     sem = SemanticLayer(con)
+    check = lambda text, value, steps, metric=None: verifier.verify_answer(  # noqa: E731
+        sem, "q", text, steps, source_metric=metric, declared_value=value,
+        run_output_validation=False, run_governed_numbers=True)
+
     steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
              _qm("activation_rate", 0.529, start="2026-06-01", end="2026-06-30")]
-    v = verifier.verify_answer(sem, "how many signups?", "444", steps, source_metric="new_signups",
-                                    declared_value=444, run_output_validation=False, run_single_metric=True)
-    assert v.allowed, "a direct governed result must pass single-metric"
-    # 235 = 444 * 0.529 matches no governed result -> refuse
-    v2 = verifier.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
-                                              declared_value=235, run_output_validation=False,
-                                              run_single_metric=True)
-    # A hand-derived value means no single governed metric produces it -> report that root cause.
-    assert not v2.allowed and v2.reason == "no_governed_definition", \
-        "a hand-derived value must refuse no_governed_definition"
+    assert check("444", 444, steps, "new_signups").allowed, "a governed result is case (a)"
+    # A rate served as a percentage is the same governed number, differently rendered.
+    assert check("52.9%", 52.9, steps, "activation_rate").allowed, "x100 is display, not derivation"
+    # 235 = 444 x 0.529 combines TWO DIFFERENT metrics -> a quantity nothing defines.
+    composed = check("235", 235, steps)
+    assert not composed.allowed and composed.reason == "no_governed_definition", \
+        "a count times a rate invents a measure and must refuse"
+
+    # Two results of the SAME metric: every comparison between them is governed.
+    weeks = [_qm("value_moments", 4307, period="prev_week"),
+             _qm("value_moments", 3785, period="last_week")]
+    for value, what in ((3785, "the level"), (-522, "the difference"),
+                        (-12.12, "the percent change"), (0.8788, "the ratio")):
+        assert check(str(value), value, weeks, "value_moments").allowed, \
+            f"{what} between two value_moments results is a comparison, not a composition"
+
+    # The tree's own figures are governed results, whatever tool produced them — the check that
+    # asked `tool == "query_metric"` could not see them and refused the whole decomposition.
+    tree_step = {"tool": "explain_change", "args": {"node": "weekly_value_moments"},
+                 "error": False, "result": "", "result_values": [4133.0, 3642.0, -0.1188, 1.42025]}
+    assert check("-11.9%", -11.88, [tree_step]).allowed, "a tree-computed change is governed"
+    assert check("142%", 1.42025, [tree_step]).allowed, "so is a contribution share"
+    assert not check("999", 999, [tree_step]).allowed, "but an unaccounted number is still refused"
 
 
 def test_verifier_skips_prose_answers():
@@ -550,7 +576,7 @@ def test_ladder_presets_reproduce_the_rung_thresholds():
         assert g.abstain is (n >= 1) and g.check_tools is (n >= 2)
         assert g.coverage_check is (n >= 3) and g.tool_restriction is (n >= 4)
         assert g.resolve is (n >= 5) and g.transparency is (n >= 6)
-        assert g.single_metric is (n >= 7) and g.output_validation is (n >= 8)
+        assert g.governed_numbers is (n >= 7) and g.output_validation is (n >= 8)
         assert g.trajectory_verify is (n >= 9)
         assert g.label() == f"R{n}"
 
@@ -569,10 +595,10 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     assert incoherent(cell) is None
 
     # A cell whose guardrail cannot fire is named, not reported. output_validation reads a `value`
-    # the answer tool only offers under single_metric, so without it the check is inert and its
+    # the answer tool only offers under governed_numbers, so without it the check is inert and its
     # measured contribution would be zero by construction — 365 stored answers sat in such cells.
-    inert = LADDER[8].without("single_metric")
-    assert "output_validation without single_metric" in (incoherent(inert) or "")
+    inert = LADDER[8].without("governed_numbers")
+    assert "output_validation without governed_numbers" in (incoherent(inert) or "")
     # Coherence is a property of the (rung, cell) PAIR: every guardrail above abstention acts on
     # the semantic layer, which rung 1 and 2 do not have.
     assert incoherent(LADDER[9], rung=6) is None and incoherent(LADDER[1], rung=1) is None
@@ -589,7 +615,7 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     # single-metric reads result_values, which only governed queries record
     assert incoherent(LADDER[7].without("tool_restriction")) is not None
     # the verifier judges a metric+SQL trajectory, which a hand-composed number lacks
-    assert incoherent(LADDER[9].without("single_metric")) is not None
+    assert incoherent(LADDER[9].without("governed_numbers")) is not None
 
 
 def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
@@ -642,7 +668,7 @@ def test_verifier_is_refuse_only():
     sem = SemanticLayer(con)
     steps = [_qm("paying_users", 371)]
     kw = dict(source_metric="paying_users", declared_value=371,
-              run_output_validation=False, run_single_metric=True)
+              run_output_validation=False, run_governed_numbers=True)
     seen: dict = {}
 
     def passing(question, metric, metric_def, args, value, declared_value, claim_text):
@@ -682,7 +708,7 @@ def test_toolbox_wiring_and_rung_gate():
     assert Toolbox(con, 6, sem, None, LADDER[5]).g.resolve is True
     # Each guardrail reaches the Toolbox from the guardrail set it was built with — the set IS the
     # configuration, so there is nothing to mirror onto the Toolbox and nothing to fall out of step.
-    for n, guardrail in [(7, "single_metric"), (8, "output_validation"), (9, "trajectory_verify")]:
+    for n, guardrail in [(7, "governed_numbers"), (8, "output_validation"), (9, "trajectory_verify")]:
         assert getattr(Toolbox(con, 6, sem, None, LADDER[n - 1]).g, guardrail) is False
         assert getattr(Toolbox(con, 6, sem, None, LADDER[n]).g, guardrail) is True
 
@@ -692,7 +718,7 @@ def test_toolbox_wiring_and_rung_gate():
     def check(rrung, declared):
         return verifier.verify_answer(
             sem, q, str(declared), steps, source_metric="active_users", declared_value=declared,
-            run_single_metric=LADDER[rrung].single_metric,
+            run_governed_numbers=LADDER[rrung].governed_numbers,
             run_output_validation=LADDER[rrung].output_validation)
 
     assert check(7, 2100).allowed, "a direct governed result passes single-metric"
@@ -703,7 +729,7 @@ def test_toolbox_wiring_and_rung_gate():
 
     # a prose answer (no typed value) is passed through untouched
     assert verifier.verify_answer(sem, q, "healthy overall", steps, source_metric="active_users",
-                                  declared_value=None, run_single_metric=True).allowed, \
+                                  declared_value=None, run_governed_numbers=True).allowed, \
         "no declared value -> output guardrails stand down"
 
 
@@ -720,7 +746,7 @@ if __name__ == "__main__":
     test_metrics_conform_to_ontology()
     test_output_validation_catches_degenerate_values()
     test_value_resolver()
-    test_single_metric_enforcement()
+    test_governed_numbers_allows_comparison_and_refuses_composition()
     test_verifier_skips_prose_answers()
     test_governed_segment_excludes_test_members()
     test_region_availability_is_read_from_the_dimension()

@@ -3,7 +3,8 @@
 Industry calls these output guardrails. Three of them, each switched on separately so their
 contributions are measured apart:
 
-  single_metric      the served number must BE one governed result, not a hand-composition
+  governed_numbers   the served number is a governed result, or a comparison of two of the
+                     same metric — never a composition of different ones
   output_validation  that number must be well-formed for its unit
   trajectory_verify  the metric must actually answer the question (judge.py — the one guardrail
                      here whose verdict is an opinion rather than a proof)
@@ -32,14 +33,14 @@ _V_REASON = {kind: f"verifier_wrong_{kind}" for kind in
              ("thing", "kind", "scope", "definition", "segment")}
 
 # --------------------------------------------------------------------------- #
-# Deterministic output checks: provenance (single-metric, R7) + validation (R8)
+# Deterministic output checks: provenance (governed_numbers, R7) + validation (R8)
 # --------------------------------------------------------------------------- #
 def num_match(a: float, b: float) -> bool:
     """Is one of these numbers a ROUNDING of the other?
 
-    This is an identity test, not an approximation test — single_metric asks whether the served
-    number IS a governed result, and the only difference it should forgive is the model writing
-    2685.08 for 2685.0766666.
+    This is an identity test, not an approximation test — governed_numbers asks whether the
+    served number IS a governed result (or a comparison of two), and the only difference it
+    should forgive is the model writing 2685.08 for 2685.0766666.
 
     It used to be a tolerance band, `abs(a - b) <= max(0.5, 0.005 * abs(b))`, which failed at
     both ends. The 0.5 floor is large for a ratio: days_per_user 2.27 and 2.69 — two different
@@ -65,14 +66,84 @@ def step_values(step: dict) -> list:
     return parse_numbers(step.get("result"))
 
 
-def _is_direct_governed_value(declared_value, steps: list) -> bool:
-    """Single-metric test: is the served number the actual result of SOME governed query the
-    model ran? If it matches no governed result, the model built it by hand (a rate x a count,
-    metric A + metric B) — a composition that is out of scope for a one-metric answer."""
+# Tools whose results are GOVERNED: the layer compiled them, or the tree derived them from
+# metrics the layer compiled, through an identity it declares. Asked by capability rather than
+# hardcoded at each use — the previous check named `query_metric` in three places, so the metric
+# tree could produce eighteen governed figures and be refused as hand-composed.
+_GOVERNED_TOOLS = ("query_metric", "explain_change")
+
+
+def _governed_results(steps: list):
+    """Every number a governed tool produced, with a label for what it is."""
     for s in steps or []:
-        if s.get("tool") == "query_metric" and any(num_match(declared_value, b) for b in step_values(s)):
-            return True
-    return False
+        if s.get("tool") not in _GOVERNED_TOOLS or s.get("error"):
+            continue
+        args = s.get("args") or {}
+        label = args.get("metric") or args.get("node") or s.get("tool")
+        for v in step_values(s):
+            yield label, v
+
+
+def _same_metric_results(steps: list) -> dict:
+    """Governed results grouped by the metric they are instances of.
+
+    Only `query_metric`, because only there does one call's whole result belong to one named
+    metric. A decomposition spans several, and every figure in it is already a governed result in
+    its own right — the tree computed it — so it never needs to be reached by comparison."""
+    groups: dict[str, list] = {}
+    for s in steps or []:
+        if s.get("tool") != "query_metric" or s.get("error"):
+            continue
+        metric = (s.get("args") or {}).get("metric")
+        if metric:
+            groups.setdefault(metric, []).extend(step_values(s))
+    return groups
+
+
+def _renderings(x: float):
+    """A number, and the same number written as a percentage. Multiplying a rate by 100 changes
+    how a figure is displayed, never what it means, so 53.22 stands for a governed 0.5322."""
+    yield x
+    yield x * 100
+
+
+def account_for(declared_value, steps: list) -> str | None:
+    """Where does this number come from? Returns the account, or None if there is none.
+
+    The rule, in one line: YOU MAY COMPARE GOVERNED NUMBERS, YOU MAY NOT COMPOSE NEW ONES.
+
+      (a) the number IS a governed result, or
+      (b) it is a comparison of two governed results OF THE SAME METRIC — a difference, a ratio
+          or a percent change.
+
+    The distinction is not whether arithmetic happened; both `ARR = mrr x 12` and `value moments
+    fell 11.9%` are one operation on a governed result, and no rule about the arithmetic can
+    separate them. It is whether the result claims to be a NEW QUANTITY or a relationship between
+    instances of an existing one. Comparing one metric across two scopes leaves its definition
+    untouched — only the filter moved — so the governed definition still says what the number
+    means. Combining two different metrics invents a measure nothing defines, which is exactly
+    what `mrr / marketing_spend` does when a question asks for return on ad spend.
+
+    This is why a decomposition survives: "active users rose 5.98% while days_per_user fell
+    16.44%" is two same-metric comparisons side by side. The sentence combines them; no number
+    does. Its predecessor accepted only (a), restricted to one tool, and refused the diagnostic
+    tier twelve times in fifteen.
+    """
+    for metric, v in _governed_results(steps):
+        for candidate in _renderings(v):
+            if num_match(declared_value, candidate):
+                return f"{metric} = {v:g}"
+    for metric, values in _same_metric_results(steps).items():
+        for a in values:
+            for b in values:
+                if a == b or not b:
+                    continue
+                for base, op in ((a - b, "difference"), (a / b, "ratio"),
+                                 ((a - b) / b, "percent change")):
+                    for candidate in _renderings(base):
+                        if num_match(declared_value, candidate):
+                            return f"{op} of two {metric} results ({a:g}, {b:g})"
+    return None
 
 
 def _provenance(declared_value, steps: list, source_metric, metrics, source_result=None):
@@ -168,33 +239,38 @@ def output_validation(metric_def: dict, value) -> Verdict:
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   record=None, source_metric: str | None = None, declared_value=None,
                   source_result: str | None = None,
-                  run_output_validation: bool = True, run_single_metric: bool = False,
+                  run_output_validation: bool = True, run_governed_numbers: bool = False,
                   verify_traj=None) -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
     ok=False means convert the answer into a refuse. Each check is toggled by its own rung so
-    the deltas are measured separately: `run_single_metric` (R7, the served number must BE one
-    governed result, not a hand-composition), `run_output_validation` (R8, well-formed value), and
-    `verify_traj` (R9, the trajectory judge). `source_metric`/`declared_value` are the model's typed
-    provenance. The checks apply to a NUMERIC answer, so prose (no `declared_value`) passes through
-    untouched. Refuse-only: it can turn an answer into a refusal, never the reverse."""
+    the deltas are measured separately: `run_governed_numbers` (R7, the served number is a
+    governed result or a comparison of two of the same metric), `run_output_validation` (R8,
+    well-formed value), and `verify_traj` (R9, the trajectory judge). `source_metric`/
+    `declared_value` are the model's typed provenance. The checks apply to a NUMERIC answer, so
+    prose (no `declared_value`) passes through untouched. Refuse-only: it can turn an answer into
+    a refusal, never the reverse."""
     if semantic is None or not answer_text or declared_value is None:
         return Verdict.ok()
 
-    if run_single_metric and _is_direct_governed_value(declared_value, steps):
-        note(record, "single_metric", Position.AFTER, "allowed",
-             "the served number is one governed result")
-    if run_single_metric and not _is_direct_governed_value(declared_value, steps):
-        # The served number is not any single governed result, so no governed DEFINITION answers
-        # the question as asked (ARR = mrr x 12, an activation count from a rate). Report that root
-        # cause, not a vague 'out_of_scope' — a coverage gap is one typed signal, so downstream
-        # (and a future planning agent) can label it and name the metric worth defining.
-        return Verdict(
-            False, "no_governed_definition", guardrail="single_metric", detail=
-            "this number was composed by hand (a rate times a count, or two metrics added), not "
-            "read from one governed metric. No governed definition covers what was asked — refuse "
-            "and name the metric that would need to exist, rather than serve a hand-built figure.",
-            missing="no single governed metric produces this number as asked (it was derived or "
-                    "combined)")
+    if run_governed_numbers:
+        account = account_for(declared_value, steps)
+        note(record, "governed_numbers", Position.AFTER,
+             "allowed" if account else "refused",
+             account or "the served number is neither a governed result nor a comparison of two")
+        if account is None:
+            # Nothing governed produces this number, and no comparison of one metric with itself
+            # reaches it — so it is a COMPOSITION, and no governed definition covers what was
+            # asked (ARR = mrr x 12; revenue per dollar spent from mrr and marketing_spend).
+            # Report that root cause rather than a vague 'out_of_scope': a coverage gap is one
+            # typed signal, so downstream can label it and name the metric worth defining.
+            return Verdict(
+                False, "no_governed_definition", guardrail="governed_numbers", detail=
+                "this number was composed from different metrics (a rate times a count, metric A "
+                "over metric B), not read from a governed result or reached by comparing one "
+                "metric with itself. No governed definition covers what was asked — refuse and "
+                "name the metric that would need to exist, rather than serve a hand-built figure.",
+                missing="no governed result produces this number, and no comparison of a single "
+                        "metric across scopes reaches it (it combines different metrics)")
 
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
@@ -251,10 +327,10 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     to judge with — and receives the judge's verdict back on `last_verdict`, so a stored run is
     enough to score the judge later without re-running anything."""
     g, semantic = run.grounding.guardrails, run.grounding.semantic
-    if semantic is None or not (g.output_validation or g.single_metric or g.trajectory_verify):
+    if semantic is None or not (g.output_validation or g.governed_numbers or g.trajectory_verify):
         return Verdict.ok()
     if declared is None:
-        for name in ("single_metric", "output_validation", "trajectory_verify"):
+        for name in ("governed_numbers", "output_validation", "trajectory_verify"):
             if getattr(g, name):
                 note(record, name, Position.AFTER, "stood down", "the answer is prose, not a number")
         return Verdict.ok()
@@ -266,7 +342,7 @@ def check(args: dict, declared, run, record=None) -> Verdict:
         source_metric=args.get("source_metric"), declared_value=declared,
         source_result=args.get("source_result"),
         run_output_validation=g.output_validation,
-        run_single_metric=g.single_metric, verify_traj=verify_traj)
+        run_governed_numbers=g.governed_numbers, verify_traj=verify_traj)
 
 
 def governed_notes(args: dict, semantic) -> list[str]:
