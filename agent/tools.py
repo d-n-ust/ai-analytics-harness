@@ -276,12 +276,46 @@ def _get_metric_tree(tb, args) -> ToolResult:
     return ToolResult(tb.tree.describe())
 
 
+def _decomposition_values(out: dict) -> list[float]:
+    """Every number the tree COMPUTED for this decomposition, as governed values.
+
+    They are governed in the same sense a query_metric result is: the tree derived each one
+    deterministically from governed metrics, by an identity it declares. Recording them is what
+    makes them addressable — the loop hands any result carrying values a handle, so an answer can
+    cite the decomposition it read instead of the harness matching numbers back to it.
+
+    Without this, everything the tree produced was invisible to provenance: `explain_change`
+    returned prose-shaped JSON and no values, so a diagnostic answer built on it could not be
+    traced by anything, and single_metric refused all of it as hand-composed. The numbers were
+    never hand-composed; nothing had written them down.
+
+    Shares and percent changes are included, not just levels. They are the answer to "why did it
+    move" — the quantity a diagnosis actually reports — and they are computed by the tree, not by
+    the model.
+    """
+    values: list[float] = []
+
+    def take(d: dict) -> None:
+        for key in ("value_a", "value_b", "pct_change", "contribution_share"):
+            v = d.get(key)
+            if isinstance(v, (int, float)):
+                values.append(float(v))
+
+    take(out)
+    for child in out.get("identity_decomposition") or []:
+        take(child)
+    for child in out.get("influence_candidates") or []:
+        take(child)
+    return values
+
+
 def _explain_change(tb, args) -> ToolResult:
     out = tb.tree.explain_change(node=args.get("node"),
                                  period_a=args.get("period_a", "prev_week"),
                                  period_b=args.get("period_b", "last_week"),
                                  filters=args.get("filters"))
-    return ToolResult(json.dumps(out, default=str, indent=2))
+    return ToolResult(json.dumps(out, default=str, indent=2),
+                      values=_decomposition_values(out))
 
 
 @dataclass(frozen=True)

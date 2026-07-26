@@ -218,6 +218,34 @@ def test_a_tree_node_reports_the_metric_it_names():
         "value_moments must keep its all-accounts meaning; the lookup golds count every row"
 
 
+def test_the_tree_writes_its_numbers_down():
+    """A decomposition's numbers are governed results and must be recorded as such.
+
+    They were not. `explain_change` returned JSON and no `values`, so the loop gave it no handle
+    and nothing downstream could see what it produced — a diagnostic answer built on the tree was
+    untraceable, and single_metric refused it as hand-composed. It never was: the tree derived
+    every figure deterministically from governed metrics through an identity it declares. Nothing
+    had written them down.
+
+    Shares and percent changes are included, not just levels: they are what a diagnosis reports,
+    and the tree computes them, not the model. NO LLM."""
+    from agent.tools import _decomposition_values
+    from semantic.tree import MetricTree
+
+    sem = SemanticLayer(open_warehouse())
+    out = MetricTree(sem).explain_change("weekly_value_moments", "prev_week", "last_week")
+    values = _decomposition_values(out)
+
+    assert out["value_a"] in values and out["value_b"] in values, "the levels are governed"
+    assert out["pct_change"] in values, "the change is what 'why did it move' answers with"
+    for child in out["identity_decomposition"]:
+        assert child["contribution_share"] in values, \
+            f"{child['child']}'s share is computed by the tree, not by the model"
+    # A result carrying values is addressable — the loop hands it a handle by that rule alone,
+    # so this is what makes `source_result` able to name a decomposition.
+    assert values, "no values means no handle means the tree stays invisible to provenance"
+
+
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set
     at it — which agreed only while every rung was a superset of the one below. Rung 7 breaks that
