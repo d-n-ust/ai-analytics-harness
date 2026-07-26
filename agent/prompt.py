@@ -8,6 +8,8 @@ so the experiment can compare them.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -134,6 +136,18 @@ class Grounding:
     system: str
     toolbox: Toolbox
     guardrails: Guardrails | None = None
+
+    def fingerprint(self) -> str:
+        """A short, stable hash of everything the model is shown: the assembled system prompt and
+        the exact tool specs (names, descriptions, enums, required fields).
+
+        The tool specs are as much a treatment as the prompt — a reworded description or a
+        widened enum changes the agent's behaviour just as surely — yet nothing else records
+        them. Two runs whose fingerprints differ are not comparable however alike their labels
+        read, and a refactor that was meant to leave the model's view untouched proves it by
+        leaving this unchanged."""
+        surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
+        return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
 def build_grounding(con, rung: int,

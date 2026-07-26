@@ -1,0 +1,3149 @@
+=== rung 1 · R0 · fingerprint dd0834122a6e ===
+system: sha256=59a42399fbd7 chars=757
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 1 · R2 · fingerprint 34f09f80fd81 ===
+system: sha256=4e1775410f47 chars=1352
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 1 · R4 · fingerprint 749be1c77243 ===
+system: sha256=68f7a8b7fab7 chars=1667
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 1 · R6 · fingerprint d22433bcfdce ===
+system: sha256=8de705163e0a chars=2178
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 1 · R9 · fingerprint 37f10e982e19 ===
+system: sha256=364b53e45412 chars=3457
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 3 · R0 · fingerprint d20c4a521545 ===
+system: sha256=6825ee4a8741 chars=1017
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 3 · R2 · fingerprint 60412eb077ec ===
+system: sha256=76e3834e8c5d chars=1612
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 3 · R4 · fingerprint ac7b2aa5c24c ===
+system: sha256=f4f60a1534f5 chars=1927
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 3 · R6 · fingerprint 034be9cae3b1 ===
+system: sha256=7ba8ed981940 chars=2438
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 3 · R9 · fingerprint a96abc687add ===
+system: sha256=a9db88aaeb44 chars=3717
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        },
+        "source_metric": {
+          "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 6 · R0 · fingerprint ebc648cdcd14 ===
+system: sha256=fdb0e4ee15d9 chars=5912
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "node": {
+          "description": "Tree node to explain (default: the root).",
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "explain_change"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 6 · R2 · fingerprint ed9fea9b97d9 ===
+system: sha256=5e2378bf5cd1 chars=6507
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "Run a read-only DuckDB SQL query (a single SELECT/WITH) and get the rows back.",
+    "input_schema": {
+      "properties": {
+        "query": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "query"
+      ],
+      "type": "object"
+    },
+    "name": "run_sql"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "node": {
+          "description": "Tree node to explain (default: the root).",
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "explain_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 6 · R4 · fingerprint ab400023151a ===
+system: sha256=32641d7c1066 chars=6822
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "node": {
+          "description": "Tree node to explain (default: the root).",
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "explain_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 6 · R6 · fingerprint ccb1f9d3ac52 ===
+system: sha256=d317a18effa9 chars=7333
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "node": {
+          "description": "Tree node to explain (default: the root).",
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "explain_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 6 · R9 · fingerprint 14604ff0ab96 ===
+system: sha256=400f056239ae chars=8612
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "input_schema": {
+      "properties": {
+        "filters": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "node": {
+          "description": "Tree node to explain (default: the root).",
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "explain_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        },
+        "source_metric": {
+          "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
+          "enum": [
+            "value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== verifier ===
+prompt_fingerprint: 439c750bb4de
+QUESTION:
+  {question}
+
+WHAT THE ANALYST COMPUTED:
+metric used: {metric}
+  definition (correct by construction): {description}
+  measures entity={entity}, segment={segment}, aggregation={agg}, unit={unit}
+  governed modifications applied (DEFINITIONAL — the layer did this, not the analyst; do NOT treat as an invented restriction): {governed}
+  analyst added (check these for scope): {applied_filters}
+  time window: {time_window}
+  full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}
+query result: {result_value}
+analyst's claimed answer: {claim_value}

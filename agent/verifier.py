@@ -75,6 +75,23 @@ _VERIFY_SYSTEM = (
     "all five checks pass, the answer stands."
 )
 
+# The evidence the judge is shown, as a named template rather than an inline f-string — so
+# the fingerprint below can hash it. A judge's behaviour is set by its instructions AND by
+# what it is shown; changing either invalidates a validation, so both must be fingerprinted.
+_EVIDENCE = (
+    "metric used: {metric}\n"
+    "  definition (correct by construction): {description}\n"
+    "  measures entity={entity}, segment={segment}, aggregation={agg}, unit={unit}\n"
+    "  governed modifications applied (DEFINITIONAL — the layer did this, not the analyst; "
+    "do NOT treat as an invented restriction): {governed}\n"
+    "  analyst added (check these for scope): {applied_filters}\n"
+    "  time window: {time_window}\n"
+    "  full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}\n"
+    "query result: {result_value}\n"
+    "analyst's claimed answer: {claim_value}"
+)
+_USER = "QUESTION:\n  {question}\n\nWHAT THE ANALYST COMPUTED:\n{evidence}"
+
 _REPORT = {
     "name": "report_verdict",
     "description": "Report whether the computed number answers the question as asked.",
@@ -91,11 +108,14 @@ _REPORT = {
 
 
 def prompt_fingerprint() -> str:
-    """A short, stable hash of the verifier's behaviour-defining surface — its system prompt plus
-    the mismatch enum. It changes iff the judge's spec changes, so a stored validation can be
-    flagged STALE the moment the prompt is edited (as Workstream C did)."""
+    """A short, stable hash of the verifier's behaviour-defining surface — its system prompt, the
+    mismatch enum, AND the evidence template it judges from. It changes iff the judge's spec
+    changes, so a stored validation can be flagged STALE the moment any of them is edited (as
+    Workstream C did). The evidence belongs in here: a judge shown different evidence is a
+    different judge, even word-for-word identical instructions."""
     enum = _REPORT["input_schema"]["properties"]["mismatch"]["enum"]
-    return hashlib.sha256((_VERIFY_SYSTEM + "|" + ",".join(enum)).encode()).hexdigest()[:12]
+    surface = "|".join([_VERIFY_SYSTEM, ",".join(enum), _EVIDENCE, _USER])
+    return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
 def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
@@ -109,19 +129,15 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
     window) — DEFINITIONAL, not the analyst's invention — so a governed narrowing (excluding a
     test channel, dropping pre-launch data) is not mistaken for a scope error."""
     md = metric_def or {}
-    governed = "; ".join(governed_notes) if governed_notes else "none"
-    brief = (f"metric used: {metric_name}\n"
-             f"  definition (correct by construction): {md.get('description', '(no description)')}\n"
-             f"  measures entity={md.get('entity')}, segment={md.get('segment')}, "
-             f"aggregation={md.get('agg')}, unit={md.get('unit')}\n"
-             f"  governed modifications applied (DEFINITIONAL — the layer did this, not the analyst; "
-             f"do NOT treat as an invented restriction): {governed}\n"
-             f"  analyst added (check these for scope): {applied_filters or 'none'}\n"
-             f"  time window: {time_window or 'all time'}\n"
-             f"  full SQL (for reference; its built-in clauses are definitional, not the analyst's): {sql}\n"
-             f"query result: {result_value}\n"
-             f"analyst's claimed answer: {claim_value}")
-    user = f"QUESTION:\n  {question}\n\nWHAT THE ANALYST COMPUTED:\n{brief}"
+    brief = _EVIDENCE.format(
+        metric=metric_name, description=md.get("description", "(no description)"),
+        entity=md.get("entity"), segment=md.get("segment"),
+        agg=md.get("agg"), unit=md.get("unit"),
+        governed="; ".join(governed_notes) if governed_notes else "none",
+        applied_filters=applied_filters or "none",
+        time_window=time_window or "all time",
+        sql=sql, result_value=result_value, claim_value=claim_value)
+    user = _USER.format(question=question, evidence=brief)
     resp = model.create(_VERIFY_SYSTEM, [{"role": "user", "content": user}],
                         [_REPORT], force_tool="report_verdict", temperature=0)
     for b in getattr(resp, "content", []):

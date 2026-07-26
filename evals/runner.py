@@ -107,6 +107,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                              outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
             elapsed_s = time.perf_counter() - t0   # wall-clock per run, for per-rung latency
             config_label = grounding.guardrails.label()
+            # Read the surface while the grounding is still live, next to the label it belongs
+            # with: the label says which controls were MEANT to be on, the fingerprint says
+            # what the agent was actually shown.
+            surface = grounding.fingerprint()
         finally:
             cur.close()
         g = grade(ans, q, golds[q["id"]])
@@ -131,6 +135,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
             "schema_version": report.ROW_SCHEMA_VERSION,
+            # What the model was actually shown, hashed — so a surface edit between runs is
+            # visible in the rows rather than inferred from the git log.
+            "surface_fingerprint": surface,
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
         }

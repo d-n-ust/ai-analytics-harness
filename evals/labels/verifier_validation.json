@@ -5,9 +5,11 @@
   "miss_rate": 0.059,
   "false_flag": 2,
   "false_flag_rate": 0.1,
-  "prompt_fingerprint": "1b2752fac63a",
+  "prompt_fingerprint": "439c750bb4de",
+  "superseded_fingerprint": "1b2752fac63a",
   "run": "20260725-011850-gpt-5-mini",
   "date": "2026-07-25",
   "method": "3-Claude-judge panel (strict/pragmatic/skeptic, majority, blind); 3/37 split, all 2-1",
-  "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850)."
+  "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850).",
+  "restamp_note": "Fingerprint re-stamped 2026-07-26 WITHOUT re-labelling: its definition widened to cover the evidence template, which was extracted from an inline f-string. The rendered evidence is byte-identical — pinned by tests/test_surface.py::_check_evidence_renders — so these labels were collected against the same characters the judge sees now. A change to what the judge is SHOWN (not just how it is stored) does require re-labelling."
 }

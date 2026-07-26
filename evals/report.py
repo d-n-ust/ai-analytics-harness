@@ -40,7 +40,7 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 4   # v4: rows carry `cached_tokens` (prompt-cache hits, for real USD)
+ROW_SCHEMA_VERSION = 5   # v5: rows carry `surface_fingerprint` (what the model was shown)
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
