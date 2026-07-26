@@ -87,7 +87,8 @@ class _Run:
             result = self.grounding.toolbox.dispatch(call.name, call.args)
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
                                "result": result.content[:_TRACE_LIMIT],
-                               "result_values": result.values})
+                               "result_values": result.values,
+                               "blocked_reason": result.reason})
             results.append(result.for_call(call))
         return results
 
@@ -114,15 +115,15 @@ class _Run:
         recovered = None if args.get("value") is not None else bare_number(text)
         declared = args.get("value") if recovered is None else recovered
         self.answer_text = text
-        ok, reason, missing, explanation = after.check(args, declared, self)
+        verdict = after.check(args, declared, self)
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
                       value_recovered=recovered is not None,
                       verifier_verdict=self.last_verdict)
-        if not ok:
-            return self._record(answer=None, explanation=explanation, outcome="refuse",
-                                reason=reason, missing=missing, abstained=True,
+        if not verdict.allowed:
+            return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
+                                reason=verdict.reason, missing=verdict.missing, abstained=True,
                                 iterations=iterations, **claims)
         return self._record(answer=text, explanation=_line(args.get("explanation")),
                             outcome="answer", iterations=iterations, **claims)

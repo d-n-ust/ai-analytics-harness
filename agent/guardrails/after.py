@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 
 from ..numbers import parse_numbers
-from . import judge
+from . import Verdict, judge
 
 _log = logging.getLogger(__name__)
 
@@ -108,28 +108,32 @@ def _infer_source_metric(declared_value, steps: list, metrics) -> str | None:
     return named.pop() if len(named) == 1 else None
 
 
-def output_validation(metric_def: dict, value) -> tuple[bool, str, str, str]:
+def output_validation(metric_def: dict, value) -> Verdict:
     """Deterministic checks on the RETURNED value, not the metric selection: a governed
     query that came back empty/null, or a value impossible for its `unit`, must not be
     served as an answer. Refuse-only. This is where the metric-selection check can't see —
     it never looks at *what came back*."""
     if value is None:
-        return (False, "result_empty", "the governed query returned no value (empty/null result)",
-                "the metric produced no number for this request, so there is nothing to report; refuse.")
+        return Verdict(False, "result_empty",
+                       "the metric produced no number for this request, so there is nothing to "
+                       "report; refuse.",
+                       missing="the governed query returned no value (empty/null result)")
     unit = (metric_def or {}).get("unit")
     if value < 0 and unit in ("count", "currency", "share"):
-        return (False, "implausible_value", f"a {unit} value cannot be negative (got {value})",
-                f"the governed result {value} is impossible for a {unit} metric; refuse.")
+        return Verdict(False, "implausible_value",
+                       f"the governed result {value} is impossible for a {unit} metric; refuse.",
+                       missing=f"a {unit} value cannot be negative (got {value})")
     if unit == "share" and value > 100:
-        return (False, "implausible_value", f"a share above 100 (got {value})",
-                f"the governed result {value} is out of range for a share; refuse.")
-    return True, "", "", ""
+        return Verdict(False, "implausible_value",
+                       f"the governed result {value} is out of range for a share; refuse.",
+                       missing=f"a share above 100 (got {value})")
+    return Verdict.ok()
 
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   source_metric: str | None = None, declared_value=None,
                   run_output_validation: bool = True, run_single_metric: bool = False,
-                  verify_traj=None) -> tuple[bool, str, str, str]:
+                  verify_traj=None) -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
     ok=False means convert the answer into a refuse. Each check is toggled by its own rung so
     the deltas are measured separately: `run_single_metric` (R7, the served number must BE one
@@ -138,54 +142,56 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     provenance. The checks apply to a NUMERIC answer, so prose (no `declared_value`) passes through
     untouched. Refuse-only: it can turn an answer into a refusal, never the reverse."""
     if semantic is None or not answer_text or declared_value is None:
-        return True, "", "", ""
+        return Verdict.ok()
 
     if run_single_metric and not _is_direct_governed_value(declared_value, steps):
         # The served number is not any single governed result, so no governed DEFINITION answers
         # the question as asked (ARR = mrr x 12, an activation count from a rate). Report that root
         # cause, not a vague 'out_of_scope' — a coverage gap is one typed signal, so downstream
         # (and a future planning agent) can label it and name the metric worth defining.
-        return (False, "no_governed_definition",
-                "no single governed metric produces this number as asked (it was derived or combined)",
-                "this number was composed by hand (a rate times a count, or two metrics added), not "
-                "read from one governed metric. No governed definition covers what was asked — refuse "
-                "and name the metric that would need to exist, rather than serve a hand-built figure.")
+        return Verdict(
+            False, "no_governed_definition",
+            "this number was composed by hand (a rate times a count, or two metrics added), not "
+            "read from one governed metric. No governed definition covers what was asked — refuse "
+            "and name the metric that would need to exist, rather than serve a hand-built figure.",
+            missing="no single governed metric produces this number as asked (it was derived or "
+                    "combined)")
 
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("output checks: numeric answer with no usable source_metric; not verified")
-        return True, "", "", ""            # no governed metric to check against
+        return Verdict.ok()                # no governed metric to check against
     metric_def = semantic.metrics[metric]
 
     if run_output_validation:                         # R8: the returned value is empty or impossible
-        ok_r, reason_r, missing_r, expl_r = output_validation(metric_def, value)
-        if not ok_r:
-            return False, reason_r, missing_r, expl_r
+        verdict = output_validation(metric_def, value)
+        if not verdict.allowed:
+            return verdict
 
     if verify_traj is not None:            # R9: does this metric + SQL actually answer the question?
         ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
         if not ok_v:
-            return (False, _V_REASON.get(mismatch, "other"),
-                    f"verifier[{mismatch}]: {reason_v}"[:180], reason_v)
+            return Verdict(False, _V_REASON.get(mismatch, "other"), reason_v,
+                           missing=f"verifier[{mismatch}]: {reason_v}"[:180])
 
-    return True, "", "", ""
+    return Verdict.ok()
 
 
 # --------------------------------------------------------------------------- #
 # The hook: run every AFTER guardrail on one completed answer.
 # --------------------------------------------------------------------------- #
-def check(args: dict, declared, run) -> tuple[bool, str, str, str]:
-    """Put an answer through the AFTER guardrails. Returns (ok, reason, missing, explanation);
-    ok=False turns the answer into a refusal carrying the coded reason it failed for.
+def check(args: dict, declared, run) -> Verdict:
+    """Put an answer through the AFTER guardrails. A refusing verdict turns the answer into a
+    refusal carrying the coded reason it failed for.
 
     `run` supplies the live handles — the semantic layer, the guardrail set, the trace, a model
     to judge with — and receives the judge's verdict back on `last_verdict`, so a stored run is
     enough to score the judge later without re-running anything."""
     g, semantic = run.grounding.guardrails, run.grounding.semantic
     if semantic is None or not (g.output_validation or g.single_metric or g.trajectory_verify):
-        return True, "", "", ""
+        return Verdict.ok()
     # the judge is a careful checker — run it on its own (higher-reasoning) model when given
     model = run.verifier_model or run.model
     verify_traj = _trajectory_verifier(run, model) if (g.trajectory_verify and model) else None

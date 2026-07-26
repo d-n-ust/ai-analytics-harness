@@ -192,19 +192,19 @@ def test_output_validation_catches_degenerate_values():
     sem = SemanticLayer(con)
     # the governed query returned no value, but the model answered a number -> result_empty
     empty_steps = [_qm("active_users", None, period="last_week")]
-    ok, reason, *_ = verifier.verify_answer(sem, "How many active users last week?", "5", empty_steps,
+    v = verifier.verify_answer(sem, "How many active users last week?", "5", empty_steps,
                                             source_metric="active_users", declared_value=5)
-    assert not ok and reason == "result_empty", (ok, reason)
+    assert not v.allowed and v.reason == "result_empty", v
     # a share metric returning 150 is impossible
     share_steps = [_qm("reminder_open_rate", 150)]
-    ok2, reason2, *_ = verifier.verify_answer(sem, "What is the reminder open rate?", "150", share_steps,
+    v2 = verifier.verify_answer(sem, "What is the reminder open rate?", "150", share_steps,
                                               source_metric="reminder_open_rate", declared_value=150)
-    assert not ok2 and reason2 == "implausible_value", (ok2, reason2)
+    assert not v2.allowed and v2.reason == "implausible_value", v2
     # a normal value passes sanity
     good_steps = [_qm("active_users", 886, period="last_week")]
-    ok3, *_ = verifier.verify_answer(sem, "How many active users last week?", "886", good_steps,
+    v3 = verifier.verify_answer(sem, "How many active users last week?", "886", good_steps,
                                      source_metric="active_users", declared_value=886)
-    assert ok3
+    assert v3.allowed
 
 
 def test_value_resolver():
@@ -241,15 +241,15 @@ def test_single_metric_enforcement():
     sem = SemanticLayer(con)
     steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
              _qm("activation_rate", 0.529, start="2026-06-01", end="2026-06-30")]
-    ok, *_ = verifier.verify_answer(sem, "how many signups?", "444", steps, source_metric="new_signups",
+    v = verifier.verify_answer(sem, "how many signups?", "444", steps, source_metric="new_signups",
                                     declared_value=444, run_output_validation=False, run_single_metric=True)
-    assert ok, "a direct governed result must pass single-metric"
+    assert v.allowed, "a direct governed result must pass single-metric"
     # 235 = 444 * 0.529 matches no governed result -> refuse
-    ok2, reason2, *_ = verifier.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
+    v2 = verifier.verify_answer(sem, "how many activated?", "235", steps, source_metric=None,
                                               declared_value=235, run_output_validation=False,
                                               run_single_metric=True)
     # A hand-derived value means no single governed metric produces it -> report that root cause.
-    assert not ok2 and reason2 == "no_governed_definition", \
+    assert not v2.allowed and v2.reason == "no_governed_definition", \
         "a hand-derived value must refuse no_governed_definition"
 
 
@@ -262,13 +262,13 @@ def test_verifier_skips_prose_answers():
     sem = SemanticLayer(con)
     steps = [_qm("value_moments", 67132, period="all")]
     # a prose health verdict: no declared value -> skip
-    ok, *_ = verifier.verify_answer(sem, "Is the app healthy?", "No — mixed early-warning signals",
+    v = verifier.verify_answer(sem, "Is the app healthy?", "No — mixed early-warning signals",
                                     steps, source_metric="value_moments")
-    assert ok, "prose answer (no declared value) must skip the output checks"
+    assert v.allowed, "prose answer (no declared value) must skip the output checks"
     # a diagnostic narrative that literally contains 67132: still skipped, because value is unset
     narrative = "No; value moments were 67132 all-time but active users rose from 836 to 886"
-    ok2, *_ = verifier.verify_answer(sem, "What happened?", narrative, steps, source_metric="value_moments")
-    assert ok2, "diagnostic narrative (no declared value) must skip the output checks"
+    v2 = verifier.verify_answer(sem, "What happened?", narrative, steps, source_metric="value_moments")
+    assert v2.allowed, "diagnostic narrative (no declared value) must skip the output checks"
 
 
 def test_governed_segment_excludes_test_members():
@@ -374,21 +374,21 @@ def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
     window = {"start": "2026-06-01", "end": "2026-06-30"}
 
     no_dim = input_guardrail.check(sem, tb.g, {"metric": "mrr", "filters": {"region": "Americas"}})
-    assert no_dim and "dimension_not_supported" in no_dim   # mrr is sliceable by plan only
+    assert not no_dim.allowed and no_dim.reason == "dimension_not_supported"   # mrr is sliceable by plan only
 
     bad_value = input_guardrail.check(
         sem, tb.g, {"metric": "active_users", "filters": {"region": "North America"}, **window})
-    assert bad_value and "ungoverned_dimension_value" in bad_value
-    assert "Americas" not in bad_value                 # no substitutable member list leaks back
+    assert not bad_value.allowed and bad_value.reason == "ungoverned_dimension_value"
+    assert "Americas" not in bad_value.detail                 # no substitutable member list leaks back
 
     # a governed dimension holding a governed member passes both checks
     assert input_guardrail.check(
-        sem, tb.g, {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
+        sem, tb.g, {"metric": "active_users", "filters": {"region": "Americas"}, **window}).allowed
 
     # below the resolve rung the value check is off — the pre-R5 hole, kept measurable
     below = Toolbox(con, 6, sem, None, LADDER[4])
     assert input_guardrail.check(
-        sem, below.g, {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
+        sem, below.g, {"metric": "active_users", "filters": {"region": "North America"}, **window}).allowed
 
 
 def test_closing_phase_offers_only_exit_tools():
@@ -420,17 +420,17 @@ def test_verifier_is_refuse_only():
         seen.update(metric=metric, args=args, declared=declared_value)
         return True, "none", ""
 
-    ok, _, _, _ = verifier.verify_answer(sem, "How many paying users?", "371", steps,
+    v = verifier.verify_answer(sem, "How many paying users?", "371", steps,
                                          verify_traj=passing, **kw)
-    assert ok is True                                   # a passing verdict changes nothing
+    assert v.allowed is True                            # a passing verdict changes nothing
     assert seen["metric"] == "paying_users" and seen["declared"] == 371
     assert seen["args"] == {"metric": "paying_users"}   # the analyst's call, not the compiled SQL
 
-    ok, reason, _, _ = verifier.verify_answer(
+    v = verifier.verify_answer(
         sem, "How many paying users?", "371", steps,
         verify_traj=lambda *a: (False, "scope", "answers a different question"), **kw)
     # downgraded to a GOVERNED reason (scope -> other; the old out_of_scope was not in REFUSAL_REASONS)
-    assert ok is False and reason == "other"
+    assert v.allowed is False and v.reason == "other"
 
 
 def test_toolbox_wiring_and_rung_gate():
@@ -457,15 +457,15 @@ def test_toolbox_wiring_and_rung_gate():
             run_single_metric=LADDER[rrung].single_metric,
             run_output_validation=LADDER[rrung].output_validation)
 
-    assert check(7, 2100)[0], "a direct governed result passes single-metric"
-    ok, reason, *_ = check(7, 999)
-    assert not ok and reason == "no_governed_definition", \
+    assert check(7, 2100).allowed, "a direct governed result passes single-metric"
+    v = check(7, 999)
+    assert not v.allowed and v.reason == "no_governed_definition", \
         "a hand-derived value (matches no governed result) refuses no_governed_definition at R7"
-    assert check(6, 999)[0], "single-metric must be OFF below rrung 7"
+    assert check(6, 999).allowed, "single-metric must be OFF below rrung 7"
 
     # a prose answer (no typed value) is passed through untouched
     assert verifier.verify_answer(sem, q, "healthy overall", steps, source_metric="active_users",
-                                  declared_value=None, run_single_metric=True)[0], \
+                                  declared_value=None, run_single_metric=True).allowed, \
         "no declared value -> output guardrails stand down"
 
 

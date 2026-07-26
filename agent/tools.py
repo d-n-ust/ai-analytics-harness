@@ -355,9 +355,9 @@ class Toolbox:
         # Every call passes the BEFORE guardrails and every result passes DISCLOSURE, rather than
         # each handler remembering to ask. A tool added later is guarded by existing; for a call
         # with no scope to check both are no-ops.
-        blocked = before.check(self.semantic, self.g, args)
-        if blocked is not None:
-            return ToolResult(blocked, is_error=True)
+        verdict = before.check(self.semantic, self.g, args)
+        if not verdict.allowed:
+            return ToolResult(verdict.detail, is_error=True, reason=verdict.reason)
         try:
             return disclosure.annotate(tool.run(self, args), args, self.semantic, self.g)
         except (QueryError, SemanticError, TreeError) as exc:

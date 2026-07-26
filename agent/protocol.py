@@ -44,6 +44,10 @@ class ToolResult:
     # DISCLOSURE guardrail formats it for the model, and it is carried rather than recompiled
     # so what the model is shown is what actually ran.
     sql: str | None = None
+    # The coded reason a guardrail refused this call, when one did. Recorded on the trace, so
+    # "how often did the coverage check fire, and for what" is a count rather than a grep
+    # through English.
+    reason: str = ""
 
     def for_call(self, call: ToolCall) -> ToolResult:
         return replace(self, call_id=call.id)

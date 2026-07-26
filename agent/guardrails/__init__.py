@@ -23,8 +23,33 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 
-__all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position",
+__all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position", "Verdict",
            "incoherent", "parse_cell"]
+
+
+@dataclass(frozen=True)
+class Verdict:
+    """What every guardrail returns: allow, or refuse with a CODED reason.
+
+    The reason is a code from REFUSAL_REASONS, never prose. That sounds like tidiness and is not:
+    the BEFORE guardrails used to signal by returning a sentence with the code spelled inside it
+    ("...; refuse (out_of_coverage)"), so nothing could count how often a guardrail fired, or for
+    what, without grepping English out of stored tool results. Every other outcome in this
+    codebase is typed precisely so nobody has to do that.
+
+    `detail` is the sentence the model reads — the block has to be interpretable or it becomes a
+    retry loop. `missing` names the specific absent thing, when there is one, so a refusal can be
+    checked rather than taken on faith. Both are prose; only they are.
+    """
+
+    allowed: bool
+    reason: str = ""
+    detail: str = ""
+    missing: str = ""
+
+    @classmethod
+    def ok(cls) -> Verdict:
+        return cls(allowed=True)
 
 
 class Position(StrEnum):
