@@ -116,4 +116,10 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
         "type": "string", "enum": list(semantic.metrics),
         "description": "If `value` came from a governed metric, name that metric (as passed "
                        "to query_metric). Omit for a derived or non-metric answer."}
+    props["source_result"] = {
+        "type": "string",
+        "description": "The handle of the result you are reporting — every governed result is "
+                       "printed with one, like [r2]. Give just the handle (r2). This says WHICH "
+                       "query your number came from, so it does not have to be guessed by "
+                       "matching numbers."}
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}

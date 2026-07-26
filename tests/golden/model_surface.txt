@@ -1148,7 +1148,7 @@ system: sha256=7ba8ed981940 chars=2438
   }
 ]
 
-=== rung 3 · R9 · fingerprint d8b916120145 ===
+=== rung 3 · R9 · fingerprint 45bb35390e10 ===
 system: sha256=a9db88aaeb44 chars=3717
 [
   {
@@ -1368,6 +1368,10 @@ system: sha256=a9db88aaeb44 chars=3717
             "marketing_spend",
             "referrals"
           ],
+          "type": "string"
+        },
+        "source_result": {
+          "description": "The handle of the result you are reporting \u2014 every governed result is printed with one, like [r2]. Give just the handle (r2). This says WHICH query your number came from, so it does not have to be guessed by matching numbers.",
           "type": "string"
         },
         "value": {
@@ -2523,7 +2527,7 @@ system: sha256=d317a18effa9 chars=7333
   }
 ]
 
-=== rung 6 · R9 · fingerprint 1196bdc80a48 ===
+=== rung 6 · R9 · fingerprint 7c92473aac5b ===
 system: sha256=400f056239ae chars=8612
 [
   {
@@ -2776,6 +2780,10 @@ system: sha256=400f056239ae chars=8612
             "marketing_spend",
             "referrals"
           ],
+          "type": "string"
+        },
+        "source_result": {
+          "description": "The handle of the result you are reporting \u2014 every governed result is printed with one, like [r2]. Give just the handle (r2). This says WHICH query your number came from, so it does not have to be guessed by matching numbers.",
           "type": "string"
         },
         "value": {

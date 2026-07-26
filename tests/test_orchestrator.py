@@ -218,6 +218,35 @@ def test_every_guardrail_reports_what_it_did():
     assert {a["outcome"] for a in prose.acts} == {"stood down"}
 
 
+def test_provenance_is_a_lookup_when_the_answer_names_its_result():
+    """Every governed result is printed with a handle, and the answer names the one it reports.
+    Provenance is then a lookup instead of a search for a number that looks right — a search
+    needs a tolerance, and every tolerance is wrong for some metric: a 0.5 floor made two
+    different weeks of days_per_user, 2.27 and 2.69, the same number."""
+    from agent.guardrails.after import _provenance
+    from semantic.semantic import SemanticLayer
+
+    metrics = SemanticLayer(open_warehouse()).metrics
+    steps = [{"tool": "query_metric", "handle": "r1", "args": {"metric": "days_per_user"},
+              "result_values": [2.68852]},
+             {"tool": "query_metric", "handle": "r2", "args": {"metric": "days_per_user"},
+              "result_values": [2.27088]}]
+    # named -> the named one, even though both are within the old tolerance of each other
+    assert _provenance(2.27088, steps, "days_per_user", metrics, "r2")[2] == 2.27088
+    assert _provenance(2.68852, steps, "days_per_user", metrics, "r1")[2] == 2.68852
+    assert _provenance(2.27088, steps, "days_per_user", metrics, "[r2]")[2] == 2.27088
+
+    # a handle naming a DIFFERENT metric is not trusted; it falls back rather than mislinking
+    steps2 = steps + [{"tool": "query_metric", "handle": "r3", "args": {"metric": "mrr"},
+                       "result_values": [2685.08]}]
+    assert _provenance(2685.08, steps2, "mrr", metrics, "r1")[0] == "mrr"
+
+    # and the handle is what the model actually sees, on the result carrying typed values
+    ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", ANSWER)], rrung=9)
+    assert ans.steps[0]["handle"] == "r1"
+    assert ans.steps[0]["result"].startswith("[r1] "), ans.steps[0]["result"][:20]
+
+
 TESTS = [test_a_run_ends_through_one_typed_exit,
          test_output_checks_convert_an_answer_into_a_refusal,
          test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset,
@@ -228,7 +257,8 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_usage_accumulates_across_turns,
          test_a_turn_separates_the_exit_call_from_the_rest,
          test_the_trace_renders_every_run_shape_without_inventing_data,
-         test_every_guardrail_reports_what_it_did]
+         test_every_guardrail_reports_what_it_did,
+         test_provenance_is_a_lookup_when_the_answer_names_its_result]
 
 
 if __name__ == "__main__":

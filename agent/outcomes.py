@@ -50,6 +50,7 @@ class Answer:
     missing: str | None = None     # refuse only: what the model says is missing
     source_metric: str | None = None  # answer only: the governed metric the value came from
     declared_value: float | None = None  # answer only: the served number (None = prose)
+    source_result: str = ""       # the handle of the governed result the answer reports
     value_recovered: bool = False   # the number came from the answer text, not the typed field
     verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
     abstained: bool = False        # convenience mirror of outcome == "refuse"

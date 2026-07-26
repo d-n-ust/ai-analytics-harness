@@ -163,6 +163,8 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
         typed = f"value={row['declared_value']:g}"
         if row.get("source_metric"):
             typed += f"  source_metric={row['source_metric']}"
+        typed += (f"  source_result={row['source_result']}" if row.get("source_result")
+                  else paint("  (no source_result — provenance fell back to matching numbers)", "warn"))
         if row.get("value_recovered"):
             typed += paint("  (recovered from the answer text, not declared)", "warn")
         lines.append(f"          {paint(typed, 'dim')}")

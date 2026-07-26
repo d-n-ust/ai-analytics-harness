@@ -75,7 +75,7 @@ def _is_direct_governed_value(declared_value, steps: list) -> bool:
     return False
 
 
-def _provenance(declared_value, steps: list, source_metric, metrics):
+def _provenance(declared_value, steps: list, source_metric, metrics, source_result=None):
     """Which governed metric produced the answer, its call args, and the value it returned
     — taken ONLY from the model's typed `source_metric` declaration, never inferred from the
     answer text. When that metric was queried more than once (say a breakdown and a total),
@@ -86,10 +86,31 @@ def _provenance(declared_value, steps: list, source_metric, metrics):
     (metric, args, value), or (None, None, None) when nothing verifiable was declared."""
     if source_metric not in metrics:
         return None, None, None
+    # BY REFERENCE first. The model names the handle of the result it reported, so this is a
+    # lookup. Matching numbers was only ever a way to guess the same thing, and a guess needs a
+    # tolerance, and every tolerance is wrong for some metric: a 0.5 floor made two different
+    # weeks of days_per_user (2.27 and 2.69) the same number, and the checks then validated a
+    # figure nobody served.
+    if source_result:
+        named = next((s for s in (steps or []) if s.get("handle") == str(source_result).strip("[]")),
+                     None)
+        if named is not None and (named.get("args") or {}).get("metric") == source_metric:
+            values = step_values(named)
+            # num_match returns to its real job here: verifying the declared number IS that
+            # result, rather than searching for which result it might have been.
+            hit = next((v for v in values if num_match(declared_value, v)), None)
+            return source_metric, (named.get("args") or {}), hit
     calls = [s for s in (steps or []) if s.get("tool") == "query_metric"
              and (s.get("args") or {}).get("metric") == source_metric]
     if not calls:
         return None, None, None
+    # No handle given (an older trace, or the model did not name one) — fall back to the search,
+    # but say when it is a guess rather than settling it silently.
+    matching = [st for st in calls
+                if any(num_match(declared_value, v) for v in step_values(st))]
+    if len(matching) > 1:
+        _log.info("provenance: %d calls to %s match the served value; taking the last",
+                  len(matching), source_metric)
     for step in reversed(calls):
         # The matching cell, not the call's first one: a breakdown returns a number per group,
         # and the declared value says WHICH group the answer reported. Handing the checks the
@@ -146,6 +167,7 @@ def output_validation(metric_def: dict, value) -> Verdict:
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   record=None, source_metric: str | None = None, declared_value=None,
+                  source_result: str | None = None,
                   run_output_validation: bool = True, run_single_metric: bool = False,
                   verify_traj=None) -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
@@ -176,7 +198,8 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
-    metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics)
+    metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics,
+                                      source_result)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("output checks: numeric answer with no usable source_metric; not verified")
         return Verdict.ok()                # no governed metric to check against
@@ -226,6 +249,7 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     return verify_answer(
         semantic, run.question, run.answer_text, run.steps, record=record,
         source_metric=args.get("source_metric"), declared_value=declared,
+        source_result=args.get("source_result"),
         run_output_validation=g.output_validation,
         run_single_metric=g.single_metric, verify_traj=verify_traj)
 

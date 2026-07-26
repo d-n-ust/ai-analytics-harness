@@ -17,7 +17,7 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from .conversation import Conversation, ToolCall, Turn, Usage
 from .guardrails import after
@@ -57,7 +57,8 @@ class _Run:
     # One entry per model call: how long it took, what it asked for, what it cost. The tool
     # steps alone hide where a run's time goes, which for an agent is almost always here.
     turns: list = field(default_factory=list)
-    acts: list = field(default_factory=list)   # what the AFTER guardrails did to the answer
+    acts: list = field(default_factory=list)
+    handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
 
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
@@ -68,7 +69,17 @@ class _Run:
             self.tool_calls += 1
             t0 = time.perf_counter()
             result = self.grounding.toolbox.dispatch(call.name, call.args)
+            # A result carrying typed numbers gets a HANDLE, printed where the model reads it, so
+            # the answer can name which result it is reporting instead of leaving the harness to
+            # find it by matching numbers. The rule is tool-agnostic: whatever returns governed
+            # values is addressable, so a governed tool added later is addressable too.
+            handle = ""
+            if result.values:
+                handle = f"r{len(self.handles) + 1}"
+                self.handles[handle] = len(self.steps)
+                result = replace(result, content=f"[{handle}] {result.content}")
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
+                               "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
                                "result_values": result.values,
                                "blocked_reason": result.reason,
@@ -113,6 +124,7 @@ class _Run:
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
+                      source_result=str(args.get("source_result") or ""),
                       value_recovered=recovered is not None,
                       verifier_verdict=self.last_verdict)
         if not verdict.allowed:

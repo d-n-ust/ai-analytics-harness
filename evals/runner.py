@@ -135,6 +135,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "bucket": g["bucket"], "expected_refuse": g["expected_refuse"],
             "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
             "source_metric": ans.source_metric,
+            # Which governed result the answer names. Provenance is a lookup when this is
+            # present and a flagged guess when it is not, so its adoption rate is itself worth
+            # measuring — a declared field the model ignores is not a guarantee.
+            "source_result": ans.source_result,
             "declared_value": ans.declared_value,
             # True when the number came from the answer text rather than the typed
             # field — so "the model forgot to declare it" stays measurable after
