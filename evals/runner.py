@@ -18,6 +18,7 @@ from pathlib import Path
 
 from agent.grounding import build_grounding
 from agent.loop import Answer, run_agent
+from agent.rungs import capabilities
 from agent.providers import get_model
 from warehouse.warehouse import open_warehouse, set_star
 
@@ -179,7 +180,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         verifier_used = os.environ.get("VERIFIER_MODEL") or model_name
         verifier_model = get_model(verifier_used, mock=mock, reasoning=verifier_reasoning)
         for rung in rungs:
-            set_star(con, rung >= 2)     # per-rung shared catalog state; the parallel unit is within a rung
+            set_star(con, capabilities(rung).star)  # per-rung shared catalog state; the parallel unit is within a rung
             # Coherence is a property of the PAIR, not of the cell alone: a guardrail that needs
             # the semantic layer measures nothing below rung 3. Filter here, where the rung is
             # known, so an inert pair is skipped out loud instead of producing rows labelled

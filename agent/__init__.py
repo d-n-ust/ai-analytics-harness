@@ -29,11 +29,12 @@ def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrail
     from warehouse.warehouse import open_warehouse, set_star
 
     from .grounding import RUNG_NAMES, build_grounding
+    from .rungs import capabilities
     from .loop import run_agent
     from .providers import get_model
 
     con = con or open_warehouse()
-    set_star(con, rung >= 2)  # rung 1 is raw-only
+    set_star(con, capabilities(rung).star)  # rung 1 is raw-only
     grounding = build_grounding(con, rung, guardrails=guardrails)
     live = get_model(model, mock=mock)
     result = run_agent(question, grounding, live)

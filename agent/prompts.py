@@ -11,14 +11,11 @@ from pathlib import Path
 
 import yaml
 
+from .rungs import capabilities
+
 _ROOT = Path(__file__).resolve().parent.parent
 _VERIFIED = _ROOT / "context" / "verified_queries.yml"
 _KB = _ROOT / "context" / "knowledge_base.md"
-
-RUNG_NAMES = {
-    1: "messy data", 2: "star schema", 3: "semantic layer",
-    4: "+ verified examples", 5: "+ knowledge base", 6: "+ metric tree",
-}
 
 _BASE = (
     "You are a data analyst for a habit-tracking app. Today is 2026-07-16; "
@@ -147,13 +144,16 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
-    system += _RUNG_NOTES[1] if rung == 1 else _RUNG_NOTES[2]  # rungs 2-6 sit on the star
-    if rung >= 3:
+    # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
+    # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
+    caps = capabilities(rung)
+    system += _RUNG_NOTES[2] if caps.star else _RUNG_NOTES[1]
+    if caps.semantic:
         system += _RUNG_NOTES[3]
-    if rung >= 4:
+    if caps.examples:
         system += _verified_block()
-    if rung >= 5:
+    if caps.knowledge:
         system += _knowledge_block()
-    if rung >= 6:
+    if caps.tree:
         system += _RUNG_NOTES[6]
     return system

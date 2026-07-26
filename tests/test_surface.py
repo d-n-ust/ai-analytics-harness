@@ -35,7 +35,7 @@ GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"
 # every other guardrail acts on a semantic layer that isn't there — so the grid stops where
 # build_grounding now refuses rather than pinning a surface that cannot mean what it says.
 GRID = ([(1, rrung) for rrung in (0, 1)]
-        + [(rung, rrung) for rung in (3, 6) for rrung in (0, 2, 4, 6, 9)])
+        + [(rung, rrung) for rung in (3, 6, 7) for rrung in (0, 2, 4, 6, 9)])
 
 
 def _render(con) -> str:

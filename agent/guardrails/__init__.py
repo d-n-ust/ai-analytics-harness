@@ -240,8 +240,11 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     as 'the contribution of X' would be wrong. Returns why, or None if the cell is sound.
 
     Pass `rung` to also check the pairing with the grounding. A guardrail and the rung it acts on
-    are not independent axes: every guardrail above abstention operates on the semantic layer,
-    which does not exist below rung 3."""
+    are not independent axes: every guardrail above abstention operates on the semantic layer, so
+    a rung without one cannot run them. Which rungs those are is asked of the rung rather than
+    compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
+    advisory blocks), so a number no longer implies what the agent has."""
+    from ..rungs import capabilities
     if g.single_metric and not g.tool_restriction:
         return ("single_metric without tool_restriction: the check reads result_values, which "
                 "only governed queries record, so every raw-SQL answer auto-refuses")
@@ -254,7 +257,7 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.trajectory_verify and not g.single_metric:
         return ("trajectory_verify without single_metric: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
-    if rung is not None and rung < 3:
+    if rung is not None and not capabilities(rung).semantic:
         beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
         if beyond:
             return (f"rung {rung} has no semantic layer, so {', '.join(beyond)} cannot act: the "

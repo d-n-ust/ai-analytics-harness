@@ -18,6 +18,11 @@ from __future__ import annotations
 import argparse
 import os
 
+# The one eager agent import: rungs is a leaf (dataclasses only, no warehouse, no providers), and
+# the parser needs the rung table to build --rung's help and validation from the definitions
+# themselves rather than a second copy of them.
+from agent.rungs import RUNGS, parse_rung
+
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
           "gpt-5-mini", "gpt-5.6-luna", "gpt-4.1-mini", "deepseek-v4-flash", "deepseek-v4-pro"]
 
@@ -82,7 +87,7 @@ def cmd_trace(a):
 
 def cmd_run(a):
     from evals.runner import run_experiment
-    run_experiment(mock=a.mock, models=_split(a.models), rungs=[int(r) for r in _split(a.rungs)],
+    run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
                    rrungs=[int(r) for r in _split(a.rrungs)],
                    cells=_split(a.cells) if a.cells else None, reasoning=a.reasoning,
@@ -130,7 +135,10 @@ def main() -> None:
 
     sp = sub.add_parser("ask", help="ask one question at one grounding rung + guardrail level")
     sp.add_argument("question")
-    sp.add_argument("--rung", type=int, required=True, choices=[1, 2, 3, 4, 5, 6])
+    # parse_rung validates against the rung table, so the choices and the definitions cannot
+    # drift apart — and its error names every defined rung.
+    sp.add_argument("--rung", type=parse_rung, required=True,
+                    help=f"grounding rung: {' '.join(f'{n}={r.name}' for n, r in RUNGS.items())}")
     sp.add_argument("--guardrails", default=None,
                     help="reliability config: a preset (R0..R9) or an explicit cell "
                          "(e.g. R9-resolve, or coverage_check+resolve+single_metric). Default R1.")
@@ -142,7 +150,8 @@ def main() -> None:
     sp = sub.add_parser("run", aliases=["eval"], help="run the experiment grid")
     sp.add_argument("--mock", action="store_true", help="deterministic mock model (no API key)")
     sp.add_argument("--models", default="gpt-5.6-terra,gpt-5.4-mini")
-    sp.add_argument("--rungs", default="1,2,3,4,5,6", help="grounding rungs")
+    sp.add_argument("--rungs", default="1,2,3,4,5,6",
+                    help=f"grounding rungs, comma-separated; defined: {sorted(RUNGS)}")
     sp.add_argument("--rrungs", default="1", help="reliability ladder presets R0..R9")
     sp.add_argument("--cells", default=None,
                     help="explicit guardrail cells (overrides --rrungs), e.g. R9,R9-resolve. "

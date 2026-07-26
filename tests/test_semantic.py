@@ -173,6 +173,42 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     assert used == set(Position), f"unused position(s): {set(Position) - used}"
 
 
+def test_a_rung_is_what_it_declares_not_what_its_number_implies():
+    """The rung number used to mean two things — a position on the ladder, and the capability set
+    at it — which agreed only while every rung was a superset of the one below. Rung 7 breaks that
+    on purpose: it holds the metric tree WITHOUT the advisory blocks, so it carries less than rung
+    6 while sorting after it.
+
+    So nothing may infer a capability from `rung >= n`. This pins the table against the conditions
+    it replaced (rungs 1-6 must be untouched) and against the one rung that proves numbers no
+    longer order capabilities."""
+    from agent.rungs import RUNGS, capabilities, parse_rung
+
+    for n in (1, 2, 3, 4, 5, 6):
+        c = capabilities(n)
+        assert (c.star, c.semantic, c.examples, c.knowledge, c.tree) == \
+               (n >= 2, n >= 3, n >= 4, n >= 5, n >= 6), f"rung {n} no longer matches the ladder"
+
+    seven, six = capabilities(7), capabilities(6)
+    assert seven.semantic and seven.tree, "rung 7 is the governed pair"
+    assert not seven.advisory(), "rung 7 is governed-only; examples and the knowledge base are prose"
+    assert six.advisory(), "rung 6 is the one that carries both kinds"
+    # The ladder is not monotonic any more, and that is exactly the point: 7 sorts after 6 and
+    # holds strictly less. Any code asking `rung >= n` about a capability is wrong from here.
+    assert 7 > 6 and (six.knowledge and not seven.knowledge), \
+        "a higher rung number no longer implies a superset — ask the table, never compare numbers"
+
+    assert parse_rung("7") == 7 and parse_rung("3") == 3
+    for bad in ("9", "banana", "3.5"):
+        try:
+            parse_rung(bad)
+            raise AssertionError(f"{bad!r} is not a defined rung and must not parse")
+        except ValueError:
+            pass
+    # The names travel with the number, so a chart printing "rung 7" prints the correction too.
+    assert "governed only" in RUNGS[7].name
+
+
 def test_the_judge_settles_what_the_number_is_doing_before_judging_it():
     """The five checks compare the metric against the QUESTION's wording, which is the right test
     only when the number IS the answer. Shown a bare 3785 against "weekly value moments dropped —

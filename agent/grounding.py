@@ -17,13 +17,8 @@ from semantic.tree import MetricTree
 
 from .guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
+from .rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
 from .tools import Toolbox
-
-RUNG_NAMES = {
-    1: "messy data", 2: "star schema", 3: "semantic layer",
-    4: "+ verified examples", 5: "+ knowledge base", 6: "+ metric tree",
-}
-
 
 @dataclass
 class Grounding:
@@ -64,7 +59,8 @@ def build_grounding(con, rung: int,
     if bad:
         raise ValueError(f"incoherent grounding: rung {rung} with {g.label()} — {bad}")
     system = system_prompt(rung, g)
-    semantic = SemanticLayer(con) if rung >= 3 else None
-    tree = MetricTree(semantic) if rung >= 6 else None
+    caps = capabilities(rung)
+    semantic = SemanticLayer(con) if caps.semantic else None
+    tree = MetricTree(semantic) if caps.tree else None
     return Grounding(rung=rung, guardrails=g, system=system, semantic=semantic,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g))

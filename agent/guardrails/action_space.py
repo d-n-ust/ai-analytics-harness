@@ -16,6 +16,7 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
+from ..rungs import capabilities
 from . import Position, note
 
 _CHECK_TOOLS = ("check_metric_exists", "check_coverage",
@@ -48,10 +49,11 @@ def offer(tools: dict, rung: int, guardrails, semantic=None,
                  "run_sql — every data path is a governed call")
         else:
             offered.append(schema("run_sql"))
-        if rung >= 3:
+        caps = capabilities(rung)
+        if caps.semantic:
             offered += [schema("list_metrics"),
                         query_metric_schema(schema("query_metric"), guardrails, semantic, record)]
-        if rung >= 6:
+        if caps.tree:
             offered += [schema("get_metric_tree"), schema("explain_change")]
         if guardrails.check_tools and semantic is not None:
             offered += [schema(name) for name in _CHECK_TOOLS]
