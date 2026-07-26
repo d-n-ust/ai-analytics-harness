@@ -115,6 +115,30 @@ def test_a_received_turn_is_echoed_back_verbatim():
     assert _anthropic_blocks(convo2.entries[-1][1])[0] == {"type": "text", "text": "hi"}
 
 
+def test_a_model_never_asks_for_an_effort_it_rejects():
+    """`bench ask` sent reasoning_effort='none' to gpt-5-mini and took a 400 — it accepts only
+    minimal/low/medium/high. Every stored run of that model used minimal or higher, so the
+    harness's own default was never exercised against it.
+
+    A model that cannot go as low as asked runs at its floor. What it must NOT do is misreport:
+    reasoning effort is a treatment variable, so `.reasoning` has to be what was actually sent,
+    not what was requested."""
+    from agent.models import MODEL_SPECS
+
+    mini = MODEL_SPECS["gpt-5-mini"]
+    assert mini.effort_for("none") == "minimal", "the floor is applied"
+    assert mini.effort_for("low") == "low", "an explicit effort above the floor is untouched"
+
+    for name, spec in MODEL_SPECS.items():
+        if spec.provider == "anthropic":
+            continue
+        sent = spec.effort_for("none")
+        assert sent != "none" or spec.lowest_effort == "none", name
+        # deepseek's dialect reads 'none' as non-thinking mode, so its floor stays 'none'
+        if spec.provider == "deepseek":
+            assert sent == "none", f"{name}: deepseek reads 'none' as thinking-off"
+
+
 def test_tools_schema_mapping():
     out = OpenAIModel._to_openai_tools(TOOLS)
     assert out[0]["type"] == "function" and out[0]["function"]["name"] == "answer"
@@ -124,6 +148,7 @@ def test_tools_schema_mapping():
 
 
 TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
+         test_a_model_never_asks_for_an_effort_it_rejects,
          test_empty_assistant_content_is_string_not_null,
          test_an_exit_call_is_rendered_like_any_other_call,
          test_responses_threads_a_call_to_its_result_by_call_id,

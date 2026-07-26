@@ -128,9 +128,11 @@ class OpenAIModel:
         self.spec = spec
         self.client = OpenAI(base_url=spec.base_url, api_key=os.environ[spec.api_key_env],
                              max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)
-        # 'none' keeps reasoning off (comparable to the thinking-disabled Anthropic
-        # models) and is required for function tools on gpt-5.6 via chat-completions.
-        self.reasoning = os.environ.get("OPENAI_REASONING", "none")
+        # 'none' keeps reasoning off (comparable to the thinking-disabled Anthropic models) and is
+        # required for function tools on gpt-5.6 via chat-completions. A model that will not go
+        # that low runs at its own floor instead — `.reasoning` then reports what was actually
+        # sent, which is what the run records.
+        self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", "none"))
 
     @staticmethod
     def _render_chat(convo) -> list:
@@ -292,6 +294,6 @@ def get_model(name: str, mock: bool = False, reasoning: str | None = None):
     if spec.provider in ("openai", "deepseek"):
         model = OpenAIModel(spec)
         if reasoning is not None:
-            model.reasoning = reasoning
+            model.reasoning = spec.effort_for(reasoning)
         return model
     return AnthropicModel(spec)

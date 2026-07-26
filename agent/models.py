@@ -28,6 +28,21 @@ class ModelSpec:
     # gpt-5.6 rejects function tools + reasoning_effort on /v1/chat/completions; it needs the
     # Responses API (/v1/responses). True routes this model's calls through _create_responses.
     use_responses_api: bool = False
+    # The lowest reasoning effort this model will accept. The harness's canonical "off" is
+    # `none`, and most models take it; gpt-5-mini rejects it outright (400: supported values are
+    # minimal, low, medium, high), so it names its own floor here.
+    lowest_effort: str = "none"
+
+    def effort_for(self, requested: str) -> str:
+        """The effort to actually send for a requested one.
+
+        A model that cannot go as low as asked runs at its floor instead of failing — but the
+        caller is told which by reading `.reasoning` back off the model, because reasoning effort
+        is a treatment variable and a row claiming `none` for a run that used `minimal` is a lie.
+        """
+        off = ("none", "off", "disabled")
+        return self.lowest_effort if (requested in off and self.lowest_effort not in off) \
+            else requested
 
 
 def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
@@ -47,7 +62,9 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     _spec("gpt-5.6-terra", 2.50, 15.0, price_confirmed=True, use_responses_api=True),
     _spec("gpt-5.4-mini", 0.25, 2.0),
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
-    _spec("gpt-5-mini", 0.25, 2.0, price_confirmed=True),
+    # Rejects reasoning_effort='none'; `minimal` is its floor. Every stored run of this model
+    # used minimal or higher, so the default was never exercised until it 400'd from `bench ask`.
+    _spec("gpt-5-mini", 0.25, 2.0, price_confirmed=True, lowest_effort="minimal"),
     _spec("gpt-5.6-luna", 1.0, 8.0),  # price a placeholder; tier unknown
     # Cheap legacy model for pilot runs.
     _spec("gpt-4.1-mini", 0.4, 1.6, supports_reasoning_effort=False),
