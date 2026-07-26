@@ -10,7 +10,7 @@ show what moved.
 | # | Experiment | State |
 |---|---|---|
 | 1 | Grounding ladder — what structure buys | **done** (2026-07-26) |
-| 2 | Reliability ladder — what guardrails buy | pending |
+| 2 | Reliability ladder — what guardrails buy | **done** (2026-07-26) |
 | 3 | Reasoning-effort sweep | pending |
 | 4 | Shapley attribution | pending |
 
@@ -194,23 +194,96 @@ stays there. At R1 nothing forbids it; the agent simply stops needing it.
 
 ## Experiment 2 — the reliability ladder
 
-*Pending.* Holds grounding fixed and climbs the guardrail ladder, so the comparison to Experiment 1
-is like-for-like on the same 57 questions.
+**Question.** Experiment 1 showed structure cannot make the agent honest. What can?
 
-Planned cells: rungs 3 and 7 at R9. R9 cannot run below rung 3 — every guardrail above abstention
-acts on a semantic layer, and `incoherent()` refuses the pairing rather than producing rows whose
-label overstates what ran.
+**Design.** The same two grounding rungs that mattered in Experiment 1 — 3 (semantic layer) and 7
+(+ metric tree) — at **R9**, the full guardrail ladder, against R1 as the baseline. Same 57
+questions, same model, same reps. The only thing that changes is the guardrails.
 
-The one number to hold in view, from a rung 7 · R9 run on the current question set (measured before
-the vocabulary fix, so its yield will move):
+R9 cannot run below rung 3: every guardrail above abstention acts on a semantic layer, and
+`incoherent()` refuses the pairing rather than emitting rows whose label overstates what ran.
+
+`run` — `./bench run --models gpt-5-mini --rungs 3,7 --rrungs 9 --repeats 3 --reasoning minimal`
+· 342 rows · 2026-07-26 · zero infrastructure errors
+
+### Headline — the full 2×2
+
+| cell | coverage | precision | groundedness | fabrications | yield |
+|---|---|---|---|---|---|
+| rung 3 · R1 | 97.4% | 77.6% | 65.2% | 31/89 | 70/171 |
+| rung 3 · R9 | 75.6% | 89.8% | **95.5%** | **4/89** | 119/171 |
+| rung 7 · R1 | 98.7% | 85.7% | 69.0% | 27/87 | 75/171 |
+| rung 7 · R9 | 87.2% | **97.1%** | **96.7%** | **3/87** | **135/171** |
+
+### The finding — the two axes are orthogonal
+
+| | answerable (75) | reliability (96) |
+|---|---|---|
+| rung 3 · R1 | 56/75 | 14/96 |
+| **grounding** → rung 7 · R1 | **63/75** (+7) | 12/96 (−2) |
+| **guardrails** → rung 7 · R9 | **63/75** (+0) | **72/96** (+60) |
+
+> Grounding moves the answerable questions and not the others. Guardrails move the others and
+> **cost nothing at all** on the answerable ones — 63/75 either way.
+
+Each axis fixes what the other cannot touch. That is the whole argument in six numbers, and it is
+why the two have to be built and measured separately: neither is a substitute for the other, and a
+team that invests only in data modelling will get an agent that is accurate and still dishonest.
+
+**Fabrication, end to end.** Of 87 unanswerable questions at the best grounding:
 
 ```
-rung 7 · R1   groundedness 69.0%   ← 27 fabrications
-rung 7 · R9   groundedness 97.8%   ← 1 fabrication
+rung 7 · R1    27 fabrications      grounding alone
+rung 7 · R9     3 fabrications      + guardrails
 ```
 
-Same grounding, same questions, same model. Grounding took fabrication from 36 to 27; guardrails
-took it from 27 to 1.
+Grounding took fabrication from 36 (rung 1) to 27. Guardrails took it from 27 to 3.
+
+### Per tier, at rung 7
+
+| tier | R1 | R9 | |
+|---|---|---|---|
+| valid_but_wrong | 3/21 | **21/21** | the hardest failure — a real metric answering a slightly different question |
+| unanswerable | 3/18 | **17/18** | |
+| adversarial | 6/39 | **26/39** | |
+| rt_phantom | 0/12 | **7/12** | |
+| false_premise | 0/6 | 1/6 | still the worst tier — see below |
+| metric | 15/15 | 15/15 | no cost |
+| lookup | 8/9 | 9/9 | no cost |
+| knowledge | 11/15 | 11/15 | no cost |
+| filtered | 9/15 | 11/15 | no cost |
+| diagnostic | 20/21 | 17/21 | **the only tier the guardrails cost anything** |
+
+`valid_but_wrong` going 3/21 → 21/21 is the result to lead with. Those questions are the ones where
+a plausible, correctly-computed governed number answers a *slightly different* question than the
+one asked — the failure that survives every amount of data modelling and that a human reviewer
+will not catch either.
+
+The 3-row cost on `diagnostic` is what remains of the coverage price, down from **13 of 15** before
+this month's judge work.
+
+### Cost and latency
+
+| cell | tokens/question | wall/question | tool calls/question | cost |
+|---|---|---|---|---|
+| rung 3 · R9 | 17,286 | 10.6s | 3.7 | $0.43 |
+| rung 7 · R9 | 15,699 | 10.2s | 3.2 | $0.38 |
+
+Guardrails add roughly **50% to wall time** (6.6s → 10.2s at rung 7) and about 12% to tokens. The
+latency is two extra model calls per answered question: the role classifier and the judge. That is
+the real price — not tokens, and not accuracy.
+
+### What is still broken
+
+**`false_premise` — 1/6, the worst tier at every cell measured.** The agent invents a cause for a
+collapse that never happened. Nothing in the guardrail ladder addresses it, because every position
+in the architecture (`action_space`, `before`, `disclosure`, `after`) acts on what the agent
+*does*, and this failure is in what it was *asked*. A question carrying a false presupposition is
+never inspected by anything. This is scoped to the planning experiment, not to this ladder.
+
+**Judge over-refusals — 6 at rung 7, 7 at rung 3.** Every remaining refusal of an answerable
+question comes from the one probabilistic guardrail; the eight deterministic ones over-refuse
+nothing.
 
 ---
 
