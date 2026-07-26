@@ -358,7 +358,8 @@ class Toolbox:
         # with no scope to check both are no-ops.
         verdict = before.check(self.semantic, self.g, args)
         if not verdict.allowed:
-            return ToolResult(verdict.detail, is_error=True, reason=verdict.reason)
+            return ToolResult(verdict.detail, is_error=True, reason=verdict.reason,
+                              blocked_by=verdict.guardrail)
         try:
             return disclosure.annotate(tool.run(self, args), args, self.semantic, self.g)
         except (QueryError, SemanticError, TreeError) as exc:

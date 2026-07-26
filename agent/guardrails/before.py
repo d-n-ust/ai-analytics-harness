@@ -41,8 +41,7 @@ def check(semantic, guardrails, args: dict) -> Verdict:
         return Verdict.ok()
     filters = args.get("filters") or {}
     if not isinstance(filters, dict):
-        return Verdict(False, "other",
-                       "BLOCKED — `filters` must be an object mapping a dimension to a value, "
+        return Verdict(False, "other", guardrail="resolve", detail="BLOCKED — `filters` must be an object mapping a dimension to a value, "
                        f"e.g. {{\"platform\": \"ios\"}}; got {type(filters).__name__}.")
 
     if guardrails.resolve:
@@ -52,14 +51,14 @@ def check(semantic, guardrails, args: dict) -> Verdict:
             # dimension is fine but the VALUE is not a governed member.
             if allowed is not None and col not in allowed:
                 reason = "dimension_not_supported"
-                return Verdict(False, reason,
+                return Verdict(False, reason, guardrail="resolve", detail=
                                f"BLOCKED by governance — {args.get('metric')!r} has no governed "
                                f"dimension {col!r} (it can be sliced by: {sorted(allowed)}). Do "
                                f"NOT substitute a different dimension; refuse ({reason}).")
             for v in (val if isinstance(val, (list, tuple)) else [val]):
                 if semantic.resolve_member(col, v) is None:
                     reason = "ungoverned_dimension_value"
-                    return Verdict(False, reason,
+                    return Verdict(False, reason, guardrail="resolve", detail=
                                    f"BLOCKED by governance — {v!r} is not a governed member of "
                                    f"{col!r} (it may be finer-grained than, or absent from, the "
                                    "governed vocabulary). Do NOT substitute a different member "
@@ -75,7 +74,7 @@ def check(semantic, guardrails, args: dict) -> Verdict:
         dim, member, detail = violations[0]
         named = f"{dim} {member!r} — " if dim else ""
         reason = "out_of_coverage"
-        return Verdict(False, reason,
+        return Verdict(False, reason, guardrail="coverage_check", detail=
                        f"BLOCKED by governance — {named}{detail} This request is outside data "
                        f"coverage and cannot be served; refuse ({reason}) or query within "
                        "coverage. Asking for the same scope as a breakdown does not make it "

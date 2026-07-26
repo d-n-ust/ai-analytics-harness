@@ -46,6 +46,7 @@ class ToolResult:
     # "how often did the coverage check fire, and for what" is a count rather than a grep
     # through English.
     reason: str = ""
+    blocked_by: str = ""   # the guardrail that refused, when one did
 
     def for_call(self, call: ToolCall) -> ToolResult:
         return replace(self, call_id=call.id)

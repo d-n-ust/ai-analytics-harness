@@ -16,6 +16,7 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 
 from .conversation import Conversation, ToolCall, Turn, Usage
@@ -53,6 +54,9 @@ class _Run:
     # question, rather than on a Toolbox that outlives it.
     last_verdict: dict | None = None
     answer_text: str = ""     # the answer under check, for the AFTER guardrails
+    # One entry per model call: how long it took, what it asked for, what it cost. The tool
+    # steps alone hide where a run's time goes, which for an agent is almost always here.
+    turns: list = field(default_factory=list)
 
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
@@ -61,11 +65,14 @@ class _Run:
         results = []
         for call in calls:
             self.tool_calls += 1
+            t0 = time.perf_counter()
             result = self.grounding.toolbox.dispatch(call.name, call.args)
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
                                "result": result.content[:_TRACE_LIMIT],
                                "result_values": result.values,
-                               "blocked_reason": result.reason})
+                               "blocked_reason": result.reason,
+                               "blocked_by": result.blocked_by,
+                               "ms": round((time.perf_counter() - t0) * 1000, 1)})
             results.append(result.for_call(call))
         return results
 
@@ -101,7 +108,7 @@ class _Run:
         if not verdict.allowed:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
                                 reason=verdict.reason, missing=verdict.missing, abstained=True,
-                                iterations=iterations, **claims)
+                                refused_by=verdict.guardrail, iterations=iterations, **claims)
         return self._record(answer=text, explanation=_line(args.get("explanation")),
                             outcome="answer", iterations=iterations, **claims)
 
@@ -118,7 +125,7 @@ class _Run:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
-                      cached_tokens=self.usage.cached, steps=self.steps, **kw)
+                      cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns, **kw)
 
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
@@ -132,8 +139,15 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         # protocol instead of dying as an untyped error row — which is a lost measurement, not
         # a model behaviour.
         closing = nudges >= 1 or it == max_iters - 1
-        turn = model.respond(convo, grounding.toolbox.specs(terminal_only=closing),
-                             require_tool=closing)
+        offered = grounding.toolbox.specs(terminal_only=closing)
+        t0 = time.perf_counter()
+        turn = model.respond(convo, offered, require_tool=closing)
+        run.turns.append({"ms": round((time.perf_counter() - t0) * 1000, 1),
+                          "tools_offered": len(offered), "closing": closing,
+                          "calls": [c.name for c in turn.tool_calls],
+                          "exit": turn.exit_call.name if turn.exit_call else None,
+                          "in": turn.usage.input, "out": turn.usage.output,
+                          "cached": turn.usage.cached})
         run.usage += turn.usage
         convo.add(turn)
 

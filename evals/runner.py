@@ -121,6 +121,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "question": q["question"], "gold": golds[q["id"]],
             "answer": ans.answer, "explanation": ans.explanation,
             "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
+            # Which output guardrail downgraded the answer, when one did — the reason code
+            # cannot say on its own, because the judge shares single_metric's code.
+            "refused_by": ans.refused_by,
             "correct": g["correct"], "executed": g["executed"],
             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
             "fabricated": g["fabricated"], "off_governance": g.get("off_governance", False),
@@ -138,6 +141,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
             "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
+            # One entry per model call: where a run's latency actually goes, which the tool
+            # steps alone cannot show.
+            "turns": ans.turns,
             "schema_version": report.ROW_SCHEMA_VERSION,
             # What the model was actually shown, hashed — so a surface edit between runs is
             # visible in the rows rather than inferred from the git log.

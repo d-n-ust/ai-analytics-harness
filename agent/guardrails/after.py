@@ -114,17 +114,17 @@ def output_validation(metric_def: dict, value) -> Verdict:
     served as an answer. Refuse-only. This is where the metric-selection check can't see —
     it never looks at *what came back*."""
     if value is None:
-        return Verdict(False, "result_empty",
+        return Verdict(False, "result_empty", guardrail="output_validation", detail=
                        "the metric produced no number for this request, so there is nothing to "
                        "report; refuse.",
                        missing="the governed query returned no value (empty/null result)")
     unit = (metric_def or {}).get("unit")
     if value < 0 and unit in ("count", "currency", "share"):
-        return Verdict(False, "implausible_value",
+        return Verdict(False, "implausible_value", guardrail="output_validation", detail=
                        f"the governed result {value} is impossible for a {unit} metric; refuse.",
                        missing=f"a {unit} value cannot be negative (got {value})")
     if unit == "share" and value > 100:
-        return Verdict(False, "implausible_value",
+        return Verdict(False, "implausible_value", guardrail="output_validation", detail=
                        f"the governed result {value} is out of range for a share; refuse.",
                        missing=f"a share above 100 (got {value})")
     return Verdict.ok()
@@ -150,7 +150,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         # cause, not a vague 'out_of_scope' — a coverage gap is one typed signal, so downstream
         # (and a future planning agent) can label it and name the metric worth defining.
         return Verdict(
-            False, "no_governed_definition",
+            False, "no_governed_definition", guardrail="single_metric", detail=
             "this number was composed by hand (a rate times a count, or two metrics added), not "
             "read from one governed metric. No governed definition covers what was asked — refuse "
             "and name the metric that would need to exist, rather than serve a hand-built figure.",
@@ -174,7 +174,8 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value, declared_value)
         if not ok_v:
             return Verdict(False, _V_REASON.get(mismatch, "other"), reason_v,
-                           missing=f"verifier[{mismatch}]: {reason_v}"[:180])
+                           missing=f"verifier[{mismatch}]: {reason_v}"[:180],
+                           guardrail="trajectory_verify")
 
     return Verdict.ok()
 

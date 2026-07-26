@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace as NS
 
+from agent import as_row
 from agent.conversation import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
@@ -153,6 +154,36 @@ def test_a_turn_separates_the_exit_call_from_the_rest():
     assert two.exit_call.name == "refuse" 
 
 
+def test_the_trace_renders_every_run_shape_without_inventing_data():
+    """The trace is a pure function over a row, so it has to survive rows it did not produce —
+    including the 16,796 written before it existed, which carry no turns and no timings. The one
+    thing it must never do is print a measured-looking zero for something never recorded."""
+    from cli.trace import render
+
+    ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", ANSWER)])
+    live = render(as_row(ans, build_grounding(open_warehouse(create_star_views=True), 6,
+                                              guardrails=LADDER[8])), colour=False)
+    assert "turn 1" in live and "query_metric" in live and "ANSWER" in live
+    assert "iterations" in live and "no timings recorded" not in live
+
+    # a pre-timing row: steps but no turns, no ms, no iterations
+    old = {"question": "q", "rung": 3, "model": "gpt-5-mini", "config": "R9", "outcome": "refuse",
+           "reason": "out_of_coverage", "tool_calls": 1, "input_tokens": 10, "output_tokens": 2,
+           "iterations": None, "turns": None,
+           "steps": [{"tool": "query_metric", "args": {}, "error": True, "result": "BLOCKED …"}]}
+    archived = render(old, colour=False)
+    assert "no timings recorded" in archived, "must say so rather than print 0ms"
+    assert "0 iterations" not in archived and "None iterations" not in archived
+    assert "query_metric" in archived and "REFUSE" in archived
+
+    # an empty run, and one with no guardrails at all, must still render
+    assert render({"outcome": "error", "error": "max_iterations"}, colour=False)
+    assert "the bare agent" in render({"config": "R0", "outcome": "answer"}, colour=False)
+
+    # colour is opt-in: a piped trace is plain text
+    assert "\033[" not in archived
+
+
 TESTS = [test_a_run_ends_through_one_typed_exit,
          test_output_checks_convert_an_answer_into_a_refusal,
          test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset,
@@ -161,7 +192,8 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_tool_errors_come_back_as_results_so_the_model_can_correct_itself,
          test_a_turn_carrying_both_a_call_and_an_exit_records_the_call,
          test_usage_accumulates_across_turns,
-         test_a_turn_separates_the_exit_call_from_the_rest]
+         test_a_turn_separates_the_exit_call_from_the_rest,
+         test_the_trace_renders_every_run_shape_without_inventing_data]
 
 
 if __name__ == "__main__":

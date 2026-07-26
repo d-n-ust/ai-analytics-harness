@@ -56,7 +56,28 @@ def cmd_ask(a):
     from agent import ask_one
     from agent.guardrails import parse_cell
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
-    ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails, verbose=True)
+    ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails,
+            verbose=not a.trace, trace=a.trace)
+
+
+def cmd_trace(a):
+    """Re-render a stored run. The trace is a view over what was already recorded, so any row
+    ever written can be read back — including runs that predate this command."""
+    import json
+
+    from cli.trace import render
+    run = _run_dir(a.run)
+    rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
+    picked = [r for r in rows if r.get("qid") == a.qid
+              and (a.config is None or r.get("config") == a.config)
+              and (a.model is None or r.get("model") == a.model)]
+    if not picked:
+        ids = sorted({r.get("qid") for r in rows})
+        raise SystemExit(f"no row for qid={a.qid!r} in {run.name}. Available: {', '.join(ids[:12])}…")
+    for row in picked[: a.limit]:
+        print(render(row))
+    if len(picked) > a.limit:
+        print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
 
 
 def cmd_run(a):
@@ -114,6 +135,8 @@ def main() -> None:
                     help="reliability config: a preset (R0..R9) or an explicit cell "
                          "(e.g. R9-resolve, or coverage_check+resolve+single_metric). Default R1.")
     sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
+    sp.add_argument("--trace", action="store_true",
+                    help="print the full run: every model call, tool call and guardrail that acted")
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("run", aliases=["eval"], help="run the experiment grid")
@@ -140,6 +163,14 @@ def main() -> None:
     sp = sub.add_parser("report", help="re-render summary.md/json from a run's stored rows")
     sp.add_argument("--run", default=None, help="run dir (default: results/latest)")
     sp.set_defaults(func=cmd_report)
+
+    sp = sub.add_parser("trace", help="re-render a stored run as a full trace")
+    sp.add_argument("qid", help="question id, e.g. u_apac_march")
+    sp.add_argument("--run", default="results/latest")
+    sp.add_argument("--config", default=None, help="one guardrail cell, e.g. R9")
+    sp.add_argument("--model", default=None)
+    sp.add_argument("--limit", type=int, default=3)
+    sp.set_defaults(func=cmd_trace)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 

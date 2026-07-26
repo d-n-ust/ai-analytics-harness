@@ -46,6 +46,11 @@ class Verdict:
     reason: str = ""
     detail: str = ""
     missing: str = ""
+    # WHICH guardrail decided this. The reason code alone cannot always say: the judge maps
+    # several of its mismatch kinds onto `no_governed_definition`, the same code single_metric
+    # uses, so an answer downgraded at R9 is indistinguishable from one downgraded at R7 unless
+    # the guardrail names itself.
+    guardrail: str = ""
 
     @classmethod
     def ok(cls) -> Verdict:

@@ -39,6 +39,10 @@ class Answer:
     value_recovered: bool = False   # the number came from the answer text, not the typed field
     verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
     abstained: bool = False        # convenience mirror of outcome == "refuse"
+    # Which output guardrail turned this answer into a refusal, when one did. The reason code
+    # cannot say on its own: the judge maps several mismatch kinds onto no_governed_definition,
+    # which is also single_metric's code.
+    refused_by: str = ""
     tool_calls: int = 0
     iterations: int = 0
     input_tokens: int = 0
@@ -46,3 +50,4 @@ class Answer:
     cached_tokens: int = 0          # prompt-cache HITS (a subset of input_tokens, billed ~10%)
     error: str | None = None
     steps: list = field(default_factory=list)
+    turns: list = field(default_factory=list)   # one per model call: latency, cost, what it asked
