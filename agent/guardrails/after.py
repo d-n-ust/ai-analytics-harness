@@ -327,7 +327,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
 
     if verify_traj is not None:            # R9: does this metric + SQL actually answer the question?
         ok_v, mismatch, reason_v = verify_traj(question, metric, metric_def, args, value,
-                                               declared_value, answer_text)
+                                               declared_value, answer_text, steps)
         note(record, "trajectory_verify", Position.AFTER, "allowed" if ok_v else "refused",
              reason_v if not ok_v else "the judge found no mismatch")
         if not ok_v:
@@ -410,11 +410,68 @@ def governed_notes(args: dict, semantic) -> list[str]:
     return notes
 
 
+def causal_record(run, steps: list) -> str:
+    """What the TREE vouches for, when the answer used it — the judge's evidence for a claim
+    about CAUSE rather than about a number.
+
+    Without it, "the drop was driven by frequency" and "the drop was driven by EMEA" look alike:
+    the judge sees a metric, its SQL and the analyst's filters, and nothing about which drivers
+    are encoded. One of those claims is exact arithmetic the tree computed; the other names a
+    geographic slice that is not a node at all. That is the third governed thing the tree carried
+    and no guardrail could see — after the North Star's value and its eighteen figures.
+
+    The two edge kinds are different in KIND, not degree, and the record keeps them apart:
+    identity is exact and may be asserted, influence is correlational and may only be suggested
+    with the evidence it carries. The tree states that distinction itself; this hands it over.
+
+    Recomputed from the tree rather than read back from the step, for the reason the SQL is
+    recompiled a few lines below: the stored `result` is truncated for the trace, and evidence a
+    guardrail rules on must not be a display string.
+    """
+    tree = getattr(run.grounding.toolbox, "tree", None)
+    calls = [s for s in steps or [] if s.get("tool") == "explain_change" and not s.get("error")]
+    if tree is None or not calls:
+        return ""
+    a = calls[-1].get("args") or {}
+    try:
+        out = tree.explain_change(node=a.get("node"), period_a=a.get("period_a", "prev_week"),
+                                  period_b=a.get("period_b", "last_week"), filters=a.get("filters"))
+    except Exception:                      # a node that no longer exists is not the judge's problem
+        return ""
+
+    primary = (out.get("primary_driver") or {}).get("child")
+    lines = [f"the analyst decomposed {out['node']} ({out['period_a']} -> {out['period_b']}: "
+             f"{out['value_a']:g} -> {out['value_b']:g}) through the governed metric tree."]
+    lines.append("  IDENTITY children — exact arithmetic, the parent IS their product, shares "
+                 "sum to 1. Naming one of these as the driver is GOVERNED:")
+    for c in out.get("identity_decomposition") or []:
+        share = c.get("contribution_share")
+        line = f"    {c['child']} ({c['label']}): {c['value_a']:g} -> {c['value_b']:g}"
+        if share is not None:
+            line += f", share {share:+.1%}"
+        if c["child"] == primary:
+            line += "   <- largest contributor"
+        lines.append(line)
+    influences = out.get("influence_candidates") or []
+    if influences:
+        lines.append("  INFLUENCE children — correlational only, NOT proof of cause. May be "
+                     "offered as a likely driver WITH this evidence, never asserted as the cause:")
+        for c in influences:
+            lines.append(f"    {c['child']} ({c['label']}): {c['value_a']:g} -> {c['value_b']:g}, "
+                         f"confidence: {c['confidence']}")
+            lines.append(f"      evidence: {c['evidence']}")
+    else:
+        lines.append("  INFLUENCE children: none encoded for this driver.")
+    lines.append("  No other driver is encoded. A breakdown showing WHERE a change landed (a "
+                 "region, a platform, a channel) is not a driver OF it.")
+    return "\n".join(lines)
+
+
 def _trajectory_verifier(run, model):
     """A callable the judge is driven through: it recompiles the SQL the analyst ran and hands
     over the analyst's ADDED filters separately from the metric's definitional clauses — the
     separation an isolated test showed is load-bearing."""
-    def go(question, metric, metric_def, args, gov_value, claim, claim_text):
+    def go(question, metric, metric_def, args, gov_value, claim, claim_text, steps=None):
         a = args or {}
         semantic = run.grounding.semantic
         sql = semantic.compile(metric, group_by=a.get("group_by"), filters=a.get("filters"),
@@ -426,7 +483,8 @@ def _trajectory_verifier(run, model):
         j = judge.verify_trajectory(
             model, question, metric, metric_def, sql, gov_value, claim,
             applied_filters=a.get("filters"), time_window=window,
-            governed_notes=governed_notes(a, semantic), claim_text=claim_text)
+            governed_notes=governed_notes(a, semantic), claim_text=claim_text,
+            causal_record=causal_record(run, steps))
         run.last_verdict = {"answers_question": j.answers_question, "mismatch": j.mismatch,
                             "reason": j.reason, "value_role": j.value_role,
                             "metric": metric, "sql": sql, "applied_filters": a.get("filters"),

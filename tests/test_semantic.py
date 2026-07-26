@@ -246,6 +246,49 @@ def test_the_tree_writes_its_numbers_down():
     assert values, "no values means no handle means the tree stays invisible to provenance"
 
 
+def test_the_judge_is_shown_what_the_tree_vouches_for():
+    """A claim about CAUSE needs the tree, and the judge was never shown it.
+
+    Given a metric, its SQL and the analyst's filters, "the drop was driven by frequency" and
+    "driven by EMEA" look alike — one is arithmetic the tree computed, the other names a
+    geographic slice that is not a node at all. This is the third governed thing the tree carried
+    that no guardrail could see, after the North Star's value and its eighteen figures.
+
+    The two edge kinds differ in KIND: identity is exact and may be asserted, influence is
+    correlational and may only be suggested with the evidence it carries — including evidence
+    AGAINST it, which is what this tree's one influence edge records. NO LLM: this pins that both
+    kinds reach the judge, labelled, and that the fingerprint moves when the rules do."""
+    from agent.grounding import build_grounding
+    from agent.guardrails import judge
+    from agent.guardrails.after import causal_record
+
+    con = open_warehouse(create_star_views=True)
+    grounding = build_grounding(con, 7, guardrails=LADDER[9])
+    run = type("R", (), {"grounding": grounding})()
+    decomposed = [{"tool": "explain_change", "error": False,
+                   "args": {"node": "weekly_value_moments",
+                            "period_a": "prev_week", "period_b": "last_week"}}]
+
+    record = causal_record(run, decomposed)
+    assert "IDENTITY" in record and "INFLUENCE" in record, "both edge kinds must be labelled"
+    assert "days_per_user" in record and "largest contributor" in record, \
+        "the identity child the tree computed as the driver must be named"
+    assert "confidence: low" in record and "correlation is ~0" in record, \
+        "an influence edge must carry its evidence — including evidence against it"
+    assert "not a driver OF it" in record, "a breakdown is not a driver, and the judge must know"
+
+    # No decomposition, no causal claim to grade — the judge must not invent a requirement.
+    assert causal_record(run, [{"tool": "query_metric", "args": {"metric": "mrr"},
+                                "error": False}]) == ""
+    assert causal_record(run, []) == ""
+
+    # The rules are part of the judge's behaviour-defining surface, so a stored validation goes
+    # stale when they change — the property the whole fingerprint exists for.
+    for role in ("the_answer", "evidence"):
+        assert judge._CAUSAL in judge.verify_system(role), \
+            f"causal grading must apply to the {role} branch too: a lookup can name a driver"
+
+
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set
     at it — which agreed only while every rung was a superset of the one below. Rung 7 breaks that
@@ -682,7 +725,7 @@ def test_verifier_is_refuse_only():
               run_output_validation=False, run_governed_numbers=True)
     seen: dict = {}
 
-    def passing(question, metric, metric_def, args, value, declared_value, claim_text):
+    def passing(question, metric, metric_def, args, value, declared_value, claim_text, steps=None):
         seen.update(metric=metric, args=args, declared=declared_value, claim=claim_text)
         return True, "none", ""
 

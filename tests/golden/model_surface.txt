@@ -4280,7 +4280,7 @@ system: sha256=0c6e6e39093e chars=4262
 ]
 
 === verifier ===
-prompt_fingerprint: 84a54960eee3
+prompt_fingerprint: 149da8f96078
 --- role classifier ---
 Decide what one number is DOING in an analyst's answer. Report exactly one role.
 
@@ -4331,6 +4331,13 @@ GOVERNED MODIFICATIONS (shown as 'governed modifications applied') are done by t
 - A governed coverage window: if the question names a period that extends before it, the in-coverage portion IS the correct answer. The out-of-coverage months are pre-launch/unavailable data; excluding them is REQUIRED, so do NOT flag the answer for 'not covering' those months.
 
 Cite the specific definition text or the analyst's added filter that fails. Do not invent problems, and never object to the metric's internal computation or a governed modification. If all five checks pass, the answer stands.
+
+CLAIMS ABOUT CAUSE. When the analyst names a driver, grade it against the causal evidence shown above — that is what the governed tree encodes, and nothing else is encoded:
+- an IDENTITY child is exact arithmetic; the parent IS the product of its children and the shares sum to 1. Naming one as the driver is GOVERNED and needs no further evidence. Accept it, and do not ask the analyst to prove what the tree computed.
+- an INFLUENCE child is correlational. It may be offered as a LIKELY driver together with its confidence and evidence. Asserted as a proven cause — 'X caused Y', with no hedge — that is a mismatch (definition), and say which edge was overstated.
+- a driver that appears in NEITHER list is ungoverned. A region, platform or channel is a breakdown showing WHERE a change landed, not a driver OF it: 'the fall was driven by EMEA' names a slice, not a lever, and the tree encodes no such edge. That is a mismatch (thing).
+- if no causal evidence is shown above, the analyst did not decompose through the tree. Judge the number as usual and do not invent a causal requirement.
+
 --- checks · evidence ---
 You verify an analytics answer. You are NOT asked to re-answer the question — you are shown exactly what the analyst computed, and your job is to find a CONCRETE reason the computed number does NOT support the answer the analyst gave. Report answers_question=true ONLY if you cannot find one. This number is EVIDENCE: the analyst's SENTENCE is the answer, and the number is one fact cited to back it up.
 
@@ -4349,6 +4356,13 @@ MISDESCRIBED (thing) and SILENTLY NARROWED (scope) are the ONLY two faults a cit
 - whether the analyst's CONCLUSION is right. You check how this number is used, not the quality of the analysis.
 
 When you do reject, cite the definition text or the added filter that fails.
+
+CLAIMS ABOUT CAUSE. When the analyst names a driver, grade it against the causal evidence shown above — that is what the governed tree encodes, and nothing else is encoded:
+- an IDENTITY child is exact arithmetic; the parent IS the product of its children and the shares sum to 1. Naming one as the driver is GOVERNED and needs no further evidence. Accept it, and do not ask the analyst to prove what the tree computed.
+- an INFLUENCE child is correlational. It may be offered as a LIKELY driver together with its confidence and evidence. Asserted as a proven cause — 'X caused Y', with no hedge — that is a mismatch (definition), and say which edge was overstated.
+- a driver that appears in NEITHER list is ungoverned. A region, platform or channel is a breakdown showing WHERE a change landed, not a driver OF it: 'the fall was driven by EMEA' names a slice, not a lever, and the tree encodes no such edge. That is a mismatch (thing).
+- if no causal evidence is shown above, the analyst did not decompose through the tree. Judge the number as usual and do not invent a causal requirement.
+
 {
   "description": "Report whether the computed number holds up in the answer the analyst gave.",
   "input_schema": {
@@ -4397,3 +4411,5 @@ metric used: {metric}
 query result: {result_value}
 the number the analyst declared: {claim_value}
 what the analyst actually served (THIS is the answer; the number above is one figure inside it): {claim_text}
+CAUSAL EVIDENCE THE GOVERNED TREE CARRIES:
+{causal_record}

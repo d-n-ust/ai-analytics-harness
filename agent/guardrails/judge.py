@@ -96,6 +96,34 @@ _ROLE_REPORT = {
 _ROLE_USER = ("QUESTION:\n  {question}\n\nTHE ANALYST'S ANSWER:\n  {claim_text}\n\n"
               "THE NUMBER IN QUESTION: {claim_value}")
 
+# How to grade a claim about CAUSE. Shared by both roles, because a lookup answer can name a
+# driver too, and read against the causal record the tree supplies in the evidence block.
+#
+# The two edge kinds differ in KIND, not degree, and the tree states which is which. An identity
+# edge is arithmetic: the parent IS the product of its children, the shares sum to 1, and naming
+# the largest as the driver is a computed fact. An influence edge is a correlation the layer
+# chose to record along with the evidence for and against it — the one in this tree carries
+# "co-moved in one anomaly week only; across normal weeks the correlation is ~0".
+#
+# Without this the judge saw a metric, its SQL and the analyst's filters, and nothing about which
+# drivers exist. "The drop was driven by frequency" (exact) and "driven by EMEA" (a slice, not a
+# node) were indistinguishable to it.
+_CAUSAL = (
+    "CLAIMS ABOUT CAUSE. When the analyst names a driver, grade it against the causal evidence "
+    "shown above — that is what the governed tree encodes, and nothing else is encoded:\n"
+    "- an IDENTITY child is exact arithmetic; the parent IS the product of its children and the "
+    "shares sum to 1. Naming one as the driver is GOVERNED and needs no further evidence. Accept "
+    "it, and do not ask the analyst to prove what the tree computed.\n"
+    "- an INFLUENCE child is correlational. It may be offered as a LIKELY driver together with "
+    "its confidence and evidence. Asserted as a proven cause — 'X caused Y', with no hedge — that "
+    "is a mismatch (definition), and say which edge was overstated.\n"
+    "- a driver that appears in NEITHER list is ungoverned. A region, platform or channel is a "
+    "breakdown showing WHERE a change landed, not a driver OF it: 'the fall was driven by EMEA' "
+    "names a slice, not a lever, and the tree encodes no such edge. That is a mismatch (thing).\n"
+    "- if no causal evidence is shown above, the analyst did not decompose through the tree. Judge "
+    "the number as usual and do not invent a causal requirement.\n"
+)
+
 # CALL TWO, evidence branch. Two checks, not five, and both read against the SENTENCE. The other
 # three compare the metric with the QUESTION's wording, which is meaningful only when the number
 # is the answer to it: no metric's purpose "matches the intent" of "why did it drop?", and no
@@ -136,7 +164,8 @@ _CHECKS_EVIDENCE = (
     "segment to compare against.\n"
     "- whether the analyst's CONCLUSION is right. You check how this number is used, not the "
     "quality of the analysis.\n\n"
-    "When you do reject, cite the definition text or the added filter that fails."
+    "When you do reject, cite the definition text or the added filter that fails.\n\n"
+     + _CAUSAL
 )
 
 # CALL TWO, the_answer branch — the five checks, unchanged from every published run.
@@ -179,7 +208,8 @@ _CHECKS_ANSWER = (
     "data; excluding them is REQUIRED, so do NOT flag the answer for 'not covering' those months.\n\n"
     "Cite the specific definition text or the analyst's added filter that fails. Do not invent "
     "problems, and never object to the metric's internal computation or a governed modification. If "
-    "all five checks pass, the answer stands."
+    "all five checks pass, the answer stands.\n\n"
+    + _CAUSAL
 )
 
 
@@ -216,7 +246,8 @@ _EVIDENCE = (
     # number as the answer every time, including for 'is the app healthy?'.
     "the number the analyst declared: {claim_value}\n"
     "what the analyst actually served (THIS is the answer; the number above is one figure "
-    "inside it): {claim_text}"
+    "inside it): {claim_text}\n"
+    "CAUSAL EVIDENCE THE GOVERNED TREE CARRIES:\n{causal_record}"
 )
 _USER = "QUESTION:\n  {question}\n\nWHAT THE ANALYST COMPUTED:\n{evidence}"
 
@@ -248,6 +279,7 @@ def prompt_fingerprint() -> str:
     every field added later was silently outside the fingerprint. Both roles' instructions and the
     role classifier are in here for the same reason: each is a prompt that decides a verdict."""
     surface = "|".join([verify_system("the_answer"), verify_system("evidence"), _ROLE_SYSTEM,
+                        _CAUSAL,
                         json.dumps(_REPORT, sort_keys=True),
                         json.dumps(_ROLE_REPORT, sort_keys=True),
                         _EVIDENCE, _USER, _ROLE_USER])
@@ -293,7 +325,8 @@ class Judgement:
 def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
                       sql: str, result_value, claim_value, applied_filters=None,
                       time_window=None, governed_notes=None,
-                      claim_text: str | None = None) -> Judgement:
+                      claim_text: str | None = None,
+                      causal_record: str = "") -> Judgement:
     """Inspect one answer's trajectory.
     answers_question=False means the served number does not answer the question -> downgrade.
     `applied_filters` is what the ANALYST added for this query (not the metric's own definition),
@@ -318,7 +351,8 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
         applied_filters=applied_filters or "none",
         time_window=time_window or "all time",
         sql=sql, result_value=result_value, claim_value=claim_value,
-        claim_text=said or "(not recorded)")
+        claim_text=said or "(not recorded)",
+        causal_record=causal_record or "  (the analyst did not decompose through the tree)")
     user = _USER.format(question=question, evidence=brief)
     turn = model.respond(Conversation.opening(verify_system(role), user), [_REPORT],
                          force_tool="report_verdict", temperature=0)

@@ -84,7 +84,8 @@ def _check_evidence_renders() -> None:
                        "agg": "count(*)", "unit": "count"},
                       "SELECT 1", 42, "42", applied_filters={"platform": "ios"},
                       time_window="last_week", governed_notes=["note"],
-                      claim_text="42 active users\nlast week.")
+                      claim_text="42 active users\nlast week.",
+                      causal_record="  none")
     expected = (
         "QUESTION:\n  how many active users?\n\nWHAT THE ANALYST COMPUTED:\n"
         "metric used: active_users\n"
@@ -100,7 +101,8 @@ def _check_evidence_renders() -> None:
         # collapsed to one line: an answer's own newlines must not restructure the evidence
         # block, which is read positionally by the judge.
         "what the analyst actually served (THIS is the answer; the number above is one figure "
-        "inside it): 42 active users last week.")
+        "inside it): 42 active users last week.\n"
+        "CAUSAL EVIDENCE THE GOVERNED TREE CARRIES:\n  none")
     if spy.seen != expected:
         diff = "\n".join(difflib.unified_diff(expected.splitlines(), spy.seen.splitlines(),
                                               "expected", "rendered", lineterm=""))
