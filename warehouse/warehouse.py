@@ -102,7 +102,10 @@ class QueryError(Exception):
     pass
 
 
-def run_query(con, sql: str, max_rows: int = 100) -> tuple[list[str], list[tuple]]:
+DEFAULT_MAX_ROWS = 100   # the row cap; agent.tools reports it rather than restating it
+
+
+def run_query(con, sql: str, max_rows: int = DEFAULT_MAX_ROWS) -> tuple[list[str], list[tuple]]:
     """Run a read-only query. Returns (column_names, rows). Raises QueryError with
     the database's own message on failure — that message is what the agent's
     self-correction loop feeds back to the model.

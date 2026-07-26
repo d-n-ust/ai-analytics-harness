@@ -348,7 +348,7 @@ system: sha256=6825ee4a8741 chars=1017
   }
 ]
 
-=== rung 3 · R2 · fingerprint 60412eb077ec ===
+=== rung 3 · R2 · fingerprint 297d1999e085 ===
 system: sha256=76e3834e8c5d chars=1612
 [
   {
@@ -477,9 +477,12 @@ system: sha256=76e3834e8c5d chars=1612
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -611,7 +614,7 @@ system: sha256=76e3834e8c5d chars=1612
   }
 ]
 
-=== rung 3 · R4 · fingerprint ac7b2aa5c24c ===
+=== rung 3 · R4 · fingerprint 9863db9b7c01 ===
 system: sha256=f4f60a1534f5 chars=1927
 [
   {
@@ -741,9 +744,12 @@ system: sha256=f4f60a1534f5 chars=1927
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -875,7 +881,7 @@ system: sha256=f4f60a1534f5 chars=1927
   }
 ]
 
-=== rung 3 · R6 · fingerprint 034be9cae3b1 ===
+=== rung 3 · R6 · fingerprint a26fae0fbca4 ===
 system: sha256=7ba8ed981940 chars=2438
 [
   {
@@ -1005,9 +1011,12 @@ system: sha256=7ba8ed981940 chars=2438
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -1139,7 +1148,7 @@ system: sha256=7ba8ed981940 chars=2438
   }
 ]
 
-=== rung 3 · R9 · fingerprint a96abc687add ===
+=== rung 3 · R9 · fingerprint d8b916120145 ===
 system: sha256=a9db88aaeb44 chars=3717
 [
   {
@@ -1269,9 +1278,12 @@ system: sha256=a9db88aaeb44 chars=3717
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -1612,7 +1624,7 @@ system: sha256=fdb0e4ee15d9 chars=5912
   }
 ]
 
-=== rung 6 · R2 · fingerprint ed9fea9b97d9 ===
+=== rung 6 · R2 · fingerprint 53faa58f3f30 ===
 system: sha256=5e2378bf5cd1 chars=6507
 [
   {
@@ -1774,9 +1786,12 @@ system: sha256=5e2378bf5cd1 chars=6507
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -1908,7 +1923,7 @@ system: sha256=5e2378bf5cd1 chars=6507
   }
 ]
 
-=== rung 6 · R4 · fingerprint ab400023151a ===
+=== rung 6 · R4 · fingerprint 11b49793e22c ===
 system: sha256=32641d7c1066 chars=6822
 [
   {
@@ -2071,9 +2086,12 @@ system: sha256=32641d7c1066 chars=6822
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -2205,7 +2223,7 @@ system: sha256=32641d7c1066 chars=6822
   }
 ]
 
-=== rung 6 · R6 · fingerprint ccb1f9d3ac52 ===
+=== rung 6 · R6 · fingerprint 325aaeb9b9f6 ===
 system: sha256=d317a18effa9 chars=7333
 [
   {
@@ -2368,9 +2386,12 @@ system: sha256=d317a18effa9 chars=7333
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"
@@ -2502,7 +2523,7 @@ system: sha256=d317a18effa9 chars=7333
   }
 ]
 
-=== rung 6 · R9 · fingerprint 14604ff0ab96 ===
+=== rung 6 · R9 · fingerprint 1196bdc80a48 ===
 system: sha256=400f056239ae chars=8612
 [
   {
@@ -2665,9 +2686,12 @@ system: sha256=400f056239ae chars=8612
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period (and optional region). Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
     "input_schema": {
       "properties": {
+        "country": {
+          "type": "string"
+        },
         "end": {
           "description": "YYYY-MM-DD (end of the range)",
           "type": "string"

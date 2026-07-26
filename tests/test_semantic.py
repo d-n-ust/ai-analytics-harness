@@ -11,11 +11,13 @@ Run: uv run python -m pytest tests/test_semantic.py -q     (or run this file dir
 
 from __future__ import annotations
 
-from agent import verifier
+from agent import input_guardrail, verifier
 from agent.guardrails import LADDER
 from agent.numbers import bare_number
+from agent.protocol import TERMINAL_TOOLS
 from agent.tools import Toolbox
-from semantic.semantic import SemanticError, SemanticLayer
+from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
+from semantic.tree import MetricTree
 from warehouse.warehouse import open_warehouse
 
 
@@ -115,6 +117,35 @@ def test_numeric_answers_cannot_skip_the_output_checks():
     assert verifier._infer_source_metric(886, steps, sem.metrics) == "active_users"
     shared = [_qm("active_subscriptions", 371), _qm("paying_users", 371)]
     assert verifier._infer_source_metric(371, shared, sem.metrics) is None, "ambiguous -> no link"
+
+
+def test_every_offered_tool_can_be_dispatched():
+    """A tool's schema and the code that runs it were defined 300 lines apart with nothing
+    linking them, so nothing stopped one existing without the other. Offered-but-undispatchable
+    is a hallucination the model is invited to make; dispatchable-but-never-offered is dead code
+    pretending to be a control."""
+    con = open_warehouse(create_star_views=True)
+    tb = Toolbox(con, 6, SemanticLayer(con), MetricTree(SemanticLayer(con)), LADDER[9])
+    for spec in tb.specs():
+        name = spec["name"]
+        if name in TERMINAL_TOOLS:
+            continue                      # the agent loop ends the run; there is nothing to run
+        result = tb.dispatch(name, {})
+        assert not result.content.startswith("Unknown tool"), f"{name} is offered but not dispatchable"
+
+
+def test_the_check_tools_can_express_every_scope_the_gate_enforces():
+    """A model told to pre-check answerability must be able to ask about the same scopes it will
+    then be judged on. check_coverage accepts a region but not a country, while the gate resolves
+    a country to its region — so a Philippines question pre-checks clean and is then blocked, and
+    at the rung where the check tools exist without the gate it is never caught at all."""
+    con = open_warehouse(create_star_views=True)
+    tb = Toolbox(con, 6, SemanticLayer(con), None, LADDER[9])
+    coverage = next(t for t in tb.specs() if t["name"] == "check_coverage")
+    offered = set(coverage["input_schema"]["properties"])
+    assert set(COVERAGE_DIMS) <= offered, (
+        f"check_coverage offers {sorted(offered)}; the gate judges "
+        f"{sorted(COVERAGE_DIMS)} — the model cannot ask about {sorted(set(COVERAGE_DIMS) - offered)}")
 
 
 def test_metrics_conform_to_ontology():
@@ -299,7 +330,7 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
         except ValueError as exc:
             assert "incoherent grounding" in str(exc)
     tb = Toolbox(con, 6, SemanticLayer(con), None, guardrails=cell)
-    assert tb.trajectory_verify is True and tb.resolve is False
+    assert tb.g.trajectory_verify is True and tb.g.resolve is False
 
     # single-metric reads result_values, which only governed queries record
     assert incoherent(LADDER[7].without("tool_restriction")) is not None
@@ -317,22 +348,22 @@ def test_gate_blocks_ungoverned_dimension_and_value():
     tb = Toolbox(con, 6, sem, None, LADDER[5])                 # R5: member resolution on
     window = {"start": "2026-06-01", "end": "2026-06-30"}
 
-    no_dim = tb._gate_block("query_metric", {"metric": "mrr", "filters": {"region": "Americas"}})
+    no_dim = input_guardrail.block(sem, tb.g, {"metric": "mrr", "filters": {"region": "Americas"}})
     assert no_dim and "dimension_not_supported" in no_dim   # mrr is sliceable by plan only
 
-    bad_value = tb._gate_block(
-        "query_metric", {"metric": "active_users", "filters": {"region": "North America"}, **window})
+    bad_value = input_guardrail.block(
+        sem, tb.g, {"metric": "active_users", "filters": {"region": "North America"}, **window})
     assert bad_value and "ungoverned_dimension_value" in bad_value
     assert "Americas" not in bad_value                 # no substitutable member list leaks back
 
     # a governed dimension holding a governed member passes both checks
-    assert tb._gate_block(
-        "query_metric", {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
+    assert input_guardrail.block(
+        sem, tb.g, {"metric": "active_users", "filters": {"region": "Americas"}, **window}) is None
 
     # below the resolve rung the value check is off — the pre-R5 hole, kept measurable
     below = Toolbox(con, 6, sem, None, LADDER[4])
-    assert below._gate_block(
-        "query_metric", {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
+    assert input_guardrail.block(
+        sem, below.g, {"metric": "active_users", "filters": {"region": "North America"}, **window}) is None
 
 
 def test_closing_phase_offers_only_exit_tools():
@@ -384,10 +415,13 @@ def test_toolbox_wiring_and_rung_gate():
     q = "How many users do we have in total?"
 
     # the re-ordered ladder gates each guardrail on its own rung
-    assert Toolbox(con, 6, sem, None, LADDER[4]).resolve is False and Toolbox(con, 6, sem, None, LADDER[5]).resolve is True
-    assert Toolbox(con, 6, sem, None, LADDER[6]).single_metric is False and Toolbox(con, 6, sem, None, LADDER[7]).single_metric is True
-    assert Toolbox(con, 6, sem, None, LADDER[7]).output_validation is False and Toolbox(con, 6, sem, None, LADDER[8]).output_validation is True
-    assert Toolbox(con, 6, sem, None, LADDER[8]).trajectory_verify is False and Toolbox(con, 6, sem, None, LADDER[9]).trajectory_verify is True
+    assert Toolbox(con, 6, sem, None, LADDER[4]).g.resolve is False
+    assert Toolbox(con, 6, sem, None, LADDER[5]).g.resolve is True
+    # Each control reaches the Toolbox from the guardrail set it was built with — the set IS the
+    # configuration, so there is nothing to mirror onto the Toolbox and nothing to fall out of step.
+    for n, control in [(7, "single_metric"), (8, "output_validation"), (9, "trajectory_verify")]:
+        assert getattr(Toolbox(con, 6, sem, None, LADDER[n - 1]).g, control) is False
+        assert getattr(Toolbox(con, 6, sem, None, LADDER[n]).g, control) is True
 
     tb7 = Toolbox(con, rung=6, semantic=sem, tree=None, guardrails=LADDER[7])   # single-metric on (deterministic; no model needed)
     ok, *_ = tb7.verify_answer(q, "2100", steps, None, "active_users", 2100)
@@ -407,6 +441,8 @@ def test_toolbox_wiring_and_rung_gate():
 
 if __name__ == "__main__":
     test_provenance_is_typed_not_guessed()
+    test_every_offered_tool_can_be_dispatched()
+    test_the_check_tools_can_express_every_scope_the_gate_enforces()
     test_numeric_answers_cannot_skip_the_output_checks()
     test_provenance_reads_the_row_the_answer_came_from()
     test_dispatcher_records_the_measure_not_every_cell()

@@ -11,17 +11,21 @@ because they end the run.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree, TreeError
-from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
-
-from . import verifier
-from .guardrails import LADDER, Guardrails
-from .protocol import ToolResult
 
 # The three terminal tools. Every run ends through exactly one of them, so the
 # outcome is a typed field, never a phrase to be text-matched out of prose.
+from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
+from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
+
+from . import input_guardrail, verifier
+from .guardrails import LADDER, Guardrails
+from .protocol import ToolResult
+
 REFUSAL_REASONS = ["no_governed_definition", "out_of_coverage", "segment_undefined",
                    "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
                    "dimension_not_supported", "ungoverned_dimension_value",
@@ -139,12 +143,16 @@ _CHECK_METRIC = {
 
 _CHECK_COVERAGE = {
     "name": "check_coverage",
-    "description": "Check whether data coverage exists for a period (and optional region). "
-                   "Pass both start and end for a range; the whole period must be covered.",
+    "description": "Check whether data coverage exists for a period, optionally for one region "
+                   "or country. Pass both start and end for a range; the whole period must be "
+                   "covered.",
     "input_schema": {"type": "object", "properties": {
         "start": {"type": "string", "description": "YYYY-MM-DD"},
         "end": {"type": "string", "description": "YYYY-MM-DD (end of the range)"},
-        "region": {"type": "string"}}, "required": ["start", "end"]},
+        "region": {"type": "string"},
+        # A country inherits its region's availability window, so a question scoped to one is
+        # answerable-or-not on the same terms. Without this the model could not ask.
+        "country": {"type": "string"}}, "required": ["start", "end"]},
 }
 
 _CHECK_SEGMENT = {
@@ -184,12 +192,16 @@ _EXPLAIN_CHANGE = {
 }
 
 
+# --------------------------------------------------------------------------- #
+# Handlers. Each sits next to the schema it implements; `tb` is the Toolbox holding the live
+# warehouse / semantic / tree handles and the guardrail set.
+# --------------------------------------------------------------------------- #
 def _fmt_rows(columns, rows) -> str:
     head = ", ".join(columns)
     if not rows:
         return f"columns: {head}\n(no rows)"
     body = "\n".join(str(tuple(r)) for r in rows)
-    note = "" if len(rows) < 100 else "\n(truncated at 100 rows)"
+    note = "" if len(rows) < MAX_ROWS else f"\n(truncated at {MAX_ROWS} rows)"
     return f"columns: {head}\n{body}{note}"
 
 
@@ -207,6 +219,112 @@ def _measure_values(cols, rows) -> list:
     i = cols.index("value")
     return [float(r[i]) for r in rows
             if isinstance(r[i], (int, float)) and not isinstance(r[i], bool)]
+
+
+def _verdict(ok: bool, detail: str) -> str:
+    return ("YES — " if ok else "NO — ") + detail
+
+
+def _get_schema(tb, args) -> ToolResult:
+    return ToolResult(schema_text(tb.con, tb.rung))
+
+
+def _describe_table(tb, args) -> ToolResult:
+    return ToolResult(describe_table(tb.con, args["table"], tb.rung))
+
+
+def _run_sql(tb, args) -> ToolResult:
+    cols, rows = run_query(tb.con, args["query"])
+    return ToolResult(_fmt_rows(cols, rows))
+
+
+def _list_metrics(tb, args) -> ToolResult:
+    return ToolResult(tb.semantic.list_metrics_text())
+
+
+def _query_metric(tb, args) -> ToolResult:
+    """The governed data path. The input guardrail runs first, so a call that must not be
+    answered never reaches the warehouse; transparency then shows the model what it actually
+    got — the scope the number covers and the exact SQL — rather than a bare figure to trust."""
+    blocked = input_guardrail.block(tb.semantic, tb.g, args)
+    if blocked is not None:
+        return ToolResult(blocked, is_error=True)
+    sql, cols, rows = tb.semantic.query_with_sql(
+        args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
+        time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),
+        period=args.get("period"), resolve=tb.g.resolve, segment=args.get("segment"))
+    text = _fmt_rows(cols, rows)
+    if tb.g.transparency:
+        text += "\n[scope] " + tb.semantic.scope_line(
+            args["metric"], filters=args.get("filters"), period=args.get("period"),
+            start=args.get("start"), end=args.get("end"),
+            group_by=args.get("group_by"), resolve=tb.g.resolve)
+        text += f"\n[sql] {sql}"
+    return ToolResult(text, values=_measure_values(cols, rows))
+
+
+def _check_metric_exists(tb, args) -> ToolResult:
+    return ToolResult(_verdict(*tb.semantic.metric_exists(args["term"])))
+
+
+def _check_coverage(tb, args) -> ToolResult:
+    return ToolResult(_verdict(*tb.semantic.in_coverage(
+        args.get("start"), args.get("end"), args.get("region"), args.get("country"))))
+
+
+def _check_segment_defined(tb, args) -> ToolResult:
+    return ToolResult(_verdict(*tb.semantic.segment_defined(args["term"])))
+
+
+def _check_causal_evidence(tb, args) -> ToolResult:
+    if tb.tree is None:
+        return ToolResult("NO — no metric tree at this rung; no causal evidence is encoded.")
+    return ToolResult(_verdict(*tb.tree.causal_evidence(args.get("driver"), args.get("outcome"))))
+
+
+def _get_metric_tree(tb, args) -> ToolResult:
+    return ToolResult(tb.tree.describe())
+
+
+def _explain_change(tb, args) -> ToolResult:
+    out = tb.tree.explain_change(node=args.get("node"),
+                                 period_a=args.get("period_a", "prev_week"),
+                                 period_b=args.get("period_b", "last_week"),
+                                 filters=args.get("filters"))
+    return ToolResult(json.dumps(out, default=str, indent=2))
+
+
+@dataclass(frozen=True)
+class Tool:
+    """One tool: the schema the model sees and the code that runs it, in one place.
+
+    `run=None` marks a TERMINAL tool — it ends the run, so the agent loop decides what it means
+    and there is nothing to dispatch. That is the only legitimate reason for a tool to have no
+    handler, and tests/test_semantic.py holds it to that."""
+
+    schema: dict
+    run: Callable | None = None
+
+    @property
+    def name(self) -> str:
+        return self.schema["name"]
+
+
+TOOLS: dict[str, Tool] = {t.name: t for t in [
+    Tool(_GET_SCHEMA, _get_schema),
+    Tool(_DESCRIBE_TABLE, _describe_table),
+    Tool(_RUN_SQL, _run_sql),
+    Tool(_LIST_METRICS, _list_metrics),
+    Tool(_QUERY_METRIC, _query_metric),
+    Tool(_CHECK_METRIC, _check_metric_exists),
+    Tool(_CHECK_COVERAGE, _check_coverage),
+    Tool(_CHECK_SEGMENT, _check_segment_defined),
+    Tool(_CHECK_CAUSAL, _check_causal_evidence),
+    Tool(_GET_METRIC_TREE, _get_metric_tree),
+    Tool(_EXPLAIN_CHANGE, _explain_change),
+    Tool(_ANSWER), Tool(_REFUSE), Tool(_CLARIFY),      # terminal: the loop ends the run
+]}
+
 
 
 class Toolbox:
@@ -233,25 +351,6 @@ class Toolbox:
         self.tree = tree
         self.last_verdict = None
 
-    # Each control reads from the guardrail set, so call sites are unchanged. Input guardrails
-    # (stop a bad number being COMPUTED) then output guardrails (stop one being SERVED).
-    @property
-    def gate(self) -> bool: return self.g.gate                      # R3
-    @property
-    def tool_restriction(self) -> bool: return self.g.tool_restriction  # R4
-    @property
-    def resolve(self) -> bool: return self.g.resolve                # R5
-    @property
-    def show_sql(self) -> bool: return self.g.transparency          # R6: the compiled SQL...
-    @property
-    def scope_echo(self) -> bool: return self.g.transparency        # R6: ...and a scope line
-    @property
-    def single_metric(self) -> bool: return self.g.single_metric    # R7
-    @property
-    def output_validation(self) -> bool: return self.g.output_validation  # R8
-    @property
-    def trajectory_verify(self) -> bool: return self.g.trajectory_verify  # R9
-
     def specs(self, terminal_only: bool = False) -> list[dict]:
         """The action space. `terminal_only` withdraws every data tool, leaving just the exit
         tools — used to CLOSE a run that has stopped calling tools or is about to hit the
@@ -260,7 +359,7 @@ class Toolbox:
         specs: list[dict] = []
         if not terminal_only:
             specs += [_GET_SCHEMA, _DESCRIBE_TABLE]
-            if not self.tool_restriction:
+            if not self.g.tool_restriction:
                 specs.append(_RUN_SQL)
             if self.rung >= 3:
                 specs += [_LIST_METRICS, self._query_metric_spec()]
@@ -281,7 +380,7 @@ class Toolbox:
         if self.semantic is None:
             return _QUERY_METRIC
         props = dict(_QUERY_METRIC["input_schema"]["properties"])
-        if self.gate:
+        if self.g.gate:
             props["metric"] = {**props["metric"], "enum": list(self.semantic.metrics)}
         segs = self.semantic.segment_names()
         if segs:
@@ -297,7 +396,7 @@ class Toolbox:
         menu as query_metric). Both are the model's typed claims, more reliable than
         reconstructing them from the answer text. A prose / diagnostic answer leaves `value`
         unset, so the output checks stand down rather than force a spec onto words."""
-        if not (self.single_metric and self.semantic is not None):
+        if not (self.g.single_metric and self.semantic is not None):
             return _ANSWER
         props = dict(_ANSWER["input_schema"]["properties"])
         props["value"] = {
@@ -311,55 +410,6 @@ class Toolbox:
                            "to query_metric). Omit for a derived or non-metric answer."}
         return {**_ANSWER, "input_schema": {**_ANSWER["input_schema"], "properties": props}}
 
-    def _gate_block(self, name: str, args: dict) -> str | None:
-        """The interception gate: before a governed data call runs, verify every filter VALUE is a
-        governed member (R5) and the period/region are inside coverage (R3). Returns a block message
-        that names the coded refusal reason, or None to allow. The gate needs no LLM — given a call,
-        the verdict is deterministic."""
-        if self.semantic is None or name != "query_metric":
-            return None
-        filters = args.get("filters") or {}
-        # R5: an ungoverned filter value is blocked HERE, naming its own coded reason, so the model
-        # never sees the "known members" list it would otherwise substitute a sibling from — the
-        # failure that served Americas (504) for a "North America" question.
-        if self.resolve:
-            allowed = self.semantic.allowed_filters(args.get("metric"))
-            for col, val in filters.items():
-                # Two distinct failures, two reasons: the metric has no such DIMENSION, or the
-                # dimension is fine but the VALUE is not a governed member.
-                if allowed is not None and col not in allowed:
-                    return (f"BLOCKED by governance — {args.get('metric')!r} has no governed "
-                            f"dimension {col!r} (it can be sliced by: {sorted(allowed)}). Do NOT "
-                            "substitute a different dimension; refuse (dimension_not_supported).")
-                for v in (val if isinstance(val, (list, tuple)) else [val]):
-                    if self.semantic.resolve_member(col, v) is None:
-                        return (f"BLOCKED by governance — {v!r} is not a governed member of {col!r} "
-                                "(it may be finer-grained than, or absent from, the governed "
-                                "vocabulary). Do NOT substitute a different member and do NOT answer "
-                                "for a broader slice; refuse (ungoverned_dimension_value).")
-        if not self.gate:
-            return None
-        # R3: every scope this call reports a number ABOUT must be inside coverage. The layer
-        # answers that — which member is named, however it is spelled, and whether a breakdown
-        # asks for all of them — because the same question is asked by the verifier's governed
-        # notes and by the audit, and three partial answers is how the same scope came to be
-        # blocked when filtered and served when grouped.
-        bad = self.semantic.coverage_violations(
-            filters=filters, group_by=args.get("group_by"), start=args.get("start"),
-            end=args.get("end"), period=args.get("period"))
-        if bad:
-            dim, member, detail = bad[0]
-            named = f"{dim} {member!r} — " if dim else ""
-            return (f"BLOCKED by governance — {named}{detail} This request is outside data "
-                    "coverage and cannot be served; refuse (out_of_coverage) or query within "
-                    "coverage. Asking for the same scope as a breakdown does not make it "
-                    "available.")
-        return None
-
-    @staticmethod
-    def _verdict(ok: bool, detail: str) -> str:
-        return ("YES — " if ok else "NO — ") + detail
-
     def verify_answer(self, question: str, answer_text: str | None, steps: list, model=None,
                       source_metric: str | None = None, declared_value=None,
                       verifier_model=None) -> tuple[bool, str, str, str]:
@@ -369,17 +419,17 @@ class Toolbox:
         (R9, the metric must actually answer the question). All three live in harness/verifier.py.
         Returns (ok, reason, missing, explanation); ok=False converts the answer to a refuse."""
         self.last_verdict = None      # one verdict per answer; the Toolbox outlives the question
-        if self.semantic is None or not (self.output_validation or self.single_metric
-                                         or self.trajectory_verify):
+        if self.semantic is None or not (self.g.output_validation or self.g.single_metric
+                                         or self.g.trajectory_verify):
             return True, "", "", ""
         # the verifier is a careful checker — run it on its own (higher-reasoning) model when given
         vmodel = verifier_model or model
-        verify_traj = self._trajectory_verifier(vmodel) if (self.trajectory_verify and vmodel) else None
+        verify_traj = self._trajectory_verifier(vmodel) if (self.g.trajectory_verify and vmodel) else None
         return verifier.verify_answer(
             self.semantic, question, answer_text, steps,
             source_metric=source_metric, declared_value=declared_value,
-            run_output_validation=self.output_validation,
-            run_single_metric=self.single_metric, verify_traj=verify_traj)
+            run_output_validation=self.g.output_validation,
+            run_single_metric=self.g.single_metric, verify_traj=verify_traj)
 
     def _governed_notes(self, args: dict) -> list[str]:
         """Governed modifications the LAYER applied to this query, so the verifier treats them as
@@ -411,7 +461,7 @@ class Toolbox:
             sql = self.semantic.compile(
                 metric, group_by=a.get("group_by"), filters=a.get("filters"),
                 time_grain=a.get("time_grain"), start=a.get("start"), end=a.get("end"),
-                period=a.get("period"), resolve=self.resolve, segment=a.get("segment"))
+                period=a.get("period"), resolve=self.g.resolve, segment=a.get("segment"))
             window = a.get("period") or (f"{a.get('start')}..{a.get('end')}"
                                          if (a.get("start") or a.get("end")) else None)
             ok, mismatch, reason = verifier.verify_trajectory(
@@ -428,57 +478,14 @@ class Toolbox:
         return run
 
     def dispatch(self, name: str, args: dict) -> ToolResult:
-        """Run a tool. Errors come back as the DB/semantic message rather than as exceptions, so
-        the model is told what went wrong and can correct itself."""
-        try:
-            if name == "get_schema":
-                return ToolResult(schema_text(self.con, self.rung))
-            if name == "describe_table":
-                return ToolResult(describe_table(self.con, args["table"], self.rung))
-            if name == "run_sql":
-                cols, rows = run_query(self.con, args["query"])
-                return ToolResult(_fmt_rows(cols, rows))
-            if name == "list_metrics":
-                return ToolResult(self.semantic.list_metrics_text())
-            if name == "query_metric":
-                block = self._gate_block(name, args)
-                if block is not None:
-                    return ToolResult(block, is_error=True)
-                sql, cols, rows = self.semantic.query_with_sql(
-                    args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
-                    time_grain=args.get("time_grain"), start=args.get("start"),
-                    end=args.get("end"), period=args.get("period"), resolve=self.resolve,
-                    segment=args.get("segment"))
-                text = _fmt_rows(cols, rows)
-                if self.scope_echo:       # R6 (transparency): a plain scope line, flagging a narrowed subset
-                    text += "\n[scope] " + self.semantic.scope_line(
-                        args["metric"], filters=args.get("filters"), period=args.get("period"),
-                        start=args.get("start"), end=args.get("end"),
-                        group_by=args.get("group_by"), resolve=self.resolve)
-                if self.show_sql:       # R6 (transparency): the exact compiled SQL
-                    text += f"\n[sql] {sql}"
-                return ToolResult(text, values=_measure_values(cols, rows))
-            if name == "check_metric_exists":
-                return ToolResult(self._verdict(*self.semantic.metric_exists(args["term"])))
-            if name == "check_coverage":
-                return self._verdict(*self.semantic.in_coverage(
-                    args.get("start"), args.get("end"),
-                    args.get("region"), args.get("country"))), False, None
-            if name == "check_segment_defined":
-                return ToolResult(self._verdict(*self.semantic.segment_defined(args["term"])))
-            if name == "check_causal_evidence":
-                if self.tree is None:
-                    return ToolResult("NO — no metric tree at this rung; no causal evidence is encoded.")
-                return self._verdict(*self.tree.causal_evidence(
-                    args.get("driver"), args.get("outcome"))), False, None
-            if name == "get_metric_tree":
-                return ToolResult(self.tree.describe())
-            if name == "explain_change":
-                out = self.tree.explain_change(
-                    node=args.get("node"), period_a=args.get("period_a", "prev_week"),
-                    period_b=args.get("period_b", "last_week"), filters=args.get("filters"))
-                return ToolResult(json.dumps(out, default=str, indent=2))
+        """Run one tool. Errors come back as the DB/semantic message rather than as exceptions,
+        so the model is told what went wrong and can correct itself — a crashed run is a lost
+        measurement, which is worse than a wrong answer because it looks like neither."""
+        tool = TOOLS.get(name)
+        if tool is None or tool.run is None:
             return ToolResult(f"Unknown tool {name!r}.", is_error=True)
+        try:
+            return tool.run(self, args)
         except (QueryError, SemanticError, TreeError) as exc:
             return ToolResult(f"Error: {exc}", is_error=True)
         except KeyError as exc:
