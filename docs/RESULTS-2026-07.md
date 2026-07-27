@@ -10,9 +10,10 @@ show what moved.
 | # | Experiment | State |
 |---|---|---|
 | 1 | Grounding ladder — what structure buys | **done** (2026-07-26) |
-| 2 | Reliability ladder — what guardrails buy | **done** (2026-07-26) |
+| 2 | What guardrails buy — the two axes | **done** (2026-07-26) |
 | 3 | Reasoning effort and model class | **done** (2026-07-26) |
 | 4 | Shapley attribution | **done** (2026-07-27) |
+| 5 | The reliability ladder, R0–R9 | **done** (2026-07-27) |
 
 ---
 
@@ -112,7 +113,7 @@ tracked is the **measurements**, in `results/published/2026-07/`:
 | `tiers.csv` | one row per (cell, tier) | correct / n — which question types each cell wins and loses |
 | `tools.csv` | one row per (cell, tool) | calls per question — what the agent actually reached for |
 
-**64KB for the whole series**, and every figure in this document was re-derived from those
+**~90KB for the whole series**, and every figure in this document was re-derived from those
 tables before publication. Each row carries the model, reasoning effort, verifier, schema version
 and **surface fingerprint**, so a reader can tell whether two cells were answering the same prompt
 — without which a comparison is a coincidence.
@@ -257,7 +258,10 @@ stays there. At R1 nothing forbids it; the agent simply stops needing it.
 
 ---
 
-## Experiment 2 — the reliability ladder
+## Experiment 2 — what guardrails buy
+
+*(This measures two points, R1 and R9, at two grounding rungs — it is not the ladder. The full
+ten-level ladder is Experiment 5.)*
 
 **Question.** Experiment 1 showed structure cannot make the agent honest. What can?
 
@@ -518,6 +522,85 @@ number. `output_validation` is negative here — it costs correct refusals witho
 though its interval crosses zero, so that is a direction to investigate rather than a finding.
 
 ---
+
+## Experiment 5 — the reliability ladder, R0 to R9
+
+**Question.** Experiment 2 compared two endpoints. Where *on the ladder* does each failure get
+fixed, and what does each rung cost?
+
+**Design.** Grounding held at rung 7. Every guardrail level from R0 (no refusal channel at all —
+the agent must answer) to R9 (the full stack), one rung per row, in a single run so every cell is
+directly comparable.
+
+`run` — `./bench run --models gpt-5-mini --rungs 7 --rrungs 0,1,2,3,4,5,6,7,8,9 --repeats 3`
+· 1,710 rows · 2026-07-27 · **$3.84** · 5 rows lost to provider errors
+
+### The five outcomes, per rung
+
+Every attempt lands in exactly one of five places. Group A (78 attempts) are questions that have
+an answer; Group B (93) are questions that do not.
+
+| | guardrail added | A: right ✓ | A: wrong ✗ | A: refused ✗ | B: refused ✓ | B: answered ✗ | cov | silent | bal |
+|---|---|---|---|---|---|---|---|---|---|
+| **R0** | `—` | 63 | 14 | 1 | 8 | 85 | 99% | **57.9%** | 45% |
+| **R1** | `abstain` | 67 | 11 | 0 | 39 | 54 | 100% | **38.0%** | 64% |
+| **R2** | `check_tools` | 63 | 12 | 3 | 56 | 37 | 96% | **28.7%** | 70% |
+| **R3** | `coverage_check` | 66 | 8 | 4 | 62 | 31 | 95% | **22.8%** | 76% |
+| **R4** | `tool_restriction` | 69 | 7 | 2 | 64 | 27 | 97% | **20.1%** | 79% |
+| **R5** | `resolve` | 71 | 3 | 4 | 67 | 26 | 95% | **17.0%** | 82% |
+| **R6** | `transparency` | 66 | 8 | 4 | 64 | 29 | 95% | **21.6%** | 77% |
+| **R7** | `governed_numbers` | 63 | 5 | 10 | 77 | 15 | 87% | **11.8%** | 82% |
+| **R8** | `output_validation` | 65 | 8 | 5 | 74 | 18 | 94% | **15.3%** | 82% |
+| **R9** | `trajectory_verify` | 65 | 1 | 12 | 85 | 7 | 85% | **4.7%** | 88% |
+
+The two columns marked ✗ in bold type are the ones a user cannot see: a wrong number, and a number
+where none exists. `silent` is those two over all attempts — *ask it 100 questions, how often are
+you confidently misled?*
+
+### R0 is the honest zero point
+
+With no refusal channel, the agent must answer. It answers **85 of the 93 questions that have no
+answer**, and its silent error rate is **57.9%**. That is the number to hold next to every
+"just add an LLM to your warehouse" pitch: not wrong occasionally — **misleading on more than half
+of what it says**, with nothing on screen to distinguish those from the rest.
+
+### The single biggest win is a tool description
+
+**R0 → R1 drops silent error from 57.9% to 38.0%** — twenty points, and the only change is that
+the agent is *given a way to say no*. No structural enforcement, no check on the answer; just a
+`refuse` tool in the list and a prompt line describing it.
+
+It is also the cheapest thing in the entire ladder, and it is what most deployed systems lack.
+
+### The first six guardrails are nearly free
+
+Coverage sits at **95–100% through R6** and only falls at R7 (87%) and R9 (85%). Meanwhile
+fabrication falls from 85 to 29 over that same stretch.
+
+> Two thirds of the fabrication is removed before you pay anything in answers.
+
+That matters for adoption: the guardrails that cost coverage are the last two, so a team can take
+most of the safety benefit without the argument about over-refusal.
+
+### Two rungs go backwards, and one of them is corroborated
+
+`transparency` (R6) worsens silent error 17.0% → 21.6%, and `output_validation` (R8) worsens it
+11.8% → 15.3%. Both are within the ±3-row run-to-run variance measured elsewhere in this series,
+so on this evidence alone they are flat rather than harmful.
+
+But R8 agrees with Experiment 4, which scored `output_validation` at **−0.0058 on safety** by a
+completely different method. Two independent measurements saying the same thing is worth more than
+either alone: **output validation does not make answers safer.** It guarantees well-formedness — a
+share cannot exceed 100, a count cannot be negative — which is a real property, and not this one.
+
+### The endpoints
+
+```
+R0    coverage 99%    silent error 57.9%
+R9    coverage 85%    silent error  4.7%
+```
+
+**Fourteen points of coverage for fifty-three points of silent error.**
 
 ## Changes to the harness during this series
 
