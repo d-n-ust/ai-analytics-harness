@@ -12,7 +12,7 @@ show what moved.
 | 1 | Grounding ladder — what structure buys | **done** (2026-07-26) |
 | 2 | Reliability ladder — what guardrails buy | **done** (2026-07-26) |
 | 3 | Reasoning effort and model class | **done** (2026-07-26) |
-| 4 | Shapley attribution | pending |
+| 4 | Shapley attribution | **done** (2026-07-27) |
 
 ---
 
@@ -112,7 +112,7 @@ tracked is the **measurements**, in `results/published/2026-07/`:
 | `tiers.csv` | one row per (cell, tier) | correct / n — which question types each cell wins and loses |
 | `tools.csv` | one row per (cell, tool) | calls per question — what the agent actually reached for |
 
-**14.5KB for the whole series**, and every figure in this document was re-derived from those
+**64KB for the whole series**, and every figure in this document was re-derived from those
 tables before publication. Each row carries the model, reasoning effort, verifier, schema version
 and **surface fingerprint**, so a reader can tell whether two cells were answering the same prompt
 — without which a comparison is a coincidence.
@@ -429,9 +429,93 @@ number rather than a single row.
 
 ## Experiment 4 — Shapley attribution
 
-*Pending.* Per-guardrail contribution over coherent coalitions. The previously published figures
-(32 configurations, 120 orderings) are superseded — the coherence rules changed, and so did the
-guardrail set: `single_metric` is now `governed_numbers`, a different rule with a different name.
+**Question.** The ladder says the stack works. Which guardrail is doing the work?
+
+**Design.** Six guardrails vary; `abstain`, `check_tools` and `transparency` are held on
+throughout. Six switches would be 2⁶ = 64 configurations, but **40 are incoherent** — they
+describe a system that cannot do what its label says:
+
+- `governed_numbers` without `tool_restriction` — the check reads governed results, which only
+  governed queries record, so every raw-SQL answer auto-refuses
+- `output_validation` without `governed_numbers` — `value` never reaches the answer schema, so
+  the check cannot fire at all
+- `trajectory_verify` without `governed_numbers` — the judge inspects a metric+SQL trajectory,
+  which a hand-composed number does not have
+
+Running those measures a contribution of zero *by construction* rather than by evidence.
+`incoherent()` rules them out, leaving **24 cells and 60 legal orderings** (an ordering is legal
+only if every prefix is coherent). Every ordering is enumerated — no Monte-Carlo — so the
+efficiency axiom is an arithmetic check, not an approximation.
+
+The previously published **32 configurations and 120 orderings are superseded.** That figure came
+from the legality rule being restated inside the Shapley script instead of read from
+`incoherent()`, and it drifted. The guardrail set changed too: `single_metric` is now
+`governed_numbers`, a different rule.
+
+`run` — 24 cells × 57 questions × 3 reps · **4,104 rows** · rung 7 · loop `gpt-5-mini@minimal`,
+verifier `gpt-5-mini@low` · **$9.02** · 7 rows lost to errors (5 provider `invalid_prompt`, 2 a
+harness crash since fixed)
+
+### Safety — the wrong-number rate avoided
+
+v(none) = 0.187 → v(full) = 0.029. **Point estimates with 95% bootstrap intervals (500 resamples,
+resampling rows within each coalition and recomputing the whole exact Shapley each time):**
+
+| guardrail | contribution | 95% interval | |
+|---|---|---|---|
+| `trajectory_verify` | **+0.0842** | [+0.0606, +0.1068] | clear of zero |
+| `coverage_check` | **+0.0455** | [+0.0248, +0.0663] | clear of zero |
+| `governed_numbers` | +0.0162 | [−0.0257, +0.0538] | |
+| `tool_restriction` | +0.0117 | [−0.0444, +0.0671] | |
+| `resolve` | +0.0069 | [−0.0146, +0.0271] | |
+| `output_validation` | −0.0058 | [−0.0265, +0.0158] | indistinguishable from zero |
+
+**Efficiency: Σ = −0.1579 = v(full) − v(none) — exact to floating point.**
+
+### What this does and does not establish
+
+Read the intervals, not the ordering. What the data supports:
+
+- **`trajectory_verify` is the largest single safety contributor**, and its interval clears zero.
+  The one probabilistic guardrail in the stack is also the one doing the most work.
+- **`coverage_check` is second and also clear of zero.**
+- **`output_validation` contributes nothing to safety**, which is what it should do: it catches a
+  *malformed* value, not a *wrong* one. Its work shows up as a well-formedness guarantee, not as
+  a lower error rate.
+- **The bottom four are not ranked by this data.** Their intervals overlap each other and mostly
+  straddle zero.
+
+### Why the intervals are the headline
+
+A one-rep pilot ran first, at $3, and produced this ordering: `trajectory_verify` +0.0719,
+`tool_restriction` +0.0397, `coverage_check` +0.0281. It looks like a clean result. Bootstrapping
+it showed **zero of five adjacent pairs separated at 95%** and `tool_restriction`'s interval ran
+from −0.055 to +0.145 — wider than the whole spread from first to fifth.
+
+At three reps `tool_restriction` fell to +0.0117 and `coverage_check` rose to +0.0455. **Second
+and third place swapped.** Publishing the pilot's point estimates would have put a wrong ranking
+in print, and nothing in those numbers would have shown it.
+
+That is the reason every figure here carries an interval, and the reason the claims above name
+only what survives one.
+
+### Task-success — the correct typed-refusal rate
+
+v(none) = 0.585 → v(full) = 0.749. Efficiency Σ = +0.1637, exact.
+
+| guardrail | contribution | 95% interval |
+|---|---|---|
+| `coverage_check` | +0.0549 | [+0.0195, +0.0901] |
+| `trajectory_verify` | +0.0430 | [+0.0064, +0.0817] |
+| `governed_numbers` | +0.0427 | [−0.0082, +0.0959] |
+| `tool_restriction` | +0.0244 | [−0.0495, +0.0955] |
+| `resolve` | +0.0176 | [−0.0121, +0.0491] |
+| `output_validation` | **−0.0197** | [−0.0583, +0.0164] |
+
+The order changes between the two value functions, which is the point of computing both:
+`coverage_check` leads on getting the refusal *right*, `trajectory_verify` on avoiding a wrong
+number. `output_validation` is negative here — it costs correct refusals without buying safety —
+though its interval crosses zero, so that is a direction to investigate rather than a finding.
 
 ---
 

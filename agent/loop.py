@@ -16,6 +16,8 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 
 from __future__ import annotations
 
+import logging
+
 import time
 from dataclasses import dataclass, field, replace
 
@@ -33,9 +35,33 @@ _CLOSING_NUDGE = "Finish by calling one terminal tool: answer, refuse, or clarif
 _TRACE_LIMIT = 4000
 
 
+_log = logging.getLogger(__name__)
+
+
 def _line(value) -> str:
     """A model-supplied string as one clean line."""
     return str(value or "").strip()
+
+
+def _as_number(value):
+    """The declared `value`, as a number — or None when it is not one.
+
+    The answer tool declares `value` as `"type": "number"` and a model can still put a string
+    there. Nothing downstream expected that: num_match compares it against governed results, and
+    both `round(str, k)` and `isclose(str, x)` raise `TypeError: must be real number, not str`,
+    which kills the run. Two of 4,104 rows in the Shapley lattice died that way — a crash where
+    there should have been a measurement, and the failure is silent about which.
+
+    A string that parses is the number the model meant; one that does not is prose, and prose
+    leaves `value` unset by design, so the numeric checks stand down rather than blow up.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        _log.info("answer declared a non-numeric `value` (%r); treating it as prose", value)
+        return None
 
 
 @dataclass
@@ -115,8 +141,14 @@ class _Run:
         # writes "3852" into `answer` and leaves it unset therefore stood every output check
         # down. Recovering it here makes being checked a property of the answer rather than of
         # the model remembering to ask for it.
-        recovered = None if args.get("value") is not None else bare_number(text)
-        declared = args.get("value") if recovered is None else recovered
+        declared = _as_number(args.get("value"))
+        # Recover from the answer text whenever the typed field yielded no number — whether it
+        # was absent, or present and unusable. A model that writes "3852" into `answer` and
+        # leaves `value` unset used to stand every output check down; one that writes "about 400"
+        # INTO `value` would have done the same, and then crashed the run instead.
+        recovered = bare_number(text) if declared is None else None
+        if recovered is not None:
+            declared = recovered
         self.answer_text = text
         after_acts: list = []
         verdict = after.check(args, declared, self, record=after_acts)
