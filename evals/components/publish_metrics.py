@@ -33,9 +33,9 @@ from pathlib import Path
 import yaml
 
 from agent.models import MODEL_SPECS
+from evals.selective import selective
 
 CACHED_DISCOUNT = 0.1
-ANSWERABLE = {"lookup", "filtered", "metric", "knowledge", "diagnostic"}
 
 
 def _cases() -> dict:
@@ -52,17 +52,21 @@ def _pctl(vals, p):
     return round(s[max(0, min(len(s) - 1, round(p * (len(s) - 1))))], 2) if s else None
 
 
-def cell_metrics(rows: list[dict], cases: dict) -> dict:
+def cell_metrics(rows: list[dict]) -> dict:
     """Everything worth knowing about one (rung, config) cell, from its rows."""
     first = rows[0]
-    valid = [r for r in rows if not r.get("expected_refuse") and r["outcome"] != "error"]
-    answered = [r for r in valid if r["outcome"] == "answer"]
+    sel = selective(rows)
+    answered = [r for r in rows if not r.get("expected_refuse") and r["outcome"] == "answer"]
     correct_ans = sum(1 for r in answered if r.get("correct"))
     una = [r for r in rows if r.get("expected_refuse") and r["outcome"] != "error"
            and not r.get("needs_judge")]
     fabricated = sum(1 for r in una if r.get("fabricated"))
-    ansf = [r for r in rows if cases[r["qid"]]["tier"] in ANSWERABLE]
-    relf = [r for r in rows if cases[r["qid"]]["tier"] not in ANSWERABLE]
+    # The two families come from `expected_refuse`, which is written from the case's `expect.type`.
+    # They used to come from a tier allow-list, which put the one deliberately-answerable control in
+    # the `valid_but_wrong` tier on the wrong side and made this table disagree with every other
+    # analysis by one question.
+    ansf = [r for r in rows if not r.get("expected_refuse")]
+    relf = [r for r in rows if r.get("expected_refuse")]
     buckets = Counter(r["bucket"] for r in rows)
     spec = MODEL_SPECS.get(first["model"])
     cached = sum(r.get("cached_tokens", 0) or 0 for r in rows)
@@ -86,8 +90,8 @@ def cell_metrics(rows: list[dict], cases: dict) -> dict:
         "surface_fingerprint": first.get("surface_fingerprint"),
         "n_rows": n, "n_questions": len({r["qid"] for r in rows}),
         "reps": len({r.get("rep") for r in rows}),
-        # selective prediction
-        "coverage": round(len(answered) / len(valid), 4) if valid else None,
+        # selective prediction — the three reported metrics, from the one module that defines them
+        **sel.as_dict(),
         "precision": round(correct_ans / len(answered), 4) if answered else None,
         "groundedness": round(1 - fabricated / len(una), 4) if una else None,
         "fabrications": fabricated, "n_unanswerable_scored": len(una),
@@ -148,13 +152,18 @@ def main() -> None:
         for r in rows:
             by_cell.setdefault((r["rung"], r["config"]), []).append(r)
         for (rung, config), rs in sorted(by_cell.items()):
-            cells.append(cell_metrics(rs, cases))
+            cells.append(cell_metrics(rs))
             key = {"run": run_dir.name, "rung": rung, "config": config}
-            for tier in sorted({cases[r["qid"]]["tier"] for r in rs}):
-                trs = [r for r in rs if cases[r["qid"]]["tier"] == tier]
-                tiers.append({**key, "tier": tier, "n": len(trs),
-                              "correct": sum(1 for r in trs if r.get("correct")),
-                              "family": "answerable" if tier in ANSWERABLE else "reliability"})
+            # Grouped by (tier, family), not tier alone: `valid_but_wrong` holds both a set of traps
+            # and one answerable control, so a single row per tier would average a question that
+            # should be answered together with questions that should be refused.
+            grain = {(cases[r["qid"]]["tier"],
+                      "reliability" if r.get("expected_refuse") else "answerable") for r in rs}
+            for tier, family in sorted(grain):
+                trs = [r for r in rs if cases[r["qid"]]["tier"] == tier
+                       and ("reliability" if r.get("expected_refuse") else "answerable") == family]
+                tiers.append({**key, "tier": tier, "family": family, "n": len(trs),
+                              "correct": sum(1 for r in trs if r.get("correct"))})
             calls = Counter(s.get("tool") for r in rs for s in (r.get("steps") or []))
             for tool, k in calls.most_common():
                 tools.append({**key, "tool": tool, "calls": k,

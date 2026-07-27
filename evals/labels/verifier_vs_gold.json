@@ -1,21 +1,20 @@
 {
   "method": "independent gold (no human labels): gold_sql on numeric questions, plus unanswerable questions where any served number is wrong",
   "covers": {
-    "gold_sql": 177,
-    "unanswerable": 12
+    "gold_sql": 56,
+    "unanswerable": 2
   },
   "excludes": "prose answers (diagnostic/keywords)",
   "prompt_fingerprint": "149da8f96078",
   "source_runs": [
-    "results/runs/20260726-211115-gpt-5-mini/raw.jsonl",
-    "results/runs/20260726-202156-gpt-5-mini/raw.jsonl"
+    "results/runs/20260727-140714-gpt-5-mini/raw.jsonl"
   ],
-  "n": 189,
-  "catch": 45,
-  "false_flag": 7,
-  "ok_pass": 132,
-  "miss": 5,
-  "agreement": 0.9365079365079365,
-  "false_flag_rate": 0.050359712230215826,
-  "catch_rate": 0.9
+  "n": 58,
+  "catch": 11,
+  "false_flag": 1,
+  "ok_pass": 46,
+  "miss": 0,
+  "agreement": 0.9827586206896551,
+  "false_flag_rate": 0.02127659574468085,
+  "catch_rate": 1.0
 }

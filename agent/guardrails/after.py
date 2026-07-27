@@ -224,10 +224,26 @@ def _infer_source_metric(declared_value, steps: list, metrics) -> str | None:
 
 
 def output_validation(metric_def: dict, value) -> Verdict:
-    """Deterministic checks on the RETURNED value, not the metric selection: a governed
-    query that came back empty/null, or a value impossible for its `unit`, must not be
-    served as an answer. Refuse-only. This is where the metric-selection check can't see —
-    it never looks at *what came back*."""
+    """Deterministic checks on the RETURNED value: a governed query that came back empty/null,
+    or a value impossible for its `unit`. Refuse-only.
+
+    MEASURED CONTRIBUTION: ZERO, AND STRUCTURALLY SO. Over 5,814 scored rows this fired 656
+    times and refused nothing. All three of its checks are subsumed by a layer beneath it:
+
+      empty result   `governed_numbers` is REQUIRED for this guardrail to be coherent, and runs
+                     first. It refuses any served number that is not a governed result or a
+                     comparison of two, and an empty query produces neither — so R7 refuses the
+                     case before R8 sees it. Pinned by test_orchestrator's
+                     test_the_empty_result_check_is_unreachable_wherever_it_is_legal.
+      negative       across 5,373 governed queries the semantic layer never returned one; counts
+                     and currency come from aggregations that cannot go negative.
+      share > 100    the two `share` metrics are bounded ratios by definition.
+
+    The last two are properties of THIS semantic layer, not of arithmetic: a net-revenue metric
+    with refunds would return negative currency and the check would earn its place. The first is
+    structural and would hold anywhere. This docstring previously claimed the guardrail saw
+    "where the metric-selection check can't see"; it does not, and the attribution measured
+    exactly that."""
     if value is None:
         return Verdict(False, "result_empty", guardrail="output_validation", detail=
                        "the metric produced no number for this request, so there is nothing to "

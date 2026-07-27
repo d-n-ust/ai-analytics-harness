@@ -49,3 +49,27 @@ def bare_number(text: str | None) -> float | None:
         return float(m.group(1).replace(",", ""))
     except ValueError:
         return None
+
+
+# Dates are not answers. A refusal that names the coverage window — "I cannot provide
+# July 13-19, 2026 because data ends 2026-07-12" — contains six numbers and asserts none
+# of them, and reading it as a served figure turned honest declines into fabrications.
+_DATE = re.compile(
+    r"\b\d{4}-\d{2}-\d{2}\b"                                    # 2026-07-12
+    r"|\bQ[1-4][\s,]*\d{4}\b"                                   # Q2 2026
+    r"|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*"
+    r"\s*\.?\s*\d{0,2}\s*(?:[-–—]\s*\d{1,2})?[\s,]*\d{0,4}\b"   # July 13-19, 2026
+    r"|\b(?:19|20)\d{2}\b",                                     # a bare year
+    re.I)
+
+
+def asserts_number(text: str | None) -> bool:
+    """Does this answer put a FIGURE forward, as opposed to merely mentioning dates?
+
+    Used by the grader to decide whether an answer that should have been a refusal actually
+    served a number. Deliberately not `bare_number`: a real answer is often a sentence
+    ("5386 value moments came from the Americas"), and holding those to a bare-number pattern
+    would drop 145 genuine figures in one run. Deliberately not `parse_numbers` either, which
+    counts the digits in a date. Strip the dates, then ask.
+    """
+    return bool(parse_numbers(_DATE.sub(" ", str(text or ""))))

@@ -918,6 +918,35 @@ def test_toolbox_wiring_and_rung_gate():
         "no declared value -> output guardrails stand down"
 
 
+
+def test_a_refusal_that_names_a_date_is_not_a_fabrication():
+    """Dates are not answers.
+
+    The grader asked `parse_numbers(answer)` — every numeral anywhere in the text — so a decline
+    citing the coverage window ("I cannot provide July 13-19, 2026 because data ends 2026-07-12")
+    counted as a served number and was flagged `fabricated`. Honest declines scored as the worst
+    failure the harness has, and every silent-error figure inherited it.
+
+    Pinned in both directions, because the tempting fix (`bare_number`) breaks the other side: a
+    real answer is usually a sentence, and holding those to a bare-number pattern dropped 145
+    genuine figures in a single run.
+    """
+    from agent.numbers import asserts_number
+
+    for prose in ("I cannot provide July 13-19, 2026 because data coverage ends 2026-07-12",
+                  "No data available for 2026-07-13 to 2026-07-19",
+                  "No data yet for Jul 13-19, 2026",
+                  "There is no governed metric for that in Q2 2026"):
+        assert not asserts_number(prose), prose
+
+    for served in ("5386 value moments came from users in the Americas region in June 2026",
+                   "134 currently-active annual subscriptions.",
+                   "Last-week DAU/MAU (stickiness) = 31.4%",
+                   "2,500 users",
+                   "1620 vs 0"):
+        assert asserts_number(served), served
+
+
 if __name__ == "__main__":
     test_provenance_is_typed_not_guessed()
     test_every_offered_tool_can_be_dispatched()
@@ -941,4 +970,5 @@ if __name__ == "__main__":
     test_closing_phase_offers_only_exit_tools()
     test_verifier_is_refuse_only()
     test_toolbox_wiring_and_rung_gate()
+    test_a_refusal_that_names_a_date_is_not_a_fabrication()
     print("OK - output guardrails (provenance/validation/verifier) + semantic layer + input guardrail + ladder: all pass.")

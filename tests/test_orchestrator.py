@@ -247,6 +247,38 @@ def test_provenance_is_a_lookup_when_the_answer_names_its_result():
     assert ans.steps[0]["result"].startswith("[r1] "), ans.steps[0]["result"][:20]
 
 
+def test_the_empty_result_check_is_unreachable_wherever_it_is_legal():
+    """R8's `result_empty` branch cannot fire, and the reason is structural.
+
+    `output_validation` is incoherent without `governed_numbers` (guardrails/__init__.py), and
+    `governed_numbers` runs FIRST in verify_answer. A number can only reach R8 by being accounted
+    for as a governed result or a comparison of two — and a query that came back empty produces
+    neither, so R7 has already refused. The branch is therefore dead wherever it is legal to run.
+
+    This is pinned because the code claims otherwise: output_validation's docstring said it saw
+    "where the metric-selection check can't see". It doesn't. If someone later makes R8 legal on
+    its own, or moves R7 after it, this test fails and the claim can be re-examined rather than
+    silently inherited.
+    """
+    from agent.guardrails import GuardrailSet, incoherent
+    from agent.guardrails.after import account_for, output_validation
+
+    empty = [{"tool": "query_metric", "args": {"metric": "activation_rate"},
+              "error": False, "result_values": []}]
+
+    # 1. an all-empty run cannot account for any served number -> R7 refuses it
+    assert account_for(42.0, empty) is None
+    # 2. ...and R8 would have called it result_empty, had it ever been reached
+    assert output_validation({}, None).reason == "result_empty"
+    # 3. ...but R8 never runs without R7, so it never is
+    assert incoherent(GuardrailSet(abstain=True, check_tools=True, transparency=True,
+                                   tool_restriction=True, output_validation=True))
+    # 4. and when R7 DOES pass, the served number came from a non-empty result by construction
+    mixed = empty + [{"tool": "query_metric", "args": {"metric": "active_users"},
+                      "error": False, "result_values": [371.0]}]
+    assert account_for(371.0, mixed) == "active_users = 371"
+
+
 TESTS = [test_a_run_ends_through_one_typed_exit,
          test_output_checks_convert_an_answer_into_a_refusal,
          test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset,
@@ -258,7 +290,8 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_a_turn_separates_the_exit_call_from_the_rest,
          test_the_trace_renders_every_run_shape_without_inventing_data,
          test_every_guardrail_reports_what_it_did,
-         test_provenance_is_a_lookup_when_the_answer_names_its_result]
+         test_provenance_is_a_lookup_when_the_answer_names_its_result,
+         test_the_empty_result_check_is_unreachable_wherever_it_is_legal]
 
 
 if __name__ == "__main__":

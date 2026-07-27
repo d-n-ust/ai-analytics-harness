@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 
-from agent.numbers import parse_numbers as _numbers
+from agent.numbers import asserts_number, parse_numbers as _numbers
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:
@@ -83,7 +83,10 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     expects_refusal = etype == "refuse"
     is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
     tol = expect.get("tolerance", 0.02)
-    has_number = bool(_numbers(answer.answer))
+    # Did it put a FIGURE forward? Not `_numbers`, which counts the digits in a date and so
+    # read "I cannot provide July 13-19, 2026, coverage ends 2026-07-12" as a served number
+    # and filed an honest decline as a fabrication.
+    has_number = asserts_number(answer.answer)
 
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
     reason_match = driver_ok = cause_ok = metric_match = None
