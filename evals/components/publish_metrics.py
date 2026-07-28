@@ -114,8 +114,16 @@ def cell_metrics(rows: list[dict]) -> dict:
                                        if not r.get("expected_refuse") and r["outcome"] == "refuse"),
         **{f"refused_by_{g}": sum(1 for r in rows if r.get("refused_by") == g)
            for g in ("governed_numbers", "output_validation", "trajectory_verify")},
-        # the judge, where it ran
+        # the judge, where it ran. `blocked_good` and `passed_bad` are the two ways it can be
+        # wrong, scored against the same ground truth as everything else — without them a reader
+        # can see that the judge rejected 12 answers but not whether any of the 12 deserved it,
+        # which is the only question anyone asks about an AI grading an AI.
         "judge_ran": len(judged), "judge_rejected": len(j_rej),
+        "judge_blocked_good": sum(1 for r in j_rej
+                                  if not r.get("expected_refuse") and r.get("correct")),
+        "judge_passed_bad": sum(1 for r in judged
+                                if r["verifier_verdict"].get("answers_question") is not False
+                                and (r.get("expected_refuse") or not r.get("correct"))),
         "judge_role_evidence": sum(1 for r in judged
                                    if (r["verifier_verdict"] or {}).get("value_role") == "evidence"),
         # cost and shape
@@ -157,10 +165,15 @@ def main() -> None:
             # Grouped by (tier, family), not tier alone: `valid_but_wrong` holds both a set of traps
             # and one answerable control, so a single row per tier would average a question that
             # should be answered together with questions that should be refused.
-            grain = {(cases[r["qid"]]["tier"],
+            # A run older than a question-set change carries qids no longer on disk. Its CELL
+            # metrics are still valid — they never consult the case file — so a retired question
+            # gets a tier of its own instead of killing the publish. Losing the tier breakdown for
+            # a superseded run is the honest cost; losing the run's rates would not be.
+            tier_of = lambda r: (cases.get(r["qid"]) or {}).get("tier", "retired")
+            grain = {(tier_of(r),
                       "reliability" if r.get("expected_refuse") else "answerable") for r in rs}
             for tier, family in sorted(grain):
-                trs = [r for r in rs if cases[r["qid"]]["tier"] == tier
+                trs = [r for r in rs if tier_of(r) == tier
                        and ("reliability" if r.get("expected_refuse") else "answerable") == family]
                 tiers.append({**key, "tier": tier, "family": family, "n": len(trs),
                               "correct": sum(1 for r in trs if r.get("correct"))})
