@@ -20,9 +20,10 @@ Each experiment adds exactly one thing to the *same* agent and re-answers the **
 Nothing else changes, so every delta is attributable to that one change — not to prompt luck or
 question drift.
 
-> Companion essays: [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
-> and [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
-> (the grounding experiment); a reliability essay on typed refusal is forthcoming.
+> Companion essays: [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
+> (the grounding experiment) and [Agentic Analytics: Teaching an AI Analyst to Say I Don't Know](https://decisionspine.com/blog/teaching-an-ai-analyst-to-say-i-dont-know)
+> (the reliability experiment), with [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
+> as the argument underneath both.
 
 ## Anatomy — what's inside
 
