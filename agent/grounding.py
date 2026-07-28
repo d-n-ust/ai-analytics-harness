@@ -20,6 +20,7 @@ from .prompts import system_prompt
 from .rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
 from .tools import Toolbox
 
+
 @dataclass
 class Grounding:
     """Everything one configuration gives the agent: what it is told, what it may do, and the

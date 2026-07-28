@@ -24,8 +24,17 @@ from pathlib import Path
 from agent.conversation import Turn
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
-from agent.guardrails.judge import (_EVIDENCE, _REPORT, _ROLE_REPORT, _ROLE_SYSTEM, _ROLE_USER,
-                                    _USER, prompt_fingerprint, verify_system, verify_trajectory)
+from agent.guardrails.judge import (
+    _EVIDENCE,
+    _REPORT,
+    _ROLE_REPORT,
+    _ROLE_SYSTEM,
+    _ROLE_USER,
+    _USER,
+    prompt_fingerprint,
+    verify_system,
+    verify_trajectory,
+)
 from warehouse.warehouse import open_warehouse
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"

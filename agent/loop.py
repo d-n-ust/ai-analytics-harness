@@ -17,7 +17,6 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 from __future__ import annotations
 
 import logging
-
 import time
 from dataclasses import dataclass, field, replace
 

@@ -43,9 +43,11 @@ def trajectories(path: str, only_over_refusals: bool = True) -> list[dict]:
 
 def main() -> None:
     path = sys.argv[1]
-    con = open_warehouse(); set_star(con, True)
+    con = open_warehouse()
+    set_star(con, True)
     sem = SemanticLayer(con)
-    grounding = build_grounding(con, 7, guardrails=LADDER[9])
+    # built for its side effect on `con`: the judge replays against the same star views
+    build_grounding(con, 7, guardrails=LADDER[9])
     model = get_model("gpt-5-mini")
 
     cases = trajectories(path)

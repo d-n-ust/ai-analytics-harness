@@ -18,8 +18,8 @@ from pathlib import Path
 
 from agent.grounding import build_grounding
 from agent.loop import Answer, run_agent
-from agent.rungs import capabilities
 from agent.providers import get_model
+from agent.rungs import capabilities
 from warehouse.warehouse import open_warehouse, set_star
 
 from . import report

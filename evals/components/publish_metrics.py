@@ -169,7 +169,8 @@ def main() -> None:
             # metrics are still valid — they never consult the case file — so a retired question
             # gets a tier of its own instead of killing the publish. Losing the tier breakdown for
             # a superseded run is the honest cost; losing the run's rates would not be.
-            tier_of = lambda r: (cases.get(r["qid"]) or {}).get("tier", "retired")
+            def tier_of(r):
+                return (cases.get(r["qid"]) or {}).get("tier", "retired")
             grain = {(tier_of(r),
                       "reliability" if r.get("expected_refuse") else "answerable") for r in rs}
             for tier, family in sorted(grain):

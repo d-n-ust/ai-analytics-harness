@@ -71,7 +71,7 @@ def main() -> None:
         (an, a), (bn, b) = sorted(spans.items())
         gap = abs(a[2].silent_error - b[2].silent_error) * 100
         worst = max(a[1] - a[0], b[1] - b[0])
-        print(f"  ORIGINAL CLAIM   all-but-well-formed beat all-six by 1.8 points of silent error")
+        print("  ORIGINAL CLAIM   all-but-well-formed beat all-six by 1.8 points of silent error")
         print(f"  THIS RUN         they differ by {gap:.1f} points "
               f"({an} {a[2].silent_error:.1%} vs {bn} {b[2].silent_error:.1%})")
         print(f"  NOISE FLOOR      one cell's own repeats span up to {worst:.1f} points")

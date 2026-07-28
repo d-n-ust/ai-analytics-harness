@@ -21,7 +21,8 @@ from __future__ import annotations
 
 import re
 
-from agent.numbers import asserts_number, parse_numbers as _numbers
+from agent.numbers import asserts_number
+from agent.numbers import parse_numbers as _numbers
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:

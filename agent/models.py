@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 # Reasoning effort, weakest to strongest. The canonical vocabulary; a model accepts some slice
 # of it, and `off`/`disabled` are aliases callers use for the weakest.
 EFFORT_LADDER = ("none", "minimal", "low", "medium", "high", "xhigh")

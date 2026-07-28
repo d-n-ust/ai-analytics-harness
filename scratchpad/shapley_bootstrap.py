@@ -48,7 +48,7 @@ def bootstrap(rows: list[dict], iters: int = 400, seed: int = 0) -> dict:
 
 
 def main() -> None:
-    rows = [json.loads(l) for l in open(sys.argv[1])]
+    rows = [json.loads(line) for line in open(sys.argv[1])]
     iters = int(sys.argv[2]) if len(sys.argv) > 2 else 400
     draws = bootstrap(rows, iters)
     for name, title, flip in (("safety", "SAFETY (wrong-number rate avoided)", -1),

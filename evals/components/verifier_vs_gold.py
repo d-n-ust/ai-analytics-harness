@@ -109,10 +109,10 @@ def main() -> None:
     OUT.write_text(json.dumps(record, indent=2))
 
     print(f"judge vs independent gold — n={s['n']}  (fingerprint {record['prompt_fingerprint']})\n")
-    print(f"                       answer RIGHT   answer WRONG")
+    print("                       answer RIGHT   answer WRONG")
     print(f"    judge PASSED     {s['ok_pass']:>10}      {s['miss']:>10}  <- miss")
     print(f"    judge REFUSED    {s['false_flag']:>10}      {s['catch']:>10}  <- catch")
-    print(f"       ^ false flag")
+    print("       ^ false flag")
     print(f"\n    agreement       {s['agreement']:.1%}")
     print(f"    false-flag rate {s['false_flag_rate']:.1%}   (refused {s['false_flag']} correct answers)")
     print(f"    catch rate      {s['catch_rate']:.1%}   (caught {s['catch']} wrong answers)")
