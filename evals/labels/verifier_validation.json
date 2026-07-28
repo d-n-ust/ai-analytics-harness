@@ -1,0 +1,19 @@
+{
+  "labelled": 37,
+  "agreement": 34,
+  "miss": 1,
+  "miss_rate": 0.059,
+  "false_flag": 2,
+  "false_flag_rate": 0.1,
+  "prompt_fingerprint": "439c750bb4de",
+  "superseded_fingerprint": "1b2752fac63a",
+  "run": "20260725-011850-gpt-5-mini",
+  "date": "2026-07-25",
+  "method": "3-Claude-judge panel (strict/pragmatic/skeptic, majority, blind); 3/37 split, all 2-1",
+  "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850).",
+  "restamp_note": "Fingerprint re-stamped 2026-07-26 WITHOUT re-labelling: its definition widened to cover the evidence template, which was extracted from an inline f-string. The rendered evidence is byte-identical — pinned by tests/test_surface.py::_check_evidence_renders — so these labels were collected against the same characters the judge sees now. A change to what the judge is SHOWN (not just how it is stored) does require re-labelling.",
+  "invalidated": "7 of the 37 cases were judged on the wrong number — _provenance handed the judge a breakdown's FIRST row instead of the row the answer served (e.g. V027/V029 t2_paid_search_spend_q2: judge shown 10643.22, answer served 36875.98). The blind sheet carried the same wrong `query_result`, so the human labels were formed against it too. Both sides of the comparison used corrupted evidence, so the 92% agreement / 6% miss / 10% false-flag rates below do not describe the judge as it now runs.",
+  "invalidated_date": "2026-07-26",
+  "invalidated_by": "provenance fix (agent/verifier.py::_provenance, agent/tools.py::_measure_values)",
+  "next_step": "Re-draw a blind sample from a post-fix R9 run and re-label; the rates above must not be quoted until then."
+}

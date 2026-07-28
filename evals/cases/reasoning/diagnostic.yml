@@ -1,0 +1,85 @@
+# Diagnostic / root cause — graded on naming the right driver (breadth vs frequency vs depth).
+# `cause` is descriptive only (the generated world has no reminder->activity cause); not a gate.
+cases:
+  - id: t5_why_drop
+    tier: diagnostic
+    question: "Weekly value moments dropped last week. What caused it?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_engagement_drop
+    tier: diagnostic
+    question: "Engagement fell last week. Which part of the business is responsible?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "retention", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_not_breadth
+    tier: diagnostic
+    question: "Did our active user base shrink last week, or is something else going on with value moments?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_masked_by_growth
+    tier: diagnostic
+    question: "Value moments came in soft last week even though we added users. What happened?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+      cause: ["reminder", "notification"]
+
+  - id: t5_which_lever
+    tier: diagnostic
+    question: "Which part of the North Star weakened last week — breadth, frequency, or depth?"
+    expect:
+      type: diagnostic
+      driver: ["frequency", "days per user", "days/user", "days_per_user"]
+      cause: ["reminder", "notification"]
+
+  # The two below contest the metric tree's CAUSAL EDGES, which nothing else in the set reaches.
+  # Every question above is graded on naming the right identity child; neither of these can be
+  # answered by naming one, and each fails a different way.
+
+  - id: t5_region_or_broader
+    tier: diagnostic
+    question: "Value moments dropped last week. Was it one region, or something broader?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often",
+               "broad", "across", "all three", "every region", "not a region", "not regional"]
+      cause: ["reminder", "notification"]
+    note: >
+      A slice is not a lever. days_per_user fell in EVERY region — APAC 2.693->2.229,
+      Americas 2.766->2.279, EMEA 2.699->2.289 — so the drop is a frequency effect that is
+      uniform geographically. EMEA merely shows the largest ABSOLUTE fall (1952->1601) because
+      it is the largest region, and the tree encodes no region edge at all: region is a
+      breakdown dimension, never a driver. Trap: answer "EMEA", which the agent has already
+      done unprompted on t5_engagement_drop. Tests that a driver named outside the tree is not
+      accepted as a cause.
+
+  - id: t5_reminder_caused_it
+    tier: diagnostic
+    question: "Reminder open rate fell sharply last week. Did that cause the drop in engagement?"
+    expect:
+      type: keywords
+      keywords: ["unproven", "not proven", "no evidence", "not established", "correlational",
+                 "low confidence", "cannot attribute", "can't attribute", "not causal",
+                 "no causal", "not the cause", "not proof"]
+    note: >
+      The one question in the set where the tree DOES carry the edge and the answer is still no.
+      days_per_user <- reminder_open_rate exists as an INFLUENCE edge at confidence low, and its
+      evidence argues against itself: "Co-moved in one anomaly week only; across normal weeks the
+      correlation is ~0. No independent evidence of a causal link." Both series did move hard
+      (reminders 0.4256->0.3067, -27.9%; frequency -16.4%), which is exactly what makes the
+      causal story tempting. Trap: say yes because the edge is in the tree and both fell — a
+      check that asked only "is this edge encoded?" would wave it through. Only reading the
+      confidence and the evidence refuses it.
+      Graded on KEYWORDS, not on the refuse channel: the right answer here is a substantive
+      "no, and here is why", which is better than a bare refusal and which the agent already
+      gives — "a plausible but unproven contributor; the main cause was lower days per user".
+      Expecting `refuse` scored that 0/6 and measured which tool it exited through.

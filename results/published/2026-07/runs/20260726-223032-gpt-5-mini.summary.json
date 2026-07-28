@@ -1,0 +1,5966 @@
+{
+  "meta": {
+    "axis": "config",
+    "models": [
+      "gpt-5-mini"
+    ],
+    "cells": [
+      "abstain+check_tools+transparency",
+      "abstain+check_tools+coverage_check+transparency",
+      "abstain+check_tools+tool_restriction+transparency",
+      "abstain+check_tools+resolve+transparency",
+      "R6-resolve",
+      "R6-tool_restriction",
+      "R6-coverage_check",
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "R6",
+      "R7-resolve",
+      "R7-coverage_check",
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "R7",
+      "R8-resolve",
+      "abstain+check_tools+coverage_check+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "R8-coverage_check",
+      "abstain+check_tools+tool_restriction+resolve+transparency+governed_numbers+trajectory_verify",
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation+trajectory_verify",
+      "R8",
+      "R9-output_validation",
+      "R9-resolve",
+      "R9-coverage_check",
+      "R9"
+    ],
+    "n_questions": 57,
+    "reps": 1,
+    "n_rows": 1368,
+    "wrong_cost": 4.0,
+    "prices_estimated": false,
+    "schema_version": 14,
+    "schema_current": 14,
+    "schema_skew": false,
+    "main_reasoning": "minimal",
+    "relevancy_scored": true,
+    "cache_measured": true,
+    "verifier": {
+      "model": "gpt-5-mini",
+      "reasoning": "low"
+    },
+    "mock": false,
+    "verifier_validation": {
+      "labelled": 37,
+      "agreement": 34,
+      "miss": 1,
+      "miss_rate": 0.059,
+      "false_flag": 2,
+      "false_flag_rate": 0.1,
+      "prompt_fingerprint": "439c750bb4de",
+      "superseded_fingerprint": "1b2752fac63a",
+      "run": "20260725-011850-gpt-5-mini",
+      "date": "2026-07-25",
+      "method": "3-Claude-judge panel (strict/pragmatic/skeptic, majority, blind); 3/37 split, all 2-1",
+      "note": "Expanded from n=20. Panel is a proxy for human labels. Sample from reliability ladder R9 verdicts (20260725-011850).",
+      "restamp_note": "Fingerprint re-stamped 2026-07-26 WITHOUT re-labelling: its definition widened to cover the evidence template, which was extracted from an inline f-string. The rendered evidence is byte-identical \u2014 pinned by tests/test_surface.py::_check_evidence_renders \u2014 so these labels were collected against the same characters the judge sees now. A change to what the judge is SHOWN (not just how it is stored) does require re-labelling.",
+      "invalidated": "7 of the 37 cases were judged on the wrong number \u2014 _provenance handed the judge a breakdown's FIRST row instead of the row the answer served (e.g. V027/V029 t2_paid_search_spend_q2: judge shown 10643.22, answer served 36875.98). The blind sheet carried the same wrong `query_result`, so the human labels were formed against it too. Both sides of the comparison used corrupted evidence, so the 92% agreement / 6% miss / 10% false-flag rates below do not describe the judge as it now runs.",
+      "invalidated_date": "2026-07-26",
+      "invalidated_by": "provenance fix (agent/verifier.py::_provenance, agent/tools.py::_measure_values)",
+      "next_step": "Re-draw a blind sample from a post-fix R9 run and re-label; the rates above must not be quoted until then.",
+      "current_fingerprint": "149da8f96078",
+      "stale": true
+    },
+    "verifier_vs_gold": {
+      "method": "independent gold (no human labels): gold_sql on numeric questions, plus unanswerable questions where any served number is wrong",
+      "covers": {
+        "gold_sql": 56,
+        "unanswerable": 2
+      },
+      "excludes": "prose answers (diagnostic/keywords)",
+      "prompt_fingerprint": "149da8f96078",
+      "source_runs": [
+        "results/runs/20260727-140714-gpt-5-mini/raw.jsonl"
+      ],
+      "n": 58,
+      "catch": 11,
+      "false_flag": 1,
+      "ok_pass": 46,
+      "miss": 0,
+      "agreement": 0.9827586206896551,
+      "false_flag_rate": 0.02127659574468085,
+      "catch_rate": 1.0,
+      "current_fingerprint": "149da8f96078"
+    }
+  },
+  "cells": {
+    "gpt-5-mini": {
+      "abstain+check_tools+transparency": {
+        "n": 57,
+        "outcomes": {
+          "right": 21,
+          "wrong": 15,
+          "idk": 19,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 7,
+            "wrong": 2,
+            "refused_ok": 9,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0,
+            "wrong": 2,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.84,
+          "risk": 0.16000000000000003,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.8333333333333334,
+          "answer_correctness": 0.84,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 5,
+          "confident_wrong": 7,
+          "off_governance": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.6,
+          "tools_per_run": {
+            "query_metric": 0.98,
+            "list_metrics": 0.88,
+            "check_metric_exists": 0.33,
+            "explain_change": 0.32,
+            "check_coverage": 0.3,
+            "run_sql": 0.21,
+            "get_metric_tree": 0.18,
+            "check_segment_defined": 0.18,
+            "get_schema": 0.16,
+            "check_causal_evidence": 0.05,
+            "describe_table": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 780683,
+          "out_tokens": 14140,
+          "cached_tokens": 564736,
+          "usd": 0.0964,
+          "latency_s": {
+            "mean": 6.8,
+            "p50": 5.253,
+            "p90": 10.372,
+            "p99": 18.101
+          }
+        },
+        "score": -15.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.84
+          ],
+          "grounded": [
+            0.8333333333333334
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "abstain+check_tools+coverage_check+transparency": {
+        "n": 57,
+        "outcomes": {
+          "right": 24,
+          "wrong": 9,
+          "idk": 20,
+          "deferred": 2,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 8,
+            "wrong": 2,
+            "refused_ok": 8,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1,
+            "wrong": 0,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.96,
+          "risk": 0.040000000000000036,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9310344827586207,
+          "answer_correctness": 0.96,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 4,
+          "off_governance": 3,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 5,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.21,
+          "tools_per_run": {
+            "query_metric": 0.98,
+            "list_metrics": 0.79,
+            "explain_change": 0.3,
+            "check_coverage": 0.28,
+            "check_metric_exists": 0.23,
+            "check_segment_defined": 0.18,
+            "get_metric_tree": 0.14,
+            "run_sql": 0.11,
+            "check_causal_evidence": 0.09,
+            "get_schema": 0.07,
+            "describe_table": 0.05
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 716737,
+          "out_tokens": 13261,
+          "cached_tokens": 461824,
+          "usd": 0.1018,
+          "latency_s": {
+            "mean": 6.1,
+            "p50": 4.671,
+            "p90": 10.548,
+            "p99": 12.956
+          }
+        },
+        "score": 14.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.96
+          ],
+          "grounded": [
+            0.9310344827586207
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+transparency": {
+        "n": 57,
+        "outcomes": {
+          "right": 19,
+          "wrong": 11,
+          "idk": 25,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 2,
+            "wrong": 5,
+            "refused_ok": 1,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 0.7916666666666666,
+          "risk": 0.20833333333333337,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9333333333333333,
+          "answer_correctness": 0.8333333333333334,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 7,
+          "off_governance": 2,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 5,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.42,
+          "tools_per_run": {
+            "query_metric": 1.07,
+            "list_metrics": 0.91,
+            "check_coverage": 0.35,
+            "check_metric_exists": 0.35,
+            "explain_change": 0.26,
+            "get_metric_tree": 0.16,
+            "check_segment_defined": 0.16,
+            "check_causal_evidence": 0.07,
+            "get_schema": 0.05,
+            "describe_table": 0.04
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 757000,
+          "out_tokens": 12725,
+          "cached_tokens": 461184,
+          "usd": 0.1109,
+          "latency_s": {
+            "mean": 6.5,
+            "p50": 5.24,
+            "p90": 10.807,
+            "p99": 12.54
+          }
+        },
+        "score": -1.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.7916666666666666
+          ],
+          "grounded": [
+            0.9333333333333333
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "abstain+check_tools+resolve+transparency": {
+        "n": 57,
+        "outcomes": {
+          "right": 22,
+          "wrong": 12,
+          "idk": 18,
+          "deferred": 2,
+          "other": 3,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 6,
+            "wrong": 1,
+            "refused_ok": 9,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.88,
+          "risk": 0.12,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.896551724137931,
+          "answer_correctness": 0.88,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 5,
+          "off_governance": 4,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 5,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.93,
+          "tools_per_run": {
+            "query_metric": 1.05,
+            "list_metrics": 0.93,
+            "check_coverage": 0.46,
+            "check_metric_exists": 0.3,
+            "explain_change": 0.28,
+            "run_sql": 0.26,
+            "check_segment_defined": 0.23,
+            "get_metric_tree": 0.19,
+            "get_schema": 0.09,
+            "describe_table": 0.07,
+            "check_causal_evidence": 0.07
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 867149,
+          "out_tokens": 14849,
+          "cached_tokens": 409344,
+          "usd": 0.1544,
+          "latency_s": {
+            "mean": 7.2,
+            "p50": 5.987,
+            "p90": 11.841,
+            "p99": 15.587
+          }
+        },
+        "score": 3.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.88
+          ],
+          "grounded": [
+            0.896551724137931
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R6-resolve": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 9,
+          "idk": 23,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 8,
+            "wrong": 2,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0,
+            "wrong": 1,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 5,
+            "refused_ok": 1,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.92,
+          "risk": 0.07999999999999996,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9,
+          "answer_correctness": 0.96,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 5,
+          "off_governance": 1,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 4,
+            "wrong_reason": 3,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.16,
+          "tools_per_run": {
+            "query_metric": 1.16,
+            "list_metrics": 0.86,
+            "check_metric_exists": 0.28,
+            "explain_change": 0.28,
+            "check_coverage": 0.21,
+            "get_metric_tree": 0.14,
+            "check_segment_defined": 0.14,
+            "check_causal_evidence": 0.07,
+            "get_schema": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 728883,
+          "out_tokens": 16316,
+          "cached_tokens": 355200,
+          "usd": 0.1349,
+          "latency_s": {
+            "mean": 7.2,
+            "p50": 4.687,
+            "p90": 10.811,
+            "p99": 27.128
+          }
+        },
+        "score": 4.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.92
+          ],
+          "grounded": [
+            0.9
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R6-tool_restriction": {
+        "n": 57,
+        "outcomes": {
+          "right": 22,
+          "wrong": 11,
+          "idk": 21,
+          "deferred": 1,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 5,
+            "wrong": 2,
+            "refused_ok": 7,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.88,
+          "risk": 0.12,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9,
+          "answer_correctness": 0.92,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 7,
+          "off_governance": 1,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 4,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 4,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.63,
+          "tools_per_run": {
+            "query_metric": 1.23,
+            "list_metrics": 0.79,
+            "check_coverage": 0.42,
+            "explain_change": 0.32,
+            "check_segment_defined": 0.25,
+            "check_metric_exists": 0.23,
+            "run_sql": 0.16,
+            "get_metric_tree": 0.16,
+            "check_causal_evidence": 0.05,
+            "describe_table": 0.02,
+            "get_schema": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 792919,
+          "out_tokens": 14450,
+          "cached_tokens": 394496,
+          "usd": 0.1384,
+          "latency_s": {
+            "mean": 6.8,
+            "p50": 5.316,
+            "p90": 11.389,
+            "p99": 13.903
+          }
+        },
+        "score": -5.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.88
+          ],
+          "grounded": [
+            0.9
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R6-coverage_check": {
+        "n": 57,
+        "outcomes": {
+          "right": 21,
+          "wrong": 9,
+          "idk": 24,
+          "deferred": 1,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 1,
+            "refused_ok": 9,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 2,
+            "wrong": 4,
+            "refused_ok": 1,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.84,
+          "risk": 0.16000000000000003,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9333333333333333,
+          "answer_correctness": 0.88,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 5,
+          "off_governance": 2,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 4,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 6,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.33,
+          "tools_per_run": {
+            "list_metrics": 0.86,
+            "query_metric": 0.86,
+            "check_metric_exists": 0.42,
+            "explain_change": 0.37,
+            "check_coverage": 0.3,
+            "check_segment_defined": 0.25,
+            "get_metric_tree": 0.19,
+            "check_causal_evidence": 0.07,
+            "describe_table": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 730026,
+          "out_tokens": 12615,
+          "cached_tokens": 354688,
+          "usd": 0.1279,
+          "latency_s": {
+            "mean": 6.2,
+            "p50": 5.213,
+            "p90": 10.402,
+            "p99": 12.11
+          }
+        },
+        "score": 11.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.84
+          ],
+          "grounded": [
+            0.9333333333333333
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers": {
+        "n": 57,
+        "outcomes": {
+          "right": 20,
+          "wrong": 6,
+          "idk": 27,
+          "deferred": 1,
+          "other": 3,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 12,
+            "wrong": 0,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 3,
+            "refused_ok": 3,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 0.8333333333333334,
+          "risk": 0.16666666666666663,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9666666666666667,
+          "answer_correctness": 0.9166666666666666,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 5,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 4,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 2,
+            "over_refused": 2
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.18,
+          "tools_per_run": {
+            "query_metric": 1.14,
+            "list_metrics": 0.91,
+            "check_metric_exists": 0.35,
+            "explain_change": 0.32,
+            "check_coverage": 0.14,
+            "get_metric_tree": 0.12,
+            "check_segment_defined": 0.11,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 815700,
+          "out_tokens": 12990,
+          "cached_tokens": 393472,
+          "usd": 0.1414,
+          "latency_s": {
+            "mean": 6.3,
+            "p50": 4.932,
+            "p90": 10.646,
+            "p99": 15.0
+          }
+        },
+        "score": 17.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.8333333333333334
+          ],
+          "grounded": [
+            0.9666666666666667
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "R6": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 9,
+          "idk": 21,
+          "deferred": 2,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 1,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 1,
+            "wrong": 6,
+            "refused_ok": 0,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 0.9583333333333334,
+          "risk": 0.04166666666666663,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9310344827586207,
+          "answer_correctness": 0.9583333333333334,
+          "answer_relevancy": null
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 5,
+          "off_governance": 2,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.21,
+          "tools_per_run": {
+            "query_metric": 1.12,
+            "list_metrics": 0.82,
+            "explain_change": 0.32,
+            "check_segment_defined": 0.26,
+            "check_coverage": 0.25,
+            "check_metric_exists": 0.21,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 731647,
+          "out_tokens": 12254,
+          "cached_tokens": 369920,
+          "usd": 0.1242,
+          "latency_s": {
+            "mean": 6.0,
+            "p50": 4.832,
+            "p90": 9.819,
+            "p99": 12.4
+          }
+        },
+        "score": 12.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.9583333333333334
+          ],
+          "grounded": [
+            0.9310344827586207
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "R7-resolve": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 6,
+          "idk": 26,
+          "deferred": 0,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 1,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 3,
+            "refused_ok": 3,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.92,
+          "risk": 0.07999999999999996,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.967741935483871,
+          "answer_correctness": 0.92,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 5,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 4,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.26,
+          "tools_per_run": {
+            "query_metric": 1.04,
+            "list_metrics": 0.86,
+            "check_metric_exists": 0.4,
+            "explain_change": 0.37,
+            "check_coverage": 0.28,
+            "check_segment_defined": 0.14,
+            "get_metric_tree": 0.09,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 871067,
+          "out_tokens": 14061,
+          "cached_tokens": 409600,
+          "usd": 0.1537,
+          "latency_s": {
+            "mean": 6.6,
+            "p50": 5.242,
+            "p90": 11.758,
+            "p99": 16.223
+          }
+        },
+        "score": 17.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.92
+          ],
+          "grounded": [
+            0.967741935483871
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R7-coverage_check": {
+        "n": 57,
+        "outcomes": {
+          "right": 19,
+          "wrong": 9,
+          "idk": 26,
+          "deferred": 1,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 8,
+            "wrong": 1,
+            "refused_ok": 9,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 3,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 2,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 0.7916666666666666,
+          "risk": 0.20833333333333337,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9,
+          "answer_correctness": 0.8333333333333334,
+          "answer_relevancy": 0.9411764705882353
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 6,
+          "off_governance": 0,
+          "wrong_metric": 1
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 4,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.14,
+          "tools_per_run": {
+            "query_metric": 0.98,
+            "list_metrics": 0.89,
+            "check_metric_exists": 0.35,
+            "check_coverage": 0.28,
+            "explain_change": 0.26,
+            "check_segment_defined": 0.21,
+            "get_metric_tree": 0.11,
+            "check_causal_evidence": 0.05
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 803089,
+          "out_tokens": 12933,
+          "cached_tokens": 381312,
+          "usd": 0.1408,
+          "latency_s": {
+            "mean": 6.1,
+            "p50": 5.053,
+            "p90": 10.505,
+            "p99": 12.052
+          }
+        },
+        "score": 0.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.7916666666666666
+          ],
+          "grounded": [
+            0.9
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation": {
+        "n": 57,
+        "outcomes": {
+          "right": 22,
+          "wrong": 7,
+          "idk": 28,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 0,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 2,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 3,
+            "refused_ok": 3,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.88,
+          "risk": 0.12,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.967741935483871,
+          "answer_correctness": 0.88,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 6,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.25,
+          "tools_per_run": {
+            "query_metric": 1.11,
+            "list_metrics": 0.91,
+            "check_coverage": 0.33,
+            "check_metric_exists": 0.32,
+            "explain_change": 0.21,
+            "get_metric_tree": 0.14,
+            "check_segment_defined": 0.12,
+            "check_causal_evidence": 0.09,
+            "describe_table": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 821411,
+          "out_tokens": 12355,
+          "cached_tokens": 386176,
+          "usd": 0.1432,
+          "latency_s": {
+            "mean": 6.0,
+            "p50": 4.555,
+            "p90": 10.509,
+            "p99": 11.362
+          }
+        },
+        "score": 13.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.88
+          ],
+          "grounded": [
+            0.967741935483871
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+trajectory_verify": {
+        "n": 57,
+        "outcomes": {
+          "right": 19,
+          "wrong": 1,
+          "idk": 37,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 0,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 1,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.7692307692307693,
+          "precision_on_answered": 0.95,
+          "risk": 0.050000000000000044,
+          "answered": 20,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 0.95,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 1,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 4
+          },
+          "verifier_wrong_segment": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.16,
+          "tools_per_run": {
+            "query_metric": 1.05,
+            "list_metrics": 0.84,
+            "check_metric_exists": 0.35,
+            "explain_change": 0.3,
+            "check_coverage": 0.25,
+            "check_segment_defined": 0.14,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {
+            "pass": 14,
+            "fail": 8
+          }
+        },
+        "telemetry": {
+          "in_tokens": 818368,
+          "out_tokens": 12686,
+          "cached_tokens": 406272,
+          "usd": 0.1386,
+          "latency_s": {
+            "mean": 9.1,
+            "p50": 10.122,
+            "p90": 14.041,
+            "p99": 18.639
+          }
+        },
+        "score": 34.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.95
+          ],
+          "grounded": [
+            1.0
+          ],
+          "coverage": [
+            0.7692307692307693
+          ]
+        }
+      },
+      "R7": {
+        "n": 57,
+        "outcomes": {
+          "right": 25,
+          "wrong": 5,
+          "idk": 24,
+          "deferred": 2,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 1,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 3,
+            "refused_ok": 3,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9310344827586207,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 3,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.4,
+          "tools_per_run": {
+            "query_metric": 1.12,
+            "list_metrics": 0.82,
+            "check_metric_exists": 0.4,
+            "explain_change": 0.4,
+            "check_coverage": 0.33,
+            "check_segment_defined": 0.18,
+            "get_metric_tree": 0.07,
+            "check_causal_evidence": 0.07
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 840309,
+          "out_tokens": 12642,
+          "cached_tokens": 416640,
+          "usd": 0.1416,
+          "latency_s": {
+            "mean": 6.1,
+            "p50": 4.719,
+            "p90": 10.323,
+            "p99": 12.492
+          }
+        },
+        "score": 25.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            1.0
+          ],
+          "grounded": [
+            0.9310344827586207
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R8-resolve": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 6,
+          "idk": 26,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 1,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 3,
+            "wrong": 4,
+            "refused_ok": 2,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 0.9583333333333334,
+          "risk": 0.04166666666666663,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9666666666666667,
+          "answer_correctness": 0.9583333333333334,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 5,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.11,
+          "tools_per_run": {
+            "query_metric": 1.05,
+            "list_metrics": 0.68,
+            "explain_change": 0.4,
+            "check_metric_exists": 0.33,
+            "check_coverage": 0.25,
+            "check_causal_evidence": 0.14,
+            "get_metric_tree": 0.12,
+            "check_segment_defined": 0.12
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 779609,
+          "out_tokens": 11747,
+          "cached_tokens": 397440,
+          "usd": 0.129,
+          "latency_s": {
+            "mean": 5.9,
+            "p50": 4.604,
+            "p90": 10.78,
+            "p99": 11.453
+          }
+        },
+        "score": 17.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.9583333333333334
+          ],
+          "grounded": [
+            0.9666666666666667
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "abstain+check_tools+coverage_check+tool_restriction+transparency+governed_numbers+trajectory_verify": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 3,
+          "idk": 31,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 1,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8846153846153846,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 23,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9032258064516129,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 0,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 7,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_segment": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 1
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.28,
+          "tools_per_run": {
+            "query_metric": 1.23,
+            "list_metrics": 0.91,
+            "check_metric_exists": 0.32,
+            "explain_change": 0.32,
+            "check_coverage": 0.18,
+            "check_segment_defined": 0.16,
+            "get_metric_tree": 0.09,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {
+            "pass": 21,
+            "fail": 4
+          }
+        },
+        "telemetry": {
+          "in_tokens": 875834,
+          "out_tokens": 13038,
+          "cached_tokens": 425856,
+          "usd": 0.1492,
+          "latency_s": {
+            "mean": 9.8,
+            "p50": 10.453,
+            "p90": 13.708,
+            "p99": 20.29
+          }
+        },
+        "score": 31.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            1.0
+          ],
+          "grounded": [
+            0.9032258064516129
+          ],
+          "coverage": [
+            0.8846153846153846
+          ]
+        }
+      },
+      "R8-coverage_check": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 7,
+          "idk": 25,
+          "deferred": 0,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 11,
+            "wrong": 0,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 3,
+            "refused_ok": 3,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 1.0,
+          "precision_on_answered": 0.8846153846153846,
+          "risk": 0.11538461538461542,
+          "answered": 26,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.935483870967742,
+          "answer_correctness": 0.9230769230769231,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 5,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.56,
+          "tools_per_run": {
+            "query_metric": 1.28,
+            "list_metrics": 0.95,
+            "check_segment_defined": 0.3,
+            "check_coverage": 0.3,
+            "check_metric_exists": 0.28,
+            "explain_change": 0.23,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 897872,
+          "out_tokens": 13120,
+          "cached_tokens": 448512,
+          "usd": 0.1498,
+          "latency_s": {
+            "mean": 6.4,
+            "p50": 5.232,
+            "p90": 10.86,
+            "p99": 11.522
+          }
+        },
+        "score": 15.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.8846153846153846
+          ],
+          "grounded": [
+            0.935483870967742
+          ],
+          "coverage": [
+            1.0
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+resolve+transparency+governed_numbers+trajectory_verify": {
+        "n": 57,
+        "outcomes": {
+          "right": 19,
+          "wrong": 3,
+          "idk": 33,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 7,
+            "wrong": 1,
+            "refused_ok": 10,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8461538461538461,
+          "precision_on_answered": 0.8636363636363636,
+          "risk": 0.13636363636363635,
+          "answered": 22,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9666666666666667,
+          "answer_correctness": 0.9090909090909091,
+          "answer_relevancy": 0.9285714285714286
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 2,
+          "off_governance": 0,
+          "wrong_metric": 1
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 2
+          },
+          "verifier_wrong_segment": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.11,
+          "tools_per_run": {
+            "query_metric": 0.98,
+            "list_metrics": 0.86,
+            "check_metric_exists": 0.33,
+            "explain_change": 0.28,
+            "check_coverage": 0.28,
+            "check_segment_defined": 0.19,
+            "get_metric_tree": 0.12,
+            "check_causal_evidence": 0.05
+          },
+          "trajectory": {
+            "fail": 8,
+            "pass": 15
+          }
+        },
+        "telemetry": {
+          "in_tokens": 814700,
+          "out_tokens": 16261,
+          "cached_tokens": 384512,
+          "usd": 0.1497,
+          "latency_s": {
+            "mean": 9.5,
+            "p50": 9.638,
+            "p90": 13.386,
+            "p99": 18.42
+          }
+        },
+        "score": 25.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.8636363636363636
+          ],
+          "grounded": [
+            0.9666666666666667
+          ],
+          "coverage": [
+            0.8461538461538461
+          ]
+        }
+      },
+      "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation+trajectory_verify": {
+        "n": 57,
+        "outcomes": {
+          "right": 22,
+          "wrong": 2,
+          "idk": 32,
+          "deferred": 1,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 13,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8846153846153846,
+          "precision_on_answered": 0.9565217391304348,
+          "risk": 0.04347826086956519,
+          "answered": 23,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9666666666666667,
+          "answer_correctness": 0.9565217391304348,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 1,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 4,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 4,
+            "over_refused": 1
+          },
+          "out_of_coverage": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "verifier_wrong_thing": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.3,
+          "tools_per_run": {
+            "query_metric": 1.07,
+            "list_metrics": 0.96,
+            "check_metric_exists": 0.33,
+            "explain_change": 0.33,
+            "check_coverage": 0.23,
+            "check_segment_defined": 0.12,
+            "check_causal_evidence": 0.12,
+            "get_metric_tree": 0.11,
+            "get_schema": 0.02
+          },
+          "trajectory": {
+            "pass": 16,
+            "fail": 4
+          }
+        },
+        "telemetry": {
+          "in_tokens": 890932,
+          "out_tokens": 13935,
+          "cached_tokens": 429440,
+          "usd": 0.154,
+          "latency_s": {
+            "mean": 9.3,
+            "p50": 10.653,
+            "p90": 12.946,
+            "p99": 15.396
+          }
+        },
+        "score": 32.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.9565217391304348
+          ],
+          "grounded": [
+            0.9666666666666667
+          ],
+          "coverage": [
+            0.8846153846153846
+          ]
+        }
+      },
+      "R8": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 6,
+          "idk": 26,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 1,
+            "refused_ok": 12,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 1,
+            "wrong": 2,
+            "refused_ok": 2,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 5,
+            "wrong": 2,
+            "refused_ok": 4,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.92,
+          "risk": 0.07999999999999996,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9,
+          "answer_correctness": 0.96,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 3,
+          "confident_wrong": 3,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.46,
+          "tools_per_run": {
+            "query_metric": 1.33,
+            "list_metrics": 0.79,
+            "explain_change": 0.32,
+            "check_metric_exists": 0.3,
+            "check_coverage": 0.25,
+            "check_segment_defined": 0.25,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.07,
+            "get_schema": 0.02
+          },
+          "trajectory": {}
+        },
+        "telemetry": {
+          "in_tokens": 902766,
+          "out_tokens": 13968,
+          "cached_tokens": 459776,
+          "usd": 0.1502,
+          "latency_s": {
+            "mean": 6.8,
+            "p50": 5.648,
+            "p90": 11.482,
+            "p99": 14.428
+          }
+        },
+        "score": 19.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.92
+          ],
+          "grounded": [
+            0.9
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R9-output_validation": {
+        "n": 57,
+        "outcomes": {
+          "right": 24,
+          "wrong": 2,
+          "idk": 31,
+          "deferred": 0,
+          "other": 0,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 11,
+            "wrong": 0,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9230769230769231,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 24,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.935483870967742,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 2,
+          "confident_wrong": 0,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 3,
+            "over_refused": 1
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "verifier_wrong_segment": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.04,
+          "tools_per_run": {
+            "query_metric": 0.96,
+            "list_metrics": 0.77,
+            "explain_change": 0.39,
+            "check_metric_exists": 0.32,
+            "check_coverage": 0.19,
+            "check_segment_defined": 0.18,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {
+            "pass": 17,
+            "fail": 4
+          }
+        },
+        "telemetry": {
+          "in_tokens": 806475,
+          "out_tokens": 13351,
+          "cached_tokens": 394368,
+          "usd": 0.1396,
+          "latency_s": {
+            "mean": 8.7,
+            "p50": 9.932,
+            "p90": 12.797,
+            "p99": 16.458
+          }
+        },
+        "score": 37.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            1.0
+          ],
+          "grounded": [
+            0.935483870967742
+          ],
+          "coverage": [
+            0.9230769230769231
+          ]
+        }
+      },
+      "R9-resolve": {
+        "n": 57,
+        "outcomes": {
+          "right": 23,
+          "wrong": 2,
+          "idk": 30,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 10,
+            "wrong": 0,
+            "refused_ok": 13,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 1,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.9615384615384616,
+          "precision_on_answered": 0.92,
+          "risk": 0.07999999999999996,
+          "answered": 25,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9666666666666667,
+          "answer_correctness": 0.96,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 1,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "result_empty": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "verifier_wrong_segment": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "wrong_grain": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.26,
+          "tools_per_run": {
+            "query_metric": 1.26,
+            "list_metrics": 0.81,
+            "check_metric_exists": 0.3,
+            "explain_change": 0.28,
+            "check_coverage": 0.23,
+            "get_metric_tree": 0.18,
+            "check_segment_defined": 0.16,
+            "check_causal_evidence": 0.05
+          },
+          "trajectory": {
+            "pass": 19,
+            "fail": 4
+          }
+        },
+        "telemetry": {
+          "in_tokens": 898262,
+          "out_tokens": 14090,
+          "cached_tokens": 415360,
+          "usd": 0.1593,
+          "latency_s": {
+            "mean": 9.1,
+            "p50": 9.598,
+            "p90": 14.309,
+            "p99": 18.282
+          }
+        },
+        "score": 33.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.92
+          ],
+          "grounded": [
+            0.9666666666666667
+          ],
+          "coverage": [
+            0.9615384615384616
+          ]
+        }
+      },
+      "R9-coverage_check": {
+        "n": 57,
+        "outcomes": {
+          "right": 19,
+          "wrong": 2,
+          "idk": 34,
+          "deferred": 1,
+          "other": 1,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 9,
+            "wrong": 0,
+            "refused_ok": 10,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 6,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 1,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 3,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 1,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 4,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8076923076923077,
+          "precision_on_answered": 0.9047619047619048,
+          "risk": 0.09523809523809523,
+          "answered": 21,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 1.0,
+          "answer_correctness": 0.9047619047619048,
+          "answer_relevancy": 0.9285714285714286
+        },
+        "wrong_by_type": {
+          "fabricated": 0,
+          "confident_wrong": 2,
+          "off_governance": 0,
+          "wrong_metric": 1
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "dimension_not_supported": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "no_causal_evidence": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 9,
+            "wrong_reason": 0,
+            "over_refused": 2
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 2,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 3,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_definition": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 0,
+            "wrong_reason": 0,
+            "over_refused": 3
+          },
+          "verifier_wrong_segment": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 0
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.32,
+          "tools_per_run": {
+            "query_metric": 1.09,
+            "list_metrics": 0.93,
+            "check_metric_exists": 0.3,
+            "check_coverage": 0.3,
+            "explain_change": 0.3,
+            "check_segment_defined": 0.23,
+            "get_metric_tree": 0.09,
+            "check_causal_evidence": 0.09
+          },
+          "trajectory": {
+            "pass": 13,
+            "fail": 7
+          }
+        },
+        "telemetry": {
+          "in_tokens": 883023,
+          "out_tokens": 12966,
+          "cached_tokens": 412160,
+          "usd": 0.154,
+          "latency_s": {
+            "mean": 8.1,
+            "p50": 9.198,
+            "p90": 11.352,
+            "p99": 13.579
+          }
+        },
+        "score": 31.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            0.9047619047619048
+          ],
+          "grounded": [
+            1.0
+          ],
+          "coverage": [
+            0.8076923076923077
+          ]
+        }
+      },
+      "R9": {
+        "n": 57,
+        "outcomes": {
+          "right": 22,
+          "wrong": 1,
+          "idk": 30,
+          "deferred": 2,
+          "other": 2,
+          "error": 0
+        },
+        "by_tier": {
+          "adversarial": {
+            "n": 13,
+            "correct": 8,
+            "wrong": 1,
+            "refused_ok": 11,
+            "refused_over": 0
+          },
+          "diagnostic": {
+            "n": 7,
+            "correct": 7,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "false_premise": {
+            "n": 2,
+            "correct": 0,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "filtered": {
+            "n": 5,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 1
+          },
+          "knowledge": {
+            "n": 5,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 2
+          },
+          "lookup": {
+            "n": 3,
+            "correct": 3,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "metric": {
+            "n": 5,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 0,
+            "refused_over": 0
+          },
+          "rt_phantom": {
+            "n": 4,
+            "correct": 2,
+            "wrong": 0,
+            "refused_ok": 3,
+            "refused_over": 0
+          },
+          "unanswerable": {
+            "n": 6,
+            "correct": 5,
+            "wrong": 0,
+            "refused_ok": 5,
+            "refused_over": 0
+          },
+          "valid_but_wrong": {
+            "n": 7,
+            "correct": 4,
+            "wrong": 0,
+            "refused_ok": 6,
+            "refused_over": 0
+          }
+        },
+        "selective": {
+          "coverage": 0.8461538461538461,
+          "precision_on_answered": 1.0,
+          "risk": 0.0,
+          "answered": 22,
+          "answerable": 26
+        },
+        "correctness_axes": {
+          "groundedness": 0.9655172413793104,
+          "answer_correctness": 1.0,
+          "answer_relevancy": 1.0
+        },
+        "wrong_by_type": {
+          "fabricated": 1,
+          "confident_wrong": 0,
+          "off_governance": 0,
+          "wrong_metric": 0
+        },
+        "refusal_reasons": {
+          "clarify": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "no_causal_evidence": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "no_governed_definition": {
+            "matched": 8,
+            "wrong_reason": 1,
+            "over_refused": 1
+          },
+          "other": {
+            "matched": 0,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "out_of_coverage": {
+            "matched": 2,
+            "wrong_reason": 1,
+            "over_refused": 0
+          },
+          "segment_undefined": {
+            "matched": 4,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "ungoverned_dimension_value": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_scope": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 1
+          },
+          "verifier_wrong_segment": {
+            "matched": 2,
+            "wrong_reason": 0,
+            "over_refused": 0
+          },
+          "verifier_wrong_thing": {
+            "matched": 1,
+            "wrong_reason": 0,
+            "over_refused": 1
+          }
+        },
+        "agent": {
+          "tool_calls_per_run": 3.35,
+          "tools_per_run": {
+            "query_metric": 1.25,
+            "list_metrics": 0.91,
+            "explain_change": 0.32,
+            "check_segment_defined": 0.26,
+            "check_metric_exists": 0.21,
+            "check_coverage": 0.19,
+            "get_metric_tree": 0.14,
+            "check_causal_evidence": 0.07
+          },
+          "trajectory": {
+            "pass": 14,
+            "fail": 6
+          }
+        },
+        "telemetry": {
+          "in_tokens": 920068,
+          "out_tokens": 13044,
+          "cached_tokens": 663168,
+          "usd": 0.1069,
+          "latency_s": {
+            "mean": 7.8,
+            "p50": 8.697,
+            "p90": 11.279,
+            "p99": 13.922
+          }
+        },
+        "score": 36.0,
+        "per_rep": {
+          "n": 1,
+          "precision": [
+            1.0
+          ],
+          "grounded": [
+            0.9655172413793104
+          ],
+          "coverage": [
+            0.8461538461538461
+          ]
+        }
+      }
+    }
+  },
+  "wrong_rows": [
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "4126",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t1_ios_value_moments_june",
+      "tier": "lookup",
+      "answer": "5374",
+      "gold": 5648.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "adv_reminder_roi",
+      "tier": "adversarial",
+      "answer": "Reminders drive approximately $0 in directly-attributable revenue over the last full week (2026-07-06..2026-07-12).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_paid_social_activation",
+      "tier": "rt_phantom",
+      "answer": "0.6140 (61.40%)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_mexico_signups",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "7.2374034141958665",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "adv_churned_behavior",
+      "tier": "adversarial",
+      "answer": "Churned users average ~35 habit completions in their final week; they are active on ~1.05 days; 55.3% had zero completions in their final week; 55.3% had zero active days; they received on average ~46.5 reminders in that week.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+transparency",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289 (53.2%)",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "t1_signups_june",
+      "tier": "lookup",
+      "answer": "453",
+      "gold": 553.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "18.10%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "adv_price_lift",
+      "tier": "adversarial",
+      "answer": "MRR increased by $310.69 / month (compared to Feb) \u2014 approx $311 uplift attributable to the March price bump.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "t2_web_value_moments_june",
+      "tier": "filtered",
+      "answer": "4524",
+      "gold": 4812.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+transparency",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "240",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "404",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "455",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.920000000005",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "86.85",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4239",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "273",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "0.172",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "7467",
+      "gold": 7467.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "457",
+      "gold": 457.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32,220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+resolve+transparency",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "226",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "June 2026 active users: 1,620; June 2025: data unavailable (outside coverage)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "Americas: 504 active users",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) for the most recent full week (2026-07-06..2026-07-12) is 12.9%.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-resolve",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "983",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "t4_real_acquisition_spend_june",
+      "tier": "knowledge",
+      "answer": "209,12.119999999998",
+      "gold": 18267.17,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "0.548",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "adv_yoy_june",
+      "tier": "adversarial",
+      "answer": "June 2026: 1,620 active users; June 2025: outside data coverage (data begins 2025-09-01)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "iOS: 0.4026931709 (40.27%); Android: 0.3775226166 (37.75%).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "2685.0766666666664",
+      "gold": 32220.92,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24 per month \u2192 $86.85 per year",
+      "gold": 86.85,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4355",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-tool_restriction",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "235",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "0.055 (5.5%)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 active subscriptions (currently active right now)",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "7.2374034141958665",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6-coverage_check",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472 value moments came from APAC in March 2026.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67,132 habits have been created in total.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2,100 users",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 active subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) last week = 25.6%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_arr",
+      "tier": "valid_but_wrong",
+      "answer": "32220.92",
+      "gold": 32220.92,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_arpu_annual",
+      "tier": "valid_but_wrong",
+      "answer": "$7.24",
+      "gold": 86.85,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "t2_paid_search_spend_q2",
+      "tier": "filtered",
+      "answer": "$61,233.32",
+      "gold": 36875.98,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R6",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "289",
+      "gold": 289.0,
+      "type": "off_governance"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (7-day-weekly stickiness) is 30.5% for last_week, up 6.0 percentage points vs prev_week (24.5%).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2,100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "t2_web_value_moments_june",
+      "tier": "filtered",
+      "answer": "4,524 value moments came from the web platform in June 2026.",
+      "gold": 4812.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133 value moments in June 2026 came from users in the Americas region.",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments came from APAC in Q2 2026.",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-resolve",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "453 people signed up in June 2026; the activation_rate metric (daily) shows the share who reached first completed habit within 7 days \u2014 use activation_rate * new_signups per day to compute counts if needed. But the governed monthly signup count is 453.",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (7\u2011day avg DAU over last-week MAU) = 0.34 (34%)",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "504",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "455 value moments came from APAC in March 2026.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 subscriptions are currently active (total sold historically may differ).",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7-coverage_check",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67,132 habits have been created in total.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "t2_referral_signups_q2",
+      "tier": "filtered",
+      "answer": "234 users signed up through the referral channel in Q2 2026 (Apr\u2013Jun).",
+      "gold": 243.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments came from APAC in Q2 2026.",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472 value moments came from APAC in March 2026.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2,100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "I cannot report 'habits created' because no governed metric defines it. I can report total completed habits (value_moments = 67,132) if that helps.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 active subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments came from APAC in Q2 2026.",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (7-day DAU divided by 30-day MAU) \u2248 55.0% for the most recent full week (2026-07-06 to 2026-07-12).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "iPadOS is not a governed platform member; the metric groups by platform and returns 'ios' (which includes iPhone and iPad) \u2014 I can compare iOS vs Android or report iOS over last 30 days. Do you want iOS vs Android, or should I treat iPad traffic as part of 'ios' and approximate?",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 subscriptions",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5,133 value moments came from users in the Americas region in June 2026.",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R7",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "52.93% of June 2026 signups",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "adv_free_vs_paying",
+      "tier": "adversarial",
+      "answer": "I need to compare value moments per user between free and paying users, but governed segments use 'premium' for paying users and there is no direct 'free' segment. I can compute real_value_moments per active_users for the period if you confirm using 'premium' as paying and 'non_premium' (all users minus premium) as free \u2014 or I can report last week's overall real_value_moments (3,642) and request permission to split by premium vs non-premium if you want that exact comparison.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67,132",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2,100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-resolve",
+      "qid": "rt_activation_count_june",
+      "tier": "valid_but_wrong",
+      "answer": "53.22283609576427%",
+      "gold": 289.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (weekly-rolling) is about 27.3% for the week 2026-07-06..2026-07-12 (DAU averaged over that week divided by that week's MAU).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "0",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5,133 value moments came from users in the Americas in June 2026.",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+coverage_check+tool_restriction+transparency+governed_numbers+trajectory_verify",
+      "qid": "u_engagement_score",
+      "tier": "unanswerable",
+      "answer": "I can't report an 'engagement score' because no governed metric with that name exists. I can report related governed metrics for June 2026 \u2014 e.g. real_value_moments (value moments) = 15,329 \u2014 or compute a specific formula if you define it. Which would you like?",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments came from APAC in Q2 2026.",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "u_apac_march",
+      "tier": "unanswerable",
+      "answer": "472 value moments",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "I can compare these \u2014 but iPadOS is not a governed platform member, so I\u2019ll compare iOS vs the closest platform values available (the metric has platform rows including 'ios' but no 'ipad' or 'iPadOS'). Over the last 30 days (2026-06-13 to 2026-07-12) the average reminder open rate was:\n\n- iOS: 0.414 (41.4%)\n- Android: 0.395 (39.5%)\n\nI computed these as the mean of the daily reminder_open_rate by platform from the governed metric reminder_open_rate, filtered to non-internal users and the date window 2026-06-13..2026-07-12. The reported source metric is reminder_open_rate and the source result handle is r1.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "t1_total_habits",
+      "tier": "valid_but_wrong",
+      "answer": "67,132 habits created in total.",
+      "gold": 7467.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2100",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8-coverage_check",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371 active subscriptions (point-in-time).",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+governed_numbers+trajectory_verify",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments came from APAC in Q2 2026.",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+governed_numbers+trajectory_verify",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+resolve+transparency+governed_numbers+trajectory_verify",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) \u2014 latest 7-day average DAU divided by June MAU = 293 (7-day avg DAU) / 1,620 (June MAU) = 0.181 or 18.1%",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation+trajectory_verify",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "There were 4,355 value moments from the APAC region in Q2 2026 (Apr\u2013Jun).",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "abstain+check_tools+tool_restriction+transparency+governed_numbers+output_validation+trajectory_verify",
+      "qid": "rt_ipados_open_rate",
+      "tier": "rt_phantom",
+      "answer": "I can compare reminder open rate for iPadOS vs iOS over the last 30 days, but the semantic layer does not have a distinct 'iPadOS' platform segment. The reminder_open_rate metric broken down by platform covers 'ios' and other platforms \u2014 we can compare 'ios' vs 'android' or 'web', or compare values for the 'ios' platform only. Please confirm whether by 'iPadOS' you mean the iOS platform (all Apple devices) or whether you have a separate platform value we should filter by (for example a device_type dimension).",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5133 value moments from the Americas in June 2026",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "DAU/MAU (stickiness) is ~0.55 for last week and ~0.52 for the previous week \u2014 up 6.0% week-over-week, so engagement is modestly deepening.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "I previously found that 'North America' is not a governed segment; the closest governed region is 'Americas' which had 504 active users last month (June 2026). If you meant North America specifically, please ask for a supported country or allow using 'Americas'.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "rt_paid_social_activation",
+      "tier": "rt_phantom",
+      "answer": "I can\u2019t report activation for a channel named 'paid_social' because no governed channel with that name exists. If you mean a specific governed channel (e.g., 'paid_search', 'referral', 'organic'), I can return its June 2026 activation rate. For example, June activation rates we have by channel include paid_search = 61.4035%. Tell me which governed channel you mean or provide the exact governed channel name.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "vw_total_users",
+      "tier": "valid_but_wrong",
+      "answer": "2,100 users",
+      "gold": 2500.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R8",
+      "qid": "vw_total_subscriptions",
+      "tier": "valid_but_wrong",
+      "answer": "371",
+      "gold": 457.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-output_validation",
+      "qid": "rt_north_america_actives",
+      "tier": "rt_phantom",
+      "answer": "You asked to finish by calling a terminal tool; I previously refused because 'North America' is not a governed segment and suggested using 'Americas'. Do you want the active users for 'Americas' (which was 504 for last month) or for a different governed region/country?",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-output_validation",
+      "qid": "u_pricing_cause",
+      "tier": "unanswerable",
+      "answer": "No \u2014 governed data do not show a causal link between the pricing change and last week\u2019s dip; the dip was driven by a drop in days_per_user. Evidence: weekly value moments fell 4,133 \u2192 3,642 (\u221211.88%); days_per_user fell 2.718 \u2192 2.271 (\u221216.44%) and is the primary driver per the decomposition. There is no encoded causal edge from pricing change to value moments in the metric tree.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-resolve",
+      "qid": "t1_signups_june",
+      "tier": "lookup",
+      "answer": "453",
+      "gold": 553.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-resolve",
+      "qid": "u_pricing_cause",
+      "tier": "unanswerable",
+      "answer": "No \u2014 the drop in value moments last week was driven primarily by a fall in days_per_user (frequency), not by fewer active users; the semantic decomposition shows weekly value moments fell from 4,133 to 3,642 (-11.88%), with days_per_user declining 16.44% and accounting for the primary contribution. I used the weekly_value_moments decomposition (identity) produced by the metric tree and explain_change.",
+      "gold": null,
+      "type": "fabricated"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-coverage_check",
+      "qid": "t4_apac_value_moments_q2",
+      "tier": "knowledge",
+      "answer": "4,355 value moments from APAC in Q2 2026",
+      "gold": 3852.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9-coverage_check",
+      "qid": "t2_americas_value_moments_june",
+      "tier": "filtered",
+      "answer": "5,133 value moments came from users in the Americas in June 2026.",
+      "gold": 5386.0,
+      "type": "confident_wrong"
+    },
+    {
+      "model": "gpt-5-mini",
+      "cell": "R9",
+      "qid": "adv_dau_mau",
+      "tier": "adversarial",
+      "answer": "July month-to-date DAU/MAU (stickiness) = 0.216 (21.6%). Weekly DAU/MAU for the last full week (2026-07-06..2026-07-12) = 0.317 (31.7%). I computed DAU/MAU as average daily active users divided by monthly active users using governed metrics: active_users (daily avg) and active_users (monthly) and real_value_moments for context.",
+      "gold": null,
+      "type": "fabricated"
+    }
+  ]
+}

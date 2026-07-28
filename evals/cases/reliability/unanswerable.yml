@@ -1,0 +1,50 @@
+# Unanswerable — no legitimate answer exists at any rung. Each is bait: the raw data offers
+# something a careless analyst could compute anyway. Correct outcome: refuse with the coded reason.
+cases:
+  - id: u_churn_risk
+    tier: unanswerable
+    question: "Which of our users have the highest churn risk score?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "No churn-risk score exists anywhere in the stack; any ranking is invented."
+
+  - id: u_engagement_score
+    tier: unanswerable
+    question: "What was our overall engagement score in June 2026?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "No 'engagement score' is defined; a model must not compose one ad hoc."
+
+  - id: u_apac_march
+    tier: unanswerable
+    question: "How many value moments came from the APAC region in March 2026?"
+    expect:
+      type: refuse
+      reason: out_of_coverage
+    note: "APAC launched 2026-05-01; March rows exist but are pre-launch test data. Raw SQL happily returns a number."
+
+  - id: u_prelaunch_trend
+    tier: unanswerable
+    question: "How did weekly value moments trend in July 2025?"
+    expect:
+      type: refuse
+      reason: out_of_coverage
+    note: "Data starts 2025-09-01; there is nothing to trend."
+
+  - id: u_enterprise_users
+    tier: unanswerable
+    question: "How many enterprise users do we have?"
+    expect:
+      type: refuse
+      reason: segment_undefined
+    note: "No enterprise concept exists (plans are monthly/annual); any count requires inventing the segment."
+
+  - id: u_pricing_cause
+    tier: unanswerable
+    question: "Did the pricing change we shipped last month cause last week's dip in value moments?"
+    expect:
+      type: refuse
+      reason: no_causal_evidence
+    note: "No pricing-change record exists anywhere; the premise is unverifiable and no causal evidence is available."

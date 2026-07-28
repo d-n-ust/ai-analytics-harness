@@ -1,0 +1,405 @@
+cases:
+- id: V001
+  question: How many value moments came from the APAC region in the second quarter of 2026 (April–June)?
+  metric_used: value_moments
+  analyst_added_filters:
+    region: APAC
+  time_window: 2026-05-01..2026-06-30
+  sql: SELECT sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-05-01' AND active_date
+    <= DATE '2026-06-30' AND region = 'APAC'
+  query_result: 3852.0
+  served_answer: 3852
+  human: 'no'
+- id: V002
+  question: How many value moments came from users in the Americas region in June 2026?
+  metric_used: value_moments
+  analyst_added_filters: {}
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days
+    WHERE channel NOT IN ('partnerships') AND active_date >= DATE '2026-06-01' AND active_date <= DATE
+    '2026-06-30' GROUP BY period, region ORDER BY period, region
+  query_result: 2139.0
+  served_answer: 4318
+  human: 'no'
+- id: V003
+  question: How many users signed up through the referral channel in the second quarter of 2026 (April–June)?
+  metric_used: new_signups
+  analyst_added_filters:
+    channel: referral
+    is_internal: false
+  time_window: 2026-04-01..2026-06-30
+  sql: SELECT count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-04-01' AND signup_date
+    <= DATE '2026-06-30' AND channel = 'referral' AND is_internal = false
+  query_result: 234.0
+  served_answer: 234
+  human: 'no'
+- id: V004
+  question: How many active users did we have last week?
+  metric_used: active_users
+  analyst_added_filters:
+    is_internal: false
+  time_window: prev_week
+  sql: SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND active_date
+    >= DATE '2026-06-29' AND active_date <= DATE '2026-07-05' AND is_internal = false
+  query_result: 836.0
+  served_answer: 836
+  human: 'no'
+- id: V005
+  question: Engagement fell last week. Which part of the business is responsible?
+  metric_used: value_moments
+  analyst_added_filters:
+    is_internal: false
+  time_window: last_week
+  sql: SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false
+    GROUP BY period ORDER BY period
+  query_result: 3642.0
+  served_answer: 3642
+  human: 'no'
+- id: V006
+  question: Which part of the North Star weakened last week — breadth, frequency, or depth?
+  metric_used: value_moments
+  analyst_added_filters:
+    is_internal: false
+  time_window: last_week
+  sql: SELECT sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-07-06' AND active_date
+    <= DATE '2026-07-12' AND is_internal = false
+  query_result: 3642.0
+  served_answer: 3642
+  human: 'no'
+- id: V007
+  question: How many paying users do we currently have?
+  metric_used: paying_users
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT count(distinct user_id) AS value FROM fct_subscriptions WHERE is_active
+  query_result: 371.0
+  served_answer: 371
+  human: 'yes'
+- id: V008
+  question: How many active users did we have last week?
+  metric_used: active_users
+  analyst_added_filters: null
+  time_window: last_week
+  sql: SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND active_date
+    >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12'
+  query_result: 886.0
+  served_answer: 886
+  human: 'yes'
+- id: V009
+  question: Did our active user base shrink last week, or is something else going on with value moments?
+  metric_used: active_users
+  analyst_added_filters:
+    is_internal: false
+  time_window: last_week
+  sql: SELECT date_trunc('week', active_date)::date AS period, count(distinct user_id) AS value FROM agg_active_days
+    WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND
+    is_internal = false GROUP BY period ORDER BY period
+  query_result: 886.0
+  served_answer: 886
+  human: 'no'
+- id: V010
+  question: How many value moments came from the iOS platform in June 2026?
+  metric_used: value_moments
+  analyst_added_filters:
+    platform: ios
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND platform = 'ios' GROUP
+    BY period ORDER BY period
+  query_result: 5648.0
+  served_answer: 5648
+  human: 'yes'
+- id: V011
+  question: What is our current MRR (monthly recurring revenue)?
+  metric_used: mrr
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) AS value
+    FROM fct_subscriptions WHERE is_active
+  query_result: 2685.0766666666664
+  served_answer: 2685.0766666666664
+  human: 'yes'
+- id: V012
+  question: How many power users did we have in June 2026?
+  metric_used: power_users
+  analyst_added_filters:
+    is_internal: false
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, count(distinct case when moments >= 5
+    then user_id end) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-06-01'
+    AND active_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period ORDER BY period
+  query_result: 151.0
+  served_answer: 151
+  human: 'yes'
+- id: V013
+  question: Can you compare reminder open rate on iPadOS vs iOS over the last 30 days?
+  metric_used: reminder_open_rate
+  analyst_added_filters:
+    platform: ios
+  time_window: 2026-06-13..2026-07-12
+  sql: SELECT date_trunc('day', active_date)::date AS period, platform, avg(had_reminder) AS value FROM
+    agg_active_days WHERE NOT is_internal AND channel NOT IN ('partnerships') AND active_date >= DATE
+    '2026-06-13' AND active_date <= DATE '2026-07-12' AND platform = 'ios' GROUP BY period, platform ORDER
+    BY period, platform
+  query_result: 0.3684210526315789
+  served_answer: 0.0
+  human: 'no'
+- id: V014
+  question: What drove our MRR to roughly triple last month?
+  metric_used: mrr
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) AS value
+    FROM fct_subscriptions WHERE is_active
+  query_result: 2685.0766666666664
+  served_answer: 2685.0766666666664
+  human: 'no'
+- id: V015
+  question: How many users signed up through the referral channel in the second quarter of 2026 (April–June)?
+  metric_used: new_signups
+  analyst_added_filters:
+    channel: referral
+  time_window: 2026-04-01..2026-06-30
+  sql: SELECT count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-04-01' AND signup_date
+    <= DATE '2026-06-30' AND channel = 'referral'
+  query_result: 243.0
+  served_answer: 243
+  human: 'yes'
+- id: V016
+  question: How many people who signed up in June 2026 reached their first completed habit within a week?
+  metric_used: activation_rate
+  analyst_added_filters:
+    is_internal: false
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', signup_date)::date AS period, avg(CASE WHEN activated THEN 1 ELSE 0
+    END) AS value FROM agg_user_activation WHERE NOT is_internal AND signup_date >= DATE '2026-06-01'
+    AND signup_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period ORDER BY period
+  query_result: 0.5322283609576427
+  served_answer: 0.5322283609576427
+  human: 'no'
+- id: V017
+  question: How many value moments came from users in the Americas region in June 2026?
+  metric_used: value_moments
+  analyst_added_filters:
+    region: americas
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND region = 'Americas'
+    GROUP BY period ORDER BY period
+  query_result: 5386.0
+  served_answer: 5386
+  human: 'yes'
+- id: V018
+  question: How many value moments came from the APAC region in March 2026?
+  metric_used: value_moments
+  analyst_added_filters: {}
+  time_window: 2026-03-01..2026-03-31
+  sql: SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days
+    WHERE channel NOT IN ('partnerships') AND active_date >= DATE '2026-03-01' AND active_date <= DATE
+    '2026-03-31' GROUP BY period, region ORDER BY period, region
+  query_result: 280.0
+  served_answer: 280
+  human: 'no'
+- id: V019
+  question: What was our total marketing spend in June 2026?
+  metric_used: marketing_spend
+  analyst_added_filters: null
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend
+    WHERE spend_date >= DATE '2026-06-01' AND spend_date <= DATE '2026-06-30' GROUP BY period ORDER BY
+    period
+  query_result: 21013.199999999997
+  served_answer: 21013.2
+  human: 'yes'
+- id: V020
+  question: Value moments came in soft last week even though we added users. What happened?
+  metric_used: value_moments
+  analyst_added_filters:
+    is_internal: false
+  time_window: last_week
+  sql: SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false
+    GROUP BY period ORDER BY period
+  query_result: 3642.0
+  served_answer: 3642
+  human: 'no'
+- id: V021
+  question: Why did APAC value moments collapse to near zero in June 2026?
+  metric_used: value_moments
+  analyst_added_filters:
+    is_internal: false
+  time_window: 2026-01-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-01-01' AND active_date <= DATE '2026-06-30' AND is_internal = false
+    GROUP BY period, region ORDER BY period, region
+  query_result: 262.0
+  served_answer: 2786
+  human: 'no'
+- id: V022
+  question: How many value moments came from the web platform in June 2026?
+  metric_used: value_moments
+  analyst_added_filters:
+    platform: web
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND platform = 'web' GROUP
+    BY period ORDER BY period
+  query_result: 4812.0
+  served_answer: 4812
+  human: 'yes'
+- id: V023
+  question: What was the activation rate for users who signed up in June 2026?
+  metric_used: activation_rate
+  analyst_added_filters:
+    is_internal: false
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT avg(CASE WHEN activated THEN 1 ELSE 0 END) AS value FROM agg_user_activation WHERE NOT is_internal
+    AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false
+  query_result: 0.5322283609576427
+  served_answer: 0.5322283609576427
+  human: 'yes'
+- id: V024
+  question: How many new users signed up in June 2026?
+  metric_used: new_signups
+  analyst_added_filters: null
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-06-01' AND signup_date
+    <= DATE '2026-06-30'
+  query_result: 553.0
+  served_answer: 553
+  human: 'yes'
+- id: V025
+  question: How much did we spend on real acquisition channels in June 2026?
+  metric_used: marketing_spend
+  analyst_added_filters: null
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend
+    WHERE channel NOT IN ('partnerships') AND spend_date >= DATE '2026-06-01' AND spend_date <= DATE '2026-06-30'
+    GROUP BY period ORDER BY period
+  query_result: 18267.169999999995
+  served_answer: 18267.17
+  human: 'yes'
+- id: V026
+  question: What is our ARPU (average monthly recurring revenue per paying user)?
+  metric_used: arpu
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) * 1.0 /
+    nullif(count(distinct user_id), 0) AS value FROM fct_subscriptions WHERE is_active
+  query_result: 7.2374034141958665
+  served_answer: 7.237403414195867
+  human: 'yes'
+- id: V027
+  question: How much did we spend on paid search in the second quarter of 2026 (April–June)?
+  metric_used: marketing_spend
+  analyst_added_filters: null
+  time_window: 2026-04-01..2026-06-30
+  sql: SELECT channel, sum(spend) AS value FROM fct_marketing_spend WHERE spend_date >= DATE '2026-04-01'
+    AND spend_date <= DATE '2026-06-30' GROUP BY channel ORDER BY channel
+  query_result: 10643.219999999998
+  served_answer: 36875.98
+  human: 'no'
+- id: V028
+  question: Is the app healthy right now — how would you tell?
+  metric_used: active_users
+  analyst_added_filters:
+    is_internal: false
+  time_window: last_week
+  sql: SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND active_date
+    >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false
+  query_result: 886.0
+  served_answer: 886
+  human: 'no'
+- id: V029
+  question: How much did we spend on paid search in the second quarter of 2026 (April–June)?
+  metric_used: marketing_spend
+  analyst_added_filters:
+    channel: paid search
+  time_window: 2026-04-01..2026-06-30
+  sql: SELECT sum(spend) AS value FROM fct_marketing_spend WHERE spend_date >= DATE '2026-04-01' AND spend_date
+    <= DATE '2026-06-30' AND channel = 'paid_search'
+  query_result: 36875.979999999996
+  served_answer: 36875.98
+  human: 'yes'
+- id: V030
+  question: How many habit completions (value moments) were logged in June 2026?
+  metric_used: value_moments
+  analyst_added_filters: null
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' GROUP BY period ORDER
+    BY period
+  query_result: 16041.0
+  served_answer: 16041
+  human: 'yes'
+- id: V031
+  question: How many value moments came from the iOS platform in June 2026?
+  metric_used: value_moments
+  analyst_added_filters: {}
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT date_trunc('month', active_date)::date AS period, platform, sum(moments) AS value FROM agg_active_days
+    WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' GROUP BY period, platform
+    ORDER BY period, platform
+  query_result: 5190.0
+  served_answer: 5648
+  human: 'no'
+- id: V032
+  question: How many subscriptions have we sold in total since launch?
+  metric_used: active_subscriptions
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT count(*) AS value FROM fct_subscriptions WHERE is_active
+  query_result: 371.0
+  served_answer: 371
+  human: 'no'
+- id: V033
+  question: How many currently-active subscriptions are on the annual plan?
+  metric_used: active_subscriptions
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT plan, count(*) AS value FROM fct_subscriptions WHERE is_active GROUP BY plan ORDER BY plan
+  query_result: 134.0
+  served_answer: 134
+  human: 'yes'
+- id: V034
+  question: How many signups came from real acquisition channels in June 2026?
+  metric_used: new_signups
+  analyst_added_filters: null
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT count(*) AS value FROM dim_users WHERE channel NOT IN ('partnerships') AND signup_date >=
+    DATE '2026-06-01' AND signup_date <= DATE '2026-06-30'
+  query_result: 453.0
+  served_answer: 453
+  human: 'yes'
+- id: V035
+  question: How much did the price bump we rolled out in March lift MRR?
+  metric_used: mrr
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) AS value
+    FROM fct_subscriptions WHERE is_active
+  query_result: 2685.0766666666664
+  served_answer: 2685.0766666666664
+  human: 'no'
+- id: V036
+  question: On average, how much does each paying customer pay us per year?
+  metric_used: arpu
+  analyst_added_filters: null
+  time_window: null
+  sql: SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) * 1.0 /
+    nullif(count(distinct user_id), 0) AS value FROM fct_subscriptions WHERE is_active
+  query_result: 7.2374034141958665
+  served_answer: 7.237403414195867
+  human: 'no'
+- id: V037
+  question: What was the activation rate for users who signed up in June 2026?
+  metric_used: activation_rate
+  analyst_added_filters:
+    is_internal: false
+  time_window: 2026-06-01..2026-06-30
+  sql: SELECT avg(CASE WHEN activated THEN 1 ELSE 0 END) AS value FROM agg_user_activation WHERE NOT is_internal
+    AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false
+  query_result: 0.5322283609576427
+  served_answer: 0.5322283609576427
+  human: 'yes'

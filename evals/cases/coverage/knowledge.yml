@@ -1,0 +1,48 @@
+# Knowledge base — a governed metric PLUS a world-fact/coverage caveat the layer can't hold,
+# or a fuzzy mapping from a business word to the right metric.
+cases:
+  - id: t4_apac_value_moments_q2
+    tier: knowledge
+    question: "How many value moments came from the APAC region in the second quarter of 2026 (April–June)?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.region = 'APAC' AND f.completed_date BETWEEN DATE '2026-05-01' AND DATE '2026-06-30'"
+      tolerance: 0.04
+    note: "APAC launched 2026-05-01; pre-launch (April) activity is test data and must be excluded — a coverage caveat no metric holds."
+
+  - id: t4_real_signups_june
+    tier: knowledge
+    question: "How many signups came from real acquisition channels in June 2026?"
+    expect:
+      type: metric_answer
+      metric: new_signups
+      gold_sql: "SELECT count(*) FROM dim_users WHERE channel != 'partnerships' AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.03
+    note: "The 'partnerships' channel is an internal test integration, not real acquisition — a world fact only the KB carries."
+
+  - id: t4_real_acquisition_spend_june
+    tier: knowledge
+    question: "How much did we spend on real acquisition channels in June 2026?"
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel != 'partnerships' AND spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.03
+    note: "Same world fact — partnerships spend isn't real acquisition spend."
+
+  - id: t4_retention_trend
+    tier: knowledge
+    question: "How has our retention been trending over the last couple of months?"
+    expect:
+      type: keywords
+      keywords: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+    note: "Fuzzy mapping: 'retention' means days per user (frequency), not active-user count. Only the KB maps the word to the metric."
+
+  - id: t4_business_health
+    tier: knowledge
+    question: "Is the app healthy right now — how would you tell?"
+    expect:
+      type: keywords
+      keywords: ["value moments", "north star", "weekly value"]
+    note: "Fuzzy mapping: health = the North Star (weekly value moments), not MRR or a single lookup."

@@ -1,0 +1,708 @@
+{
+  "note": "Real recorded judge calls, replayed to test the judge without a full run. `answer_was_right` is the independent gold check, so a verdict can be scored rather than merely compared to what it said last time.",
+  "source_runs": [
+    "results/runs/20260726-211115-gpt-5-mini/raw.jsonl",
+    "results/runs/20260726-202156-gpt-5-mini/raw.jsonl"
+  ],
+  "cases": [
+    {
+      "qid": "t4_apac_value_moments_q2",
+      "question": "How many value moments came from the APAC region in the second quarter of 2026 (April\u2013June)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "value_moments",
+      "sql": "SELECT region, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-05-01' AND active_date <= DATE '2026-06-30' GROUP BY region ORDER BY region",
+      "applied_filters": null,
+      "time_window": "2026-05-01..2026-06-30",
+      "governed_value": 3852.0,
+      "claim": 3852,
+      "claim_text": "3,852 Queried governed metric value_moments for 2026-05-01 through 2026-06-30 (APAC coverage begins 2026-05-01); the metric returned 3,852 value moments for APAC in that window.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t3_activation_rate_june",
+      "question": "What was the activation rate for users who signed up in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "activation_rate",
+      "sql": "SELECT avg(CASE WHEN activated THEN 1 ELSE 0 END) AS value FROM agg_user_activation WHERE NOT is_internal AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 0.5322283609576427,
+      "claim": 0.5322283609576427,
+      "claim_text": "53.22% Activation rate for users who signed up in June 2026 (share who reached a first value moment within 7 days), calculated from governed metric activation_rate filtered to signup_date 2026-06-01..2026-06-30 with is_internal=false.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t4_real_signups_june",
+      "question": "How many signups came from real acquisition channels in June 2026?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "new_signups",
+      "sql": "SELECT date_trunc('month', signup_date)::date AS period, count(*) AS value FROM dim_users WHERE channel NOT IN ('partnerships') AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_month",
+      "governed_value": 444.0,
+      "claim": 444,
+      "claim_text": "444 signups from real acquisition channels in June 2026. Queried governed metric new_signups filtered to real_acquisition segment and is_internal=false for last_month (June 2026); result [r1] = 444.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t3_active_users_last_week",
+      "question": "How many active users did we have last week?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "active_users",
+      "sql": "SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_week",
+      "governed_value": 886.0,
+      "claim": 886,
+      "claim_text": "886 Distinct real users with at least one value moment during last ISO week (2026-07-06 to 2026-07-12), computed by the governed metric active_users with is_internal=false.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t3_power_users",
+      "question": "How many power users did we have in June 2026?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "power_users",
+      "sql": "SELECT date_trunc('month', active_date)::date AS period, count(distinct case when moments >= 5 then user_id end) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 151.0,
+      "claim": 151,
+      "claim_text": "151 power users in June 2026. Queried governed metric 'power_users' for June 2026 (is_internal=false), which returned 151 distinct users who logged 5+ value moments in a single day during June 2026.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_americas_value_moments_june",
+      "question": "How many value moments came from users in the Americas region in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "value_moments",
+      "sql": "SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period, region ORDER BY period, region",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 5133.0,
+      "claim": 5133,
+      "claim_text": "5133 value moments came from users in the Americas region in June 2026. Governed metric value_moments for June 2026, filtered is_internal=false and grouped by region returned Americas = 5133.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t1_total_habits",
+      "question": "How many habits have been created in total?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "value_moments",
+      "sql": "SELECT sum(moments) AS value FROM agg_active_days",
+      "applied_filters": null,
+      "time_window": "all",
+      "governed_value": 67132.0,
+      "claim": 67132,
+      "claim_text": "67,132 habits have been created in total. Sum of all value moments (completed habits) over all time from the governed metric value_moments [r1].",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "thing",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "vw_total_subscriptions",
+      "question": "How many subscriptions have we sold in total?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "active_subscriptions",
+      "sql": "SELECT count(*) AS value FROM fct_subscriptions WHERE is_active",
+      "applied_filters": null,
+      "time_window": null,
+      "governed_value": 371.0,
+      "claim": 371,
+      "claim_text": "371 subscriptions Queried governed metric active_subscriptions (count of currently-active subscriptions). Source result handle: r1",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "segment",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "vw_total_users",
+      "question": "How many users do we have in total?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "active_users",
+      "sql": "SELECT count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND is_internal = false",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "all",
+      "governed_value": 2100.0,
+      "claim": 2100,
+      "claim_text": "2,100 users Count of distinct real active users across all time (metric active_users with is_internal=false, period=all).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "segment",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "u_engagement_score",
+      "question": "What was our overall engagement score in June 2026?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30'",
+      "applied_filters": null,
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 15329.0,
+      "claim": 15329,
+      "claim_text": "I previously refused because 'engagement score' is not a governed metric. If you mean the product north star 'real_value_moments', June 2026 total was 15,329. I can report a different governed metric (days_per_user, moments_per_day, active_users) if that's what you want. No governed metric named 'engagement score' exists. I provided the real_value_moments for June 2026 (from governed metric 'real_value_moments' covering 2026-06-01..2026-06-30).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "thing",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_paid_search_spend_q2",
+      "question": "How much did we spend on paid search in the second quarter of 2026 (April\u2013June)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "marketing_spend",
+      "sql": "SELECT sum(spend) AS value FROM fct_marketing_spend WHERE spend_date >= DATE '2026-04-01' AND spend_date <= DATE '2026-06-30'",
+      "applied_filters": null,
+      "time_window": "last_quarter",
+      "governed_value": 61233.32000000003,
+      "claim": 61233.32,
+      "claim_text": "$61,233.32 Total marketing spend for 2026 Q2 (Apr 1\u2013Jun 30) from the governed metric marketing_spend (query result [r1]).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "thing",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_referral_signups_q2",
+      "question": "How many users signed up through the referral channel in the second quarter of 2026 (April\u2013June)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "new_signups",
+      "sql": "SELECT count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-04-01' AND signup_date <= DATE '2026-06-30' AND is_internal = false AND channel = 'referral'",
+      "applied_filters": {
+        "is_internal": false,
+        "channel": "referral"
+      },
+      "time_window": "2026-04-01..2026-06-30",
+      "governed_value": 234.0,
+      "claim": 234,
+      "claim_text": "234 users Count of new_signups with channel=referral and is_internal=false between 2026-04-01 and 2026-06-30 (Q2 2026).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t5_which_lever",
+      "question": "Which part of the North Star weakened last week \u2014 breadth, frequency, or depth?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND channel NOT IN ('partnerships') AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "last_week",
+      "governed_value": 2903.0,
+      "claim": 2903,
+      "claim_text": "Breadth weakened the most last week: real value moments fell from 3,346 (week of 2026-06-29) to 2,903 (week of 2026-07-06), a drop of 443 moments (\u221213.24%). Frequency and depth fell too but less: days_per_user fell from 2.746 to 2.311 (\u221215.85% relative) and moments_per_day fell from 1.829 to 1.784 (\u22122.45%). Since the North Star is real_value_moments (breadth\u00d7frequency\u00d7depth) and the absolute drop in real_value_moments is largest in magnitude and directly measures breadth \u00d7 overall effect, breadth is the primary weakening. Used governed metrics: real_value_moments for total (r2\u2192r1), days_per_user for frequency (r4\u2192r3), moments_per_day for depth (r6\u2192r5).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "thing",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "fp_apac_collapse",
+      "question": "Why did APAC value moments collapse to near zero in June 2026?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "value_moments",
+      "sql": "SELECT region, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND is_internal = false GROUP BY region ORDER BY region",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_month",
+      "governed_value": 2786.0,
+      "claim": 2786,
+      "claim_text": "APAC value moments collapsed in June 2026 because product activity in APAC began only in May 2026 and June had very low active users (300) and low total value moments (2,786); the metric shows APAC had far fewer users and completions than other regions in June. Governed metric value_moments for last_month (June 2026) shows APAC=2,786 value moments and active_users shows APAC=300 active users \u2014 APAC launched May 2026 so volumes are naturally small compared with Americas/EMEA.",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "scope",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t2_americas_value_moments_june",
+      "question": "How many value moments came from users in the Americas region in June 2026?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND is_internal = false GROUP BY period, region ORDER BY period, region",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 5133.0,
+      "claim": 5133,
+      "claim_text": "5133 Sum of real value moments in June 2026 for region = Americas, from governed metric real_value_moments grouped by region (see result [r1]).",
+      "recorded_verdict": {
+        "answers_question": false,
+        "mismatch": "segment",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_active_annual_subs",
+      "question": "How many currently-active subscriptions are on the annual plan?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "active_subscriptions",
+      "sql": "SELECT count(*) AS value FROM fct_subscriptions WHERE is_active AND plan = 'annual'",
+      "applied_filters": {
+        "plan": "annual"
+      },
+      "time_window": null,
+      "governed_value": 134.0,
+      "claim": 134,
+      "claim_text": "134 currently-active annual subscriptions Queried governed metric active_subscriptions filtered by plan='annual'; result [r1] returned 134 active subscriptions on the annual plan.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_referral_signups_q2",
+      "question": "How many users signed up through the referral channel in the second quarter of 2026 (April\u2013June)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "new_signups",
+      "sql": "SELECT channel, count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-04-01' AND signup_date <= DATE '2026-06-30' GROUP BY channel ORDER BY channel",
+      "applied_filters": {},
+      "time_window": "last_quarter",
+      "governed_value": 243.0,
+      "claim": 243,
+      "claim_text": "243 users signed up through the referral channel in Q2 2026. Governed metric new_signups for period=last_quarter, grouped by channel returned 243 signups for channel='referral' ([r1]).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t1_spend_june",
+      "question": "What was our total marketing spend in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "marketing_spend",
+      "sql": "SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend WHERE spend_date >= DATE '2026-06-01' AND spend_date <= DATE '2026-06-30' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 21013.199999999997,
+      "claim": 21013.2,
+      "claim_text": "21013.20 Total marketing spend for June 2026 from the governed metric marketing_spend (sum of spend between 2026-06-01 and 2026-06-30).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_web_value_moments_june",
+      "question": "How many value moments came from the web platform in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "value_moments",
+      "sql": "SELECT date_trunc('month', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND platform = 'web' GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "platform": "web"
+      },
+      "time_window": "last_month",
+      "governed_value": 4812.0,
+      "claim": 4812,
+      "claim_text": "4812 value_moments for platform=web in June 2026 (period=last_month) came from governed metric value_moments; source result [r1].",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t4_real_signups_june",
+      "question": "How many signups came from real acquisition channels in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "new_signups",
+      "sql": "SELECT count(*) AS value FROM dim_users WHERE channel NOT IN ('partnerships') AND signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30'",
+      "applied_filters": null,
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 453.0,
+      "claim": 453,
+      "claim_text": "453 signups from real acquisition channels in June 2026. Queried governed metric new_signups filtered to the real_acquisition segment for 2026-06-01..2026-06-30 returned 453.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t4_real_acquisition_spend_june",
+      "question": "How much did we spend on real acquisition channels in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "marketing_spend",
+      "sql": "SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend WHERE channel NOT IN ('partnerships') AND spend_date >= DATE '2026-06-01' AND spend_date <= DATE '2026-06-30' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 18267.169999999995,
+      "claim": 18267.17,
+      "claim_text": "$18,267.17 Total marketing spend on real acquisition channels during June 2026, from the governed metric marketing_spend (real_acquisition segment) covering 2026-06-01 to 2026-06-30.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t1_ios_value_moments_june",
+      "question": "How many value moments came from the iOS platform in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "value_moments",
+      "sql": "SELECT sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-06-01' AND active_date <= DATE '2026-06-30' AND platform = 'ios'",
+      "applied_filters": {
+        "platform": "ios"
+      },
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 5648.0,
+      "claim": 5648,
+      "claim_text": "5,648 value moments on iOS in June 2026. Queried governed metric value_moments filtered to platform = iOS for 2026-06-01 through 2026-06-30 returned 5,648.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t1_signups_june",
+      "question": "How many new users signed up in June 2026?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "new_signups",
+      "sql": "SELECT count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-06-01' AND signup_date <= DATE '2026-06-30'",
+      "applied_filters": null,
+      "time_window": "2026-06-01..2026-06-30",
+      "governed_value": 553.0,
+      "claim": 553,
+      "claim_text": "553 new users signed up in June 2026. Queried governed metric new_signups for 2026-06-01..2026-06-30; result [r1] returned 553 signups.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t3_mrr",
+      "question": "What is our current MRR (monthly recurring revenue)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "mrr",
+      "sql": "SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) AS value FROM fct_subscriptions WHERE is_active",
+      "applied_filters": null,
+      "time_window": null,
+      "governed_value": 2685.0766666666664,
+      "claim": 2685.0766666666664,
+      "claim_text": "$2,685.08 MRR (monthly recurring revenue) from the governed metric 'mrr' \u2014 sum of active subscriptions (annual plans divided by 12).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t3_arpu",
+      "question": "What is our ARPU (average monthly recurring revenue per paying user)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": true,
+      "metric": "arpu",
+      "sql": "SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) * 1.0 / nullif(count(distinct user_id), 0) AS value FROM fct_subscriptions WHERE is_active",
+      "applied_filters": null,
+      "time_window": null,
+      "governed_value": 7.2374034141958665,
+      "claim": 7.237403414195867,
+      "claim_text": "7.237403414195867 ARPU (average monthly recurring revenue per paying user) computed by the governed metric 'arpu' over all active subscriptions/users (point-in-time).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "the_answer"
+      }
+    },
+    {
+      "qid": "t2_paid_search_spend_q2",
+      "question": "How much did we spend on paid search in the second quarter of 2026 (April\u2013June)?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "marketing_spend",
+      "sql": "SELECT sum(spend) AS value FROM fct_marketing_spend WHERE spend_date >= DATE '2026-04-01' AND spend_date <= DATE '2026-06-30'",
+      "applied_filters": null,
+      "time_window": "last_quarter",
+      "governed_value": 61233.32000000003,
+      "claim": 61233.32,
+      "claim_text": "$61,233.32 Total marketing spend for 2026 Q2 (Apr 1\u2013Jun 30) from the governed metric marketing_spend (period=last_quarter).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t5_masked_by_growth",
+      "question": "Value moments came in soft last week even though we added users. What happened?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_week",
+      "governed_value": 3642.0,
+      "claim": 3642,
+      "claim_text": "Value moments fell: 3,642 real value moments in last_week. Despite 121 new signups, active users were 886. Breakdown: days_per_user = 2.2709 (frequency) and moments_per_day = 1.8101 (depth). So the drop is explained by lower depth and modest active base \u2014 lower moments_per_day (1.81) means each active day produced fewer completions than usual. I pulled real_value_moments, new_signups, active_users, days_per_user and moments_per_day for 2026-07-06..2026-07-12 to support this. Queried governed metrics for last_week: real_value_moments=3642 [r1], new_signups=121 [r2], active_users=886 [r3], days_per_user=2.270880361173815 [r4], moments_per_day=1.8101391650099403 [r5]. The decline is primarily lower moments_per_day (depth) rather than fewer active users or signups.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t5_reminder_caused_it",
+      "question": "Reminder open rate fell sharply last week. Did that cause the drop in engagement?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_week",
+      "governed_value": 3642.0,
+      "claim": 3642,
+      "claim_text": "Yes \u2014 the drop in reminder open rate likely explains most of the engagement decline. Reminder open rate fell from 42.56% (week of 2026-06-29) to 30.67% (week of 2026-07-06), a 28% relative drop, while real value moments fell from 4,133 to 3,642 (a 11.9% decline). Both figures come from governed metrics for the same weekly periods. I compared governed metrics: reminder_open_rate (r1 vs r2) and real_value_moments (r3 vs r4) for prev_week vs last_week; reminder opens fell 0.1189 (42.56%\u219230.67%), moments fell 491 (4,133\u21923,642).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "fp_apac_collapse",
+      "question": "Why did APAC value moments collapse to near zero in June 2026?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('month', active_date)::date AS period, region, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-05-01' AND active_date <= DATE '2026-06-30' AND is_internal = false AND region = 'APAC' GROUP BY period, region ORDER BY period, region",
+      "applied_filters": {
+        "is_internal": false,
+        "region": "APAC"
+      },
+      "time_window": "2026-05-01..2026-06-30",
+      "governed_value": 2786.0,
+      "claim": 2786,
+      "claim_text": "APAC value moments did NOT collapse to near zero in June 2026 \u2014 they rose from 982 in May to 2,786 in June (a +184% increase). I checked the governed metric real_value_moments (and value_moments) filtered to region=APAC and months May\u2013June 2026; the metric values and SQL are shown in the queried results. Queried governed metric real_value_moments for APAC May\u2013Jun 2026 returned 982 (May) and 2,786 (Jun) \u2014 no collapse to near zero; source metric real_value_moments.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "fp_mrr_tripled",
+      "question": "What drove our MRR to roughly triple last month?",
+      "rung": 3,
+      "expected_refuse": true,
+      "answer_was_right": false,
+      "metric": "mrr",
+      "sql": "SELECT plan, sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) AS value FROM fct_subscriptions WHERE is_active GROUP BY plan ORDER BY plan",
+      "applied_filters": null,
+      "time_window": null,
+      "governed_value": 1888.44,
+      "claim": 1888.44,
+      "claim_text": "MRR increase was primarily from growth in monthly-plan subscriptions: monthly-plan MRR rose and now makes up the bulk of MRR; active subscriptions growth in monthly plans drove the ~3x increase. Point-in-time MRR broken down by plan shows monthly plan contributes $1,888.44 and annual $796.64 (monthly equivalents); active subscriptions are 237 monthly vs 134 annual \u2014 the large monthly-plan share explains the tripling.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "active_users",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, count(distinct user_id) AS value FROM agg_active_days WHERE NOT is_internal AND channel NOT IN ('partnerships') AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "last_week",
+      "governed_value": 704.0,
+      "claim": 704,
+      "claim_text": "Active users increased week-over-week, while total real value moments fell \u2014 the drop is driven by lower frequency (days per user) rather than fewer active users. active_users rose from 666 (prev_week) to 704 (last_week) while real_value_moments fell from 3,346 to 2,903; days_per_user fell from 2.746 to 2.311, showing lower per-user frequency. Sources: active_users [r2]->666 & [r1]->704; real_value_moments [r4]->3346 & [r3]->2903; days_per_user [r6]->2.7462462462462462 & [r5]->2.3110795454545454.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t5_why_drop",
+      "question": "Weekly value moments dropped last week. What caused it?",
+      "rung": 3,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "last_week",
+      "governed_value": 3642.0,
+      "claim": 3642,
+      "claim_text": "Weekly value moments fell by 491 (\u221211.9%) from 4,133 in the week of 2026-06-29 to 3,642 in the week of 2026-07-06. The drop was concentrated in EMEA (\u2212351, \u221218.0%) with smaller declines in Americas (\u221290, \u22127.3%) and APAC (\u221250, \u22125.2%). Comparing drivers: active users fell from 886 to 886? Wait compute active users prev_week total needed. Numbers taken from governed metric real_value_moments for prev_week [r4] and last_week [r3], and regional breakdowns [r2],[r1].",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t4_business_health",
+      "question": "Is the app healthy right now \u2014 how would you tell?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' AND is_internal = false GROUP BY period ORDER BY period",
+      "applied_filters": {
+        "is_internal": false
+      },
+      "time_window": "last_week",
+      "governed_value": 3642.0,
+      "claim": 3642,
+      "claim_text": "Short answer: overall health slipped last week \u2014 weekly real value moments fell 11.9% vs. the prior week (from 4,133 to 3,642). Main reason: fewer active days per user (frequency) \u2014 days_per_user dropped ~16.4% and is the primary driver in the decomposition. I used the governed North Star metric real_value_moments for last_week (3,642) vs prev_week (4,133) and the tree decomposition of weekly_value_moments which attributes the decline mainly to a 16.4% fall in days_per_user (primary driver).",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t5_region_or_broader",
+      "question": "Value moments dropped last week. Was it one region, or something broader?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT date_trunc('week', active_date)::date AS period, sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-07-06' AND active_date <= DATE '2026-07-12' GROUP BY period ORDER BY period",
+      "applied_filters": null,
+      "time_window": "last_week",
+      "governed_value": 3642.0,
+      "claim": 3642,
+      "claim_text": "It was broad \u2014 all regions fell and the decline was driven mainly by lower days-per-user (frequency). Governed metrics show global real value moments fell 4,133 \u2192 3,642 (\u221211.9%) last_week vs prev_week [real_value_moments r4]; EMEA, Americas, and APAC each declined (r1/r2). Decomposition (weekly_value_moments r3) attributes the drop primarily to days_per_user (\u221216.44%), while active_users rose (+5.98%) and moments_per_day was flat.",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    },
+    {
+      "qid": "t4_business_health",
+      "question": "Is the app healthy right now \u2014 how would you tell?",
+      "rung": 7,
+      "expected_refuse": false,
+      "answer_was_right": false,
+      "metric": "real_value_moments",
+      "sql": "SELECT sum(moments) AS value FROM agg_active_days WHERE NOT is_internal AND active_date >= DATE '2026-06-29' AND active_date <= DATE '2026-07-05'",
+      "applied_filters": null,
+      "time_window": "prev_week",
+      "governed_value": 4133.0,
+      "claim": -11.879990321800149,
+      "claim_text": "No \u2014 overall engagement (weekly real value moments) dropped last week vs the prior week, driven by a sharp fall in days_per_user despite a rise in active_users. Weekly real value moments fell from 4,133 (prev_week) to 3,642 (last_week), \u221211.88%; decomposition [r3] shows days_per_user fell \u221216.44% and was the primary driver while active_users rose +5.98%. Sources: metric queries [r1]=3642, [r2]=4133 and explain_change [r3].",
+      "recorded_verdict": {
+        "answers_question": true,
+        "mismatch": "none",
+        "value_role": "evidence"
+      }
+    }
+  ]
+}

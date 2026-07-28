@@ -1,0 +1,46 @@
+# Filtered / segmented — one governed metric sliced by a governed dimension member.
+cases:
+  - id: t2_web_value_moments_june
+    tier: filtered
+    question: "How many value moments came from the web platform in June 2026?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.platform = 'web' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  - id: t2_referral_signups_q2
+    tier: filtered
+    question: "How many users signed up through the referral channel in the second quarter of 2026 (April–June)?"
+    expect:
+      type: metric_answer
+      metric: new_signups
+      gold_sql: "SELECT count(*) FROM dim_users WHERE channel = 'referral' AND signup_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  - id: t2_paid_search_spend_q2
+    tier: filtered
+    question: "How much did we spend on paid search in the second quarter of 2026 (April–June)?"
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel = 'paid_search' AND spend_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  - id: t2_americas_value_moments_june
+    tier: filtered
+    question: "How many value moments came from users in the Americas region in June 2026?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.region = 'Americas' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  - id: t2_active_annual_subs
+    tier: filtered
+    question: "How many currently-active subscriptions are on the annual plan?"
+    expect:
+      type: metric_answer
+      metric: active_subscriptions
+      gold_sql: "SELECT count(*) FROM fct_subscriptions WHERE is_active AND plan = 'annual'"
+      tolerance: 0.02

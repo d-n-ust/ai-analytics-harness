@@ -18,6 +18,27 @@ dependencies = [
     "rich>=13",
 ]
 
+[dependency-groups]
+# The structural guarantees are claimed to hold for ANY call, not just the handful a human
+# thought to enumerate. Hypothesis generates the call space so that claim is tested rather
+# than asserted; pytest is what CI already invokes the suite through.
+dev = [
+    "hypothesis>=6.100",
+    "pytest>=8",
+]
+
 [tool.uv]
 # This is a runnable app, not an installable library — install deps only.
 package = false
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+# Historical audit scripts and generated run artifacts are not part of the live surface.
+extend-exclude = ["experiments", "results"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# Many governed prompts and docstrings are intentionally long single strings; length isn't the
+# signal here. Keep the correctness rules (F/B), import order (I), and modern-Python (UP).
+ignore = ["E501"]

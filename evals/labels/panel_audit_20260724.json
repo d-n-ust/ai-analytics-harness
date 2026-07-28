@@ -1,0 +1,371 @@
+{
+  "audit": "out-of-sample verifier audit",
+  "n": 21,
+  "panel": "3 Claude judges (opus/strict, sonnet/pragmatic, opus/skeptic), given grounded facts, blind to the verifier verdict; orchestrated via Claude Code agents",
+  "run": "20260724-130237-gpt-5-mini",
+  "cases": [
+    {
+      "id": "P001",
+      "qid": "rt_activation_count_june",
+      "question": "How many people who signed up in June 2026 reached their first completed habit within a week?",
+      "served": 0.5322283609576427,
+      "metric": "activation_rate",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P002",
+      "qid": "t2_americas_value_moments_june",
+      "question": "How many value moments came from users in the Americas region in June 2026?",
+      "served": 5386,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P003",
+      "qid": "t4_real_acquisition_spend_june",
+      "question": "How much did we spend on real acquisition channels in June 2026?",
+      "served": 18267.17,
+      "metric": "marketing_spend",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P004",
+      "qid": "t3_arpu",
+      "question": "What is our ARPU (average monthly recurring revenue per paying user)?",
+      "served": 7.2374034141958665,
+      "metric": "arpu",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P005",
+      "qid": "vw_paying_users",
+      "question": "How many paying users do we currently have?",
+      "served": 371,
+      "metric": "paying_users",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P006",
+      "qid": "t5_masked_by_growth",
+      "question": "Value moments came in soft last week even though we added users. What happened?",
+      "served": 3785,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P007",
+      "qid": "adv_price_lift",
+      "question": "How much did the price bump we rolled out in March lift MRR?",
+      "served": 2685.0766666666664,
+      "metric": "mrr",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P008",
+      "qid": "t1_signups_june",
+      "question": "How many new users signed up in June 2026?",
+      "served": 553,
+      "metric": "new_signups",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P009",
+      "qid": "t3_active_users_last_week",
+      "question": "How many active users did we have last week?",
+      "served": 886,
+      "metric": "active_users",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P010",
+      "qid": "rt_total_subs_ever",
+      "question": "How many subscriptions have we sold in total since launch?",
+      "served": 371,
+      "metric": "active_subscriptions",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P011",
+      "qid": "t4_apac_value_moments_q2",
+      "question": "How many value moments came from the APAC region in the second quarter of 2026 (April\u2013June)?",
+      "served": 3852,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P012",
+      "qid": "t2_web_value_moments_june",
+      "question": "How many value moments came from the web platform in June 2026?",
+      "served": 4812,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P013",
+      "qid": "vw_total_subscriptions",
+      "question": "How many subscriptions have we sold in total?",
+      "served": 371,
+      "metric": "active_subscriptions",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P014",
+      "qid": "t2_paid_search_spend_q2",
+      "question": "How much did we spend on paid search in the second quarter of 2026 (April\u2013June)?",
+      "served": 36875.98,
+      "metric": "marketing_spend",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P015",
+      "qid": "t4_retention_trend",
+      "question": "How has our retention been trending over the last couple of months?",
+      "served": 2.270880361173815,
+      "metric": "days_per_user",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P016",
+      "qid": "t3_mrr",
+      "question": "What is our current MRR (monthly recurring revenue)?",
+      "served": 2685.0766666666664,
+      "metric": "mrr",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P017",
+      "qid": "t2_active_annual_subs",
+      "question": "How many currently-active subscriptions are on the annual plan?",
+      "served": 134,
+      "metric": "active_subscriptions",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P018",
+      "qid": "t5_not_breadth",
+      "question": "Did our active user base shrink last week, or is something else going on with value moments?",
+      "served": 886,
+      "metric": "active_users",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P019",
+      "qid": "t1_total_habits",
+      "question": "How many habits have been created in total?",
+      "served": 67132,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": "no",
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    },
+    {
+      "id": "P020",
+      "qid": "t1_spend_june",
+      "question": "What was our total marketing spend in June 2026?",
+      "served": 21013.2,
+      "metric": "marketing_spend",
+      "judge_votes": {
+        "strict": "yes",
+        "pragmatic": "yes",
+        "skeptic": "yes"
+      },
+      "panel": "yes",
+      "human_adjudicated": null,
+      "ground_truth": "yes",
+      "verifier": "yes",
+      "outcome": "agree"
+    },
+    {
+      "id": "P021",
+      "qid": "fp_apac_collapse",
+      "question": "Why did APAC value moments collapse to near zero in June 2026?",
+      "served": 272,
+      "metric": "value_moments",
+      "judge_votes": {
+        "strict": "no",
+        "pragmatic": "no",
+        "skeptic": "no"
+      },
+      "panel": "no",
+      "human_adjudicated": null,
+      "ground_truth": "no",
+      "verifier": "no",
+      "outcome": "agree"
+    }
+  ],
+  "score": {
+    "agreement": "21/21",
+    "miss": 0,
+    "false_flag": 0,
+    "note": "P019 verifier<->panel disagreement resolved in the verifier's favour (completions 67132 != creations 7467)"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "method": "independent gold (no human labels): gold_sql on numeric questions, plus unanswerable questions where any served number is wrong",
+  "covers": {
+    "gold_sql": 56,
+    "unanswerable": 2
+  },
+  "excludes": "prose answers (diagnostic/keywords)",
+  "prompt_fingerprint": "149da8f96078",
+  "source_runs": [
+    "results/runs/20260727-140714-gpt-5-mini/raw.jsonl"
+  ],
+  "n": 58,
+  "catch": 11,
+  "false_flag": 1,
+  "ok_pass": 46,
+  "miss": 0,
+  "agreement": 0.9827586206896551,
+  "false_flag_rate": 0.02127659574468085,
+  "catch_rate": 1.0
+}
