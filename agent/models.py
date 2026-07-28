@@ -73,6 +73,13 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # cached input reads at $0.25/1M (10% of input), captured per-call so USD is real, not an upper bound.
     _spec("gpt-5.6-terra", 2.50, 15.0, price_confirmed=True, use_responses_api=True,
           efforts=("none", "low", "medium", "high", "xhigh")),   # 400s on `minimal`
+    # Same family as terra, so same API surface and the same effort ladder (no `minimal`).
+    # Price is OpenRouter's published base tier (2026-07-28), ONE source rather than the three
+    # terra and gpt-5-mini were corroborated against, so it stays unconfirmed and the cost report
+    # stars it. Both models also carry a long-context tier that doubles input above 272k prompt
+    # tokens; this bench runs ~6k per call, so the base rate is the one that applies.
+    _spec("gpt-5.6-sol", 5.00, 30.0, use_responses_api=True,
+          efforts=("none", "low", "medium", "high", "xhigh")),   # 400s on `minimal`
     _spec("gpt-5.4-mini", 0.25, 2.0),
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
     # Rejects reasoning_effort='none'; `minimal` is its floor. Every stored run of this model
