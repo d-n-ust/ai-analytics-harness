@@ -64,7 +64,7 @@ def _norm_value(v) -> str:
     return re.sub(r"[\s_\-]+", " ", str(v).strip().lower())
 
 
-def _match_catalog(term: str, names) -> str | None:
+def _match_catalog(term: str, names, aliases: dict | None = None) -> str | None:
     """Return the catalog name a free-text term denotes, or None.
 
     Strict on purpose: a term matches a name only when it *is* that name plus at
@@ -72,14 +72,24 @@ def _match_catalog(term: str, names) -> str | None:
     is either a name token or filler). This refuses composites like "MRR growth
     rate" (→ None) that bare-substring matching wrongly accepted, at the cost of
     some true synonyms ("monthly recurring revenue" → None) — a false NO costs
-    measurable coverage, a false YES invites fabrication."""
+    measurable coverage, a false YES invites fabrication.
+
+    `aliases` gives the other names the layer DECLARES for a catalog entry, and each
+    is tested by the same strict rule. This is not a loosening: a declared synonym is
+    the governed model stating what a term means, so honouring it is reading the
+    definition rather than guessing past it. Ignoring them made the layer contradict
+    itself — `list_metrics` tells the agent value_moments is "also called engagement
+    events", and check_metric_exists then answered "no governed definition matches".
+    'north star' is declared on real_value_moments and did not resolve either.
+    """
     tt = _tokens(term)
     if not tt:
         return None
     for name in names:
-        nt = _tokens(name)
-        if nt and nt <= tt and tt <= (nt | _STOP):
-            return name
+        for candidate in (name, *(aliases or {}).get(name, ())):
+            nt = _tokens(candidate)
+            if nt and nt <= tt and tt <= (nt | _STOP):
+                return name
     return None
 
 
@@ -115,7 +125,8 @@ class SemanticLayer:
     def metric_exists(self, term: str) -> tuple[bool, str]:
         if not _tokens(term):
             return False, "empty term."
-        name = _match_catalog(term, self.metrics)
+        name = _match_catalog(term, self.metrics,
+                              {n: m.get("synonyms", []) for n, m in self.metrics.items()})
         if name:
             return True, f"governed metric {name!r} matches {term!r}."
         return False, (f"no governed definition matches {term!r}. "
