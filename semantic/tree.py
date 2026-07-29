@@ -46,21 +46,60 @@ class MetricTree:
     def _children(self, node: str, kind: str) -> list[dict]:
         return [e for e in self.edges if e["parent"] == node and e["type"] == kind]
 
+    @staticmethod
+    def _matches(term: str, node: str) -> bool:
+        t = "".join(c if c.isalnum() else "_" for c in term.lower()).strip("_")
+        return t == node or node in t or t in node
+
+    def _edge_text(self, e: dict) -> str:
+        if e["type"] == "identity":
+            return f"{e['parent']} <- {e['child']} [identity, exact arithmetic]"
+        return (f"{e['parent']} <- {e['child']} [influence, confidence: "
+                f"{e.get('confidence', 'unknown')}]: {e.get('evidence', '')}")
+
+    def _path(self, outcome: str, driver: str) -> list[dict] | None:
+        """The shortest edge chain from an outcome down to a driver, or None.
+
+        Breadth-first, so the chain returned is the most direct one the tree carries. Edges point
+        parent <- child, and a driver is always further from the root than the outcome it acts on,
+        so the walk only ever goes downward and cannot loop back through a node it has left."""
+        queue: list[tuple[str, list[dict]]] = [(n, []) for n in self.nodes if self._matches(outcome, n)]
+        seen = {n for n, _ in queue}
+        while queue:
+            node, path = queue.pop(0)
+            for e in (x for x in self.edges if x["parent"] == node):
+                chain = [*path, e]
+                if self._matches(driver, e["child"]):
+                    return chain
+                if e["child"] not in seen:
+                    seen.add(e["child"])
+                    queue.append((e["child"], chain))
+        return None
+
     def causal_evidence(self, driver: str | None = None, outcome: str | None = None) -> tuple[bool, str]:
-        """Answerability check: does the tree carry an edge linking driver to outcome?
-        Both a driver and an outcome are required — an omitted term is not a wildcard
-        (that would trivially match every edge). A found influence edge reports its
-        confidence, so a low-confidence link is not mistaken for proof."""
+        """Answerability check: does the tree link driver to outcome, directly or through a chain?
+
+        Both terms are required — an omitted one is not a wildcard, which would trivially match
+        every edge. A found influence edge reports its confidence, so a low-confidence link is not
+        mistaken for proof.
+
+        An INDIRECT link is reported as one, rather than as nothing. Asked whether reminders caused
+        the North Star to fall, this used to answer "no encoded edge" — true of a direct edge, and
+        badly misleading: reminder_open_rate influences days_per_user, which is an identity child
+        of the root. A model reading that flat NO refused a question the tree could speak to, and
+        did so on two different backbones. The verdict is unchanged (a chain through a low-
+        confidence influence edge is still not proof); only the explanation stops hiding the path.
+
+        A chain is exactly as strong as its weakest edge, which is the rule the claim layer uses
+        too: identity composes with identity and stays exact, and one correlational edge anywhere
+        makes the whole chain correlational.
+        """
         if not (driver and driver.strip()) or not (outcome and outcome.strip()):
             return False, ("name both a driver and an outcome to check. Encoded edges: "
                            + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
 
-        def matches(term, node):
-            t = "".join(c if c.isalnum() else "_" for c in term.lower()).strip("_")
-            return t == node or node in t or t in node
-
         for e in self.edges:
-            if matches(driver, e["child"]) and matches(outcome, e["parent"]):
+            if self._matches(driver, e["child"]) and self._matches(outcome, e["parent"]):
                 if e["type"] == "identity":
                     return True, (f"{e['parent']} = ... x {e['child']} (identity, exact arithmetic).")
                 conf = e.get("confidence", "unknown")
@@ -70,8 +109,21 @@ class MetricTree:
                                 f"[influence, confidence: {conf}]: {e.get('evidence', '')} "
                                 "An influence edge is not proof of causation; a low-confidence "
                                 "edge is not a basis for a confident causal claim.")
-        return False, (f"no encoded edge links {driver!r} to {outcome!r}. "
-                       "Edges exist only for: "
+
+        chain = self._path(outcome, driver)
+        if chain:
+            proven = all(e["type"] == "identity" or e.get("confidence") == "high" for e in chain)
+            weakest = "exact arithmetic throughout" if proven else (
+                "the weakest link is a correlational influence edge, so the chain is not proof of "
+                "causation and cannot support a confident causal claim")
+            return proven, (
+                f"no DIRECT edge links {driver!r} to {outcome!r}, but the tree carries a path: "
+                + " ; ".join(self._edge_text(e) for e in chain)
+                + f". A chain is only as strong as its weakest edge — {weakest}. The intermediate "
+                  f"node ({chain[-1]['parent']}) is where to check whether anything actually moved.")
+
+        return False, (f"no encoded edge links {driver!r} to {outcome!r}, directly or through any "
+                       "chain. Edges exist only for: "
                        + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
 
     def describe(self) -> str:
