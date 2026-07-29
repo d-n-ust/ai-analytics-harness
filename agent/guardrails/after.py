@@ -23,7 +23,7 @@ import logging
 from math import isclose
 
 from ..numbers import parse_numbers
-from . import Position, Verdict, judge, note
+from . import DECOMPOSE_TOOLS, GOVERNED_TOOLS, Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)
 
@@ -75,17 +75,10 @@ def step_values(step: dict) -> list:
     return parse_numbers(step.get("result"))
 
 
-# Tools whose results are GOVERNED: the layer compiled them, or the tree derived them from
-# metrics the layer compiled, through an identity it declares. Asked by capability rather than
-# hardcoded at each use — the previous check named `query_metric` in three places, so the metric
-# tree could produce eighteen governed figures and be refused as hand-composed.
-_GOVERNED_TOOLS = ("query_metric", "explain_change")
-
-
 def _governed_results(steps: list):
     """Every number a governed tool produced, with a label for what it is."""
     for s in steps or []:
-        if s.get("tool") not in _GOVERNED_TOOLS or s.get("error"):
+        if s.get("tool") not in GOVERNED_TOOLS or s.get("error"):
             continue
         args = s.get("args") or {}
         label = args.get("metric") or args.get("node") or s.get("tool")
@@ -456,7 +449,7 @@ def causal_record(run, steps: list) -> str:
     guardrail rules on must not be a display string.
     """
     tree = getattr(run.grounding.toolbox, "tree", None)
-    calls = [s for s in steps or [] if s.get("tool") == "explain_change" and not s.get("error")]
+    calls = [s for s in steps or [] if s.get("tool") in DECOMPOSE_TOOLS and not s.get("error")]
     if tree is None or not calls:
         return ""
     a = calls[-1].get("args") or {}

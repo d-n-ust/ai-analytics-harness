@@ -23,8 +23,26 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 
-__all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position", "Verdict",
-           "incoherent", "parse_cell"]
+__all__ = ["DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER", "LADDER_ORDER",
+           "GuardrailSet", "Position", "Verdict", "incoherent", "parse_cell"]
+
+# The tree-decomposition tool, current name first. `explain_change` was renamed because "explain"
+# promised more than the tool does — it attributes a change to a metric's COMPONENTS and never to
+# dimension members, and a model reading the old name asked it for regional contributions. The old
+# name stays readable because stored rows carry it: the coverage audit reads every row ever
+# written, and cli/trace.py renders archived runs.
+DECOMPOSE_TOOLS = ("decompose_change", "explain_change")
+
+# Tools whose results are GOVERNED: the layer compiled them, or the tree derived them from
+# metrics the layer compiled, through an identity it declares.
+#
+# It lives here rather than beside either user because two guardrails at opposite ends of a
+# request need the same list, for the same reason. `after.py` asks which results a served number
+# may have come from; `action_space.py` asks which calls should carry a stated purpose. Both mean
+# "the calls that produce evidence", and a second copy would drift — the provenance check once
+# named `query_metric` in three places, so the metric tree could produce eighteen governed figures
+# and have them refused as hand-composed.
+GOVERNED_TOOLS = ("query_metric", *DECOMPOSE_TOOLS)
 
 
 @dataclass(frozen=True)
@@ -97,8 +115,9 @@ class Position(StrEnum):
     BEFORE        expressible, but it does not run. The model is told why and can adapt. Fails
                   when a second path reaches the same data — which is how a scope blocked as a
                   filter was once served as a breakdown.
-    DISCLOSURE    prevents nothing; tells the model what it actually got. Works only if the
-                  model reads it and acts.
+    DISCLOSURE    prevents nothing; carries information between the model and the harness, in
+                  either direction — what the call actually covered, or what the model meant by
+                  it. Works only if the model cooperates.
     AFTER         the number already exists; the question is whether it is served. Can only
                   refuse, never rescue.
     """
@@ -158,6 +177,23 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
               "the added filters, and rejects an answer to a different question",
               ("guardrails/after.py", "prompts.py")),
+    # The first guardrail that prevents nothing. It widens what a call can SAY about itself, so
+    # the working decomposition — which sub-question each query was meant to settle — is recorded
+    # instead of being inferred afterwards from the arguments.
+    #
+    # `because` is deliberately inert: nothing that executes a call ever reads it, so declaring a
+    # purpose cannot change a result, block a query, or fail. That is the property that keeps this
+    # from becoming a parse-or-die gate — the failure mode that sank natural-language database
+    # interfaces for forty years. A model that ignores the field behaves exactly as it does at R9.
+    # DISCLOSURE, though the mechanism is a schema change: Position classifies by FAILURE MODE,
+    # and this one fails exactly the way `transparency` does — silently, when the model does not
+    # cooperate — not the way an action-space guardrail fails. It runs the other way round from
+    # every other disclosure (the model discloses to us), which is the seam where a fifth position
+    # would eventually go. Until a second guardrail needs it, one is not a category.
+    Guardrail("declared_purpose", Position.DISCLOSURE,
+              "adds an optional `because` to every governed call — one line on what the call is "
+              "meant to establish. Recorded on the trace; never read by anything that acts",
+              ("guardrails/action_space.py", "prompts.py")),
 )
 
 LADDER_ORDER = [g.name for g in GUARDRAILS]
@@ -178,6 +214,7 @@ class GuardrailSet:
     governed_numbers: bool = False
     output_validation: bool = False
     trajectory_verify: bool = False
+    declared_purpose: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as

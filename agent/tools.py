@@ -24,6 +24,7 @@ from dataclasses import dataclass, replace
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree, TreeError
+from warehouse.config import NAMED_PERIODS
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
@@ -130,8 +131,9 @@ _QUERY_METRIC = {
                         "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}"},
             "time_grain": {"type": "string", "enum": ["day", "week", "month"],
                            "description": "Bucket the time column (for trends)."},
-            "period": {"type": "string",
-                       "enum": ["last_week", "prev_week", "last_month", "last_quarter", "ytd", "all"],
+            # The enum is read from the vocabulary itself rather than restated. It was a copy, and
+            # the copy is exactly how `decompose_change` came to accept any string at all.
+            "period": {"type": "string", "enum": list(NAMED_PERIODS),
                        "description": "A named period."},
             "start": {"type": "string", "description": "Explicit start date YYYY-MM-DD."},
             "end": {"type": "string", "description": "Explicit end date YYYY-MM-DD."},
@@ -179,22 +181,45 @@ _CHECK_CAUSAL = {
 
 _GET_METRIC_TREE = {
     "name": "get_metric_tree",
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": ("Which governed metrics produce or influence another — the structural map, "
+                    "no data read. Identity edges are exact arithmetic (a parent IS the product "
+                    "of its children); influence edges are correlational only, and carry a "
+                    "confidence and their evidence. Every node is a metric."),
     "input_schema": {"type": "object", "properties": {}},
 }
 
-_EXPLAIN_CHANGE = {
-    "name": "explain_change",
-    "description": ("Decompose why a metric changed between two periods, walking the tree. "
-                    "Returns exact identity contributions plus likely (hedged) influence drivers. "
-                    "Use this for 'why did X move' questions. The numbers are computed for you."),
+# The description states the AXIS, which the old one ("use this for 'why did X move' questions")
+# left open. A model reading that called this expecting per-region contributions — visible in its
+# own `because` — because the tree is the only decomposition on offer and "why" is unbounded.
+# Naming the axis and routing the other question to group_by is describing the tool, not answering
+# the question: which slice a change landed in is still the model's to work out.
+_DECOMPOSE_CHANGE = {
+    "name": "decompose_change",
+    "description": ("Attribute a metric's change between two periods to the metrics that COMPOSE "
+                    "it, walking the tree: exact identity contributions (shares sum to 1) plus "
+                    "hedged influence candidates. The numbers are computed for you.\n"
+                    "This decomposes along the metric tree only — into component metrics, never "
+                    "into dimension members. To see WHERE a change landed across a dimension "
+                    "(region, platform), call query_metric with group_by instead; to decompose "
+                    "WITHIN one scope, pass filters here."),
     "input_schema": {
         "type": "object",
         "properties": {
-            "node": {"type": "string", "description": "Tree node to explain (default: the root)."},
-            "period_a": {"type": "string", "description": "Baseline period (default prev_week)."},
-            "period_b": {"type": "string", "description": "Comparison period (default last_week)."},
-            "filters": {"type": "object", "additionalProperties": True},
+            "node": {"type": "string",
+                     "description": "The metric to decompose — a node from get_metric_tree "
+                                    "(default: the root)."},
+            # Enumerated for the same reason `period` is on query_metric: a free string invited a
+            # date, the model passed "2026-06-29", and the run lost a turn to `unknown period`.
+            # It is not offering less — this tool never took dates — it is saying so in the schema
+            # instead of in an error message.
+            "period_a": {"type": "string", "enum": list(NAMED_PERIODS),
+                         "description": "Baseline period (default prev_week)."},
+            "period_b": {"type": "string", "enum": list(NAMED_PERIODS),
+                         "description": "Comparison period (default last_week)."},
+            "filters": {"type": "object", "additionalProperties": True,
+                        "description": "Restrict the WHOLE decomposition to one scope, e.g. "
+                                       "{\"region\": \"EMEA\"} to decompose EMEA on its own. "
+                                       "Every node is computed inside that scope."},
         },
     },
 }
@@ -326,7 +351,10 @@ def _decomposition_values(out: dict) -> list[float]:
     return values
 
 
-def _explain_change(tb, args) -> ToolResult:
+def _decompose_change(tb, args) -> ToolResult:
+    # The tool is `decompose_change`; the tree METHOD keeps its own name. It returns more than the
+    # tool need ever expose (the judge's evidence is built from it in guardrails/after.py), so the
+    # two names are not required to agree.
     out = tb.tree.explain_change(node=args.get("node"),
                                  period_a=args.get("period_a", "prev_week"),
                                  period_b=args.get("period_b", "last_week"),
@@ -362,7 +390,7 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool(_CHECK_SEGMENT, _check_segment_defined),
     Tool(_CHECK_CAUSAL, _check_causal_evidence),
     Tool(_GET_METRIC_TREE, _get_metric_tree),
-    Tool(_EXPLAIN_CHANGE, _explain_change),
+    Tool(_DECOMPOSE_CHANGE, _decompose_change),
     Tool(_ANSWER), Tool(_REFUSE), Tool(_CLARIFY),      # terminal: the loop ends the run
 ]}
 
@@ -394,7 +422,7 @@ class Toolbox:
     def specs(self, terminal_only: bool = False, record=None) -> list[dict]:
         """The action space for this configuration — assembled by the ACTION_SPACE guardrails,
         which is where the ladder is legible."""
-        return action_space.offer(TOOLS, self.rung, self.g, self.semantic,
+        return action_space.offer(TOOLS, self.rung, self.g, self.semantic, self.tree,
                                   terminal_only=terminal_only, record=record)
 
     def dispatch(self, name: str, args: dict) -> ToolResult:

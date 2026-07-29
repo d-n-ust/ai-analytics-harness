@@ -20,7 +20,9 @@ import shutil
 import sys
 import textwrap
 
-from agent.guardrails import GUARDRAILS, Position, parse_cell
+from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
+
+from .sqlfmt import format_sql
 
 # Terminal styling, degraded to nothing when the output is not a terminal.
 _C = {"dim": "\033[2m", "bold": "\033[1m", "off": "\033[0m",
@@ -125,28 +127,167 @@ def _act_lines(acts, paint, indent: str) -> list[str]:
     return lines
 
 
+# Calls whose arguments and result are shown IN FULL rather than summarised. A governed query
+# returns a bounded table — the warehouse caps it at MAX_ROWS, the loop at _TRACE_LIMIT — and that
+# table, with the [scope] and [sql] the disclosure guardrail appends, is the evidence a served
+# number is checked against. Summarising it defeats the reason anyone opens a trace: `→ 976, 1289,
+# 2042` says three regions moved and not which is which.
+#
+# `explain_change` is absent because its result is not a table: it is a JSON document, laid out by
+# `_decomposition` instead of printed verbatim. Every other tool stays summarised — `get_schema`
+# alone would bury the trace it is meant to make readable.
+_SHOWN_IN_FULL = ("query_metric",)
+
+# Where the argument text starts on a step line, so a wrapped argument lines up under itself
+# instead of under the tool name: 6 indent + mark + space + 24 name + space + 9 timing + 2.
+_ARG_COLUMN = 44
+
+
+def _purpose_and_args(step: dict) -> tuple[str, dict]:
+    """A step's declared purpose, split from the arguments that were actually executed.
+
+    `because` earns its own line instead of appearing in the argument summary, which is truncated
+    to fit the terminal: a sentence there would crowd out the metric and the filters, which are
+    what a reader checks a number against. Splitting it here also keeps the two readings apart —
+    the arguments are what ran, the purpose is what it was for."""
+    args = dict(step.get("args") or {})
+    return str(args.pop("because", "") or "").strip(), args
+
+
 def _step_lines(step: dict, width: int, paint) -> list[str]:
     blocked_by, reason = step.get("blocked_by"), step.get("blocked_reason")
     failed = step.get("error")
     mark = paint("✗", "bad") if failed else paint("✓", "ok")
     ms = step.get("ms")
     timing = paint(f"{ms:>7.0f}ms" if ms is not None else "        —", "dim")
+    purpose, args = _purpose_and_args(step)
     lines = _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "before"],
                        paint, "        ")
+    if step.get("tool") in _SHOWN_IN_FULL:
+        shown = textwrap.wrap(json.dumps(args, default=str, sort_keys=True),
+                              max(40, width - _ARG_COLUMN)) or [""]
+    else:
+        shown = [_short(args, max(20, width - 58))]
     lines.append(f"      {mark} {paint(step.get('tool', '?'), 'bold'):<24} {timing}  "
-                 f"{paint(_short(step.get('args'), max(20, width - 58)), 'dim')}")
+                 f"{paint(shown[0], 'dim')}")
+    lines += [f"{' ' * _ARG_COLUMN}{paint(line, 'dim')}" for line in shown[1:]]
+    if purpose:
+        # Wrapped, not truncated. Everything else on a step is evidence ABOUT the call and can be
+        # summarised; this is the model's own account of what the call was for, and it is the one
+        # thing this rung exists to read. Cutting it would be like cutting the answer — the same
+        # reason _outcome_lines wraps rather than shortens.
+        body = textwrap.wrap(purpose, max(40, width - 20)) or [""]
+        lines.append(f"          {paint('because', 'cyan')} {body[0]}")
+        lines += [f"                  {line}" for line in body[1:]]
     if blocked_by:
         lines.append(f"          {paint('blocked by', 'bad')} {paint(blocked_by, 'bad')}"
                      f" → {paint(reason or '', 'bad')}")
     lines += _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "disclosure"],
                         paint, "        ")
-    values = step.get("result_values")
-    if values:
-        shown = ", ".join(f"{v:g}" for v in values[:6]) + ("…" if len(values) > 6 else "")
-        lines.append(f"          {paint('→ ' + shown, 'dim')}")
-    elif not blocked_by:
-        lines.append(f"          {paint('→ ' + _short(step.get('result'), max(20, width - 14)), 'dim')}")
+    return lines + _result_lines(step, width, paint)
+
+
+def _decomposition(step: dict, width: int) -> list[str] | None:
+    """The metric tree's decomposition as a scannable table, or None if it will not parse.
+
+    `explain_change` returns a sixty-line JSON document. Every number in it is governed — the tree
+    computed each one from governed metrics through an identity it declares — so none of it can be
+    dropped, but nobody reads a contribution share out of pretty-printed JSON.
+
+    Deliberately NOT shared with `causal_record` in the AFTER guardrails, which renders this same
+    dict for the judge. That rendering is a TREATMENT — test_surface pins it — so factoring the two
+    together would mean a tweak to this trace silently changed what the judge reads. Two audiences,
+    two renderings, and the duplication is the cheaper of the two mistakes.
+    """
+    handle = step.get("handle") or ""
+    text = str(step.get("result") or "")
+    prefix = f"[{handle}] "
+    if handle and text.startswith(prefix):
+        text = text[len(prefix):]
+    try:
+        out = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(out, dict) or "identity_decomposition" not in out:
+        return None
+
+    def num(v) -> str:
+        return "—" if not isinstance(v, (int, float)) else f"{v:.4g}"
+
+    def pct(v) -> str:
+        return "" if not isinstance(v, (int, float)) else f"{v * 100:+.2f}%"
+
+    def row(c: dict, name_w: int) -> str:
+        return (f"    {str(c.get('child', '')):<{name_w}}  {num(c.get('value_a')):>7} → "
+                f"{num(c.get('value_b')):<7}{pct(c.get('pct_change')):>9}")
+
+    kids = out.get("identity_decomposition") or []
+    infl = out.get("influence_candidates") or []
+    name_w = max((len(str(c.get("child", ""))) for c in [*kids, *infl]), default=0)
+    primary = (out.get("primary_driver") or {}).get("child")
+
+    lines = [f"{prefix if handle else ''}{out.get('node', '?')}  "
+             f"{out.get('period_a')} → {out.get('period_b')}:  {num(out.get('value_a'))} → "
+             f"{num(out.get('value_b'))}  {pct(out.get('pct_change'))}"]
+    if kids:
+        lines.append("  identity — exact arithmetic, shares sum to 1")
+        for c in kids:
+            share = c.get("contribution_share")
+            lines.append(row(c, name_w)
+                         + (f"   share {share:+.3f}" if isinstance(share, (int, float)) else "")
+                         + ("  ← primary" if c.get("child") == primary else ""))
+    if infl:
+        lines.append("  influence — correlational, never proof of cause")
+        for c in infl:
+            lines.append(row(c, name_w) + f"   confidence: {c.get('confidence', '?')}")
+            # The evidence is the whole point of an influence edge — it is what says whether the
+            # edge may be leaned on — so it wraps rather than being cut.
+            evidence = " ".join(str(c.get("evidence") or "").split())
+            lines += [f"      {line}" for line in textwrap.wrap(evidence, max(40, width - 20))]
     return lines
+
+
+_SQL_TAG = "[sql] "
+
+
+def _laid_out(lines: list[str]) -> list[str]:
+    """A governed result's lines, with the one carrying SQL expanded for reading.
+
+    Only the display changes: the model was shown, and the row still stores, the single-line query
+    the compiler emitted. Continuation lines are indented to the tag's own width so the query
+    hangs together as a block under it."""
+    out: list[str] = []
+    for line in lines:
+        if not line.startswith(_SQL_TAG):
+            out.append(line)
+            continue
+        query = format_sql(line[len(_SQL_TAG):])
+        out.append(_SQL_TAG + (query[0] if query else ""))
+        out += [" " * len(_SQL_TAG) + rest for rest in query[1:]]
+    return out
+
+
+def _result_lines(step: dict, width: int, paint) -> list[str]:
+    """What the call returned — in full for a governed query, summarised for everything else.
+
+    A blocked call has no result to show; the block was already reported above, and printing an
+    empty arrow under it would read as "returned nothing" rather than "never ran"."""
+    if step.get("blocked_by"):
+        return []
+    text = str(step.get("result") or "")
+    body = None
+    if step.get("tool") in _SHOWN_IN_FULL:
+        body = _laid_out(text.splitlines() or [""])
+    elif step.get("tool") in DECOMPOSE_TOOLS:
+        body = _decomposition(step, width)       # None when it will not parse — fall through
+    if body:
+        return ([f"          {paint('→ ' + body[0], 'dim')}"]
+                + [f"            {paint(line, 'dim')}" for line in body[1:]])
+    values = step.get("result_values")
+    if values:                                  # typed numbers read the checks read; the display
+        shown = ", ".join(f"{v:g}" for v in values[:6]) + ("…" if len(values) > 6 else "")
+        return [f"          {paint('→ ' + shown, 'dim')}"]   # text they came from is in the row
+    return [f"          {paint('→ ' + _short(text, max(20, width - 14)), 'dim')}"]
 
 
 def _outcome_lines(row: dict, width: int, paint) -> list[str]:
@@ -231,5 +372,13 @@ def render(row: dict, colour: bool | None = None) -> str:
         parts.append(f"tools {sum(tool_timed):.0f}ms")
     if not (timed or tool_timed):
         parts.append("no timings recorded")
+    # How much of the working decomposition the run actually left behind. Reported as a share of
+    # the calls that COULD carry a purpose, because that is the only denominator the model had a
+    # choice over — counting it against every step would score `get_schema` as a missed
+    # declaration. Absent entirely when no governed call ran, rather than printed as 0/0.
+    governed = [s for s in steps if s.get("tool") in GOVERNED_TOOLS]
+    if governed:
+        stated = sum(1 for s in governed if _purpose_and_args(s)[0])
+        parts.append(f"purpose stated on {stated}/{len(governed)} governed calls")
     foot = [rule] + _outcome_lines(row, width, paint) + [f"  {paint(' · '.join(parts), 'dim')}", rule]
     return "\n".join(head + [""] + body + foot)

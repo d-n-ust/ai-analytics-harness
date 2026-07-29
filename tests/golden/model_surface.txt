@@ -1452,8 +1452,8 @@ system: sha256=6c91697d4893 chars=3900
   }
 ]
 
-=== rung 6 · R0 · fingerprint ebc648cdcd14 ===
-system: sha256=fdb0e4ee15d9 chars=5912
+=== rung 6 · R0 · fingerprint 45163cf36ca6 ===
+system: sha256=d005a20e406a chars=5928
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1566,7 +1566,7 @@ system: sha256=fdb0e4ee15d9 chars=5912
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1574,29 +1574,46 @@ system: sha256=fdb0e4ee15d9 chars=5912
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
@@ -1637,8 +1654,8 @@ system: sha256=fdb0e4ee15d9 chars=5912
   }
 ]
 
-=== rung 6 · R2 · fingerprint b7c351239176 ===
-system: sha256=5e2378bf5cd1 chars=6507
+=== rung 6 · R2 · fingerprint deeebc7058c7 ===
+system: sha256=7ed91ec3d872 chars=6523
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1751,7 +1768,7 @@ system: sha256=5e2378bf5cd1 chars=6507
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1759,29 +1776,46 @@ system: sha256=5e2378bf5cd1 chars=6507
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -1937,8 +1971,8 @@ system: sha256=5e2378bf5cd1 chars=6507
   }
 ]
 
-=== rung 6 · R4 · fingerprint 4a874a0e9cef ===
-system: sha256=32641d7c1066 chars=6822
+=== rung 6 · R4 · fingerprint ce4283124c03 ===
+system: sha256=507834b9b9dc chars=6838
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2053,7 +2087,7 @@ system: sha256=32641d7c1066 chars=6822
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2061,29 +2095,55 @@ system: sha256=32641d7c1066 chars=6822
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -2239,8 +2299,8 @@ system: sha256=32641d7c1066 chars=6822
   }
 ]
 
-=== rung 6 · R6 · fingerprint 29a87f835d22 ===
-system: sha256=d317a18effa9 chars=7333
+=== rung 6 · R6 · fingerprint 65bf7c77dcf2 ===
+system: sha256=8d00c8bcc097 chars=7349
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2355,7 +2415,7 @@ system: sha256=d317a18effa9 chars=7333
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2363,29 +2423,55 @@ system: sha256=d317a18effa9 chars=7333
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -2541,8 +2627,8 @@ system: sha256=d317a18effa9 chars=7333
   }
 ]
 
-=== rung 6 · R9 · fingerprint cc0a9baecdb7 ===
-system: sha256=c54366e6f531 chars=8795
+=== rung 6 · R9 · fingerprint b668ccb605ed ===
+system: sha256=663a66e08552 chars=8811
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2657,7 +2743,7 @@ system: sha256=c54366e6f531 chars=8795
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2665,29 +2751,55 @@ system: sha256=c54366e6f531 chars=8795
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -2872,8 +2984,8 @@ system: sha256=c54366e6f531 chars=8795
   }
 ]
 
-=== rung 7 · R0 · fingerprint a28de1321ef4 ===
-system: sha256=ada7ce512af2 chars=1379
+=== rung 7 · R0 · fingerprint 77253f04b6a0 ===
+system: sha256=5c3753b51b8d chars=1395
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2986,7 +3098,7 @@ system: sha256=ada7ce512af2 chars=1379
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2994,29 +3106,46 @@ system: sha256=ada7ce512af2 chars=1379
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
@@ -3057,8 +3186,8 @@ system: sha256=ada7ce512af2 chars=1379
   }
 ]
 
-=== rung 7 · R2 · fingerprint bf529f0379d4 ===
-system: sha256=35608495f184 chars=1974
+=== rung 7 · R2 · fingerprint 61dba769e1dd ===
+system: sha256=04b20fe4e172 chars=1990
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3171,7 +3300,7 @@ system: sha256=35608495f184 chars=1974
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3179,29 +3308,46 @@ system: sha256=35608495f184 chars=1974
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -3357,8 +3503,8 @@ system: sha256=35608495f184 chars=1974
   }
 ]
 
-=== rung 7 · R4 · fingerprint 59a78dd4e430 ===
-system: sha256=d17deff1f014 chars=2289
+=== rung 7 · R4 · fingerprint 2b4eeceed8e8 ===
+system: sha256=2eae0f659bf2 chars=2305
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3473,7 +3619,7 @@ system: sha256=d17deff1f014 chars=2289
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3481,29 +3627,55 @@ system: sha256=d17deff1f014 chars=2289
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -3659,8 +3831,8 @@ system: sha256=d17deff1f014 chars=2289
   }
 ]
 
-=== rung 7 · R6 · fingerprint 9eafbb803ab0 ===
-system: sha256=5d55c6166f26 chars=2800
+=== rung 7 · R6 · fingerprint 8fb10a0c269e ===
+system: sha256=6f23f53ef535 chars=2816
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3775,7 +3947,7 @@ system: sha256=5d55c6166f26 chars=2800
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3783,29 +3955,55 @@ system: sha256=5d55c6166f26 chars=2800
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
@@ -3961,8 +4159,8 @@ system: sha256=5d55c6166f26 chars=2800
   }
 ]
 
-=== rung 7 · R9 · fingerprint 5e2d95ee5997 ===
-system: sha256=0c6e6e39093e chars=4262
+=== rung 7 · R9 · fingerprint b1c530673c1b ===
+system: sha256=fe5f7da20236 chars=4278
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -4077,7 +4275,7 @@ system: sha256=0c6e6e39093e chars=4262
     "name": "query_metric"
   },
   {
-    "description": "Show the metric tree: how the North Star decomposes, with identity and influence edges.",
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4085,29 +4283,55 @@ system: sha256=0c6e6e39093e chars=4262
     "name": "get_metric_tree"
   },
   {
-    "description": "Decompose why a metric changed between two periods, walking the tree. Returns exact identity contributions plus likely (hedged) influence drivers. Use this for 'why did X move' questions. The numbers are computed for you.",
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
     "input_schema": {
       "properties": {
         "filters": {
           "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
           "type": "object"
         },
         "node": {
-          "description": "Tree node to explain (default: the root).",
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
           "type": "string"
         },
         "period_a": {
           "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         },
         "period_b": {
           "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "explain_change"
+    "name": "decompose_change"
   },
   {
     "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",

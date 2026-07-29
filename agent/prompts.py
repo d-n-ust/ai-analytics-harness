@@ -86,6 +86,14 @@ _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you use
                    "much', a rate for 'what rate / average / per user'), and the right scope (no filter "
                    "the question did not ask for). If the metric answers a different question, your answer "
                    "is rejected — so choose the metric that matches what was asked, or refuse.")
+# declared_purpose (R10) — the only line here that asks for something rather than describing what
+# the system will do. It requests a record, not a behaviour: the guardrail cannot enforce it, and
+# how often the model complies is exactly what the rung is there to measure.
+_RRUNG_PURPOSE = ("\n- Each governed call takes an optional `because`: one line, in plain words, on "
+                  "what you are trying to establish with it (\"check whether the drop is uniform "
+                  "across regions or concentrated in one\"). Write the sub-question you are "
+                  "answering, not a label for the call. It does not change the result — it records "
+                  "how you got to the answer, so a reader can follow your reasoning.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -98,7 +106,7 @@ _RUNG_NOTES = {
         "power users, activation, etc.) so the definition, threshold, and segment are always "
         "correct. You may still use run_sql for anything the metrics don't cover."),
     6: ("\n\nA metric tree is available. For diagnostic questions - why did a metric move, what is "
-        "driving a change - call explain_change to decompose the movement through the tree, and "
+        "driving a change - call decompose_change to attribute the movement to the metrics that compose it, and "
         "get_metric_tree to see its structure. The decomposition's numbers are computed for you: "
         "narrate them and their evidence, and do not invent contributions or causes the tree "
         "does not carry."),
@@ -146,6 +154,8 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
+    if g.declared_purpose:
+        system += _RRUNG_PURPOSE
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
     caps = capabilities(rung)

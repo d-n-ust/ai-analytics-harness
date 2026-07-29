@@ -17,13 +17,35 @@ depends on the tools it gates.
 from __future__ import annotations
 
 from ..rungs import capabilities
-from . import Position, note
+from . import GOVERNED_TOOLS, Position, note
 
 _CHECK_TOOLS = ("check_metric_exists", "check_coverage",
                 "check_segment_defined", "check_causal_evidence")
 
+# The field is named `because` rather than `purpose` or `intent` because the name is itself a
+# prompt: "because" invites the reason a call is being made, where a formal noun invites a restated
+# label ("regional analysis"). What we want recorded is the sub-question, in the analyst's words.
+_BECAUSE = {
+    "type": "string",
+    "description": "One line: what you are trying to establish with this call, in plain words "
+                   "(e.g. \"check whether the drop is uniform across regions or concentrated in "
+                   "one\"). It records your reasoning; it does not affect the result.",
+}
 
-def offer(tools: dict, rung: int, guardrails, semantic=None,
+
+def with_purpose(base: dict) -> dict:
+    """A tool schema that also offers `because` — the caller's own account of what it is for.
+
+    Additive and inert by construction: the field is optional, and no handler, guardrail or
+    compiler reads it (`agent/tools.py` takes its arguments by name). Omitting it therefore
+    produces exactly the run that would have happened without this guardrail, which is what keeps
+    a declaration from ever costing coverage.
+    """
+    props = {**base["input_schema"]["properties"], "because": _BECAUSE}
+    return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
+def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
           *, terminal_only: bool = False, record=None) -> list[dict]:
     """The tool schemas this configuration offers the model.
 
@@ -54,7 +76,8 @@ def offer(tools: dict, rung: int, guardrails, semantic=None,
             offered += [schema("list_metrics"),
                         query_metric_schema(schema("query_metric"), guardrails, semantic, record)]
         if caps.tree:
-            offered += [schema("get_metric_tree"), schema("explain_change")]
+            offered += [schema("get_metric_tree"),
+                        decompose_schema(schema("decompose_change"), guardrails, tree, record)]
         if guardrails.check_tools and semantic is not None:
             offered += [schema(name) for name in _CHECK_TOOLS]
             note(record, "check_tools", Position.ACTION_SPACE, "applied",
@@ -64,6 +87,13 @@ def offer(tools: dict, rung: int, guardrails, semantic=None,
         offered.append(schema("refuse"))
         note(record, "abstain", Position.ACTION_SPACE, "applied", "offered the refuse tool")
     offered.append(schema("clarify"))
+    # Applied once over the assembled list rather than at each governed tool: the set of calls
+    # that carry a purpose is one fact about the configuration, and stating it once means adding
+    # a third governed tool later cannot leave `because` off it by omission.
+    if guardrails.declared_purpose:
+        offered = [with_purpose(s) if s["name"] in GOVERNED_TOOLS else s for s in offered]
+        note(record, "declared_purpose", Position.ACTION_SPACE, "applied",
+             f"governed calls gained `because` ({', '.join(GOVERNED_TOOLS)})")
     return offered
 
 
@@ -88,6 +118,27 @@ def query_metric_schema(base: dict, guardrails, semantic, record=None) -> dict:
             "type": "string", "enum": segments,
             "description": "A governed named segment / reusable filter (see list_metrics), "
                            "e.g. real_acquisition to exclude test channels."}
+    return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
+def decompose_schema(base: dict, guardrails, tree, record=None) -> dict:
+    """Close `node` to the tree's own nodes, for the same reason `metric` is closed to the catalog.
+
+    A node name that does not exist costs a whole turn: the model guessed `value_moments` (a metric)
+    where the node is `weekly_value_moments`, read the error, and corrected — on three diagnostic
+    runs out of three. An enum makes the mistake unmakeable rather than recoverable, which is what
+    an ACTION_SPACE guardrail is for.
+
+    Gated on the coverage check because it IS that guardrail's mechanism, one level along: close the
+    vocabulary to what the governed layer defines. Ungated it would be an unattributable improvement
+    to every cell, which is the one thing an ablation must not contain.
+    """
+    if tree is None or not guardrails.coverage_check:
+        return base
+    props = {**base["input_schema"]["properties"],
+             "node": {**base["input_schema"]["properties"]["node"], "enum": list(tree.nodes)}}
+    note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",
+         f"node closed to the {len(tree.nodes)} tree nodes")
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
 
 
