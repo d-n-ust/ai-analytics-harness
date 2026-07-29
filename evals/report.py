@@ -17,6 +17,13 @@ split (RAG-eval's central lesson):
     (the Husain-Shankar error-analysis table).
   - two-level agent metrics: the per-tool call profile (call-level) and the trajectory verdict
     (task-level).
+  - process hygiene: what the trajectory cost, described and never scored against a route —
+    calls the surface rejected (waste) held apart from calls a guardrail blocked (the mechanism
+    working), turns spent before the first governed call, and the share of governed calls that
+    stated a purpose. Asserting a golden path is the brittle thing; describing the process is
+    not, and it is the only view that sees a run whose ANSWERS were unchanged while its
+    behaviour changed completely. Dead rows are named with their cause here too — they leave
+    every rate above silently, taking the run's n with them.
   - consolidated telemetry: tokens, estimated USD (starred when the price is a placeholder), and
     latency p50/p90/p99 (wall-clock on a shared API; a concurrent run overlaps requests, so the
     percentiles include queueing under load — read deltas between cells, not absolutes).
@@ -34,6 +41,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from agent.grounding import RUNG_NAMES
+from agent.guardrails import GOVERNED_TOOLS
 from agent.models import MODEL_SPECS
 
 from .grade import WRONG_COST
@@ -77,6 +85,74 @@ def _bucket(r: dict) -> str:
 def _expected_refuse(r: dict) -> bool:
     """Answerable vs expected-to-refuse — decided by the gold, not the tier string."""
     return r.get("expected_refuse", r.get("tier") == "unanswerable")
+
+
+def _call_kind(step: dict) -> str:
+    """What became of one tool call: `ok`, `blocked`, or `rejected`.
+
+    The trace carries one `error` flag over two events that mean opposite things, and pooling
+    them hides the only one worth acting on. A BLOCKED call was well-formed and a guardrail
+    refused it — the mechanism working, and usually the very fact that earns a correct refusal.
+    A REJECTED call named something that does not exist (an unknown node, a dimension the metric
+    cannot be grouped by, a period on a point-in-time metric): the model misread the tool
+    surface, so either it or the tool's description is wrong. Only rejections are waste."""
+    if not step.get("error"):
+        return "ok"
+    return "blocked" if step.get("blocked_by") else "rejected"
+
+
+def _turns_before_evidence(r: dict) -> int | None:
+    """Turns spent before the first governed call — orientation, not waste.
+
+    None when the run made none: below the governed rungs there is no such tool, so the cell has
+    no number rather than a zero that would read as "went straight to the data"."""
+    for i, t in enumerate(r.get("turns") or []):
+        if any(c in GOVERNED_TOOLS for c in (t.get("calls") or [])):
+            return i
+    return None
+
+
+def _purpose_offered(rs) -> bool:
+    """Did the surface ask governed calls to state a purpose? Read from what the guardrails
+    RECORDED doing, not reconstructed from the config string: a cell is a guardrail SET, not
+    always a ladder rung, and reconstructing would put guardrail logic in a second place."""
+    return any(a.get("guardrail") == "declared_purpose" and a.get("position") == "action_space"
+               for r in rs for t in (r.get("turns") or []) for a in (t.get("acts") or []))
+
+
+def _process(rs) -> dict:
+    """Process hygiene for one cell: how cleanly the agent worked, with no expectation of HOW.
+
+    Every figure describes the trajectory instead of scoring it against a route. That is the
+    line between this and a golden-path assertion ("must call get_metric_tree, then
+    decompose_change"), which is brittle and punishes a better route — the reason tool-level
+    evals get called bad practice. Nothing here can be gamed by taking a different path, because
+    nothing here prefers a path."""
+    rejected: Counter = Counter()
+    blocked: Counter = Counter()
+    calls = governed = with_purpose = 0
+    for r in rs:
+        for s in (r.get("steps") or []):
+            calls += 1
+            kind = _call_kind(s)
+            if kind == "rejected":
+                rejected[s.get("tool")] += 1
+            elif kind == "blocked":
+                blocked[s.get("blocked_by")] += 1
+            if s.get("tool") in GOVERNED_TOOLS:
+                governed += 1
+                with_purpose += bool((s.get("args") or {}).get("because"))
+    firsts = [t for t in map(_turns_before_evidence, rs) if t is not None]
+    return {
+        "calls": calls,
+        # rates over CALLS, so a cell that simply works harder is not read as a sloppier one
+        "rejected_rate": sum(rejected.values()) / calls if calls else None,
+        "blocked_rate": sum(blocked.values()) / calls if calls else None,
+        "rejected_by_tool": dict(rejected.most_common()),
+        "blocked_by_guardrail": dict(blocked.most_common()),
+        "turns_before_evidence": round(sum(firsts) / len(firsts), 2) if firsts else None,
+        "purpose_declared": (with_purpose / governed) if _purpose_offered(rs) and governed else None,
+    }
 
 
 def _rates(rs) -> dict:
@@ -285,6 +361,7 @@ def aggregate(rows) -> dict:
                 "tools_per_run": {t: round(c / n, 2) for t, c in tools.most_common()},
                 "trajectory": dict(traj),
             },
+            "process": _process(rs),
             "telemetry": {
                 "in_tokens": sum(r["input_tokens"] for r in rs),
                 "out_tokens": sum(r["output_tokens"] for r in rs),
@@ -307,6 +384,18 @@ def aggregate(rows) -> dict:
                             "off_governance" if r.get("off_governance") else "wrong")}
                   for r in rows if _bucket(r) == "wrong"]
 
+    # Two trace-level drill-downs. Both name the offending call or row outright, because a rate
+    # tells you something went wrong and only the text tells you what: the difference between
+    # "3 rejected calls" and "the model asked for node `value_moments`, three times".
+    rejected_calls = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"],
+                       "tool": s.get("tool"), "args": s.get("args"),
+                       "message": str(s.get("result") or "").split("\n")[0]}
+                      for r in rows for s in (r.get("steps") or []) if _call_kind(s) == "rejected"]
+
+    dead_rows = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"],
+                  "cause": str(r.get("error") or "unrecorded")}
+                 for r in rows if _bucket(r) == "error"]
+
     return {
         "meta": {"axis": axis, "models": models, "cells": cells, "n_questions": n_q,
                  "reps": reps, "n_rows": len(rows), "wrong_cost": WRONG_COST,
@@ -321,6 +410,8 @@ def aggregate(rows) -> dict:
                               "reasoning": first.get("verifier_reasoning")}},
         "cells": {m: dict(c) for m, c in per_cell.items()},
         "wrong_rows": wrong_rows,
+        "rejected_calls": rejected_calls,
+        "dead_rows": dead_rows,
     }
 
 
@@ -329,6 +420,19 @@ def aggregate(rows) -> dict:
 # --------------------------------------------------------------------------- #
 def _pct(x) -> str:
     return "—" if x is None else f"{x * 100:.0f}%"
+
+
+def _td(x) -> str:
+    """One markdown table cell. A pipe inside a rendered value ends the cell and silently shifts
+    every column after it, so free text and stored arguments are escaped rather than trusted."""
+    return str(x).replace("\n", " ").replace("|", "\\|")
+
+
+def _rate_with_detail(rate, by: dict) -> str:
+    """A rate, followed by the breakdown that says where it came from — '12% (query_metric 5)'."""
+    if not by:
+        return _pct(rate)
+    return f"{_pct(rate)} ({', '.join(f'{k} {v}' for k, v in by.items())})"
 
 
 def _band(vals) -> tuple:
@@ -361,6 +465,14 @@ def render_markdown(summary: dict) -> str:
              f"**{v.get('model')}**@{v.get('reasoning')} · row schema v{meta.get('schema_version')}._")
     if meta.get("schema_skew"):
         L.append(f"_⚠ schema skew: some rows predate v{meta.get('schema_current')} — missing fields read as None._")
+    # Dead rows are excluded from every rate below, so without this line a contaminated run is
+    # indistinguishable from a clean run with a smaller n — which is how 43 rows died unnoticed.
+    if summary.get("dead_rows"):
+        n_dead = len(summary["dead_rows"])
+        causes = len({d["cause"] for d in summary["dead_rows"]})
+        L.append(f"_⚠ {n_dead} of {meta['n_rows']} rows died before a measurement was taken "
+                 f"({causes} distinct cause(s)) — they are excluded from every rate below. "
+                 "See **Rows that died**._")
     vv = meta.get("verifier_validation")
     if vv:
         flag = ""
@@ -558,6 +670,27 @@ def render_markdown(summary: dict) -> str:
             tjs = f"{tj.get('pass', 0)}/{tj.get('fail', 0)}" if tj else "—"
             L.append(f"| {c} | {a['tool_calls_per_run']} | {prof} | {tjs} |")
 
+    # 5b. Process hygiene — describes the trajectory, never asserts a route
+    for m in meta["models"]:
+        L += ["", f"## Process hygiene — {m}", "",
+              "_Descriptive only: how cleanly the agent worked, with no expectation of HOW it "
+              "should. **rejected** = calls the tool surface refused because they named something "
+              "that does not exist — an unknown node, a dimension the metric cannot be grouped by. "
+              "Those are pure waste, and a mistake that repeats across runs is a tool-description "
+              "problem rather than a model one. **blocked** = well-formed calls a guardrail "
+              "refused; that is the mechanism working, and it is often what earns a correct "
+              "refusal, so it is counted apart and never added to waste. **turns to evidence** = "
+              "turns spent before the first governed call (orientation). **purpose** = share of "
+              "governed calls carrying a stated `because`, where the surface asks for one._", "",
+              f"| {axis} | rejected | blocked | turns to evidence | purpose |",
+              "|" + "---|" * 5]
+        for c in _cells_for(summary, m):
+            p = summary["cells"][m][c]["process"]
+            L.append(f"| {c} | {_rate_with_detail(p['rejected_rate'], p['rejected_by_tool'])} "
+                     f"| {_rate_with_detail(p['blocked_rate'], p['blocked_by_guardrail'])} "
+                     f"| {p['turns_before_evidence'] if p['turns_before_evidence'] is not None else '—'} "
+                     f"| {_pct(p['purpose_declared'])} |")
+
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:
         usd_note = ("reflects the **measured** prompt-cache discount (cache hits billed at 10% of input)"
@@ -588,6 +721,33 @@ def render_markdown(summary: dict) -> str:
         for w in summary["wrong_rows"]:
             L.append(f"| {w['model']} | {w['cell']} | {w['qid']} | {w.get('tier','?')} | {w['type']} "
                      f"| {w['answer']} | {w['gold']} |")
+
+    # 8. Drill-down — every call the tool surface rejected
+    if summary.get("rejected_calls"):
+        L += ["", "## Rejected tool calls (the surface refused the arguments)", "",
+              "_Each cost a turn and returned no evidence. Read the arguments against the message: "
+              "the same wrong name recurring is the tool's description failing to say what it "
+              "accepts, which no amount of scoring the ANSWER would ever reveal._", "",
+              "| model | cell | qid | tool | arguments | what came back |",
+              "|---|---|---|---|---|---|"]
+        for x in summary["rejected_calls"]:
+            L.append(f"| {x['model']} | {x['cell']} | {x['qid']} | `{x['tool']}` "
+                     f"| `{_td(json.dumps(x['args'], default=str))}` | {_td(x['message'])} |")
+
+    # 9. Drill-down — rows that never produced a measurement, grouped by cause
+    if summary.get("dead_rows"):
+        by_cause: dict = defaultdict(list)
+        for d in summary["dead_rows"]:
+            by_cause[d["cause"]].append(d)
+        L += ["", "## Rows that died (no measurement taken)", "",
+              "_A dead row is excluded from every rate above, so a contaminated run reads as a "
+              "clean one with a smaller n. Grouping by cause is what separates an infrastructure "
+              "fault — one message repeated across every row — from scattered model failures._", "",
+              "| rows | cause | models | cells |", "|---|---|---|---|"]
+        for cause, ds in sorted(by_cause.items(), key=lambda kv: -len(kv[1])):
+            models = ", ".join(sorted({d["model"] for d in ds}))
+            cells = ", ".join(sorted({d["cell"] for d in ds}))
+            L.append(f"| {len(ds)} | {_td(cause[:160])} | {models} | {cells} |")
 
     return "\n".join(L) + "\n"
 
