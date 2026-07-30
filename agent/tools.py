@@ -239,19 +239,28 @@ def _fmt_rows(columns, rows) -> str:
 
 
 def _measure_values(cols, rows) -> list:
-    """The numbers a governed query reported, one per row: the `value` column the compiler
-    always aliases the measure to.
+    """The numbers a governed query reported, one per row, each with the row that produced it:
+    `[(label, value), …]`. The measure is the `value` column the compiler always aliases to.
 
     Reading every numeric cell of every row instead loses which cell IS the measure, and the
     checks downstream take the first one — so a breakdown handed them its first group's number
     rather than the group the answer came from, and a numeric dimension member could pass for
     a governed result. No `value` column means nothing verifiable came back, which fails the
-    provenance check closed rather than silently checking the wrong number."""
+    provenance check closed rather than silently checking the wrong number.
+
+    The label is the row's other columns joined — `paid_search`, or `2026-06-12/ios` for a
+    grouped time series — so a claim can cite the row it read instead of the whole result.
+    A single unnamed value labels as the empty string."""
     if "value" not in cols:
         return []
     i = cols.index("value")
-    return [float(r[i]) for r in rows
-            if isinstance(r[i], (int, float)) and not isinstance(r[i], bool)]
+    keys = [k for k in range(len(cols)) if k != i]
+    out = []
+    for r in rows:
+        if not isinstance(r[i], (int, float)) or isinstance(r[i], bool):
+            continue
+        out.append(("/".join(str(r[k]) for k in keys), float(r[i])))
+    return out
 
 
 def _verdict(ok: bool, detail: str) -> str:
@@ -283,7 +292,7 @@ def _query_metric(tb, args) -> ToolResult:
         args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
         time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),
         period=args.get("period"), resolve=tb.g.resolve, segment=args.get("segment"))
-    return ToolResult(_fmt_rows(cols, rows), values=_measure_values(cols, rows), sql=sql)
+    return ToolResult(_fmt_rows(cols, rows), sql=sql, **_labelled(_measure_values(cols, rows)))
 
 
 def _check_metric_exists(tb, args) -> ToolResult:
@@ -317,7 +326,12 @@ def _get_metric_tree(tb, args) -> ToolResult:
     return ToolResult(tb.tree.describe())
 
 
-def _decomposition_values(out: dict) -> list[float]:
+def _labelled(pairs) -> dict:
+    """Split `[(label, value), …]` into the two parallel lists a ToolResult carries."""
+    return {"values": [v for _, v in pairs], "labels": [k for k, _ in pairs]}
+
+
+def _decomposition_values(out: dict) -> list:
     """Every number the tree COMPUTED for this decomposition, as governed values.
 
     They are governed in the same sense a query_metric result is: the tree derived each one
@@ -335,19 +349,19 @@ def _decomposition_values(out: dict) -> list[float]:
     move" — the quantity a diagnosis actually reports — and they are computed by the tree, not by
     the model.
     """
-    values: list[float] = []
+    values: list = []
 
-    def take(d: dict) -> None:
+    def take(d: dict, prefix: str = "") -> None:
         for key in ("value_a", "value_b", "pct_change", "contribution_share"):
             v = d.get(key)
             if isinstance(v, (int, float)):
-                values.append(float(v))
+                values.append((prefix + key, float(v)))
 
+    # The root's own figures are unprefixed; a child's carry the child's name, so an answer
+    # cites `days_per_user.contribution_share` rather than "one of the eighteen numbers in r1".
     take(out)
-    for child in out.get("identity_decomposition") or []:
-        take(child)
-    for child in out.get("influence_candidates") or []:
-        take(child)
+    for child in (out.get("identity_decomposition") or []) + (out.get("influence_candidates") or []):
+        take(child, str(child.get("child", "")) + ".")
     return values
 
 
@@ -360,7 +374,7 @@ def _decompose_change(tb, args) -> ToolResult:
                                  period_b=args.get("period_b", "last_week"),
                                  filters=args.get("filters"))
     return ToolResult(json.dumps(out, default=str, indent=2),
-                      values=_decomposition_values(out))
+                      **_labelled(_decomposition_values(out)))
 
 
 @dataclass(frozen=True)

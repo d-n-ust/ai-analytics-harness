@@ -78,6 +78,26 @@ VERIFIER_REASONS = ["verifier_wrong_thing", "verifier_wrong_kind", "verifier_wro
                     "verifier_wrong_definition", "verifier_wrong_segment", "verifier_other"]
 
 
+def declared_handles(args: dict) -> tuple:
+    """The `sources` an answer declared, as clean handles — `['[r2]', 'r3']` -> `('r2', 'r3')`.
+
+    One reader for one field: the AFTER guardrails see the raw tool arguments and the loop sees
+    them again when it builds the Answer, and two copies of "what counts as a handle" would drift
+    the way the provenance check once did across three files.
+
+    Accepts a bare string as well as a list, because a model asked for an array will sometimes
+    send `"r2"` or `"r2, r3"`, and refusing a well-meant answer over its punctuation would measure
+    the schema rather than the analysis. `source_result` is read as a fallback because rows and
+    replies written before this field was plural carry that name. Empty entries drop out, so
+    "declared nothing" and "declared junk" arrive downstream as the same empty tuple."""
+    value = (args or {}).get("sources")
+    if value in (None, "", [], ()):
+        value = (args or {}).get("source_result")
+    if isinstance(value, str):
+        value = value.replace(",", " ").split()
+    return tuple(h for h in (str(v).strip().strip("[]") for v in (value or ())) if h)
+
+
 @dataclass
 class Answer:
     question: str
@@ -90,8 +110,25 @@ class Answer:
     missing: str | None = None     # refuse only: what the model says is missing
     source_metric: str | None = None  # answer only: the governed metric the value came from
     declared_value: float | None = None  # answer only: the served number (None = prose)
-    source_result: str = ""       # the handle of the governed result the answer reports
+    # The handle(s) of the governed result(s) the answer reports. A list because a comparison
+    # has two operands. Stored rows written before this was plural carry `source_result`, a
+    # single string; readers of archived runs accept both, the way DECOMPOSE_TOOLS does.
+    sources: tuple = ()
     value_recovered: bool = False   # the number came from the answer text, not the typed field
+    # Did the answer tool CARRY a typed `value` field (governed_numbers, R7+)? When it did,
+    # `declared_value` is the model's own statement of what it served and nothing needs to read
+    # the prose; when it did not, the prose is all there is. Recorded rather than inferred: the
+    # two cases are indistinguishable from `declared_value` alone, since it is also populated by
+    # recovery from the answer text.
+    typed_value: bool = False
+    # What the answer broke itself into, and what the audit found. Recorded on every run where
+    # the schema offered `claims`; the audit never changes the outcome on this rung, so a row
+    # carries the measurement without the measurement having moved the thing measured.
+    claims: tuple = ()
+    claim_audit: dict | None = None
+    # How many times the answer was handed back for citing something that does not
+    # exist. A run that needed a second go is not the same as one that got it right.
+    claim_retries: int = 0
     verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
     abstained: bool = False        # convenience mirror of outcome == "refuse"
     # Which output guardrail turned this answer into a refusal, when one did. The reason code

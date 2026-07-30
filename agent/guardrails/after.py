@@ -23,6 +23,7 @@ import logging
 from math import isclose
 
 from ..numbers import parse_numbers
+from ..outcomes import declared_handles
 from . import DECOMPOSE_TOOLS, GOVERNED_TOOLS, Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)
@@ -86,20 +87,57 @@ def _governed_results(steps: list):
             yield label, v
 
 
-def _same_metric_results(steps: list) -> dict:
-    """Governed results grouped by the metric they are instances of.
+def _named_steps(steps: list, sources) -> list:
+    """The `query_metric` steps the answer NAMED, in trace order.
+
+    An empty `sources` yields nothing rather than everything: a relation the model did not anchor
+    is unaccountable, which is the whole point of asking for the handles."""
+    wanted = {str(h).strip().strip("[]") for h in (sources or ())}
+    if not wanted:
+        return []
+    return [s for s in steps or []
+            if s.get("tool") == "query_metric" and not s.get("error")
+            and s.get("handle") in wanted and (s.get("args") or {}).get("metric")]
+
+
+def _named_results(steps: list, sources) -> dict:
+    """The values of the named results, grouped by the metric they are instances of.
 
     Only `query_metric`, because only there does one call's whole result belong to one named
     metric. A decomposition spans several, and every figure in it is already a governed result in
     its own right — the tree computed it — so it never needs to be reached by comparison."""
     groups: dict[str, list] = {}
-    for s in steps or []:
-        if s.get("tool") != "query_metric" or s.get("error"):
-            continue
-        metric = (s.get("args") or {}).get("metric")
-        if metric:
-            groups.setdefault(metric, []).extend(step_values(s))
+    for s in _named_steps(steps, sources):
+        groups.setdefault((s.get("args") or {})["metric"], []).extend(step_values(s))
     return groups
+
+
+def _additive_total(declared_value, steps: list, sources, semantic) -> str | None:
+    """The declared number as the TOTAL of one named result's periods — when that is governed.
+
+    Asking for a quarter at monthly grain and adding the months is the same figure as asking for
+    the quarter, but only for a metric whose aggregation composes across periods. `value_moments`
+    sums; `active_users` counts distinct users, so adding two months counts anyone active in both
+    of them twice. The layer states which is which (`additive_over_time`) rather than anything
+    here parsing `agg`, and a metric that has not been thought about is not additive — the unsafe
+    case has to be opted into.
+
+    Requires a single result, time-grained and NOT grouped: rows of a breakdown differ by
+    dimension as well as by period, and summing those is a different claim about a different
+    vocabulary."""
+    if semantic is None:
+        return None
+    for s in _named_steps(steps, sources):
+        args = s.get("args") or {}
+        metric = args["metric"]
+        if args.get("group_by") or not args.get("time_grain"):
+            continue
+        if not semantic.metrics.get(metric, {}).get("additive_over_time"):
+            continue
+        values = step_values(s)
+        if len(values) > 1 and num_match(declared_value, sum(values)):
+            return f"total of {len(values)} {metric} periods ({sum(values):g}), additive over time"
+    return None
 
 
 def _renderings(x: float):
@@ -109,14 +147,28 @@ def _renderings(x: float):
     yield x * 100
 
 
-def account_for(declared_value, steps: list) -> str | None:
+def account_for(declared_value, steps: list, sources=(), semantic=None) -> str | None:
     """Where does this number come from? Returns the account, or None if there is none.
 
     The rule, in one line: YOU MAY COMPARE GOVERNED NUMBERS, YOU MAY NOT COMPOSE NEW ONES.
 
       (a) the number IS a governed result, or
       (b) it is a comparison of two governed results OF THE SAME METRIC — a difference, a ratio
-          or a percent change.
+          or a percent change, BETWEEN THE RESULTS THE ANSWER NAMED, or
+      (c) it is the total of one named result's periods, for a metric the layer declares
+          additive over time (see `_additive_total`).
+
+    (b) is settled by lookup, not by search. It used to try every ordered pair of every value
+    the metric ever returned, times three relations, times two renderings — sixteen values of
+    `active_users` in one run meant ~1,440 candidate numbers, and the pairwise differences of
+    fourteen daily counts cover 0–79 densely enough that almost any figure matches something.
+    A hand-composed DAU/WAU ratio of 31.7% was accepted as "a ratio of two active_users results
+    (281, 886)": 281 was a single Sunday's count, 886 a whole week's, and the model's own average
+    was 287.4 anyway. Scoping the pair to the named results leaves 6 candidates instead of 1,440,
+    every one of them drawn from a result the model itself pointed at.
+
+    A comparison whose operands were not named cannot be accounted for. That is the enforcement:
+    you may not serve a relationship without saying what it is between.
 
     The distinction is not whether arithmetic happened; both `ARR = mrr x 12` and `value moments
     fell 11.9%` are one operation on a governed result, and no rule about the arithmetic can
@@ -135,7 +187,7 @@ def account_for(declared_value, steps: list) -> str | None:
         for candidate in _renderings(v):
             if num_match(declared_value, candidate):
                 return f"{metric} = {v:g}"
-    for metric, values in _same_metric_results(steps).items():
+    for metric, values in _named_results(steps, sources).items():
         for a in values:
             for b in values:
                 if a == b or not b:
@@ -145,10 +197,10 @@ def account_for(declared_value, steps: list) -> str | None:
                     for candidate in _renderings(base):
                         if num_match(declared_value, candidate):
                             return f"{op} of two {metric} results ({a:g}, {b:g})"
-    return None
+    return _additive_total(declared_value, steps, sources, semantic)
 
 
-def _provenance(declared_value, steps: list, source_metric, metrics, source_result=None):
+def _provenance(declared_value, steps: list, source_metric, metrics, sources=()):
     """Which governed metric produced the answer, its call args, and the value it returned
     — taken ONLY from the model's typed `source_metric` declaration, never inferred from the
     answer text. When that metric was queried more than once (say a breakdown and a total),
@@ -164,15 +216,19 @@ def _provenance(declared_value, steps: list, source_metric, metrics, source_resu
     # tolerance, and every tolerance is wrong for some metric: a 0.5 floor made two different
     # weeks of days_per_user (2.27 and 2.69) the same number, and the checks then validated a
     # figure nobody served.
-    if source_result:
-        named = next((s for s in (steps or []) if s.get("handle") == str(source_result).strip("[]")),
-                     None)
+    # Several handles only when the answer is a COMPARISON, and then the served number is in
+    # none of them — it is the relation between them. Taking the one that contains the declared
+    # value keeps a single-source answer exact and leaves a comparison with `hit=None`, which is
+    # what tells the checks below they are looking at a relation rather than an instance.
+    for handle in (sources or ()):
+        named = next((s for s in (steps or []) if s.get("handle") == str(handle).strip("[]")), None)
         if named is not None and (named.get("args") or {}).get("metric") == source_metric:
             values = step_values(named)
             # num_match returns to its real job here: verifying the declared number IS that
             # result, rather than searching for which result it might have been.
             hit = next((v for v in values if num_match(declared_value, v)), None)
-            return source_metric, (named.get("args") or {}), hit
+            if hit is not None or len(sources) == 1:
+                return source_metric, (named.get("args") or {}), hit
     calls = [s for s in (steps or []) if s.get("tool") == "query_metric"
              and (s.get("args") or {}).get("metric") == source_metric]
     if not calls:
@@ -256,7 +312,7 @@ def output_validation(metric_def: dict, value) -> Verdict:
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   record=None, source_metric: str | None = None, declared_value=None,
-                  source_result: str | None = None,
+                  sources=(),
                   run_output_validation: bool = True, run_governed_numbers: bool = False,
                   verify_traj=None) -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
@@ -271,7 +327,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
         return Verdict.ok()
 
     if run_governed_numbers:
-        account = account_for(declared_value, steps)
+        account = account_for(declared_value, steps, sources, semantic)
         note(record, "governed_numbers", Position.AFTER,
              "allowed" if account else "refused",
              account or "the served number is neither a governed result nor a comparison of two")
@@ -293,7 +349,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics,
-                                      source_result)
+                                      sources)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("output checks: numeric answer with no usable source_metric; not verified")
         return Verdict.ok()                # no governed metric to check against
@@ -385,7 +441,7 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     return verify_answer(
         semantic, run.question, served_text(args), run.steps, record=record,
         source_metric=args.get("source_metric"), declared_value=declared,
-        source_result=args.get("source_result"),
+        sources=declared_handles(args),
         run_output_validation=g.output_validation,
         run_governed_numbers=g.governed_numbers, verify_traj=verify_traj)
 

@@ -154,6 +154,13 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
     than force a spec onto words. That is a deliberate hole, and the loop closes it from the
     other side: an answer that IS a number is recovered and checked even when the field is
     empty (see numbers.bare_number).
+
+    `sources` is a LIST because a comparison has two operands and one slot could not hold them.
+    While it could not, the comparison branch of `account_for` had nothing to look up and had to
+    search instead — every ordered pair of the metric's values, times three relations. One run
+    put sixteen `active_users` values in that pool, so ~1,440 candidate numbers, and a
+    hand-composed DAU/WAU ratio matched one of them by coincidence. Naming the operands turns
+    the search back into a lookup.
     """
     if not (guardrails.governed_numbers and semantic is not None):
         return base
@@ -169,10 +176,47 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
         "type": "string", "enum": list(semantic.metrics),
         "description": "If `value` came from a governed metric, name that metric (as passed "
                        "to query_metric). Omit for a derived or non-metric answer."}
-    props["source_result"] = {
-        "type": "string",
-        "description": "The handle of the result you are reporting — every governed result is "
-                       "printed with one, like [r2]. Give just the handle (r2). This says WHICH "
-                       "query your number came from, so it does not have to be guessed by "
-                       "matching numbers."}
+    props["sources"] = {
+        "type": "array", "items": {"type": "string"},
+        "description": "The handle(s) of the result(s) your number comes from — every governed "
+                       "result is printed with one, like [r2]. Give just the handles (['r2']). "
+                       "A COMPARISON names both: a difference, ratio or percent change of r3 "
+                       "against r4 is ['r3','r4']. This says WHICH queries your number came "
+                       "from, so it is never guessed by matching numbers."}
+
+    # One rung further: the served number is one assertion among several, and the rest have
+    # never been checked at all. `claims` asks for each of them, addressed to a VALUE rather
+    # than to a result — `r1:days_per_user.pct_change`, not "somewhere in r1".
+    if guardrails.claim_binding:
+        props["claims"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string",
+                             "description": "One assertion your answer makes, in plain words."},
+                    "sources": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "The governed value(s) this assertion rests on, as "
+                                       "handle:field — e.g. r1:days_per_user.pct_change, or "
+                                       "r2:paid_search for one row of a breakdown."},
+                    "value": {"type": "number",
+                              "description": "The figure this assertion states, if it states one."},
+                },
+                "required": ["text", "sources"],
+            },
+            "description": "Break your answer into the separate assertions it makes — one per "
+                           "figure or judgement — each naming the governed value it rests on. "
+                           "An answer that reports five numbers makes five assertions.",
+        }
+        # REQUIRED, not optional. Left optional, 6 of 73 answers simply omitted it and nothing
+        # objected — an empty field passing silently on the one rung whose entire purpose is that
+        # field. An answer with nothing to declare can send one claim and no value; an answer that
+        # sends none has not been measured, and "not measured" read as "nothing to measure".
+        base = {**base, "input_schema": {**base["input_schema"],
+                                         "required": [*base["input_schema"].get("required", []),
+                                                      "claims"]}}
+        note(record, "claim_binding", Position.ACTION_SPACE, "applied",
+             "answer gained a REQUIRED `claims` — each assertion names the value it rests on")
+
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}

@@ -44,7 +44,12 @@ GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"
 # every other guardrail acts on a semantic layer that isn't there — so the grid stops where
 # build_grounding now refuses rather than pinning a surface that cannot mean what it says.
 GRID = ([(1, rrung) for rrung in (0, 1)]
-        + [(rung, rrung) for rung in (3, 6, 7) for rrung in (0, 2, 4, 6, 9)])
+        + [(rung, rrung) for rung in (3, 6, 7) for rrung in (0, 2, 4, 6, 9)]
+        # The rungs above 9 were unpinned, so every change to them was invisible here: making
+        # `claims` required altered the answer schema and this test still passed. A cell that is
+        # not in the grid is not pinned, and the guardrails most likely to be edited are the
+        # newest ones.
+        + [(7, rrung) for rrung in (10, 11)])
 
 
 def _render(con) -> str:

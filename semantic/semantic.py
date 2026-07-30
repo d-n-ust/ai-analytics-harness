@@ -372,6 +372,15 @@ class SemanticLayer:
                 bits.append("    point-in-time (as of now); no period filter")
             lines.append("\n".join(bits))
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
+        # The MEMBERS, once, rather than repeated under every metric that shares a dimension.
+        # Naming the dimension without its values told the agent that `channel` exists and left
+        # it to guess what a channel is: one run spent four of its eight turns asking three
+        # different tools whether "paid search" was defined, and never learned that `paid_search`
+        # is a governed member. There are 25 values in total — cheaper to state than to discover.
+        if self.dimensions:
+            lines.append("\nGoverned dimension values (any other value is refused, not approximated):")
+            for dim, members in self.dimensions.items():
+                lines.append(f"- {dim}: {', '.join(members)}")
         segs = self.governance.get("segments", {}) or {}
         if segs:
             lines.append("\nGoverned segments (pass segment=… to query_metric for a named reusable filter):")

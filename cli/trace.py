@@ -127,7 +127,8 @@ def _act_lines(acts, paint, indent: str) -> list[str]:
     return lines
 
 
-# Calls whose arguments and result are shown IN FULL rather than summarised. A governed query
+# Calls whose RESULT is shown in full rather than summarised (arguments are always in full, for
+# every tool — see _step_lines). A governed query
 # returns a bounded table — the warehouse caps it at MAX_ROWS, the loop at _TRACE_LIMIT — and that
 # table, with the [scope] and [sql] the disclosure guardrail appends, is the evidence a served
 # number is checked against. Summarising it defeats the reason anyone opens a trace: `→ 976, 1289,
@@ -146,10 +147,10 @@ _ARG_COLUMN = 44
 def _purpose_and_args(step: dict) -> tuple[str, dict]:
     """A step's declared purpose, split from the arguments that were actually executed.
 
-    `because` earns its own line instead of appearing in the argument summary, which is truncated
-    to fit the terminal: a sentence there would crowd out the metric and the filters, which are
-    what a reader checks a number against. Splitting it here also keeps the two readings apart —
-    the arguments are what ran, the purpose is what it was for."""
+    `because` earns its own line rather than sitting inside the argument list: it is a sentence,
+    and wrapped inline it would push the metric and the filters — the fields a reader checks a
+    number against — down the block. Splitting it also keeps the two readings apart: the
+    arguments are what ran, the purpose is what it was for."""
     args = dict(step.get("args") or {})
     return str(args.pop("because", "") or "").strip(), args
 
@@ -163,11 +164,15 @@ def _step_lines(step: dict, width: int, paint) -> list[str]:
     purpose, args = _purpose_and_args(step)
     lines = _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "before"],
                        paint, "        ")
-    if step.get("tool") in _SHOWN_IN_FULL:
-        shown = textwrap.wrap(json.dumps(args, default=str, sort_keys=True),
-                              max(40, width - _ARG_COLUMN)) or [""]
-    else:
-        shown = [_short(args, max(20, width - 58))]
+    # ARGUMENTS ARE NEVER CUT, for any tool. They are not a summary of the call — they ARE the
+    # call, and they are what a reader checks a number against. A truncated argument list hides
+    # exactly the field that decides whether a result answers the question: one run compared
+    # `period_a: last_month` against `period_b: prev_week` — a month against a week, which is
+    # why it reported a 65% collapse — and the trace cut the line at `{"node": "weekly_value_…`.
+    # Results still summarise (see _SHOWN_IN_FULL); a schema dump would bury the trace, an
+    # argument list never does.
+    shown = textwrap.wrap(json.dumps(args, default=str, sort_keys=True),
+                          max(40, width - _ARG_COLUMN)) or [""]
     lines.append(f"      {mark} {paint(step.get('tool', '?'), 'bold'):<24} {timing}  "
                  f"{paint(shown[0], 'dim')}")
     lines += [f"{' ' * _ARG_COLUMN}{paint(line, 'dim')}" for line in shown[1:]]
@@ -290,6 +295,41 @@ def _result_lines(step: dict, width: int, paint) -> list[str]:
     return [f"          {paint('→ ' + _short(text, max(20, width - 14)), 'dim')}"]
 
 
+def _claim_lines(row: dict, paint, width: int) -> list:
+    """What the answer broke itself into, and what the audit made of each piece.
+
+    The served answer is one assertion among several; without this the trace shows the one
+    number that was checked and stays silent about the four that were not."""
+    audit = row.get("claim_audit") or {}
+    claims = row.get("claims") or []
+    if not claims:
+        return []
+    head = (f"{audit.get('bound', 0)}/{audit.get('n', len(claims))} bound · "
+            f"{audit.get('sources', 0)} source(s)")
+    for k, label in (("unresolved", "unresolved"), ("mislabelled", "mislabelled"),
+                     ("value_mismatch", "value mismatch"), ("unsourced", "unsourced")):
+        if audit.get(k):
+            head += paint(f" · {audit[k]} {label}", "warn")
+    out = [f"  {paint('claims', 'bold')}   {head}"]
+    findings = audit.get("findings") or [{} for _ in claims]
+    for c, f in zip(claims, findings, strict=False):
+        ok = f.get("bound", True) and not f.get("why")
+        mark = paint("✓", "ok") if ok else paint("✗", "bad")
+        text = " ".join(str(c.get("text") or "").split())
+        wrapped = textwrap.wrap(text, max(40, width - 22)) or [""]
+        val = c.get("value")
+        out.append(f"        {mark} c{(f.get('i', 0)) + 1}  {wrapped[0]}"
+                   + (paint(f"  = {val:g}", "dim") if isinstance(val, (int, float))
+                      and not isinstance(val, bool) else ""))
+        out += [f"             {line}" for line in wrapped[1:]]
+        refs = ",".join(str(s) for s in (c.get("sources") or [])) or "—"
+        line = paint(f"             ← {refs}", "dim")
+        if f.get("why"):
+            line += paint(f"   {' · '.join(f['why'])}", "bad")
+        out.append(line)
+    return out
+
+
 def _outcome_lines(row: dict, width: int, paint) -> list[str]:
     outcome = row.get("outcome", "?")
     colour = {"answer": "ok", "refuse": "warn", "clarify": "cyan", "error": "bad"}.get(outcome, "dim")
@@ -304,8 +344,10 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
         typed = f"value={row['declared_value']:g}"
         if row.get("source_metric"):
             typed += f"  source_metric={row['source_metric']}"
-        typed += (f"  source_result={row['source_result']}" if row.get("source_result")
-                  else paint("  (no source_result — provenance fell back to matching numbers)", "warn"))
+        # `sources` is the current field; archived rows carry the singular `source_result`.
+        cited = row.get("sources") or ([row["source_result"]] if row.get("source_result") else [])
+        typed += (f"  sources={','.join(str(h) for h in cited)}" if cited
+                  else paint("  (no sources — a comparison cannot be accounted for)", "warn"))
         if row.get("value_recovered"):
             typed += paint("  (recovered from the answer text, not declared)", "warn")
         lines.append(f"          {paint(typed, 'dim')}")
@@ -316,6 +358,7 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
     if row.get("missing"):
         lines.append(f"          missing {paint(_short(row['missing'], 90), 'dim')}")
     lines += _act_lines(row.get("acts"), paint, "        ")
+    lines += _claim_lines(row, paint, width)
     verdict = row.get("verifier_verdict")
     if verdict:
         ok = verdict.get("answers_question")

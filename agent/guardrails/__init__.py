@@ -194,6 +194,23 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "adds an optional `because` to every governed call — one line on what the call is "
               "meant to establish. Recorded on the trace; never read by anything that acts",
               ("guardrails/action_space.py", "prompts.py")),
+    # The unit of decision is still the RUN. This is the first guardrail that measures below it.
+    #
+    # An answer is not one assertion. On the diagnostic tier it averages 4.8, and every one of
+    # them but the single declared `value` goes unchecked — one live run served nine assertions
+    # and had exactly one verified, under a metric name it had not used. Claims make each
+    # assertion name the value it rests on, so "what did this answer commit to, and does each
+    # commitment hold" becomes a question with an answer.
+    #
+    # Like `declared_purpose`, it is inert on this rung: the audit is recorded and the run's
+    # outcome is untouched, so R0–R10 rows are reproduced exactly and the measurement can be
+    # trusted before anything is enforced on it. Enforcement is a later rung, and it needs this
+    # one's numbers to justify it.
+    Guardrail("claim_binding", Position.DISCLOSURE,
+              "adds `claims` to the answer schema — each assertion with the governed value it "
+              "rests on (`r1:days_per_user.pct_change`). Every binding is resolved and audited; "
+              "nothing is refused on it yet",
+              ("guardrails/action_space.py", "loop.py", "prompts.py")),
 )
 
 LADDER_ORDER = [g.name for g in GUARDRAILS]
@@ -215,6 +232,7 @@ class GuardrailSet:
     output_validation: bool = False
     trajectory_verify: bool = False
     declared_purpose: bool = False
+    claim_binding: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as

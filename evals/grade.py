@@ -84,12 +84,17 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     expects_refusal = etype == "refuse"
     is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
     tol = expect.get("tolerance", 0.02)
-    # Did it put a FIGURE forward? Not `_numbers`, which counts the digits in a date and so
-    # read "I cannot provide July 13-19, 2026, coverage ends 2026-07-12" as a served number
-    # and filed an honest decline as a fabrication.
-    has_number = asserts_number(answer.answer)
+    # Did it put a FIGURE forward? Where the answer schema carried a typed `value` (R7+), the
+    # model has already said so and reading its prose can only invent a disagreement: one run
+    # declared no value, wrote "over the last 30 days", and the digit scan filed a clarification
+    # as a fabrication. Below R7 there is no such field, so the prose is all there is — and there
+    # the scan must stay, because a real answer is usually a sentence ("5386 value moments came
+    # from the Americas") that a bare-number pattern would drop.
+    has_number = (answer.declared_value is not None if getattr(answer, "typed_value", False)
+                  else asserts_number(answer.answer))
 
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
+    wrong_scope = False
     reason_match = driver_ok = cause_ok = metric_match = None
 
     if outcome == "error":
@@ -119,7 +124,18 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         if has_number:
             bucket = "wrong"
             if gold is None:
-                fabricated = True                    # no valid number exists -> pure fabrication
+                # No valid number exists for the question. WHERE the served figure came from
+                # decides which failure this is, and only R7+ knows: governed_numbers refuses
+                # any number it cannot account for, so an ANSWERED row there is carrying a real
+                # governed result — the model reported June 2026 actives and said plainly that
+                # June 2025 is outside coverage. That is a scope failure, not an invention, and
+                # scoring it as fabrication put it beside a hand-composed DAU/WAU ratio. Below
+                # R7 nothing checks provenance, so the two are indistinguishable and the older,
+                # stricter reading stands.
+                if getattr(answer, "typed_value", False):
+                    wrong_scope = True
+                else:
+                    fabricated = True                # no valid number exists -> pure fabrication
             elif not grade_numeric(answer.answer, gold, tol)["correct"]:
                 confident_wrong = True               # served a WRONG number
             else:
@@ -150,13 +166,16 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             else:
                 bucket = "other"
 
-    wrong_number = confident_wrong or fabricated
+    # A scope failure still put a figure in front of someone who asked something else, so it
+    # costs what a wrong answer costs. Splitting it out changes what the failure is CALLED, and
+    # therefore what you would fix; it does not make it cheaper.
+    wrong_number = confident_wrong or fabricated or wrong_scope
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         # Both terminal declines abstain: neither serves a number, which is what the
         # selective-prediction sense of the word means. `outcome` still tells them apart.
         "abstained": outcome in ("refuse", "clarify"), "confident_wrong": confident_wrong,
-        "fabricated": fabricated, "off_governance": off_governance,
+        "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
         "reason_match": reason_match, "metric_match": metric_match,
         "driver_ok": driver_ok, "cause_ok": cause_ok,

@@ -25,14 +25,15 @@ from semantic.tree import MetricTree
 from warehouse.warehouse import open_warehouse
 
 
-def _qm(metric, value, **args):
+def _qm(metric, value, handle="", **args):
     """A recorded query_metric step returning one scalar, as the trace stores it: the typed
-    `result_values` the dispatcher records, plus the display string."""
+    `result_values` the dispatcher records, plus the display string. `handle` is what an answer
+    names in `sources`; a step without one can be read but never cited."""
     try:
         vals = [float(value)]
     except (TypeError, ValueError):
         vals = []
-    return {"tool": "query_metric", "args": {"metric": metric, **args},
+    return {"tool": "query_metric", "args": {"metric": metric, **args}, "handle": handle,
             "result": f"columns: value\n({value},)", "result_values": vals}
 
 
@@ -651,8 +652,8 @@ def test_governed_numbers_allows_comparison_and_refuses_composition():
     NO LLM."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    check = lambda text, value, steps, metric=None: verifier.verify_answer(  # noqa: E731
-        sem, "q", text, steps, source_metric=metric, declared_value=value,
+    check = lambda text, value, steps, metric=None, sources=(): verifier.verify_answer(  # noqa: E731
+        sem, "q", text, steps, source_metric=metric, declared_value=value, sources=sources,
         run_output_validation=False, run_governed_numbers=True)
 
     steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
@@ -665,13 +666,54 @@ def test_governed_numbers_allows_comparison_and_refuses_composition():
     assert not composed.allowed and composed.reason == "no_governed_definition", \
         "a count times a rate invents a measure and must refuse"
 
-    # Two results of the SAME metric: every comparison between them is governed.
-    weeks = [_qm("value_moments", 4307, period="prev_week"),
-             _qm("value_moments", 3785, period="last_week")]
+    # Two results of the SAME metric: every comparison between them is governed — WHEN THE
+    # ANSWER NAMES BOTH. The handles turn the check into a lookup over two values instead of a
+    # search over every value the metric ever returned.
+    weeks = [_qm("value_moments", 4307, handle="r1", period="prev_week"),
+             _qm("value_moments", 3785, handle="r2", period="last_week")]
     for value, what in ((3785, "the level"), (-522, "the difference"),
                         (-12.12, "the percent change"), (0.8788, "the ratio")):
-        assert check(str(value), value, weeks, "value_moments").allowed, \
+        assert check(str(value), value, weeks, "value_moments", ("r1", "r2")).allowed, \
             f"{what} between two value_moments results is a comparison, not a composition"
+
+    # …and an UNNAMED comparison is refused. This is the enforcement, not a side effect: while
+    # one slot held the provenance a comparison had nothing to cite, so the check searched every
+    # ordered pair of the metric's values for one that fit — ~1,440 candidates in a live run,
+    # and a hand-composed DAU/WAU ratio matched one of them. The level still passes unnamed
+    # because it IS a governed result; only the relation needs its operands.
+    assert check("3785", 3785, weeks, "value_moments").allowed, "a level needs no operands"
+    for value, what in ((-522, "difference"), (-12.12, "percent change"), (0.8788, "ratio")):
+        unnamed = check(str(value), value, weeks, "value_moments")
+        assert not unnamed.allowed and unnamed.reason == "no_governed_definition", \
+            f"an unnamed {what} cannot be accounted for and must refuse"
+
+    # Naming ONE side of a two-sided relation is not enough either.
+    half = check("-522", -522, weeks, "value_moments", ("r1",))
+    assert not half.allowed, "one handle cannot anchor a comparison"
+
+    # (c) Totalling the periods of ONE result — governed only where the layer says the metric
+    # composes across periods. A live run asked for a quarter at monthly grain, added the two
+    # months, and got the gold figure exactly; refusing it was the rule failing to distinguish
+    # summing moments from summing distinct people.
+    months = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [1852.0, 2000.0],
+               "args": {"metric": "value_moments", "time_grain": "month",
+                        "start": "2026-05-01", "end": "2026-06-30"}}]
+    assert check("3852", 3852, months, "value_moments", ("r1",)).allowed, \
+        "value_moments sums moments, so its months total"
+    # Same shape, a metric that counts distinct users: anyone active in both months would be
+    # counted twice, so the total is not a governed figure however arithmetically tidy.
+    people = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [500.0, 600.0],
+               "args": {"metric": "active_users", "time_grain": "month",
+                        "start": "2026-05-01", "end": "2026-06-30"}}]
+    dup = check("1100", 1100, people, "active_users", ("r1",))
+    assert not dup.allowed, "count(distinct) does not compose across periods"
+    # A BREAKDOWN's rows differ by dimension as well as by period, so their total is a different
+    # claim — not licensed by additivity over time.
+    split = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [1852.0, 2000.0],
+              "args": {"metric": "value_moments", "time_grain": "month", "group_by": ["region"],
+                       "start": "2026-05-01", "end": "2026-06-30"}}]
+    assert not check("3852", 3852, split, "value_moments", ("r1",)).allowed, \
+        "a grouped result is not a time series"
 
     # A rate rendered as a percentage must match the governed rate. Multiplying by 100 moves
     # the last bits, and num_match's rounding ladder asks whether one number is the ROUNDING of

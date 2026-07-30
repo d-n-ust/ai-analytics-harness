@@ -94,6 +94,15 @@ _RRUNG_PURPOSE = ("\n- Each governed call takes an optional `because`: one line,
                   "across regions or concentrated in one\"). Write the sub-question you are "
                   "answering, not a label for the call. It does not change the result — it records "
                   "how you got to the answer, so a reader can follow your reasoning.")
+# claim_binding (R11) — asks for a record, like declared_purpose, and for the same reason: the
+# guardrail cannot enforce a decomposition the model declines to give, and how well the model
+# breaks its own answer apart is what this rung exists to measure.
+_RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion your answer makes, "
+                 "each naming the governed value it rests on. Every governed result prints a "
+                 "handle and its fields, so cite the VALUE — `r1:days_per_user.pct_change`, or "
+                 "`r2:paid_search` for one row of a breakdown — not just the result. If your "
+                 "answer reports five figures and draws one conclusion, that is six claims; the "
+                 "conclusion cites the values it follows from. It does not change your answer.")
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -156,6 +165,8 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_VERIFIER
     if g.declared_purpose:
         system += _RRUNG_PURPOSE
+    if g.claim_binding:
+        system += _RRUNG_CLAIMS
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
     caps = capabilities(rung)

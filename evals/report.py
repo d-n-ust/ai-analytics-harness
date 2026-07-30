@@ -48,7 +48,7 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 14  # v14: the judge is shown the answer text and reports the value's role
+ROW_SCHEMA_VERSION = 16  # v16: claims + claim_audit, labelled result values
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
@@ -120,6 +120,38 @@ def _purpose_offered(rs) -> bool:
                for r in rs for t in (r.get("turns") or []) for a in (t.get("acts") or []))
 
 
+def _claims(rs) -> dict | None:
+    """What the answers in this cell committed to, and how much of it held.
+
+    None when the rung never offered `claims` — an absent measurement, not a zero. The
+    denominator is ANSWERS, because a refusal commits to nothing: counting it as an answer with
+    no claims would read as non-compliance when it is the run declining."""
+    if not any(r.get("claim_audit") is not None for r in rs):
+        return None
+    served = [r for r in rs if r.get("outcome") == "answer"]
+    audits = [r["claim_audit"] for r in served if r.get("claim_audit")]
+    declared = [a for a in audits if a.get("n")]
+    total = sum(a["n"] for a in declared)
+    return {
+        "answers": len(served),
+        # Did the model use the field at all? A schema the model ignores is not a measurement.
+        "adoption": len(declared) / len(served) if served else None,
+        "claims_per_answer": round(total / len(declared), 2) if declared else None,
+        "claims": total,
+        # Of the assertions declared, how many stand up: sources resolve and the figure is one
+        # of them. Mislabelling is counted apart — the binding can hold while the answer's
+        # declared metric disagrees with every claim in it.
+        "bound_rate": sum(a["bound"] for a in declared) / total if total else None,
+        "unsourced": sum(a["unsourced"] for a in declared),
+        "unresolved": sum(a["unresolved"] for a in declared),
+        "value_mismatch": sum(a["value_mismatch"] for a in declared),
+        "mislabelled": sum(a["mislabelled"] for a in declared),
+        # How much of an answer stands on how little.
+        "sources_per_answer": round(sum(a["sources"] for a in declared) / len(declared), 2)
+                              if declared else None,
+    }
+
+
 def _process(rs) -> dict:
     """Process hygiene for one cell: how cleanly the agent worked, with no expectation of HOW.
 
@@ -155,6 +187,18 @@ def _process(rs) -> dict:
     }
 
 
+def _ungrounded(una) -> int:
+    """Rows that served a figure where no answer exists — the groundedness numerator.
+
+    `fabricated` and `wrong_scope` are ONE failure split by rung, not two failures. Below R7
+    nothing checks where a number came from, so any figure served on an unanswerable question
+    reads as an invention; at R7+ governed_numbers can tell an invention from a real governed
+    number answering a different question, and the row is typed `wrong_scope` instead. Counting
+    only the first would move groundedness at R7 for a grading reason, on a curve whose whole
+    job is to show what the guardrail bought."""
+    return sum(bool(r.get("fabricated")) or bool(r.get("wrong_scope")) for r in una)
+
+
 def _rates(rs) -> dict:
     """The three headline selective-prediction rates for a set of rows, each on its own
     denominator (answerable vs unanswerable) — None when that denominator is empty. Used both
@@ -165,7 +209,7 @@ def _rates(rs) -> dict:
     return {
         "coverage": len(answered) / len(ans_valid) if ans_valid else None,
         "precision": sum(bool(r.get("correct")) for r in answered) / len(answered) if answered else None,
-        "grounded": 1 - sum(bool(r.get("fabricated")) for r in una) / len(una) if una else None,
+        "grounded": 1 - _ungrounded(una) / len(una) if una else None,
     }
 
 
@@ -269,10 +313,17 @@ def aggregate(rows) -> dict:
         coverage = len(answered) / len(ans_valid) if ans_valid else None
         precision = correct_answered / len(answered) if answered else None
 
-        # groundedness on the UNANSWERABLE set (errors + pending-judge excluded)
+        # groundedness on the UNANSWERABLE set (errors + pending-judge excluded).
+        #
+        # The numerator is fabricated OR wrong_scope, because those two are ONE failure split by
+        # rung: a figure served where no answer exists reads as `fabricated` below R7 and as
+        # `wrong_scope` at R7+, where governed_numbers can tell an invention from a real number
+        # answering the wrong question. Counting only `fabricated` would make groundedness jump
+        # at R7 partly because the guardrail works and partly because the grader changed, and the
+        # ladder chart cannot tell those apart. Split them in `wrong_by_type`, where the
+        # distinction is the point; keep them together here, where comparability is.
         una = [r for r in rs if _expected_refuse(r) and r["outcome"] != "error" and not r.get("needs_judge")]
-        fabricated = sum(bool(r.get("fabricated")) for r in una)
-        groundedness = 1 - fabricated / len(una) if una else None
+        groundedness = 1 - _ungrounded(una) / len(una) if una else None
 
         # correctness (on answered): 1 - confident-wrong rate; relevancy where metric_match is known
         confident_wrong = sum(bool(r.get("confident_wrong")) for r in answered)
@@ -306,6 +357,7 @@ def aggregate(rows) -> dict:
         # wrong_metric is a SUBSET of confident_wrong, scored only where metric_match is known.
         wrong_by_type = {
             "fabricated": sum(bool(r.get("fabricated")) for r in wrong),          # groundedness fail
+            "wrong_scope": sum(bool(r.get("wrong_scope")) for r in wrong),        # real number, unasked question
             "confident_wrong": sum(bool(r.get("confident_wrong")) for r in wrong),   # correctness fail
             "off_governance": sum(bool(r.get("off_governance")) for r in wrong),  # right digits, off-path
             "wrong_metric": sum(r.get("metric_match") is False for r in wrong),   # relevancy fail (⊆ conf-wrong)
@@ -362,6 +414,7 @@ def aggregate(rows) -> dict:
                 "trajectory": dict(traj),
             },
             "process": _process(rs),
+            "claims": _claims(rs),
             "telemetry": {
                 "in_tokens": sum(r["input_tokens"] for r in rs),
                 "out_tokens": sum(r["output_tokens"] for r in rs),
@@ -642,18 +695,21 @@ def render_markdown(summary: dict) -> str:
                 L.append(f"| {c} | " + " | ".join(cellstr) + " |")
             L += ["", "_key: matched✓ / wrong-reason✗ / over-refused-answerable-o_"]
         L += ["", f"## Wrong answers by type — {m}", "",
-              "_The first three columns **partition** every wrong answer — they sum to ❌ wrong. "
-              "**fabricated** = invented a number where none exists (groundedness); **confident-wrong** "
-              "= asserted a wrong number (correctness); **off-governance** = right digits reached off the "
-              "governed path when the answer was to refuse. **wrong-metric** is a *subset* of "
-              "confident-wrong (a relevancy miss), scored only where the model declares source_metric "
-              "(R7+)._", "",
-              f"| {axis} | fabricated | confident-wrong | off-governance | of which wrong-metric |",
-              "|" + "---|" * 5]
+              "_The first four columns **partition** every wrong answer — they sum to ❌ wrong. "
+              "**fabricated** = invented a number where none exists (groundedness); **wrong-scope** "
+              "= a real governed number, but for a question that was not asked — only separable at "
+              "R7+, where nothing unaccountable can be served, so below that it reads as fabricated; "
+              "**confident-wrong** = asserted a wrong number (correctness); **off-governance** = right "
+              "digits reached off the governed path when the answer was to refuse. **wrong-metric** is "
+              "a *subset* of confident-wrong (a relevancy miss), scored only where the model declares "
+              "source_metric (R7+)._", "",
+              f"| {axis} | fabricated | wrong-scope | confident-wrong | off-governance "
+              f"| of which wrong-metric |",
+              "|" + "---|" * 6]
         for c in _cells_for(summary, m):
             w = summary["cells"][m][c]["wrong_by_type"]
             wm = w["wrong_metric"] if meta.get("relevancy_scored") else "n/a"
-            L.append(f"| {c} | {w['fabricated']} | {w['confident_wrong']} "
+            L.append(f"| {c} | {w['fabricated']} | {w.get('wrong_scope', 0)} | {w['confident_wrong']} "
                      f"| {w.get('off_governance', 0)} | {wm} |")
 
     # 5. Agent behaviour — tool-call profile (call-level) + trajectory verdicts (task-level)
@@ -690,6 +746,31 @@ def render_markdown(summary: dict) -> str:
                      f"| {_rate_with_detail(p['blocked_rate'], p['blocked_by_guardrail'])} "
                      f"| {p['turns_before_evidence'] if p['turns_before_evidence'] is not None else '—'} "
                      f"| {_pct(p['purpose_declared'])} |")
+
+    # 5c. Claim binding — what each answer committed to, and how much of it resolved
+    if any(summary["cells"][m][c].get("claims") for m in meta["models"]
+           for c in _cells_for(summary, m)):
+        for m in meta["models"]:
+            rows_ = [(c, summary["cells"][m][c].get("claims")) for c in _cells_for(summary, m)]
+            rows_ = [(c, cl) for c, cl in rows_ if cl]
+            if not rows_:
+                continue
+            L += ["", f"## Claim binding — {m}", "",
+                  "_An answer is not one assertion; on the diagnostic tier it averages about five, "
+                  "and before this rung only the single declared `value` was ever checked. "
+                  "**adoption** = answers that broke themselves into claims. **bound** = claims "
+                  "whose sources resolve to real governed values and whose stated figure is one "
+                  "of them. **mislabelled** is counted apart: a claim can be perfectly bound and "
+                  "the answer's declared metric still disagree with it, which no check on the "
+                  "number can catch. Nothing here refuses anything yet._", "",
+                  f"| {axis} | adoption | claims/answer | bound | unsourced | unresolved "
+                  f"| value mismatch | mislabelled | sources/answer |",
+                  "|" + "---|" * 9]
+            for c, cl in rows_:
+                L.append(f"| {c} | {_pct(cl['adoption'])} | {cl['claims_per_answer'] or '—'} "
+                         f"| {_pct(cl['bound_rate'])} | {cl['unsourced']} | {cl['unresolved']} "
+                         f"| {cl['value_mismatch']} | {cl['mislabelled']} "
+                         f"| {cl['sources_per_answer'] or '—'} |")
 
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:

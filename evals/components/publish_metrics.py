@@ -138,7 +138,7 @@ def cell_metrics(rows: list[dict]) -> dict:
             sum(r.get("iterations") or 0 for r in rows) / n, 2) if any(
             r.get("iterations") for r in rows) else None,
         # provenance adoption — a declared field the model ignores is not a guarantee
-        "source_result_declared": sum(1 for r in rows if r.get("source_result")),
+        "sources_declared": sum(1 for r in rows if r.get("sources") or r.get("source_result")),
         "value_recovered": sum(1 for r in rows if r.get("value_recovered")),
         "errors": sum(1 for r in rows if r["outcome"] == "error"),
     }

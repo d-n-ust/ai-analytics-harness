@@ -20,10 +20,11 @@ import logging
 import time
 from dataclasses import dataclass, field, replace
 
-from .conversation import Conversation, ToolCall, Turn, Usage
+from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import after
+from .guardrails import claims as claim_audit
 from .numbers import bare_number
-from .outcomes import TERMINAL_TOOLS, Answer
+from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
@@ -40,6 +41,24 @@ _log = logging.getLogger(__name__)
 def _line(value) -> str:
     """A model-supplied string as one clean line."""
     return str(value or "").strip()
+
+
+def _citable(handle: str, result) -> str:
+    """The references this result can be cited by, printed with it.
+
+    A handle names a BAG — a decomposition holds eighteen numbers. Which of them a claim rests on
+    is only expressible if the model knows the addressing scheme, and asking it to infer
+    `r1:days_per_user.pct_change` from a JSON key is a guess. The first run at this rung cited
+    bare `r1` five times out of five for exactly that reason.
+
+    Same shape as the [scope] and [sql] lines: the harness states what it will hold the model to,
+    where the model is reading."""
+    labels = [str(lb) for lb in (result.labels or []) if str(lb)]
+    if not labels:
+        return ""
+    shown = " · ".join(f"{handle}:{lb}" for lb in labels[:24])
+    more = f" · … ({len(labels) - 24} more)" if len(labels) > 24 else ""
+    return f"\n[cite] {shown}{more}"
 
 
 def _as_number(value):
@@ -83,6 +102,10 @@ class _Run:
     # steps alone hide where a run's time goes, which for an agent is almost always here.
     turns: list = field(default_factory=list)
     acts: list = field(default_factory=list)
+    # How many times an answer was handed back for a citation that named nothing.
+    # Recorded because the correction is a treatment: a run that needed two goes is
+    # not the same as one that got it right first time, and only this tells them apart.
+    claim_retries: int = 0
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
 
     def execute(self, calls) -> list:
@@ -102,17 +125,67 @@ class _Run:
             if result.values:
                 handle = f"r{len(self.handles) + 1}"
                 self.handles[handle] = len(self.steps)
-                result = replace(result, content=f"[{handle}] {result.content}")
+                result = replace(result, content=f"[{handle}] {result.content}{_citable(handle, result)}")
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
                                "result_values": result.values,
+                               "result_labels": result.labels,
                                "blocked_reason": result.reason,
                                "blocked_by": result.blocked_by,
                                "acts": [a.as_dict() for a in result.acts],
                                "ms": round((time.perf_counter() - t0) * 1000, 1)})
             results.append(result.for_call(call))
         return results
+
+    def malformed_claims(self, exit_call: ToolCall):
+        """A citation that names nothing is a MALFORMED CALL, and is handed back as one.
+
+        This is the same treatment `decompose_change` gets for an unknown node: the harness says
+        what is wrong, the model corrects, the run continues. Claims were the one thing in the
+        loop with no feedback at all — a bad citation was discovered after the run, by us, and the
+        model never heard about it. That is why 22% of references named a container rather than a
+        number: not because the model could not do better, but because nothing ever told it.
+
+        Only UNRESOLVED is handed back. A reference that points at nothing is objectively broken,
+        the way a bad argument is. Whether a claim is mislabelled, or states a figure its evidence
+        does not support, are judgements about the ANALYSIS — those stay in the audit, where they
+        are measured rather than corrected away.
+
+        Returns a ToolResult to feed back, or None when there is nothing to correct."""
+        if exit_call.name != "answer" or not self.grounding.toolbox.g.claim_binding:
+            return None
+        declared = tuple(c for c in (exit_call.args.get("claims") or []) if isinstance(c, dict))
+        if not declared:
+            return None
+        audited = claim_audit.audit(declared, self.steps, exit_call.args.get("source_metric"),
+                                    node_metrics=self._node_metrics())
+        broken = [f for f in audited["findings"] if f["unresolved"]]
+        if not broken:
+            return None
+        self.claim_retries += 1
+        lines = ["Your answer was not accepted: some claims cite evidence that does not exist."]
+        for f in broken:
+            for ref in f["unresolved"]:
+                lines.append(f"  claim {f['i'] + 1} cites {ref!r} — {self._why_unresolved(ref)}")
+        lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
+                     "Every governed result printed its citable fields on a [cite] line.")
+        return ToolResult("\n".join(lines), is_error=True)
+
+    def _why_unresolved(self, ref: str) -> str:
+        handle = str(ref).strip().strip("[]").partition(":")[0]
+        step = next((s for s in self.steps if s.get("handle") == handle), None)
+        if step is None:
+            return f"there is no result named {handle!r}"
+        n = len(step.get("result_values") or [])
+        if ":" not in str(ref):
+            return f"{handle} holds {n} values and this names none of them"
+        return f"{handle} has no such field"
+
+    def _node_metrics(self):
+        tree = getattr(self.grounding.toolbox, "tree", None)
+        return ({n: spec.get("metric") for n, spec in tree.nodes.items()}
+                if tree is not None else None)
 
     # -- what an exit call means ------------------------------------------- #
     def finish(self, exit_call: ToolCall, iterations: int) -> Answer:
@@ -154,9 +227,17 @@ class _Run:
         self.acts = [a.as_dict() for a in after_acts]
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
+        # The audit is a lookup over the trace, so it costs nothing and cannot fail the run.
+        declared_claims = tuple(c for c in (args.get("claims") or []) if isinstance(c, dict))
+        audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
+                                     node_metrics=self._node_metrics())
+                   if self.grounding.toolbox.g.claim_binding else None)
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
-                      source_result=str(args.get("source_result") or ""),
+                      claims=declared_claims, claim_audit=audited,
+                      sources=declared_handles(args),
                       value_recovered=recovered is not None,
+                      typed_value=bool(self.grounding.toolbox.g.governed_numbers),
+                      claim_retries=self.claim_retries,
                       verifier_verdict=self.last_verdict)
         if not verdict.allowed:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
@@ -213,6 +294,13 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         # separate question about the protocol, not about this loop.)
         results = run.execute(turn.tool_calls) if turn.tool_calls else []
         if turn.exit_call:
+            # A malformed answer is corrected, not accepted — but never on the closing turn,
+            # where there is no next turn to correct in. Ending as an untyped error row would
+            # be a lost measurement, which is worse than an answer that cites loosely.
+            correction = None if closing else run.malformed_claims(turn.exit_call)
+            if correction is not None:
+                convo.observe([correction.for_call(turn.exit_call)])
+                continue
             return run.finish(turn.exit_call, it + 1)
         if results:
             convo.observe(results)

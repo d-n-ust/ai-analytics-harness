@@ -36,6 +36,7 @@ metrics:
     synonyms: ["completed habits", "habit completions", "activity", "engagement events"]
     base: agg_active_days
     agg: "sum(moments)"
+    additive_over_time: true
     time_column: active_date
     dimensions: [region, platform, channel, country]
     supports_internal_filter: true
@@ -66,6 +67,7 @@ metrics:
     synonyms: ["north star", "real value moments", "real habit completions"]
     base: agg_active_days
     agg: "sum(moments)"
+    additive_over_time: true
     time_column: active_date
     dimensions: [region, platform, channel, country]
     default_filters: ["NOT is_internal"]
@@ -79,6 +81,7 @@ metrics:
     synonyms: ["signups", "new users", "registrations", "new accounts"]
     base: dim_users
     agg: "count(*)"
+    additive_over_time: true
     time_column: signup_date
     dimensions: [region, channel, platform]
     supports_internal_filter: true
@@ -219,6 +222,7 @@ metrics:
     synonyms: ["marketing spend", "ad spend", "marketing cost"]
     base: fct_marketing_spend
     agg: "sum(spend)"
+    additive_over_time: true
     time_column: spend_date
     dimensions: [channel]
 
@@ -230,6 +234,7 @@ metrics:
     synonyms: ["referrals", "invites", "referred users"]
     base: fct_referrals
     agg: "count(*)"
+    additive_over_time: true
     time_column: referred_ts
     filterable: [status]
 

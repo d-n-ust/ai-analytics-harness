@@ -132,6 +132,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "correct": g["correct"], "executed": g["executed"],
             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
             "fabricated": g["fabricated"], "off_governance": g.get("off_governance", False),
+            "wrong_scope": g.get("wrong_scope", False),
             "needs_judge": g.get("needs_judge", False),
             "bucket": g["bucket"], "expected_refuse": g["expected_refuse"],
             "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
@@ -139,12 +140,21 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             # Which governed result the answer names. Provenance is a lookup when this is
             # present and a flagged guess when it is not, so its adoption rate is itself worth
             # measuring — a declared field the model ignores is not a guarantee.
-            "source_result": ans.source_result,
+            "sources": list(ans.sources),
             "declared_value": ans.declared_value,
             # True when the number came from the answer text rather than the typed
             # field — so "the model forgot to declare it" stays measurable after
             # the recovery closed the hole it used to open.
             "value_recovered": ans.value_recovered,
+            # Whether the answer tool carried a typed `value` at all. Without it a re-grade
+            # cannot tell "declared nothing" from "was never asked to declare", and would read
+            # the prose in one case and the declaration in the other.
+            "typed_value": ans.typed_value,
+            # What the answer committed to, and whether each commitment resolved. The whole
+            # point of the rung: an answer's assertions are countable, not just its verdict.
+            "claims": list(ans.claims),
+            "claim_audit": ans.claim_audit,
+            "claim_retries": ans.claim_retries,
             "verifier_verdict": ans.verifier_verdict, "score": g["score"],
             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
             # How many times round the orchestrator loop. A multi-step loop multiplies
@@ -214,23 +224,51 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     report.write(rows, run_dir, mock=mock)
 
 
+def _node_metrics() -> dict:
+    """Each tree node and the governed metric underneath it — `weekly_value_moments` is computed
+    from `real_value_moments`, so an answer naming either is naming the same evidence."""
+    from semantic.semantic import SemanticLayer
+    from semantic.tree import MetricTree
+    con = open_warehouse()
+    try:
+        return {n: spec.get("metric") for n, spec in MetricTree(SemanticLayer(con)).nodes.items()}
+    finally:
+        con.close()
+
+
 def regrade_run(run_dir: Path) -> None:
     """Re-grade a finished run from its stored answers (no model calls) and regenerate
     its summary. This is how a grade.py change reaches every past number — the model
     outputs are immutable; only the verdicts derived from them change."""
+    from agent.guardrails import claims as claim_audit
+
     from .gold import load_questions
     qmap = {q["id"]: q for q in load_questions()}
     raw = run_dir / "raw.jsonl"
     rows = [json.loads(line) for line in raw.open()]
+    # The claim audit is a pure lookup over the stored trace, so a claims.py change reaches every
+    # past row for the same reason a grade.py change does: nothing here calls a model. The first
+    # correction moved 21 claims from unresolved to bound and cleared 25 false mislabels, on rows
+    # that had already been run — which is the argument for auditing rather than enforcing first.
+    node_metrics = _node_metrics()
     for r in rows:
+        if r.get("claims"):
+            r["claim_audit"] = claim_audit.audit(r["claims"], r.get("steps") or [],
+                                                 r.get("source_metric"), node_metrics=node_metrics)
         ans = Answer(question=r["question"], rung=r["rung"], model=r["model"],
                      answer=r["answer"], explanation=r.get("explanation", "") or "",
                      outcome=r.get("outcome", "answer"), reason=r.get("reason"),
                      missing=r.get("missing"), error=r.get("error"),
-                     source_metric=r.get("source_metric"))   # so metric_match re-grades faithfully
+                     source_metric=r.get("source_metric"),   # so metric_match re-grades faithfully
+                     # …and so has_number re-grades faithfully too. A row written before these
+                     # were stored reads typed_value False and falls back to the prose scan,
+                     # which is exactly how it was graded when it was written.
+                     declared_value=r.get("declared_value"),
+                     typed_value=bool(r.get("typed_value", False)))
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
-                                    "fabricated", "off_governance", "needs_judge", "bucket",
+                                    "fabricated", "off_governance", "wrong_scope",
+                                    "needs_judge", "bucket",
                                     "expected_refuse", "reason_match", "metric_match",
                                     "driver_ok", "cause_ok", "score")})
     with raw.open("w") as f:

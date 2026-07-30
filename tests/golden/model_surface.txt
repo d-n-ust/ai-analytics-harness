@@ -1154,7 +1154,7 @@ system: sha256=7ba8ed981940 chars=2438
   }
 ]
 
-=== rung 3 · R9 · fingerprint 3bdda0d96d7e ===
+=== rung 3 · R9 · fingerprint eb6f7ddc04b1 ===
 system: sha256=6c91697d4893 chars=3900
 [
   {
@@ -1378,9 +1378,12 @@ system: sha256=6c91697d4893 chars=3900
           ],
           "type": "string"
         },
-        "source_result": {
-          "description": "The handle of the result you are reporting \u2014 every governed result is printed with one, like [r2]. Give just the handle (r2). This says WHICH query your number came from, so it does not have to be guessed by matching numbers.",
-          "type": "string"
+        "sources": {
+          "description": "The handle(s) of the result(s) your number comes from \u2014 every governed result is printed with one, like [r2]. Give just the handles (['r2']). A COMPARISON names both: a difference, ratio or percent change of r3 against r4 is ['r3','r4']. This says WHICH queries your number came from, so it is never guessed by matching numbers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "value": {
           "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
@@ -2627,7 +2630,7 @@ system: sha256=8d00c8bcc097 chars=7349
   }
 ]
 
-=== rung 6 · R9 · fingerprint b668ccb605ed ===
+=== rung 6 · R9 · fingerprint 2384cb88ac16 ===
 system: sha256=663a66e08552 chars=8811
 [
   {
@@ -2910,9 +2913,12 @@ system: sha256=663a66e08552 chars=8811
           ],
           "type": "string"
         },
-        "source_result": {
-          "description": "The handle of the result you are reporting \u2014 every governed result is printed with one, like [r2]. Give just the handle (r2). This says WHICH query your number came from, so it does not have to be guessed by matching numbers.",
-          "type": "string"
+        "sources": {
+          "description": "The handle(s) of the result(s) your number comes from \u2014 every governed result is printed with one, like [r2]. Give just the handles (['r2']). A COMPARISON names both: a difference, ratio or percent change of r3 against r4 is ['r3','r4']. This says WHICH queries your number came from, so it is never guessed by matching numbers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "value": {
           "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
@@ -4159,7 +4165,7 @@ system: sha256=6f23f53ef535 chars=2816
   }
 ]
 
-=== rung 7 · R9 · fingerprint b1c530673c1b ===
+=== rung 7 · R9 · fingerprint 985699dea123 ===
 system: sha256=fe5f7da20236 chars=4278
 [
   {
@@ -4442,9 +4448,12 @@ system: sha256=fe5f7da20236 chars=4278
           ],
           "type": "string"
         },
-        "source_result": {
-          "description": "The handle of the result you are reporting \u2014 every governed result is printed with one, like [r2]. Give just the handle (r2). This says WHICH query your number came from, so it does not have to be guessed by matching numbers.",
-          "type": "string"
+        "sources": {
+          "description": "The handle(s) of the result(s) your number comes from \u2014 every governed result is printed with one, like [r2]. Give just the handles (['r2']). A COMPARISON names both: a difference, ratio or percent change of r3 against r4 is ['r3','r4']. This says WHICH queries your number came from, so it is never guessed by matching numbers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "value": {
           "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
@@ -4454,6 +4463,771 @@ system: sha256=fe5f7da20236 chars=4278
       "required": [
         "answer",
         "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 7 · R10 · fingerprint 6a39830a26e9 ===
+system: sha256=ff5770adc1c2 chars=4652
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "because": {
+          "description": "One line: what you are trying to establish with this call, in plain words (e.g. \"check whether the drop is uniform across regions or concentrated in one\"). It records your reasoning; it does not affect the result.",
+          "type": "string"
+        },
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "real_value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
+    "input_schema": {
+      "properties": {
+        "because": {
+          "description": "One line: what you are trying to establish with this call, in plain words (e.g. \"check whether the drop is uniform across regions or concentrated in one\"). It records your reasoning; it does not affect the result.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "type": "object"
+        },
+        "node": {
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "decompose_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "country": {
+          "type": "string"
+        },
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        },
+        "source_metric": {
+          "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
+          "enum": [
+            "value_moments",
+            "real_value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "sources": {
+          "description": "The handle(s) of the result(s) your number comes from \u2014 every governed result is printed with one, like [r2]. Give just the handles (['r2']). A COMPARISON names both: a difference, ratio or percent change of r3 against r4 is ['r3','r4']. This says WHICH queries your number came from, so it is never guessed by matching numbers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation"
+      ],
+      "type": "object"
+    },
+    "name": "answer"
+  },
+  {
+    "description": "Decline to answer and end, because no reliable answer exists in the available data. Give the coded reason and name the specific thing that is missing, so the claim can be checked.",
+    "input_schema": {
+      "properties": {
+        "explanation": {
+          "description": "One line: why this cannot be answered reliably.",
+          "type": "string"
+        },
+        "missing": {
+          "description": "The specific definition, coverage window, segment, or evidence that is missing.",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "enum": [
+            "no_governed_definition",
+            "out_of_coverage",
+            "segment_undefined",
+            "no_causal_evidence",
+            "false_premise",
+            "wrong_measure",
+            "wrong_grain",
+            "dimension_not_supported",
+            "ungoverned_dimension_value",
+            "result_empty",
+            "implausible_value",
+            "other"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "missing"
+      ],
+      "type": "object"
+    },
+    "name": "refuse"
+  },
+  {
+    "description": "End by asking one clarifying question, because the question is ambiguous and materially different readings would give different answers.",
+    "input_schema": {
+      "properties": {
+        "question": {
+          "description": "The single clarifying question to ask.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "question"
+      ],
+      "type": "object"
+    },
+    "name": "clarify"
+  }
+]
+
+=== rung 7 · R11 · fingerprint c29c21b985bc ===
+system: sha256=99feda8f5238 chars=5113
+[
+  {
+    "description": "List the tables available to you and their columns.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_schema"
+  },
+  {
+    "description": "Show one table's columns and a few sample rows.",
+    "input_schema": {
+      "properties": {
+        "table": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "table"
+      ],
+      "type": "object"
+    },
+    "name": "describe_table"
+  },
+  {
+    "description": "List the governed metrics available through the semantic layer.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "list_metrics"
+  },
+  {
+    "description": "Compute a governed metric. Prefer this over raw SQL for defined business measures so the definition and grain are correct.",
+    "input_schema": {
+      "properties": {
+        "because": {
+          "description": "One line: what you are trying to establish with this call, in plain words (e.g. \"check whether the drop is uniform across regions or concentrated in one\"). It records your reasoning; it does not affect the result.",
+          "type": "string"
+        },
+        "end": {
+          "description": "Explicit end date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "type": "object"
+        },
+        "group_by": {
+          "description": "Dimensions to break the metric down by.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metric": {
+          "description": "Metric name (see list_metrics).",
+          "enum": [
+            "value_moments",
+            "real_value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "period": {
+          "description": "A named period.",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "segment": {
+          "description": "A governed named segment / reusable filter (see list_metrics), e.g. real_acquisition to exclude test channels.",
+          "enum": [
+            "real_acquisition"
+          ],
+          "type": "string"
+        },
+        "start": {
+          "description": "Explicit start date YYYY-MM-DD.",
+          "type": "string"
+        },
+        "time_grain": {
+          "description": "Bucket the time column (for trends).",
+          "enum": [
+            "day",
+            "week",
+            "month"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric"
+      ],
+      "type": "object"
+    },
+    "name": "query_metric"
+  },
+  {
+    "description": "Which governed metrics produce or influence another \u2014 the structural map, no data read. Identity edges are exact arithmetic (a parent IS the product of its children); influence edges are correlational only, and carry a confidence and their evidence. Every node is a metric.",
+    "input_schema": {
+      "properties": {},
+      "type": "object"
+    },
+    "name": "get_metric_tree"
+  },
+  {
+    "description": "Attribute a metric's change between two periods to the metrics that COMPOSE it, walking the tree: exact identity contributions (shares sum to 1) plus hedged influence candidates. The numbers are computed for you.\nThis decomposes along the metric tree only \u2014 into component metrics, never into dimension members. To see WHERE a change landed across a dimension (region, platform), call query_metric with group_by instead; to decompose WITHIN one scope, pass filters here.",
+    "input_schema": {
+      "properties": {
+        "because": {
+          "description": "One line: what you are trying to establish with this call, in plain words (e.g. \"check whether the drop is uniform across regions or concentrated in one\"). It records your reasoning; it does not affect the result.",
+          "type": "string"
+        },
+        "filters": {
+          "additionalProperties": true,
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "type": "object"
+        },
+        "node": {
+          "description": "The metric to decompose \u2014 a node from get_metric_tree (default: the root).",
+          "enum": [
+            "weekly_value_moments",
+            "active_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "new_signups",
+            "activation_rate"
+          ],
+          "type": "string"
+        },
+        "period_a": {
+          "description": "Baseline period (default prev_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        },
+        "period_b": {
+          "description": "Comparison period (default last_week).",
+          "enum": [
+            "last_week",
+            "prev_week",
+            "last_month",
+            "last_quarter",
+            "ytd",
+            "all"
+          ],
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "name": "decompose_change"
+  },
+  {
+    "description": "Check whether a governed metric/definition exists for a term (e.g. 'engagement score').",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_metric_exists"
+  },
+  {
+    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "input_schema": {
+      "properties": {
+        "country": {
+          "type": "string"
+        },
+        "end": {
+          "description": "YYYY-MM-DD (end of the range)",
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "start": {
+          "description": "YYYY-MM-DD",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "name": "check_coverage"
+  },
+  {
+    "description": "Check whether a segment term (e.g. 'enterprise users') has a governed definition.",
+    "input_schema": {
+      "properties": {
+        "term": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "term"
+      ],
+      "type": "object"
+    },
+    "name": "check_segment_defined"
+  },
+  {
+    "description": "Check whether the governed metric tree carries causal evidence linking a driver to an outcome.",
+    "input_schema": {
+      "properties": {
+        "driver": {
+          "type": "string"
+        },
+        "outcome": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "driver",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "name": "check_causal_evidence"
+  },
+  {
+    "description": "Submit the final answer and end. Put the direct value in `answer` (a number for numeric questions), and a one-line justification in `explanation`.",
+    "input_schema": {
+      "properties": {
+        "answer": {
+          "description": "The direct answer (a number if numeric).",
+          "type": "string"
+        },
+        "claims": {
+          "description": "Break your answer into the separate assertions it makes \u2014 one per figure or judgement \u2014 each naming the governed value it rests on. An answer that reports five numbers makes five assertions.",
+          "items": {
+            "properties": {
+              "sources": {
+                "description": "The governed value(s) this assertion rests on, as handle:field \u2014 e.g. r1:days_per_user.pct_change, or r2:paid_search for one row of a breakdown.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "text": {
+                "description": "One assertion your answer makes, in plain words.",
+                "type": "string"
+              },
+              "value": {
+                "description": "The figure this assertion states, if it states one.",
+                "type": "number"
+              }
+            },
+            "required": [
+              "text",
+              "sources"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "explanation": {
+          "description": "One line on how you got it.",
+          "type": "string"
+        },
+        "source_metric": {
+          "description": "If `value` came from a governed metric, name that metric (as passed to query_metric). Omit for a derived or non-metric answer.",
+          "enum": [
+            "value_moments",
+            "real_value_moments",
+            "new_signups",
+            "active_users",
+            "power_users",
+            "days_per_user",
+            "moments_per_day",
+            "reminder_open_rate",
+            "activation_rate",
+            "mrr",
+            "active_subscriptions",
+            "paying_users",
+            "arpu",
+            "marketing_spend",
+            "referrals"
+          ],
+          "type": "string"
+        },
+        "sources": {
+          "description": "The handle(s) of the result(s) your number comes from \u2014 every governed result is printed with one, like [r2]. Give just the handles (['r2']). A COMPARISON names both: a difference, ratio or percent change of r3 against r4 is ['r3','r4']. This says WHICH queries your number came from, so it is never guessed by matching numbers.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "value": {
+          "description": "If your answer is a single number, repeat it here as a number (not text). Leave it out for a non-numeric answer (an assessment, a driver, a list) \u2014 the value check then does not apply.",
+          "type": "number"
+        }
+      },
+      "required": [
+        "answer",
+        "explanation",
+        "claims"
       ],
       "type": "object"
     },
