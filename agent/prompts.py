@@ -138,11 +138,24 @@ _ROLE_CLAIMS = ("\n- Being checkable is part of the job, not paperwork after it.
                 "\n- So give the `claims` list with every answer: one entry per assertion. Cite the "
                 "VALUE, not the result — `r1:days_per_user.pct_change`, or `r2:paid_search` for one "
                 "row of a breakdown; every governed result prints its citable fields on a [cite] "
-                "line. Five figures and one conclusion is six claims."
+                "line. A result that returns no numbers — what the tree says about a causal edge, "
+                "whether a segment is defined — is cited by its handle alone (`r2`), and it is "
+                "evidence like any other: it is what makes a refusal a governed finding rather "
+                "than an opinion."
                 "\n- A CONCLUSION rests on other claims, not on data: set `premises` to the earlier "
                 "claims it follows from. \"Days per user is the primary driver\" IS a comparison of "
                 "the three contribution shares — writing it as one more figure hides the reasoning "
-                "that makes it true, and a reader cannot check what is hidden.")
+                "that makes it true, and a reader cannot check what is hidden."
+                # The prompt described exactly one layer, and then 83% of answers came back as flat
+                # lists with the conclusion asserted alongside the measurements. The hand-built
+                # reference graphs need TWO layers on every one of three questions, so a model
+                # producing one was doing what it was told.
+                "\n- Conclusions build on conclusions. Your final answer is itself a claim, and its "
+                "premises are usually the comparison you just made plus the fact you set out to "
+                "explain — not the raw figures again. So a diagnostic answer typically looks like: "
+                "measurements citing values, then a comparison across those measurements, then the "
+                "answer to the question resting on that comparison. Three levels of evidence, not "
+                "a list with a verdict at the bottom.")
 
 
 _RUNG_NOTES = {

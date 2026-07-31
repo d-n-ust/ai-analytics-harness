@@ -309,15 +309,31 @@ def _claim_lines(row: dict, paint, width: int) -> list:
     """What the answer broke itself into, and what the audit made of each piece.
 
     The served answer is one assertion among several; without this the trace shows the one
-    number that was checked and stays silent about the four that were not."""
+    number that was checked and stays silent about the four that were not.
+
+    PREMISES are rendered, not just sources. They were not, and the omission was invisible in the
+    worst way: a derived claim — the whole point of the graph — rendered as `← —`, identical to a
+    claim resting on nothing at all, while the audit counted it bound. Every trace read while
+    investigating why so few answers reason could not have shown reasoning if it were there.
+    STRENGTH is shown for the same reason: correlational is a property the tree assigns, and a
+    reader deciding what to act on needs it more than they need the figure."""
     audit = row.get("claim_audit") or {}
     claims = row.get("claims") or []
     if not claims:
         return []
-    head = (f"{audit.get('bound', 0)}/{audit.get('n', len(claims))} bound · "
-            f"{audit.get('sources', 0)} source(s)")
+    n = audit.get("n", len(claims))
+    head = (f"{audit.get('bound', 0)}/{n} bound · {audit.get('sources', 0)} source(s)")
+    # The shape of the argument, not just its size: how much of the answer is reasoned rather than
+    # looked up, and whether any conclusion rests on another. Both are ~0 in most answers, which
+    # is the finding the reference graphs exist to make legible.
+    if audit.get("derived"):
+        head += (f" · {audit['derived']}/{n} derived, depth {audit.get('max_depth', 0)}"
+                 f", fan-in {audit.get('max_fan_in', 0)}")
+    else:
+        head += paint(" · flat list — nothing derived", "warn")
     for k, label in (("unresolved", "unresolved"), ("mislabelled", "mislabelled"),
-                     ("value_mismatch", "value mismatch"), ("unsourced", "unsourced")):
+                     ("value_mismatch", "value mismatch"), ("unsourced", "unsourced"),
+                     ("bad_premise", "bad premise")):
         if audit.get(k):
             head += paint(f" · {audit[k]} {label}", "warn")
     out = [f"  {paint('claims', 'bold')}   {head}"]
@@ -328,12 +344,20 @@ def _claim_lines(row: dict, paint, width: int) -> list:
         text = " ".join(str(c.get("text") or "").split())
         wrapped = textwrap.wrap(text, max(40, width - 22)) or [""]
         val = c.get("value")
-        out.append(f"        {mark} c{(f.get('i', 0)) + 1}  {wrapped[0]}"
+        soft = paint("  ~correlational", "warn") if f.get("strength") == "correlational" else ""
+        # Archived rows predate claim ids and carry only the position, so fall back to it.
+        cid = f.get("id") or f"c{f.get('i', 0) + 1}"
+        out.append(f"        {mark} {cid}  {wrapped[0]}"
                    + (paint(f"  = {val:g}", "dim") if isinstance(val, (int, float))
-                      and not isinstance(val, bool) else ""))
+                      and not isinstance(val, bool) else "") + soft)
         out += [f"             {line}" for line in wrapped[1:]]
-        refs = ",".join(str(s) for s in (c.get("sources") or [])) or "—"
-        line = paint(f"             ← {refs}", "dim")
+        # A conclusion cites CLAIMS; a measurement cites values. Different arrows, because they
+        # are different kinds of support and a reader must not have to guess which this is.
+        if f.get("premises"):
+            line = paint(f"             ⇐ follows from {', '.join(f['premises'])}", "cyan")
+        else:
+            line = paint(f"             ← {','.join(str(s) for s in (c.get('sources') or [])) or '—'}",
+                         "dim")
         if f.get("why"):
             line += paint(f"   {' · '.join(f['why'])}", "bad")
         out.append(line)

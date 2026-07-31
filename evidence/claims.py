@@ -99,6 +99,14 @@ def _index(steps, node_metrics=None) -> dict:
     return out
 
 
+# A citation that resolves to a governed STATEMENT rather than to a number: what
+# `check_causal_evidence` returns about an edge, what `check_segment_defined` returns about a
+# term. It is evidence in exactly the way a figure is — the causal-refusal reference graph rests
+# its conclusion on one — but there is no number, so the value check has nothing to say about it
+# and must stand down rather than report a mismatch against nothing.
+STATEMENT = object()
+
+
 def _resolve(ref: str, index: dict):
     """`r1:days_per_user.pct_change` -> (handle, value, metric), or a None value when the field
     is absent.
@@ -118,6 +126,8 @@ def _resolve(ref: str, index: dict):
         return None, None, ""
     child, _, _ = field.partition(".")
     metric = child if child and child in entry["children"] else entry["metric"]
+    if not entry["all"]:
+        return handle, STATEMENT, metric      # a governed statement: cited whole, nothing to check
     if len(entry["all"]) == 1:
         return handle, entry["all"][0], metric
     return handle, entry["values"].get(field), metric
@@ -149,10 +159,13 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
             if handle is None or v is None:
                 unresolved.append(str(ref))
                 continue
-            cited.append(v)
+            if v is not STATEMENT:
+                cited.append(v)
             # A reference names the metric its FIELD is about, plus the aliases of the result it
-            # came from — the tree node and the metric underneath it are the same evidence.
-            metrics |= {metric} | index[handle]["aliases"]
+            # came from — the tree node and the metric underneath it are the same evidence. The
+            # empty name is dropped: a governed statement belongs to no single metric, and letting
+            # "" into the set made every answer that cited one read as mislabelled.
+            metrics |= ({metric} | index[handle]["aliases"]) - {""}
 
         # A DERIVED claim rests on earlier claims instead of on data. Only backwards, and never on
         # itself: a graph that can cite forwards is a graph that can cite in a circle, and then

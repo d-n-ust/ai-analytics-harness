@@ -52,11 +52,19 @@ def _citable(handle: str, result) -> str:
     `r1:days_per_user.pct_change` from a JSON key is a guess. The first run at this rung cited
     bare `r1` five times out of five for exactly that reason.
 
+    A result carrying NO numbers is cited by its handle alone. That is not a degenerate case — it
+    is how an answer cites GOVERNANCE. `check_causal_evidence` returns what the metric tree
+    declares about an edge (its type, its confidence, and the evidence behind it), and in the
+    hand-built reference graph for the causal question that statement is the load-bearing premise:
+    the refusal is a governed finding rather than a hunch precisely because the tree says the edge
+    is low-confidence. While only numeric results had handles, that claim had nowhere to point,
+    and an agent doing exactly the right thing could not say why.
+
     Same shape as the [scope] and [sql] lines: the harness states what it will hold the model to,
     where the model is reading."""
     labels = [str(lb) for lb in (result.labels or []) if str(lb)]
     if not labels:
-        return ""
+        return f"\n[cite] {handle} — cite this whole statement as evidence"
     shown = " · ".join(f"{handle}:{lb}" for lb in labels[:24])
     more = f" · … ({len(labels) - 24} more)" if len(labels) > 24 else ""
     return f"\n[cite] {shown}{more}"
@@ -118,12 +126,19 @@ class _Run:
             self.tool_calls += 1
             t0 = time.perf_counter()
             result = self.grounding.toolbox.dispatch(call.name, call.args)
-            # A result carrying typed numbers gets a HANDLE, printed where the model reads it, so
-            # the answer can name which result it is reporting instead of leaving the harness to
-            # find it by matching numbers. The rule is tool-agnostic: whatever returns governed
-            # values is addressable, so a governed tool added later is addressable too.
+            # Every result that SUCCEEDED gets a HANDLE, printed where the model reads it, so the
+            # answer can name what it is reporting instead of leaving the harness to find it by
+            # matching numbers. Tool-agnostic on purpose: a governed tool added later is
+            # addressable by existing.
+            #
+            # Numbers are not the criterion — being evidence is. A governed statement ("the tree
+            # carries this edge as an influence at low confidence, and here is why") is evidence
+            # for a claim in exactly the way a figure is, and the causal-refusal reference graph
+            # rests its conclusion on one. Gating handles on `result.values` made that unsayable.
+            # An ERRORING result gets none: there is nothing to stand on, and letting a claim cite
+            # a blocked call would make a refusal look like support.
             handle = ""
-            if result.values:
+            if not result.is_error:
                 handle = f"r{len(self.handles) + 1}"
                 self.handles[handle] = len(self.steps)
                 result = replace(result, content=f"[{handle}] {result.content}{_citable(handle, result)}")
