@@ -20,7 +20,10 @@ verifier module worth keeping pure.
 from __future__ import annotations
 
 import logging
-from math import isclose
+
+# A guardrail may consult the evidence layer; the evidence layer must never reach back. This is
+# the one import that crosses that line, and it crosses it in the permitted direction.
+from evidence.values import num_match
 
 from ..numbers import parse_numbers
 from ..outcomes import declared_handles
@@ -36,36 +39,10 @@ _V_REASON = {kind: f"verifier_wrong_{kind}" for kind in
 
 # --------------------------------------------------------------------------- #
 # Deterministic output checks: provenance (governed_numbers, R7) + validation (R8)
+#
+# `num_match` — the rounding-identity test these checks are built on — lives in
+# evidence/values.py, because the claim audit asks the same question one grain further down.
 # --------------------------------------------------------------------------- #
-def num_match(a: float, b: float) -> bool:
-    """Is one of these numbers a ROUNDING of the other?
-
-    This is an identity test, not an approximation test — governed_numbers asks whether the
-    served number IS a governed result (or a comparison of two), and the only difference it
-    should forgive is the model writing 2685.08 for 2685.0766666.
-
-    It used to be a tolerance band, `abs(a - b) <= max(0.5, 0.005 * abs(b))`, which failed at
-    both ends. The 0.5 floor is large for a ratio: days_per_user 2.27 and 2.69 — two different
-    weeks — counted as the same number, and the check validated whichever it happened to reach
-    first. The 0.5% term is large for a count: 371 and 372 matched, which the old docstring
-    explicitly promised they would not.
-
-    Rounding to significant figures is deliberately not forgiven. A model writing 2690 for
-    2685.08 has not served a governed result; it has served an approximation of one, and this
-    guardrail exists to tell those apart.
-
-    `isclose` is how the first test is written, not a tolerance added to it. The rounding ladder
-    asks whether one number is the ROUNDING of the other, which is false when both carry full
-    precision and differ only in the last bits — so a rate rendered as a percentage failed every
-    rung: the tree's -0.1644119797793533 times 100 is -16.441197977935328, the model served
-    -16.44119797793533, and the two differ by 3.55e-15. At 1e-12 this admits nothing the ladder
-    below would not already admit at k=6; it only stops float representation being mistaken for
-    a different number."""
-    if a == b or isclose(a, b, rel_tol=1e-12, abs_tol=1e-12):
-        return True
-    return any(a == round(b, k) or b == round(a, k) for k in range(7))
-
-
 def step_values(step: dict) -> list:
     """The typed numeric results a query_metric step returned. Prefers the typed `result_values`
     the dispatcher now records; falls back to parsing the display text only for older traces

@@ -116,6 +116,38 @@ def prove():
     return passed
 
 
+def test_the_evidence_layer_never_reaches_back_into_the_agent():
+    """The evidence layer measures the agent, so it must not depend on it.
+
+    Guardrails may consult `evidence/` — `after.py` does, for the rounding-identity test. The
+    reverse direction is what would make the instrument part of the thing it measures, and it is
+    the kind of rule that survives exactly until someone needs one convenient import. So it is a
+    test rather than a paragraph: `evidence/` may see the certified model and a trace, and
+    nothing else.
+
+    A trace arrives as plain dicts on purpose. The audit therefore needs no type from `agent/`,
+    which is what makes this rule cheap to keep rather than a constant fight."""
+    import ast
+    from pathlib import Path
+
+    forbidden = ("agent", "evals", "cli")
+    root = Path(__file__).resolve().parent.parent / "evidence"
+    checked = 0
+    for path in sorted(root.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text())):
+            if isinstance(node, ast.ImportFrom) and node.level == 0:
+                top = (node.module or "").split(".")[0]
+            elif isinstance(node, ast.Import):
+                top = node.names[0].name.split(".")[0]
+            else:
+                continue
+            _check(top not in forbidden,
+                   f"evidence/{path.name} imports {top!r} — the evidence layer decides nothing "
+                   "and must not depend on what it measures (docs/ARCHITECTURE.md)")
+            checked += 1
+    _check(checked >= 3, f"expected the evidence layer's imports, found {checked}")
+
+
 def test_the_cli_imports_what_it_claims_to():
     """Every CLI subcommand imports lazily, inside its handler, so a moved module breaks that one
     command and nothing else — the whole suite stayed green while `bench ask` pointed at a module
@@ -140,6 +172,7 @@ def test_the_cli_imports_what_it_claims_to():
 
 if __name__ == "__main__":
     test_the_cli_imports_what_it_claims_to()
+    test_the_evidence_layer_never_reaches_back_into_the_agent()
     n = prove()
     print(f"OK — {n} structural assertions proved with no LLM.")
 

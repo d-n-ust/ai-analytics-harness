@@ -165,6 +165,8 @@ semantic/     the governed model: the semantic layer (metrics/segments) + the me
 context/      what the agent is GIVEN: verified example queries + the knowledge base (text, no code)
 agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
               guardrails, and the answer verifier
+evidence/     what an answer DECLARED, resolved against the trace it was built from. Pure
+              lookups, no model — and it decides nothing, which is what keeps it an instrument
 evals/         the 57 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
 cli/          the `bench` entry point (one dispatcher over every verb)
 experiments/  pre-registrations + findings logs

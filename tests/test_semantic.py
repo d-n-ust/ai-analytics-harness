@@ -576,7 +576,7 @@ def test_a_served_number_must_be_a_rounding_of_a_governed_one():
     days_per_user 2.27 and 2.69 (two different weeks) counted as the same number and the checks
     validated whichever they reached first. Its 0.5% term is huge for a count, so 371 and 372
     matched — which the docstring explicitly promised they would not."""
-    from agent.guardrails.after import num_match
+    from evidence import num_match
 
     for a, b in [(2685.08, 2685.0766666), (886, 886.0), (5648, 5648), (0.53, 0.5299999999)]:
         assert num_match(a, b), f"{a} is a rounding of {b} and must match"

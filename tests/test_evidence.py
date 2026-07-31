@@ -8,7 +8,7 @@ Run: PYTHONPATH=. uv run python tests/test_claims.py
 
 from __future__ import annotations
 
-from agent.guardrails.claims import BAD_PREMISE, MISLABELLED, UNRESOLVED, UNSOURCED, VALUE_MISMATCH, audit
+from evidence import BAD_PREMISE, MISLABELLED, UNRESOLVED, UNSOURCED, VALUE_MISMATCH, audit
 
 # The decomposition every diagnostic answer is built on, as the trace stores it: eighteen
 # governed figures under ONE handle, each addressable by name.

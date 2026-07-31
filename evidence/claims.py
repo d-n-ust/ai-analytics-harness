@@ -16,7 +16,7 @@ exactly while it is being measured.
 
 from __future__ import annotations
 
-from .after import num_match
+from .values import num_match
 
 __all__ = ["audit", "cited_metric", "claim_id"]
 

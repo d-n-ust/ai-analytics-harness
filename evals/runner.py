@@ -245,7 +245,7 @@ def regrade_run(run_dir: Path) -> None:
     """Re-grade a finished run from its stored answers (no model calls) and regenerate
     its summary. This is how a grade.py change reaches every past number — the model
     outputs are immutable; only the verdicts derived from them change."""
-    from agent.guardrails import claims as claim_audit
+    import evidence as claim_audit
 
     from .gold import load_questions
     qmap = {q["id"]: q for q in load_questions()}

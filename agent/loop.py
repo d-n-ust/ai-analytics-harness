@@ -22,7 +22,7 @@ from dataclasses import dataclass, field, replace
 
 from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import after
-from .guardrails import claims as claim_audit
+import evidence as claim_audit
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 
