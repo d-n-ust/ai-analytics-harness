@@ -856,6 +856,48 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     assert incoherent(LADDER[9].without("governed_numbers")) is not None
 
 
+def test_the_protocol_is_a_peer_primitive_and_labels_itself():
+    """The third axis has to be nameable in a cell, or it is not a treatment the harness controls.
+
+    Framing lived in an environment variable: it changed the model-visible prompt, moved the
+    derived-claim rate from 6.9% to 13.6%, and could not be written into a config, put in a
+    label, or varied within a run. A framing comparison was therefore two runs at different times
+    on a shared API — a confound the harness refuses everywhere else.
+
+    Three properties, and the third is the load-bearing one."""
+    from agent.grounding import build_grounding
+    from agent.guardrails import LADDER
+    from agent.protocol import FRAMINGS, ROLE, RULE, Protocol, split_config
+    con = open_warehouse(create_star_views=True)
+
+    # 1. the framings are genuinely different treatments — same guardrails, different surface
+    rule = build_grounding(con, 7, guardrails=LADDER[12], protocol=Protocol(RULE))
+    role = build_grounding(con, 7, guardrails=LADDER[12], protocol=Protocol(ROLE))
+    assert rule.system != role.system, "the framings must differ, or the arm measures nothing"
+    assert rule.fingerprint() != role.fingerprint(), "and the difference must be recorded"
+    assert rule.toolbox.specs() == role.toolbox.specs(), \
+        "only the WORDING differs — a framing that changed the action space would be a guardrail"
+
+    # 2. the default is silent, so no stored row's config changes meaning
+    assert Protocol().framing == RULE and Protocol().label() == ""
+    assert rule.guardrails.label() + rule.protocol.label() == "R12"
+    assert role.guardrails.label() + role.protocol.label() == "R12/role"
+
+    # 3. every label round-trips, so a reader recovers BOTH primitives from a stored row. Without
+    #    this the trace would fail to parse `R12/role` and quietly render "unknown guardrails".
+    for cell in ("R0", "R9", "R12", "R9-resolve", "R12-citation_repair"):
+        for framing in FRAMINGS:
+            label = cell + Protocol(framing).label()
+            assert split_config(label) == (cell, Protocol(framing)), label
+
+    for junk in ("casual", "", "ROLE", None):
+        try:
+            Protocol(junk)
+            raise AssertionError(f"framing={junk!r} was accepted")
+        except ValueError:
+            pass
+
+
 def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
     """R5, deterministic (no model call): the coverage check rejects a filter DIMENSION the metric does
     not have, and a filter VALUE that is not a governed member — each with its own coded

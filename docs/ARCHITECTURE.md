@@ -1,6 +1,6 @@
 # The three axes — grounding, guardrails, protocol
 
-Status: **proposed design, not yet executed.** Written 2026-07-31, after the claim-binding
+Status: **steps 1–3 landed 2026-07-31; steps 4–5 outstanding.** Written after the claim-binding
 increment (R11) shipped and made the seam visible. Companion to `REFACTOR.md`, which this
 extends rather than replaces.
 
@@ -15,11 +15,11 @@ This document names it, says why it is not a guardrail, and says where it goes.
 
 ## The three axes
 
-| axis | the question it varies | primitive today | lives in |
+| axis | the question it varies | primitive | lives in |
 |---|---|---|---|
 | **grounding** | what the agent **knows** | `rung` 1–7 | `agent/rungs.py`, `agent/grounding.py` |
-| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R10 | `agent/guardrails/` |
-| **protocol** | what the agent must **declare** | *none — scattered* | `guardrails/`, `prompts.py`, `loop.py`, an env var |
+| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R12 | `agent/guardrails/` |
+| **protocol** | what the agent must **declare** | `Protocol` | `agent/protocol.py`, `evidence/` |
 
 Each is independent in the sense that matters for an experiment: hold two fixed, move the third,
 and the run means something. That is what makes it an axis rather than a setting.
@@ -75,7 +75,7 @@ switching on four things of three different kinds.
 
 Three live consequences:
 
-**1. R11 cannot be ablated, so its effect cannot be attributed.** Turning `claim_binding` off
+**1. R11 cannot be ablated, so its effect cannot be attributed.** *(Fixed in step 2.)* Turning `claim_binding` off
 removes the schema field, the prompt, the correction loop and the audit together. The correction
 loop demonstrably changes runs — across today's 743 audited rows, **41 needed at least one
 correction** (38 needed one, 3 needed two), and a correction on the closing turn buys an extra
@@ -83,7 +83,7 @@ iteration. So R11's effect on coverage and accuracy is a compound of a treatment
 enforcement, and the ladder reports it as one rung. This is exactly the failure `incoherent()`
 exists to prevent for every other cell.
 
-**2. A treatment variable lives in an environment variable.** `CLAIM_FRAMING=rule|role`
+**2. A treatment variable lives in an environment variable.** *(Fixed in step 3.)* `CLAIM_FRAMING=rule|role`
 (`agent/prompts.py:142`) changes the model-visible prompt and is stamped on every row
 (`evals/runner.py:97`), but is not part of any config primitive, does not appear in
 `GuardrailSet.label()`, and cannot be named in `--cells`. It is a real, measured treatment — role
@@ -97,7 +97,7 @@ framing roughly doubles the share of claims that are conclusions rather than loo
 A variable that moves a headline number by 2× and cannot be written into a cell spec is the
 single-primitive problem `REFACTOR.md` Workstream B exists to solve, reintroduced.
 
-**3. The dependency points the wrong way.** `agent/guardrails/claims.py` is a pure function over
+**3. The dependency points the wrong way.** *(Fixed in step 1.)* `agent/guardrails/claims.py` is a pure function over
 a trace — no model, no tolerance, no policy. Anything that wants to read an evidence graph (the
 trace renderer, the report, a future client-facing surface) must import the guardrail package to
 get it. The audit is an instrument, and instruments do not belong inside the thing they measure.
@@ -131,12 +131,13 @@ reference architecture:
 
 ```
 evidence/                what an answer committed to, and whether it holds
-  claims.py                claim identity + the binding audit   (moved from agent/guardrails/)
-  strength.py              warrant levels; min-semiring propagation over premises
-  trust.py                 the answer-level trust profile       (docs/TRUST-MODEL.md)
+  claims.py              ✅ claim identity + the binding audit  (moved from agent/guardrails/)
+  values.py              ✅ num_match — is this figure that governed value
+  strength.py            ⬜ warrant levels; min-semiring propagation over premises
+  trust.py               ⬜ the answer-level trust profile      (docs/TRUST-MODEL.md)
 agent/
-  protocol.py              what an answer must DECLARE — the third primitive
-  guardrails/              unchanged, minus claims.py; may CONSULT evidence/
+  protocol.py            ✅ what an answer must DECLARE — the third primitive
+  guardrails/            ✅ unchanged, minus claims.py; consults evidence/ for num_match
 ```
 
 `evidence/` sits beside `warehouse/` and `semantic/`, not inside `agent/`, and it has the same
@@ -157,28 +158,37 @@ evals/             →  evidence/  (for reporting)
 
 ### The third primitive
 
+As shipped — one field, which is the honest reflection of the staging below rather than an
+unfinished sketch:
+
 ```python
 @dataclass(frozen=True)
 class Protocol:
-    """What an answer must declare about itself. Orthogonal to what the agent knows
-    (rung) and to what it may do (GuardrailSet)."""
-    claims: bool = False       # one declaration per assertion, each naming its evidence
-    premises: bool = False     # a claim may cite earlier claims instead of values
-    framing: str = "rule"      # HOW it is asked for: a rule to follow, or part of the job
+    """What an answer must declare about itself. A peer of GuardrailSet, not a part of it."""
+    framing: str = RULE     # how the account is asked for: a rule to follow, or part of the job
 ```
 
-Splitting `claim_binding` three ways:
+It grows to hold the declarations themselves at the Workstream A rename. Framing could not wait,
+for the reason in *What step 3 revealed*: it is the one that had nowhere to live at all.
 
-| today | becomes | axis |
+Where each piece of `claim_binding` went:
+
+| was | is | axis |
 |---|---|---|
-| the `claims` schema field + prompt | `Protocol.claims` | protocol |
-| `premises` (derived claims) | `Protocol.premises` | protocol |
-| `CLAIM_FRAMING` env var | `Protocol.framing` | protocol |
-| reject-and-retry on unresolved citations | `Guardrail("citation_repair", Position.REPAIR)` | guardrails |
-| the stored audit | always on, `evidence/` | neither — it is the instrument |
+| the `claims` schema field + prompt | `GuardrailSet.claim_binding` (R11), until the rename | protocol, misfiled |
+| `premises` (derived claims) | part of the same schema field | protocol, misfiled |
+| `CLAIM_FRAMING` env var | ✅ `Protocol.framing` | protocol |
+| reject-and-retry on unresolved citations | ✅ `Guardrail("citation_repair", Position.REPAIR)` (R12) | guardrails |
+| the stored audit | ✅ always on, `evidence/` | neither — it is the instrument |
 
 The audit becoming unconditional is the point of the split: measurement is not a treatment. An
 answer that declares nothing audits to `n=0`, which is a finding, not an absence.
+
+`claims` and `premises` are still one flag, so the cell "claims without derived claims" remains
+unexpressible. That is a real gap and it is smaller than it looks — `premises` is an optional
+field, so the model can already decline it, and the ablation in step 4 measures the framing
+difference that actually moves the derived rate (6.9% → 13.6%). Splitting them is scheduled with
+the rest of the declarations, not before.
 
 ### Design it twice — the alternative, and why not
 
@@ -203,8 +213,9 @@ fixing it twice.
 
 - **No behaviour change.** Every move is a relocation plus a flag split. The claim audit is the
   same pure function; the correction loop is the same bounded loop with a different label.
-- **The guardrail ladder R0–R10 keeps its numbers and its semantics.** Only R11 is decomposed,
-  and it has never been published.
+- **The guardrail ladder R0–R11 keeps its numbers and its semantics.** Only the repair loop was
+  split out, as a new R12, and it has never been published. The pinned model surface confirms it:
+  the golden diff across R0–R11 is empty.
 - **The rung axis is untouched.**
 - **The two metric families stay separate**, exactly as `docs/TRUST-MODEL.md` requires. Nothing
   here merges a gold-requiring metric with a gold-free one; the restructure makes the boundary a
@@ -214,20 +225,37 @@ fixing it twice.
 
 ## Sequencing
 
-1. **Move `claims.py` → `evidence/`** and fix the imports. Logic-free; the tests move with it.
-2. **Add `Position.REPAIR`** and register `citation_repair` as its own guardrail. This is the
-   change that makes R11 ablatable, and it is worth landing before the next sweep so the sweep
-   can carry the leave-one-out cell.
-3. **Add `Protocol`**, fold `CLAIM_FRAMING` into it, thread it beside `GuardrailSet`. Row schema
-   version bumps; the framing stamp already on rows keeps its name.
-4. **Run the ablation** the split makes possible: claims off / claims on without repair / claims
-   on with repair, × rule and role framing. Six cells, and for the first time each number means
-   one thing.
-5. **`strength.py` and `trust.py`** — the trust ladder, once the ablation says the declarations
+1. ✅ **`claims.py` → `evidence/`.** `num_match` moved with it — both ends of the stack ask the
+   same question, so one definition, in the layer that owns it. The dependency direction is a
+   test (`test_the_evidence_layer_never_reaches_back_into_the_agent`) that catches a real
+   violation, not just an absent one.
+2. ✅ **`Position.REPAIR` + `citation_repair` as R12.** R11 now asks and audits without
+   correcting, so `R12-citation_repair` is the leave-one-out cell that was previously
+   unexpressible. The golden surface diff was **purely additive** — R0–R11 byte-identical — so no
+   published cell's treatment moved.
+3. ✅ **`Protocol`**, threaded beside `GuardrailSet` through `build_grounding`. `CLAIM_FRAMING`
+   is gone; `--framings rule,role` crosses every cell, and the arms label themselves `R12` and
+   `R12/role` so the report separates what it would otherwise pool. No row-schema bump: no field
+   was added or removed, and bumping would only raise a spurious skew warning on every stored run.
+4. ⬜ **Run the ablation** the split makes possible: claims off / claims on without repair /
+   claims on with repair, × rule and role framing. Six cells, and for the first time each number
+   means one thing.
+5. ⬜ **`strength.py` and `trust.py`** — the trust ladder, once the ablation says the declarations
    are worth propagating.
 
-Steps 1–3 are behaviour-preserving and can land together. Step 4 is the first experiment on the
+Steps 1–3 were behaviour-preserving and landed together. Step 4 is the first experiment on the
 third axis, and it is cheap: the audit is a lookup, so it costs one sweep and no judging.
+
+### What step 3 revealed
+
+The framing was not an oversight — it was the first treatment that is **not a boolean**, and
+`GuardrailSet` can only say on/off. Anything with more than two levels, or that varies *wording*
+rather than *mechanism*, has nowhere to live and ends up in the environment. Two others are still
+there: `VERIFIER_STANCE` (`agent/guardrails/judge.py`) and the reasoning-effort settings. They are
+read once per run and stamped on every row, which is most of the discipline — but they still
+cannot be named in a cell or vary within a run, so a stance comparison is two runs at different
+times on a shared API. `Protocol` is the pattern for fixing that; the judge's stance is the
+obvious next tenant, and it belongs to the guardrail axis rather than this one.
 
 ---
 

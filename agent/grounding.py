@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from semantic.semantic import SemanticLayer
 from semantic.tree import MetricTree
 
 from .guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
+from .protocol import Protocol
 from .rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
 from .tools import Toolbox
 
@@ -31,6 +32,7 @@ class Grounding:
     toolbox: Toolbox
     guardrails: GuardrailSet | None = None
     semantic: SemanticLayer | None = None
+    protocol: Protocol = field(default_factory=Protocol)
 
     def fingerprint(self) -> str:
         """A short, stable hash of everything the model is shown: the assembled system prompt and
@@ -45,8 +47,8 @@ class Grounding:
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
-def build_grounding(con, rung: int,
-                    guardrails: GuardrailSet | None = None) -> Grounding:
+def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
+                    protocol: Protocol | None = None) -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -59,9 +61,13 @@ def build_grounding(con, rung: int,
     bad = incoherent(g, rung)
     if bad:
         raise ValueError(f"incoherent grounding: rung {rung} with {g.label()} — {bad}")
-    system = system_prompt(rung, g)
+    # The protocol is a peer of the guardrail set, not a part of it: it says what the answer must
+    # DECLARE, where the set says what the agent may DO. Both feed the same prompt, so both are
+    # covered by fingerprint() without either needing to know about the other.
+    p = protocol if protocol is not None else Protocol()
+    system = system_prompt(rung, g, p)
     caps = capabilities(rung)
     semantic = SemanticLayer(con) if caps.semantic else None
     tree = MetricTree(semantic) if caps.tree else None
-    return Grounding(rung=rung, guardrails=g, system=system, semantic=semantic,
+    return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g))

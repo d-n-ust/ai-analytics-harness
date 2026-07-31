@@ -7,11 +7,11 @@ nothing but treatment text is a file whose diff is always worth reading.
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import yaml
 
+from .protocol import ROLE, Protocol
 from .rungs import capabilities
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -145,11 +145,6 @@ _ROLE_CLAIMS = ("\n- Being checkable is part of the job, not paperwork after it.
                 "that makes it true, and a reader cannot check what is hidden.")
 
 
-def framing() -> str:
-    """Which framing of the declarations is live: `rule` (the original) or `role`."""
-    return "role" if os.environ.get("CLAIM_FRAMING", "rule").lower() == "role" else "rule"
-
-
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
         "capitalisation and encodings (e.g. platform stored as 'ios'/'iOS'/'IOS'), integer "
@@ -184,14 +179,15 @@ def _knowledge_block() -> str:
 
 
 
-def system_prompt(rung: int, g) -> str:
-    """Assemble what the agent is told, from the rung it is grounded at and the guardrails it
-    runs under.
+def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
+    """Assemble what the agent is told, from the rung it is grounded at, the guardrails it runs
+    under, and the protocol it declares by.
 
     Each guardrail contributes a line describing itself. Those lines are not the guardrail — the
     structural ones hold whether or not the model reads them — but a model that does not know
     raw SQL is gone will waste turns discovering it. The set that writes the prompt is the SAME
     set the runtime enforces, so a cell can never describe a guardrail that is not running."""
+    protocol = protocol or Protocol()
     system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
     if g.check_tools:
         system += _RRUNG_CHECKS
@@ -209,7 +205,7 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
-    role = framing() == "role"
+    role = protocol.framing == ROLE
     if g.declared_purpose:
         system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
     if g.claim_binding:

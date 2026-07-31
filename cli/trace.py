@@ -21,6 +21,7 @@ import sys
 import textwrap
 
 from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
+from agent.protocol import RULE, split_config
 
 from .sqlfmt import format_sql
 
@@ -46,9 +47,11 @@ def _short(value, width: int) -> str:
 
 
 def _guardrail_line(config: str, paint) -> list[str]:
-    """Which guardrails this run had on, split by whether they hold regardless of the model."""
+    """Which guardrails this run had on, split by whether they hold regardless of the model —
+    and which protocol it declared by, when that was not the default."""
+    cell, protocol = split_config(config)
     try:
-        gset = parse_cell(config)
+        gset = parse_cell(cell)
     except (ValueError, AttributeError):
         return [f"  guardrails  {paint(config or 'unknown', 'dim')}"]
     on = [g for g in GUARDRAILS if getattr(gset, g.name, False)]
@@ -62,6 +65,9 @@ def _guardrail_line(config: str, paint) -> list[str]:
     if advisory:
         lines.append(f"     advisory {paint(' · '.join(advisory), 'dim')}"
                      f" {paint('(works only if the model cooperates)', 'dim')}")
+    if protocol.framing != RULE:
+        lines.append(f"     protocol {paint(protocol.framing + ' framing', 'cyan')}"
+                     f" {paint('(how the account is asked for)', 'dim')}")
     off = [g.name for g in GUARDRAILS if not getattr(gset, g.name, False)]
     if off:
         lines.append(f"          off {paint(' · '.join(off), 'dim')}")

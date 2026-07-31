@@ -18,6 +18,7 @@ from pathlib import Path
 
 from agent.grounding import build_grounding
 from agent.loop import Answer, run_agent
+from agent.protocol import RULE, Protocol
 from agent.providers import get_model
 from agent.rungs import capabilities
 from warehouse.warehouse import open_warehouse, set_star
@@ -45,7 +46,8 @@ def _new_run_dir(models, mock: bool) -> Path:
 
 def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
-                   rrungs=(1,), cells=None, reasoning: str | None = None, concurrency: int = 1) -> None:
+                   rrungs=(1,), cells=None, framings=(RULE,), reasoning: str | None = None,
+                   concurrency: int = 1) -> None:
     from agent.guardrails import LADDER, incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
@@ -62,21 +64,26 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                 seen[q["tier"]] += 1
         questions = subset
 
-    # A "config" is (label, nominal-rrung, guardrails). --cells overrides the ladder presets with
-    # arbitrary ablation cells (R9-resolve, ...), skipping the ones incoherent() rejects.
-    if cells:
-        configs = []
-        for spec in cells:
-            g = parse_cell(spec)
-            bad = incoherent(g)
-            if bad:
-                print(f"  SKIP incoherent cell {spec}: {bad}", flush=True)
-                continue
-            base = spec.split("-")[0]                      # nominal rrung, for the row; label() is the truth
-            nominal = int(base[1:]) if base.startswith("R") and base[1:].isdigit() else 9
-            configs.append((g.label(), nominal, g))
-    else:
-        configs = [(f"R{rr}", rr, LADDER[rr]) for rr in rrungs]
+    # A "config" is (label, nominal-rrung, guardrails, protocol). --cells overrides the ladder
+    # presets with arbitrary ablation cells (R9-resolve, ...), skipping the ones incoherent()
+    # rejects; --framings crosses each of those with a protocol.
+    #
+    # The protocol is crossed here rather than parsed out of the cell spec so `parse_cell` keeps
+    # owning exactly one primitive. The two meet only in the LABEL, which is what the report keys
+    # its tables on — so an arm that varies the framing within one run is separated by the report
+    # instead of silently pooled, which is what happens to any treatment with no label of its own.
+    cell_specs = list(cells) if cells else [f"R{rr}" for rr in rrungs]
+    protocols = [Protocol(framing=f) for f in framings]
+    configs = []
+    for spec in cell_specs:
+        g = parse_cell(spec)
+        bad = incoherent(g)
+        if bad:
+            print(f"  SKIP incoherent cell {spec}: {bad}", flush=True)
+            continue
+        base = spec.split("-")[0]                      # nominal rrung, for the row; label() is the truth
+        nominal = int(base[1:]) if base.startswith("R") and base[1:].isdigit() else 9
+        configs += [(g.label() + p.label(), nominal, g, p) for p in protocols]
 
     rows: list[dict] = []
     run_dir = _new_run_dir(models, mock)
@@ -91,20 +98,15 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     # not left to whatever the environment held when a given question ran.
     from agent.guardrails.judge import stance_name
     verifier_stance = stance_name()
-    # How the harness TALKS about declaring is a treatment like any other, so it is
-    # read once and stamped on every row rather than left to whatever the shell held.
-    from agent.prompts import framing
-    claim_framing = framing()
-
     def _run_one(task, model, model_name, verifier_model, verifier_used):
         # Each task gets its OWN DuckDB cursor — a connection sharing the catalog, so it sees the
         # star views set once per rung; one connection per thread is DuckDB's thread-safe pattern.
         # The model objects are shared: the provider SDK clients are thread-safe.
-        rung, rrung, cfg_label, gr, rep, q = task
+        rung, rrung, cfg_label, gr, proto, rep, q = task
         with cursor_lock:
             cur = con.cursor()
         try:
-            grounding = build_grounding(cur, rung, guardrails=gr)
+            grounding = build_grounding(cur, rung, guardrails=gr, protocol=proto)
             t0 = time.perf_counter()
             try:
                 ans = run_agent(q["question"], grounding, model, verifier_model=verifier_model)
@@ -115,7 +117,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                 ans = Answer(q["question"], rung, model_name, None,
                              outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
             elapsed_s = time.perf_counter() - t0   # wall-clock per run, for per-rung latency
-            config_label = grounding.guardrails.label()
+            config_label = grounding.guardrails.label() + grounding.protocol.label()
             # Read the surface while the grounding is still live, next to the label it belongs
             # with: the label says which guardrails were MEANT to be on, the fingerprint says
             # what the agent was actually shown.
@@ -182,7 +184,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
             "verifier_stance": verifier_stance,
-            "claim_framing": claim_framing,
+            "claim_framing": proto.framing,
         }
         mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if g["correct"] else "✗")
         with write_lock:
@@ -206,14 +208,14 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             # known, so an inert pair is skipped out loud instead of producing rows labelled
             # with a guardrail that could not run.
             usable = []
-            for cfg_label, rrung, gr in configs:
+            for cfg_label, rrung, gr, proto in configs:
                 bad = incoherent(gr, rung)
                 if bad:
                     print(f"  SKIP rung {rung} x {cfg_label}: {bad}", flush=True)
                     continue
-                usable.append((cfg_label, rrung, gr))
-            work = [(rung, rrung, cfg_label, gr, rep, q)
-                    for cfg_label, rrung, gr in usable
+                usable.append((cfg_label, rrung, gr, proto))
+            work = [(rung, rrung, cfg_label, gr, proto, rep, q)
+                    for cfg_label, rrung, gr, proto in usable
                     for rep in range(repeats)
                     for q in questions]
             dispatch = partial(_run_one, model=model, model_name=model_name,
