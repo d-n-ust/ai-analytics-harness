@@ -56,6 +56,33 @@ confident answer, never rescue a refusal, so it can only add safety.
 held-out human labels, and its error rate is a **standing, first-class number** — revalidated
 whenever its prompt changes. A refuse-only critic you cannot score is just another opinion.
 
+### The two halves of that validation, and what each is worth (2026-07-31)
+
+The judge's decisions split into two populations, and only one of them needs labelling at all.
+
+**Numeric decisions — settled by independent gold, no human in the loop.** Where the question has
+a `gold_sql` answer, or is unanswerable and any served number is therefore wrong, the gold decides
+and the judge is scored against it (`evals/components/verifier_vs_gold.py`). n=58, agreement
+**98.3%**, catch rate 100%, one false flag. Current against the live prompt fingerprint.
+
+**Prose decisions — the ones gold cannot settle**, on diagnostic and keyword-graded questions.
+These are re-labelled by a three-lens panel (strict / pragmatic / skeptical), blind to the judge's
+verdict, **unanimous-only**, with splits escalated to a human rather than out-voted
+(`evals/components/prose_panel.py`). Pooled over all 22 stored runs:
+
+```
+28 prose decisions · 24 unanimous · 4 escalated
+on the settled ones: the judge false-flagged 0 and missed 0
+```
+
+**Read that as thin, not clean.** The sample is the ceiling: of 1,384 rows across today's runs,
+513 reached the judge, 381 of those the gold settles by itself and 108 are unanswerable — leaving
+24 prose decisions as the entire labelling surface, deduplicating to a handful of distinct texts
+across seven diagnostic questions. Twenty-four decisions cannot measure a judge that is right most
+of the time. The fix is more diagnostic questions, not a better panel. Until then the prose half
+of the judge's error rate is **not established**, and the earlier 37-case labelling remains
+invalidated (7 of its cases were judged against a number the answer did not serve).
+
 The deterministic core that *survives* is `governed_numbers` (R7) and the
 output-validation check (R8) — both live in `agent/guardrails/after.py` alongside the trajectory judge, and
 both are provable without a model (`tests/test_semantic.py`).

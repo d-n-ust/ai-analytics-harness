@@ -146,6 +146,15 @@ def _claims(rs) -> dict | None:
         "unresolved": sum(a["unresolved"] for a in declared),
         "value_mismatch": sum(a["value_mismatch"] for a in declared),
         "mislabelled": sum(a["mislabelled"] for a in declared),
+        # The graph itself. `derived` is the share of claims that are conclusions rather than
+        # lookups — zero means the model is listing findings, not reasoning. `correlational` is
+        # the hedge, computed from the tree's own influence edges instead of grepped for.
+        "derived": sum(a.get("derived", 0) for a in declared),
+        "derived_rate": (sum(a.get("derived", 0) for a in declared) / total) if total else None,
+        "max_fan_in": max((a.get("max_fan_in", 0) for a in declared), default=0),
+        "max_depth": max((a.get("max_depth", 0) for a in declared), default=0),
+        "correlational": sum(a.get("correlational", 0) for a in declared),
+        "bad_premise": sum(a.get("bad_premise", 0) for a in declared),
         # How much of an answer stands on how little.
         "sources_per_answer": round(sum(a["sources"] for a in declared) / len(declared), 2)
                               if declared else None,
@@ -763,14 +772,15 @@ def render_markdown(summary: dict) -> str:
                   "of them. **mislabelled** is counted apart: a claim can be perfectly bound and "
                   "the answer's declared metric still disagree with it, which no check on the "
                   "number can catch. Nothing here refuses anything yet._", "",
-                  f"| {axis} | adoption | claims/answer | bound | unsourced | unresolved "
-                  f"| value mismatch | mislabelled | sources/answer |",
-                  "|" + "---|" * 9]
+                  f"| {axis} | adoption | claims/answer | bound | derived | fan-in | depth "
+                  f"| correlational | unresolved | value mismatch | mislabelled |",
+                  "|" + "---|" * 11]
             for c, cl in rows_:
                 L.append(f"| {c} | {_pct(cl['adoption'])} | {cl['claims_per_answer'] or '—'} "
-                         f"| {_pct(cl['bound_rate'])} | {cl['unsourced']} | {cl['unresolved']} "
-                         f"| {cl['value_mismatch']} | {cl['mislabelled']} "
-                         f"| {cl['sources_per_answer'] or '—'} |")
+                         f"| {_pct(cl['bound_rate'])} | {_pct(cl.get('derived_rate'))} "
+                         f"| {cl.get('max_fan_in', 0)} | {cl.get('max_depth', 0)} "
+                         f"| {cl.get('correlational', 0)} | {cl['unresolved']} "
+                         f"| {cl['value_mismatch']} | {cl['mislabelled']} |")
 
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:

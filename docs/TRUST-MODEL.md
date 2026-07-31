@@ -154,12 +154,26 @@ judging.
 |---|---|---|
 | L3 vs L0 — bound, mislabelled, unresolved | **shipped** (R11) | — |
 | evidence concentration | **shipped** | — |
-| **L2 vs L1** | **not yet** | derived claims — a claim citing claims |
+| **L2 vs L1** | **shipped** | — |
 | operation legality (failure 3) | partial — `additive_over_time` only | unit + ratio rules |
 | scope match (failure 5) | no | scope declared on the claim |
 
-The middle row is the point of this document. **The trusted / questionable split cannot be
-computed until a claim can name its warrant**, and a warrant only exists once a claim can cite
-another claim rather than a value. That is the concrete requirement justifying the next
-increment — not that the design doc lists it, but that the entire distinction between "act on
-this" and "act on this knowing what it rests on" is unreachable without it.
+The middle row was the point of this document, and it has since landed. **The trusted /
+questionable split could not be computed until a claim could name its warrant**, and a warrant
+only exists once a claim can cite another claim rather than a value. `premises` gives it that:
+a claim citing `["c1","c2"]` is a conclusion, its strength is the **minimum** over its premises,
+and `correlational` vs `exact` is read off the metric tree's edge types rather than chosen by
+the model. Backwards-only, so the graph cannot cite in a circle.
+
+What it measures, over today's runs (743 audited rows, 1,712 claims): **7.4% of claims are
+derived** under the rule framing and **13.6%** under the role framing — that is, most of what an
+analytical answer asserts is still a lookup rather than an argument. `max_depth` is 1 on every
+run so far: no conclusion yet rests on another conclusion.
+
+## What still stands between this and a trust level
+
+The audit produces the inputs. It does not yet produce the ladder — nothing computes L3/L2/L1/L0,
+the band distribution, or the answer-level headline described above. That work, and the package
+it belongs in, are set out in `docs/ARCHITECTURE.md`: the claim audit is an **instrument**, not a
+guardrail, and a trust profile computed inside `agent/guardrails/` would be a verdict wearing a
+measurement's clothes.

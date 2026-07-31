@@ -7,6 +7,7 @@ nothing but treatment text is a file whose diff is always worth reading.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import yaml
@@ -101,8 +102,47 @@ _RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion 
                  "each naming the governed value it rests on. Every governed result prints a "
                  "handle and its fields, so cite the VALUE — `r1:days_per_user.pct_change`, or "
                  "`r2:paid_search` for one row of a breakdown — not just the result. If your "
-                 "answer reports five figures and draws one conclusion, that is six claims; the "
-                 "conclusion cites the values it follows from. It does not change your answer.")
+                 "answer reports five figures and draws one conclusion, that is six claims. A "
+                 "claim that is a CONCLUSION — \"X is the primary driver\", \"Y did not cause it\" "
+                 "— sets `premises` naming the earlier claims it follows from, instead of "
+                 "`sources`. Saying days_per_user is the primary driver means comparing the three "
+                 "contribution shares, so those three claims are its premises. It does not change "
+                 "your answer.")
+
+# --- the framing experiment -------------------------------------------------------------- #
+# The lines above tell the model, twice and in as many words, that declaring "does not change
+# your answer". Then we measured how much it cared: 88% adoption, 43% of reasoning answers
+# declaring a conclusion, and declarations the first thing dropped when a closing turn rushes it.
+# That is the prompt working as written, not a fact about the model.
+#
+# The alternative says being checkable IS the job. Nothing about the MECHANISM changes — the audit
+# still records and never refuses — because inert-in-the-check and unimportant-in-the-role are
+# different claims, and the design conflated them. Which framing is live is a treatment, so it is
+# read once per run and stamped on every row.
+_ROLE_PURPOSE = ("\n- Each governed call takes an optional `because`: one line, in plain words, on "
+                 "what you are trying to establish with it (\"check whether the drop is uniform "
+                 "across regions or concentrated in one\"). Write the sub-question you are "
+                 "answering, not a label for the call — it is the record of how you reached the "
+                 "answer, and a reader who was not here has nothing else to follow.")
+
+_ROLE_CLAIMS = ("\n- Being checkable is part of the job, not paperwork after it. An answer is the "
+                "number AND the account of it: the separate statements you are making, and which "
+                "governed value each one rests on. A figure a reader cannot trace back is not an "
+                "answer, however right it happens to be."
+                "\n- So give the `claims` list with every answer: one entry per assertion. Cite the "
+                "VALUE, not the result — `r1:days_per_user.pct_change`, or `r2:paid_search` for one "
+                "row of a breakdown; every governed result prints its citable fields on a [cite] "
+                "line. Five figures and one conclusion is six claims."
+                "\n- A CONCLUSION rests on other claims, not on data: set `premises` to the earlier "
+                "claims it follows from. \"Days per user is the primary driver\" IS a comparison of "
+                "the three contribution shares — writing it as one more figure hides the reasoning "
+                "that makes it true, and a reader cannot check what is hidden.")
+
+
+def framing() -> str:
+    """Which framing of the declarations is live: `rule` (the original) or `role`."""
+    return "role" if os.environ.get("CLAIM_FRAMING", "rule").lower() == "role" else "rule"
+
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -163,10 +203,11 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
+    role = framing() == "role"
     if g.declared_purpose:
-        system += _RRUNG_PURPOSE
+        system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
     if g.claim_binding:
-        system += _RRUNG_CLAIMS
+        system += _ROLE_CLAIMS if role else _RRUNG_CLAIMS
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
     caps = capabilities(rung)

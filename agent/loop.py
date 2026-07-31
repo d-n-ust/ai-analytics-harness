@@ -159,7 +159,8 @@ class _Run:
         if not declared:
             return None
         audited = claim_audit.audit(declared, self.steps, exit_call.args.get("source_metric"),
-                                    node_metrics=self._node_metrics())
+                                    node_metrics=self._node_metrics(),
+                                    influence_children=self._influence_children())
         broken = [f for f in audited["findings"] if f["unresolved"]]
         if not broken:
             return None
@@ -186,6 +187,14 @@ class _Run:
         tree = getattr(self.grounding.toolbox, "tree", None)
         return ({n: spec.get("metric") for n, spec in tree.nodes.items()}
                 if tree is not None else None)
+
+    def _influence_children(self):
+        """The tree children reached by an INFLUENCE edge. A claim citing one of these is
+        correlational because the model of the business says that link is — not because the
+        model writing the answer chose a hedging word."""
+        tree = getattr(self.grounding.toolbox, "tree", None)
+        return ({e["child"] for e in tree.edges if e.get("type") == "influence"}
+                if tree is not None else ())
 
     # -- what an exit call means ------------------------------------------- #
     def finish(self, exit_call: ToolCall, iterations: int) -> Answer:
@@ -230,7 +239,8 @@ class _Run:
         # The audit is a lookup over the trace, so it costs nothing and cannot fail the run.
         declared_claims = tuple(c for c in (args.get("claims") or []) if isinstance(c, dict))
         audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
-                                     node_metrics=self._node_metrics())
+                                     node_metrics=self._node_metrics(),
+                                     influence_children=self._influence_children())
                    if self.grounding.toolbox.g.claim_binding else None)
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
                       claims=declared_claims, claim_audit=audited,
@@ -267,13 +277,22 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     run = _Run(question, grounding, model, verifier_model)
     convo = Conversation.opening(grounding.system, question)
     nudges = 0
+    # The budget, which one thing may extend. Corrections were skipped on the closing turn
+    # because there was no next turn to correct in, and that exemption became the residue: every
+    # answer still citing something that does not exist ended there, six of six in one run and
+    # all of them in the next. A GRACE turn is granted once, and only to a correction — the run
+    # still ends through the typed protocol, one turn later than it would have.
+    budget = max_iters
+    GRACE, MAX_CORRECTIONS = 1, 2
 
-    for it in range(max_iters):
+    for it in range(max_iters + GRACE):
+        if it >= budget:
+            break
         # Closing phase. Once the model has stopped calling tools, or on the last iteration,
         # withdraw the data tools and require an exit call. A run then ends through the typed
         # protocol instead of dying as an untyped error row — which is a lost measurement, not
         # a model behaviour.
-        closing = nudges >= 1 or it == max_iters - 1
+        closing = nudges >= 1 or it == budget - 1
         offer_acts: list = []
         offered = grounding.toolbox.specs(terminal_only=closing, record=offer_acts)
         t0 = time.perf_counter()
@@ -294,11 +313,15 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         # separate question about the protocol, not about this loop.)
         results = run.execute(turn.tool_calls) if turn.tool_calls else []
         if turn.exit_call:
-            # A malformed answer is corrected, not accepted — but never on the closing turn,
-            # where there is no next turn to correct in. Ending as an untyped error row would
-            # be a lost measurement, which is worse than an answer that cites loosely.
-            correction = None if closing else run.malformed_claims(turn.exit_call)
+            # A malformed answer is corrected, not accepted — on any turn, including the last,
+            # which is where the model was rushing and citing loosest. Bounded twice over: at
+            # most MAX_CORRECTIONS per run, and the grace turn is granted once, so this cannot
+            # trade a lost measurement for an unbounded loop.
+            correction = (run.malformed_claims(turn.exit_call)
+                          if run.claim_retries < MAX_CORRECTIONS else None)
             if correction is not None:
+                if it == budget - 1 and budget < max_iters + GRACE:
+                    budget += 1
                 convo.observe([correction.for_call(turn.exit_call)])
                 continue
             return run.finish(turn.exit_call, it + 1)

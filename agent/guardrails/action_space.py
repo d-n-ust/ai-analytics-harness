@@ -200,10 +200,17 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
                         "description": "The governed value(s) this assertion rests on, as "
                                        "handle:field — e.g. r1:days_per_user.pct_change, or "
                                        "r2:paid_search for one row of a breakdown."},
+                    "premises": {
+                        "type": "array", "items": {"type": "string"},
+                        "description": "If this assertion is a CONCLUSION drawn from earlier "
+                                       "claims rather than a figure read off a result, name those "
+                                       "claims instead of sources — ['c2','c3','c4']. Claims are "
+                                       "numbered in the order you list them, and a conclusion may "
+                                       "only cite claims before it."},
                     "value": {"type": "number",
                               "description": "The figure this assertion states, if it states one."},
                 },
-                "required": ["text", "sources"],
+                "required": ["text"],
             },
             "description": "Break your answer into the separate assertions it makes — one per "
                            "figure or judgement — each naming the governed value it rests on. "

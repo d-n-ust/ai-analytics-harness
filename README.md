@@ -168,13 +168,18 @@ agent/        the agent: orchestrator loop, prompt/context assembly, tools, mode
 evals/         the 57 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
 cli/          the `bench` entry point (one dispatcher over every verb)
 experiments/  pre-registrations + findings logs
-docs/         ANATOMY · DATA · GROUNDING · RELIABILITY
+docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · ARCHITECTURE · TRUST-MODEL
 results/      per-run summaries; raw rows regenerate with a run
 ```
 
 See [`docs/ANATOMY.md`](docs/ANATOMY.md) for the file→component map, and
 [`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the two
 experiments.
+
+A **third** axis is in progress — what the agent must *declare* about its own work, on top of what
+it knows (grounding) and what it may do (guardrails). [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+names it and says where it goes; [`docs/TRUST-MODEL.md`](docs/TRUST-MODEL.md) says what it measures
+and why those numbers must never be averaged with the ones above.
 
 ## Results
 

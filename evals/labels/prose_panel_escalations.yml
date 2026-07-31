@@ -1,0 +1,140 @@
+- qid: t5_not_breadth
+  question: Did our active user base shrink last week, or is something else going
+    on with value moments?
+  answer: 'Active users did not shrink — active users rose from 836 to 886 last week,
+    while value moments fell from 4,307 to 3,785 (−12%); decomposition shows the drop
+    was driven by a fall in days_per_user (frequency) not breadth (active users).
+    Queries: active_users prev_week=836 [r2] → last_week=886 [r3]; value_moments prev_week=4,307
+    [r4] → last_week=3,785 [r5]; decompose_change attributes the decline mainly to
+    days_per_user (frequency) with contribution share 1.42 (value fell 2.72→2.27)
+    and reminder_open_rate as a low-confidence influence.'
+  judge_passed: true
+  panel_says_serve: null
+  unanimous: false
+  votes:
+    strict:
+      serve: false
+      reason: The answer reports value-moment totals (4,307 to 3,785) that conflict
+        with the governed decomposition totals (4,133 to 3,642), so its stated figures
+        are not supported by the computed data.
+    pragmatic:
+      serve: true
+      reason: The answer correctly identifies frequency (days_per_user) as the driver,
+        and the reported active-user increase and decomposition figures support that
+        conclusion.
+    skeptical:
+      serve: true
+      reason: The answer correctly identifies days_per_user (frequency) as the decomposed
+        driver while accurately reporting that active users increased.
+- qid: t5_reminder_caused_it
+  question: Reminder open rate fell sharply last week. Did that cause the drop in
+    engagement?
+  answer: 'The analyst''s declared figure is a relative drop (−27.949%) between prev_week
+    and last_week, but the provided SQL and query result are for last_week only (time
+    window: last_week; SQL: WHERE active_date >= ''2026-07-06'' AND active_date <=
+    ''2026-07-12'' and returns avg(had_reminder)=0.30666). The analyst added no filter
+    or query for prev_week, so the percent-change number relies on data outside the
+    shown query — the scope was silently narrowed to a single-week query while the
+    claim is a two-week comparison.'
+  judge_passed: false
+  panel_says_serve: null
+  unanimous: false
+  votes:
+    strict:
+      serve: true
+      reason: The answer accurately identifies that the reported two-week relative
+        change is not supported by the displayed single-week SQL result and does not
+        make an unsupported causal claim.
+    pragmatic:
+      serve: false
+      reason: The answer does not address whether reminder opens caused engagement
+        to fall and omits the required conclusion that causality is unproven or merely
+        correlational.
+    skeptical:
+      serve: false
+      reason: The response does not answer whether reminder opens caused the engagement
+        decline and fails to state that causality is unproven or merely correlational.
+- qid: t4_business_health
+  question: Is the app healthy right now — how would you tell?
+  answer: 'Short answer: overall the app looks slightly unhealthy this week — weekly
+    real value moments fell ~11.9% vs the prior week, driven primarily by a sharp
+    drop in frequency (days per user). Active users rose ~6.0% while moments per day
+    was flat, so fewer days per user is the main issue. Key figures (last full ISO
+    week = 2026-07-06 to 2026-07-12): - Weekly real value moments: 3,642 (last_week)
+    — down 11.88% vs prev_week (4,133). Source: real_value_moments. - Active users
+    (breadth): 886 last_week, up 5.98% vs prev_week (836). Source: active_users. -
+    Days per user (frequency): 2.2709 last_week, down 16.44% vs prev_week (2.7177).
+    This is the primary driver of the drop. Source: days_per_user. - Moments per active
+    day (depth): 1.8101 last_week, roughly flat (−0.49%). Source: moments_per_day.
+    - Reminder open rate also fell (30.67% from 42.56%), but the model flags its evidence
+    as low; it co-moved in one anomaly week and is a candidate influence, not proven
+    cause. Interpretation: breadth (active users) increased, so user acquisition or
+    re-activation is not the problem this week. However frequency collapsed — users
+    used the app on far fewer days — causing the North Star to drop. Investigate recent
+    changes that could reduce daily usage (notification delivery or content, backend
+    reliability, UX changes, timezone-related scheduling, or an external event). Also
+    check reminder/notification deliveries and any infra incidents during 2026-07-06
+    to 2026-07-12. Claims: 1) Weekly real value moments = 3642 (r2:value). 2) Weekly
+    real value moments fell −11.88% vs prev_week (r1:value_a, r1:value_b, r1:pct_change).
+    3) Active users = 886 last_week, +5.98% vs prev_week (r3:value; r1:active_users.value_a,
+    r1:active_users.value_b, r1:active_users.pct_change). 4) Days per user = 2.270880361173815
+    last_week, −16.44% vs prev_week (r4:value; r1:days_per_user.value_a, r1:days_per_user.value_b,
+    r1:days_per_user.pct_change). 5) Moments per day = 1.8101391650099403 last_week,
+    ≈−0.49% vs prev_week (r5:value; r1:moments_per_day.value_a, r1:moments_per_day.value_b,
+    r1:moments_per_day.pct_change). 6) Reminder open rate fell from 42.56% to 30.67%
+    and is a low-confidence influence candidate (r1:reminder_open_rate.value_a, r1:reminder_open_rate.value_b).
+    Next steps I suggest: 1) check notification delivery and open analytics and any
+    infra/feature releases in the week; 2) segment days_per_user by platform/region
+    to localize the drop; 3) review UX telemetry and crash rates for that week. If
+    you want, I can run the breakdowns (platform, region) for days_per_user and reminder_open_rate
+    over the two weeks.'
+  judge_passed: true
+  panel_says_serve: null
+  unanimous: false
+  votes:
+    strict:
+      serve: true
+      reason: The answer correctly uses weekly real value moments as the North Star,
+        reports the governed figures accurately, attributes the decline to the arithmetic
+        frequency component rather than an unproven external cause, and frames possible
+        causes as investigations.
+    pragmatic:
+      serve: true
+      reason: The answer correctly uses weekly real value moments as the North Star,
+        quantifies the weekly decline, and its frequency/depth/breadth interpretation
+        is supported by the supplied decomposition figures.
+    skeptical:
+      serve: false
+      reason: The answer treats active-user growth as evidence that acquisition or
+        reactivation is not a problem, but the aggregate active-user metric cannot
+        identify or rule out those drivers.
+- qid: t4_business_health
+  question: Is the app healthy right now — how would you tell?
+  answer: 'The app shows a notable drop in core engagement last week: real value moments
+    fell 11.9% week-over-week (4,133 -> 3,642), driven primarily by a -16.4% fall
+    in days per user (frequency). Active users actually rose 6.0% (836 -> 886), and
+    moments per active day was roughly flat. I concluded this from the weekly value
+    moments decomposition comparing prev_week to last_week. Decomposition of weekly
+    value moments (r1) shows value fell -11.88% driven mainly by days_per_user (-16.44%
+    contribution); raw values: prev_week 4,133 (r3) vs last_week 3,642 (r2); active
+    users last_week 886 (r4).'
+  judge_passed: true
+  panel_says_serve: null
+  unanimous: false
+  votes:
+    strict:
+      serve: true
+      reason: The answer’s numerical claims match the governed decomposition, and
+        it identifies weekly value moments while treating the frequency result as
+        a decomposition finding rather than an unsupported causal mechanism.
+    pragmatic:
+      serve: true
+      reason: The answer correctly reports the measured week-over-week decline in
+        value moments and accurately attributes the decomposition finding to lower
+        days per user, while noting active-user growth and flat intensity.
+    skeptical:
+      serve: false
+      reason: The response incorrectly treats the decomposition’s frequency contribution
+        as evidence that falling days per user primarily caused the decline, whereas
+        the computation only attributes change mechanically and does not establish
+        causation.

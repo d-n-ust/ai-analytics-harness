@@ -8,7 +8,7 @@ Run: PYTHONPATH=. uv run python tests/test_claims.py
 
 from __future__ import annotations
 
-from agent.guardrails.claims import MISLABELLED, UNRESOLVED, UNSOURCED, VALUE_MISMATCH, audit
+from agent.guardrails.claims import BAD_PREMISE, MISLABELLED, UNRESOLVED, UNSOURCED, VALUE_MISMATCH, audit
 
 # The decomposition every diagnostic answer is built on, as the trace stores it: eighteen
 # governed figures under ONE handle, each addressable by name.
@@ -101,11 +101,72 @@ def test_an_unsourced_claim_and_the_totals():
     assert a["sources"] == 2, "distinct handles cited, however many fields of each"
 
 
+# --- derived claims: a conclusion resting on other claims ------------------- #
+
+def test_a_conclusion_cites_claims_and_inherits_the_weakest_premise():
+    """The reconstruction found this shape in every diagnostic answer: three measurements, then
+    a judgement comparing them. Before `premises` the judgement was recorded as one more figure
+    — 7 of 21 "primary driver" claims cited only a percent change, which shows a metric fell
+    but not that it contributed most."""
+    steps = [DECOMP]
+    claims = [
+        {"text": "days per user fell 16.44%, share +1.42",
+         "sources": ["r1:days_per_user.contribution_share"]},
+        {"text": "active users rose, share −0.46",
+         "sources": ["r1:active_users.pct_change"]},
+        {"text": "days per user is the primary driver", "premises": ["c1", "c2"]},
+    ]
+    a = audit(claims, steps, source_metric="weekly_value_moments",
+              influence_children={"reminder_open_rate"})
+    assert a["n"] == 3 and a["bound"] == 3
+    assert a["derived"] == 1, "the conclusion is derived, the two measurements are not"
+    assert a["max_fan_in"] == 2 and a["max_depth"] == 1
+    assert [f["strength"] for f in a["findings"]] == ["exact", "exact", "exact"]
+
+
+def test_one_soft_premise_makes_the_whole_conclusion_soft():
+    """Strength is computed from the tree, not chosen by the model. `reminder_open_rate` hangs
+    off an INFLUENCE edge, so a claim citing it is correlational — and a conclusion resting on
+    that claim inherits it, however exact its other premises are. The weakest link governs."""
+    claims = [
+        {"text": "days per user fell 16.44%", "sources": ["r1:days_per_user.pct_change"]},
+        {"text": "reminder open rate fell 27.95%", "sources": ["r1:reminder_open_rate.pct_change"]},
+        {"text": "reminders drove the frequency drop", "premises": ["c1", "c2"]},
+    ]
+    a = audit(claims, [DECOMP], source_metric="weekly_value_moments",
+              influence_children={"reminder_open_rate", "new_signups", "activation_rate"})
+    kinds = [f["strength"] for f in a["findings"]]
+    assert kinds == ["exact", "correlational", "correlational"], kinds
+    assert a["correlational"] == 2
+
+
+def test_premises_may_only_point_backwards():
+    """A graph that can cite forwards can cite in a circle, and then "does this hold" has no
+    answer. Rejected here rather than detected later, and it costs the model nothing: it wrote
+    the premises first."""
+    for bad in (["c3"], ["c9"], ["nonsense"]):
+        a = audit([{"text": "a", "sources": ["r1:pct_change"]},
+                   {"text": "b", "sources": ["r1:value_a"]},
+                   {"text": "circular", "premises": bad}],
+                  [DECOMP], source_metric="weekly_value_moments")
+        assert BAD_PREMISE in a["findings"][2]["why"], bad
+        assert a["bad_premise"] == 1
+
+
+def test_a_claim_that_names_nothing_at_all():
+    a = audit([{"text": "engagement is down"}], [DECOMP], source_metric="weekly_value_moments")
+    assert UNSOURCED in a["findings"][0]["why"] and a["bound"] == 0
+
+
 if __name__ == "__main__":
     test_a_field_citation_resolves_and_the_figure_must_match()
     test_a_bare_handle_does_not_name_a_number()
     test_the_wrong_metric_name_is_caught_where_no_number_check_could()
     test_a_breakdown_row_is_addressable_on_its_own()
     test_an_unsourced_claim_and_the_totals()
-    print("OK - claim audit: field citation, bare handles, the wrong-metric catch, "
-          "breakdown rows, and the totals all hold.")
+    test_a_conclusion_cites_claims_and_inherits_the_weakest_premise()
+    test_one_soft_premise_makes_the_whole_conclusion_soft()
+    test_premises_may_only_point_backwards()
+    test_a_claim_that_names_nothing_at_all()
+    print("OK - claim audit: field citation, bare handles, the wrong-metric catch, breakdown "
+          "rows, derived claims, inherited strength, and backwards-only premises all hold.")

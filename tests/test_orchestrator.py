@@ -294,6 +294,36 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_the_empty_result_check_is_unreachable_wherever_it_is_legal]
 
 
+def test_a_run_that_never_fixes_its_citations_still_terminates():
+    """The correction now runs on the closing turn too, so the loop can extend itself. That is
+    exactly the shape that hangs a sweep, so the bound is pinned rather than reasoned about: a
+    model that answers badly forever gets at most MAX_CORRECTIONS goes and one grace turn, and
+    still leaves through a terminal tool rather than as an untyped error row."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r1"], "value": 886}]}
+    # r1 holds one value here, so make it unresolvable by naming a handle that does not exist
+    bad["claims"][0]["sources"] = ["r9:nothing"]
+    ans, model = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
+                      rrung=11, max_iters=4)
+    assert ans.outcome == "answer", "it must still end through the typed protocol"
+    assert ans.claim_retries <= 2, f"corrections must be bounded, got {ans.claim_retries}"
+    assert ans.iterations <= 5, f"at most max_iters + 1 turns, got {ans.iterations}"
+    assert model.n <= 6, "the model must not be called unboundedly"
+
+
+def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
+    """A malformed answer arriving on the LAST turn used to be accepted as-is — nothing could be
+    said to a model with no turn left. It now gets one more, and a model that fixes its citation
+    ends bound."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r9:nope"], "value": 886}]}
+    good = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r1"], "value": 886}]}
+    ans, _ = _run([call("1", "query_metric", QM)],
+                  [call("2", "answer", bad)],      # lands on the closing turn of a 3-turn budget
+                  [call("3", "answer", good)],
+                  rrung=11, max_iters=3)
+    assert ans.claim_retries == 1, "the closing-turn answer was handed back"
+    assert (ans.claim_audit or {}).get("unresolved") == 0, "and the second attempt resolved"
+
+
 if __name__ == "__main__":
     for fn in TESTS:
         fn()

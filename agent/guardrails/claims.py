@@ -18,13 +18,20 @@ from __future__ import annotations
 
 from .after import num_match
 
-__all__ = ["audit", "cited_metric"]
+__all__ = ["audit", "cited_metric", "claim_id"]
 
 # One reason code per way a claim can fail to hold, so a finding is a count rather than a grep.
 UNRESOLVED = "unresolved"          # names a handle or field that does not exist
-UNSOURCED = "unsourced"            # asserts something and cites nothing
+UNSOURCED = "unsourced"            # asserts something and names neither evidence nor premises
 VALUE_MISMATCH = "value_mismatch"  # states a figure the cited value does not support
 MISLABELLED = "mislabelled"        # cites a result belonging to a different metric than declared
+BAD_PREMISE = "bad_premise"        # names a claim that does not exist, or itself, or a later one
+
+# How strong the support is, weakest first — the order IS the comparison, so `min` over a claim's
+# premises is the weakest-link rule and needs no special case.
+CORRELATIONAL = "correlational"    # rests on an influence edge: evidence, never proof
+EXACT = "exact"                    # a governed value, or identity arithmetic over governed values
+_ORDER = (CORRELATIONAL, EXACT)
 
 
 def cited_metric(step: dict) -> str:
@@ -36,6 +43,33 @@ def cited_metric(step: dict) -> str:
     because `value_moments` and the tree's root differ by a quarter of a point."""
     args = step.get("args") or {}
     return str(args.get("metric") or args.get("node") or "")
+
+
+def claim_id(i: int) -> str:
+    """The id of the i-th claim. Ids are ASSIGNED here, not carried by the model: a claim the
+    model numbered itself could collide, skip, or repeat, and a premise pointing at the wrong
+    conclusion is worse than one pointing at nothing. Position decides identity; the id makes
+    it explicit so nothing downstream has to recover it by counting."""
+    return f"c{i + 1}"
+
+
+def _claim_index(ref, ids: dict) -> int | None:
+    """A premise reference -> the position it names. `c3`, `3` and `C3` all mean the third
+    claim; anything else names nothing. Resolved through the id map rather than by arithmetic,
+    so ids stay the one place identity is decided."""
+    key = str(ref or "").strip()
+    if key in ids:
+        return ids[key]
+    if key.lstrip("cC").isdigit():
+        return ids.get(f"c{int(key.lstrip('cC'))}")
+    return None
+
+
+def _child_of(ref: str) -> str:
+    """The tree child a reference is about — `r1:days_per_user.pct_change` -> `days_per_user`.
+    Empty for a root field or a plain query result, neither of which is an influence edge."""
+    field = str(ref or "").partition(":")[2]
+    return field.partition(".")[0] if "." in field else ""
 
 
 def _index(steps, node_metrics=None) -> dict:
@@ -89,7 +123,8 @@ def _resolve(ref: str, index: dict):
     return handle, entry["values"].get(field), metric
 
 
-def audit(claims, steps, source_metric: str | None = None, node_metrics=None) -> dict:
+def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
+          influence_children=()) -> dict:
     """Resolve every claim against the trace. Returns per-claim findings and the totals.
 
     A claim holds when each source it names resolves to a real governed value, and — when it
@@ -97,11 +132,16 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None) ->
     those. The relation set is the same one governed_numbers allows, computed over the cited
     values only, so a claim can say "fell 16.4%" while citing the two levels."""
     index = _index(steps, node_metrics)
+    soft = {str(c) for c in (influence_children or ())}
+    # Every claim has an id before any premise is read, so a conclusion citing `c2` resolves the
+    # same whether or not `c2` itself turned out to hold.
+    ids = {claim_id(i): i for i in range(len(claims or []))}
     findings, reasons = [], []
 
     for i, c in enumerate(claims or []):
         c = c if isinstance(c, dict) else {}
         refs = c.get("sources") or []
+        prem = [_claim_index(x, ids) for x in (c.get("premises") or [])]
         value = c.get("value")
         cited, unresolved, metrics = [], [], set()
         for ref in refs:
@@ -114,9 +154,18 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None) ->
             # came from — the tree node and the metric underneath it are the same evidence.
             metrics |= {metric} | index[handle]["aliases"]
 
+        # A DERIVED claim rests on earlier claims instead of on data. Only backwards, and never on
+        # itself: a graph that can cite forwards is a graph that can cite in a circle, and then
+        # "does this conclusion hold" has no answer. Rejecting it here is cheaper than detecting
+        # a cycle later, and it costs the model nothing — it already wrote the premises first.
+        bad_prem = [p for p in prem if p is None or not (0 <= p < i)]
+        good_prem = [p for p in prem if p is not None and 0 <= p < i]
+
         why = []
-        if not refs:
-            why.append(UNSOURCED)
+        if not refs and not prem:
+            why.append(UNSOURCED)       # asserts something and names nothing at all
+        if bad_prem:
+            why.append(BAD_PREMISE)
         if unresolved:
             why.append(UNRESOLVED)
         if isinstance(value, (int, float)) and not isinstance(value, bool) and cited:
@@ -132,8 +181,21 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None) ->
         # them. Mislabelling is a disagreement between the claim and the ANSWER's declared
         # metric — the claim can be perfectly bound and the label still wrong, which is exactly
         # the live case: three claims citing weekly_value_moments under a declared value_moments.
-        findings.append({"i": i, "text": str(c.get("text") or "")[:200],
+        # STRENGTH, computed — never a word the model chose. A leaf citing a field of an influence
+        # child is correlational because the tree says that edge is; a derived claim takes the
+        # WEAKEST of its premises, so one soft premise makes the whole conclusion soft. That is the
+        # min-semiring, and it is why `_ORDER` is an order rather than a set.
+        if good_prem:
+            strength = min((findings[p]["strength"] for p in good_prem), key=_ORDER.index)
+            depth = 1 + max(findings[p]["depth"] for p in good_prem)
+        else:
+            strength = CORRELATIONAL if any(_child_of(r) in soft for r in refs) else EXACT
+            depth = 0
+
+        findings.append({"i": i, "id": claim_id(i), "text": str(c.get("text") or "")[:200],
                          "sources": [str(r) for r in refs], "value": value,
+                         "premises": [claim_id(p) for p in good_prem], "strength": strength,
+                         "depth": depth,
                          "unresolved": unresolved, "metrics": sorted(metrics),
                          "bound": not [w for w in why if w != MISLABELLED], "why": why})
         reasons += why
@@ -146,6 +208,15 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None) ->
         "unresolved": sum(1 for f in findings if UNRESOLVED in f["why"]),
         "value_mismatch": sum(1 for f in findings if VALUE_MISMATCH in f["why"]),
         "mislabelled": sum(1 for f in findings if MISLABELLED in f["why"]),
+        "bad_premise": sum(1 for f in findings if BAD_PREMISE in f["why"]),
+        # The graph, in four numbers. `derived` is how much of the answer is a conclusion rather
+        # than a lookup; `max_depth` tells an argument from a wall of statistics; `max_fan_in` is
+        # how much a conclusion rests on; `correlational` counts the claims the tree itself marks
+        # as evidence-not-proof, so a hedge is a property rather than a word.
+        "derived": sum(1 for f in findings if f["premises"]),
+        "max_depth": max((f["depth"] for f in findings), default=0),
+        "max_fan_in": max((len(f["premises"]) for f in findings), default=0),
+        "correlational": sum(1 for f in findings if f["strength"] == CORRELATIONAL),
         # How much of the answer stands on how little. One source behind every claim is not a
         # fault — a governed decomposition is one call — but it is a fragility worth counting.
         "sources": len({r.partition(":")[0] for f in findings for r in f["sources"]}),

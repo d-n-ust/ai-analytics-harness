@@ -91,6 +91,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     # not left to whatever the environment held when a given question ran.
     from agent.guardrails.judge import stance_name
     verifier_stance = stance_name()
+    # How the harness TALKS about declaring is a treatment like any other, so it is
+    # read once and stamped on every row rather than left to whatever the shell held.
+    from agent.prompts import framing
+    claim_framing = framing()
 
     def _run_one(task, model, model_name, verifier_model, verifier_used):
         # Each task gets its OWN DuckDB cursor — a connection sharing the catalog, so it sees the
@@ -178,6 +182,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
             "verifier_stance": verifier_stance,
+            "claim_framing": claim_framing,
         }
         mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if g["correct"] else "✗")
         with write_lock:

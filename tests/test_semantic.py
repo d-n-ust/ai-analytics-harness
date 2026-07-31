@@ -229,22 +229,33 @@ def test_the_tree_writes_its_numbers_down():
     had written them down.
 
     Shares and percent changes are included, not just levels: they are what a diagnosis reports,
-    and the tree computes them, not the model. NO LLM."""
+    and the tree computes them, not the model. NO LLM.
+
+    Each figure carries a LABEL as well as a value, and the label is what makes it citable: a
+    decomposition holds eighteen numbers under one handle, so `r1` names none of them and
+    `r1:days_per_user.contribution_share` names exactly one. Pinning the labels rather than only
+    the values is not tidiness — when the pairs arrived, this test kept asserting on bare floats
+    and failed silently at the commit that introduced them."""
     from agent.tools import _decomposition_values
     from semantic.tree import MetricTree
 
     sem = SemanticLayer(open_warehouse())
     out = MetricTree(sem).explain_change("weekly_value_moments", "prev_week", "last_week")
-    values = _decomposition_values(out)
+    pairs = _decomposition_values(out)
+    named = dict(pairs)
 
-    assert out["value_a"] in values and out["value_b"] in values, "the levels are governed"
-    assert out["pct_change"] in values, "the change is what 'why did it move' answers with"
+    assert named["value_a"] == out["value_a"] and named["value_b"] == out["value_b"], \
+        "the levels are governed"
+    assert named["pct_change"] == out["pct_change"], \
+        "the change is what 'why did it move' answers with"
     for child in out["identity_decomposition"]:
-        assert child["contribution_share"] in values, \
-            f"{child['child']}'s share is computed by the tree, not by the model"
+        ref = f"{child['child']}.contribution_share"
+        assert named.get(ref) == child["contribution_share"], \
+            f"{child['child']}'s share is computed by the tree, not by the model, and is cited as {ref}"
     # A result carrying values is addressable — the loop hands it a handle by that rule alone,
-    # so this is what makes `source_result` able to name a decomposition.
-    assert values, "no values means no handle means the tree stays invisible to provenance"
+    # so this is what makes `sources` able to name a decomposition.
+    assert pairs, "no values means no handle means the tree stays invisible to provenance"
+    assert len(named) == len(pairs), "a duplicate label would make a citation ambiguous"
 
 
 def test_the_judge_is_shown_what_the_tree_vouches_for():

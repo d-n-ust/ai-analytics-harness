@@ -4893,8 +4893,8 @@ system: sha256=ff5770adc1c2 chars=4652
   }
 ]
 
-=== rung 7 · R11 · fingerprint c29c21b985bc ===
-system: sha256=99feda8f5238 chars=5113
+=== rung 7 · R11 · fingerprint a75d438d834a ===
+system: sha256=aa30df956b8d chars=5356
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5163,6 +5163,13 @@ system: sha256=99feda8f5238 chars=5113
           "description": "Break your answer into the separate assertions it makes \u2014 one per figure or judgement \u2014 each naming the governed value it rests on. An answer that reports five numbers makes five assertions.",
           "items": {
             "properties": {
+              "premises": {
+                "description": "If this assertion is a CONCLUSION drawn from earlier claims rather than a figure read off a result, name those claims instead of sources \u2014 ['c2','c3','c4']. Claims are numbered in the order you list them, and a conclusion may only cite claims before it.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "sources": {
                 "description": "The governed value(s) this assertion rests on, as handle:field \u2014 e.g. r1:days_per_user.pct_change, or r2:paid_search for one row of a breakdown.",
                 "items": {
@@ -5180,8 +5187,7 @@ system: sha256=99feda8f5238 chars=5113
               }
             },
             "required": [
-              "text",
-              "sources"
+              "text"
             ],
             "type": "object"
           },
