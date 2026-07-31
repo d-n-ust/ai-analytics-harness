@@ -303,11 +303,34 @@ def test_a_run_that_never_fixes_its_citations_still_terminates():
     # r1 holds one value here, so make it unresolvable by naming a handle that does not exist
     bad["claims"][0]["sources"] = ["r9:nothing"]
     ans, model = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
-                      rrung=11, max_iters=4)
+                      rrung=12, max_iters=4)
     assert ans.outcome == "answer", "it must still end through the typed protocol"
     assert ans.claim_retries <= 2, f"corrections must be bounded, got {ans.claim_retries}"
     assert ans.iterations <= 5, f"at most max_iters + 1 turns, got {ans.iterations}"
     assert model.n <= 6, "the model must not be called unboundedly"
+
+
+def test_asking_for_claims_and_correcting_them_are_separate_guardrails():
+    """The split that makes the claims rung ablatable. As one flag, `claim_binding` was a
+    treatment (the model is asked for an account) and an enforcement (a bad account is handed
+    back) at once, and no cell could say which of them moved a number.
+
+    R11 asks and audits; R12 also repairs. Same malformed answer, two different runs — one is
+    served with its broken citation recorded, the other is corrected. If these ever coincide the
+    ablation is measuring one thing and reporting two."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r9:nope"], "value": 886}]}
+    # The scripted model repeats its last turn, so R12 corrects until the cap; what is pinned here
+    # is that R11 corrects at all — not how often, which the termination test above bounds.
+    for rrung, repairs, why in ((11, False, "R11 records the broken citation and serves it"),
+                                (12, True, "R12 hands it back")):
+        ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
+                      rrung=rrung, max_iters=4)
+        assert bool(ans.claim_retries) is repairs, f"{why}: got {ans.claim_retries} corrections"
+        # both AUDIT it — measurement is not a treatment, so the finding is recorded either way
+        assert (ans.claim_audit or {}).get("unresolved") == 1, "the audit runs at both rungs"
+        repaired = [a for a in ans.acts if a["guardrail"] == "citation_repair"]
+        assert bool(repaired) is repairs, "and the repair names itself on the trace"
+        assert all(a["position"] == "repair" for a in repaired), repaired
 
 
 def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
@@ -319,7 +342,7 @@ def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
     ans, _ = _run([call("1", "query_metric", QM)],
                   [call("2", "answer", bad)],      # lands on the closing turn of a 3-turn budget
                   [call("3", "answer", good)],
-                  rrung=11, max_iters=3)
+                  rrung=12, max_iters=3)
     assert ans.claim_retries == 1, "the closing-turn answer was handed back"
     assert (ans.claim_audit or {}).get("unresolved") == 0, "and the second attempt resolved"
 
@@ -327,4 +350,7 @@ def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
 if __name__ == "__main__":
     for fn in TESTS:
         fn()
+    test_a_run_that_never_fixes_its_citations_still_terminates()
+    test_asking_for_claims_and_correcting_them_are_separate_guardrails()
+    test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it()
     print(f"OK — agent loop: {len(TESTS)} control-flow properties hold on a scripted model.")

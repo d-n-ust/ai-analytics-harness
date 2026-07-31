@@ -108,6 +108,12 @@ _RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion 
                  "`sources`. Saying days_per_user is the primary driver means comparing the three "
                  "contribution shares, so those three claims are its premises. It does not change "
                  "your answer.")
+# citation_repair — a mechanism line, like every guardrail above and unlike the two declaration
+# lines: it describes what the system will do, so it has no role/rule variant. The framing
+# treatment is about how an ACCOUNT is asked for, not about how a check is announced.
+_RRUNG_CITATION_REPAIR = ("\n- A claim citing something that does not exist is handed back to you "
+                          "with the fault named, the same way a call with a bad argument is, and "
+                          "you get to fix it. Cite one value per source and this never fires.")
 
 # --- the framing experiment -------------------------------------------------------------- #
 # The lines above tell the model, twice and in as many words, that declaring "does not change
@@ -208,6 +214,8 @@ def system_prompt(rung: int, g) -> str:
         system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
     if g.claim_binding:
         system += _ROLE_CLAIMS if role else _RRUNG_CLAIMS
+    if g.citation_repair:
+        system += _RRUNG_CITATION_REPAIR
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
     caps = capabilities(rung)

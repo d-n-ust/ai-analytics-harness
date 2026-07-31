@@ -21,6 +21,7 @@ import os
 # The one eager agent import: rungs is a leaf (dataclasses only, no warehouse, no providers), and
 # the parser needs the rung table to build --rung's help and validation from the definitions
 # themselves rather than a second copy of them.
+from agent.guardrails import LADDER_ORDER
 from agent.rungs import RUNGS, parse_rung
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
@@ -152,7 +153,10 @@ def main() -> None:
     sp.add_argument("--models", default="gpt-5.6-terra,gpt-5.4-mini")
     sp.add_argument("--rungs", default="1,2,3,4,5,6",
                     help=f"grounding rungs, comma-separated; defined: {sorted(RUNGS)}")
-    sp.add_argument("--rrungs", default="1", help="reliability ladder presets R0..R9")
+    # The ceiling is COMPUTED. Typed as a literal it went stale twice — the help still said
+    # R0..R9 three guardrails later, which is the fossilised numbering REFACTOR.md names.
+    sp.add_argument("--rrungs", default="1",
+                    help=f"reliability ladder presets R0..R{len(LADDER_ORDER)}")
     sp.add_argument("--cells", default=None,
                     help="explicit guardrail cells (overrides --rrungs), e.g. R9,R9-resolve. "
                          "Incoherent cells are skipped.")

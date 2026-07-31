@@ -20,9 +20,10 @@ import logging
 import time
 from dataclasses import dataclass, field, replace
 
-from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
-from .guardrails import after
 import evidence as claim_audit
+
+from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
+from .guardrails import Act, Position, after
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 
@@ -152,8 +153,12 @@ class _Run:
         does not support, are judgements about the ANALYSIS — those stay in the audit, where they
         are measured rather than corrected away.
 
+        Gated on `citation_repair`, not on `claim_binding`: asking for an account is a treatment
+        and correcting one is an enforcement, and while they shared a flag no cell could say which
+        of them moved a number.
+
         Returns a ToolResult to feed back, or None when there is nothing to correct."""
-        if exit_call.name != "answer" or not self.grounding.toolbox.g.claim_binding:
+        if exit_call.name != "answer" or not self.grounding.toolbox.g.citation_repair:
             return None
         declared = tuple(c for c in (exit_call.args.get("claims") or []) if isinstance(c, dict))
         if not declared:
@@ -168,9 +173,15 @@ class _Run:
         lines = ["Your answer was not accepted: some claims cite evidence that does not exist."]
         for f in broken:
             for ref in f["unresolved"]:
-                lines.append(f"  claim {f['i'] + 1} cites {ref!r} — {self._why_unresolved(ref)}")
+                lines.append(f"  claim {f['id']} cites {ref!r} — {self._why_unresolved(ref)}")
         lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
                      "Every governed result printed its citable fields on a [cite] line.")
+        # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
+        # its own verb. Recorded on the run rather than on a step: the thing being handed back is
+        # the ANSWER, which no step owns.
+        self.acts.append(Act("citation_repair", str(Position.REPAIR), "handed back",
+                             f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
+                             f"nothing; correction {self.claim_retries} of 2").as_dict())
         return ToolResult("\n".join(lines), is_error=True)
 
     def _why_unresolved(self, ref: str) -> str:
@@ -233,7 +244,11 @@ class _Run:
         self.answer_text = text
         after_acts: list = []
         verdict = after.check(args, declared, self, record=after_acts)
-        self.acts = [a.as_dict() for a in after_acts]
+        # Appended, not assigned: a repair happened on an EARLIER turn than the answer that
+        # finally passed, and overwriting here would erase the record of every run that had to be
+        # corrected — leaving a corrected run indistinguishable from one that got it right first
+        # time, which is exactly the distinction claim_retries exists to keep.
+        self.acts += [a.as_dict() for a in after_acts]
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         # The audit is a lookup over the trace, so it costs nothing and cannot fail the run.

@@ -27,7 +27,10 @@ from .sqlfmt import format_sql
 # Terminal styling, degraded to nothing when the output is not a terminal.
 _C = {"dim": "\033[2m", "bold": "\033[1m", "off": "\033[0m",
       "ok": "\033[32m", "warn": "\033[33m", "bad": "\033[31m", "cyan": "\033[36m"}
-_ENFORCED = {Position.ACTION_SPACE, Position.BEFORE, Position.AFTER}
+# REPAIR belongs here: the model has no say in being handed its answer back, so it is enforced in
+# the sense this split means — it holds regardless of whether the model cooperates. The line below
+# calls the other column "works only if the model cooperates", which a repair plainly does not.
+_ENFORCED = {Position.ACTION_SPACE, Position.BEFORE, Position.AFTER, Position.REPAIR}
 
 
 def _paint(colour: bool):
@@ -107,7 +110,9 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
 
 
 _MARK = {"refused": ("✗", "bad"), "withdrew": ("−", "cyan"), "narrowed": ("▸", "cyan"),
-         "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim")}
+         "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim"),
+         # neither served nor refused — the answer went back for another go
+         "handed back": ("↺", "warn")}
 
 
 def _act_lines(acts, paint, indent: str) -> list[str]:

@@ -120,12 +120,18 @@ class Position(StrEnum):
                   it. Works only if the model cooperates.
     AFTER         the number already exists; the question is whether it is served. Can only
                   refuse, never rescue.
+    REPAIR        the answer is neither served nor refused: the fault is named and handed back,
+                  and the run continues. The only position that can RESCUE — which is why it
+                  cannot be folded into AFTER, whose whole character is that it cannot. It fails
+                  by consuming the budget rather than by letting something through, so it is
+                  bounded (a correction cap, and one grace turn) rather than trusted.
     """
 
     ACTION_SPACE = "action_space"
     BEFORE = "before"
     DISCLOSURE = "disclosure"
     AFTER = "after"
+    REPAIR = "repair"
 
 
 @dataclass(frozen=True)
@@ -210,7 +216,16 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "adds `claims` to the answer schema — each assertion with the governed value it "
               "rests on (`r1:days_per_user.pct_change`). Every binding is resolved and audited; "
               "nothing is refused on it yet",
-              ("guardrails/action_space.py", "loop.py", "prompts.py")),
+              ("guardrails/action_space.py", "prompts.py")),
+    # Splitting this out from claim_binding is what makes the claims rung ablatable. As one flag
+    # they were a treatment and an enforcement together — asking for claims changes what the model
+    # writes, handing bad ones back changes what the run does — and no cell could tell the two
+    # apart. 41 of 743 audited rows took a correction, so the difference is not hypothetical.
+    Guardrail("citation_repair", Position.REPAIR,
+              "a claim citing a value that does not exist is handed back as a malformed call, "
+              "the same treatment decompose_change gives an unknown node; at most two per run, "
+              "and one grace turn so a correction on the closing turn still has somewhere to go",
+              ("loop.py", "prompts.py")),
 )
 
 LADDER_ORDER = [g.name for g in GUARDRAILS]
@@ -233,6 +248,7 @@ class GuardrailSet:
     trajectory_verify: bool = False
     declared_purpose: bool = False
     claim_binding: bool = False
+    citation_repair: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -314,6 +330,13 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.trajectory_verify and not g.governed_numbers:
         return ("trajectory_verify without governed_numbers: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
+    if g.citation_repair and not g.claim_binding:
+        return ("citation_repair without claim_binding: `claims` is only offered on the answer "
+                "tool under claim_binding (guardrails/action_space.py), so no answer can cite "
+                "anything, there is never an unresolved citation to hand back, and the guardrail "
+                "fires zero times — a contribution of zero by construction rather than by "
+                "evidence. The reverse cell (claim_binding without citation_repair) is the "
+                "interesting one: it measures asking for an account without correcting it")
     if rung is not None and not capabilities(rung).semantic:
         beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
         if beyond:

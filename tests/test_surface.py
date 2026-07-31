@@ -23,7 +23,7 @@ from pathlib import Path
 
 from agent.conversation import Turn
 from agent.grounding import build_grounding
-from agent.guardrails import LADDER
+from agent.guardrails import LADDER, LADDER_ORDER
 from agent.guardrails.judge import (
     _EVIDENCE,
     _REPORT,
@@ -48,8 +48,9 @@ GRID = ([(1, rrung) for rrung in (0, 1)]
         # The rungs above 9 were unpinned, so every change to them was invisible here: making
         # `claims` required altered the answer schema and this test still passed. A cell that is
         # not in the grid is not pinned, and the guardrails most likely to be edited are the
-        # newest ones.
-        + [(7, rrung) for rrung in (10, 11)])
+        # newest ones — so the top of the ladder is pinned to the LAST rung, computed, rather
+        # than to a number someone remembered to raise.
+        + [(7, rrung) for rrung in range(10, len(LADDER_ORDER) + 1)])
 
 
 def _render(con) -> str:
