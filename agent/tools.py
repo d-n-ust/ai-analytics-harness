@@ -31,6 +31,7 @@ from warehouse.warehouse import QueryError, describe_table, run_query, schema_te
 from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
 from .outcomes import REASON_MEANINGS, REFUSAL_REASONS
+from .protocol import Protocol
 
 _ANSWER = {
     "name": "answer",
@@ -423,13 +424,17 @@ class Toolbox:
     which is why they can be proven exhaustively without an LLM (see tests/)."""
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
-                 tree: MetricTree | None = None, guardrails: GuardrailSet | None = None):
+                 tree: MetricTree | None = None, guardrails: GuardrailSet | None = None,
+                 protocol: Protocol | None = None):
         self.con = con
         self.rung = rung
         # GuardrailSet is the one primitive: which reliability guardrails are on. A ladder preset
         # (LADDER[n]) and an ablation cell are both just a GuardrailSet set; every guardrail below reads
         # from it, so a cell is expressible and self-describing. Default R1 (abstention).
         self.g = guardrails if guardrails is not None else LADDER[1]
+        # What the answer must DECLARE — a peer of the guardrail set, not a part of it. It gates
+        # fields on the answer tool the way the set gates whole tools.
+        self.p = protocol if protocol is not None else Protocol()
         self.semantic = semantic
         self.tree = tree
 
@@ -437,7 +442,7 @@ class Toolbox:
         """The action space for this configuration — assembled by the ACTION_SPACE guardrails,
         which is where the ladder is legible."""
         return action_space.offer(TOOLS, self.rung, self.g, self.semantic, self.tree,
-                                  terminal_only=terminal_only, record=record)
+                                  protocol=self.p, terminal_only=terminal_only, record=record)
 
     def dispatch(self, name: str, args: dict) -> ToolResult:
         """Run one tool. Errors come back as the DB/semantic message rather than as exceptions,

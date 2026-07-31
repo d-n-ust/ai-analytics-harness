@@ -70,4 +70,4 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     semantic = SemanticLayer(con) if caps.semantic else None
     tree = MetricTree(semantic) if caps.tree else None
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
-                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g))
+                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p))

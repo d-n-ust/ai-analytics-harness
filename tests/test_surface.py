@@ -24,6 +24,7 @@ from pathlib import Path
 from agent.conversation import Turn
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER, LADDER_ORDER
+from agent.protocol import Protocol
 from agent.guardrails.judge import (
     _EVIDENCE,
     _REPORT,
@@ -43,14 +44,20 @@ GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"
 # prompt block and every gated tool at least once. Below rung 3 only abstention is coherent —
 # every other guardrail acts on a semantic layer that isn't there — so the grid stops where
 # build_grounding now refuses rather than pinning a surface that cannot mean what it says.
-GRID = ([(1, rrung) for rrung in (0, 1)]
-        + [(rung, rrung) for rung in (3, 6, 7) for rrung in (0, 2, 4, 6, 9)]
-        # The rungs above 9 were unpinned, so every change to them was invisible here: making
-        # `claims` required altered the answer schema and this test still passed. A cell that is
-        # not in the grid is not pinned, and the guardrails most likely to be edited are the
-        # newest ones — so the top of the ladder is pinned to the LAST rung, computed, rather
-        # than to a number someone remembered to raise.
-        + [(7, rrung) for rrung in range(10, len(LADDER_ORDER) + 1)])
+# Three axes now, so the grid carries a protocol too. It is a separate axis rather than more
+# rungs, so it must be swept separately: an unpinned cell is an unpinned treatment, and that is
+# how making `claims` required once altered the answer schema with this test still passing.
+#
+# Sweeping the full cross product would pin 100+ cells and make every diff unreadable. These
+# touch every prompt block and every gated field at least once: the ladder at fixed protocol,
+# then the protocol at fixed ladder, plus the low-guardrail cell the restructure exists for.
+GRID = ([(1, rrung, "none") for rrung in (0, 1)]
+        + [(rung, rrung, "none") for rung in (3, 6, 7) for rrung in (0, 2, 4, 6, 9)]
+        + [(7, len(LADDER_ORDER), p) for p in
+           ("purpose", "claims", "claims+repair", "purpose+claims+repair",
+            "purpose+claims+repair+role")]
+        # declarations BELOW the checks — the cell that was inexpressible while these were rungs
+        + [(5, 5, "claims"), (5, 5, "claims+role")])
 
 
 def _render(con) -> str:
@@ -58,10 +65,11 @@ def _render(con) -> str:
     rung 5+ it embeds the whole knowledge base, and duplicating those files here would just
     rot. A prompt edit still fails the test; the readable diff lives in git."""
     out = []
-    for rung, rrung in GRID:
-        g = build_grounding(con, rung, guardrails=LADDER[rrung])
+    for rung, rrung, proto in GRID:
+        g = build_grounding(con, rung, guardrails=LADDER[rrung], protocol=Protocol.parse(proto))
         sys_hash = hashlib.sha256(g.system.encode()).hexdigest()[:12]
-        out.append(f"=== rung {rung} · R{rrung} · fingerprint {g.fingerprint()} ===")
+        label = g.guardrails.label() + g.protocol.label()
+        out.append(f"=== rung {rung} · {label} · fingerprint {g.fingerprint()} ===")
         out.append(f"system: sha256={sys_hash} chars={len(g.system)}")
         out.append(json.dumps(g.toolbox.specs(), indent=2, sort_keys=True))
         out.append("")

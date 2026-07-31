@@ -18,7 +18,7 @@ from pathlib import Path
 
 from agent.grounding import build_grounding
 from agent.loop import Answer, run_agent
-from agent.protocol import RULE, Protocol
+from agent.protocol import Protocol
 from agent.providers import get_model
 from agent.rungs import capabilities
 from warehouse.warehouse import open_warehouse, set_star
@@ -46,7 +46,7 @@ def _new_run_dir(models, mock: bool) -> Path:
 
 def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"), rungs=(1, 2, 3, 4, 5, 6),
                    only=None, sample: int | None = None, repeats: int = 1,
-                   rrungs=(1,), cells=None, framings=(RULE,), reasoning: str | None = None,
+                   rrungs=(1,), cells=None, protocols=("none",), reasoning: str | None = None,
                    concurrency: int = 1) -> None:
     from agent.guardrails import LADDER, incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
@@ -73,7 +73,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     # its tables on — so an arm that varies the framing within one run is separated by the report
     # instead of silently pooled, which is what happens to any treatment with no label of its own.
     cell_specs = list(cells) if cells else [f"R{rr}" for rr in rrungs]
-    protocols = [Protocol(framing=f) for f in framings]
+    protos = [Protocol.parse(s) for s in protocols]
     configs = []
     for spec in cell_specs:
         g = parse_cell(spec)
@@ -83,7 +83,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             continue
         base = spec.split("-")[0]                      # nominal rrung, for the row; label() is the truth
         nominal = int(base[1:]) if base.startswith("R") and base[1:].isdigit() else 9
-        configs += [(g.label() + p.label(), nominal, g, p) for p in protocols]
+        configs += [(g.label() + p.label(), nominal, g, p) for p in protos]
 
     rows: list[dict] = []
     run_dir = _new_run_dir(models, mock)
@@ -185,6 +185,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
             "verifier_stance": verifier_stance,
             "claim_framing": proto.framing,
+            # WHICH declarations were asked for. `claim_framing` says how they were asked for and
+            # says nothing about whether they were asked at all — so without this a run that
+            # declared nothing and a run that declared everything both stamp "rule".
+            "protocol": proto.label().lstrip("/") or "none",
         }
         mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if g["correct"] else "✗")
         with write_lock:

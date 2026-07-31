@@ -16,6 +16,7 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
+from ..protocol import Protocol
 from ..rungs import capabilities
 from . import GOVERNED_TOOLS, Position, note
 
@@ -46,13 +47,15 @@ def with_purpose(base: dict) -> dict:
 
 
 def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
-          *, terminal_only: bool = False, record=None) -> list[dict]:
+          *, protocol: Protocol | None = None, terminal_only: bool = False,
+          record=None) -> list[dict]:
     """The tool schemas this configuration offers the model.
 
-    Two axes decide it, and they are not the same thing: `rung` is grounding — what the agent
-    KNOWS, which is the experiment's other variable — and `guardrails` is what it may DO about
-    not knowing. A tool can be absent because the rung has no semantic layer to serve it, or
-    because a guardrail withdrew it.
+    Three axes decide it, and they are not the same thing: `rung` is grounding — what the agent
+    KNOWS — `guardrails` is what it may DO about not knowing, and `protocol` is what it must
+    DECLARE about what it did. A tool can be absent because the rung has no semantic layer to
+    serve it, or because a guardrail withdrew it; a FIELD can be absent because the protocol did
+    not ask for it.
 
     `terminal_only` withdraws every data tool, leaving just the exits. It closes a run that has
     stopped calling tools or is about to hit the iteration cap, so it ends through the typed
@@ -60,6 +63,7 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
     behaviour. Removing the choice is structural; asking the model nicely is not.
     """
     schema = lambda name: tools[name].schema        # noqa: E731 — a lookup, not a function
+    protocol = protocol or Protocol()
     offered: list[dict] = []
     if terminal_only:
         note(record, "(closing)", Position.ACTION_SPACE, "withdrew",
@@ -82,7 +86,7 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
             offered += [schema(name) for name in _CHECK_TOOLS]
             note(record, "check_tools", Position.ACTION_SPACE, "applied",
                  f"offered {len(_CHECK_TOOLS)} answerability lookups")
-    offered.append(answer_schema(schema("answer"), guardrails, semantic, record))
+    offered.append(answer_schema(schema("answer"), guardrails, semantic, protocol, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))
         note(record, "abstain", Position.ACTION_SPACE, "applied", "offered the refuse tool")
@@ -90,9 +94,9 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
     # Applied once over the assembled list rather than at each governed tool: the set of calls
     # that carry a purpose is one fact about the configuration, and stating it once means adding
     # a third governed tool later cannot leave `because` off it by omission.
-    if guardrails.declared_purpose:
+    if protocol.purpose:
         offered = [with_purpose(s) if s["name"] in GOVERNED_TOOLS else s for s in offered]
-        note(record, "declared_purpose", Position.ACTION_SPACE, "applied",
+        note(record, "purpose", Position.ACTION_SPACE, "applied",
              f"governed calls gained `because` ({', '.join(GOVERNED_TOOLS)})")
     return offered
 
@@ -142,7 +146,7 @@ def decompose_schema(base: dict, guardrails, tree, record=None) -> dict:
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
 
 
-def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
+def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:
     """Add typed provenance to the answer tool when the served number must be checked.
 
     `value` is the number as a number, so the AFTER guardrails read what was served instead of
@@ -162,9 +166,17 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
     hand-composed DAU/WAU ratio matched one of them by coincidence. Naming the operands turns
     the search back into a lookup.
     """
-    if not (guardrails.governed_numbers and semantic is not None):
+    protocol = protocol or Protocol()
+    if semantic is None or not (guardrails.governed_numbers or protocol.claims):
         return base
     props = dict(base["input_schema"]["properties"])
+    if not guardrails.governed_numbers:
+        # Claims without governed_numbers: the declaration is offered, the numeric checks are not.
+        # This is the cell the whole restructure exists for — declaring at a LOW guardrail level,
+        # where the agent is wrong often enough for a difference to show. Citations resolve
+        # against handles, which any governed RESULT carries from rung 3 up, so nothing here
+        # needs the R7 checks.
+        return _with_claims(base, props, protocol, record)
     props["value"] = {
         "type": "number",
         "description": "If your answer is a single number, repeat it here as a number "
@@ -184,10 +196,20 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
                        "against r4 is ['r3','r4']. This says WHICH queries your number came "
                        "from, so it is never guessed by matching numbers."}
 
-    # One rung further: the served number is one assertion among several, and the rest have
-    # never been checked at all. `claims` asks for each of them, addressed to a VALUE rather
-    # than to a result — `r1:days_per_user.pct_change`, not "somewhere in r1".
-    if guardrails.claim_binding:
+    return _with_claims(base, props, protocol, record)
+
+
+def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
+    """The `claims` block, when the protocol asks for it.
+
+    Separated from the provenance fields because they answer different questions and are switched
+    on by different axes: `value`/`source_metric`/`sources` exist so the R7 checks can read what
+    was served, and `claims` exists so every OTHER assertion in the answer is accountable. They
+    shared a gate only because they arrived together."""
+    # The served number is one assertion among several, and the rest have never been checked at
+    # all. `claims` asks for each of them, addressed to a VALUE rather than to a result —
+    # `r1:days_per_user.pct_change`, not "somewhere in r1".
+    if protocol.claims:
         props["claims"] = {
             "type": "array",
             "items": {
@@ -223,7 +245,7 @@ def answer_schema(base: dict, guardrails, semantic, record=None) -> dict:
         base = {**base, "input_schema": {**base["input_schema"],
                                          "required": [*base["input_schema"].get("required", []),
                                                       "claims"]}}
-        note(record, "claim_binding", Position.ACTION_SPACE, "applied",
+        note(record, "claims", Position.ACTION_SPACE, "applied",
              "answer gained a REQUIRED `claims` — each assertion names the value it rests on")
 
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}

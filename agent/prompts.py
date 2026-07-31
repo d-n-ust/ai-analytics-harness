@@ -87,7 +87,7 @@ _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you use
                    "much', a rate for 'what rate / average / per user'), and the right scope (no filter "
                    "the question did not ask for). If the metric answers a different question, your answer "
                    "is rejected — so choose the metric that matches what was asked, or refuse.")
-# declared_purpose (R10) — the only line here that asks for something rather than describing what
+# protocol.purpose — the only line here that asks for something rather than describing what
 # the system will do. It requests a record, not a behaviour: the guardrail cannot enforce it, and
 # how often the model complies is exactly what the rung is there to measure.
 _RRUNG_PURPOSE = ("\n- Each governed call takes an optional `because`: one line, in plain words, on "
@@ -95,7 +95,7 @@ _RRUNG_PURPOSE = ("\n- Each governed call takes an optional `because`: one line,
                   "across regions or concentrated in one\"). Write the sub-question you are "
                   "answering, not a label for the call. It does not change the result — it records "
                   "how you got to the answer, so a reader can follow your reasoning.")
-# claim_binding (R11) — asks for a record, like declared_purpose, and for the same reason: the
+# protocol.claims — asks for a record, like `purpose`, and for the same reason: the
 # guardrail cannot enforce a decomposition the model declines to give, and how well the model
 # breaks its own answer apart is what this rung exists to measure.
 _RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion your answer makes, "
@@ -108,7 +108,7 @@ _RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion 
                  "`sources`. Saying days_per_user is the primary driver means comparing the three "
                  "contribution shares, so those three claims are its premises. It does not change "
                  "your answer.")
-# citation_repair — a mechanism line, like every guardrail above and unlike the two declaration
+# protocol.repair — a mechanism line, like every guardrail above and unlike the two declaration
 # lines: it describes what the system will do, so it has no role/rule variant. The framing
 # treatment is about how an ACCOUNT is asked for, not about how a check is announced.
 _RRUNG_CITATION_REPAIR = ("\n- A claim citing something that does not exist is handed back to you "
@@ -206,11 +206,11 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
     role = protocol.framing == ROLE
-    if g.declared_purpose:
+    if protocol.purpose:
         system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
-    if g.claim_binding:
+    if protocol.claims:
         system += _ROLE_CLAIMS if role else _RRUNG_CLAIMS
-    if g.citation_repair:
+    if protocol.repair:
         system += _RRUNG_CITATION_REPAIR
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.

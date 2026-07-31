@@ -20,6 +20,7 @@ from agent.conversation import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.loop import run_agent
+from agent.protocol import Protocol
 from warehouse.warehouse import open_warehouse
 
 QM = {"metric": "active_users", "period": "last_week"}
@@ -51,10 +52,11 @@ class Scripted:
         return Turn.of(said, calls, Usage(*self.tokens))
 
 
-def _run(*turns, rrung=8, max_iters=4, **kw):
+def _run(*turns, rrung=8, protocol="none", max_iters=4, **kw):
     con = open_warehouse(create_star_views=True)
     model = Scripted(*turns, **kw)
-    grounding = build_grounding(con, 6, guardrails=LADDER[rrung])
+    grounding = build_grounding(con, 6, guardrails=LADDER[rrung],
+                                protocol=Protocol.parse(protocol))
     return run_agent("how many active users last week?", grounding, model,
                      max_iters=max_iters), model
 
@@ -303,7 +305,7 @@ def test_a_run_that_never_fixes_its_citations_still_terminates():
     # r1 holds one value here, so make it unresolvable by naming a handle that does not exist
     bad["claims"][0]["sources"] = ["r9:nothing"]
     ans, model = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
-                      rrung=12, max_iters=4)
+                      rrung=9, protocol="claims+repair", max_iters=4)
     assert ans.outcome == "answer", "it must still end through the typed protocol"
     assert ans.claim_retries <= 2, f"corrections must be bounded, got {ans.claim_retries}"
     assert ans.iterations <= 5, f"at most max_iters + 1 turns, got {ans.iterations}"
@@ -311,24 +313,24 @@ def test_a_run_that_never_fixes_its_citations_still_terminates():
 
 
 def test_asking_for_claims_and_correcting_them_are_separate_guardrails():
-    """The split that makes the claims rung ablatable. As one flag, `claim_binding` was a
-    treatment (the model is asked for an account) and an enforcement (a bad account is handed
-    back) at once, and no cell could say which of them moved a number.
+    """The split that makes the claims arm ablatable. As one flag it was a treatment (the model
+    is asked for an account) and an enforcement (a bad account is handed back) at once, and no
+    cell could say which of them moved a number.
 
-    R11 asks and audits; R12 also repairs. Same malformed answer, two different runs — one is
-    served with its broken citation recorded, the other is corrected. If these ever coincide the
-    ablation is measuring one thing and reporting two."""
+    `claims` asks and audits; `claims+repair` also corrects. Same malformed answer, two runs —
+    one is served with its broken citation recorded, the other is handed back. If these ever
+    coincide the ablation is measuring one thing and reporting two."""
     bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r9:nope"], "value": 886}]}
-    # The scripted model repeats its last turn, so R12 corrects until the cap; what is pinned here
-    # is that R11 corrects at all — not how often, which the termination test above bounds.
-    for rrung, repairs, why in ((11, False, "R11 records the broken citation and serves it"),
-                                (12, True, "R12 hands it back")):
+    # The scripted model repeats its last turn, so the repair arm corrects until the cap; what is
+    # pinned here is that it corrects at all — not how often, which the termination test bounds.
+    for proto, repairs, why in (("claims", False, "claims alone records it and serves the answer"),
+                                ("claims+repair", True, "the repair arm hands it back")):
         ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
-                      rrung=rrung, max_iters=4)
+                      rrung=9, protocol=proto, max_iters=4)
         assert bool(ans.claim_retries) is repairs, f"{why}: got {ans.claim_retries} corrections"
         # both AUDIT it — measurement is not a treatment, so the finding is recorded either way
-        assert (ans.claim_audit or {}).get("unresolved") == 1, "the audit runs at both rungs"
-        repaired = [a for a in ans.acts if a["guardrail"] == "citation_repair"]
+        assert (ans.claim_audit or {}).get("unresolved") == 1, "the audit runs in both arms"
+        repaired = [a for a in ans.acts if a["guardrail"] == "repair"]
         assert bool(repaired) is repairs, "and the repair names itself on the trace"
         assert all(a["position"] == "repair" for a in repaired), repaired
 
@@ -342,7 +344,7 @@ def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
     ans, _ = _run([call("1", "query_metric", QM)],
                   [call("2", "answer", bad)],      # lands on the closing turn of a 3-turn budget
                   [call("3", "answer", good)],
-                  rrung=12, max_iters=3)
+                  rrung=9, protocol="claims+repair", max_iters=3)
     assert ans.claim_retries == 1, "the closing-turn answer was handed back"
     assert (ans.claim_audit or {}).get("unresolved") == 0, "and the second attempt resolved"
 

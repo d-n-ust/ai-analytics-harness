@@ -150,16 +150,16 @@ def test_the_check_tools_can_express_every_scope_the_guardrail_enforces():
 
 
 def test_the_guardrail_registry_matches_the_set_and_names_real_files():
-    """Nine guardrail flags sat in one file while their implementations lived in two to four
-    others, with nothing connecting them — so "what does this guardrail actually do" could only
-    be answered by grepping. The registry answers it, and this keeps the answer true: every flag
-    is described, in ladder order, and every file it claims to be implemented in exists and
-    mentions it."""
+    """Guardrail flags sat in one file while their implementations lived in two to four others,
+    with nothing connecting them — so "what does this guardrail actually do" could only be
+    answered by grepping. The registry answers it, and this keeps the answer true: every flag is
+    described, in ladder order, and every file it claims to be implemented in exists and mentions
+    it."""
     from agent.guardrails import GUARDRAILS, LADDER_ORDER, GuardrailSet, Position
 
     declared = [f.name for f in dataclasses.fields(GuardrailSet)]
     assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
-        "the registry, the flag set and the ladder order must be the same nine, in one order"
+        "the registry, the flag set and the ladder order must be the same set, in one order"
 
     root = Path(__file__).resolve().parent.parent / "agent"
     for g in GUARDRAILS:
@@ -169,9 +169,15 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
             assert path.exists(), f"{g.name}: claims {rel}, which does not exist"
             assert g.name in path.read_text(), f"{g.name}: {rel} never mentions it"
 
-    # Position is the distinction that carries information, so each one must be used.
+    # Position is the distinction that carries information, so each one must be used — but not
+    # necessarily by a GUARDRAIL. REPAIR is used by the protocol layer's citation repair, which
+    # is a mechanism at a position without being a rung on the ladder. Asserting against the
+    # whole package keeps the "no dead position" guarantee while letting a position outlive the
+    # axis it was first needed for.
     used = {g.position for g in GUARDRAILS}
-    assert used == set(Position), f"unused position(s): {set(Position) - used}"
+    source = "\n".join(p.read_text() for p in root.rglob("*.py"))
+    for pos in Position:
+        assert pos in used or f'Position.{pos.name}' in source, f"unused position: {pos}"
 
 
 def test_a_tree_node_reports_the_metric_it_names():
@@ -866,36 +872,60 @@ def test_the_protocol_is_a_peer_primitive_and_labels_itself():
 
     Three properties, and the third is the load-bearing one."""
     from agent.grounding import build_grounding
-    from agent.guardrails import LADDER
+    from agent.guardrails import LADDER, LADDER_ORDER
     from agent.protocol import FRAMINGS, ROLE, RULE, Protocol, split_config
     con = open_warehouse(create_star_views=True)
+    ALL = Protocol(purpose=True, claims=True, repair=True)
 
-    # 1. the framings are genuinely different treatments — same guardrails, different surface
-    rule = build_grounding(con, 7, guardrails=LADDER[12], protocol=Protocol(RULE))
-    role = build_grounding(con, 7, guardrails=LADDER[12], protocol=Protocol(ROLE))
+    # 1. the ladder is guardrails ONLY. The declarations used to be rungs 10-12 of it, which said
+    #    that declaring sits "above" the verifier — it does not, it is orthogonal to it.
+    assert len(LADDER_ORDER) == 9 and set(LADDER_ORDER).isdisjoint({"purpose", "claims", "repair"})
+
+    # 2. the framings are genuinely different treatments — same guardrails, different surface
+    rule = build_grounding(con, 7, guardrails=LADDER[9], protocol=ALL)
+    role = build_grounding(con, 7, guardrails=LADDER[9],
+                           protocol=Protocol(purpose=True, claims=True, repair=True, framing=ROLE))
     assert rule.system != role.system, "the framings must differ, or the arm measures nothing"
     assert rule.fingerprint() != role.fingerprint(), "and the difference must be recorded"
     assert rule.toolbox.specs() == role.toolbox.specs(), \
         "only the WORDING differs — a framing that changed the action space would be a guardrail"
 
-    # 2. the default is silent, so no stored row's config changes meaning
+    # 3. the default is silent, so no stored row's config changes meaning
     assert Protocol().framing == RULE and Protocol().label() == ""
-    assert rule.guardrails.label() + rule.protocol.label() == "R12"
-    assert role.guardrails.label() + role.protocol.label() == "R12/role"
+    assert rule.guardrails.label() + rule.protocol.label() == "R9/purpose+claims+repair"
 
-    # 3. every label round-trips, so a reader recovers BOTH primitives from a stored row. Without
-    #    this the trace would fail to parse `R12/role` and quietly render "unknown guardrails".
-    for cell in ("R0", "R9", "R12", "R9-resolve", "R12-citation_repair"):
-        for framing in FRAMINGS:
-            label = cell + Protocol(framing).label()
-            assert split_config(label) == (cell, Protocol(framing)), label
+    # 4. THE POINT OF THE MOVE: declarations cross with any rung and any guardrail level. The
+    #    rung-7/R9 baseline gets 4 answers wrong out of 70, so whether declaring changes accuracy
+    #    can only be asked further down — which was inexpressible while these were ladder rungs.
+    low = build_grounding(con, 5, guardrails=LADDER[5], protocol=Protocol(claims=True))
+    answer = next(s for s in low.toolbox.specs() if s["name"] == "answer")
+    assert "claims" in answer["input_schema"]["properties"], \
+        "claims must not need governed_numbers — citations resolve against handles, not checks"
+    assert "value" not in answer["input_schema"]["properties"], "…and R7's fields stay R7's"
+    assert low.guardrails.label() + low.protocol.label() == "R5/claims"
 
-    for junk in ("casual", "", "ROLE", None):
+    # 5. every label round-trips, so a reader recovers BOTH primitives from a stored row. Without
+    #    this the trace would fail to parse and quietly render "unknown guardrails".
+    for cell in ("R0", "R9", "R9-resolve"):
+        for proto in (Protocol(), Protocol(claims=True), ALL,
+                      Protocol(purpose=True, claims=True, repair=True, framing=ROLE)):
+            assert split_config(cell + proto.label()) == (cell, proto), cell + proto.label()
+
+    # 6. the retired rungs still read, because stored rows carry them. R11 is the only one that
+    #    ever reached a results file, and it drove the repair loop as well as the claims field.
+    assert split_config("R11") == ("R9", ALL)
+
+    for junk in ("casual", "ROLE", None):
         try:
-            Protocol(junk)
+            Protocol(framing=junk)
             raise AssertionError(f"framing={junk!r} was accepted")
         except ValueError:
             pass
+    try:
+        Protocol(repair=True)      # nothing to repair -> zero by construction, not by evidence
+        raise AssertionError("repair without claims was accepted")
+    except ValueError:
+        pass
 
 
 def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():

@@ -153,12 +153,12 @@ class _Run:
         does not support, are judgements about the ANALYSIS — those stay in the audit, where they
         are measured rather than corrected away.
 
-        Gated on `citation_repair`, not on `claim_binding`: asking for an account is a treatment
-        and correcting one is an enforcement, and while they shared a flag no cell could say which
-        of them moved a number.
+        Gated on `protocol.repair`, not on `protocol.claims`: asking for an account is a
+        treatment and correcting one is an enforcement, and while they shared a flag no cell could
+        say which of them moved a number.
 
         Returns a ToolResult to feed back, or None when there is nothing to correct."""
-        if exit_call.name != "answer" or not self.grounding.toolbox.g.citation_repair:
+        if exit_call.name != "answer" or not self.grounding.protocol.repair:
             return None
         declared = tuple(c for c in (exit_call.args.get("claims") or []) if isinstance(c, dict))
         if not declared:
@@ -179,7 +179,7 @@ class _Run:
         # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
         # its own verb. Recorded on the run rather than on a step: the thing being handed back is
         # the ANSWER, which no step owns.
-        self.acts.append(Act("citation_repair", str(Position.REPAIR), "handed back",
+        self.acts.append(Act("repair", str(Position.REPAIR), "handed back",
                              f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
                              f"nothing; correction {self.claim_retries} of 2").as_dict())
         return ToolResult("\n".join(lines), is_error=True)
@@ -256,7 +256,7 @@ class _Run:
         audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
                                      node_metrics=self._node_metrics(),
                                      influence_children=self._influence_children())
-                   if self.grounding.toolbox.g.claim_binding else None)
+                   if self.grounding.protocol.claims else None)
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
                       claims=declared_claims, claim_audit=audited,
                       sources=declared_handles(args),

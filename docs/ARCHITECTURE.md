@@ -1,8 +1,7 @@
 # The three axes — grounding, guardrails, protocol
 
-Status: **steps 1–3 landed 2026-07-31; steps 4–5 outstanding.** Written after the claim-binding
-increment (R11) shipped and made the seam visible. Companion to `REFACTOR.md`, which this
-extends rather than replaces.
+Status: **steps 1–3 landed 2026-07-31, and the declarations are now off the ladder entirely;
+steps 4–5 outstanding.** Companion to `REFACTOR.md`, which this extends rather than replaces.
 
 `REFACTOR.md` diagnosed the repo as running **two experiments packaged as one** — the grounding
 ladder and the reliability ladder — and said to name them as first-class peers. That diagnosis
@@ -18,7 +17,7 @@ This document names it, says why it is not a guardrail, and says where it goes.
 | axis | the question it varies | primitive | lives in |
 |---|---|---|---|
 | **grounding** | what the agent **knows** | `rung` 1–7 | `agent/rungs.py`, `agent/grounding.py` |
-| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R12 | `agent/guardrails/` |
+| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R9 | `agent/guardrails/` |
 | **protocol** | what the agent must **declare** | `Protocol` | `agent/protocol.py`, `evidence/` |
 
 Each is independent in the sense that matters for an experiment: hold two fixed, move the third,
@@ -158,28 +157,34 @@ evals/             →  evidence/  (for reporting)
 
 ### The third primitive
 
-As shipped — one field, which is the honest reflection of the staging below rather than an
-unfinished sketch:
+As shipped:
 
 ```python
 @dataclass(frozen=True)
 class Protocol:
     """What an answer must declare about itself. A peer of GuardrailSet, not a part of it."""
+    purpose: bool = False   # `because` on every governed call
+    claims: bool = False    # one declaration per assertion, each naming the value it rests on
+    repair: bool = False    # a citation that names nothing is handed back, bounded
     framing: str = RULE     # how the account is asked for: a rule to follow, or part of the job
 ```
 
-It grows to hold the declarations themselves at the Workstream A rename. Framing could not wait,
-for the reason in *What step 3 revealed*: it is the one that had nowhere to live at all.
+`repair` is the one member that ACTS. It lives here because what it enforces is the declaration
+contract and not the data contract — it cannot stop a wrong number, only an unaccountable one.
+`repair` without `claims` raises at construction: with no `claims` field offered there is never a
+citation to hand back, so it could only ever fire zero times.
 
 Where each piece of `claim_binding` went:
 
 | was | is | axis |
 |---|---|---|
-| the `claims` schema field + prompt | `GuardrailSet.claim_binding` (R11), until the rename | protocol, misfiled |
-| `premises` (derived claims) | part of the same schema field | protocol, misfiled |
+| the `claims` schema field + prompt (R11) | ✅ `Protocol.claims` | protocol |
+| `premises` (derived claims) | part of the same field | protocol |
 | `CLAIM_FRAMING` env var | ✅ `Protocol.framing` | protocol |
-| reject-and-retry on unresolved citations | ✅ `Guardrail("citation_repair", Position.REPAIR)` (R12) | guardrails |
+| `because` on governed calls (R10) | ✅ `Protocol.purpose` | protocol |
+| reject-and-retry on unresolved citations (R12) | ✅ `Protocol.repair`, at `Position.REPAIR` | protocol — it enforces the DECLARATION contract |
 | the stored audit | ✅ always on, `evidence/` | neither — it is the instrument |
+| typed `value` / `source_metric` / `sources` (R7) | ⬜ still `GuardrailSet.governed_numbers` | protocol, misfiled — R7 is published |
 
 The audit becoming unconditional is the point of the split: measurement is not a treatment. An
 answer that declares nothing audits to `n=0`, which is a finding, not an absence.
@@ -187,8 +192,43 @@ answer that declares nothing audits to `n=0`, which is a finding, not an absence
 `claims` and `premises` are still one flag, so the cell "claims without derived claims" remains
 unexpressible. That is a real gap and it is smaller than it looks — `premises` is an optional
 field, so the model can already decline it, and the ablation in step 4 measures the framing
-difference that actually moves the derived rate (6.9% → 13.6%). Splitting them is scheduled with
-the rest of the declarations, not before.
+difference that actually moves the derived rate (6.9% → 13.6%).
+
+### The move that finished it: the ladder stops at R9
+
+The three steps above put the declarations on their own axis while leaving them *numbered* as
+rungs 10–12 of the guardrail ladder. That was still wrong, for a reason worth stating plainly:
+
+**a guardrail ladder is ordered by increasing strictness about what touches data, and a
+declaration is not stricter than a verifier — it is orthogonal to it.** Numbering them as rungs
+asserted an ordering that does not exist, and it made the useful cells inexpressible. The one
+question worth asking is whether declaring helps a *weaker* agent, and "rung 5 with claims" could
+only be written as an eight-name explicit set.
+
+That is not hypothetical. The rung-7 R9 baseline answers 70 questions and gets **4 wrong**. There
+is no room up there to detect whether declaring changes accuracy. The experiment has to run
+further down, where the agent is wrong often enough for a difference to show — and until this
+move, that run could not be configured.
+
+So `LADDER` stops at R9, and `purpose` / `claims` / `repair` / `framing` are `Protocol` fields
+crossed with any rung and any guardrail level. Labels compose: `R9`, `R9/claims`,
+`R5/claims+repair+role`.
+
+**It cost nothing in recomputability, which is why it could be done now.** Nothing above R9 has
+ever appeared in a published result or doc — checked, not assumed. And the model-visible surface
+is provably unchanged: the retired rungs' fingerprints are reproduced exactly by their protocol
+equivalents (`R10` → `R9/purpose` → `6a39830a26e9`, `R11` → `R9/purpose+claims` →
+`a75d438d834a`, `R12` → `…+repair` → `8d01ebe7a413`). The restructure renamed cells; it did not
+alter a treatment.
+
+One consequence had to be fixed to make it real: the `claims` field used to be gated behind
+`governed_numbers`, so it could not exist below R7. It now has its own gate — citations resolve
+against result handles, which exist from rung 3 up, and never needed the R7 checks.
+
+`Position.REPAIR` outlives the guardrail that introduced it. A repair is still a mechanism at a
+position; it is simply not a rung. The registry test now asserts every position is used
+*somewhere in `agent/`* rather than by a `Guardrail`, so the no-dead-position guarantee survives
+the axis it was written for.
 
 ### Design it twice — the alternative, and why not
 
@@ -197,15 +237,14 @@ The obvious cleaner move is to hoist **every** declaration onto the protocol axi
 Structurally that is more correct — those are declarations, and the checks that read them are
 separate mechanisms that happen to be gated by the same flag.
 
-It is rejected for now on the recomputability invariant. `governed_numbers` is R7 and
-`declared_purpose` is R10; splitting them renumbers a ladder whose numbers are printed in
-published results and stamped on every stored row. `REFACTOR.md` invariant 1 requires old runs to
-stay re-gradeable, and invariant 4 requires published numbers to stay recomputable.
+`declared_purpose` was R10, and it moved — nothing above R9 was published, so it cost nothing.
 
-So: **the protocol axis owns declarations from here forward; the two older ones stay classified
-as guardrails until the Workstream A rename**, which is already scheduled for after the headline
-numbers freeze and already carries a migration. Recording this as a known misfiling rather than
-fixing it twice.
+`governed_numbers` is **R7, and it is published**, so it stays. Splitting it would renumber a
+ladder whose numbers appear in results and on every stored row; `REFACTOR.md` invariant 1
+requires old runs to stay re-gradeable and invariant 4 requires published numbers to stay
+recomputable. So one declaration remains misfiled as a guardrail, and it is written down here
+rather than pretended away. It moves with the Workstream A rename, which already carries a
+migration.
 
 ---
 

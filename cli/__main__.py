@@ -22,7 +22,7 @@ import os
 # the parser needs the rung table to build --rung's help and validation from the definitions
 # themselves rather than a second copy of them.
 from agent.guardrails import LADDER_ORDER
-from agent.protocol import FRAMINGS, RULE
+from agent.protocol import FRAMINGS, PARTS
 from agent.rungs import RUNGS, parse_rung
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
@@ -92,7 +92,7 @@ def cmd_run(a):
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
                    rrungs=[int(r) for r in _split(a.rrungs)],
-                   framings=_split(a.framings),
+                   protocols=_split(a.protocols),
                    cells=_split(a.cells) if a.cells else None, reasoning=a.reasoning,
                    concurrency=a.concurrency)
 
@@ -162,9 +162,12 @@ def main() -> None:
     sp.add_argument("--cells", default=None,
                     help="explicit guardrail cells (overrides --rrungs), e.g. R9,R9-resolve. "
                          "Incoherent cells are skipped.")
-    sp.add_argument("--framings", default=RULE,
-                    help=f"protocol framings to cross every cell with: {','.join(FRAMINGS)}. "
-                         "Two arms in one run label themselves R12 and R12/role.")
+    sp.add_argument("--protocols", default="none",
+                    help=f"what the answer must DECLARE, crossed with every cell. Parts: "
+                         f"{'+'.join(PARTS)} and a framing ({'|'.join(FRAMINGS)}); `none` "
+                         "declares nothing. Comma-separated for several arms, e.g. "
+                         "none,claims,claims+repair+role — which label themselves R9, "
+                         "R9/claims and R9/claims+repair+role.")
     sp.add_argument("--only", default=None, help="comma-separated question ids (a quick subset)")
     sp.add_argument("--sample", type=int, default=None, help="first N questions per tier")
     sp.add_argument("--repeats", type=int, default=1, help="repeat the grid N times (mean + spread)")

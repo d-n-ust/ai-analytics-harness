@@ -183,49 +183,6 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
               "the added filters, and rejects an answer to a different question",
               ("guardrails/after.py", "prompts.py")),
-    # The first guardrail that prevents nothing. It widens what a call can SAY about itself, so
-    # the working decomposition — which sub-question each query was meant to settle — is recorded
-    # instead of being inferred afterwards from the arguments.
-    #
-    # `because` is deliberately inert: nothing that executes a call ever reads it, so declaring a
-    # purpose cannot change a result, block a query, or fail. That is the property that keeps this
-    # from becoming a parse-or-die gate — the failure mode that sank natural-language database
-    # interfaces for forty years. A model that ignores the field behaves exactly as it does at R9.
-    # DISCLOSURE, though the mechanism is a schema change: Position classifies by FAILURE MODE,
-    # and this one fails exactly the way `transparency` does — silently, when the model does not
-    # cooperate — not the way an action-space guardrail fails. It runs the other way round from
-    # every other disclosure (the model discloses to us), which is the seam where a fifth position
-    # would eventually go. Until a second guardrail needs it, one is not a category.
-    Guardrail("declared_purpose", Position.DISCLOSURE,
-              "adds an optional `because` to every governed call — one line on what the call is "
-              "meant to establish. Recorded on the trace; never read by anything that acts",
-              ("guardrails/action_space.py", "prompts.py")),
-    # The unit of decision is still the RUN. This is the first guardrail that measures below it.
-    #
-    # An answer is not one assertion. On the diagnostic tier it averages 4.8, and every one of
-    # them but the single declared `value` goes unchecked — one live run served nine assertions
-    # and had exactly one verified, under a metric name it had not used. Claims make each
-    # assertion name the value it rests on, so "what did this answer commit to, and does each
-    # commitment hold" becomes a question with an answer.
-    #
-    # Like `declared_purpose`, it is inert on this rung: the audit is recorded and the run's
-    # outcome is untouched, so R0–R10 rows are reproduced exactly and the measurement can be
-    # trusted before anything is enforced on it. Enforcement is a later rung, and it needs this
-    # one's numbers to justify it.
-    Guardrail("claim_binding", Position.DISCLOSURE,
-              "adds `claims` to the answer schema — each assertion with the governed value it "
-              "rests on (`r1:days_per_user.pct_change`). Every binding is resolved and audited; "
-              "nothing is refused on it yet",
-              ("guardrails/action_space.py", "prompts.py")),
-    # Splitting this out from claim_binding is what makes the claims rung ablatable. As one flag
-    # they were a treatment and an enforcement together — asking for claims changes what the model
-    # writes, handing bad ones back changes what the run does — and no cell could tell the two
-    # apart. 41 of 743 audited rows took a correction, so the difference is not hypothetical.
-    Guardrail("citation_repair", Position.REPAIR,
-              "a claim citing a value that does not exist is handed back as a malformed call, "
-              "the same treatment decompose_change gives an unknown node; at most two per run, "
-              "and one grace turn so a correction on the closing turn still has somewhere to go",
-              ("loop.py", "prompts.py")),
 )
 
 LADDER_ORDER = [g.name for g in GUARDRAILS]
@@ -246,9 +203,6 @@ class GuardrailSet:
     governed_numbers: bool = False
     output_validation: bool = False
     trajectory_verify: bool = False
-    declared_purpose: bool = False
-    claim_binding: bool = False
-    citation_repair: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -330,13 +284,6 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.trajectory_verify and not g.governed_numbers:
         return ("trajectory_verify without governed_numbers: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
-    if g.citation_repair and not g.claim_binding:
-        return ("citation_repair without claim_binding: `claims` is only offered on the answer "
-                "tool under claim_binding (guardrails/action_space.py), so no answer can cite "
-                "anything, there is never an unresolved citation to hand back, and the guardrail "
-                "fires zero times — a contribution of zero by construction rather than by "
-                "evidence. The reverse cell (claim_binding without citation_repair) is the "
-                "interesting one: it measures asking for an account without correcting it")
     if rung is not None and not capabilities(rung).semantic:
         beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
         if beyond:

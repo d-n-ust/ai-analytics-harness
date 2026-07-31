@@ -21,7 +21,7 @@ import sys
 import textwrap
 
 from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
-from agent.protocol import RULE, split_config
+from agent.protocol import split_config
 
 from .sqlfmt import format_sql
 
@@ -65,9 +65,8 @@ def _guardrail_line(config: str, paint) -> list[str]:
     if advisory:
         lines.append(f"     advisory {paint(' · '.join(advisory), 'dim')}"
                      f" {paint('(works only if the model cooperates)', 'dim')}")
-    if protocol.framing != RULE:
-        lines.append(f"     protocol {paint(protocol.framing + ' framing', 'cyan')}"
-                     f" {paint('(how the account is asked for)', 'dim')}")
+    lines.append(f"     protocol {paint(protocol.describe(), 'cyan' if protocol.on else 'dim')}"
+                 f" {paint('(what the answer must declare)', 'dim')}")
     off = [g.name for g in GUARDRAILS if not getattr(gset, g.name, False)]
     if off:
         lines.append(f"          off {paint(' · '.join(off), 'dim')}")
