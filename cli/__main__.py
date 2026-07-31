@@ -62,9 +62,10 @@ def cmd_query(a):
 def cmd_ask(a):
     from agent import ask_one
     from agent.guardrails import parse_cell
+    from agent.protocol import Protocol
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails,
-            verbose=not a.trace, trace=a.trace)
+            protocol=Protocol.parse(a.protocol), verbose=not a.trace, trace=a.trace)
 
 
 def cmd_trace(a):
@@ -145,6 +146,10 @@ def main() -> None:
     sp.add_argument("--guardrails", default=None,
                     help="reliability config: a preset (R0..R9) or an explicit cell "
                          "(e.g. R9-resolve, or coverage_check+resolve+governed_numbers). Default R1.")
+    sp.add_argument("--protocol", default="none",
+                    help=f"what the answer must DECLARE: {'+'.join(PARTS)} and a framing "
+                         f"({'|'.join(FRAMINGS)}); `none` declares nothing. "
+                         "e.g. claims+repair+role")
     sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")
