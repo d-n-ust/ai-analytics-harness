@@ -7,8 +7,20 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   governed metric (source_metric, when the model declares it)
   refuse          a refusal carrying the expected coded reason; for such a case ANY served
                   number is a miss (a wrong number, or a right one reached off-governance)
+  ambiguous       a refusal with that reason OR a clarifying question — both are correct,
+                  because the question names an undefined term with more than one plausible
+                  governed reading, and picking one silently is the failure. Serving a number
+                  is still a miss, so the trap the case sets is unchanged.
 
 Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
+
+A case may also declare `requires` — the injected context its expected answer DEPENDS on.
+`t4_retention_trend` expects days-per-user because the knowledge base says "retention" means
+that; at a rung with no knowledge base, nothing has told the agent what the word means, and
+asking is the right move. Run there without this, the case scored 4 of 27 and every one of the
+19 clarifications counted as a failure. The case is not broken and neither is the agent — the
+case was being asked at a rung it does not apply to. Where its context is absent it stops
+demanding a particular answer and only insists the agent did not GUESS.
 
 Every response still reduces to one `bucket` — the single lens the project reports:
   right / wrong (a wrong or fabricated number) / idk (refused or clarified) /
@@ -23,6 +35,7 @@ import re
 
 from agent.numbers import asserts_number
 from agent.numbers import parse_numbers as _numbers
+from agent.rungs import capabilities
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:
@@ -77,11 +90,33 @@ def _metric_match(answer, expect: dict):
     return str(got).strip().lower() == str(want).strip().lower()
 
 
+def _missing_context(case: dict, rung) -> bool:
+    """Does this case need injected context the rung did not supply?
+
+    Only ever WIDENS what counts as correct, and only for a case that declares `requires`. A
+    case with no such declaration is graded exactly as it always was, so this cannot quietly
+    relax the rest of the set."""
+    needs = case.get("requires") or ()
+    if not needs or rung is None:
+        return False
+    caps = capabilities(rung)
+    return any(not getattr(caps, name, False) for name in needs)
+
+
 def grade(answer, case: dict, gold: float | None) -> dict:
     outcome = answer.outcome
     expect = case["expect"]
     etype = expect["type"]
-    expects_refusal = etype == "refuse"
+    # An `ambiguous` case is a refusal case that ALSO accepts a clarification. Both mean "I will
+    # not guess at a term nobody has defined", and a gold set that accepts only one of them scores
+    # the analyst's manner rather than the analyst's judgement: 27 attempts at t4_retention_trend
+    # produced 19 clarifications and 4 refusals, and the old gold called 23 of the 27 wrong.
+    expects_refusal = etype in ("refuse", "ambiguous")
+    accepts_clarify = etype in ("clarify", "ambiguous")
+    # Was the context this case's answer depends on actually supplied? Asked of the rung's
+    # capabilities rather than compared against a rung number: rung 7 is governed-only and holds
+    # the tree WITHOUT the knowledge base, so `rung >= 5` would get this exactly backwards.
+    missing_context = _missing_context(case, getattr(answer, "rung", None))
     is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
     tol = expect.get("tolerance", 0.02)
     # Did it put a FIGURE forward? Where the answer schema carried a typed `value` (R7+), the
@@ -112,10 +147,12 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             else:
                 reason_match = answer.reason == expect["reason"]
                 correct = reason_match
+        elif missing_context:
+            correct = True     # declining a term nobody defined for it
         # else: over-refused an answerable question -> correct stays False
         bucket = "idk"
     elif outcome == "clarify":
-        correct = etype == "clarify"
+        correct = accepts_clarify or missing_context
         bucket = "idk"
     elif is_false_premise:
         needs_judge = True                           # rebuttal vs accepted-premise — a judge rules

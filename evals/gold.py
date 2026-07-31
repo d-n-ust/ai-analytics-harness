@@ -16,7 +16,9 @@ import yaml
 from agent.outcomes import REFUSAL_REASONS
 
 EVALS_DIR = Path(__file__).resolve().parent / "cases"
-_EXPECT_TYPES = {"metric_answer", "refuse", "diagnostic", "keywords", "clarify"}
+_EXPECT_TYPES = {"metric_answer", "refuse", "ambiguous", "diagnostic", "keywords", "clarify"}
+# The context a case may declare it depends on, mirroring agent.rungs.Capabilities.
+_CONTEXT_KINDS = {"star", "semantic", "examples", "knowledge", "tree"}
 
 
 def _validate(case: dict, where: str) -> None:
@@ -29,12 +31,20 @@ def _validate(case: dict, where: str) -> None:
         raise ValueError(f"{where}: case {case['id']!r} has expect.type {t!r}, not one of {_EXPECT_TYPES}")
     if t == "metric_answer" and not (e.get("metric") and e.get("gold_sql")):
         raise ValueError(f"{where}: metric_answer case {case['id']!r} needs both metric and gold_sql")
-    if t == "refuse" and e.get("reason") not in REFUSAL_REASONS:
-        raise ValueError(f"{where}: refuse case {case['id']!r} reason {e.get('reason')!r} not in REFUSAL_REASONS")
+    # `ambiguous` carries a reason for the same purpose `refuse` does — a refusal must still name
+    # the right code to be correct. The extra allowance is the clarification, not a free pass.
+    if t in ("refuse", "ambiguous") and e.get("reason") not in REFUSAL_REASONS:
+        raise ValueError(f"{where}: {t} case {case['id']!r} reason {e.get('reason')!r} not in REFUSAL_REASONS")
     if t == "diagnostic" and not e.get("driver"):
         raise ValueError(f"{where}: diagnostic case {case['id']!r} needs a driver list")
     if t == "keywords" and not e.get("keywords"):
         raise ValueError(f"{where}: keywords case {case['id']!r} needs a keywords list")
+    # `requires` names the injected context the expected answer depends on, in the vocabulary of
+    # agent.rungs.Capabilities — so a typo is caught here rather than silently never matching.
+    for name in case.get("requires") or ():
+        if name not in _CONTEXT_KINDS:
+            raise ValueError(f"{where}: case {case['id']!r} requires {name!r}, "
+                             f"not one of {sorted(_CONTEXT_KINDS)}")
 
 
 def load_questions() -> list[dict]:

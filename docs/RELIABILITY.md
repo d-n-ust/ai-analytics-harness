@@ -87,6 +87,51 @@ The deterministic core that *survives* is `governed_numbers` (R7) and the
 output-validation check (R8) — both live in `agent/guardrails/after.py` alongside the trajectory judge, and
 both are provable without a model (`tests/test_semantic.py`).
 
+## Erratum — the gold set could not say "do not guess" (2026-07-31)
+
+**This changes stored scores. Runs published before this date are not comparable to runs after
+it without regrading.**
+
+The answer key could say *answer this*, or *refuse this*. It had no way to say **the analyst
+must not guess, and either declining or asking is right**. Two consequences, both found by
+running rung 7 rather than by inspection:
+
+**1. A genuinely ambiguous question.** `adv_whales` asks for MRR on "whale accounts — the top
+spenders". Nothing defines that: not the semantic layer, not the knowledge base. It has two
+plausible governed readings — `power_users` (activity) or top-N by `mrr` (spend) — and either
+would answer the question. Across 27 attempts the agent split **14 refusals to 11 clarifying
+questions**, and the refuse-only gold scored all 11 as failures. It is now `expect.type:
+ambiguous`, which accepts a refusal carrying the right code **or** a clarification. Serving a
+number is still a miss, so the trap the case sets is unchanged.
+
+**2. A case asked at a rung that cannot answer it.** Only the knowledge base maps "retention" to
+days per user — that mapping is the entire point of `t4_retention_trend`. Rung 7 is
+*governed-only*: semantic layer plus metric tree, **no knowledge base**. So at rung 7 nothing had
+ever told the agent what the word meant, it asked on **19 of 27 attempts**, and the case scored
+**4 of 27** — the worst in the set, entirely because it was being asked at a rung it does not
+apply to. A case may now declare `requires: [knowledge]`; where the rung does not supply that
+context, the case stops demanding a particular answer and only insists the agent did not guess.
+
+Both rules **only widen** what counts as correct, and only for cases that declare them —
+`tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
+claim. Regrading the rung-7 R9 baseline moves it from 134/171 to **141/171**; every one of the
+seven is a clarification that was previously counted as a failure, and nothing moves the other way.
+
+The rule used to decide eligibility is stated so it can be argued with, and was applied to all 57
+questions from the **question text and the governed vocabulary alone**, never from which runs
+happened to clarify:
+
+> A question is ambiguous when it names a term with no governed definition **anywhere the agent is
+> given** — neither the metric catalog nor the knowledge base — there is **more than one plausible
+> governed reading**, and **picking one of them makes the question answerable**.
+
+The third clause separates *ambiguous* from *impossible*, and it does real work: `adv_free_vs_paying`
+("free users vs paying users") is genuinely ambiguous, but every reading needs `active_users` minus
+`paying_users` — a composition of two different metrics, which `governed_numbers` forbids — so
+clarifying could not unblock it and refusing stays correct. The rule accepts **1** of the 9
+questions the agent actually clarified and rejects 8, which is the evidence it is not simply the
+observed behaviour wearing a rule's clothes.
+
 ## How it's reported
 
 Rates are never pooled across the answerable / unanswerable split. Per config, `evals/report.py` emits:
