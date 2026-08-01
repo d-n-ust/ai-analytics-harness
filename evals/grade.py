@@ -38,11 +38,28 @@ from agent.numbers import parse_numbers as _numbers
 from agent.rungs import capabilities
 
 
+# What separates two words: a space, a hyphen, an en dash, a slash. A keyword written with one
+# must match a text written with another — they are the same phrase, and which one an answer
+# happens to use is not a fact about the analysis.
+_GAP = r"[\s\-\u2010-\u2015/]+"
+
+
 def _mentions(text: str, keywords: list[str]) -> bool:
     """Does the text name any keyword, at a LEADING word boundary (not a raw substring) so
-    'active' can't fire on 'inactive', while plurals/inflections still count?"""
+    'active' can't fire on 'inactive', while plurals/inflections still count?
+
+    Word separators are treated as equivalent. Without that, three answers saying the same thing
+    scored differently: "low confidence" matched, "low-confidence" did not, and one run of
+    t5_reminder_caused_it was marked wrong for a hyphen while the run beside it passed. A grader
+    that reads punctuation as meaning is measuring typography, and it inflated a regression it
+    was meant to measure — two of twelve failures in the 2026-08-01 sweep were this.
+
+    It does NOT paper over word ORDER. "not a proven cause" still misses "not proven", because
+    those differ by an inserted word and a gold set that matched across insertions would start
+    matching things it should not. That case is a gold-set gap: the phrase belongs in the list."""
     t = (text or "").lower()
-    return any(re.search(r"\b" + re.escape(k.lower()), t) for k in keywords)
+    return any(re.search(r"\b" + _GAP.join(re.escape(w) for w in k.lower().split()), t)
+               for k in keywords)
 
 # How many refusals one wrong answer is worth — a placeholder until field interviews
 # price it; reported alongside every score.

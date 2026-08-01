@@ -30,6 +30,12 @@ BAD_PREMISE = "bad_premise"        # names a claim that does not exist, or itsel
 # this off the data, or work it out from things you already said — and nothing enforced it, so a
 # claim could be a measurement and a conclusion at once and the audit had no opinion.
 MIXED_SUPPORT = "mixed_support"
+# States a figure reachable only by combining values of DIFFERENT metrics. `governed_numbers`
+# forbids exactly this on the served number — you may compare governed numbers, you may not
+# compose new ones — and the claim audit allowed it, so the same composition was refused at the
+# answer and accepted one level down. One run served "DAU/MAU = 32.5%" in prose with no typed
+# value, so the answer-level check stood down, and the claim carrying it audited clean.
+COMPOSED = "composed"
 
 # How strong the support is, weakest first — the order IS the comparison, so `min` over a claim's
 # premises is the weakest-link rule and needs no special case.
@@ -158,6 +164,7 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         prem = [_claim_index(x, ids) for x in (c.get("premises") or [])]
         value = c.get("value")
         cited, unresolved, metrics = [], [], set()
+        by_metric: dict = {}
         for ref in refs:
             handle, v, metric = _resolve(ref, index)
             if handle is None or v is None:
@@ -165,6 +172,10 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
                 continue
             if v is not STATEMENT:
                 cited.append(v)
+                # Grouped by the metric the reference is about, because a relation is only
+                # governed WITHIN one metric. Ungrouped, a ratio of two different metrics looked
+                # exactly like a percent change of one.
+                by_metric.setdefault(metric, []).append(v)
             # A reference names the metric its FIELD is about, plus the aliases of the result it
             # came from — the tree node and the metric underneath it are the same evidence. The
             # empty name is dropped: a governed statement belongs to no single metric, and letting
@@ -188,8 +199,10 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         if unresolved:
             why.append(UNRESOLVED)
         if isinstance(value, (int, float)) and not isinstance(value, bool) and cited:
-            if not _supports(value, cited):
-                why.append(VALUE_MISMATCH)
+            if not _supports(value, cited, by_metric):
+                # Reachable by composing ACROSS metrics but not within any one of them: the figure
+                # is arithmetic on the cited values, and arithmetic nothing licenses.
+                why.append(COMPOSED if _supports(value, cited, None) else VALUE_MISMATCH)
         # The declared metric is answer-level; a claim that carries the served figure and cites a
         # result from a different definition is the mislabel case, and it is invisible to every
         # numeric check.
@@ -229,6 +242,7 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         "mislabelled": sum(1 for f in findings if MISLABELLED in f["why"]),
         "bad_premise": sum(1 for f in findings if BAD_PREMISE in f["why"]),
         "mixed_support": sum(1 for f in findings if MIXED_SUPPORT in f["why"]),
+        "composed": sum(1 for f in findings if COMPOSED in f["why"]),
         # The graph, in four numbers. `derived` is how much of the answer is a conclusion rather
         # than a lookup; `max_depth` tells an argument from a wall of statistics; `max_fan_in` is
         # how much a conclusion rests on; `correlational` counts the claims the tree itself marks
@@ -244,16 +258,28 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
     }
 
 
-def _supports(value: float, cited: list) -> bool:
-    """Is this figure one of the cited values, or a relation between exactly two of them?"""
+def _supports(value: float, cited: list, by_metric: dict | None) -> bool:
+    """Is this figure one of the cited values, or a relation between two of the SAME metric?
+
+    The same rule `governed_numbers` applies to the served number: you may compare governed
+    numbers, you may not compose new ones. It was missing here, so a ratio of two DIFFERENT
+    metrics — a rate over a count, metric A over metric B — passed the claim audit while being
+    refused one level up. That gap is how a composed DAU/MAU reached an answer: the model put the
+    figure in prose rather than in the typed `value`, the answer-level check stood down for want
+    of a number, and the claim that carried it audited clean.
+
+    `by_metric` None means "do not scope the relation" — used only to ask the counterfactual,
+    which distinguishes a composed figure from one the evidence simply does not support."""
     for v in cited:
         if num_match(value, v) or (v and num_match(value, v * 100)):
             return True
-    for a in cited:
-        for b in cited:
-            if a == b or not b:
-                continue
-            for base in (a - b, a / b, (a - b) / b):
-                if num_match(value, base) or num_match(value, base * 100):
-                    return True
+    groups = [cited] if by_metric is None else list(by_metric.values())
+    for group in groups:
+        for a in group:
+            for b in group:
+                if a == b or not b:
+                    continue
+                for base in (a - b, a / b, (a - b) / b):
+                    if num_match(value, base) or num_match(value, base * 100):
+                        return True
     return False

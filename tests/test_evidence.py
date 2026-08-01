@@ -168,5 +168,38 @@ if __name__ == "__main__":
     test_one_soft_premise_makes_the_whole_conclusion_soft()
     test_premises_may_only_point_backwards()
     test_a_claim_that_names_nothing_at_all()
+    test_a_claim_may_compare_governed_numbers_but_not_compose_them()
     print("OK - claim audit: field citation, bare handles, the wrong-metric catch, breakdown "
           "rows, derived claims, inherited strength, and backwards-only premises all hold.")
+
+
+def test_a_claim_may_compare_governed_numbers_but_not_compose_them():
+    """The same rule governed_numbers applies to the served number, applied one level down.
+
+    It was missing here, so a ratio of two DIFFERENT metrics passed the claim audit while being
+    refused at the answer. That gap is how a composed DAU/MAU reached a user: the model wrote the
+    figure into prose rather than the typed `value`, so the answer-level check stood down for want
+    of a number, and the claim carrying it audited clean."""
+    from evidence.claims import COMPOSED, audit
+
+    def result(handle, metric, value):
+        return {"tool": "query_metric", "handle": handle, "error": False,
+                "args": {"metric": metric}, "result_labels": [""], "result_values": [value]}
+
+    # two different metrics, and their ratio
+    cross = [result("r1", "active_users", 886.0), result("r2", "paying_users", 288.0)]
+    a = audit([{"text": "DAU/MAU is 32.5%", "sources": ["r1", "r2"], "value": 288.0 / 886.0}],
+              cross)
+    assert COMPOSED in a["findings"][0]["why"] and a["composed"] == 1
+    assert a["findings"][0]["bound"] is False
+
+    # the SAME metric across two periods is a comparison, and stays legal
+    same = [result("r1", "active_users", 836.0), result("r2", "active_users", 886.0)]
+    for figure in ((886.0 - 836.0) / 836.0, (886.0 - 836.0) / 836.0 * 100, 50.0):
+        b = audit([{"text": "up", "sources": ["r1", "r2"], "value": figure}], same)
+        assert not b["findings"][0]["why"], (figure, b["findings"][0]["why"])
+
+    # a figure reachable NO way from the citations is still a plain mismatch, not a composition —
+    # the two are different faults and collapsing them would hide which one happened
+    c = audit([{"text": "?", "sources": ["r1", "r2"], "value": 12345.0}], same)
+    assert "value_mismatch" in c["findings"][0]["why"] and c["composed"] == 0
