@@ -48,7 +48,10 @@ from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 16  # v16: claims + claim_audit, labelled result values
+ROW_SCHEMA_VERSION = 17  # v17: rendered measurements carry `declared_text` (what the model
+                         # wrote) beside `text` (what the harness rendered). v16 rows mean
+                         # `text` IS the model's; pooling the two compares model prose
+                         # against rendered prose and calls the difference a trend.
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 

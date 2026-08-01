@@ -220,14 +220,23 @@ class _Run:
 
         A citation that resolves to nothing renders to nothing, and the claim keeps whatever the
         model wrote: the repair guardrail is what handles a broken citation, and silently blanking
-        the text here would hide the fault it exists to surface."""
+        the text here would hide the fault it exists to surface.
+
+        The model's sentence is KEPT, as `declared_text`. Overwriting it destroyed the only record
+        of the behaviour this whole change exists to stop — three of five measurements in one
+        stored answer carried a judgement their citations did not support ("...and is the primary
+        driver", "...so breadth did not cause the drop"), and after rendering the file would say
+        the model wrote the tidy version. Then "does a newer model still do this?" becomes
+        unanswerable on every run from here on, and the most persuasive evidence we have could
+        never be reproduced. Fixing a behaviour and erasing the proof it existed is one commit too
+        clever."""
         out = []
         for c in claims:
             if c.get("premises") or not c.get("sources"):
                 out.append(c)
                 continue
             text = claim_audit.measurement_text(c.get("sources"), self.steps)
-            out.append({**c, "text": text} if text else c)
+            out.append({**c, "declared_text": c.get("text"), "text": text} if text else c)
         return tuple(out)
 
     def _node_metrics(self):
