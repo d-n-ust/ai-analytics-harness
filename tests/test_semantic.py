@@ -1097,3 +1097,42 @@ if __name__ == "__main__":
     test_toolbox_wiring_and_rung_gate()
     test_a_refusal_that_names_a_date_is_not_a_fabrication()
     print("OK - output guardrails (provenance/validation/verifier) + semantic layer + input guardrail + ladder: all pass.")
+
+
+def test_a_guardrail_reports_what_it_verified_not_that_it_verified():
+    """The output checks verify a NUMBER. When the answer is a number that is the same thing; when
+    the answer is a judgement it is not, and saying `allowed` implies otherwise.
+
+    Two runs of t4_business_health answered "Yes — generally healthy" and "No — health is weak",
+    both declaring 3,642, and both drew `allowed` from all three output guardrails. Identical
+    verification, opposite answers. 29 of 29 judgement-tier answers carried a figure this way.
+
+    The check still runs — a composed figure smuggled into prose is exactly what it catches — so
+    what changed is the claim it makes about its own scope."""
+    from agent.guardrails.after import verify_answer
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+    steps = [_qm("active_users", 886.0, handle="r1", period="last_week")]
+
+    def outcome(answer: str) -> str:
+        rec: list = []
+        verify_answer(sem, "q?", f"{answer} explanatory prose follows", steps, record=rec,
+                      source_metric="active_users", declared_value=886.0, sources=["r1"],
+                      run_governed_numbers=True, run_output_validation=False,
+                      served_answer=answer)
+        return next(a.outcome for a in rec if a.guardrail == "governed_numbers")
+
+    # the answer IS the number -> the check verified the answer
+    assert outcome("886") == "allowed"
+    assert outcome("886 active users") == "allowed"
+    # the answer is a judgement that mentions a number -> it verified one figure inside it
+    assert outcome("No — the app looks unhealthy this week") == "verified a figure"
+    assert outcome("Broad — all regions contributed, driven by lower days per user") == \
+        "verified a figure"
+
+    # the scope test reads the `answer` field ALONE. Joined with the explanation it is never a
+    # bare number, so every answer read as prose and the distinction collapsed.
+    rec: list = []
+    verify_answer(sem, "q?", "886 explanatory prose follows", steps, record=rec,
+                  source_metric="active_users", declared_value=886.0, sources=["r1"],
+                  run_governed_numbers=True, run_output_validation=False)
+    assert next(a.outcome for a in rec if a.guardrail == "governed_numbers") == "verified a figure"

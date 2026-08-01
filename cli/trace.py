@@ -118,7 +118,10 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
 _MARK = {"refused": ("✗", "bad"), "withdrew": ("−", "cyan"), "narrowed": ("▸", "cyan"),
          "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim"),
          # neither served nor refused — the answer went back for another go
-         "handed back": ("↺", "warn")}
+         "handed back": ("↺", "warn"),
+         # the check ran and passed, on something narrower than the answer — a reader who sees a
+         # tick here concludes the answer was verified, and on a judgement question it was not
+         "verified a figure": ("◐", "warn")}
 
 
 def _act_lines(acts, paint, indent: str) -> list[str]:

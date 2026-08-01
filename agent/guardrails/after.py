@@ -25,7 +25,7 @@ import logging
 # the one import that crosses that line, and it crosses it in the permitted direction.
 from evidence.values import num_match
 
-from ..numbers import parse_numbers
+from ..numbers import bare_number, parse_numbers
 from ..outcomes import declared_handles
 from . import DECOMPOSE_TOOLS, GOVERNED_TOOLS, Position, Verdict, judge, note
 
@@ -291,7 +291,7 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   record=None, source_metric: str | None = None, declared_value=None,
                   sources=(),
                   run_output_validation: bool = True, run_governed_numbers: bool = False,
-                  verify_traj=None) -> Verdict:
+                  verify_traj=None, served_answer: str = "") -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
     ok=False means convert the answer into a refuse. Each check is toggled by its own rung so
     the deltas are measured separately: `run_governed_numbers` (R7, the served number is a
@@ -299,15 +299,34 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     well-formed value), and `verify_traj` (R9, the trajectory judge). `source_metric`/
     `declared_value` are the model's typed provenance. The checks apply to a NUMERIC answer, so
     prose (no `declared_value`) passes through untouched. Refuse-only: it can turn an answer into
-    a refusal, never the reverse."""
+    a refusal, never the reverse.
+
+    `served_answer` is the `answer` field ALONE, where `answer_text` is that field joined with the
+    explanation. The join is right for the judge — the substance moves between the two fields —
+    and wrong for asking "is the answer a number", because an explanation is always prose and the
+    joined string therefore never is."""
     if semantic is None or not answer_text or declared_value is None:
         return Verdict.ok()
 
     if run_governed_numbers:
         account = account_for(declared_value, steps, sources, semantic)
+        # WHAT was verified, not merely that something was. The declared figure is the answer only
+        # when the answer IS that figure; on a judgement question — "is the app healthy?", "one
+        # region or broader?" — the model attaches a figure from its work and this check verifies
+        # that figure, which is real and is not the answer. Two runs of t4_business_health served
+        # "Yes, generally healthy" and "No, health is weak" with the same 3,642 and identical
+        # `allowed` verdicts on all three output guardrails.
+        #
+        # The check still runs, and should: a composed figure smuggled into prose is exactly what
+        # it exists to catch, and turning it off for prose answers would lose that. What changes
+        # is the claim it makes about its own scope.
+        answers_with_it = bare_number(served_answer or answer_text) is not None
         note(record, "governed_numbers", Position.AFTER,
-             "allowed" if account else "refused",
-             account or "the served number is neither a governed result nor a comparison of two")
+             ("allowed" if answers_with_it else "verified a figure") if account else "refused",
+             (account if answers_with_it else
+              f"{account} — but the answer is prose, so this verified ONE FIGURE IN it, "
+              f"not the answer") if account else
+             "the served number is neither a governed result nor a comparison of two")
         if account is None:
             # Nothing governed produces this number, and no comparison of one metric with itself
             # reaches it — so it is a COMPOSITION, and no governed definition covers what was
@@ -417,6 +436,7 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     verify_traj = _trajectory_verifier(run, model) if (g.trajectory_verify and model) else None
     return verify_answer(
         semantic, run.question, served_text(args), run.steps, record=record,
+        served_answer=str(args.get("answer") or "").strip(),
         source_metric=args.get("source_metric"), declared_value=declared,
         sources=declared_handles(args),
         run_output_validation=g.output_validation,

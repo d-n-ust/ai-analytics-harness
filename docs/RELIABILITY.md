@@ -87,6 +87,29 @@ The deterministic core that *survives* is `governed_numbers` (R7) and the
 output-validation check (R8) — both live in `agent/guardrails/after.py` alongside the trajectory judge, and
 both are provable without a model (`tests/test_semantic.py`).
 
+## Erratum — the output guardrails do not verify a judgement answer (2026-08-01)
+
+They verify a NUMBER. When the answer is a number, that is the same thing. When the answer is a
+judgement — *"is the app healthy?"*, *"one region, or something broader?"*, *"did that cause it?"*
+— the model attaches a figure from its work, and the checks verify that figure.
+
+Two runs of `t4_business_health` answered **"Yes — generally healthy"** and **"No — overall health
+is weak"**, both declaring 3,642, and both drew `allowed` from `governed_numbers`,
+`output_validation` and the trajectory judge. Identical verification, opposite answers. Across the
+2026-08-01 sweep, **29 of 29 judgement-tier answers carried a figure this way.**
+
+No published number moves: those tiers are graded on whether the right driver was named, and the
+attached figure never entered the score. What was wrong is the **claim**, stated here and in the
+README, that the output guardrails check the answer before it is served. For a judgement answer
+they check a bystander.
+
+The check still runs — a composed figure smuggled into prose is exactly what it exists to catch,
+and `adv_dau_mau` did precisely that. What changed is that it now reports its own scope:
+`verified a figure` rather than `allowed`, with the detail saying the answer is prose and this
+verified one figure in it. An answer with no figure at all was always handled honestly
+(`stood down: the answer is prose, not a number`); this closes the case where a figure is present
+but is not the answer.
+
 ## Erratum — the gold set could not say "do not guess" (2026-07-31)
 
 **This changes stored scores. Runs published before this date are not comparable to runs after
