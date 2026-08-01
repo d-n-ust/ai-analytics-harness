@@ -111,7 +111,7 @@ make eval         # the grounding experiment: 57 questions x 6 rungs x {gpt-5.6-
 ```
 
 Everything runs through one CLI — `./bench <verb>` (a thin wrapper over `python -m cli`):
-`data · verify · query · ask · run · regrade · report · trace · chain · test`. Vary the **reliability** ladder
+`data · verify · query · ask · run · regrade · report · trace · chain · ambiguity · test`. Vary the **reliability** ladder
 with `--rrungs`, or run explicit ablation cells with `--cells`:
 
 ```bash

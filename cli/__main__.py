@@ -109,6 +109,23 @@ def cmd_chain(a):
         print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
 
 
+def cmd_ambiguity(a):
+    """Lint the governed layer for names that can be mistaken for each other.
+
+    Reads the declarations, not the traffic — so it says which confusions are POSSIBLE, before an
+    agent has ever seen the layer."""
+    import yaml
+
+    from semantic.ambiguity import report
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    layer = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())
+    metrics = layer["metrics"] if isinstance(layer.get("metrics"), dict) else layer
+    tree = yaml.safe_load((root / "semantic" / "metric_tree.yml").read_text())
+    nodes = {n: s.get("metric") for n, s in (tree.get("nodes") or {}).items()}
+    print(report(metrics, nodes))
+
+
 def cmd_run(a):
     from evals.runner import run_experiment
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
@@ -226,6 +243,10 @@ def main() -> None:
     sp.add_argument("--model", default=None)
     sp.add_argument("--limit", type=int, default=1)
     sp.set_defaults(func=cmd_chain)
+
+    sub.add_parser("ambiguity",
+                   help="lint the governed layer for names that can be confused"
+                   ).set_defaults(func=cmd_ambiguity)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 
