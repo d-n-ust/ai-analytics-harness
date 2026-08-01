@@ -1,8 +1,9 @@
 """The semantic-layer ambiguity lint — pure, no model, no run, no warehouse.
 
-It reads declarations and says which governed names could be mistaken for each other. The test
-that matters is the last one: the lint is only worth having if what it flags from the YAML alone
-is what actually gets confused in practice.
+It reads declarations and says which governed names could be mistaken for each other. The last
+test measures its recall against real confusions AND against two trivial baselines, because on
+this layer one collision dominates and recall alone cannot tell the lint apart from a rule that
+flags any two names sharing a word.
 
 Run: PYTHONPATH=. uv run python tests/test_ambiguity.py
 """
@@ -80,12 +81,28 @@ def test_an_unambiguous_layer_reports_nothing():
     assert high == [], high
 
 
-def test_what_the_lint_flags_is_what_actually_gets_confused():
-    """The only test that makes the lint worth having.
+def test_recall_against_stored_confusions_is_not_evidence_the_lint_works():
+    """What this measures, and — more important — what it does NOT.
 
-    Every mislabel the harness has ever recorded, keyed by (what the answer DECLARED, the metric
-    or node its cited evidence actually belongs to). If the pairs the lint ranks `high` from the
-    YAML alone do not dominate that list, the lint is measuring its author's intuition.
+    RECALL is computed per ANSWER, not per claim and not per citation. `mislabelled` is an
+    answer-level property (one wrong `source_metric` compared against every claim's evidence), so
+    counting it per claim multiplies one root cause by the number of claims, and counting it per
+    SOURCE CITATION multiplies it again. The first version of this test used the citation
+    denominator and reported 83%; the honest figure is 65.7% over 169 answers, and the difference
+    was entirely double-counting.
+
+    THE BASELINES ARE THE POINT. On this layer one collision dominates, so recall cannot
+    distinguish the lint from a trivial rule:
+
+        lint `high` pairs             111/169 = 65.7%
+        "the single most common pair" 110/169 = 65.1%   <- needs a RUN, and matches it
+        "any two names sharing a word" 114/169 = 67.5%  <- BEATS it, flagging 14 pairs not 2
+
+    So recall here is not evidence the classification does anything. What the lint offers over
+    those baselines is that it needs no run, and that it returns 2 findings rather than 14 — and
+    neither of those properties is what a recall number measures. Anyone quoting this figure as
+    "the lint predicts what gets confused" is quoting the wrong statistic, which is why the
+    baselines are asserted here rather than left as a note.
 
     Skipped when no runs are stored, so a fresh clone still passes."""
     import collections
@@ -107,7 +124,8 @@ def test_what_the_lint_flags_is_what_actually_gets_confused():
     flagged = {frozenset({f.a.split(" (")[0], f.b})
                for f in confusable_pairs(metrics, nodes) if f.severity == "high"}
 
-    seen: collections.Counter = collections.Counter()
+    # One entry per mislabelled ANSWER: the set of (declared, evidence-root) pairs it involves.
+    answers: list = []
     for path in paths:
         for line in open(path):
             row = json.loads(line)
@@ -116,6 +134,7 @@ def test_what_the_lint_flags_is_what_actually_gets_confused():
                 continue
             declared = row.get("source_metric")
             steps = {s["handle"]: s for s in row.get("steps") or [] if s.get("handle")}
+            pairs = set()
             for f in a["findings"]:
                 if "mislabelled" not in (f.get("why") or []):
                     continue
@@ -124,18 +143,33 @@ def test_what_the_lint_flags_is_what_actually_gets_confused():
                     args = step.get("args") or {}
                     root_name = args.get("metric") or args.get("node")
                     if root_name and declared and root_name != declared:
-                        seen[frozenset({declared, root_name})] += 1
+                        pairs.add(frozenset({declared, root_name}))
+            if pairs:
+                answers.append(pairs)
 
-    total = sum(seen.values())
-    if not total:
+    n = len(answers)
+    if not n:
         print("  (no mislabels stored — validation skipped)")
         return
-    hit = sum(n for pair, n in seen.items() if pair in flagged)
-    share = hit / total
-    print(f"  {hit}/{total} = {share:.0%} of stored mislabels sit on a pair the lint ranked high")
-    assert share > 0.6, (
-        f"only {share:.0%} of real confusions were predicted from the declarations; the lint is "
-        "not describing what actually happens")
+
+    def covers(rule) -> int:
+        return sum(1 for ps in answers if any(rule(p) for p in ps))
+
+    top = collections.Counter(p for ps in answers for p in ps).most_common(1)[0][0]
+    lint = covers(lambda p: p in flagged)
+    freq = covers(lambda p: p == top)
+    token = covers(lambda p: bool(set(tuple(p)[0].split("_")) & set(tuple(p)[1].split("_"))))
+    print(f"  over {n} mislabelled ANSWERS:  lint {lint} ({lint/n:.1%}) · "
+          f"most-frequent-pair {freq} ({freq/n:.1%}) · any-shared-token {token} ({token/n:.1%})")
+
+    assert lint / n > 0.6, f"the lint covers only {lint/n:.0%} of real confusions"
+    # The finding this test exists to keep honest. If a trivial rule ever falls well BEHIND the
+    # lint, recall has started to mean something and this assertion is the thing to revisit — but
+    # it must be revisited deliberately, not discovered by someone quoting the recall figure.
+    assert token >= lint - 5, (
+        "a trivial any-shared-token rule no longer matches the lint's recall. That would be the "
+        "first evidence the classification does work, and it needs saying explicitly rather than "
+        "being folded into a recall number")
 
 
 if __name__ == "__main__":
@@ -143,6 +177,7 @@ if __name__ == "__main__":
     test_a_tree_node_is_a_third_public_name_and_is_judged_by_what_it_resolves_to()
     test_sharing_only_a_qualifier_is_not_a_collision()
     test_an_unambiguous_layer_reports_nothing()
-    test_what_the_lint_flags_is_what_actually_gets_confused()
+    test_recall_against_stored_confusions_is_not_evidence_the_lint_works()
     print("OK — the lint finds the scope-only pair, judges a tree node by what it resolves to, "
-          "ignores qualifier collisions, and predicts what actually gets confused.")
+          "ignores qualifier collisions, and does NOT out-recall a trivial baseline on this "
+          "layer, which the last test asserts rather than hides.")
