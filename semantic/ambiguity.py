@@ -36,9 +36,10 @@ That is the finding this module exists to surface BEFORE a run, from the YAML al
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
-__all__ = ["Ambiguity", "confusable_pairs", "report"]
+__all__ = ["Ambiguity", "MemberClash", "confusable_pairs", "member_clashes", "report"]
 
 # The facets a metric declares about what it MEASURES. Two metrics agreeing on all of these
 # measure the same thing; the rest of the declaration is scope, presentation, or plumbing.
@@ -159,3 +160,100 @@ def report(metrics: dict, tree_nodes: dict | None = None) -> str:
                      "different head nouns, or fold one into the other as a governed segment of "
                      "it, so the vocabulary cannot express the confusion.")
     return "\n".join(lines)
+
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# Dimension MEMBERS. The lint above checks metric names; this checks the values a
+# caller may name, which is where the sharper collisions live.
+# ─────────────────────────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class MemberClash:
+    """One addressable member string, and why it is not safe to reach from free text.
+
+    SCOPE, because getting this wrong is what the first version of this lint did: only
+    `collision` is a defect on its own terms. `code_as_text` and `common_in_prose` are findings
+    ABOUT FREE-TEXT RESOLUTION — they matter to a system that maps a user's words onto a member,
+    and say nothing about a caller that supplies a member deliberately.
+
+    Measured on this layer: the model passed `region='apac'` 211 times, `platform='ios'` 41 times
+    and `plan='annual'` 42 times, every one of them flagged here and every one of them CORRECT.
+    Reporting those as defects counts the alias map working as evidence it is broken."""
+
+    text: str
+    kind: str                          # collision | code_as_text | common_in_prose
+    claimed_by: tuple[str, ...]        # "dimension.member" for each claimant
+    note: str = ""
+    seen_in: int = 0                   # occurrences in a supplied corpus, when given
+
+    @property
+    def severity(self) -> str:
+        """`collision` is a defect however the value arrives. The other two are conditional, so
+        they are labelled as advice rather than ranked as faults."""
+        return "high" if self.kind == "collision" else "if-you-resolve-prose"
+
+
+def _member_aliases(dimension: dict) -> dict:
+    """{addressable string -> canonical member}, for one dimension.
+
+    Members come in two shapes in this layer — a bare synonym list, or a dict carrying synonyms
+    plus metadata — and BOTH are read, because the point is to find every string a caller could
+    send. The canonical value is addressable too: `resolve_member` matches it, so it is part of
+    the surface whether or not anyone meant it to be.
+    """
+    out = {}
+    for canonical, member in (dimension or {}).items():
+        synonyms = member.get("synonyms", []) if isinstance(member, dict) else (member or [])
+        for text in [canonical, *synonyms]:
+            out.setdefault(str(text).strip().lower(), str(canonical))
+    return out
+
+
+def member_clashes(dimensions: dict, corpus: list[str] | None = None) -> list[MemberClash]:
+    """Addressable member strings that will resolve to the wrong thing, or to a thing nobody meant.
+
+    ONLY THE FIRST IS A DEFECT ON ITS OWN. The other two are conditional on free-text resolution,
+    and are returned as advice — see MemberClash.severity. Three rules, each with a reason rather
+    than a taste:
+
+    COLLISION — one string claimed by two members. `google` is an alias of platform=android and
+    lives inside `google ads`, an alias of channel=paid_search, so which dimension wins depends on
+    how many words the caller happens to send. Cube would reject two segments sharing a name;
+    LookML would reject two dimensions sharing a label. Here it is resolved by iteration order.
+
+    CODE AS TEXT — an alias of one or two characters is an identity code, not language. `resolve_
+    member` lowercases before comparing, so ISO country codes become addressable as English:
+    IN, US, ID, DE, BR, FR, GB, PH. A code should match as identity — exact and case-sensitive —
+    and never as a word.
+
+    COMMON IN PROSE — measured against a corpus when one is supplied, rather than judged. An alias
+    that appears often in ordinary questions is dangerous regardless of how reasonable it looks in
+    the YAML: `paid` reads fine next to paid_search and fires on "trial-to-paid". For a client the
+    corpus is their query log; here it is the question set.
+    """
+    addressable: dict = {}
+    for dim, members in (dimensions or {}).items():
+        for text, canonical in _member_aliases(members).items():
+            addressable.setdefault(text, []).append(f"{dim}.{canonical}")
+
+    words: dict = {}
+    for line in corpus or []:
+        for w in re.findall(r"[a-z][a-z']*", str(line).lower()):
+            words[w] = words.get(w, 0) + 1
+
+    out: list[MemberClash] = []
+    for text, claimants in addressable.items():
+        if len(claimants) > 1:
+            out.append(MemberClash(text, "collision", tuple(sorted(claimants)),
+                                   "one string, two members — the winner depends on how the "
+                                   "caller happens to phrase it"))
+        elif len(text) <= 2:
+            out.append(MemberClash(text, "code_as_text", tuple(claimants),
+                                   "an identity code, matched case-insensitively against free "
+                                   "text; it should match as identity, not as a word"))
+        elif corpus and words.get(text, 0) >= 2:
+            out.append(MemberClash(text, "common_in_prose", tuple(claimants),
+                                   "appears in ordinary questions, so any text reaching the "
+                                   "resolver will match it", seen_in=words[text]))
+    # defects first, advice after — the ordering IS the distinction the caller must not lose
+    return sorted(out, key=lambda x: (0 if x.severity == "high" else 1, x.kind, x.text))

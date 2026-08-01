@@ -181,3 +181,31 @@ if __name__ == "__main__":
     print("OK — the lint finds the scope-only pair, judges a tree node by what it resolves to, "
           "ignores qualifier collisions, and does NOT out-recall a trivial baseline on this "
           "layer, which the last test asserts rather than hides.")
+
+
+def test_the_member_lint_separates_a_defect_from_advice():
+    """Only a COLLISION is a defect however the value arrives. `code_as_text` and
+    `common_in_prose` are findings about free-text resolution, and reporting them as faults
+    counts the alias map working as evidence it is broken: on this layer the model passed
+    `region='apac'` 211 times and `plan='annual'` 42 times, all flagged, all correct."""
+    from semantic.ambiguity import member_clashes
+
+    dims = {
+        "country": {"IN": ["in", "india"], "US": ["us", "usa"]},
+        "channel": {"paid_search": ["paid search", "paid"], "referral": ["referral"]},
+        "platform": {"ios": ["iphone", "ios"]},
+    }
+    found = {c.text: c for c in member_clashes(dims, corpus=["how much did we spend on paid ads",
+                                                            "what did we spend on paid search"])}
+    # a two-letter identity code, addressable as an English word
+    assert found["in"].kind == "code_as_text" and found["in"].severity == "if-you-resolve-prose"
+    # an alias that shows up in ordinary questions
+    assert found["paid"].kind == "common_in_prose" and found["paid"].seen_in >= 2
+    # neither is ranked as a fault, because neither is one when the caller supplies the value
+    assert not [c for c in found.values() if c.severity == "high"]
+
+    # one string claimed by two members IS a defect, whoever supplies it
+    clash = {c.text: c for c in member_clashes(
+        {"channel": {"paid_search": ["ads"]}, "platform": {"android": ["ads"]}})}
+    assert clash["ads"].kind == "collision" and clash["ads"].severity == "high"
+    assert set(clash["ads"].claimed_by) == {"channel.paid_search", "platform.android"}
