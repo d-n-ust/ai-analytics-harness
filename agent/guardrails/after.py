@@ -344,19 +344,33 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
               f"not the answer") if account else
              "the served number is neither a governed result nor a comparison of two")
         if account is None:
-            # Nothing governed produces this number, and no comparison of one metric with itself
-            # reaches it — so it is a COMPOSITION, and no governed definition covers what was
-            # asked (ARR = mrr x 12; revenue per dollar spent from mrr and marketing_spend).
-            # Report that root cause rather than a vague 'out_of_scope': a coverage gap is one
-            # typed signal, so downstream can label it and name the metric worth defining.
-            return Verdict(
-                False, "no_governed_definition", guardrail="governed_numbers", detail=
-                "this number was composed from different metrics (a rate times a count, metric A "
-                "over metric B), not read from a governed result or reached by comparing one "
-                "metric with itself. No governed definition covers what was asked — refuse and "
-                "name the metric that would need to exist, rather than serve a hand-built figure.",
-                missing="no governed result produces this number, and no comparison of a single "
-                        "metric across scopes reaches it (it combines different metrics)")
+            # WHICH failure this is depends on whether anything governed was queried at all, and
+            # the two are not the same claim.
+            #
+            # The composition message asserts a specific cause — "a rate times a count, metric A
+            # over metric B" — and it fired on runs that queried NOTHING. Two answers to
+            # adv_last_week_oob declared 0.0 after only calling check_coverage, and were told they
+            # had combined metrics that were never fetched. A guardrail that names a root cause it
+            # has not established is the defect this repo keeps finding in its own tools.
+            queried = any(True for _ in _governed_results(steps))
+            if queried:
+                detail = (
+                    "this number was composed from different metrics (a rate times a count, "
+                    "metric A over metric B), not read from a governed result or reached by "
+                    "comparing one metric with itself. No governed definition covers what was "
+                    "asked — refuse and name the metric that would need to exist, rather than "
+                    "serve a hand-built figure.")
+                missing = ("no governed result produces this number, and no comparison of a "
+                           "single metric across scopes reaches it (it combines different metrics)")
+            else:
+                detail = (
+                    "you served a number without querying anything governed — no metric was "
+                    "fetched in this run, so there is no governed result this figure could have "
+                    "come from. If the data you need is unavailable, refuse and say why (that is "
+                    "an answer); do not put a placeholder in `value`.")
+                missing = "no governed result was produced in this run at all"
+            return Verdict(False, "no_governed_definition", guardrail="governed_numbers",
+                           detail=detail, missing=missing)
 
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)

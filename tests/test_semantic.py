@@ -1258,3 +1258,37 @@ def test_additivity_is_read_from_the_aggregate_not_annotated():
     assert not disagreed, (
         f"{disagreed} are annotated additive_over_time but do not derive as additive. One of the "
         "two is wrong, and the aggregate is the one that cannot drift")
+
+
+def test_a_refusal_names_the_failure_it_found_not_the_one_it_knows():
+    """`governed_numbers` had one refusal message, and it asserted a specific cause.
+
+    Two answers to adv_last_week_oob declared 0.0 after calling only check_coverage — nothing
+    governed was ever fetched — and were told "this number was composed from different metrics (a
+    rate times a count, metric A over metric B)". Nothing was composed; nothing was queried. A
+    guardrail that names a root cause it has not established is the defect this repo keeps finding
+    in its own tools, and the model then repeats the wrong reason back."""
+    from agent.guardrails.after import verify_answer
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    checks_only = [{"tool": "check_coverage", "handle": "r1", "error": False,
+                    "args": {"start": "2026-07-13", "end": "2026-07-19"},
+                    "result": "NO — out of coverage", "result_values": [], "result_labels": []}]
+    nothing = verify_answer(sem, "q?", "prose", checks_only, declared_value=0.0,
+                            run_governed_numbers=True, run_output_validation=False,
+                            served_answer="prose")
+    assert not nothing.allowed
+    assert "without querying anything governed" in nothing.detail
+    assert "composed from different metrics" not in nothing.detail, (
+        "nothing was composed — there were no metrics to compose")
+
+    # …and where metrics WERE fetched and combined, the composition message is the true one
+    two = [{"tool": "query_metric", "handle": "r1", "error": False, "args": {"metric": "mrr"},
+            "result": "(2685,)", "result_values": [2685.0], "result_labels": [""]},
+           {"tool": "query_metric", "handle": "r2", "error": False,
+            "args": {"metric": "paying_users"}, "result": "(288,)",
+            "result_values": [288.0], "result_labels": [""]}]
+    composed = verify_answer(sem, "q?", "prose", two, declared_value=2685.0 / 288,
+                             run_governed_numbers=True, run_output_validation=False,
+                             served_answer="prose")
+    assert not composed.allowed and "composed from different metrics" in composed.detail
