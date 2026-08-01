@@ -437,6 +437,57 @@ def test_a_check_that_cannot_run_says_so():
     assert not real.startswith("UNKNOWN"), "with a tree it must give a real verdict"
     assert "confidence: low" in real, "and carry the edge's confidence, not just yes/no"
 
+    # THE SIBLING CASE, which this test did not cover for a year. A missing TREE and a missing
+    # TERM are the same absence: `pricing_change` is not a node, so the tree has nothing that
+    # could show a link either way. It answered "NO — no encoded edge", and 5 of 40 answers to
+    # u_pricing_cause duly said "No — the pricing change did not cause it".
+    unmodelled = with_tree.dispatch("check_causal_evidence",
+                                    {"driver": "pricing_change",
+                                     "outcome": "value_moments"}).content
+    assert unmodelled.startswith("UNKNOWN"), f"an unmodelled term must not answer NO: {unmodelled[:60]}"
+    assert "'pricing_change' is not a modelled entity" in unmodelled, (
+        "and must name WHICH term it does not model — that tells an analyst what the layer needs, "
+        "where 'no encoded edge' invites them to conclude there is no effect")
+
+
+def test_the_causal_check_has_four_states_not_two():
+    """A boolean conflated the two absences that must never be conflated, and contradicted itself
+    on a third case: `causal_evidence('new_signups', 'active_users')` returned False alongside
+    prose describing the edge and its confidence, which `_verdict` rendered as
+    "NO — weak, correlational evidence…". The model reads the first word."""
+    from agent.tools import Toolbox
+    from semantic.tree import Causality
+
+    con = open_warehouse(create_star_views=True)
+    sem = SemanticLayer(con)
+    tree = MetricTree(sem)
+    tb = Toolbox(con, 7, sem, tree, LADDER[9])
+
+    cases = {
+        # an edge exists and is weak — evidence, and not proof
+        ("new_signups", "active_users"): (Causality.CORRELATIONAL, "CORRELATIONAL"),
+        ("reminder_open_rate", "days_per_user"): (Causality.CORRELATIONAL, "CORRELATIONAL"),
+        # both modelled, nothing joins them: a FINDING, weak evidence of no link
+        ("moments_per_day", "new_signups"): (Causality.NOT_ENCODED, "NOT ENCODED"),
+        # a term outside the model: an ADMISSION, carrying no evidence either way
+        ("pricing_change", "value_moments"): (Causality.UNKNOWN, "UNKNOWN"),
+    }
+    for (driver, outcome), (want, word) in cases.items():
+        got, _ = tree.causal_evidence(driver, outcome)
+        assert got == want, f"{driver} -> {outcome}: {got} (wanted {want})"
+        rendered = tb.dispatch("check_causal_evidence",
+                               {"driver": driver, "outcome": outcome}).content
+        assert rendered.startswith(word), f"{driver} -> {outcome} renders {rendered[:40]!r}"
+
+    # the two absences must not render alike — that identity is the whole bug
+    assert _CAUSAL_DISTINCT(tb, "moments_per_day", "pricing_change", "new_signups")
+
+
+def _CAUSAL_DISTINCT(tb, modelled, unmodelled, outcome) -> bool:
+    a = tb.dispatch("check_causal_evidence", {"driver": modelled, "outcome": outcome}).content
+    b = tb.dispatch("check_causal_evidence", {"driver": unmodelled, "outcome": outcome}).content
+    return a.split(" —")[0] != b.split(" —")[0]
+
 
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set

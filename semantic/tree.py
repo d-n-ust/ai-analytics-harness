@@ -16,6 +16,7 @@ the maths and it does not invent a cause the tree doesn't carry.
 from __future__ import annotations
 
 import math
+from enum import StrEnum
 from pathlib import Path
 
 import yaml
@@ -33,6 +34,31 @@ def _pct(a, b):
 
 def _dln(a, b):
     return math.log(b / a) if (a and b and a > 0 and b > 0) else None
+
+
+class Causality(StrEnum):
+    """What the tree can say about a driver and an outcome. FOUR states, because a boolean
+    conflated the two that must never be conflated.
+
+      PROVEN         identity arithmetic, or a high-confidence influence
+      CORRELATIONAL  an edge exists and is weak — here it is, with its confidence
+      NOT_ENCODED    both terms ARE modelled, and no edge joins them. A finding: someone drew
+                     this graph and did not draw that arrow
+      UNKNOWN        a term is outside the model entirely. An admission, carrying no evidence in
+                     either direction
+
+    The last two were one value, and they are not the same claim. "We modelled this and found no
+    link" is weak evidence of no link; "we have never heard of this thing" is none. Collapsed,
+    `causal_evidence('pricing_change', ...)` answered NO for an event the layer does not model at
+    all, and 5 of 40 answers to u_pricing_cause said "No — the pricing change did not cause it",
+    which is absence of evidence restated as evidence of absence. The repo already fixed exactly
+    that for a missing TREE (agent/tools.py) and never generalised it to a missing TERM.
+    """
+
+    PROVEN = "proven"
+    CORRELATIONAL = "correlational"
+    NOT_ENCODED = "not_encoded"
+    UNKNOWN = "unknown"
 
 
 class MetricTree:
@@ -76,7 +102,13 @@ class MetricTree:
                     queue.append((e["child"], chain))
         return None
 
-    def causal_evidence(self, driver: str | None = None, outcome: str | None = None) -> tuple[bool, str]:
+    def _known(self, term: str) -> bool:
+        """Is this term something the model has a node for at all? The whole test that separates a
+        finding from an admission, and it was never asked."""
+        return any(self._matches(term, node) for node in self.nodes)
+
+    def causal_evidence(self, driver: str | None = None,
+                        outcome: str | None = None) -> tuple[Causality, str]:
         """Answerability check: does the tree link driver to outcome, directly or through a chain?
 
         Both terms are required — an omitted one is not a wildcard, which would trivially match
@@ -95,17 +127,32 @@ class MetricTree:
         makes the whole chain correlational.
         """
         if not (driver and driver.strip()) or not (outcome and outcome.strip()):
-            return False, ("name both a driver and an outcome to check. Encoded edges: "
-                           + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
+            return Causality.UNKNOWN, ("name both a driver and an outcome to check. Encoded edges: "
+                                       + "; ".join(f"{e['parent']} <- {e['child']}"
+                                                   for e in self.edges) + ".")
+
+        # A term the model has no node for. Naming WHICH term is the point: it tells an analyst
+        # what the layer would need in order to answer, where "no encoded edge" tells them nothing
+        # and invites them to conclude there is no effect.
+        missing = [t for t in (driver, outcome) if not self._known(t)]
+        if missing:
+            return Causality.UNKNOWN, (
+                f"{', '.join(repr(m) for m in missing)} is not a modelled entity — the tree has no "
+                f"node for it, so there is nothing here that could show a link either way. This is "
+                f"NOT evidence that no link exists; it means the layer cannot speak to it. Do not "
+                f"answer the causal question in the negative on the strength of this. Modelled "
+                f"nodes: {', '.join(self.nodes)}.")
 
         for e in self.edges:
             if self._matches(driver, e["child"]) and self._matches(outcome, e["parent"]):
                 if e["type"] == "identity":
-                    return True, (f"{e['parent']} = ... x {e['child']} (identity, exact arithmetic).")
+                    return Causality.PROVEN, (f"{e['parent']} = ... x {e['child']} "
+                                              "(identity, exact arithmetic).")
                 conf = e.get("confidence", "unknown")
                 proven = conf in ("high",)
                 lead = "weak, correlational evidence" if not proven else "evidence"
-                return proven, (f"{lead} — edge {e['parent']} <- {e['child']} "
+                return (Causality.PROVEN if proven else Causality.CORRELATIONAL), (
+                    f"{lead} — edge {e['parent']} <- {e['child']} "
                                 f"[influence, confidence: {conf}]: {e.get('evidence', '')} "
                                 "An influence edge is not proof of causation; a low-confidence "
                                 "edge is not a basis for a confident causal claim.")
@@ -116,14 +163,16 @@ class MetricTree:
             weakest = "exact arithmetic throughout" if proven else (
                 "the weakest link is a correlational influence edge, so the chain is not proof of "
                 "causation and cannot support a confident causal claim")
-            return proven, (
+            return (Causality.PROVEN if proven else Causality.CORRELATIONAL), (
                 f"no DIRECT edge links {driver!r} to {outcome!r}, but the tree carries a path: "
                 + " ; ".join(self._edge_text(e) for e in chain)
                 + f". A chain is only as strong as its weakest edge — {weakest}. The intermediate "
                   f"node ({chain[-1]['parent']}) is where to check whether anything actually moved.")
 
-        return False, (f"no encoded edge links {driver!r} to {outcome!r}, directly or through any "
-                       "chain. Edges exist only for: "
+        # Both terms ARE modelled and nothing joins them. A finding, not an admission.
+        return Causality.NOT_ENCODED, (
+            f"both {driver!r} and {outcome!r} are modelled, and no encoded edge links them, "
+            "directly or through any chain. Edges exist only for: "
                        + "; ".join(f"{e['parent']} <- {e['child']}" for e in self.edges) + ".")
 
     def describe(self) -> str:

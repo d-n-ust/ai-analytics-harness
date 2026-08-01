@@ -23,7 +23,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from semantic.semantic import SemanticError, SemanticLayer
-from semantic.tree import MetricTree, TreeError
+from semantic.tree import Causality, MetricTree, TreeError
 from warehouse.config import NAMED_PERIODS
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
@@ -264,6 +264,16 @@ def _measure_values(cols, rows) -> list:
     return out
 
 
+# What the model reads first, per verdict. NOT_ENCODED and UNKNOWN both used to render as "NO",
+# which is the difference between "we looked and found nothing" and "we have nowhere to look".
+_CAUSAL_WORD = {
+    Causality.PROVEN: "YES",
+    Causality.CORRELATIONAL: "CORRELATIONAL",
+    Causality.NOT_ENCODED: "NOT ENCODED",
+    Causality.UNKNOWN: "UNKNOWN",
+}
+
+
 def _verdict(ok: bool, detail: str) -> str:
     return ("YES — " if ok else "NO — ") + detail
 
@@ -320,7 +330,11 @@ def _check_causal_evidence(tb, args) -> ToolResult:
                           "cannot be checked here. This is not evidence that no link exists: "
                           "you cannot tell either way, so do not refuse for no_causal_evidence "
                           "on the strength of this answer.")
-    return ToolResult(_verdict(*tb.tree.causal_evidence(args.get("driver"), args.get("outcome"))))
+    verdict, detail = tb.tree.causal_evidence(args.get("driver"), args.get("outcome"))
+    # The LEADING WORD is what the model acts on, so it carries the verdict rather than a
+    # yes/no cast from it. `NO — weak, correlational evidence — edge ... [confidence: medium]`
+    # told the model the opposite of the finding in its own first word.
+    return ToolResult(f"{_CAUSAL_WORD[verdict]} — {detail}")
 
 
 def _get_metric_tree(tb, args) -> ToolResult:
