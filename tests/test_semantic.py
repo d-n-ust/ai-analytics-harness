@@ -1136,3 +1136,74 @@ def test_a_guardrail_reports_what_it_verified_not_that_it_verified():
                   source_metric="active_users", declared_value=886.0, sources=["r1"],
                   run_governed_numbers=True, run_output_validation=False)
     assert next(a.outcome for a in rec if a.guardrail == "governed_numbers") == "verified a figure"
+
+
+def _grained(handle, metric, values, grain=None, period="last_week"):
+    """A recorded query_metric step at a stated grain, as the trace stores it."""
+    args = {"metric": metric, "period": period}
+    if grain:
+        args["time_grain"] = grain
+    return {"tool": "query_metric", "handle": handle, "error": False, "args": args,
+            "result": "columns: value\n" + "\n".join(f"({v},)" for v in values),
+            "result_values": [float(v) for v in values]}
+
+
+def test_a_comparison_holds_the_grain_fixed():
+    """`active_users` at day grain and at week grain are the same METRIC and not the same MEASURE.
+
+    One is distinct-users-per-day, the other distinct-users-per-week, and the ratio between them
+    is a third quantity — stickiness — that nobody defined. Keyed on the metric alone the check
+    read that ratio as "a comparison of two active_users results" and served DAU/MAU as governed:
+    13 of 46 attempts at adv_dau_mau, every one of them wrong.
+
+    A comparison holds the measure fixed and varies the period or the scope. Changing the grain
+    varies the measure, so there is nothing left to compare."""
+    from agent.guardrails.after import account_for
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    # the exploit: daily actives over weekly actives, both real governed results
+    cross = [_grained("r1", "active_users", [278, 331, 294, 268], grain="day"),
+             _grained("r2", "active_users", [886], grain="week")]
+    assert account_for(294 / 886, cross, ["r1", "r2"], sem) is None, "a cross-grain ratio is a new measure"
+    assert account_for(886 - 294, cross, ["r1", "r2"], sem) is None
+    assert account_for((886 - 294) / 294, cross, ["r1", "r2"], sem) is None
+
+    # …while the same measure across two periods is still a comparison, and still allowed
+    same = [_grained("r1", "active_users", [886], grain="week", period="last_week"),
+            _grained("r2", "active_users", [836], grain="week", period="prev_week")]
+    for figure in (886 - 836, 886 / 836, (886 - 836) / 836):
+        account = account_for(figure, same, ["r1", "r2"], sem)
+        assert account, f"{figure} is a same-grain comparison and must stand"
+        assert "week grain" in account, f"the account must name the grain it held fixed: {account}"
+
+    # and an ungrained pair — the ordinary case — is unaffected
+    plain = [_grained("r1", "active_users", [886]), _grained("r2", "active_users", [836])]
+    assert account_for(886 - 836, plain, ["r1", "r2"], sem)
+
+
+def test_additivity_is_read_from_the_aggregate_not_annotated():
+    """Kimball's three classes fall out of the `agg`, so nobody decides them per metric.
+
+    The hand-kept `additive_over_time` carried True on five metrics and null on ten, and null
+    meant both "not additive" and "nobody decided". The derivation agrees with every True and
+    resolves every null — so the flag becomes a test OF the derivation rather than a second
+    source of truth that can drift from it."""
+    import yaml
+    from pathlib import Path
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    assert sem.additivity("value_moments") == "additive"          # sum(moments)
+    assert sem.additivity("active_users") == "semi_additive"      # count(distinct user_id)
+    assert sem.additivity("days_per_user") == "non_additive"      # a ratio
+    # a STOCK: count(*) reads additive by its aggregate alone, but adding January's active
+    # subscriptions to February's counts every subscription that survived both. No time column
+    # is what says so.
+    assert sem.additivity("active_subscriptions") == "semi_additive"
+
+    layer = yaml.safe_load((Path(__file__).resolve().parent.parent / "semantic" /
+                            "semantic_layer.yml").read_text())["metrics"]
+    disagreed = [n for n, spec in layer.items()
+                 if spec.get("additive_over_time") and sem.additivity(n) != "additive"]
+    assert not disagreed, (
+        f"{disagreed} are annotated additive_over_time but do not derive as additive. One of the "
+        "two is wrong, and the aggregate is the one that cannot drift")

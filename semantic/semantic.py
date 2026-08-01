@@ -328,6 +328,40 @@ class SemanticLayer:
         return {k: v for k, v in filters.items()
                 if k in pinned and isinstance(v, bool) and v is pinned[k]}
 
+    def additivity(self, metric: str) -> str:
+        """Whether this measure may be rolled up over time — DERIVED from its aggregate.
+
+        Kimball's three classes, and each falls out of the `agg` without anyone deciding:
+
+          additive       sum(...) — the parts add up, so twelve months make a year
+          semi_additive  count(distinct ...), or a STOCK — adding two periods double-counts
+                         anything present in both, so it may be sliced by any other dimension
+                         but never summed across time
+          non_additive   a ratio or an average — adding them is meaningless in every direction
+
+        Read rather than annotated, because a hand-kept flag drifts: `additive_over_time` carries
+        True on five metrics and null on ten, and null there means both "not additive" and
+        "nobody decided". `count(distinct user_id)` is semi-additive whether or not anyone wrote
+        it down, which is the whole reason this is a property of the measure.
+        """
+        spec = self.metrics.get(metric) or {}
+        agg = " ".join(str(spec.get("agg", "")).lower().split())
+        if not agg:
+            return "unknown"
+        if "/" in agg or "avg(" in agg:
+            return "non_additive"
+        # No time column means the measure is a STOCK — a level at a moment, not events in a
+        # window. `active_subscriptions` is `count(*)` and reads additive by its aggregate alone,
+        # but adding January's active subscriptions to February's counts every subscription that
+        # survived both. A stock slices across any other dimension and never sums across time.
+        if not spec.get("time_column"):
+            return "semi_additive"
+        if "distinct" in agg:
+            return "semi_additive"
+        if agg.startswith("sum(") or agg.startswith("count("):
+            return "additive"
+        return "unknown"
+
     def resolve_member(self, dimension: str, value):
         """Map a free-text filter value onto the canonical governed member of a dimension,
         via its members + synonyms (case/space/underscore-insensitive) — "iPhone" ->

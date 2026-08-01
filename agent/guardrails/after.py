@@ -78,14 +78,25 @@ def _named_steps(steps: list, sources) -> list:
 
 
 def _named_results(steps: list, sources) -> dict:
-    """The values of the named results, grouped by the metric they are instances of.
+    """The values of the named results, grouped by the metric AND THE GRAIN they are instances of.
 
     Only `query_metric`, because only there does one call's whole result belong to one named
     metric. A decomposition spans several, and every figure in it is already a governed result in
-    its own right — the tree computed it — so it never needs to be reached by comparison."""
-    groups: dict[str, list] = {}
+    its own right — the tree computed it — so it never needs to be reached by comparison.
+
+    GRAIN IS PART OF THE KEY, and that is the whole point. `active_users` at day grain and
+    `active_users` at week grain are the same metric and NOT the same measure: one is
+    distinct-users-per-day, the other distinct-users-per-week, and the ratio between them is a
+    third quantity with its own name — stickiness — that nobody defined. Keyed on the metric
+    alone, the check read that ratio as "a comparison of two active_users results" and served
+    DAU/MAU as governed, in 6 stored answers, every one of them wrong.
+
+    A comparison holds a measure fixed and varies the period or the scope. Changing the grain
+    varies the measure, so there is nothing left to compare."""
+    groups: dict[tuple, list] = {}
     for s in _named_steps(steps, sources):
-        groups.setdefault((s.get("args") or {})["metric"], []).extend(step_values(s))
+        args = s.get("args") or {}
+        groups.setdefault((args["metric"], args.get("time_grain")), []).extend(step_values(s))
     return groups
 
 
@@ -109,7 +120,11 @@ def _additive_total(declared_value, steps: list, sources, semantic) -> str | Non
         metric = args["metric"]
         if args.get("group_by") or not args.get("time_grain"):
             continue
-        if not semantic.metrics.get(metric, {}).get("additive_over_time"):
+        # DERIVED from the aggregate, not read from a hand-kept flag: `additive_over_time` carries
+        # True on three metrics and null on eleven, and null there means both "not additive" and
+        # "nobody decided". A stock or a distinct count is not summable across periods whether or
+        # not anyone wrote it down.
+        if semantic.additivity(metric) != "additive":
             continue
         values = step_values(s)
         if len(values) > 1 and num_match(declared_value, sum(values)):
@@ -164,7 +179,7 @@ def account_for(declared_value, steps: list, sources=(), semantic=None) -> str |
         for candidate in _renderings(v):
             if num_match(declared_value, candidate):
                 return f"{metric} = {v:g}"
-    for metric, values in _named_results(steps, sources).items():
+    for (metric, grain), values in _named_results(steps, sources).items():
         for a in values:
             for b in values:
                 if a == b or not b:
@@ -173,7 +188,8 @@ def account_for(declared_value, steps: list, sources=(), semantic=None) -> str |
                                  ((a - b) / b, "percent change")):
                     for candidate in _renderings(base):
                         if num_match(declared_value, candidate):
-                            return f"{op} of two {metric} results ({a:g}, {b:g})"
+                            at = f" at {grain} grain" if grain else ""
+                            return f"{op} of two {metric} results{at} ({a:g}, {b:g})"
     return _additive_total(declared_value, steps, sources, semantic)
 
 
