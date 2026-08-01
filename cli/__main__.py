@@ -68,12 +68,10 @@ def cmd_ask(a):
             protocol=Protocol.parse(a.protocol), verbose=not a.trace, trace=a.trace)
 
 
-def cmd_trace(a):
-    """Re-render a stored run. The trace is a view over what was already recorded, so any row
-    ever written can be read back — including runs that predate this command."""
+def _rows_for(a) -> list:
+    """The stored rows matching one question. Shared by `trace` and `chain`, which are two views
+    over the same row and must never disagree about which row they are showing."""
     import json
-
-    from cli.trace import render
     run = _run_dir(a.run)
     rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
     picked = [r for r in rows if r.get("qid") == a.qid
@@ -82,6 +80,29 @@ def cmd_trace(a):
     if not picked:
         ids = sorted({r.get("qid") for r in rows})
         raise SystemExit(f"no row for qid={a.qid!r} in {run.name}. Available: {', '.join(ids[:12])}…")
+    return picked
+
+
+def cmd_trace(a):
+    """Re-render a stored run. The trace is a view over what was already recorded, so any row
+    ever written can be read back — including runs that predate this command."""
+    from cli.trace import render
+    picked = _rows_for(a)
+    for row in picked[: a.limit]:
+        print(render(row))
+    if len(picked) > a.limit:
+        print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
+
+
+def cmd_chain(a):
+    """Render one answer as the chain from question to answer — what it asked the data, what it
+    claims, and what each claim rests on.
+
+    The counterpart to `trace`: same row, read logically instead of chronologically, and written
+    for whoever has to decide whether to act on the answer rather than for whoever is debugging
+    the run. It prints no verdict; see evidence/chain.py for why."""
+    from cli.chain import render
+    picked = _rows_for(a)
     for row in picked[: a.limit]:
         print(render(row))
     if len(picked) > a.limit:
@@ -197,6 +218,14 @@ def main() -> None:
     sp.add_argument("--model", default=None)
     sp.add_argument("--limit", type=int, default=3)
     sp.set_defaults(func=cmd_trace)
+
+    sp = sub.add_parser("chain", help="render one answer as question -> evidence -> answer")
+    sp.add_argument("qid", help="question id, e.g. t5_why_drop")
+    sp.add_argument("--run", default="results/latest")
+    sp.add_argument("--config", default=None, help="one config label, e.g. R9/claims")
+    sp.add_argument("--model", default=None)
+    sp.add_argument("--limit", type=int, default=1)
+    sp.set_defaults(func=cmd_chain)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 

@@ -111,7 +111,7 @@ make eval         # the grounding experiment: 57 questions x 6 rungs x {gpt-5.6-
 ```
 
 Everything runs through one CLI — `./bench <verb>` (a thin wrapper over `python -m cli`):
-`data · verify · query · ask · run · regrade · report · test`. Vary the **reliability** ladder
+`data · verify · query · ask · run · regrade · report · trace · chain · test`. Vary the **reliability** ladder
 with `--rrungs`, or run explicit ablation cells with `--cells`:
 
 ```bash
@@ -165,8 +165,9 @@ semantic/     the governed model: the semantic layer (metrics/segments) + the me
 context/      what the agent is GIVEN: verified example queries + the knowledge base (text, no code)
 agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
               guardrails, and the answer verifier
-evidence/     what an answer DECLARED, resolved against the trace it was built from. Pure
-              lookups, no model — and it decides nothing, which is what keeps it an instrument
+evidence/     what an answer DECLARED, resolved against the trace it was built from, and the
+              question->evidence->answer chain a reader is shown. Pure lookups, no model — and it
+              decides nothing, which is what keeps it an instrument rather than a second judge
 evals/         the 57 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
 cli/          the `bench` entry point (one dispatcher over every verb)
 experiments/  pre-registrations + findings logs
