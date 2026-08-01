@@ -22,6 +22,7 @@ import textwrap
 
 from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
 from agent.protocol import split_config
+from evidence.chain import premise_id
 
 from .sqlfmt import format_sql
 
@@ -354,7 +355,9 @@ def _claim_lines(row: dict, paint, width: int) -> list:
         # A conclusion cites CLAIMS; a measurement cites values. Different arrows, because they
         # are different kinds of support and a reader must not have to guess which this is.
         if f.get("premises"):
-            line = paint(f"             ⇐ follows from {', '.join(f['premises'])}", "cyan")
+            # Archived rows store premises as positions, not ids — see evidence.chain.premise_id.
+            prem = ", ".join(premise_id(x) for x in f["premises"])
+            line = paint(f"             ⇐ follows from {prem}", "cyan")
         else:
             line = paint(f"             ← {','.join(str(s) for s in (c.get('sources') or [])) or '—'}",
                          "dim")

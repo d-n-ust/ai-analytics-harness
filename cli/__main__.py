@@ -73,6 +73,12 @@ def _rows_for(a) -> list:
     over the same row and must never disagree about which row they are showing."""
     import json
     run = _run_dir(a.run)
+    # `results/latest` is a symlink and outlives the run it points at — deleting a scratch run
+    # leaves it dangling, and the resulting FileNotFoundError names a path the user never typed.
+    if not (run / "raw.jsonl").exists():
+        raise SystemExit(f"{run} has no raw.jsonl. "
+                         + ("`results/latest` points at a run that no longer exists; "
+                            "pass --run explicitly." if "latest" in str(a.run) else ""))
     rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
     picked = [r for r in rows if r.get("qid") == a.qid
               and (a.config is None or r.get("config") == a.config)

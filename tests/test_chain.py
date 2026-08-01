@@ -101,6 +101,29 @@ def test_a_governed_statement_is_a_node_like_any_other():
     assert c1.rests_on[0].note == "", "a statement resolves; it is not an unresolved citation"
 
 
+def test_an_archived_row_whose_premises_are_positions_still_renders():
+    """Rows written before claims carried explicit ids stored premises as raw POSITIONS — [0, 1]
+    meaning the first and second claim. The chain promises every row ever written; pointed at a
+    stored run for the first time it raised TypeError instead. Live runs alone would never have
+    shown it, because live runs write the current shape."""
+    archived = {
+        "question": "why?", "answer": "frequency", "outcome": "answer",
+        "claims": [{"text": "a"}, {"text": "b"}, {"text": "so frequency"}],
+        "steps": [DECOMP],
+        "claim_audit": {"n": 3, "bound": 3, "derived": 1, "max_depth": 1, "findings": [
+            {"i": 0, "text": "a", "sources": ["r1:pct_change"], "bound": True, "strength": "exact",
+             "premises": [], "why": []},
+            {"i": 1, "text": "b", "sources": ["r1:days_per_user.pct_change"], "bound": True,
+             "strength": "exact", "premises": [], "why": []},
+            # no `id` key, and premises as ints — exactly as 2026-07-31 rows carry them
+            {"i": 2, "text": "so frequency", "sources": [], "bound": True, "strength": "exact",
+             "premises": [0, 1], "why": []},
+        ]}}
+    ch = chain_of(archived)
+    concl = next(n for n in ch.nodes if n.kind == "conclusion")
+    assert concl.id == "c3" and concl.follows_from == ("c1", "c2"), concl
+
+
 def test_a_flat_list_says_so_and_an_unmeasured_answer_says_so():
     """Both are invisible otherwise. A wall of measurements with the verdict sitting among them
     looks exactly like an argument until you ask what rests on what."""
@@ -118,6 +141,7 @@ if __name__ == "__main__":
     test_one_wrong_declaration_is_one_note_not_five_faults()
     test_correlational_is_reported_as_the_tree_s_word_not_the_model_s()
     test_a_governed_statement_is_a_node_like_any_other()
+    test_an_archived_row_whose_premises_are_positions_still_renders()
     test_a_flat_list_says_so_and_an_unmeasured_answer_says_so()
     print("OK — the chain shows provenance, names one mislabel once, carries the tree's own word "
           "for correlational, and renders a verdict nowhere.")

@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 
 from .claims import cited_metric
 
-__all__ = ["Chain", "Link", "Node", "chain_of"]
+__all__ = ["Chain", "Link", "Node", "chain_of", "premise_id"]
 
 
 @dataclass(frozen=True)
@@ -77,6 +77,22 @@ def _call_of(step: dict) -> str:
     return f"{step.get('tool', '?')}({inner})" if inner else str(step.get("tool", "?"))
 
 
+def premise_id(ref) -> str:
+    """A premise reference as a claim id, whatever shape the row stored it in.
+
+    Rows written before claims carried explicit ids stored premises as raw POSITIONS — `[0, 1]`
+    meaning the first and second claim. Reading one of those as an id produced `follows from 0, 1`
+    at best and a TypeError at worst, which is what a stored run actually did the first time this
+    view was pointed at one. The docstring above promises every row ever written; that promise is
+    only true if the old shape is understood rather than assumed away."""
+    if isinstance(ref, bool):
+        return str(ref)
+    if isinstance(ref, int):
+        return f"c{ref + 1}"
+    text = str(ref).strip()
+    return text if text.startswith("c") else f"c{int(text) + 1}" if text.isdigit() else text
+
+
 def _fmt(value) -> str:
     if not isinstance(value, (int, float)) or isinstance(value, bool):
         return ""
@@ -96,17 +112,31 @@ def chain_of(row: dict) -> Chain:
     steps = {s["handle"]: s for s in (row.get("steps") or []) if s.get("handle")}
 
     nodes: list[Node] = []
-    # The calls first, in the order they ran: this is where every number entered the answer.
-    for handle, step in steps.items():
+    # EVERY call, in the order it ran — not only the ones a claim could cite. A handle exists so an
+    # answer can point at a result; a call without one still happened, and on a REFUSAL it is
+    # usually the whole story. Indexing only handled steps rendered an out-of-coverage refusal as
+    # a question, an answer, and nothing in between, when the row held three calls including the
+    # coverage check that produced the refusal.
+    # Whether ANY call is citable at all. On a run stored before every successful result got a
+    # handle, none is — and saying so once is a fact about the run, where saying it per call is
+    # three identical lines that bury the two facts that differ.
+    any_citable = any(s.get("handle") for s in row.get("steps") or [])
+    for step in row.get("steps") or []:
+        handle = step.get("handle") or ""
         labels = [str(lb) for lb in (step.get("result_labels") or []) if str(lb)]
         facts = []
-        if not labels:
-            facts.append("returns a governed statement, not a number — cited whole")
+        if step.get("blocked_reason"):
+            facts.append(f"blocked by the guardrails: {step['blocked_reason']}")
+        elif step.get("error"):
+            facts.append("returned an error")
+        elif not labels:
+            facts.append("returns a governed statement, not a number"
+                         + (" — cited whole" if handle else ""))
         elif len(labels) > 1:
             facts.append(f"returned {len(labels)} separate figures; a claim names one of them")
-        if step.get("blocked_reason"):
-            facts.append(f"blocked: {step['blocked_reason']}")
-        nodes.append(Node(id=handle, kind="call", text=_call_of(step), facts=tuple(facts)))
+        if not handle and any_citable:
+            facts.append("no handle, so no claim could cite it")
+        nodes.append(Node(id=handle or "—", kind="call", text=_call_of(step), facts=tuple(facts)))
 
     for i, f in enumerate(findings):
         c = claims[i] if i < len(claims) else {}
@@ -142,10 +172,13 @@ def chain_of(row: dict) -> Chain:
             kind="conclusion" if f.get("premises") else "measurement",
             text=str(f.get("text") or ""),
             rests_on=tuple(refs),
-            follows_from=tuple(f.get("premises") or []),
+            follows_from=tuple(premise_id(x) for x in f.get("premises") or []),
             facts=tuple(facts)))
 
     notes = []
+    if (row.get("steps") or []) and not any_citable:
+        notes.append("No call in this run carries a handle, so nothing the agent read could be "
+                     "cited — this row predates addressable results.")
     if claims and not audit.get("derived"):
         # Said out loud because it is invisible otherwise: a wall of measurements with the verdict
         # sitting among them looks exactly like an argument until you ask what rests on what.

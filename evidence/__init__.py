@@ -36,9 +36,9 @@ from .claims import (
     cited_metric,
     claim_id,
 )
-from .chain import Chain, Link, Node, chain_of
+from .chain import Chain, Link, Node, chain_of, premise_id
 from .values import num_match
 
 __all__ = ["BAD_PREMISE", "CORRELATIONAL", "EXACT", "MISLABELLED", "UNRESOLVED", "UNSOURCED",
            "VALUE_MISMATCH", "Chain", "Link", "Node", "audit", "chain_of", "cited_metric",
-           "claim_id", "num_match"]
+           "claim_id", "num_match", "premise_id"]
