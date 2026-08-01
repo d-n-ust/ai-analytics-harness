@@ -361,8 +361,23 @@ def _decomposition_values(out: dict) -> list:
     # The root's own figures are unprefixed; a child's carry the child's name, so an answer
     # cites `days_per_user.contribution_share` rather than "one of the eighteen numbers in r1".
     take(out)
-    for child in (out.get("identity_decomposition") or []) + (out.get("influence_candidates") or []):
+    for child in out.get("identity_decomposition") or []:
         take(child, str(child.get("child", "")) + ".")
+    # Influences are keyed by the child they hang off, and the KEY is part of the address:
+    # `active_users.new_signups.pct_change` says which branch the driver belongs to, which is the
+    # whole point of reporting them per child. A flat `new_signups.pct_change` would lose it.
+    for parent, group in (out.get("influences") or {}).items():
+        for child in group:
+            take(child, f"{parent}.{child.get('child', '')}."
+                        if parent != out.get("node") else f"{child.get('child', '')}.")
+    # The tree's OWN conclusions, addressable. They were computed, shown in the JSON, and given no
+    # address — so an answer reporting "days per user is the primary driver" had to cite one of
+    # the things being ranked, which is a citation that does not support the word "primary".
+    for name, entry in (("primary_driver", out.get("primary_driver")),):
+        if isinstance(entry, dict):
+            take(entry, f"{name}.")
+    for c in out.get("offsetting") or []:
+        take(c, f"offsetting.{c.get('child', '')}.")
     return values
 
 

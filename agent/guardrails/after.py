@@ -503,20 +503,34 @@ def causal_record(run, steps: list) -> str:
         if share is not None:
             line += f", share {share:+.1%}"
         if c["child"] == primary:
-            line += "   <- largest contributor"
+            line += "   <- largest contributor in the direction the parent moved"
+        elif (share or 0) < 0:
+            line += "   <- pushed the OTHER way; it offset the change rather than causing it"
         lines.append(line)
-    influences = out.get("influence_candidates") or []
+    # Keyed by the child each hangs off, and shown for EVERY branch. Flattened and limited to the
+    # primary driver's branch, this told the judge that a question's other half did not exist.
+    influences = out.get("influences") or {}
     if influences:
         lines.append("  INFLUENCE children — correlational only, NOT proof of cause. May be "
-                     "offered as a likely driver WITH this evidence, never asserted as the cause:")
-        for c in influences:
-            lines.append(f"    {c['child']} ({c['label']}): {c['value_a']:g} -> {c['value_b']:g}, "
-                         f"confidence: {c['confidence']}")
-            lines.append(f"      evidence: {c['evidence']}")
+                     "offered as a likely driver WITH this evidence, never asserted as the cause. "
+                     "Listed under the child each one drives:")
+        for parent, group in influences.items():
+            for c in group:
+                lines.append(f"    {parent} <- {c['child']} ({c['label']}): "
+                             f"{c['value_a']:g} -> {c['value_b']:g}, confidence: {c['confidence']}")
+                lines.append(f"      evidence: {c['evidence']}")
     else:
-        lines.append("  INFLUENCE children: none encoded for this driver.")
-    lines.append("  No other driver is encoded. A breakdown showing WHERE a change landed (a "
-                 "region, a platform, a channel) is not a driver OF it.")
+        lines.append("  INFLUENCE children: none encoded anywhere in this decomposition.")
+    # This used to say "No other driver is encoded" unconditionally, which was false whenever the
+    # tool had pruned to one branch — the judge was told the analyst had the whole picture while
+    # holding part of it.
+    left = out.get("not_expanded") or []
+    lines.append(f"  Nodes with further structure this decomposition did not open: "
+                 f"{', '.join(left)}." if left else
+                 "  Nothing further is encoded: every child and every influence edge below this "
+                 "node is listed above.")
+    lines.append("  A breakdown showing WHERE a change landed (a region, a platform, a channel) "
+                 "is not a driver OF it.")
     return "\n".join(lines)
 
 

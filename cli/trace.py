@@ -238,7 +238,10 @@ def _decomposition(step: dict, width: int) -> list[str] | None:
                 f"{num(c.get('value_b')):<7}{pct(c.get('pct_change')):>9}")
 
     kids = out.get("identity_decomposition") or []
-    infl = out.get("influence_candidates") or []
+    # Archived rows carry a flat `influence_candidates` (one branch's, unlabelled); current ones
+    # carry `influences` keyed by the child each hangs off. Both render.
+    infl = [dict(c, parent=parent) for parent, group in (out.get("influences") or {}).items()
+            for c in group] or list(out.get("influence_candidates") or [])
     name_w = max((len(str(c.get("child", ""))) for c in [*kids, *infl]), default=0)
     primary = (out.get("primary_driver") or {}).get("child")
 

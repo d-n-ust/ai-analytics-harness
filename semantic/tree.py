@@ -173,17 +173,44 @@ class MetricTree:
                 "contribution_share": share,
             })
 
-        primary = max(identity, key=lambda x: abs(x["contribution_share"] or 0), default=None)
-        infl_source = primary["child"] if primary else node
-        influences = []
-        for e in self._children(infl_source, "influence"):
-            c = e["child"]
-            ai, bi = val(self.nodes[c]["metric"], period_a), val(self.nodes[c]["metric"], period_b)
-            influences.append({
-                "child": c, "label": self.nodes[c]["label"],
-                "value_a": ai, "value_b": bi, "pct_change": _pct(ai, bi),
-                "confidence": e["confidence"], "evidence": e["evidence"],
-            })
+        # The largest contribution IN THE DIRECTION THE PARENT MOVED. Signed, not absolute.
+        #
+        # `max(..., key=abs)` discarded the sign, so a child that pushed AGAINST the change could
+        # be named its primary driver. Shares are normalised by the parent's log change and sum to
+        # 1, so at least one is always positive and the signed max is always well defined — the
+        # absolute value handled a case that cannot arise while creating one that can.
+        movers = [c for c in identity if c["contribution_share"] is not None]
+        primary = max(movers, key=lambda x: x["contribution_share"], default=None)
+        # The other direction, named rather than left for a reader to infer from a minus sign.
+        # "Active users rose 5.98% and contributed -0.46" is the fact a whole class of question
+        # turns on — growth masked by a decline elsewhere — and nothing in the payload said it.
+        offsetting = [c for c in movers if (c["contribution_share"] or 0) < 0]
+
+        # Influences for EVERY identity child, keyed by the child they belong to.
+        #
+        # This returned the influences of the primary driver alone, under the name
+        # `influence_candidates`, with nothing saying a branch had been dropped. So a question
+        # like "is this a product problem or an acquisition problem" was unanswerable from the
+        # tool that exists to answer it: acquisition feeds active_users, active_users was not the
+        # top contributor, and its two influence edges were therefore structurally invisible. The
+        # agent read a field named "candidates" holding one entry and reasonably stopped.
+        #
+        # Keyed by child rather than flattened because WHICH child an influence hangs off is the
+        # information such a question needs. A flat list was unambiguous only while it could never
+        # hold more than one branch.
+        influences: dict[str, list] = {}
+        for parent in [node, *(c["child"] for c in identity)]:
+            found = []
+            for e in self._children(parent, "influence"):
+                c = e["child"]
+                ai, bi = val(self.nodes[c]["metric"], period_a), val(self.nodes[c]["metric"], period_b)
+                found.append({
+                    "child": c, "label": self.nodes[c]["label"],
+                    "value_a": ai, "value_b": bi, "pct_change": _pct(ai, bi),
+                    "confidence": e["confidence"], "evidence": e["evidence"],
+                })
+            if found:
+                influences[parent] = found
 
         return {
             "node": node, "label": self.nodes[node]["label"],
@@ -191,8 +218,27 @@ class MetricTree:
             "value_a": a, "value_b": b, "pct_change": _pct(a, b),
             "identity_decomposition": identity,
             "primary_driver": primary,
-            "influence_candidates": influences,
-            "note": ("Identity shares are exact and sum to 1 (the parent is the product of its "
-                     "children). Influence candidates are correlational — report them as likely "
-                     "drivers with their evidence, not proven causes."),
+            "offsetting": offsetting,
+            "influences": influences,
+            # What this call did NOT open. A tool that can prune has to say what it pruned, and an
+            # EMPTY list is the useful case: it states positively that nothing is hidden, which is
+            # exactly what an agent needs before concluding it has the whole picture.
+            "not_expanded": self._unexpanded(node, identity, influences),
+            "note": ("Identity shares are exact, signed, and sum to 1 (the parent is the product "
+                     "of its children); a negative share means that child pushed the parent the "
+                     "OTHER way and is listed under `offsetting`. Influence children are "
+                     "correlational — report them as likely drivers with their evidence, never as "
+                     "proven causes. `influences` is keyed by the child each one hangs off, and "
+                     "`not_expanded` names any node with further structure this call did not "
+                     "open; when it is empty, nothing was left out."),
         }
+
+    def _unexpanded(self, node: str, identity: list, influences: dict) -> list[str]:
+        """Nodes reachable from what this call returned that have structure of their own and were
+        not opened. Computed from the edges rather than hand-listed, so a tree that grows a level
+        starts reporting it without anyone remembering to."""
+        opened = {node, *(c["child"] for c in identity), *influences}
+        reached = {c["child"] for c in identity}
+        reached |= {i["child"] for group in influences.values() for i in group}
+        return sorted(n for n in reached - opened
+                      if self._children(n, "identity") or self._children(n, "influence"))

@@ -35,6 +35,22 @@
 #
 # The shapes are derived. The sizes are taste. Where a measured agent differs on a shape, that is
 # a finding; where it differs on a size, that is a preference.
+#
+# ── DEPTH IS NOT A VIRTUE. IT IS WHAT GOVERNANCE LEFT OVER. ───────────────────────────────────
+#
+# Version 2 of this file demanded a derived claim ranking the three identity contributions, and
+# scored the agent down for asserting the ranking instead. That was wrong: the metric tree already
+# computes it. `primary_driver` is a governed field, and — once made citable — an answer that
+# CITES the ranking is more correct than one that re-derives it, because re-deriving certified
+# arithmetic creates a second, uncertified copy of it.
+#
+# So the target is not "more layers". It is exactly the derivations the governed layer CANNOT do:
+# reconciling two branches against each other, or against the question's premise. Improve the
+# layer and the ideal graph gets SHALLOWER, which is the right direction — depth measures how much
+# the agent had to work out unaided, and unaided is where the errors live.
+#
+# The L2 ideal below dropped a layer when `primary_driver`, `offsetting` and the per-branch
+# influences became citable. Nothing about the question changed.
 
 reference_version: 2
 built: 2026-08-01
@@ -87,9 +103,9 @@ graphs:
     shape: attribution
     question: "Value moments came in soft last week even though we added users. What happened?"
     ideal:
-      assertions: 6
-      derived: 2
-      max_depth: 2
+      assertions: 5
+      derived: 1
+      max_depth: 1
       max_fan_in: 3
     claims:
       - id: c1
@@ -106,28 +122,27 @@ graphs:
           contribution share says which DIRECTION breadth pushed, and that is the fact the whole
           answer turns on.
       - id: c3
-        text: "Days per user fell from 2.718 to 2.271, down 16.44%, contributing +1.42."
-        rests_on: [r1:days_per_user.pct_change, r1:days_per_user.contribution_share]
+        text: "Frequency is the primary driver: days per user fell 16.44%, contributing +1.42 —
+               the largest contribution in the direction the total moved."
+        rests_on: [r1:days_per_user.pct_change, r1:primary_driver.contribution_share]
         strength: exact
+        why: >-
+          CITES the ranking rather than deriving it. The tree computes `primary_driver`, so an
+          answer that re-derives it from the three shares makes an uncertified copy of certified
+          arithmetic. This is the claim v2 of this file got wrong and the agent got right.
       - id: c4
         text: "Moments per active day was flat, down 0.49%, contributing +0.04."
         rests_on: [r1:moments_per_day.pct_change, r1:moments_per_day.contribution_share]
         strength: exact
       - id: c5
-        text: "Frequency carries the entire decline and then some: +1.42 against depth's +0.04,
-               while breadth offset −0.46 of it."
-        premises: [c2, c3, c4]
-        strength: exact
-        why: >-
-          The comparison, and the step an agent skips by asserting "days per user is the primary
-          driver" inside c3 while citing one of the things being ranked. Fan-in 3 is the tree's
-          arity, not a preference.
-      - id: c6
         text: "So growth was not masked — it worked. The total fell because existing users came
                back less often, by more than the new users added."
-        premises: [c1, c5]
+        premises: [c1, c2, c3]
         strength: exact
-        why: "Answers the paradox as posed, and is only sayable once c5 exists."
+        why: >-
+          The one derivation left, and the only one the layer cannot do: reconciling the
+          questioner's premise (we added users) with the outcome (it still fell). No governed
+          field states it, because it is about this question rather than about the metric.
 
   # ═════════════════════════════════════════════════════════════════════════════
   # L3 — CROSS-DOMAIN. Three layers, and a trap.
@@ -239,7 +254,7 @@ graphs:
 #
 #        assertions   derived   depth   fan-in    what it tests
 #   L1        1           0        0       0      restraint — does it stop when there is nothing to reason about
-#   L2        6           2        2       3      the comparison step — does it record the analysis or assert it
+#   L2        5           1        1       3      the reconciliation — the one step governance cannot do for it
 #   L3        9           3        3       3      holding two domains apart, then reconciling them against arithmetic
 #
 # Read across an agent's three runs and the question stops being "how good is its reasoning" and
