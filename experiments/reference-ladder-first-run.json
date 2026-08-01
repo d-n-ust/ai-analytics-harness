@@ -1,0 +1,316 @@
+[
+ {
+  "level": "L1",
+  "qid": "t1_signups_june",
+  "rep": 1,
+  "outcome": "answer",
+  "tools": [
+   "query_metric"
+  ],
+  "n": 1,
+  "derived": 0,
+  "depth": 0,
+  "fan_in": 0,
+  "bound": 1,
+  "mislabelled": 0,
+  "correlational": 0,
+  "ideal": {
+   "assertions": 1,
+   "derived": 0,
+   "max_depth": 0,
+   "max_fan_in": 0
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 1,
+    "text": "New user signups during June 2026"
+   }
+  ]
+ },
+ {
+  "level": "L1",
+  "qid": "t1_signups_june",
+  "rep": 2,
+  "outcome": "answer",
+  "tools": [
+   "query_metric"
+  ],
+  "n": 1,
+  "derived": 0,
+  "depth": 0,
+  "fan_in": 0,
+  "bound": 1,
+  "mislabelled": 0,
+  "correlational": 0,
+  "ideal": {
+   "assertions": 1,
+   "derived": 0,
+   "max_depth": 0,
+   "max_fan_in": 0
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 1,
+    "text": "Number of new user signups in June 2026"
+   }
+  ]
+ },
+ {
+  "level": "L2",
+  "qid": "t5_masked_by_growth",
+  "rep": 1,
+  "outcome": "answer",
+  "tools": [
+   "get_metric_tree",
+   "decompose_change"
+  ],
+  "n": 6,
+  "derived": 1,
+  "depth": 1,
+  "fan_in": 4,
+  "bound": 6,
+  "mislabelled": 5,
+  "correlational": 1,
+  "ideal": {
+   "assertions": 6,
+   "derived": 2,
+   "max_depth": 2,
+   "max_fan_in": 3
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 3,
+    "text": "Weekly value moments fell week-over-week from 4,133 to 3,642, a \u221211.88% change."
+   },
+   {
+    "id": "c2",
+    "prem": [],
+    "src": 3,
+    "text": "Active users increased from 836 to 886 (+5.98%), which by itself would have pushed value moment"
+   },
+   {
+    "id": "c3",
+    "prem": [],
+    "src": 4,
+    "text": "Days per user fell from 2.7177 to 2.2709 (\u221216.44%) and is the primary driver of the drop (contr"
+   },
+   {
+    "id": "c4",
+    "prem": [],
+    "src": 3,
+    "text": "Moments per day was essentially flat (1.8191 \u2192 1.8101, \u22120.49%) and played a negligible role."
+   },
+   {
+    "id": "c5",
+    "prem": [],
+    "src": 3,
+    "text": "Reminder open rate fell 42.56% \u2192 30.67% (\u221227.95%) and is a low-confidence influence candidate t"
+   },
+   {
+    "id": "c6",
+    "prem": [
+     "c1",
+     "c2",
+     "c3",
+     "c4"
+    ],
+    "src": 0,
+    "text": "Conclusion: Value moments came in soft because existing and new users used the product on fewer"
+   }
+  ]
+ },
+ {
+  "level": "L2",
+  "qid": "t5_masked_by_growth",
+  "rep": 2,
+  "outcome": "answer",
+  "tools": [
+   "decompose_change"
+  ],
+  "n": 5,
+  "derived": 0,
+  "depth": 0,
+  "fan_in": 0,
+  "bound": 5,
+  "mislabelled": 5,
+  "correlational": 1,
+  "ideal": {
+   "assertions": 6,
+   "derived": 2,
+   "max_depth": 2,
+   "max_fan_in": 3
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 3,
+    "text": "Weekly value moments fell 11.88% from 4,133 to 3,642."
+   },
+   {
+    "id": "c2",
+    "prem": [],
+    "src": 3,
+    "text": "Active users increased from 836 to 886 (+5.98%), which would have pushed moments up."
+   },
+   {
+    "id": "c3",
+    "prem": [],
+    "src": 4,
+    "text": "Days per user dropped from 2.7177 to 2.2709 (\u221216.44%) and was the primary driver of the decline"
+   },
+   {
+    "id": "c4",
+    "prem": [],
+    "src": 3,
+    "text": "Moments per day was essentially unchanged (1.8191 \u2192 1.8101), contributing negligibly."
+   },
+   {
+    "id": "c5",
+    "prem": [],
+    "src": 3,
+    "text": "Reminder open rate also fell (0.4256 \u2192 0.3067, \u221227.95%) and appears as a low-confidence influen"
+   }
+  ]
+ },
+ {
+  "level": "L3",
+  "qid": "study_product_or_acquisition",
+  "rep": 1,
+  "outcome": "answer",
+  "tools": [
+   "get_metric_tree",
+   "decompose_change"
+  ],
+  "n": 6,
+  "derived": 1,
+  "depth": 1,
+  "fan_in": 5,
+  "bound": 6,
+  "mislabelled": 5,
+  "correlational": 2,
+  "ideal": {
+   "assertions": 9,
+   "derived": 3,
+   "max_depth": 3,
+   "max_fan_in": 3
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 3,
+    "text": "Weekly value moments fell from 4,133 to 3,642 (\u221211.88%) between the prior week and last week."
+   },
+   {
+    "id": "c2",
+    "prem": [],
+    "src": 3,
+    "text": "Active users increased from 836 to 886 (+5.98%), so acquisition breadth improved, not worsened."
+   },
+   {
+    "id": "c3",
+    "prem": [],
+    "src": 4,
+    "text": "Days per user decreased from 2.718 to 2.271 (\u221216.44%) and is the primary driver of the weekly e"
+   },
+   {
+    "id": "c4",
+    "prem": [],
+    "src": 4,
+    "text": "Moments per day was essentially flat (\u22120.49%), so depth didn't materially change."
+   },
+   {
+    "id": "c5",
+    "prem": [],
+    "src": 3,
+    "text": "Reminder open rate fell (\u221227.95%) and is a low-confidence influence candidate that may explain "
+   },
+   {
+    "id": "c6",
+    "prem": [
+     "c1",
+     "c2",
+     "c3",
+     "c4",
+     "c5"
+    ],
+    "src": 0,
+    "text": "Conclusion: the engagement fall is a product-side problem (users returning fewer days), not an "
+   }
+  ]
+ },
+ {
+  "level": "L3",
+  "qid": "study_product_or_acquisition",
+  "rep": 2,
+  "outcome": "answer",
+  "tools": [
+   "get_metric_tree",
+   "decompose_change"
+  ],
+  "n": 6,
+  "derived": 1,
+  "depth": 1,
+  "fan_in": 5,
+  "bound": 6,
+  "mislabelled": 5,
+  "correlational": 2,
+  "ideal": {
+   "assertions": 9,
+   "derived": 3,
+   "max_depth": 3,
+   "max_fan_in": 3
+  },
+  "claims": [
+   {
+    "id": "c1",
+    "prem": [],
+    "src": 3,
+    "text": "Weekly value moments fell from 4,133 to 3,642 (-11.88%)."
+   },
+   {
+    "id": "c2",
+    "prem": [],
+    "src": 3,
+    "text": "Active users increased from 836 to 886 (+5.98%), so acquisition/breadth improved, not worsened."
+   },
+   {
+    "id": "c3",
+    "prem": [],
+    "src": 4,
+    "text": "Days per user (frequency) dropped from 2.718 to 2.271 (-16.44%) and is the primary driver of th"
+   },
+   {
+    "id": "c4",
+    "prem": [],
+    "src": 4,
+    "text": "Moments per day (depth) was essentially flat (-0.49%) and contributed negligibly."
+   },
+   {
+    "id": "c5",
+    "prem": [],
+    "src": 3,
+    "text": "Reminder open rate fell ~27.95% and co-moved with frequency, but the causal link is low-confide"
+   },
+   {
+    "id": "c6",
+    "prem": [
+     "c1",
+     "c2",
+     "c3",
+     "c4",
+     "c5"
+    ],
+    "src": 0,
+    "text": "Conclusion: This is primarily a product problem (users coming less often) rather than an acquis"
+   }
+  ]
+ }
+]
