@@ -199,6 +199,16 @@ def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) 
     return _with_claims(base, props, protocol, record)
 
 
+def _claim_text_help(protocol) -> str:
+    """What `text` is for, which depends on whether measurements are rendered."""
+    if not protocol.rendered:
+        return "One assertion your answer makes, in plain words."
+    return ("The assertion, in plain words — ONLY for a claim that draws a CONCLUSION from other "
+            "claims. A claim that cites data needs no text: name the values in `sources` and the "
+            "sentence is written from them, exactly as they read. So anything you write here is "
+            "reasoning, and must name the claims it follows from.")
+
+
 def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
     """The `claims` block, when the protocol asks for it.
 
@@ -215,8 +225,7 @@ def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
             "items": {
                 "type": "object",
                 "properties": {
-                    "text": {"type": "string",
-                             "description": "One assertion your answer makes, in plain words."},
+                    "text": {"type": "string", "description": _claim_text_help(protocol)},
                     "sources": {
                         "type": "array", "items": {"type": "string"},
                         "description": "The governed value(s) this assertion rests on, as "
@@ -232,7 +241,10 @@ def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
                     "value": {"type": "number",
                               "description": "The figure this assertion states, if it states one."},
                 },
-                "required": ["text"],
+                # With rendered measurements, `text` is the CONCLUSION's field and a measurement
+                # has none to fill — so requiring it would force prose onto the one claim shape
+                # that must not carry any.
+                "required": [] if protocol.rendered else ["text"],
             },
             "description": "Break your answer into the separate assertions it makes — one per "
                            "figure or judgement — each naming the governed value it rests on. "

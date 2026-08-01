@@ -143,5 +143,52 @@ if __name__ == "__main__":
     test_a_governed_statement_is_a_node_like_any_other()
     test_an_archived_row_whose_premises_are_positions_still_renders()
     test_a_flat_list_says_so_and_an_unmeasured_answer_says_so()
+    test_a_rendered_measurement_says_only_what_its_citations_say()
+    test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once()
     print("OK — the chain shows provenance, names one mislabel once, carries the tree's own word "
           "for correlational, and renders a verdict nowhere.")
+
+
+# --- rendered measurements ---------------------------------------------------- #
+
+def test_a_rendered_measurement_says_only_what_its_citations_say():
+    """The fix for arguments smuggled into measurements.
+
+    A claim once read "...new signups fell 24.84% and activation_rate fell 28.93%, SO ACQUISITION
+    SIGNALS WEAKENED BUT DID NOT CAUSE THE NET ENGAGEMENT DROP" while citing only those two
+    figures. Those numbers cannot rule acquisition out — what rules it out is that breadth rose
+    and its contribution is negative, a fact in a different claim this one never pointed at. It
+    passed every check, because the numbers themselves were real and correctly cited.
+
+    Detecting that means classifying English. Rendering makes it unsayable: the model names the
+    values, the harness writes the sentence, and a measurement has no words the model chose."""
+    from evidence.render import measurement_text
+    steps = [DECOMP]
+    text = measurement_text(["r1:days_per_user.pct_change",
+                             "r1:days_per_user.contribution_share"], steps)
+    assert text == "days_per_user changed by -16.44%, accounting for 1.42 of the change", text
+
+    # a rise that CONTRIBUTES NEGATIVELY is the sentence readers get wrong, so it is spelled out
+    steps2 = [{**DECOMP,
+               "result_labels": ["active_users.value_a", "active_users.value_b",
+                                 "active_users.pct_change", "active_users.contribution_share"],
+               "result_values": [836.0, 886.0, 0.0598, -0.4593]}]
+    rose = measurement_text(["r1:active_users.value_a", "r1:active_users.value_b",
+                             "r1:active_users.pct_change",
+                             "r1:active_users.contribution_share"], steps2)
+    assert "rose from 836 to 886" in rose and "pushing the other way by 0.46" in rose, rose
+
+    # a citation that resolves to nothing renders to nothing — the repair guardrail owns that
+    # failure, and blanking the text here would hide the fault it exists to surface
+    assert measurement_text(["r9:nope"], steps) is None
+
+
+def test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once():
+    """The distinction the whole design rests on — did you read this off the data, or work it out
+    from what you already said — was not enforced anywhere. A claim could carry both and the audit
+    had no opinion."""
+    from evidence import audit
+    a = audit([{"text": "x", "sources": ["r1:days_per_user.pct_change"]},
+               {"text": "both", "sources": ["r1:pct_change"], "premises": ["c1"]}], [DECOMP])
+    assert a["mixed_support"] == 1
+    assert a["findings"][1]["bound"] is False

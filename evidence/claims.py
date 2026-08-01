@@ -26,6 +26,10 @@ UNSOURCED = "unsourced"            # asserts something and names neither evidenc
 VALUE_MISMATCH = "value_mismatch"  # states a figure the cited value does not support
 MISLABELLED = "mislabelled"        # cites a result belonging to a different metric than declared
 BAD_PREMISE = "bad_premise"        # names a claim that does not exist, or itself, or a later one
+# Carries BOTH evidence and premises. The whole design rests on that distinction — did you read
+# this off the data, or work it out from things you already said — and nothing enforced it, so a
+# claim could be a measurement and a conclusion at once and the audit had no opinion.
+MIXED_SUPPORT = "mixed_support"
 
 # How strong the support is, weakest first — the order IS the comparison, so `min` over a claim's
 # premises is the weakest-link rule and needs no special case.
@@ -177,6 +181,8 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         why = []
         if not refs and not prem:
             why.append(UNSOURCED)       # asserts something and names nothing at all
+        if refs and prem:
+            why.append(MIXED_SUPPORT)   # a measurement and a conclusion at once
         if bad_prem:
             why.append(BAD_PREMISE)
         if unresolved:
@@ -222,6 +228,7 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         "value_mismatch": sum(1 for f in findings if VALUE_MISMATCH in f["why"]),
         "mislabelled": sum(1 for f in findings if MISLABELLED in f["why"]),
         "bad_premise": sum(1 for f in findings if BAD_PREMISE in f["why"]),
+        "mixed_support": sum(1 for f in findings if MIXED_SUPPORT in f["why"]),
         # The graph, in four numbers. `derived` is how much of the answer is a conclusion rather
         # than a lookup; `max_depth` tells an argument from a wall of statistics; `max_fan_in` is
         # how much a conclusion rests on; `correlational` counts the claims the tree itself marks

@@ -108,6 +108,13 @@ _RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion 
                  "`sources`. Saying days_per_user is the primary driver means comparing the three "
                  "contribution shares, so those three claims are its premises. It does not change "
                  "your answer.")
+# protocol.rendered — the model stops writing measurements. Stated as a mechanism, because it is
+# one: the field is simply not there to fill.
+_RRUNG_RENDERED = ("\n- You do NOT write the wording of a claim that cites data. Name the values in "
+                   "`sources` and leave `text` empty; the sentence is written from those values "
+                   "and reads exactly as they do. `text` is for a CONCLUSION only — so anything "
+                   "you write there is reasoning, and must name the claims it follows from in "
+                   "`premises`. A claim never carries both.")
 # protocol.repair — a mechanism line, like every guardrail above and unlike the two declaration
 # lines: it describes what the system will do, so it has no role/rule variant. The framing
 # treatment is about how an ACCOUNT is asked for, not about how a check is announced.
@@ -223,6 +230,8 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
     if protocol.claims:
         system += _ROLE_CLAIMS if role else _RRUNG_CLAIMS
+    if protocol.rendered:
+        system += _RRUNG_RENDERED
     if protocol.repair:
         system += _RRUNG_CITATION_REPAIR
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree

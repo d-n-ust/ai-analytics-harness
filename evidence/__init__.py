@@ -29,6 +29,7 @@ from .claims import (
     CORRELATIONAL,
     EXACT,
     MISLABELLED,
+    MIXED_SUPPORT,
     UNRESOLVED,
     UNSOURCED,
     VALUE_MISMATCH,
@@ -37,8 +38,9 @@ from .claims import (
     claim_id,
 )
 from .chain import Chain, Link, Node, chain_of, premise_id
+from .render import measurement_text
 from .values import num_match
 
-__all__ = ["BAD_PREMISE", "CORRELATIONAL", "EXACT", "MISLABELLED", "UNRESOLVED", "UNSOURCED",
+__all__ = ["BAD_PREMISE", "CORRELATIONAL", "EXACT", "MISLABELLED", "MIXED_SUPPORT", "UNRESOLVED", "UNSOURCED",
            "VALUE_MISMATCH", "Chain", "Link", "Node", "audit", "chain_of", "cited_metric",
-           "claim_id", "num_match", "premise_id"]
+           "claim_id", "measurement_text", "num_match", "premise_id"]

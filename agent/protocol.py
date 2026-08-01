@@ -39,7 +39,7 @@ RULE, ROLE = "rule", "role"
 FRAMINGS = (RULE, ROLE)
 
 # The declarations, in the order a label lists them.
-PARTS = ("purpose", "claims", "repair")
+PARTS = ("purpose", "claims", "repair", "rendered")
 
 _SEP, _JOIN, _NONE = "/", "+", "none"
 
@@ -63,6 +63,13 @@ class Protocol:
     purpose: bool = False    # `because` on every governed call — one line on what it is for
     claims: bool = False     # one declaration per assertion, each naming the value it rests on
     repair: bool = False     # a citation that names nothing is handed back, bounded and once more
+    # The model stops writing a measurement's words: it names the values, the harness writes the
+    # sentence. Not a formatting choice — it is what makes a measurement unable to contain an
+    # argument. A claim citing new_signups and activation_rate once read "...so acquisition
+    # signals weakened but DID NOT CAUSE the net engagement drop", which those two numbers cannot
+    # establish, and which passed every check because the numbers themselves were real and
+    # correctly cited. Detecting that means classifying English; rendering makes it unsayable.
+    rendered: bool = False
     framing: str = RULE
 
     def __post_init__(self) -> None:
@@ -71,6 +78,8 @@ class Protocol:
         # Rejected at construction rather than reported by a checker, because unlike a guardrail
         # cell there is no reading of it that measures a different system — with no `claims` field
         # offered there is never a citation to repair, so the flag could only ever fire zero times.
+        if self.rendered and not self.claims:
+            raise ValueError("rendered without claims: there are no measurements to write")
         if self.repair and not self.claims:
             raise ValueError("repair without claims: nothing offers a citation to hand back, so "
                              "the repair can only fire zero times — a contribution of zero by "

@@ -209,6 +209,27 @@ class _Run:
             return f"{handle} holds {n} values and this names none of them"
         return f"{handle} has no such field"
 
+    def _rendered(self, claims):
+        """Write each measurement's words from the values it cites.
+
+        A claim that names data gets the sentence its citations state and nothing else, so it
+        cannot carry an argument; a claim that names premises keeps the model's own words, because
+        reasoning is the one thing only the model can supply. The model's measurement text is
+        DISCARDED rather than merged — keeping it "in case it adds something" would restore
+        exactly the channel this closes.
+
+        A citation that resolves to nothing renders to nothing, and the claim keeps whatever the
+        model wrote: the repair guardrail is what handles a broken citation, and silently blanking
+        the text here would hide the fault it exists to surface."""
+        out = []
+        for c in claims:
+            if c.get("premises") or not c.get("sources"):
+                out.append(c)
+                continue
+            text = claim_audit.measurement_text(c.get("sources"), self.steps)
+            out.append({**c, "text": text} if text else c)
+        return tuple(out)
+
     def _node_metrics(self):
         tree = getattr(self.grounding.toolbox, "tree", None)
         return ({n: spec.get("metric") for n, spec in tree.nodes.items()}
@@ -268,6 +289,8 @@ class _Run:
         # run is enough to score the judge later without re-running anything.
         # The audit is a lookup over the trace, so it costs nothing and cannot fail the run.
         declared_claims = tuple(c for c in (args.get("claims") or []) if isinstance(c, dict))
+        if self.grounding.protocol.rendered:
+            declared_claims = self._rendered(declared_claims)
         audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
                                      node_metrics=self._node_metrics(),
                                      influence_children=self._influence_children())
