@@ -126,10 +126,20 @@ cases:
   # keyword-graded, because any good answer names both regions and `_mentions` is an ANY match.
   - id: t5_apac_growth_breadth
     tier: diagnostic
-    question: "APAC value moments grew roughly six-fold last quarter. Did the average user become
-      more engaged, or did we mostly just add users?"
+    question: "APAC value moments nearly tripled between May and June 2026. Did the average
+      user become more engaged, or did we mostly just add users?"
     expect:
       type: diagnostic
       driver: ["breadth", "more users", "active users", "user count", "added users", "new users"]
-    note: "Entirely breadth. Per-user engagement went slightly backwards: frequency -6.6%,
-      depth -2.6%. An answer claiming deeper engagement is wrong on the data."
+    note: "May -> June, both fully post-launch: moments x2.85, and breadth is x2.63 of it
+      (114 -> 300 active users). Frequency contributes x1.095 and depth x0.99. Overwhelmingly
+      breadth.
+
+      FIRST DRAFT OF THIS CASE WAS WRONG AND THE RUN CAUGHT IT. It asked about `last quarter`,
+      which begins 2026-04-01 — but APAC launched 2026-05-01 (warehouse/generate.py:43; the
+      window is declared as region.APAC.available_from), so April APAC rows are pre-launch test
+      data. gpt-5.6-terra refused all 15 attempts, 9 of them naming exactly that: `APAC coverage
+      begins 2026-05-01, but last quarter begins 2026-04-01`. gpt-5-mini scored 10/15 by
+      computing happily on the pre-launch rows. The model was right and the case was wrong, which
+      is the argument for running a new question before trusting it."
+

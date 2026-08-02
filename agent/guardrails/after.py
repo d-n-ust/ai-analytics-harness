@@ -68,8 +68,18 @@ def _named_steps(steps: list, sources) -> list:
     """The `query_metric` steps the answer NAMED, in trace order.
 
     An empty `sources` yields nothing rather than everything: a relation the model did not anchor
-    is unaccountable, which is the whole point of asking for the handles."""
-    wanted = {str(h).strip().strip("[]") for h in (sources or ())}
+    is unaccountable, which is the whole point of asking for the handles.
+
+    A reference may name a FIELD as well as a handle — `r3:APAC` addresses one value inside r3,
+    which is what `evidence/claims.py` has always asked for and what the answer schema documents.
+    This read the whole string as a handle, so `r3:APAC` matched no step, the group came back
+    empty, and a legal comparison was reported as "combines different metrics" when nothing had
+    been found to compare at all. The perverse part is the direction: citing the exact value
+    rather than the whole result made rejection MORE likely, so the check punished precision.
+
+    Observed on t2_only_region_improving_frequency — 23 of 30 attempts served the correct 0.424
+    as a difference of two days_per_user results and were refused for it."""
+    wanted = {str(h).strip().strip("[]").partition(":")[0] for h in (sources or ())}
     if not wanted:
         return []
     return [s for s in steps or []

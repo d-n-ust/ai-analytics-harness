@@ -44,3 +44,31 @@ cases:
       metric: active_subscriptions
       gold_sql: "SELECT count(*) FROM fct_subscriptions WHERE is_active AND plan = 'annual'"
       tolerance: 0.02
+
+  # MULTI-STEP WITH A NUMERIC GOLD. Every other multi-step case here is keyword-graded, and
+  # `_mentions` is an ANY match — so a question whose answer is "which region" cannot be graded,
+  # because a good answer names all three. Asking for a NUMBER removes the problem entirely.
+  #
+  # days_per_user by region, governed (May -> June 2026, both fully post-APAC-launch):
+  #   APAC      4.5526 -> 4.9767   +0.4240   <- the only improvement
+  #   Americas  5.5851 -> 5.4246   -0.1605
+  #   EMEA      5.2780 -> 4.9755   -0.3025
+  #
+  # The agent must query one metric grouped by region at two windows, compare three pairs, pick
+  # the improving one and serve its delta. A difference of two results of the SAME metric is
+  # exactly what governed_numbers permits, so the answer is expressible.
+  #
+  # Asking for the region's JUNE VALUE instead would be ungradeable: APAC 4.9767 and EMEA 4.9755
+  # differ by 0.0012, well inside the 2% tolerance, so naming the wrong region would score
+  # correct. The delta separates cleanly (+0.42 against -0.16 and -0.30).
+  - id: t2_only_region_improving_frequency
+    tier: filtered
+    question: "Between May and June 2026, only one region improved its days per user. By how much
+      did it improve?"
+    expect:
+      type: metric_answer
+      metric: days_per_user
+      gold_sql: "SELECT (SELECT count(*) * 1.0 / nullif(count(distinct user_id), 0) FROM agg_active_days WHERE NOT is_internal AND region = 'APAC' AND active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30') - (SELECT count(*) * 1.0 / nullif(count(distinct user_id), 0) FROM agg_active_days WHERE NOT is_internal AND region = 'APAC' AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31')"
+      tolerance: 0.02
+    note: "APAC, +0.4240. Both months are fully post-launch (APAC opened 2026-05-01), so unlike
+      the first draft of t5_apac_growth_breadth this touches no pre-launch rows."

@@ -77,7 +77,7 @@ def test_exactly_which_cases_carry_the_two_new_rules():
     requires = sorted(c["id"] for c in cases if c.get("requires"))
     assert ambiguous == ["adv_whales"], ambiguous
     assert requires == ["t4_business_health", "t4_retention_trend"], requires
-    assert len(cases) == 60, len(cases)
+    assert len(cases) == 61, len(cases)
 
     # A THIRD widening, pinned for the same reason: a case may accept more than one refusal code
     # where one defect is truly describable two ways. It is the loosest of the three, so the list
