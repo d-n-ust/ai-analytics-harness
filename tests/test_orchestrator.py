@@ -335,6 +335,51 @@ def test_asking_for_claims_and_correcting_them_are_separate_guardrails():
         assert all(a["position"] == "repair" for a in repaired), repaired
 
 
+def test_a_repaired_citation_and_a_deleted_claim_are_different_stored_rows():
+    """The check the repair loop cannot pass on its own evidence.
+
+    A citation that names nothing has two cheap fixes, and only one is the intended one: cite the
+    right value, or delete the sentence. Both end with `unresolved == 0`, so the after-state alone
+    reports 98% success for a model that quietly dropped every awkward claim — the loop's headline
+    number would be measuring compliance and reporting accountability.
+
+    Both runs below fix the citation the same way, and differ only in whether the second claim
+    survives. If the stored row cannot separate them, the field is not worth writing."""
+    broken = {"text": "886 active users", "sources": ["r9:nope"], "value": 886}
+    kept = {"text": "886 active users", "sources": ["r1"], "value": 886}
+    aside = {"text": "which is the governed figure", "sources": ["r1"]}
+    rows = {}
+    for name, second in (("fixed", [kept, aside]), ("deleted", [kept])):
+        ans, _ = _run([call("1", "query_metric", QM)],
+                      [call("2", "answer", {**ANSWER, "claims": [broken, aside]})],
+                      [call("3", "answer", {**ANSWER, "claims": second})],
+                      rrung=9, protocol="claims+repair", max_iters=4)
+        assert ans.claim_retries == 1 and (ans.claim_audit or {}).get("unresolved") == 0, (
+            f"{name}: both runs must reach a clean graph — that is what makes them confusable")
+        rows[name] = ans
+
+    # What the after-state says: nothing. This assertion is the reason the field exists.
+    assert all((r.claim_audit or {}).get("unresolved") == 0 for r in rows.values())
+
+    for name, ans in rows.items():
+        assert len(ans.repairs) == 1, f"{name}: one handback, one before-state"
+        before = ans.repairs[0]
+        assert before["claims"] == 2, f"{name}: two claims went in"
+        assert [b["cites"] for b in before["broken"]] == [["r9:nope"]], before
+        # the handed-back TEXT is what makes survival checkable without guessing from counts
+        assert before["broken"][0]["text"].startswith("886 active users"), before
+
+    survived = {n: len(a.claims) for n, a in rows.items()}
+    assert survived == {"fixed": 2, "deleted": 1}, survived
+    # and the read a report performs: was the sentence we complained about still asserted?
+    for name, expected in (("fixed", True), ("deleted", True)):
+        text = rows[name].repairs[0]["broken"][0]["text"]
+        assert any(c["text"].startswith(text[:20]) for c in rows[name].claims) is expected, name
+    # the aside is the claim that disappears, and only the before-state proves it was ever there
+    assert any(c["text"].startswith("which is") for c in rows["fixed"].claims)
+    assert not any(c["text"].startswith("which is") for c in rows["deleted"].claims)
+
+
 def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
     """A malformed answer arriving on the LAST turn used to be accepted as-is — nothing could be
     said to a model with no turn left. It now gets one more, and a model that fixes its citation

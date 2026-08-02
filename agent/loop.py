@@ -35,6 +35,9 @@ _CLOSING_NUDGE = "Finish by calling one terminal tool: answer, refuse, or clarif
 # runaway guard.
 _TRACE_LIMIT = 4000
 
+# Enough of a handed-back claim to find it again in the answer that came back.
+_REPAIR_TEXT = 200
+
 
 _log = logging.getLogger(__name__)
 
@@ -111,11 +114,26 @@ class _Run:
     # steps alone hide where a run's time goes, which for an agent is almost always here.
     turns: list = field(default_factory=list)
     acts: list = field(default_factory=list)
-    # How many times an answer was handed back for a citation that named nothing.
-    # Recorded because the correction is a treatment: a run that needed two goes is
-    # not the same as one that got it right first time, and only this tells them apart.
-    claim_retries: int = 0
+    # One entry per answer handed back for citing something that does not exist. The COUNT is a
+    # treatment marker — a run that needed two goes is not one that got it right first time — but
+    # the count alone cannot answer the question the loop exists to survive: a citation that names
+    # nothing has two cheap fixes, and only one of them is the intended one.
+    #
+    #   cite the right value instead        <- the repair
+    #   delete the sentence                 <- also satisfies the check, and hides the claim
+    #
+    # Both leave a final graph with no unresolved references, so the stored after-state cannot
+    # tell them apart. Each entry therefore records what went IN — how many claims, and the text
+    # of the broken ones — and the final `claims` on the Answer records what came out. A
+    # sentence that vanished between the two was deleted, not fixed.
+    repairs: list = field(default_factory=list)
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
+
+    @property
+    def claim_retries(self) -> int:
+        """Derived, not stored: a count beside the list it counts is two things to keep in step.
+        The name stays because it is the published field on every archived row."""
+        return len(self.repairs)
 
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
@@ -184,7 +202,12 @@ class _Run:
         broken = [f for f in audited["findings"] if f["unresolved"]]
         if not broken:
             return None
-        self.claim_retries += 1
+        # Truncated: this is here to be RECOGNISED in the final answer, not re-read. A prefix is
+        # enough to tell a surviving sentence from a deleted one, and the full text is already in
+        # the turn log for anyone who wants it.
+        self.repairs.append({"claims": len(declared),
+                             "broken": [{"text": str(f["text"] or "")[:_REPAIR_TEXT],
+                                         "cites": list(f["unresolved"])} for f in broken]})
         lines = ["Your answer was not accepted: some claims cite evidence that does not exist."]
         for f in broken:
             for ref in f["unresolved"]:
@@ -309,7 +332,7 @@ class _Run:
                       sources=declared_handles(args),
                       value_recovered=recovered is not None,
                       typed_value=bool(self.grounding.toolbox.g.governed_numbers),
-                      claim_retries=self.claim_retries,
+                      claim_retries=self.claim_retries, repairs=tuple(self.repairs),
                       verifier_verdict=self.last_verdict)
         if not verdict.allowed:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",

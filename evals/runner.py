@@ -161,6 +161,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "claims": list(ans.claims),
             "claim_audit": ans.claim_audit,
             "claim_retries": ans.claim_retries,
+            # The before-state of each handback. `claims` above is the after-state; the pair is
+            # what makes "repaired the citation" and "deleted the sentence" different rows.
+            "repairs": list(ans.repairs),
             "verifier_verdict": ans.verifier_verdict, "score": g["score"],
             "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
             # How many times round the orchestrator loop. A multi-step loop multiplies

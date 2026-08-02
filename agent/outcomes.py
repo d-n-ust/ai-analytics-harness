@@ -129,6 +129,10 @@ class Answer:
     # How many times the answer was handed back for citing something that does not
     # exist. A run that needed a second go is not the same as one that got it right.
     claim_retries: int = 0
+    # What each of those handbacks was given, so the repair can be told from a deletion: the
+    # claim count and the broken claims' text going in, against `claims` above coming out.
+    # Without it a repaired answer and a truncated one are the same stored row.
+    repairs: tuple = ()
     verifier_verdict: dict | None = None  # R9 only: the judge's verdict + the evidence it saw
     abstained: bool = False        # convenience mirror of outcome == "refuse"
     # Which output guardrail turned this answer into a refusal, when one did. The reason code

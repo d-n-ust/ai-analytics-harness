@@ -233,6 +233,7 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         reasons += why
 
     n = len(findings)
+    cited_premises = {p for f in findings for p in f["premises"]}
     return {
         "n": n,
         "bound": sum(1 for f in findings if f["bound"]),
@@ -251,6 +252,17 @@ def audit(claims, steps, source_metric: str | None = None, node_metrics=None,
         "max_depth": max((f["depth"] for f in findings), default=0),
         "max_fan_in": max((len(f["premises"]) for f in findings), default=0),
         "correlational": sum(1 for f in findings if f["strength"] == CORRELATIONAL),
+        # ORPHANS: measurements the answer gathered, stated, and then concluded without. The
+        # cross-domain answer measured new_signups falling 24.84% and concluded "primarily
+        # product, not acquisition" resting on three OTHER claims, so the assertion that
+        # acquisition is not to blame never cited the acquisition numbers.
+        #
+        # Zero when the answer draws no conclusion at all: there every measurement is trivially
+        # unused, and counting them conflates "gathered evidence it did not use" with "did not
+        # reason", which are different failures and already have different names. Computed over
+        # ALL answers rather than only concluding ones, the rate reads 68% instead of 20%.
+        "orphans": (sum(1 for f in findings if not f["premises"] and f["id"] not in cited_premises)
+                    if cited_premises else 0),
         # How much of the answer stands on how little. One source behind every claim is not a
         # fault — a governed decomposition is one call — but it is a fragility worth counting.
         "sources": len({r.partition(":")[0] for f in findings for r in f["sources"]}),
