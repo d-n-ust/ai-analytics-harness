@@ -48,7 +48,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
                    only=None, sample: int | None = None, repeats: int = 1,
                    rrungs=(1,), cells=None, protocols=("none",), reasoning: str | None = None,
                    concurrency: int = 1) -> None:
-    from agent.guardrails import LADDER, incoherent, parse_cell
+    from agent.guardrails import incoherent, parse_cell
     con = open_warehouse(create_star_views=True)
     golds = compute_gold(con)
     questions = load_questions()
@@ -238,14 +238,15 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     report.write(rows, run_dir, mock=mock)
 
 
-def _node_metrics() -> dict:
-    """Each tree node and the governed metric underneath it — `weekly_value_moments` is computed
-    from `real_value_moments`, so an answer naming either is naming the same evidence."""
+def _audit_context() -> dict:
+    """What the claim audit needs to know about the metric tree, for a run being re-audited from
+    disk. The tree owns the definition (`MetricTree.audit_context`); this only opens a warehouse
+    to reach it."""
     from semantic.semantic import SemanticLayer
     from semantic.tree import MetricTree
     con = open_warehouse()
     try:
-        return {n: spec.get("metric") for n, spec in MetricTree(SemanticLayer(con)).nodes.items()}
+        return MetricTree(SemanticLayer(con)).audit_context()
     finally:
         con.close()
 
@@ -264,11 +265,11 @@ def regrade_run(run_dir: Path) -> None:
     # past row for the same reason a grade.py change does: nothing here calls a model. The first
     # correction moved 21 claims from unresolved to bound and cleared 25 false mislabels, on rows
     # that had already been run — which is the argument for auditing rather than enforcing first.
-    node_metrics = _node_metrics()
+    context = _audit_context()
     for r in rows:
         if r.get("claims"):
             r["claim_audit"] = claim_audit.audit(r["claims"], r.get("steps") or [],
-                                                 r.get("source_metric"), node_metrics=node_metrics)
+                                                 r.get("source_metric"), **context)
         ans = Answer(question=r["question"], rung=r["rung"], model=r["model"],
                      answer=r["answer"], explanation=r.get("explanation", "") or "",
                      outcome=r.get("outcome", "answer"), reason=r.get("reason"),

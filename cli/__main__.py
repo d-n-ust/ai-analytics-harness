@@ -120,10 +120,11 @@ def cmd_ambiguity(a):
 
     Reads the declarations, not the traffic — so it says which confusions are POSSIBLE, before an
     agent has ever seen the layer."""
+    import pathlib
+
     import yaml
 
     from semantic.ambiguity import report
-    import pathlib
     root = pathlib.Path(__file__).resolve().parent.parent
     layer = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())
     metrics = layer["metrics"] if isinstance(layer.get("metrics"), dict) else layer

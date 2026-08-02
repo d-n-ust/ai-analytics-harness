@@ -37,7 +37,6 @@ from agent.numbers import asserts_number
 from agent.numbers import parse_numbers as _numbers
 from agent.rungs import capabilities
 
-
 # What separates two words: a space, a hyphen, an en dash, a slash. A keyword written with one
 # must match a text written with another — they are the same phrase, and which one an answer
 # happens to use is not a fact about the analysis.

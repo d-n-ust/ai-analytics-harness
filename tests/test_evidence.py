@@ -8,7 +8,15 @@ Run: PYTHONPATH=. uv run python tests/test_claims.py
 
 from __future__ import annotations
 
-from evidence import BAD_PREMISE, MISLABELLED, UNRESOLVED, UNSOURCED, VALUE_MISMATCH, audit
+from evidence import (
+    BAD_PREMISE,
+    COMPOSED,
+    MISLABELLED,
+    UNRESOLVED,
+    UNSOURCED,
+    VALUE_MISMATCH,
+    audit,
+)
 
 # The decomposition every diagnostic answer is built on, as the trace stores it: eighteen
 # governed figures under ONE handle, each addressable by name.
@@ -158,21 +166,6 @@ def test_a_claim_that_names_nothing_at_all():
     assert UNSOURCED in a["findings"][0]["why"] and a["bound"] == 0
 
 
-if __name__ == "__main__":
-    test_a_field_citation_resolves_and_the_figure_must_match()
-    test_a_bare_handle_does_not_name_a_number()
-    test_the_wrong_metric_name_is_caught_where_no_number_check_could()
-    test_a_breakdown_row_is_addressable_on_its_own()
-    test_an_unsourced_claim_and_the_totals()
-    test_a_conclusion_cites_claims_and_inherits_the_weakest_premise()
-    test_one_soft_premise_makes_the_whole_conclusion_soft()
-    test_premises_may_only_point_backwards()
-    test_a_claim_that_names_nothing_at_all()
-    test_a_claim_may_compare_governed_numbers_but_not_compose_them()
-    print("OK - claim audit: field citation, bare handles, the wrong-metric catch, breakdown "
-          "rows, derived claims, inherited strength, and backwards-only premises all hold.")
-
-
 def test_a_claim_may_compare_governed_numbers_but_not_compose_them():
     """The same rule governed_numbers applies to the served number, applied one level down.
 
@@ -180,8 +173,6 @@ def test_a_claim_may_compare_governed_numbers_but_not_compose_them():
     refused at the answer. That gap is how a composed DAU/MAU reached a user: the model wrote the
     figure into prose rather than the typed `value`, so the answer-level check stood down for want
     of a number, and the claim carrying it audited clean."""
-    from evidence.claims import COMPOSED, audit
-
     def result(handle, metric, value):
         return {"tool": "query_metric", "handle": handle, "error": False,
                 "args": {"metric": metric}, "result_labels": [""], "result_values": [value]}
@@ -202,4 +193,23 @@ def test_a_claim_may_compare_governed_numbers_but_not_compose_them():
     # a figure reachable NO way from the citations is still a plain mismatch, not a composition —
     # the two are different faults and collapsing them would hide which one happened
     c = audit([{"text": "?", "sources": ["r1", "r2"], "value": 12345.0}], same)
-    assert "value_mismatch" in c["findings"][0]["why"] and c["composed"] == 0
+    assert VALUE_MISMATCH in c["findings"][0]["why"] and c["composed"] == 0
+
+
+# Last in the file, so a test added below it is a NameError here rather than a test that silently
+# never runs. That is what this block cost once already: the composition test above was appended
+# after it, so `bench test` reported a traceback and the reason code it pins went unexercised.
+if __name__ == "__main__":
+    test_a_field_citation_resolves_and_the_figure_must_match()
+    test_a_bare_handle_does_not_name_a_number()
+    test_the_wrong_metric_name_is_caught_where_no_number_check_could()
+    test_a_breakdown_row_is_addressable_on_its_own()
+    test_an_unsourced_claim_and_the_totals()
+    test_a_conclusion_cites_claims_and_inherits_the_weakest_premise()
+    test_one_soft_premise_makes_the_whole_conclusion_soft()
+    test_premises_may_only_point_backwards()
+    test_a_claim_that_names_nothing_at_all()
+    test_a_claim_may_compare_governed_numbers_but_not_compose_them()
+    print("OK - claim audit: field citation, bare handles, the wrong-metric catch, breakdown "
+          "rows, derived claims, inherited strength, backwards-only premises, and comparing "
+          "governed numbers without composing them all hold.")

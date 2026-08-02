@@ -75,11 +75,36 @@ def _claim_index(ref, ids: dict) -> int | None:
     return None
 
 
+def _leaf_of(label: str) -> str:
+    """The governed name a decomposition field is ABOUT, from the label the tool wrote.
+
+    A label is `<path>.<field>`, where the path is the walk down the tree that reached the value:
+
+        days_per_user.pct_change                 -> days_per_user
+        active_users.new_signups.pct_change      -> new_signups        (the influence child)
+        pct_change                               -> ""                 (the result's own metric)
+
+    THE LAST SEGMENT OF THE PATH, not the first. Reading the first returned the identity child an
+    influence hangs off rather than the influence itself, and every influence edge in this tree
+    hangs off a component — so on a decomposition rooted at the north star, which is the ordinary
+    call, `active_users.new_signups.pct_change` resolved to `active_users`. Two consequences, both
+    silent: a claim citing driver evidence was typed `exact` instead of `correlational`, so the
+    published count of hedged claims read 0 where it should read 24; and `new_signups` and
+    `activation_rate` grouped under one name, so a ratio of the two — a figure composed across
+    metrics, which is exactly what COMPOSED exists to catch — audited clean.
+
+    `evidence/render.py:subject_of` asks a deliberately different question of the same string: it
+    wants the whole path, because two branches that happen to end in the same word are two subjects
+    to a reader. Identity is the leaf; display is the path."""
+    path = str(label or "").rpartition(".")[0]
+    return path.rpartition(".")[2]
+
+
 def _child_of(ref: str) -> str:
-    """The tree child a reference is about — `r1:days_per_user.pct_change` -> `days_per_user`.
-    Empty for a root field or a plain query result, neither of which is an influence edge."""
-    field = str(ref or "").partition(":")[2]
-    return field.partition(".")[0] if "." in field else ""
+    """The tree child a reference is about — `r1:active_users.new_signups.pct_change` ->
+    `new_signups`. Empty for a root field or a plain query result, neither of which is an
+    influence edge."""
+    return _leaf_of(str(ref or "").partition(":")[2])
 
 
 def _index(steps, node_metrics=None) -> dict:
@@ -101,7 +126,7 @@ def _index(steps, node_metrics=None) -> dict:
         out[h] = {"metric": node,
                   # both names for the same result: the node, and the metric under it
                   "aliases": {node, node_metrics.get(node, node)} - {""},
-                  "children": {lb.partition(".")[0] for lb in labels if "." in lb},
+                  "children": {_leaf_of(lb) for lb in labels} - {""},
                   # not strict: an archived row may carry values written before labels existed,
                   # and a short zip resolves what it can rather than failing the whole audit
                   "values": dict(zip(labels, values, strict=False)) if labels else {},
@@ -128,13 +153,15 @@ def _resolve(ref: str, index: dict):
 
     The metric is per-REFERENCE, not per-result: `r1:days_per_user.pct_change` is a claim about
     `days_per_user`, even though the decomposition it lives in is rooted at
-    `weekly_value_moments`. Reading the root instead reported 19 correct answers as mislabelled."""
+    `weekly_value_moments`. Reading the root instead reported 19 correct answers as mislabelled.
+    It is the LEAF of the reference's path (`_leaf_of`), so a driver two levels down names the
+    driver rather than the component it hangs off."""
     ref = str(ref or "").strip().strip("[]")
     handle, _, field = ref.partition(":")
     entry = index.get(handle)
     if entry is None:
         return None, None, ""
-    child, _, _ = field.partition(".")
+    child = _leaf_of(field)
     metric = child if child and child in entry["children"] else entry["metric"]
     if not entry["all"]:
         return handle, STATEMENT, metric      # a governed statement: cited whole, nothing to check

@@ -24,7 +24,6 @@ from pathlib import Path
 from agent.conversation import Turn
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER, LADDER_ORDER
-from agent.protocol import Protocol
 from agent.guardrails.judge import (
     _EVIDENCE,
     _REPORT,
@@ -36,6 +35,7 @@ from agent.guardrails.judge import (
     verify_system,
     verify_trajectory,
 )
+from agent.protocol import Protocol
 from warehouse.warehouse import open_warehouse
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "model_surface.txt"

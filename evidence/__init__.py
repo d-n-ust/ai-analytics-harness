@@ -24,8 +24,10 @@ whole point, and `agent/guardrails/after.py` holds the one crossing, in the perm
 
 from __future__ import annotations
 
+from .chain import Chain, Link, Node, chain_of, premise_id
 from .claims import (
     BAD_PREMISE,
+    COMPOSED,
     CORRELATIONAL,
     EXACT,
     MISLABELLED,
@@ -37,10 +39,9 @@ from .claims import (
     cited_metric,
     claim_id,
 )
-from .chain import Chain, Link, Node, chain_of, premise_id
 from .render import measurement_text
 from .values import num_match
 
-__all__ = ["BAD_PREMISE", "CORRELATIONAL", "EXACT", "MISLABELLED", "MIXED_SUPPORT", "UNRESOLVED", "UNSOURCED",
-           "VALUE_MISMATCH", "Chain", "Link", "Node", "audit", "chain_of", "cited_metric",
-           "claim_id", "measurement_text", "num_match", "premise_id"]
+__all__ = ["BAD_PREMISE", "COMPOSED", "CORRELATIONAL", "EXACT", "MISLABELLED", "MIXED_SUPPORT",
+           "UNRESOLVED", "UNSOURCED", "VALUE_MISMATCH", "Chain", "Link", "Node", "audit",
+           "chain_of", "cited_metric", "claim_id", "measurement_text", "num_match", "premise_id"]

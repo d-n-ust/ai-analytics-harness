@@ -264,6 +264,47 @@ def test_the_tree_writes_its_numbers_down():
     assert len(named) == len(pairs), "a duplicate label would make a citation ambiguous"
 
 
+def test_a_driver_citation_is_typed_correlational_by_the_tree():
+    """The label the tool writes and the name the audit reads must be the same name. NO LLM.
+
+    They were not, and nothing noticed, because both sides were tested against labels typed by
+    hand. Every influence edge in this tree hangs off a component rather than the root, so a
+    decomposition from the top writes `active_users.new_signups.pct_change` — three segments. The
+    audit read the FIRST one, got `active_users`, and never matched the influence set: a claim
+    resting on driver evidence was typed `exact`, and the published count of hedged claims read 0.
+
+    So this test builds its citation from what `_decomposition_values` actually emits rather than
+    from a string in the test file. A rename on either side now fails here."""
+    from agent.tools import _decomposition_values
+    from evidence import CORRELATIONAL, EXACT, audit
+    from semantic.tree import MetricTree
+
+    tree = MetricTree(SemanticLayer(open_warehouse()))
+    context = tree.audit_context()
+    out = tree.explain_change("weekly_value_moments", "prev_week", "last_week")
+    pairs = _decomposition_values(out)
+    step = {"tool": "decompose_change", "handle": "r1", "error": False,
+            "args": {"node": "weekly_value_moments"},
+            "result_labels": [k for k, _ in pairs], "result_values": [v for _, v in pairs]}
+
+    soft = context["influence_children"]
+    assert soft, "the tree carries influence edges, or this test proves nothing"
+    driver = next(k for k, _ in pairs if k.rpartition(".")[0].rpartition(".")[2] in soft)
+    assert driver.count(".") >= 2, \
+        f"{driver!r} should be nested under the component it drives; the flat shape hid the bug"
+
+    a = audit([{"text": "a driver moved", "sources": [f"r1:{driver}"]}], [step], **context)
+    assert a["findings"][0]["strength"] == CORRELATIONAL, \
+        f"citing {driver!r} rests on an influence edge, so the tree types it correlational"
+    assert a["correlational"] == 1
+
+    # …and an identity child is exact, so the distinction is a reading of the tree rather than a
+    # blanket downgrade of anything with a dot in it.
+    exact_ref = f"{out['identity_decomposition'][0]['child']}.pct_change"
+    b = audit([{"text": "a component moved", "sources": [f"r1:{exact_ref}"]}], [step], **context)
+    assert b["findings"][0]["strength"] == EXACT and b["correlational"] == 0
+
+
 def test_the_judge_is_shown_what_the_tree_vouches_for():
     """A claim about CAUSE needs the tree, and the judge was never shown it.
 
@@ -937,7 +978,7 @@ def test_the_protocol_is_a_peer_primitive_and_labels_itself():
     Three properties, and the third is the load-bearing one."""
     from agent.grounding import build_grounding
     from agent.guardrails import LADDER, LADDER_ORDER
-    from agent.protocol import FRAMINGS, ROLE, RULE, Protocol, split_config
+    from agent.protocol import ROLE, RULE, Protocol, split_config
     con = open_warehouse(create_star_views=True)
     ALL = Protocol(purpose=True, claims=True, repair=True)
 
@@ -1160,6 +1201,7 @@ if __name__ == "__main__":
     test_verifier_is_refuse_only()
     test_toolbox_wiring_and_rung_gate()
     test_a_refusal_that_names_a_date_is_not_a_fabrication()
+    test_a_driver_citation_is_typed_correlational_by_the_tree()
     print("OK - output guardrails (provenance/validation/verifier) + semantic layer + input guardrail + ladder: all pass.")
 
 
@@ -1252,8 +1294,9 @@ def test_additivity_is_read_from_the_aggregate_not_annotated():
     meant both "not additive" and "nobody decided". The derivation agrees with every True and
     resolves every null — so the flag becomes a test OF the derivation rather than a second
     source of truth that can drift from it."""
-    import yaml
     from pathlib import Path
+
+    import yaml
     sem = SemanticLayer(open_warehouse(create_star_views=True))
 
     assert sem.additivity("value_moments") == "additive"          # sum(moments)

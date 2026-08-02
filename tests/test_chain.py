@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from evidence import audit
 from evidence.chain import chain_of
+from evidence.render import measurement_text
 
 DECOMP = {
     "tool": "decompose_change", "handle": "r1", "error": False,
@@ -136,20 +137,6 @@ def test_a_flat_list_says_so_and_an_unmeasured_answer_says_so():
     assert [n.kind for n in bare.nodes] == ["call"], "an old row still renders its calls"
 
 
-if __name__ == "__main__":
-    test_the_chain_shows_provenance_and_never_a_verdict()
-    test_one_wrong_declaration_is_one_note_not_five_faults()
-    test_correlational_is_reported_as_the_tree_s_word_not_the_model_s()
-    test_a_governed_statement_is_a_node_like_any_other()
-    test_an_archived_row_whose_premises_are_positions_still_renders()
-    test_a_flat_list_says_so_and_an_unmeasured_answer_says_so()
-    test_a_rendered_measurement_says_only_what_its_citations_say()
-    test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once()
-    test_evidence_gathered_and_not_used_is_named()
-    print("OK — the chain shows provenance, names one mislabel once, carries the tree's own word "
-          "for correlational, and renders a verdict nowhere.")
-
-
 # --- rendered measurements ---------------------------------------------------- #
 
 def test_a_rendered_measurement_says_only_what_its_citations_say():
@@ -163,7 +150,6 @@ def test_a_rendered_measurement_says_only_what_its_citations_say():
 
     Detecting that means classifying English. Rendering makes it unsayable: the model names the
     values, the harness writes the sentence, and a measurement has no words the model chose."""
-    from evidence.render import measurement_text
     steps = [DECOMP]
     text = measurement_text(["r1:days_per_user.pct_change",
                              "r1:days_per_user.contribution_share"], steps)
@@ -188,7 +174,6 @@ def test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once():
     """The distinction the whole design rests on — did you read this off the data, or work it out
     from what you already said — was not enforced anywhere. A claim could carry both and the audit
     had no opinion."""
-    from evidence import audit
     a = audit([{"text": "x", "sources": ["r1:days_per_user.pct_change"]},
                {"text": "both", "sources": ["r1:pct_change"], "premises": ["c1"]}], [DECOMP])
     assert a["mixed_support"] == 1
@@ -229,3 +214,21 @@ def test_evidence_gathered_and_not_used_is_named():
     ch2 = chain_of(flat)
     assert not [n for n in ch2.nodes if n.unused]
     assert any("list of findings, not a chain of reasoning" in n for n in ch2.notes)
+
+
+# Last in the file, so a test added below it is a NameError here rather than a test that silently
+# never runs. That is what this block cost once already: three tests were appended after it, and
+# `bench test` reported a traceback while the behaviour they pin went unexercised.
+if __name__ == "__main__":
+    test_the_chain_shows_provenance_and_never_a_verdict()
+    test_one_wrong_declaration_is_one_note_not_five_faults()
+    test_correlational_is_reported_as_the_tree_s_word_not_the_model_s()
+    test_a_governed_statement_is_a_node_like_any_other()
+    test_an_archived_row_whose_premises_are_positions_still_renders()
+    test_a_flat_list_says_so_and_an_unmeasured_answer_says_so()
+    test_a_rendered_measurement_says_only_what_its_citations_say()
+    test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once()
+    test_evidence_gathered_and_not_used_is_named()
+    print("OK — the chain shows provenance, names one mislabel once, carries the tree's own word "
+          "for correlational, renders a measurement from its citations alone, names evidence "
+          "gathered and not used, and renders a verdict nowhere.")

@@ -197,8 +197,7 @@ class _Run:
         if not declared:
             return None
         audited = claim_audit.audit(declared, self.steps, exit_call.args.get("source_metric"),
-                                    node_metrics=self._node_metrics(),
-                                    influence_children=self._influence_children())
+                                    **self._audit_context())
         broken = [f for f in audited["findings"] if f["unresolved"]]
         if not broken:
             return None
@@ -262,18 +261,11 @@ class _Run:
             out.append({**c, "declared_text": c.get("text"), "text": text} if text else c)
         return tuple(out)
 
-    def _node_metrics(self):
+    def _audit_context(self) -> dict:
+        """What the claim audit needs to know about the tree, or nothing when there is no tree.
+        The tree owns the definition, so the loop and the regrade path cannot disagree about it."""
         tree = getattr(self.grounding.toolbox, "tree", None)
-        return ({n: spec.get("metric") for n, spec in tree.nodes.items()}
-                if tree is not None else None)
-
-    def _influence_children(self):
-        """The tree children reached by an INFLUENCE edge. A claim citing one of these is
-        correlational because the model of the business says that link is — not because the
-        model writing the answer chose a hedging word."""
-        tree = getattr(self.grounding.toolbox, "tree", None)
-        return ({e["child"] for e in tree.edges if e.get("type") == "influence"}
-                if tree is not None else ())
+        return tree.audit_context() if tree is not None else {}
 
     # -- what an exit call means ------------------------------------------- #
     def finish(self, exit_call: ToolCall, iterations: int) -> Answer:
@@ -324,8 +316,7 @@ class _Run:
         if self.grounding.protocol.rendered:
             declared_claims = self._rendered(declared_claims)
         audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
-                                     node_metrics=self._node_metrics(),
-                                     influence_children=self._influence_children())
+                                     **self._audit_context())
                    if self.grounding.protocol.claims else None)
         claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
                       claims=declared_claims, claim_audit=audited,

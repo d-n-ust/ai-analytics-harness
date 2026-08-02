@@ -69,6 +69,22 @@ class MetricTree:
         self.nodes: dict[str, dict] = spec["nodes"]
         self.edges: list[dict] = spec["edges"]
 
+    def audit_context(self) -> dict:
+        """What the claim audit needs to know about this tree, as `audit()`'s keyword arguments.
+
+        Both facts come from the same spec and are only ever wanted together, so they are read
+        together. Assembled here rather than at each call site because there are two — the live
+        loop and the regrade path — and the regrade one supplied the node map without the
+        influence set, which silently retyped every hedged claim as exact. A caller that has a
+        tree cannot now take half of what the tree says about it.
+        """
+        return {"node_metrics": {n: spec.get("metric") for n, spec in self.nodes.items()},
+                # The children reached by an INFLUENCE edge. A claim citing one of these is
+                # correlational because the model of the business says that link is, not because
+                # the model writing the answer chose a hedging word.
+                "influence_children": {e["child"] for e in self.edges
+                                       if e.get("type") == "influence"}}
+
     def _children(self, node: str, kind: str) -> list[dict]:
         return [e for e in self.edges if e["parent"] == node and e["type"] == kind]
 
