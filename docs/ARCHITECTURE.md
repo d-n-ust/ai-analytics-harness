@@ -276,9 +276,10 @@ migration.
    is gone; `--framings rule,role` crosses every cell, and the arms label themselves `R12` and
    `R12/role` so the report separates what it would otherwise pool. No row-schema bump: no field
    was added or removed, and bumping would only raise a spurious skew warning on every stored run.
-4. ⬜ **Run the ablation** the split makes possible: claims off / claims on without repair /
+4. 🟡 **Run the ablation** the split makes possible: claims off / claims on without repair /
    claims on with repair, × rule and role framing. Six cells, and for the first time each number
-   means one thing.
+   means one thing. **Two of the six are done** — `R9/claims` against `R9/claims+repair`, below.
+   The framing pair is still open.
 5. ⬜ **`strength.py` and `trust.py`** — the trust ladder, once the ablation says the declarations
    are worth propagating.
 
@@ -295,6 +296,66 @@ read once per run and stamped on every row, which is most of the discipline — 
 cannot be named in a cell or vary within a run, so a stance comparison is two runs at different
 times on a shared API. `Protocol` is the pattern for fixing that; the judge's stance is the
 obvious next tenant, and it belongs to the guardrail axis rather than this one.
+
+### What step 4 measured — repair is real, and it repairs (2026-08-02)
+
+`R9/claims` against `R9/claims+repair`, rung 7, gpt-5-mini at minimal reasoning, 3 reps —
+171 attempts per arm, **0 errors**. The two arms differ in exactly one thing: whether a claim
+citing something that does not exist is handed back.
+
+**An answer's citations resolve, or it does not go out.**
+
+```
+served answers carrying an unresolved citation
+  R9/claims          6/76 = 7.9%
+  R9/claims+repair   0/74 = 0.0%      Fisher two-sided p = 0.028
+```
+
+The obvious confound is that one arm simply made fewer mistakes. It did not: the repair arm
+*produced* broken citations at the same rate it fired (4 answers) as the claims arm *served*
+them (6). The difference is the correction, not the error rate.
+
+**And it repairs rather than deletes — which is the claim that could not previously be made.**
+A citation naming nothing has two cheap fixes, and only one is intended; both end with
+`unresolved == 0`, so the stored after-state reported the same success for either. Recording the
+before-state (`repairs` on the Answer) is what separates them:
+
+```
+4 repairs fired (2.3% of answers) · 9 broken claims handed back
+  still asserted afterwards (REPAIRED): 8/9
+  gone from the answer     (DELETED) : 1/9
+  still unresolved at the end: 0 of 4
+```
+
+**It costs tokens and nothing else.** Split answerable / unanswerable, as this repo never pools
+them:
+
+```
+ANSWERABLE   (n=78/arm)   answered 91.0% -> 89.7%   correct 93.6% -> 92.3%
+UNANSWERABLE (n=93/arm)   answered  9.7% ->  7.5%   correct 74.2% -> 77.4%
+output tokens per row            319 -> 351  (+10%)
+```
+
+Every one of those movements is one or two questions. Repair does not buy accuracy and does not
+cost coverage — which is the predicted result, not a disappointing one: `agent/protocol.py` states
+that repair *"cannot stop a wrong number, only an unaccountable one"*, and the measurement agrees
+with the docstring.
+
+**What this does not establish.** The mechanism split rests on **9 broken claims** — the direction
+is unambiguous, the 8-of-9 rate is not precise. The framing arms are unrun. And it is one model,
+which matters more here than usual:
+
+```
+repair firing rate, all stored runs
+  gpt-5-mini      47/1886 = 2.5%
+  gpt-5.6-terra    0/55   = 0.0%
+  gpt-5.4-mini     0/20   = 0.0%
+```
+
+The loop has **never fired on a stronger model**. Run there, the two arms are the same run and the
+comparison measures sampling noise at the higher price — which is the concrete form of the claim
+this axis was split out to test: the question worth asking is whether declaring helps a *weaker*
+agent, and on this evidence the enforcement half only has anything to do down there.
 
 ---
 
