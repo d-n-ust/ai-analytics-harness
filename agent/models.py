@@ -79,7 +79,13 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # tokens; this bench runs ~6k per call, so the base rate is the one that applies.
     _spec("gpt-5.6-sol", 5.00, 30.0, use_responses_api=True,
           efforts=("none", "low", "medium", "high", "xhigh")),   # 400s on `minimal`
-    _spec("gpt-5.4-mini", 0.25, 2.0),
+    # Responses API for the same reason terra and sol need it: /v1/chat/completions now rejects
+    # function tools together with reasoning_effort for this model. It fails as an intermittent
+    # 400 rather than a clean one — a 57-question sweep lost 25 rows to it, each stored as an
+    # `error` outcome, which is a lost measurement rather than a model behaviour and is invisible
+    # in any rate that divides by answered questions. This model is half the write-up pair, so
+    # every stored run of it should be checked for error rows before its numbers are believed.
+    _spec("gpt-5.4-mini", 0.25, 2.0, use_responses_api=True),
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
     # Rejects reasoning_effort='none'; `minimal` is its floor. Every stored run of this model
     # used minimal or higher, so the default was never exercised until it 400'd from `bench ask`.

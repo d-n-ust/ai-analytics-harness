@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
 # bench — the AI-analyst harness CLI.
-# Thin wrapper so `./bench <verb>` == `uv run python -m cli <verb>` from the repo root.
+# Thin wrapper so `bench <verb>` == `uv run python -m cli <verb>`.
+#
+# Runs from the repo root whatever directory it is invoked from. `uv run` resolves the project
+# from the WORKING directory, not the script's, so calling this by absolute path from anywhere
+# else fails with "No module named cli". The one path argument any verb takes (--run) is relative
+# to the repo root regardless, so moving there is the right base for it too.
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 exec uv run python -m cli "$@"

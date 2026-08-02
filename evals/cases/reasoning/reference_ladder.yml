@@ -1,0 +1,273 @@
+# Reference evidence graphs, as a LADDER of difficulty.
+#
+# The companion file (reference_graphs.yml) holds three diagnostic questions of roughly equal
+# difficulty. Comparing an agent against those says how well it reasons; it cannot say WHERE its
+# reasoning stops, because there is no easier rung to succeed at and no harder one to fail at.
+# This file is three rungs instead:
+#
+#   L1  lookup        one metric, one call, one assertion. The CONTROL.
+#   L2  attribution   several metrics, a comparison, an answer. Two layers.
+#   L3  cross-domain  two independent lines of evidence, each concluded separately, then
+#                     reconciled against each other. Three layers.
+#
+# L1 is the rung people forget to write down, and it carries a failure mode of its own: an agent
+# that produces a five-claim graph for "how many signups in June" is not being rigorous, it is
+# being noisy, and a reference that only describes hard questions would score that as good.
+#
+# ── HOW MUCH OF THIS IS DERIVED, AND HOW MUCH IS JUDGEMENT ────────────────────────────────────
+#
+# Stated because these references are otherwise the fourth thing in this repo whose author also
+# wrote the questions, the layer, the gold and the checks. A hostile reader is right to ask.
+#
+# DERIVED FROM GOVERNANCE — not opinion, and checkable against semantic/:
+#   · every figure below, from the semantic layer and the metric tree on 2026-08-01
+#   · fan-in 3 on the identity comparison, because the tree declares exactly three identity
+#     children of weekly_value_moments
+#   · every `correlational`, because the tree types that edge `influence` and states its
+#     confidence and its evidence
+#   · that acquisition CANNOT be the cause in L3: active_users is an identity child that ROSE,
+#     so its contribution to the decline is negative by arithmetic, not by argument
+#
+# AUTHOR'S JUDGEMENT — arguable, and the place to attack these:
+#   · that the comparison step deserves its own claim rather than living inside the conclusion
+#   · the claim COUNTS (1, 6, 9) — a good answer could be terser or longer
+#   · that L3's forward-looking risk belongs in the answer at all
+#
+# The shapes are derived. The sizes are taste. Where a measured agent differs on a shape, that is
+# a finding; where it differs on a size, that is a preference.
+#
+# ── DEPTH IS NOT A VIRTUE. IT IS WHAT GOVERNANCE LEFT OVER. ───────────────────────────────────
+#
+# Version 2 of this file demanded a derived claim ranking the three identity contributions, and
+# scored the agent down for asserting the ranking instead. That was wrong: the metric tree already
+# computes it. `primary_driver` is a governed field, and — once made citable — an answer that
+# CITES the ranking is more correct than one that re-derives it, because re-deriving certified
+# arithmetic creates a second, uncertified copy of it.
+#
+# So the target is not "more layers". It is exactly the derivations the governed layer CANNOT do:
+# reconciling two branches against each other, or against the question's premise. Improve the
+# layer and the ideal graph gets SHALLOWER, which is the right direction — depth measures how much
+# the agent had to work out unaided, and unaided is where the errors live.
+#
+# The L2 ideal below dropped a layer when `primary_driver`, `offsetting` and the per-branch
+# influences became citable. Nothing about the question changed.
+
+reference_version: 2
+built: 2026-08-01
+source: SemanticLayer + MetricTree, prev_week (2026-06-29..07-05) -> last_week (2026-07-06..07-12)
+
+graphs:
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # L1 — LOOKUP. The control rung.
+  #
+  # One governed metric, one call, one assertion, depth 0. There is no reasoning
+  # to record because there is none to do, and the right graph says so.
+  #
+  # What this rung actually tests is RESTRAINT. An agent that returns five claims
+  # here has learned to perform accountability rather than to be accountable, and
+  # nothing in the harder references would catch it — they reward more structure.
+  # ═════════════════════════════════════════════════════════════════════════════
+  - qid: t1_signups_june
+    level: L1
+    shape: lookup
+    question: "How many new users signed up in June 2026?"
+    ideal:
+      assertions: 1
+      derived: 0
+      max_depth: 0
+      max_fan_in: 0
+    claims:
+      - id: c1
+        text: "553 users signed up in June 2026."
+        rests_on: [r1]
+        strength: exact
+        why: >-
+          The whole answer. `new_signups` over the month IS the question, so the claim and the
+          served number are the same thing and there is nothing else to declare.
+    over_declaration: >-
+      Any conclusion here is padding. "Signups were healthy", "this is down on May", "the trend is
+      concerning" are new claims needing evidence nobody asked for, and each is a place to be
+      wrong for no gain. Count them: they are the metric this rung reports.
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # L2 — ATTRIBUTION. Two layers.
+  #
+  # The question states the paradox — value moments soft WHILE users were added —
+  # so the answer cannot avoid reconciling the two. Breadth rose and the total
+  # still fell, which is only explicable by comparing the three identity
+  # contributions rather than reporting them.
+  # ═════════════════════════════════════════════════════════════════════════════
+  - qid: t5_masked_by_growth
+    level: L2
+    shape: attribution
+    question: "Value moments came in soft last week even though we added users. What happened?"
+    ideal:
+      assertions: 5
+      derived: 1
+      max_depth: 1
+      max_fan_in: 3
+    claims:
+      - id: c1
+        text: "Weekly value moments fell from 4,133 to 3,642, down 11.88%."
+        rests_on: [r1:value_a, r1:value_b, r1:pct_change]
+        strength: exact
+      - id: c2
+        text: "The premise holds: active users did rise, from 836 to 886, up 5.98% — and its
+               contribution to the change is NEGATIVE, −0.46, meaning breadth pushed the total up."
+        rests_on: [r1:active_users.pct_change, r1:active_users.contribution_share]
+        strength: exact
+        why: >-
+          Both figures. The percent change confirms the questioner's premise; only the
+          contribution share says which DIRECTION breadth pushed, and that is the fact the whole
+          answer turns on.
+      - id: c3
+        text: "Frequency is the primary driver: days per user fell 16.44%, contributing +1.42 —
+               the largest contribution in the direction the total moved."
+        rests_on: [r1:days_per_user.pct_change, r1:primary_driver.contribution_share]
+        strength: exact
+        why: >-
+          CITES the ranking rather than deriving it. The tree computes `primary_driver`, so an
+          answer that re-derives it from the three shares makes an uncertified copy of certified
+          arithmetic. This is the claim v2 of this file got wrong and the agent got right.
+      - id: c4
+        text: "Moments per active day was flat, down 0.49%, contributing +0.04."
+        rests_on: [r1:moments_per_day.pct_change, r1:moments_per_day.contribution_share]
+        strength: exact
+      - id: c5
+        text: "So growth was not masked — it worked. The total fell because existing users came
+               back less often, by more than the new users added."
+        premises: [c1, c2, c3]
+        strength: exact
+        why: >-
+          The one derivation left, and the only one the layer cannot do: reconciling the
+          questioner's premise (we added users) with the outcome (it still fell). No governed
+          field states it, because it is about this question rather than about the metric.
+
+  # ═════════════════════════════════════════════════════════════════════════════
+  # L3 — CROSS-DOMAIN. Three layers, and a trap.
+  #
+  # Two independent lines of evidence, each concluded on its own, then reconciled.
+  # The trap is that every acquisition number is down hard — signups −24.84%,
+  # activation −28.93%, referrals −20.83% — alongside engagement −11.88%, so the
+  # available story is "acquisition collapsed and took engagement with it".
+  #
+  # It is wrong, and what refutes it is arithmetic rather than judgement: breadth
+  # is an IDENTITY child and it ROSE. Its contribution to the decline is negative.
+  # Acquisition cannot have caused a fall that breadth pushed against.
+  #
+  # The second half is the part only governance can license. The tree carries
+  # active_users <- new_signups and <- activation_rate as INFLUENCE at MEDIUM
+  # confidence, so the acquisition damage is a forward risk to breadth and not yet
+  # visible in it. That claim is correlational by declaration, and an answer that
+  # states it as fact has overclaimed exactly where the layer told it not to.
+  #
+  # NOT in the scored 57. A study question, deliberately outside the set, because
+  # adding one would change the thermometer mid-experiment.
+  # ═════════════════════════════════════════════════════════════════════════════
+  - qid: study_product_or_acquisition
+    level: L3
+    shape: cross_domain
+    in_scored_set: false
+    question: "Engagement fell last week. Is this a product problem or an acquisition problem?"
+    ideal:
+      assertions: 8
+      derived: 2
+      max_depth: 2
+      max_fan_in: 2
+    claims:
+      # ── domain A: the identity decomposition ──
+      - id: c1
+        text: "Weekly value moments fell 11.88%, from 4,133 to 3,642."
+        rests_on: [r1:pct_change]
+        strength: exact
+      - id: c2
+        text: "Breadth ROSE and pushed the other way: active users 836 → 886, +5.98%, offsetting
+               0.46 of the fall."
+        rests_on: [r1:active_users.pct_change, r1:offsetting.active_users.contribution_share]
+        strength: exact
+        why: >-
+          Cites `offsetting`, which the tool now names, rather than leaving a reader to infer
+          direction from a minus sign. This is the fact the whole answer turns on.
+      - id: c3
+        text: "Frequency is the primary driver: days per user 2.718 → 2.271, −16.44%, contributing
+               +1.42 — the largest contribution in the direction the total moved."
+        rests_on: [r1:days_per_user.pct_change, r1:primary_driver.contribution_share]
+        strength: exact
+        why: >-
+          CITES the ranking. The tree computes `primary_driver`, so an answer that re-derives it
+          from the three shares makes an uncertified copy of certified arithmetic — the same
+          correction already applied to L2, and not applied here until the tool grew `offsetting`
+          and per-branch influences.
+      - id: c4
+        text: "Depth was flat: −0.49%, contributing +0.04."
+        rests_on: [r1:moments_per_day.pct_change, r1:moments_per_day.contribution_share]
+        strength: exact
+
+      # ── domain B: the acquisition funnel, measured on its own ──
+      - id: c5
+        text: "Acquisition weakened sharply on every governed measure: new signups 161 → 121
+               (−24.84%), D7 activation 50.0% → 35.5% (−28.93%), referrals 48 → 38 (−20.83%)."
+        rests_on: [r1:active_users.new_signups.pct_change,
+                   r1:active_users.activation_rate.pct_change, r2]
+        strength: exact
+        why: >-
+          One claim, three metrics, because the assertion is about the funnel as a whole and would
+          be false if any of the three had held. Two of the three now arrive in the SAME
+          decomposition call, keyed by the child they drive — before the pruning fix they were
+          structurally invisible and no run ever fetched them.
+
+      # ── the reconciliation: depth 2, then depth 3 ──
+      - id: c6
+        text: "Acquisition cannot be the cause of last week's fall: breadth is an identity
+               component, it ROSE, and its contribution to the decline is therefore negative.
+               Whatever acquisition did, it did not subtract from this week's total."
+        premises: [c2, c5]
+        strength: exact
+        why: >-
+          THE load-bearing step, and the one that makes the obvious answer wrong. No governed
+          field states it: the tool reports that breadth rose and offset, and separately that the
+          funnel fell, and nothing joins the two. That join is the derivation.
+
+          It rests on the breadth MEASUREMENT (c2) rather than on a conclusion, because the
+          conclusion it used to rest on — "frequency is the entire story" — is now a governed
+          lookup. That is why this graph is two layers and not three: improve the layer and the
+          ideal gets shallower, which is the right direction. Depth measures how much the agent
+          had to work out unaided, and unaided is where the errors live.
+      - id: c7
+        text: "The tree carries active users as INFLUENCED by new signups and by activation, both
+               at medium confidence, noting that most weekly actives are returning users so the
+               link is partial. So the acquisition damage is a forward risk to breadth that has
+               not yet reached it."
+        rests_on: [r3]
+        strength: correlational
+        why: >-
+          Governance as evidence, cited whole — `check_causal_evidence` returns a governed
+          STATEMENT, and results without numbers became addressable so that a claim like this has
+          somewhere to point. Without the citation this is a plausible-sounding guess about the
+          future; with it, it is a stated property of the model carrying the confidence the model
+          assigns, and the medium confidence is what stops the answer promising a decline.
+      - id: c8
+        text: "So it is a product problem this week and an acquisition risk next: retention is
+               what fell, and the funnel damage should be expected to reach breadth later."
+        premises: [c6, c7]
+        strength: correlational
+        why: >-
+          Depth 2, and the second thing no governed field says. Weakest-link makes it
+          correlational because c7 is, which is correct: the forward half is not proven and the
+          sentence must not read as if it were.
+
+          These two derivations — the reconciliation and the forward risk — are the whole of what
+          the agent must supply here. Everything else is a citation.
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# THE LADDER, AS ONE TABLE
+#
+#        assertions   derived   depth   fan-in    what it tests
+#   L1        1           0        0       0      restraint — does it stop when there is nothing to reason about
+#   L2        5           1        1       3      the reconciliation — the one step governance cannot do for it
+#   L3        8           2        2       2      holding two domains apart, then reconciling them against arithmetic
+#
+# Read across an agent's three runs and the question stops being "how good is its reasoning" and
+# becomes "where does its reasoning stop" — which is the one an engineer can act on.
+# ─────────────────────────────────────────────────────────────────────────────────

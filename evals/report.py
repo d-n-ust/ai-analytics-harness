@@ -17,6 +17,13 @@ split (RAG-eval's central lesson):
     (the Husain-Shankar error-analysis table).
   - two-level agent metrics: the per-tool call profile (call-level) and the trajectory verdict
     (task-level).
+  - process hygiene: what the trajectory cost, described and never scored against a route —
+    calls the surface rejected (waste) held apart from calls a guardrail blocked (the mechanism
+    working), turns spent before the first governed call, and the share of governed calls that
+    stated a purpose. Asserting a golden path is the brittle thing; describing the process is
+    not, and it is the only view that sees a run whose ANSWERS were unchanged while its
+    behaviour changed completely. Dead rows are named with their cause here too — they leave
+    every rate above silently, taking the run's n with them.
   - consolidated telemetry: tokens, estimated USD (starred when the price is a placeholder), and
     latency p50/p90/p99 (wall-clock on a shared API; a concurrent run overlaps requests, so the
     percentiles include queueing under load — read deltas between cells, not absolutes).
@@ -34,13 +41,17 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from agent.grounding import RUNG_NAMES
+from agent.guardrails import GOVERNED_TOOLS
 from agent.models import MODEL_SPECS
 
 from .grade import WRONG_COST
 
 # Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
 # surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 14  # v14: the judge is shown the answer text and reports the value's role
+ROW_SCHEMA_VERSION = 17  # v17: rendered measurements carry `declared_text` (what the model
+                         # wrote) beside `text` (what the harness rendered). v16 rows mean
+                         # `text` IS the model's; pooling the two compares model prose
+                         # against rendered prose and calls the difference a trend.
 
 CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
 
@@ -79,6 +90,127 @@ def _expected_refuse(r: dict) -> bool:
     return r.get("expected_refuse", r.get("tier") == "unanswerable")
 
 
+def _call_kind(step: dict) -> str:
+    """What became of one tool call: `ok`, `blocked`, or `rejected`.
+
+    The trace carries one `error` flag over two events that mean opposite things, and pooling
+    them hides the only one worth acting on. A BLOCKED call was well-formed and a guardrail
+    refused it — the mechanism working, and usually the very fact that earns a correct refusal.
+    A REJECTED call named something that does not exist (an unknown node, a dimension the metric
+    cannot be grouped by, a period on a point-in-time metric): the model misread the tool
+    surface, so either it or the tool's description is wrong. Only rejections are waste."""
+    if not step.get("error"):
+        return "ok"
+    return "blocked" if step.get("blocked_by") else "rejected"
+
+
+def _turns_before_evidence(r: dict) -> int | None:
+    """Turns spent before the first governed call — orientation, not waste.
+
+    None when the run made none: below the governed rungs there is no such tool, so the cell has
+    no number rather than a zero that would read as "went straight to the data"."""
+    for i, t in enumerate(r.get("turns") or []):
+        if any(c in GOVERNED_TOOLS for c in (t.get("calls") or [])):
+            return i
+    return None
+
+
+def _purpose_offered(rs) -> bool:
+    """Did the surface ask governed calls to state a purpose? Read from what the guardrails
+    RECORDED doing, not reconstructed from the config string: a cell is a guardrail SET, not
+    always a ladder rung, and reconstructing would put guardrail logic in a second place."""
+    return any(a.get("guardrail") == "declared_purpose" and a.get("position") == "action_space"
+               for r in rs for t in (r.get("turns") or []) for a in (t.get("acts") or []))
+
+
+def _claims(rs) -> dict | None:
+    """What the answers in this cell committed to, and how much of it held.
+
+    None when the rung never offered `claims` — an absent measurement, not a zero. The
+    denominator is ANSWERS, because a refusal commits to nothing: counting it as an answer with
+    no claims would read as non-compliance when it is the run declining."""
+    if not any(r.get("claim_audit") is not None for r in rs):
+        return None
+    served = [r for r in rs if r.get("outcome") == "answer"]
+    audits = [r["claim_audit"] for r in served if r.get("claim_audit")]
+    declared = [a for a in audits if a.get("n")]
+    total = sum(a["n"] for a in declared)
+    return {
+        "answers": len(served),
+        # Did the model use the field at all? A schema the model ignores is not a measurement.
+        "adoption": len(declared) / len(served) if served else None,
+        "claims_per_answer": round(total / len(declared), 2) if declared else None,
+        "claims": total,
+        # Of the assertions declared, how many stand up: sources resolve and the figure is one
+        # of them. Mislabelling is counted apart — the binding can hold while the answer's
+        # declared metric disagrees with every claim in it.
+        "bound_rate": sum(a["bound"] for a in declared) / total if total else None,
+        "unsourced": sum(a["unsourced"] for a in declared),
+        "unresolved": sum(a["unresolved"] for a in declared),
+        "value_mismatch": sum(a["value_mismatch"] for a in declared),
+        "mislabelled": sum(a["mislabelled"] for a in declared),
+        # The graph itself. `derived` is the share of claims that are conclusions rather than
+        # lookups — zero means the model is listing findings, not reasoning. `correlational` is
+        # the hedge, computed from the tree's own influence edges instead of grepped for.
+        "derived": sum(a.get("derived", 0) for a in declared),
+        "derived_rate": (sum(a.get("derived", 0) for a in declared) / total) if total else None,
+        "max_fan_in": max((a.get("max_fan_in", 0) for a in declared), default=0),
+        "max_depth": max((a.get("max_depth", 0) for a in declared), default=0),
+        "correlational": sum(a.get("correlational", 0) for a in declared),
+        "bad_premise": sum(a.get("bad_premise", 0) for a in declared),
+        # How much of an answer stands on how little.
+        "sources_per_answer": round(sum(a["sources"] for a in declared) / len(declared), 2)
+                              if declared else None,
+    }
+
+
+def _process(rs) -> dict:
+    """Process hygiene for one cell: how cleanly the agent worked, with no expectation of HOW.
+
+    Every figure describes the trajectory instead of scoring it against a route. That is the
+    line between this and a golden-path assertion ("must call get_metric_tree, then
+    decompose_change"), which is brittle and punishes a better route — the reason tool-level
+    evals get called bad practice. Nothing here can be gamed by taking a different path, because
+    nothing here prefers a path."""
+    rejected: Counter = Counter()
+    blocked: Counter = Counter()
+    calls = governed = with_purpose = 0
+    for r in rs:
+        for s in (r.get("steps") or []):
+            calls += 1
+            kind = _call_kind(s)
+            if kind == "rejected":
+                rejected[s.get("tool")] += 1
+            elif kind == "blocked":
+                blocked[s.get("blocked_by")] += 1
+            if s.get("tool") in GOVERNED_TOOLS:
+                governed += 1
+                with_purpose += bool((s.get("args") or {}).get("because"))
+    firsts = [t for t in map(_turns_before_evidence, rs) if t is not None]
+    return {
+        "calls": calls,
+        # rates over CALLS, so a cell that simply works harder is not read as a sloppier one
+        "rejected_rate": sum(rejected.values()) / calls if calls else None,
+        "blocked_rate": sum(blocked.values()) / calls if calls else None,
+        "rejected_by_tool": dict(rejected.most_common()),
+        "blocked_by_guardrail": dict(blocked.most_common()),
+        "turns_before_evidence": round(sum(firsts) / len(firsts), 2) if firsts else None,
+        "purpose_declared": (with_purpose / governed) if _purpose_offered(rs) and governed else None,
+    }
+
+
+def _ungrounded(una) -> int:
+    """Rows that served a figure where no answer exists — the groundedness numerator.
+
+    `fabricated` and `wrong_scope` are ONE failure split by rung, not two failures. Below R7
+    nothing checks where a number came from, so any figure served on an unanswerable question
+    reads as an invention; at R7+ governed_numbers can tell an invention from a real governed
+    number answering a different question, and the row is typed `wrong_scope` instead. Counting
+    only the first would move groundedness at R7 for a grading reason, on a curve whose whole
+    job is to show what the guardrail bought."""
+    return sum(bool(r.get("fabricated")) or bool(r.get("wrong_scope")) for r in una)
+
+
 def _rates(rs) -> dict:
     """The three headline selective-prediction rates for a set of rows, each on its own
     denominator (answerable vs unanswerable) — None when that denominator is empty. Used both
@@ -89,7 +221,7 @@ def _rates(rs) -> dict:
     return {
         "coverage": len(answered) / len(ans_valid) if ans_valid else None,
         "precision": sum(bool(r.get("correct")) for r in answered) / len(answered) if answered else None,
-        "grounded": 1 - sum(bool(r.get("fabricated")) for r in una) / len(una) if una else None,
+        "grounded": 1 - _ungrounded(una) / len(una) if una else None,
     }
 
 
@@ -193,10 +325,17 @@ def aggregate(rows) -> dict:
         coverage = len(answered) / len(ans_valid) if ans_valid else None
         precision = correct_answered / len(answered) if answered else None
 
-        # groundedness on the UNANSWERABLE set (errors + pending-judge excluded)
+        # groundedness on the UNANSWERABLE set (errors + pending-judge excluded).
+        #
+        # The numerator is fabricated OR wrong_scope, because those two are ONE failure split by
+        # rung: a figure served where no answer exists reads as `fabricated` below R7 and as
+        # `wrong_scope` at R7+, where governed_numbers can tell an invention from a real number
+        # answering the wrong question. Counting only `fabricated` would make groundedness jump
+        # at R7 partly because the guardrail works and partly because the grader changed, and the
+        # ladder chart cannot tell those apart. Split them in `wrong_by_type`, where the
+        # distinction is the point; keep them together here, where comparability is.
         una = [r for r in rs if _expected_refuse(r) and r["outcome"] != "error" and not r.get("needs_judge")]
-        fabricated = sum(bool(r.get("fabricated")) for r in una)
-        groundedness = 1 - fabricated / len(una) if una else None
+        groundedness = 1 - _ungrounded(una) / len(una) if una else None
 
         # correctness (on answered): 1 - confident-wrong rate; relevancy where metric_match is known
         confident_wrong = sum(bool(r.get("confident_wrong")) for r in answered)
@@ -230,6 +369,7 @@ def aggregate(rows) -> dict:
         # wrong_metric is a SUBSET of confident_wrong, scored only where metric_match is known.
         wrong_by_type = {
             "fabricated": sum(bool(r.get("fabricated")) for r in wrong),          # groundedness fail
+            "wrong_scope": sum(bool(r.get("wrong_scope")) for r in wrong),        # real number, unasked question
             "confident_wrong": sum(bool(r.get("confident_wrong")) for r in wrong),   # correctness fail
             "off_governance": sum(bool(r.get("off_governance")) for r in wrong),  # right digits, off-path
             "wrong_metric": sum(r.get("metric_match") is False for r in wrong),   # relevancy fail (⊆ conf-wrong)
@@ -285,6 +425,8 @@ def aggregate(rows) -> dict:
                 "tools_per_run": {t: round(c / n, 2) for t, c in tools.most_common()},
                 "trajectory": dict(traj),
             },
+            "process": _process(rs),
+            "claims": _claims(rs),
             "telemetry": {
                 "in_tokens": sum(r["input_tokens"] for r in rs),
                 "out_tokens": sum(r["output_tokens"] for r in rs),
@@ -307,6 +449,18 @@ def aggregate(rows) -> dict:
                             "off_governance" if r.get("off_governance") else "wrong")}
                   for r in rows if _bucket(r) == "wrong"]
 
+    # Two trace-level drill-downs. Both name the offending call or row outright, because a rate
+    # tells you something went wrong and only the text tells you what: the difference between
+    # "3 rejected calls" and "the model asked for node `value_moments`, three times".
+    rejected_calls = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"],
+                       "tool": s.get("tool"), "args": s.get("args"),
+                       "message": str(s.get("result") or "").split("\n")[0]}
+                      for r in rows for s in (r.get("steps") or []) if _call_kind(s) == "rejected"]
+
+    dead_rows = [{"model": r["model"], "cell": cell_of(r), "qid": r["qid"],
+                  "cause": str(r.get("error") or "unrecorded")}
+                 for r in rows if _bucket(r) == "error"]
+
     return {
         "meta": {"axis": axis, "models": models, "cells": cells, "n_questions": n_q,
                  "reps": reps, "n_rows": len(rows), "wrong_cost": WRONG_COST,
@@ -321,6 +475,8 @@ def aggregate(rows) -> dict:
                               "reasoning": first.get("verifier_reasoning")}},
         "cells": {m: dict(c) for m, c in per_cell.items()},
         "wrong_rows": wrong_rows,
+        "rejected_calls": rejected_calls,
+        "dead_rows": dead_rows,
     }
 
 
@@ -329,6 +485,19 @@ def aggregate(rows) -> dict:
 # --------------------------------------------------------------------------- #
 def _pct(x) -> str:
     return "—" if x is None else f"{x * 100:.0f}%"
+
+
+def _td(x) -> str:
+    """One markdown table cell. A pipe inside a rendered value ends the cell and silently shifts
+    every column after it, so free text and stored arguments are escaped rather than trusted."""
+    return str(x).replace("\n", " ").replace("|", "\\|")
+
+
+def _rate_with_detail(rate, by: dict) -> str:
+    """A rate, followed by the breakdown that says where it came from — '12% (query_metric 5)'."""
+    if not by:
+        return _pct(rate)
+    return f"{_pct(rate)} ({', '.join(f'{k} {v}' for k, v in by.items())})"
 
 
 def _band(vals) -> tuple:
@@ -361,6 +530,14 @@ def render_markdown(summary: dict) -> str:
              f"**{v.get('model')}**@{v.get('reasoning')} · row schema v{meta.get('schema_version')}._")
     if meta.get("schema_skew"):
         L.append(f"_⚠ schema skew: some rows predate v{meta.get('schema_current')} — missing fields read as None._")
+    # Dead rows are excluded from every rate below, so without this line a contaminated run is
+    # indistinguishable from a clean run with a smaller n — which is how 43 rows died unnoticed.
+    if summary.get("dead_rows"):
+        n_dead = len(summary["dead_rows"])
+        causes = len({d["cause"] for d in summary["dead_rows"]})
+        L.append(f"_⚠ {n_dead} of {meta['n_rows']} rows died before a measurement was taken "
+                 f"({causes} distinct cause(s)) — they are excluded from every rate below. "
+                 "See **Rows that died**._")
     vv = meta.get("verifier_validation")
     if vv:
         flag = ""
@@ -530,18 +707,21 @@ def render_markdown(summary: dict) -> str:
                 L.append(f"| {c} | " + " | ".join(cellstr) + " |")
             L += ["", "_key: matched✓ / wrong-reason✗ / over-refused-answerable-o_"]
         L += ["", f"## Wrong answers by type — {m}", "",
-              "_The first three columns **partition** every wrong answer — they sum to ❌ wrong. "
-              "**fabricated** = invented a number where none exists (groundedness); **confident-wrong** "
-              "= asserted a wrong number (correctness); **off-governance** = right digits reached off the "
-              "governed path when the answer was to refuse. **wrong-metric** is a *subset* of "
-              "confident-wrong (a relevancy miss), scored only where the model declares source_metric "
-              "(R7+)._", "",
-              f"| {axis} | fabricated | confident-wrong | off-governance | of which wrong-metric |",
-              "|" + "---|" * 5]
+              "_The first four columns **partition** every wrong answer — they sum to ❌ wrong. "
+              "**fabricated** = invented a number where none exists (groundedness); **wrong-scope** "
+              "= a real governed number, but for a question that was not asked — only separable at "
+              "R7+, where nothing unaccountable can be served, so below that it reads as fabricated; "
+              "**confident-wrong** = asserted a wrong number (correctness); **off-governance** = right "
+              "digits reached off the governed path when the answer was to refuse. **wrong-metric** is "
+              "a *subset* of confident-wrong (a relevancy miss), scored only where the model declares "
+              "source_metric (R7+)._", "",
+              f"| {axis} | fabricated | wrong-scope | confident-wrong | off-governance "
+              f"| of which wrong-metric |",
+              "|" + "---|" * 6]
         for c in _cells_for(summary, m):
             w = summary["cells"][m][c]["wrong_by_type"]
             wm = w["wrong_metric"] if meta.get("relevancy_scored") else "n/a"
-            L.append(f"| {c} | {w['fabricated']} | {w['confident_wrong']} "
+            L.append(f"| {c} | {w['fabricated']} | {w.get('wrong_scope', 0)} | {w['confident_wrong']} "
                      f"| {w.get('off_governance', 0)} | {wm} |")
 
     # 5. Agent behaviour — tool-call profile (call-level) + trajectory verdicts (task-level)
@@ -557,6 +737,53 @@ def render_markdown(summary: dict) -> str:
             tj = a["trajectory"]
             tjs = f"{tj.get('pass', 0)}/{tj.get('fail', 0)}" if tj else "—"
             L.append(f"| {c} | {a['tool_calls_per_run']} | {prof} | {tjs} |")
+
+    # 5b. Process hygiene — describes the trajectory, never asserts a route
+    for m in meta["models"]:
+        L += ["", f"## Process hygiene — {m}", "",
+              "_Descriptive only: how cleanly the agent worked, with no expectation of HOW it "
+              "should. **rejected** = calls the tool surface refused because they named something "
+              "that does not exist — an unknown node, a dimension the metric cannot be grouped by. "
+              "Those are pure waste, and a mistake that repeats across runs is a tool-description "
+              "problem rather than a model one. **blocked** = well-formed calls a guardrail "
+              "refused; that is the mechanism working, and it is often what earns a correct "
+              "refusal, so it is counted apart and never added to waste. **turns to evidence** = "
+              "turns spent before the first governed call (orientation). **purpose** = share of "
+              "governed calls carrying a stated `because`, where the surface asks for one._", "",
+              f"| {axis} | rejected | blocked | turns to evidence | purpose |",
+              "|" + "---|" * 5]
+        for c in _cells_for(summary, m):
+            p = summary["cells"][m][c]["process"]
+            L.append(f"| {c} | {_rate_with_detail(p['rejected_rate'], p['rejected_by_tool'])} "
+                     f"| {_rate_with_detail(p['blocked_rate'], p['blocked_by_guardrail'])} "
+                     f"| {p['turns_before_evidence'] if p['turns_before_evidence'] is not None else '—'} "
+                     f"| {_pct(p['purpose_declared'])} |")
+
+    # 5c. Claim binding — what each answer committed to, and how much of it resolved
+    if any(summary["cells"][m][c].get("claims") for m in meta["models"]
+           for c in _cells_for(summary, m)):
+        for m in meta["models"]:
+            rows_ = [(c, summary["cells"][m][c].get("claims")) for c in _cells_for(summary, m)]
+            rows_ = [(c, cl) for c, cl in rows_ if cl]
+            if not rows_:
+                continue
+            L += ["", f"## Claim binding — {m}", "",
+                  "_An answer is not one assertion; on the diagnostic tier it averages about five, "
+                  "and before this rung only the single declared `value` was ever checked. "
+                  "**adoption** = answers that broke themselves into claims. **bound** = claims "
+                  "whose sources resolve to real governed values and whose stated figure is one "
+                  "of them. **mislabelled** is counted apart: a claim can be perfectly bound and "
+                  "the answer's declared metric still disagree with it, which no check on the "
+                  "number can catch. Nothing here refuses anything yet._", "",
+                  f"| {axis} | adoption | claims/answer | bound | derived | fan-in | depth "
+                  f"| correlational | unresolved | value mismatch | mislabelled |",
+                  "|" + "---|" * 11]
+            for c, cl in rows_:
+                L.append(f"| {c} | {_pct(cl['adoption'])} | {cl['claims_per_answer'] or '—'} "
+                         f"| {_pct(cl['bound_rate'])} | {_pct(cl.get('derived_rate'))} "
+                         f"| {cl.get('max_fan_in', 0)} | {cl.get('max_depth', 0)} "
+                         f"| {cl.get('correlational', 0)} | {cl['unresolved']} "
+                         f"| {cl['value_mismatch']} | {cl['mislabelled']} |")
 
     # 6. Telemetry — consolidated (tokens · USD · latency)
     for m in meta["models"]:
@@ -588,6 +815,33 @@ def render_markdown(summary: dict) -> str:
         for w in summary["wrong_rows"]:
             L.append(f"| {w['model']} | {w['cell']} | {w['qid']} | {w.get('tier','?')} | {w['type']} "
                      f"| {w['answer']} | {w['gold']} |")
+
+    # 8. Drill-down — every call the tool surface rejected
+    if summary.get("rejected_calls"):
+        L += ["", "## Rejected tool calls (the surface refused the arguments)", "",
+              "_Each cost a turn and returned no evidence. Read the arguments against the message: "
+              "the same wrong name recurring is the tool's description failing to say what it "
+              "accepts, which no amount of scoring the ANSWER would ever reveal._", "",
+              "| model | cell | qid | tool | arguments | what came back |",
+              "|---|---|---|---|---|---|"]
+        for x in summary["rejected_calls"]:
+            L.append(f"| {x['model']} | {x['cell']} | {x['qid']} | `{x['tool']}` "
+                     f"| `{_td(json.dumps(x['args'], default=str))}` | {_td(x['message'])} |")
+
+    # 9. Drill-down — rows that never produced a measurement, grouped by cause
+    if summary.get("dead_rows"):
+        by_cause: dict = defaultdict(list)
+        for d in summary["dead_rows"]:
+            by_cause[d["cause"]].append(d)
+        L += ["", "## Rows that died (no measurement taken)", "",
+              "_A dead row is excluded from every rate above, so a contaminated run reads as a "
+              "clean one with a smaller n. Grouping by cause is what separates an infrastructure "
+              "fault — one message repeated across every row — from scattered model failures._", "",
+              "| rows | cause | models | cells |", "|---|---|---|---|"]
+        for cause, ds in sorted(by_cause.items(), key=lambda kv: -len(kv[1])):
+            models = ", ".join(sorted({d["model"] for d in ds}))
+            cells = ", ".join(sorted({d["cell"] for d in ds}))
+            L.append(f"| {len(ds)} | {_td(cause[:160])} | {models} | {cells} |")
 
     return "\n".join(L) + "\n"
 

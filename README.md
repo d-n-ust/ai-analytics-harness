@@ -4,7 +4,9 @@ A controlled lab for measuring what makes an LLM "analyst" **reliable** over dat
 small agent that answers business questions over a warehouse, then change **one thing at a time**
 — holding the model and the questions fixed — and watch what it buys you.
 
-The harness runs **three experiments on the same rig**:
+The harness runs **four experiments on the same rig**. Three vary one axis of the agent — what it
+*knows*, what it may *do*, what it must *declare* — and the fourth asks which part of the second one
+was actually doing the work.
 
 1. **Grounding** — how much does *structure* (a schema, a semantic layer, a knowledge base, a
    metric tree) improve a capable model's answers? *The six-rung grounding ladder.*
@@ -15,15 +17,23 @@ The harness runs **three experiments on the same rig**:
    is only ever seen stacked on the ones below it. So the harness runs *every* coherent combination
    of the six independent guardrails and computes an exact Shapley value per guardrail, with the
    efficiency axiom checked to floating point. *24 coalitions, 4,104 answers.*
+4. **Protocol** — when every assertion has to name the governed value it rests on, how much of a
+   served answer can be *checked* — and does being asked for an account change the answer itself?
+   *The evidence graph.*
 
-Each experiment adds exactly one thing to the *same* agent and re-answers the **same 57 questions**.
+Grounding, reliability and protocol are independent, not one ladder. A declaration is not "stricter"
+than a verifier, so protocol crosses the guardrail cells rather than extending them, and "R5 with
+claims" is a cell you can run.
+
+Each experiment adds exactly one thing to the *same* agent and re-answers the **same 65 questions**.
 Nothing else changes, so every delta is attributable to that one change — not to prompt luck or
 question drift.
 
 > Companion essays: [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
-> (the grounding experiment) and [Agentic Analytics: Teaching an AI Analyst to Say I Don't Know](https://decisionspine.com/blog/teaching-an-ai-analyst-to-say-i-dont-know)
-> (the reliability experiment), with [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
-> as the argument underneath both.
+> (the grounding experiment), [Agentic Analytics: Teaching an AI Analyst to Say I Don't Know](https://decisionspine.com/blog/teaching-an-ai-analyst-to-say-i-dont-know)
+> (the reliability experiment) and [The Evidence Graph: Teaching an AI Analyst to Show Its Work](https://decisionspine.com/blog/the-evidence-graph-teaching-an-ai-analyst-to-show-its-work)
+> (the protocol experiment), with [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026)
+> as the argument underneath all three.
 
 ## Anatomy — what's inside
 
@@ -43,6 +53,12 @@ A canonical agent, named the way the field names it:
   request: the coverage check, the tool restriction, member resolution, governed_numbers, output validation, the trajectory
   verifier. What the system *enforces*, not behaviours the model chooses. This is the
   reliability-ladder axis.
+- **Protocol** (`agent/protocol.py`) — what the answer must *declare* about its own work: a purpose
+  per governed call, one claim per assertion, each naming the governed value it rests on. A peer of
+  the guardrail set, not a part of it. This is the evidence-graph axis.
+- **Evidence layer** (`evidence/`) — resolves every declaration against the trace it was built from.
+  It **decides nothing**: no verdict, no refusal, no downgrade. That is what keeps it an instrument
+  rather than a second judge, and it is why its numbers need no gold answers.
 - **Memory** — none, by design: each question is a fresh conversation.
 - **Observability** — typed outcomes + an expect-driven grader (below).
 
@@ -96,9 +112,9 @@ serving a confident wrong number. Each rung switches on one guardrail (`agent/gu
 | R9 | **trajectory_verify** | an LLM verifier checks the metric actually answers the question |
 
 Because the guardrails are *independent flags*, the harness can run the cumulative ladder **or** any
-individual ablation cell, so a guardrail's contribution can be measured where it functions. The **31
+individual ablation cell, so a guardrail's contribution can be measured where it functions. The **35
 reliability-tier questions** (`valid_but_wrong`, `adversarial`, `unanswerable`, `rt_phantom`,
-`false_premise`) are where the guardrails discriminate; the **26 answerable-tier questions** are
+`false_premise`) are where the guardrails discriminate; the **30 answerable-tier questions** are
 shared with the grounding experiment.
 
 Scoring is **selective prediction** — an agent that may decline cannot be judged on accuracy alone,
@@ -111,6 +127,73 @@ since refusing everything scores perfectly on what it answers. Three numbers, ne
 | **silent error rate** | of everything asked, the share where it served a confident number that was false — a wrong answer, or an answer to a question that had none |
 | **balanced accuracy** | the mean of the two families' accuracies, so the score describes the agent rather than how many of each kind of question the suite happens to contain |
 
+## Experiment 3 — attribution
+
+A ladder cannot say which guardrail did the work, because every rung is only ever seen stacked on the
+ones below it. R9 minus one guardrail answers "what does removing it cost *here*", which is not the
+same question. So the harness runs **every coherent combination** of the six independent guardrails
+and computes an exact Shapley value per guardrail — the average marginal contribution over all
+orderings, with the efficiency axiom (the parts must sum to the whole) checked to floating point.
+
+This adds no ladder and no axis of its own; it is an analysis of experiment 2, run over 24 coalitions
+and 4,104 answers. The finding it produced that no ladder could — one guardrail contributing exactly
+nothing while firing 656 times — is in [Results](#results).
+
+## Experiment 4 — the evidence graph
+
+The two ladders judge an answer as one thing. An answer is not one thing: a diagnostic reply averages
+~5 assertions, and only the single declared number was ever checked. One live run served nine
+assertions, had one verified, and declared it under a metric it had not used. It graded correct.
+
+So the fourth experiment asks the answer to **declare its own structure**. Every successful tool
+result carries a handle (`r1`, `r2`), and a result holding many numbers is addressed one value at a
+time — `r1:days_per_user.pct_change`, never a bare `r1`. Each assertion then names either:
+
+- **`sources`** — the governed values it was read off, or
+- **`premises`** — the earlier claims it was concluded from.
+
+Carrying both is itself a defect: a claim is read from evidence or derived from claims, and mixing
+the two hides the distinction the graph exists to draw.
+
+| Switch | What the answer must declare |
+|---|---|
+| **`purpose`** | one line per governed call on what it is for |
+| **`claims`** | one claim per assertion, each naming the value it rests on |
+| **`repair`** | a citation naming nothing is handed back, bounded, before the answer is served |
+| **`rendered`** | the harness writes each measurement's sentence from the cited values, so a measurement *cannot* carry an argument |
+
+Each is switched separately (`--protocols claims+repair`), and a `rule` / `role` framing varies
+whether being checkable is presented as a field to fill in or as part of the analyst's job.
+
+**Why this is a different kind of metric.** Coverage, silent error and balanced accuracy all need
+someone to have written the right answer down first. The evidence graph needs no gold: every check is
+a lookup against the trace, so **grounded-answer rate** — the share of served answers whose every
+citation resolves — computes on a client's question where no answer key will ever exist. It is
+reported *beside* the three above and never averaged into them; "was it right" and "can it be
+inspected" are different questions, and their mean answers neither.
+
+Three things it sees that nothing above it can:
+
+- **Claim support.** Whether each declared citation resolves, and whether a stated figure is one the
+  cited values support. Deterministic — a broken citation is broken, no judge required. Every
+  attribution metric in the literature is judge-dependent because citations point at *text*; these
+  point at *query results*, so resolution is a dictionary lookup.
+- **Semantic-model defects.** Confusable metric names, unsupported dimensions, missing grains and
+  weak causal edges stop being private model mistakes and become counts a data team can act on.
+  `./bench ambiguity` finds the dangerous pairs from the YAML alone, before a run: `value_moments`
+  and `real_value_moments` agree on all six facets of *what* they measure and differ only in scope,
+  so their figures land a quarter-point apart and no numeric check separates them.
+- **Whether the answer contains an argument at all.** The uncomfortable one: across 1,405 served
+  answers carrying a graph, **73.7% drew no conclusion** — a flat list of cited measurements with the
+  diagnosis left in the prose beside the graph. Seventeen reached two levels of inference.
+
+`./bench chain --run <dir>` renders any stored row the way a reader would read it: the question, what
+was asked of the data, what the answer claims, and what each claim rests on. It prints **no verdict**
+— no score, no band, no colour meaning "trust this". The first working version stamped `NOT SUPPORTED`
+across a substantively correct answer because the model had typed `value_moments` where it meant
+`weekly_value_moments`. The defect was real; the verdict was a smoke alarm going off at toast, and a
+reader who sees one wrong red badge stops believing the green ones.
+
 ## Run it
 
 ```bash
@@ -119,17 +202,26 @@ make data         # generate warehouse/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
 cp .env.example .env && $EDITOR .env   # OPENAI_API_KEY (and ANTHROPIC_API_KEY / DEEPSEEK_API_KEY as needed)
-make eval         # the grounding experiment: 57 questions x 6 rungs x {gpt-5.6-terra,gpt-5.4-mini} x 5 reps
+make eval         # the grounding experiment: 65 questions x 6 rungs x {gpt-5.6-terra,gpt-5.4-mini} x 5 reps
 ```
 
 Everything runs through one CLI — `./bench <verb>` (a thin wrapper over `python -m cli`):
-`data · verify · query · ask · run · regrade · report · test`. Vary the **reliability** ladder
-with `--rrungs`, or run explicit ablation cells with `--cells`:
+`data · verify · query · ask · run · regrade · report · trace · chain · ambiguity · test`. Vary the
+**reliability** ladder with `--rrungs`, or run explicit ablation cells with `--cells`:
 
 ```bash
 ./bench run --rungs 3 --rrungs 0,1,3,4,7,9    # hold grounding fixed, climb the guardrail ladder
 ./bench run --rungs 3 --cells R9,R9-resolve   # R9 vs R9-minus-one-guardrail
 ./bench ask "how many active users?" --rung 3 --guardrails R9   # one question at any cell
+```
+
+Cross either ladder with the **protocol** axis, and read one answer's graph back:
+
+```bash
+./bench run --rungs 7 --cells R9 --protocols none,claims,claims+repair   # what declaring buys
+./bench ask "why did value moments fall?" --rung 6 --protocol claims --trace
+./bench chain --run results/latest        # the question -> evidence -> answer chain, no verdict
+./bench ambiguity                         # confusable governed names, from the YAML alone
 ```
 
 Ask a single question at one rung:
@@ -152,7 +244,7 @@ effort and the row records what was actually sent (`agent/models.py`).
 ## How answers are graded
 
 Every run ends in one **typed outcome** — `answer`, `refuse`, or `clarify` — so grading never
-phrase-matches prose. Each of the 57 cases declares in YAML what a correct response *is* (an
+phrase-matches prose. Each of the 65 cases declares in YAML what a correct response *is* (an
 `expect` block); the grader reads that, it never infers the expected outcome from the tier:
 
 - **`metric_answer`** — a number within tolerance of an independent gold SQL, from the right
@@ -176,6 +268,11 @@ which is the failure the whole experiment is about. Those four counts are column
 (n=37) is **invalidated** and must not be quoted: 7 of its 37 cases were labelled against a corrupted
 evidence field, and the run metadata carries `"stale": true` saying so.
 
+Because the claim audit is a pure lookup over the trace, `./bench regrade --run <dir>` re-derives
+every verdict on a finished run **with no model calls**. The model's outputs are immutable; only what
+is read from them changes. That is how a fix to the grader or the audit reaches numbers already
+measured, instead of costing a re-run.
+
 ## What this is and isn't
 
 - It **is** a minimal, honest, reproducible measurement of how much structure and how many guardrails
@@ -191,18 +288,27 @@ warehouse/    the data platform: generator, DuckDB I/O, star schema (dim_/fct_ v
 semantic/     the governed model: the semantic layer (metrics/segments) + the metric tree
 context/      what the agent is GIVEN: verified example queries + the knowledge base (text, no code)
 agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
-              guardrails, and the answer verifier
-evals/         the 57 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
+              guardrails, the answer verifier, and the declaration protocol
+evidence/     what an answer DECLARED, resolved against the trace it was built from, and the
+              question -> evidence -> answer chain a reader is shown. Pure lookups, no model — and
+              it decides nothing, which is what keeps it an instrument rather than a second judge
+evals/        the 65 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
 cli/          the `bench` entry point (one dispatcher over every verb)
 experiments/  pre-registrations + findings logs
-docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · RESULTS-2026-07
+docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · RESULTS-2026-07 · ARCHITECTURE ·
+              EVIDENCE-GRAPH · TRUST-MODEL · ONTOLOGY · FINDINGS
 results/      published/ = the evidence behind the write-ups (cells/tiers/tools CSVs + the
               runs whose raw rows back a claim); runs/ is gitignored and regenerates
 ```
 
 See [`docs/ANATOMY.md`](docs/ANATOMY.md) for the file→component map, and
-[`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) for the two
-experiments.
+[`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) /
+[`docs/EVIDENCE-GRAPH.md`](docs/EVIDENCE-GRAPH.md) for the experiments.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) says why declaring is a third axis rather than a
+guardrail rung; [`docs/TRUST-MODEL.md`](docs/TRUST-MODEL.md) says what the evidence layer is
+eventually meant to compute and why those numbers must never be averaged with the ones above;
+[`docs/FINDINGS.md`](docs/FINDINGS.md) is the standing ledger of what is established, what is a
+measured null, and what was tried and rejected.
 
 ## Results
 
@@ -220,9 +326,11 @@ traces intact.
   never beat rung 4, the only rung that never earned its place.
 - **"Why did it move" needs the metric tree** — diagnostic answers jump sharply once the tree is added.
 
-Measured on the current 57 questions (`gpt-5-mini`, 3 reps, refuse tool available throughout), six
-levels of structure take right answers from **36% to 85%** — and confidently-wrong answers from only
-**52% to 31%**. Structure makes the agent capable much faster than it makes it honest.
+Measured on the 57-question set (`gpt-5-mini`, 3 reps, refuse tool available throughout), six levels
+of structure take right answers from **36% to 85%** — and confidently-wrong answers from only **52%
+to 31%**. Structure makes the agent capable much faster than it makes it honest. (The suite has since
+grown to 65; the eight additions are deliberately harder, so these percentages are not comparable to
+a fresh run of the current set.)
 
 **Reliability.** Same top-rung grounding, one guardrail at a time:
 
@@ -250,6 +358,26 @@ accumulates redundant checks, and no passing test suite will tell you.
 `gpt-5.6-terra` scores 90% for $0.80; `gpt-5.6-sol` scores **88%** for $1.73. The larger models make
 no mistakes at all — zero wrong numbers, zero inventions — and lose by declining more answerable
 questions. Past the point where guardrails have bought honesty, model size buys caution.
+
+**The evidence graph.** What has held up across runs, nulls included
+([`docs/FINDINGS.md`](docs/FINDINGS.md) is the full ledger):
+
+- **Asking for an account does not measurably change the answer.** Every difference against the same
+  cell without claims is within noise. Recorded as a null *with its power stated*: at 78 answerable
+  questions per arm it could only ever have caught a large effect. It costs ~50% more output tokens.
+- **Citation repair moves the fourth number and only the fourth** — grounded-answer rate 87.2% →
+  94.7%, while balanced accuracy moved 0.6. That is the shape a mechanism predicts when it checks
+  citations and knows nothing about the business question. Replicated across two independent sweeps.
+- **It repairs rather than deletes.** A broken citation has two cheap fixes and only one is intended;
+  recording what went *in* as well as what came out separates them. No handed-back answer came back
+  smaller.
+- **The graph captures the evidence and loses the argument.** Seven in ten answers contain no
+  conclusion at all — the single largest open problem on this axis. The lever that moves it
+  (`rendered`) is currently confounded with its framing, which makes it the most valuable unrun
+  experiment here.
+- **Two mechanisms were tested and rejected**, and are kept as rejected: orphan repair (the signal is
+  Simpson's paradox, and its cheapest compliance is *deleting* the evidence) and broken citations as
+  a correctness predictor (same trap, found the same way).
 
 Every number is labelled with its n; re-running a cell moves it a point or two, and the write-up
 prints two runs of the same configuration so a reader can see how much.

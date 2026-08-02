@@ -13,6 +13,11 @@
     "difficulty": { "enum": ["easy", "subtle", "hard"] },
     "tags": { "type": "array", "items": { "type": "string" } },
     "note": { "type": "string", "description": "Why this case exists / the trap it sets." },
+    "requires": {
+      "type": "array",
+      "items": { "enum": ["star", "semantic", "examples", "knowledge", "tree"] },
+      "description": "Injected context the expected answer DEPENDS on. Where a rung does not supply it, the case stops demanding a particular answer and only requires that the agent did not guess: a refusal or a clarification is then also correct."
+    },
     "expect": {
       "oneOf": [
         {
@@ -55,6 +60,20 @@
           "properties": {
             "type": { "const": "keywords" },
             "keywords": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+          }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["type", "reason"],
+          "properties": {
+            "type": { "const": "ambiguous" },
+            "reason": {
+              "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
+              "enum": ["no_governed_definition", "out_of_coverage", "segment_undefined",
+                       "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
+                       "dimension_not_supported", "ungoverned_dimension_value",
+                       "result_empty", "implausible_value", "out_of_scope", "other"]
+            }
           }
         },
         {

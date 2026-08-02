@@ -11,6 +11,7 @@ from pathlib import Path
 
 import yaml
 
+from .protocol import ROLE, Protocol
 from .rungs import capabilities
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -86,6 +87,83 @@ _RRUNG_VERIFIER = ("\n- After you answer, a verifier inspects the metric you use
                    "much', a rate for 'what rate / average / per user'), and the right scope (no filter "
                    "the question did not ask for). If the metric answers a different question, your answer "
                    "is rejected — so choose the metric that matches what was asked, or refuse.")
+# protocol.purpose — the only line here that asks for something rather than describing what
+# the system will do. It requests a record, not a behaviour: the guardrail cannot enforce it, and
+# how often the model complies is exactly what the rung is there to measure.
+_RRUNG_PURPOSE = ("\n- Each governed call takes an optional `because`: one line, in plain words, on "
+                  "what you are trying to establish with it (\"check whether the drop is uniform "
+                  "across regions or concentrated in one\"). Write the sub-question you are "
+                  "answering, not a label for the call. It does not change the result — it records "
+                  "how you got to the answer, so a reader can follow your reasoning.")
+# protocol.claims — asks for a record, like `purpose`, and for the same reason: the
+# guardrail cannot enforce a decomposition the model declines to give, and how well the model
+# breaks its own answer apart is what this rung exists to measure.
+_RRUNG_CLAIMS = ("\n- The answer takes a `claims` list: one entry per assertion your answer makes, "
+                 "each naming the governed value it rests on. Every governed result prints a "
+                 "handle and its fields, so cite the VALUE — `r1:days_per_user.pct_change`, or "
+                 "`r2:paid_search` for one row of a breakdown — not just the result. If your "
+                 "answer reports five figures and draws one conclusion, that is six claims. A "
+                 "claim that is a CONCLUSION — \"X is the primary driver\", \"Y did not cause it\" "
+                 "— sets `premises` naming the earlier claims it follows from, instead of "
+                 "`sources`. Saying days_per_user is the primary driver means comparing the three "
+                 "contribution shares, so those three claims are its premises. It does not change "
+                 "your answer.")
+# protocol.rendered — the model stops writing measurements. Stated as a mechanism, because it is
+# one: the field is simply not there to fill.
+_RRUNG_RENDERED = ("\n- You do NOT write the wording of a claim that cites data. Name the values in "
+                   "`sources` and leave `text` empty; the sentence is written from those values "
+                   "and reads exactly as they do. `text` is for a CONCLUSION only — so anything "
+                   "you write there is reasoning, and must name the claims it follows from in "
+                   "`premises`. A claim never carries both.")
+# protocol.repair — a mechanism line, like every guardrail above and unlike the two declaration
+# lines: it describes what the system will do, so it has no role/rule variant. The framing
+# treatment is about how an ACCOUNT is asked for, not about how a check is announced.
+_RRUNG_CITATION_REPAIR = ("\n- A claim citing something that does not exist is handed back to you "
+                          "with the fault named, the same way a call with a bad argument is, and "
+                          "you get to fix it. Cite one value per source and this never fires.")
+
+# --- the framing experiment -------------------------------------------------------------- #
+# The lines above tell the model, twice and in as many words, that declaring "does not change
+# your answer". Then we measured how much it cared: 88% adoption, 43% of reasoning answers
+# declaring a conclusion, and declarations the first thing dropped when a closing turn rushes it.
+# That is the prompt working as written, not a fact about the model.
+#
+# The alternative says being checkable IS the job. Nothing about the MECHANISM changes — the audit
+# still records and never refuses — because inert-in-the-check and unimportant-in-the-role are
+# different claims, and the design conflated them. Which framing is live is a treatment, so it is
+# read once per run and stamped on every row.
+_ROLE_PURPOSE = ("\n- Each governed call takes an optional `because`: one line, in plain words, on "
+                 "what you are trying to establish with it (\"check whether the drop is uniform "
+                 "across regions or concentrated in one\"). Write the sub-question you are "
+                 "answering, not a label for the call — it is the record of how you reached the "
+                 "answer, and a reader who was not here has nothing else to follow.")
+
+_ROLE_CLAIMS = ("\n- Being checkable is part of the job, not paperwork after it. An answer is the "
+                "number AND the account of it: the separate statements you are making, and which "
+                "governed value each one rests on. A figure a reader cannot trace back is not an "
+                "answer, however right it happens to be."
+                "\n- So give the `claims` list with every answer: one entry per assertion. Cite the "
+                "VALUE, not the result — `r1:days_per_user.pct_change`, or `r2:paid_search` for one "
+                "row of a breakdown; every governed result prints its citable fields on a [cite] "
+                "line. A result that returns no numbers — what the tree says about a causal edge, "
+                "whether a segment is defined — is cited by its handle alone (`r2`), and it is "
+                "evidence like any other: it is what makes a refusal a governed finding rather "
+                "than an opinion."
+                "\n- A CONCLUSION rests on other claims, not on data: set `premises` to the earlier "
+                "claims it follows from. \"Days per user is the primary driver\" IS a comparison of "
+                "the three contribution shares — writing it as one more figure hides the reasoning "
+                "that makes it true, and a reader cannot check what is hidden."
+                # The prompt described exactly one layer, and then 83% of answers came back as flat
+                # lists with the conclusion asserted alongside the measurements. The hand-built
+                # reference graphs need TWO layers on every one of three questions, so a model
+                # producing one was doing what it was told.
+                "\n- Conclusions build on conclusions. Your final answer is itself a claim, and its "
+                "premises are usually the comparison you just made plus the fact you set out to "
+                "explain — not the raw figures again. So a diagnostic answer typically looks like: "
+                "measurements citing values, then a comparison across those measurements, then the "
+                "answer to the question resting on that comparison. Three levels of evidence, not "
+                "a list with a verdict at the bottom.")
+
 
 _RUNG_NOTES = {
     1: ("\n\nThe tables are the raw application database: cryptic names, inconsistent "
@@ -98,7 +176,7 @@ _RUNG_NOTES = {
         "power users, activation, etc.) so the definition, threshold, and segment are always "
         "correct. You may still use run_sql for anything the metrics don't cover."),
     6: ("\n\nA metric tree is available. For diagnostic questions - why did a metric move, what is "
-        "driving a change - call explain_change to decompose the movement through the tree, and "
+        "driving a change - call decompose_change to attribute the movement to the metrics that compose it, and "
         "get_metric_tree to see its structure. The decomposition's numbers are computed for you: "
         "narrate them and their evidence, and do not invent contributions or causes the tree "
         "does not carry."),
@@ -121,14 +199,15 @@ def _knowledge_block() -> str:
 
 
 
-def system_prompt(rung: int, g) -> str:
-    """Assemble what the agent is told, from the rung it is grounded at and the guardrails it
-    runs under.
+def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
+    """Assemble what the agent is told, from the rung it is grounded at, the guardrails it runs
+    under, and the protocol it declares by.
 
     Each guardrail contributes a line describing itself. Those lines are not the guardrail — the
     structural ones hold whether or not the model reads them — but a model that does not know
     raw SQL is gone will waste turns discovering it. The set that writes the prompt is the SAME
     set the runtime enforces, so a cell can never describe a guardrail that is not running."""
+    protocol = protocol or Protocol()
     system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
     if g.check_tools:
         system += _RRUNG_CHECKS
@@ -146,6 +225,15 @@ def system_prompt(rung: int, g) -> str:
         system += _RRUNG_OUTPUT_VALIDATION
     if g.trajectory_verify:
         system += _RRUNG_VERIFIER
+    role = protocol.framing == ROLE
+    if protocol.purpose:
+        system += _ROLE_PURPOSE if role else _RRUNG_PURPOSE
+    if protocol.claims:
+        system += _ROLE_CLAIMS if role else _RRUNG_CLAIMS
+    if protocol.rendered:
+        system += _RRUNG_RENDERED
+    if protocol.repair:
+        system += _RRUNG_CITATION_REPAIR
     # Asked of the rung's capabilities, never derived from its number: rung 7 holds the tree
     # without the two advisory blocks, so `rung >= n` says nothing about what the agent has.
     caps = capabilities(rung)

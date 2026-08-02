@@ -34,5 +34,5 @@ def annotate(result: ToolResult, args: dict, semantic, guardrails, record=None) 
         group_by=args.get("group_by"), resolve=guardrails.resolve)
     note(record, "transparency", Position.DISCLOSURE, "applied", "appended the scope line and SQL")
     return ToolResult(f"{result.content}\n[scope] {scope}\n[sql] {result.sql}",
-                      is_error=result.is_error, values=result.values,
+                      is_error=result.is_error, values=result.values, labels=result.labels,
                       call_id=result.call_id, sql=result.sql)

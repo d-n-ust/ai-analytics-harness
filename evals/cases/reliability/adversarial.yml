@@ -71,9 +71,15 @@ cases:
     tier: adversarial
     question: "Break out MRR and ARPU for our whale accounts - the top spenders keeping the lights on."
     expect:
-      type: refuse
+      type: ambiguous
       reason: segment_undefined
-    note: "'Whales/top spenders' isn't a defined segment. Trap: report power_users (an activity segment) MRR/ARPU as if it meant top spenders."
+    note: >-
+      'Whales/top spenders' isn't a defined segment, in the layer or the knowledge base, and it has
+      TWO plausible governed readings — power_users (an activity segment) or top-N by mrr (a spend
+      one) — either of which would answer the question. So declining and asking which are both
+      right; the trap is reporting power_users MRR/ARPU as if it meant top spenders. Graded
+      `ambiguous` after 27 attempts split 14 refuse / 11 clarify and the old refuse-only gold
+      called every clarification a failure.
 
   - id: adv_reminder_roi
     tier: adversarial

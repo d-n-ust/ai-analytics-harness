@@ -34,14 +34,22 @@ cases:
   - id: t4_retention_trend
     tier: knowledge
     question: "How has our retention been trending over the last couple of months?"
+    requires: [knowledge]
     expect:
       type: keywords
       keywords: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
-    note: "Fuzzy mapping: 'retention' means days per user (frequency), not active-user count. Only the KB maps the word to the metric."
+    note: >-
+      Fuzzy mapping: 'retention' means days per user (frequency), not active-user count. ONLY the
+      knowledge base maps the word to the metric — which is exactly what the case tests, and why
+      it declares `requires`. Run at rung 7 (governed-only: layer + tree, no knowledge base) the
+      agent has never been told what the word means, and asked instead on 19 of 27 attempts; the
+      case scored 4 of 27 and counted every one of those as a failure. It was measuring a rung it
+      does not apply to.
 
   - id: t4_business_health
     tier: knowledge
     question: "Is the app healthy right now — how would you tell?"
+    requires: [knowledge]
     expect:
       type: keywords
       keywords: ["value moments", "north star", "weekly value"]

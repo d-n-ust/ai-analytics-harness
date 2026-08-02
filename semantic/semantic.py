@@ -64,7 +64,7 @@ def _norm_value(v) -> str:
     return re.sub(r"[\s_\-]+", " ", str(v).strip().lower())
 
 
-def _match_catalog(term: str, names) -> str | None:
+def _match_catalog(term: str, names, aliases: dict | None = None) -> str | None:
     """Return the catalog name a free-text term denotes, or None.
 
     Strict on purpose: a term matches a name only when it *is* that name plus at
@@ -72,14 +72,24 @@ def _match_catalog(term: str, names) -> str | None:
     is either a name token or filler). This refuses composites like "MRR growth
     rate" (→ None) that bare-substring matching wrongly accepted, at the cost of
     some true synonyms ("monthly recurring revenue" → None) — a false NO costs
-    measurable coverage, a false YES invites fabrication."""
+    measurable coverage, a false YES invites fabrication.
+
+    `aliases` gives the other names the layer DECLARES for a catalog entry, and each
+    is tested by the same strict rule. This is not a loosening: a declared synonym is
+    the governed model stating what a term means, so honouring it is reading the
+    definition rather than guessing past it. Ignoring them made the layer contradict
+    itself — `list_metrics` tells the agent value_moments is "also called engagement
+    events", and check_metric_exists then answered "no governed definition matches".
+    'north star' is declared on real_value_moments and did not resolve either.
+    """
     tt = _tokens(term)
     if not tt:
         return None
     for name in names:
-        nt = _tokens(name)
-        if nt and nt <= tt and tt <= (nt | _STOP):
-            return name
+        for candidate in (name, *(aliases or {}).get(name, ())):
+            nt = _tokens(candidate)
+            if nt and nt <= tt and tt <= (nt | _STOP):
+                return name
     return None
 
 
@@ -115,7 +125,8 @@ class SemanticLayer:
     def metric_exists(self, term: str) -> tuple[bool, str]:
         if not _tokens(term):
             return False, "empty term."
-        name = _match_catalog(term, self.metrics)
+        name = _match_catalog(term, self.metrics,
+                              {n: m.get("synonyms", []) for n, m in self.metrics.items()})
         if name:
             return True, f"governed metric {name!r} matches {term!r}."
         return False, (f"no governed definition matches {term!r}. "
@@ -317,6 +328,40 @@ class SemanticLayer:
         return {k: v for k, v in filters.items()
                 if k in pinned and isinstance(v, bool) and v is pinned[k]}
 
+    def additivity(self, metric: str) -> str:
+        """Whether this measure may be rolled up over time — DERIVED from its aggregate.
+
+        Kimball's three classes, and each falls out of the `agg` without anyone deciding:
+
+          additive       sum(...) — the parts add up, so twelve months make a year
+          semi_additive  count(distinct ...), or a STOCK — adding two periods double-counts
+                         anything present in both, so it may be sliced by any other dimension
+                         but never summed across time
+          non_additive   a ratio or an average — adding them is meaningless in every direction
+
+        Read rather than annotated, because a hand-kept flag drifts: `additive_over_time` carries
+        True on five metrics and null on ten, and null there means both "not additive" and
+        "nobody decided". `count(distinct user_id)` is semi-additive whether or not anyone wrote
+        it down, which is the whole reason this is a property of the measure.
+        """
+        spec = self.metrics.get(metric) or {}
+        agg = " ".join(str(spec.get("agg", "")).lower().split())
+        if not agg:
+            return "unknown"
+        if "/" in agg or "avg(" in agg:
+            return "non_additive"
+        # No time column means the measure is a STOCK — a level at a moment, not events in a
+        # window. `active_subscriptions` is `count(*)` and reads additive by its aggregate alone,
+        # but adding January's active subscriptions to February's counts every subscription that
+        # survived both. A stock slices across any other dimension and never sums across time.
+        if not spec.get("time_column"):
+            return "semi_additive"
+        if "distinct" in agg:
+            return "semi_additive"
+        if agg.startswith("sum(") or agg.startswith("count("):
+            return "additive"
+        return "unknown"
+
     def resolve_member(self, dimension: str, value):
         """Map a free-text filter value onto the canonical governed member of a dimension,
         via its members + synonyms (case/space/underscore-insensitive) — "iPhone" ->
@@ -361,6 +406,15 @@ class SemanticLayer:
                 bits.append("    point-in-time (as of now); no period filter")
             lines.append("\n".join(bits))
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
+        # The MEMBERS, once, rather than repeated under every metric that shares a dimension.
+        # Naming the dimension without its values told the agent that `channel` exists and left
+        # it to guess what a channel is: one run spent four of its eight turns asking three
+        # different tools whether "paid search" was defined, and never learned that `paid_search`
+        # is a governed member. There are 25 values in total — cheaper to state than to discover.
+        if self.dimensions:
+            lines.append("\nGoverned dimension values (any other value is refused, not approximated):")
+            for dim, members in self.dimensions.items():
+                lines.append(f"- {dim}: {', '.join(members)}")
         segs = self.governance.get("segments", {}) or {}
         if segs:
             lines.append("\nGoverned segments (pass segment=… to query_metric for a named reusable filter):")

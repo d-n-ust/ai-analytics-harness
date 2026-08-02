@@ -56,9 +56,138 @@ confident answer, never rescue a refusal, so it can only add safety.
 held-out human labels, and its error rate is a **standing, first-class number** — revalidated
 whenever its prompt changes. A refuse-only critic you cannot score is just another opinion.
 
+### The two halves of that validation, and what each is worth (2026-07-31)
+
+The judge's decisions split into two populations, and only one of them needs labelling at all.
+
+**Numeric decisions — settled by independent gold, no human in the loop.** Where the question has
+a `gold_sql` answer, or is unanswerable and any served number is therefore wrong, the gold decides
+and the judge is scored against it (`evals/components/verifier_vs_gold.py`). n=58, agreement
+**98.3%**, catch rate 100%, one false flag. Current against the live prompt fingerprint.
+
+**Prose decisions — the ones gold cannot settle**, on diagnostic and keyword-graded questions.
+These are re-labelled by a three-lens panel (strict / pragmatic / skeptical), blind to the judge's
+verdict, **unanimous-only**, with splits escalated to a human rather than out-voted
+(`evals/components/prose_panel.py`). Pooled over all 22 stored runs:
+
+```
+28 prose decisions · 24 unanimous · 4 escalated
+on the settled ones: the judge false-flagged 0 and missed 0
+```
+
+**Read that as thin, not clean.** The sample is the ceiling: of 1,384 rows across today's runs,
+513 reached the judge, 381 of those the gold settles by itself and 108 are unanswerable — leaving
+24 prose decisions as the entire labelling surface, deduplicating to a handful of distinct texts
+across seven diagnostic questions. Twenty-four decisions cannot measure a judge that is right most
+of the time. The fix is more diagnostic questions, not a better panel. Until then the prose half
+of the judge's error rate is **not established**, and the earlier 37-case labelling remains
+invalidated (7 of its cases were judged against a number the answer did not serve).
+
 The deterministic core that *survives* is `governed_numbers` (R7) and the
 output-validation check (R8) — both live in `agent/guardrails/after.py` alongside the trajectory judge, and
 both are provable without a model (`tests/test_semantic.py`).
+
+## Erratum — the output guardrails do not verify a judgement answer (2026-08-01)
+
+They verify a NUMBER. When the answer is a number, that is the same thing. When the answer is a
+judgement — *"is the app healthy?"*, *"one region, or something broader?"*, *"did that cause it?"*
+— the model attaches a figure from its work, and the checks verify that figure.
+
+Two runs of `t4_business_health` answered **"Yes — generally healthy"** and **"No — overall health
+is weak"**, both declaring 3,642, and both drew `allowed` from `governed_numbers`,
+`output_validation` and the trajectory judge. Identical verification, opposite answers. Across the
+2026-08-01 sweep, **29 of 29 judgement-tier answers carried a figure this way.**
+
+No published number moves: those tiers are graded on whether the right driver was named, and the
+attached figure never entered the score. What was wrong is the **claim**, stated here and in the
+README, that the output guardrails check the answer before it is served. For a judgement answer
+they check a bystander.
+
+The check still runs — a composed figure smuggled into prose is exactly what it exists to catch,
+and `adv_dau_mau` did precisely that. What changed is that it now reports its own scope:
+`verified a figure` rather than `allowed`, with the detail saying the answer is prose and this
+verified one figure in it. An answer with no figure at all was always handled honestly
+(`stood down: the answer is prose, not a number`); this closes the case where a figure is present
+but is not the answer.
+
+## Erratum — a declared `0` matched any rate below 50% (2026-08-02)
+
+`num_match` forgives display rounding, and its ladder ran from **zero** decimal places. Rounding
+to a whole number is the same forgiveness everywhere on the number line, and the layer's values
+are not: on a count it moves 4200.6 to 4201 and loses nothing, on a **rate** it moves every value
+below a half to `0` and everything from a half to one-and-a-half to `1`.
+
+So a declared `0` was accepted as a rounding of 0.4, 0.49 and 0.5, and a declared `1` of 0.6.
+Every rate the layer produces lives in exactly that range. The ladder now starts at one decimal
+place; a count and its whole-number self are already equal and never reach the ladder at all.
+
+**What it moves.** Replaying `account_for` over all **1,280** stored answers that served a typed
+number: **5** had no account before the change, **14** after — 1.1% of the corpus. Three of the
+fourteen sit in answers graded **correct**, and those three are the correction:
+
+| question | run | served | as |
+|---|---|---|---|
+| `t5_which_lever` | R9/claims+repair+rendered+role | 1.0 | `days_per_user` |
+| `t4_retention_trend` | R11 | 83.0 | `active_users` |
+| `t5_not_breadth` | R9 | 50.0 | `active_users` |
+
+Each would now be refused by `governed_numbers` rather than served. No headline rate in any
+published table moves by a visible amount at n≈171 per cell, but the three rows are named here
+rather than absorbed.
+
+**A figure that does not reproduce.** This audit was opened to settle an earlier claim that **66
+published answers would now be refused, 24 of them previously correct**. That number does not
+reproduce at any setting: the real check finds 5 before the fix and 14 after, of which 1 and 3
+respectively were graded correct. The 66 appears to have come from a hand-written approximation
+of the provenance rule rather than from `account_for` itself — a first pass at this audit made the
+same mistake and reported **326**, because a re-implementation does not model governed statements,
+decomposition fields or node aliases. The rule that follows from it: **never re-implement a check
+in order to audit it.** Call the real one.
+
+## Erratum — the gold set could not say "do not guess" (2026-07-31)
+
+**This changes stored scores. Runs published before this date are not comparable to runs after
+it without regrading.**
+
+The answer key could say *answer this*, or *refuse this*. It had no way to say **the analyst
+must not guess, and either declining or asking is right**. Two consequences, both found by
+running rung 7 rather than by inspection:
+
+**1. A genuinely ambiguous question.** `adv_whales` asks for MRR on "whale accounts — the top
+spenders". Nothing defines that: not the semantic layer, not the knowledge base. It has two
+plausible governed readings — `power_users` (activity) or top-N by `mrr` (spend) — and either
+would answer the question. Across 27 attempts the agent split **14 refusals to 11 clarifying
+questions**, and the refuse-only gold scored all 11 as failures. It is now `expect.type:
+ambiguous`, which accepts a refusal carrying the right code **or** a clarification. Serving a
+number is still a miss, so the trap the case sets is unchanged.
+
+**2. A case asked at a rung that cannot answer it.** Only the knowledge base maps "retention" to
+days per user — that mapping is the entire point of `t4_retention_trend`. Rung 7 is
+*governed-only*: semantic layer plus metric tree, **no knowledge base**. So at rung 7 nothing had
+ever told the agent what the word meant, it asked on **19 of 27 attempts**, and the case scored
+**4 of 27** — the worst in the set, entirely because it was being asked at a rung it does not
+apply to. A case may now declare `requires: [knowledge]`; where the rung does not supply that
+context, the case stops demanding a particular answer and only insists the agent did not guess.
+
+Both rules **only widen** what counts as correct, and only for cases that declare them —
+`tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
+claim. Regrading the rung-7 R9 baseline moves it from 134/171 to **141/171**; every one of the
+seven is a clarification that was previously counted as a failure, and nothing moves the other way.
+
+The rule used to decide eligibility is stated so it can be argued with, and was applied to all 57
+questions from the **question text and the governed vocabulary alone**, never from which runs
+happened to clarify:
+
+> A question is ambiguous when it names a term with no governed definition **anywhere the agent is
+> given** — neither the metric catalog nor the knowledge base — there is **more than one plausible
+> governed reading**, and **picking one of them makes the question answerable**.
+
+The third clause separates *ambiguous* from *impossible*, and it does real work: `adv_free_vs_paying`
+("free users vs paying users") is genuinely ambiguous, but every reading needs `active_users` minus
+`paying_users` — a composition of two different metrics, which `governed_numbers` forbids — so
+clarifying could not unblock it and refusing stays correct. The rule accepts **1** of the 9
+questions the agent actually clarified and rejects 8, which is the evidence it is not simply the
+observed behaviour wearing a rule's clothes.
 
 ## How it's reported
 

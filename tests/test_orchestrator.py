@@ -20,6 +20,7 @@ from agent.conversation import TERMINAL_TOOLS, ToolCall, Turn, Usage
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.loop import run_agent
+from agent.protocol import Protocol
 from warehouse.warehouse import open_warehouse
 
 QM = {"metric": "active_users", "period": "last_week"}
@@ -51,10 +52,11 @@ class Scripted:
         return Turn.of(said, calls, Usage(*self.tokens))
 
 
-def _run(*turns, rrung=8, max_iters=4, **kw):
+def _run(*turns, rrung=8, protocol="none", max_iters=4, **kw):
     con = open_warehouse(create_star_views=True)
     model = Scripted(*turns, **kw)
-    grounding = build_grounding(con, 6, guardrails=LADDER[rrung])
+    grounding = build_grounding(con, 6, guardrails=LADDER[rrung],
+                                protocol=Protocol.parse(protocol))
     return run_agent("how many active users last week?", grounding, model,
                      max_iters=max_iters), model
 
@@ -294,7 +296,108 @@ TESTS = [test_a_run_ends_through_one_typed_exit,
          test_the_empty_result_check_is_unreachable_wherever_it_is_legal]
 
 
+def test_a_run_that_never_fixes_its_citations_still_terminates():
+    """The correction now runs on the closing turn too, so the loop can extend itself. That is
+    exactly the shape that hangs a sweep, so the bound is pinned rather than reasoned about: a
+    model that answers badly forever gets at most MAX_CORRECTIONS goes and one grace turn, and
+    still leaves through a terminal tool rather than as an untyped error row."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r1"], "value": 886}]}
+    # r1 holds one value here, so make it unresolvable by naming a handle that does not exist
+    bad["claims"][0]["sources"] = ["r9:nothing"]
+    ans, model = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
+                      rrung=9, protocol="claims+repair", max_iters=4)
+    assert ans.outcome == "answer", "it must still end through the typed protocol"
+    assert ans.claim_retries <= 2, f"corrections must be bounded, got {ans.claim_retries}"
+    assert ans.iterations <= 5, f"at most max_iters + 1 turns, got {ans.iterations}"
+    assert model.n <= 6, "the model must not be called unboundedly"
+
+
+def test_asking_for_claims_and_correcting_them_are_separate_guardrails():
+    """The split that makes the claims arm ablatable. As one flag it was a treatment (the model
+    is asked for an account) and an enforcement (a bad account is handed back) at once, and no
+    cell could say which of them moved a number.
+
+    `claims` asks and audits; `claims+repair` also corrects. Same malformed answer, two runs —
+    one is served with its broken citation recorded, the other is handed back. If these ever
+    coincide the ablation is measuring one thing and reporting two."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r9:nope"], "value": 886}]}
+    # The scripted model repeats its last turn, so the repair arm corrects until the cap; what is
+    # pinned here is that it corrects at all — not how often, which the termination test bounds.
+    for proto, repairs, why in (("claims", False, "claims alone records it and serves the answer"),
+                                ("claims+repair", True, "the repair arm hands it back")):
+        ans, _ = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
+                      rrung=9, protocol=proto, max_iters=4)
+        assert bool(ans.claim_retries) is repairs, f"{why}: got {ans.claim_retries} corrections"
+        # both AUDIT it — measurement is not a treatment, so the finding is recorded either way
+        assert (ans.claim_audit or {}).get("unresolved") == 1, "the audit runs in both arms"
+        repaired = [a for a in ans.acts if a["guardrail"] == "repair"]
+        assert bool(repaired) is repairs, "and the repair names itself on the trace"
+        assert all(a["position"] == "repair" for a in repaired), repaired
+
+
+def test_a_repaired_citation_and_a_deleted_claim_are_different_stored_rows():
+    """The check the repair loop cannot pass on its own evidence.
+
+    A citation that names nothing has two cheap fixes, and only one is the intended one: cite the
+    right value, or delete the sentence. Both end with `unresolved == 0`, so the after-state alone
+    reports 98% success for a model that quietly dropped every awkward claim — the loop's headline
+    number would be measuring compliance and reporting accountability.
+
+    Both runs below fix the citation the same way, and differ only in whether the second claim
+    survives. If the stored row cannot separate them, the field is not worth writing."""
+    broken = {"text": "886 active users", "sources": ["r9:nope"], "value": 886}
+    kept = {"text": "886 active users", "sources": ["r1"], "value": 886}
+    aside = {"text": "which is the governed figure", "sources": ["r1"]}
+    rows = {}
+    for name, second in (("fixed", [kept, aside]), ("deleted", [kept])):
+        ans, _ = _run([call("1", "query_metric", QM)],
+                      [call("2", "answer", {**ANSWER, "claims": [broken, aside]})],
+                      [call("3", "answer", {**ANSWER, "claims": second})],
+                      rrung=9, protocol="claims+repair", max_iters=4)
+        assert ans.claim_retries == 1 and (ans.claim_audit or {}).get("unresolved") == 0, (
+            f"{name}: both runs must reach a clean graph — that is what makes them confusable")
+        rows[name] = ans
+
+    # What the after-state says: nothing. This assertion is the reason the field exists.
+    assert all((r.claim_audit or {}).get("unresolved") == 0 for r in rows.values())
+
+    for name, ans in rows.items():
+        assert len(ans.repairs) == 1, f"{name}: one handback, one before-state"
+        before = ans.repairs[0]
+        assert before["claims"] == 2, f"{name}: two claims went in"
+        assert [b["cites"] for b in before["broken"]] == [["r9:nope"]], before
+        # the handed-back TEXT is what makes survival checkable without guessing from counts
+        assert before["broken"][0]["text"].startswith("886 active users"), before
+
+    survived = {n: len(a.claims) for n, a in rows.items()}
+    assert survived == {"fixed": 2, "deleted": 1}, survived
+    # and the read a report performs: was the sentence we complained about still asserted?
+    for name, expected in (("fixed", True), ("deleted", True)):
+        text = rows[name].repairs[0]["broken"][0]["text"]
+        assert any(c["text"].startswith(text[:20]) for c in rows[name].claims) is expected, name
+    # the aside is the claim that disappears, and only the before-state proves it was ever there
+    assert any(c["text"].startswith("which is") for c in rows["fixed"].claims)
+    assert not any(c["text"].startswith("which is") for c in rows["deleted"].claims)
+
+
+def test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it():
+    """A malformed answer arriving on the LAST turn used to be accepted as-is — nothing could be
+    said to a model with no turn left. It now gets one more, and a model that fixes its citation
+    ends bound."""
+    bad = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r9:nope"], "value": 886}]}
+    good = {**ANSWER, "claims": [{"text": "886 active users", "sources": ["r1"], "value": 886}]}
+    ans, _ = _run([call("1", "query_metric", QM)],
+                  [call("2", "answer", bad)],      # lands on the closing turn of a 3-turn budget
+                  [call("3", "answer", good)],
+                  rrung=9, protocol="claims+repair", max_iters=3)
+    assert ans.claim_retries == 1, "the closing-turn answer was handed back"
+    assert (ans.claim_audit or {}).get("unresolved") == 0, "and the second attempt resolved"
+
+
 if __name__ == "__main__":
     for fn in TESTS:
         fn()
+    test_a_run_that_never_fixes_its_citations_still_terminates()
+    test_asking_for_claims_and_correcting_them_are_separate_guardrails()
+    test_a_correction_on_the_closing_turn_buys_a_turn_to_fix_it()
     print(f"OK — agent loop: {len(TESTS)} control-flow properties hold on a scripted model.")

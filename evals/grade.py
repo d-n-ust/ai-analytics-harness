@@ -7,8 +7,20 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   governed metric (source_metric, when the model declares it)
   refuse          a refusal carrying the expected coded reason; for such a case ANY served
                   number is a miss (a wrong number, or a right one reached off-governance)
+  ambiguous       a refusal with that reason OR a clarifying question — both are correct,
+                  because the question names an undefined term with more than one plausible
+                  governed reading, and picking one silently is the failure. Serving a number
+                  is still a miss, so the trap the case sets is unchanged.
 
 Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
+
+A case may also declare `requires` — the injected context its expected answer DEPENDS on.
+`t4_retention_trend` expects days-per-user because the knowledge base says "retention" means
+that; at a rung with no knowledge base, nothing has told the agent what the word means, and
+asking is the right move. Run there without this, the case scored 4 of 27 and every one of the
+19 clarifications counted as a failure. The case is not broken and neither is the agent — the
+case was being asked at a rung it does not apply to. Where its context is absent it stops
+demanding a particular answer and only insists the agent did not GUESS.
 
 Every response still reduces to one `bucket` — the single lens the project reports:
   right / wrong (a wrong or fabricated number) / idk (refused or clarified) /
@@ -23,13 +35,30 @@ import re
 
 from agent.numbers import asserts_number
 from agent.numbers import parse_numbers as _numbers
+from agent.rungs import capabilities
+
+# What separates two words: a space, a hyphen, an en dash, a slash. A keyword written with one
+# must match a text written with another — they are the same phrase, and which one an answer
+# happens to use is not a fact about the analysis.
+_GAP = r"[\s\-\u2010-\u2015/]+"
 
 
 def _mentions(text: str, keywords: list[str]) -> bool:
     """Does the text name any keyword, at a LEADING word boundary (not a raw substring) so
-    'active' can't fire on 'inactive', while plurals/inflections still count?"""
+    'active' can't fire on 'inactive', while plurals/inflections still count?
+
+    Word separators are treated as equivalent. Without that, three answers saying the same thing
+    scored differently: "low confidence" matched, "low-confidence" did not, and one run of
+    t5_reminder_caused_it was marked wrong for a hyphen while the run beside it passed. A grader
+    that reads punctuation as meaning is measuring typography, and it inflated a regression it
+    was meant to measure — two of twelve failures in the 2026-08-01 sweep were this.
+
+    It does NOT paper over word ORDER. "not a proven cause" still misses "not proven", because
+    those differ by an inserted word and a gold set that matched across insertions would start
+    matching things it should not. That case is a gold-set gap: the phrase belongs in the list."""
     t = (text or "").lower()
-    return any(re.search(r"\b" + re.escape(k.lower()), t) for k in keywords)
+    return any(re.search(r"\b" + _GAP.join(re.escape(w) for w in k.lower().split()), t)
+               for k in keywords)
 
 # How many refusals one wrong answer is worth — a placeholder until field interviews
 # price it; reported alongside every score.
@@ -77,19 +106,68 @@ def _metric_match(answer, expect: dict):
     return str(got).strip().lower() == str(want).strip().lower()
 
 
+def _accepted_reasons(expect: dict) -> tuple[str, ...]:
+    """The refusal codes this case counts as right. A string for the usual one-answer case, a
+    list where a defect is genuinely describable two ways.
+
+    THIS IS A LOOPHOLE IF USED CASUALLY, so the bar is that both codes describe the SAME defect
+    and a reviewer could not say which is better. `u_july_partial_month` is the case it was
+    added for: July 2026 is covered through the 12th, so "the period is not fully covered"
+    (`out_of_coverage`) and "the decline you assert is an artefact" (`false_premise`) are two
+    true sentences about one fact. gpt-5.6-terra produced the partial-month reasoning in the
+    `missing` field on all three attempts and split 1-2 across the codes; grading on one of them
+    scored correct analysis as failure two times in three.
+
+    That split is the published finding this widening rests on — RefusalBench (arXiv 2510.10390)
+    reports refusal as *separable detection and categorization skills*, with frontier models
+    below 50% on the second in grounded settings. A case with one obvious code (`u_churn_risk`
+    has exactly one) must keep a bare string, or reason accuracy stops measuring anything.
+    """
+    reason = expect.get("reason")
+    return (reason,) if isinstance(reason, str) else tuple(reason or ())
+
+
+def _missing_context(case: dict, rung) -> bool:
+    """Does this case need injected context the rung did not supply?
+
+    Only ever WIDENS what counts as correct, and only for a case that declares `requires`. A
+    case with no such declaration is graded exactly as it always was, so this cannot quietly
+    relax the rest of the set."""
+    needs = case.get("requires") or ()
+    if not needs or rung is None:
+        return False
+    caps = capabilities(rung)
+    return any(not getattr(caps, name, False) for name in needs)
+
+
 def grade(answer, case: dict, gold: float | None) -> dict:
     outcome = answer.outcome
     expect = case["expect"]
     etype = expect["type"]
-    expects_refusal = etype == "refuse"
-    is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
+    # An `ambiguous` case is a refusal case that ALSO accepts a clarification. Both mean "I will
+    # not guess at a term nobody has defined", and a gold set that accepts only one of them scores
+    # the analyst's manner rather than the analyst's judgement: 27 attempts at t4_retention_trend
+    # produced 19 clarifications and 4 refusals, and the old gold called 23 of the 27 wrong.
+    expects_refusal = etype in ("refuse", "ambiguous")
+    accepts_clarify = etype in ("clarify", "ambiguous")
+    # Was the context this case's answer depends on actually supplied? Asked of the rung's
+    # capabilities rather than compared against a rung number: rung 7 is governed-only and holds
+    # the tree WITHOUT the knowledge base, so `rung >= 5` would get this exactly backwards.
+    missing_context = _missing_context(case, getattr(answer, "rung", None))
+    accepted_reasons = _accepted_reasons(expect)
+    is_false_premise = expects_refusal and "false_premise" in accepted_reasons
     tol = expect.get("tolerance", 0.02)
-    # Did it put a FIGURE forward? Not `_numbers`, which counts the digits in a date and so
-    # read "I cannot provide July 13-19, 2026, coverage ends 2026-07-12" as a served number
-    # and filed an honest decline as a fabrication.
-    has_number = asserts_number(answer.answer)
+    # Did it put a FIGURE forward? Where the answer schema carried a typed `value` (R7+), the
+    # model has already said so and reading its prose can only invent a disagreement: one run
+    # declared no value, wrote "over the last 30 days", and the digit scan filed a clarification
+    # as a fabrication. Below R7 there is no such field, so the prose is all there is — and there
+    # the scan must stay, because a real answer is usually a sentence ("5386 value moments came
+    # from the Americas") that a bare-number pattern would drop.
+    has_number = (answer.declared_value is not None if getattr(answer, "typed_value", False)
+                  else asserts_number(answer.answer))
 
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
+    wrong_scope = False
     reason_match = driver_ok = cause_ok = metric_match = None
 
     if outcome == "error":
@@ -105,12 +183,14 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                 # excluded from reason accuracy rather than counted as a miss.
                 correct = True
             else:
-                reason_match = answer.reason == expect["reason"]
+                reason_match = answer.reason in accepted_reasons
                 correct = reason_match
+        elif missing_context:
+            correct = True     # declining a term nobody defined for it
         # else: over-refused an answerable question -> correct stays False
         bucket = "idk"
     elif outcome == "clarify":
-        correct = etype == "clarify"
+        correct = accepts_clarify or missing_context
         bucket = "idk"
     elif is_false_premise:
         needs_judge = True                           # rebuttal vs accepted-premise — a judge rules
@@ -119,7 +199,18 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         if has_number:
             bucket = "wrong"
             if gold is None:
-                fabricated = True                    # no valid number exists -> pure fabrication
+                # No valid number exists for the question. WHERE the served figure came from
+                # decides which failure this is, and only R7+ knows: governed_numbers refuses
+                # any number it cannot account for, so an ANSWERED row there is carrying a real
+                # governed result — the model reported June 2026 actives and said plainly that
+                # June 2025 is outside coverage. That is a scope failure, not an invention, and
+                # scoring it as fabrication put it beside a hand-composed DAU/WAU ratio. Below
+                # R7 nothing checks provenance, so the two are indistinguishable and the older,
+                # stricter reading stands.
+                if getattr(answer, "typed_value", False):
+                    wrong_scope = True
+                else:
+                    fabricated = True                # no valid number exists -> pure fabrication
             elif not grade_numeric(answer.answer, gold, tol)["correct"]:
                 confident_wrong = True               # served a WRONG number
             else:
@@ -150,13 +241,16 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             else:
                 bucket = "other"
 
-    wrong_number = confident_wrong or fabricated
+    # A scope failure still put a figure in front of someone who asked something else, so it
+    # costs what a wrong answer costs. Splitting it out changes what the failure is CALLED, and
+    # therefore what you would fix; it does not make it cheaper.
+    wrong_number = confident_wrong or fabricated or wrong_scope
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         # Both terminal declines abstain: neither serves a number, which is what the
         # selective-prediction sense of the word means. `outcome` still tells them apart.
         "abstained": outcome in ("refuse", "clarify"), "confident_wrong": confident_wrong,
-        "fabricated": fabricated, "off_governance": off_governance,
+        "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
         "reason_match": reason_match, "metric_match": metric_match,
         "driver_ok": driver_ok, "cause_ok": cause_ok,

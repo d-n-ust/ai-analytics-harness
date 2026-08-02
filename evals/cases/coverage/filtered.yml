@@ -44,3 +44,73 @@ cases:
       metric: active_subscriptions
       gold_sql: "SELECT count(*) FROM fct_subscriptions WHERE is_active AND plan = 'annual'"
       tolerance: 0.02
+
+  # MULTI-STEP WITH A NUMERIC GOLD. Every other multi-step case here is keyword-graded, and
+  # `_mentions` is an ANY match — so a question whose answer is "which region" cannot be graded,
+  # because a good answer names all three. Asking for a NUMBER removes the problem entirely.
+  #
+  # days_per_user by region, governed (May -> June 2026, both fully post-APAC-launch):
+  #   APAC      4.5526 -> 4.9767   +0.4240   <- the only improvement
+  #   Americas  5.5851 -> 5.4246   -0.1605
+  #   EMEA      5.2780 -> 4.9755   -0.3025
+  #
+  # The agent must query one metric grouped by region at two windows, compare three pairs, pick
+  # the improving one and serve its delta. A difference of two results of the SAME metric is
+  # exactly what governed_numbers permits, so the answer is expressible.
+  #
+  # Asking for the region's JUNE VALUE instead would be ungradeable: APAC 4.9767 and EMEA 4.9755
+  # differ by 0.0012, well inside the 2% tolerance, so naming the wrong region would score
+  # correct. The delta separates cleanly (+0.42 against -0.16 and -0.30).
+  - id: t2_only_region_improving_frequency
+    tier: filtered
+    question: "Between May and June 2026, only one region improved its days per user. By how much
+      did it improve?"
+    expect:
+      type: metric_answer
+      metric: days_per_user
+      gold_sql: "SELECT (SELECT count(*) * 1.0 / nullif(count(distinct user_id), 0) FROM agg_active_days WHERE NOT is_internal AND region = 'APAC' AND active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30') - (SELECT count(*) * 1.0 / nullif(count(distinct user_id), 0) FROM agg_active_days WHERE NOT is_internal AND region = 'APAC' AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31')"
+      tolerance: 0.02
+    note: "APAC, +0.4240. Both months are fully post-launch (APAC opened 2026-05-01), so unlike
+      the first draft of t5_apac_growth_breadth this touches no pre-launch rows."
+
+  # Numeric multi-step, PLATFORM rather than region so it does not simply rehearse the case above.
+  # days_per_user May -> June, governed: android 5.0654 -> 5.1379 (+0.0725, the only gain);
+  # ios 5.5434 -> 5.3376; web 5.2940 -> 4.8693; unknown 5.5938 -> 4.9111. The three losses are
+  # large and negative, so the 2% band around +0.0725 cannot admit one of them by accident.
+  - id: t2_only_platform_improving_frequency
+    tier: filtered
+    question: "Between May and June 2026, only one platform improved its days per user. By how
+      much did it improve?"
+    expect:
+      type: metric_answer
+      metric: days_per_user
+      gold_sql: "SELECT (SELECT count(*)*1.0/nullif(count(distinct user_id),0) FROM agg_active_days WHERE NOT is_internal AND platform='android' AND active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30') - (SELECT count(*)*1.0/nullif(count(distinct user_id),0) FROM agg_active_days WHERE NOT is_internal AND platform='android' AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31')"
+      tolerance: 0.02
+    note: "android, +0.0725. The layer also carries an `unknown` platform (a dirty enum kept on
+      purpose); it fell, so it changes no answer here.
+
+      OPEN, found 2026-08-02: gpt-5.6-terra at claims+repair scored 0/5 while its other two arms
+      scored 5/5. All five computed 0.07253593913491187; the difference of the two values they
+      cited is 0.07253593911491141 — a gap of 2e-11, right to ten significant figures but NOT a
+      rounding of the cited difference, so num_match rejects it and governed_numbers refuses.
+      Defensible as designed: num_match is an identity test. But rule (a) asks `is this a
+      governed result` (identity) and rule (b) asks `is this a comparison of two` (arithmetic,
+      which accumulates error), and they currently share one predicate. Giving (b) a tolerance
+      suited to derived values would fix it; that touches both ends of the stack and is not a
+      change to make casually."
+
+  # Absolute growth rather than a rate, and the answer is NOT the biggest region — EMEA added 147
+  # and Americas 87, but APAC added 186 off a far smaller base. active_users by region, governed:
+  #   APAC 114 -> 300 (+186)   Americas 417 -> 504 (+87)   EMEA 669 -> 816 (+147)
+  # Both months are fully post-launch (APAC opened 2026-05-01), so no pre-launch rows are touched.
+  - id: t2_biggest_absolute_user_growth
+    tier: filtered
+    question: "Which region added the most active users between May and June 2026, and how many
+      did it add?"
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT (SELECT count(distinct user_id) FROM agg_active_days WHERE NOT is_internal AND region='APAC' AND active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30') - (SELECT count(distinct user_id) FROM agg_active_days WHERE NOT is_internal AND region='APAC' AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31')"
+      tolerance: 0.02
+    note: "APAC, +186. Graded on the NUMBER, so an answer naming the right region with the wrong
+      figure still fails — which is the point of preferring a numeric gold where one exists."

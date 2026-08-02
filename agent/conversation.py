@@ -37,6 +37,12 @@ class ToolResult:
     content: str
     is_error: bool = False
     values: list | None = None
+    # What each value IS, parallel to `values`: the breakdown row it came from ("paid_search"),
+    # or the field of a decomposition ("days_per_user.contribution_share"). Without these a
+    # handle names a BAG of numbers rather than a number, and anything checking a claim against
+    # a result has to search the bag — which is how a hand-composed ratio matched a coincidence
+    # between two unrelated channels. Empty string where a result has one unnamed value.
+    labels: list | None = None
     call_id: str = ""
     # The governed SQL behind this result, when there was one. Evidence, not display: the
     # DISCLOSURE guardrail formats it for the model, and it is carried rather than recompiled

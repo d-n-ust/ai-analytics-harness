@@ -23,8 +23,26 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 
-__all__ = ["GUARDRAILS", "LADDER", "LADDER_ORDER", "GuardrailSet", "Position", "Verdict",
-           "incoherent", "parse_cell"]
+__all__ = ["DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER", "LADDER_ORDER",
+           "GuardrailSet", "Position", "Verdict", "incoherent", "parse_cell"]
+
+# The tree-decomposition tool, current name first. `explain_change` was renamed because "explain"
+# promised more than the tool does — it attributes a change to a metric's COMPONENTS and never to
+# dimension members, and a model reading the old name asked it for regional contributions. The old
+# name stays readable because stored rows carry it: the coverage audit reads every row ever
+# written, and cli/trace.py renders archived runs.
+DECOMPOSE_TOOLS = ("decompose_change", "explain_change")
+
+# Tools whose results are GOVERNED: the layer compiled them, or the tree derived them from
+# metrics the layer compiled, through an identity it declares.
+#
+# It lives here rather than beside either user because two guardrails at opposite ends of a
+# request need the same list, for the same reason. `after.py` asks which results a served number
+# may have come from; `action_space.py` asks which calls should carry a stated purpose. Both mean
+# "the calls that produce evidence", and a second copy would drift — the provenance check once
+# named `query_metric` in three places, so the metric tree could produce eighteen governed figures
+# and have them refused as hand-composed.
+GOVERNED_TOOLS = ("query_metric", *DECOMPOSE_TOOLS)
 
 
 @dataclass(frozen=True)
@@ -97,16 +115,23 @@ class Position(StrEnum):
     BEFORE        expressible, but it does not run. The model is told why and can adapt. Fails
                   when a second path reaches the same data — which is how a scope blocked as a
                   filter was once served as a breakdown.
-    DISCLOSURE    prevents nothing; tells the model what it actually got. Works only if the
-                  model reads it and acts.
+    DISCLOSURE    prevents nothing; carries information between the model and the harness, in
+                  either direction — what the call actually covered, or what the model meant by
+                  it. Works only if the model cooperates.
     AFTER         the number already exists; the question is whether it is served. Can only
                   refuse, never rescue.
+    REPAIR        the answer is neither served nor refused: the fault is named and handed back,
+                  and the run continues. The only position that can RESCUE — which is why it
+                  cannot be folded into AFTER, whose whole character is that it cannot. It fails
+                  by consuming the budget rather than by letting something through, so it is
+                  bounded (a correction cap, and one grace turn) rather than trusted.
     """
 
     ACTION_SPACE = "action_space"
     BEFORE = "before"
     DISCLOSURE = "disclosure"
     AFTER = "after"
+    REPAIR = "repair"
 
 
 @dataclass(frozen=True)

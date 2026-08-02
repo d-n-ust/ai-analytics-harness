@@ -1,0 +1,267 @@
+# Reference evidence graphs — what a good analyst's answer looks like, written by hand.
+#
+# WHY THIS EXISTS
+#
+# The harness can say "this answer declared 5 assertions, 0 of them derived, depth 0". It cannot
+# say whether that is good. 13.6% derived is a number with no denominator: an answer that reports
+# five measurements and draws one conclusion is ~17% derived and may be exactly right, while an
+# answer that should have built a two-level argument and produced a flat list is a failure at the
+# same percentage. Across 699 stored answers, 83% are flat lists and 1% reach two levels — and
+# nothing in the repo says which of those numbers is the problem.
+#
+# So these are references, not gold. They are NOT scored against, and no run passes or fails on
+# them. They answer one question: what SHAPE should the answer have, given the governed evidence
+# actually available? Everything measured about an agent's graph is read against these.
+#
+# HOW THEY WERE BUILT
+#
+# From the governed layer only — every figure below is a real value the tools return, checked
+# against `MetricTree.explain_change` on 2026-07-31, not invented to make a point. Where a graph
+# says a claim is `correlational`, that is because the metric tree declares that edge
+# `type: influence`, not because it reads like a hedge.
+#
+# Three questions, chosen for three DIFFERENT reasoning shapes. A reference set of three
+# attribution questions would tell us nothing about whether the agent can reason in other shapes.
+#
+#   t5_why_drop            attribution      — rank three contributions, name the largest
+#   t5_region_or_broader   universal        — check every member, conclude about all of them
+#   t5_reminder_caused_it  causal refusal   — the edge exists; the answer is still no
+#
+# HOW TO READ ONE
+#
+#   id          the claim's handle; premises point at these
+#   text        the assertion, in the analyst's words
+#   rests_on    governed values, as handle:field — a MEASUREMENT
+#   premises    other claims — a CONCLUSION
+#   strength    exact | correlational, computed from the tree's edge type, never chosen
+#   why         why a good answer contains this claim at all (not in the agent's output; for us)
+#
+# A claim has `rests_on` or `premises`, never both. That is the whole distinction the graph
+# encodes: did you read this off the data, or did you work it out from things you already said?
+
+reference_version: 1
+built: 2026-07-31
+source: MetricTree.explain_change(weekly_value_moments, prev_week, last_week)
+
+graphs:
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. ATTRIBUTION — the plainest shape, and the one the agent already half-does.
+  #
+  # Shape: three measurements, one comparison over them, one answer.
+  # The comparison is the whole analysis. An answer that lists the three percent
+  # changes and asserts "frequency is the driver" has skipped the only step that
+  # makes the conclusion true — and contribution share, not percent change, is what
+  # makes it true: active_users FELL as a contributor (-0.46) while RISING 5.98%.
+  # ─────────────────────────────────────────────────────────────────────────────
+  - qid: t5_why_drop
+    question: "Weekly value moments dropped last week. What caused it?"
+    shape: attribution
+    ideal:
+      assertions: 6
+      derived: 2
+      max_depth: 2
+      max_fan_in: 3
+    claims:
+      - id: c1
+        text: "Weekly value moments fell from 4,133 to 3,642, down 11.88%."
+        rests_on: [r1:value_a, r1:value_b, r1:pct_change]
+        strength: exact
+        why: "The fact being explained. Without it the answer explains something unstated."
+
+      - id: c2
+        text: "Breadth rose: active users went from 836 to 886, up 5.98%, contributing -0.46."
+        rests_on: [r1:active_users.pct_change, r1:active_users.contribution_share]
+        strength: exact
+        why: >-
+          Both figures, not just the percent change. A metric that ROSE while the parent fell is
+          the most easily misread row in the decomposition, and only the share says it worked
+          against the drop.
+
+      - id: c3
+        text: "Frequency fell: days per user went from 2.718 to 2.271, down 16.44%, contributing +1.42."
+        rests_on: [r1:days_per_user.pct_change, r1:days_per_user.contribution_share]
+        strength: exact
+
+      - id: c4
+        text: "Depth was flat: moments per active day fell 0.49%, contributing +0.04."
+        rests_on: [r1:moments_per_day.pct_change, r1:moments_per_day.contribution_share]
+        strength: exact
+        why: "A near-zero contribution is a finding: it rules depth out as an explanation."
+
+      - id: c5
+        text: "Of the three identity components, frequency carries essentially the whole decline: its
+               contribution share (+1.42) exceeds depth's (+0.04), and breadth offset rather than caused it (-0.46)."
+        premises: [c2, c3, c4]
+        strength: exact
+        why: >-
+          THE analytical step, and the one the agent skips. It is a comparison ACROSS the three
+          measurements — it cannot rest on data, because no single governed value states it. An
+          answer that cites r1:days_per_user.pct_change for this has asserted a ranking while
+          citing one of the things being ranked.
+
+      - id: c6
+        text: "So the drop was caused by users coming back less often, not by fewer users or by
+               shallower sessions."
+        premises: [c1, c5]
+        strength: exact
+        why: >-
+          The answer to the question as asked, in business language, tied to both the fact being
+          explained and the ranking that explains it. This is what makes the graph two levels
+          deep: a conclusion resting on a conclusion.
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2. UNIVERSAL — "one region, or broader?" is a claim about EVERY member.
+  #
+  # Shape: one measurement per member, then a conjunction over all of them.
+  # This is the shape the flat-list failure destroys most completely. Three regional
+  # figures listed side by side do not say "all three". Only a claim whose premises
+  # are all three says that, and the fan-in IS the argument: drop one premise and
+  # the conclusion is no longer supported.
+  # ─────────────────────────────────────────────────────────────────────────────
+  - qid: t5_region_or_broader
+    question: "Value moments dropped last week. Was it one region, or something broader?"
+    shape: universal
+    ideal:
+      assertions: 6
+      derived: 2
+      max_depth: 2
+      max_fan_in: 3
+    claims:
+      - id: c1
+        text: "In APAC, days per user fell from 2.693 to 2.229, down 17.22%."
+        rests_on: [r2:days_per_user.pct_change]
+        strength: exact
+      - id: c2
+        text: "In the Americas, days per user fell from 2.766 to 2.279, down 17.60%."
+        rests_on: [r3:days_per_user.pct_change]
+        strength: exact
+      - id: c3
+        text: "In EMEA, days per user fell from 2.700 to 2.289, down 15.19%."
+        rests_on: [r4:days_per_user.pct_change]
+        strength: exact
+
+      - id: c4
+        text: "Frequency fell in all three regions, by a similar amount in each — 15% to 18%."
+        premises: [c1, c2, c3]
+        strength: exact
+        why: >-
+          The universal claim. Its fan-in of 3 is not decoration: the assertion is false if any one
+          region is dropped, which is exactly what "rests on" should mean. A good answer here is
+          structurally different from a good answer to a lookup, and a harness that only counts
+          bound assertions cannot tell them apart.
+
+      - id: c5
+        text: "EMEA fell hardest in absolute terms (-17.98% of value moments vs -5.23% APAC,
+               -7.35% Americas), but its frequency drop is the shallowest of the three."
+        rests_on: [r2:pct_change, r3:pct_change, r4:pct_change]
+        strength: exact
+        why: >-
+          The honest complication. A reference that only contains claims supporting the answer is
+          a reference for advocacy. EMEA looks like the regional culprit on the headline number,
+          and the reason it is not is that its frequency decline is the mildest.
+
+      - id: c6
+        text: "So this is not a regional problem. Frequency weakened everywhere; EMEA is the
+               largest region, which is why it dominates the total."
+        premises: [c4, c5]
+        strength: exact
+        why: "Answers the disjunction actually asked — 'one region, or broader?' — and says why the
+              tempting wrong answer is tempting."
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. CAUSAL REFUSAL — the edge exists, and the answer is still no.
+  #
+  # Shape: two measurements, the governed status of the link, then a refusal that
+  # rests on the status rather than on the numbers.
+  # The trap: both metrics moved sharply in the same week, so every number supports
+  # the causal story. What refutes it is not a number at all — it is what the metric
+  # tree DECLARES about the edge. A graph that cannot cite governance as a premise
+  # cannot express this answer, and will reach for the correlation instead.
+  # ─────────────────────────────────────────────────────────────────────────────
+  - qid: t5_reminder_caused_it
+    question: "Reminder open rate fell sharply last week. Did that cause the drop in engagement?"
+    shape: causal_refusal
+    ideal:
+      assertions: 5
+      derived: 2
+      max_depth: 2
+      max_fan_in: 2
+    claims:
+      - id: c1
+        text: "Reminder open rate fell from 42.56% to 30.67%, down 27.95%."
+        rests_on: [r1:reminder_open_rate.pct_change]
+        strength: correlational
+        why: >-
+          Correlational NOT because the sentence hedges — it states a measured fact — but because
+          reminder_open_rate hangs off its parent by an `influence` edge. The strength is a
+          property of where the number sits in the model, computed, and it propagates from here.
+
+      - id: c2
+        text: "Over the same week, days per user fell 16.44%, and that is what carried the decline
+               in value moments (contribution share +1.42)."
+        rests_on: [r1:days_per_user.pct_change, r1:days_per_user.contribution_share]
+        strength: exact
+
+      - id: c3
+        text: "The metric tree carries reminder_open_rate as an INFLUENCE on days per user at LOW
+               confidence, and records why: it co-moved in one anomaly week only, the correlation
+               across normal weeks is ~0, and there is no independent evidence of a causal link."
+        rests_on: [tree:days_per_user<-reminder_open_rate]
+        strength: correlational
+        why: >-
+          The load-bearing claim, and the only one that is not a number. Governance is evidence: the
+          tree states the type of the edge, its confidence, and the reason. An answer that never
+          cites this is guessing at causality even when it guesses correctly.
+
+      - id: c4
+        text: "The two moved together in one week, which is consistent with the reminder drop
+               mattering — and is equally consistent with both being downstream of the same cause."
+        premises: [c1, c2]
+        strength: correlational
+        why: >-
+          Names what the correlation does and does not buy. Weakest-link: c2 is exact, c1 is not,
+          so the conclusion is correlational. One soft premise makes the whole thing soft, without
+          anyone choosing a hedging word.
+
+      - id: c5
+        text: "So no — this is not established as the cause. It is a low-confidence influence with
+               one week of co-movement and no independent evidence; treat it as a lead to test,
+               not as the explanation."
+        premises: [c3, c4]
+        strength: correlational
+        why: >-
+          The refusal rests on the GOVERNED STATUS (c3) as well as the co-movement (c4). That
+          ordering is the point: an answer that reaches this conclusion from the numbers alone got
+          the right answer for a reason that would not survive a week where the correlation was
+          stronger.
+
+# ─────────────────────────────────────────────────────────────────────────────────
+# WHAT THE THREE HAVE IN COMMON — the target, stated once
+#
+#   ~5-6 assertions          matching what the agent already produces (avg 5.1). The problem
+#                            was never how MUCH it says.
+#   2 derived of 5-6         ~35%, against 8.8% observed on diagnostic answers today.
+#   depth 2                  every one of the three needs a conclusion resting on a conclusion.
+#                            Observed: 1% of answers reach depth 2.
+#   fan-in 2-3               3 where the step is a comparison across three components or three
+#                            regions; 2 in the causal refusal, where the conclusion rests on the
+#                            governed status of the edge plus the co-movement.
+#
+# So the gap is not verbosity and not citation discipline — 90% of assertions are already bound.
+# It is that the ANALYTICAL STEP goes unrecorded. The agent measures, then states the conclusion
+# as if it were a sixth measurement.
+#
+# Two things this exposes about the harness itself, which no run would have shown:
+#
+#   1. `tree:days_per_user<-reminder_open_rate` (c3 above) IS NOT CITABLE. Handles are given to
+#      tool RESULTS carrying values; the tree's declaration about an edge — type, confidence,
+#      evidence — has no address. So the single most load-bearing claim in the causal-refusal
+#      graph cannot be expressed in the current schema, and an agent doing the right thing has
+#      nowhere to point. `check_causal_evidence` returns this as prose and is not addressable.
+#
+#   2. Nothing in the prompt describes a two-level graph. It says a conclusion "sets `premises`
+#      naming the earlier claims it follows from" — which describes exactly one layer. If the
+#      reference needs depth 2 and the instructions describe depth 1, the model is doing what it
+#      was asked, and the 1% is our result, not its.
+# ─────────────────────────────────────────────────────────────────────────────────

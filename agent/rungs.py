@@ -42,7 +42,7 @@ class Rung:
     semantic: bool = False    # governed catalog — list_metrics, query_metric
     examples: bool = False    # verified worked examples, in the prompt
     knowledge: bool = False   # the knowledge base, in the prompt
-    tree: bool = False        # metric tree — get_metric_tree, explain_change
+    tree: bool = False        # metric tree — get_metric_tree, decompose_change
 
     def governed(self) -> bool:
         return self.semantic or self.tree

@@ -31,7 +31,7 @@ Each rung adds one thing to the *same* agent (`agent/prompts.py` assembles it fr
 - **Rung 5 is a control.** It re-delivers the *same* knowledge as free-text prose. Across runs it
   never beats rung 4 — a knowledge base does not hold up as reliably as a verified example.
 - **Rung 6 buys usefulness** — the jump from "what was the number" to "why did it move." The metric
-  tree lets `explain_change` decompose a movement through identity + influence edges instead of the
+  tree lets `decompose_change` attribute a movement through identity + influence edges instead of the
   model inventing a cause.
 
 ## The question set (57 cases)

@@ -20,10 +20,14 @@ verifier module worth keeping pure.
 from __future__ import annotations
 
 import logging
-from math import isclose
 
-from ..numbers import parse_numbers
-from . import Position, Verdict, judge, note
+# A guardrail may consult the evidence layer; the evidence layer must never reach back. This is
+# the one import that crosses that line, and it crosses it in the permitted direction.
+from evidence.values import num_match
+
+from ..numbers import bare_number, parse_numbers
+from ..outcomes import declared_handles
+from . import DECOMPOSE_TOOLS, GOVERNED_TOOLS, Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)
 
@@ -35,36 +39,10 @@ _V_REASON = {kind: f"verifier_wrong_{kind}" for kind in
 
 # --------------------------------------------------------------------------- #
 # Deterministic output checks: provenance (governed_numbers, R7) + validation (R8)
+#
+# `num_match` — the rounding-identity test these checks are built on — lives in
+# evidence/values.py, because the claim audit asks the same question one grain further down.
 # --------------------------------------------------------------------------- #
-def num_match(a: float, b: float) -> bool:
-    """Is one of these numbers a ROUNDING of the other?
-
-    This is an identity test, not an approximation test — governed_numbers asks whether the
-    served number IS a governed result (or a comparison of two), and the only difference it
-    should forgive is the model writing 2685.08 for 2685.0766666.
-
-    It used to be a tolerance band, `abs(a - b) <= max(0.5, 0.005 * abs(b))`, which failed at
-    both ends. The 0.5 floor is large for a ratio: days_per_user 2.27 and 2.69 — two different
-    weeks — counted as the same number, and the check validated whichever it happened to reach
-    first. The 0.5% term is large for a count: 371 and 372 matched, which the old docstring
-    explicitly promised they would not.
-
-    Rounding to significant figures is deliberately not forgiven. A model writing 2690 for
-    2685.08 has not served a governed result; it has served an approximation of one, and this
-    guardrail exists to tell those apart.
-
-    `isclose` is how the first test is written, not a tolerance added to it. The rounding ladder
-    asks whether one number is the ROUNDING of the other, which is false when both carry full
-    precision and differ only in the last bits — so a rate rendered as a percentage failed every
-    rung: the tree's -0.1644119797793533 times 100 is -16.441197977935328, the model served
-    -16.44119797793533, and the two differ by 3.55e-15. At 1e-12 this admits nothing the ladder
-    below would not already admit at k=6; it only stops float representation being mistaken for
-    a different number."""
-    if a == b or isclose(a, b, rel_tol=1e-12, abs_tol=1e-12):
-        return True
-    return any(a == round(b, k) or b == round(a, k) for k in range(7))
-
-
 def step_values(step: dict) -> list:
     """The typed numeric results a query_metric step returned. Prefers the typed `result_values`
     the dispatcher now records; falls back to parsing the display text only for older traces
@@ -75,17 +53,10 @@ def step_values(step: dict) -> list:
     return parse_numbers(step.get("result"))
 
 
-# Tools whose results are GOVERNED: the layer compiled them, or the tree derived them from
-# metrics the layer compiled, through an identity it declares. Asked by capability rather than
-# hardcoded at each use — the previous check named `query_metric` in three places, so the metric
-# tree could produce eighteen governed figures and be refused as hand-composed.
-_GOVERNED_TOOLS = ("query_metric", "explain_change")
-
-
 def _governed_results(steps: list):
     """Every number a governed tool produced, with a label for what it is."""
     for s in steps or []:
-        if s.get("tool") not in _GOVERNED_TOOLS or s.get("error"):
+        if s.get("tool") not in GOVERNED_TOOLS or s.get("error"):
             continue
         args = s.get("args") or {}
         label = args.get("metric") or args.get("node") or s.get("tool")
@@ -93,20 +64,82 @@ def _governed_results(steps: list):
             yield label, v
 
 
-def _same_metric_results(steps: list) -> dict:
-    """Governed results grouped by the metric they are instances of.
+def _named_steps(steps: list, sources) -> list:
+    """The `query_metric` steps the answer NAMED, in trace order.
+
+    An empty `sources` yields nothing rather than everything: a relation the model did not anchor
+    is unaccountable, which is the whole point of asking for the handles.
+
+    A reference may name a FIELD as well as a handle — `r3:APAC` addresses one value inside r3,
+    which is what `evidence/claims.py` has always asked for and what the answer schema documents.
+    This read the whole string as a handle, so `r3:APAC` matched no step, the group came back
+    empty, and a legal comparison was reported as "combines different metrics" when nothing had
+    been found to compare at all. The perverse part is the direction: citing the exact value
+    rather than the whole result made rejection MORE likely, so the check punished precision.
+
+    Observed on t2_only_region_improving_frequency — 23 of 30 attempts served the correct 0.424
+    as a difference of two days_per_user results and were refused for it."""
+    wanted = {str(h).strip().strip("[]").partition(":")[0] for h in (sources or ())}
+    if not wanted:
+        return []
+    return [s for s in steps or []
+            if s.get("tool") == "query_metric" and not s.get("error")
+            and s.get("handle") in wanted and (s.get("args") or {}).get("metric")]
+
+
+def _named_results(steps: list, sources) -> dict:
+    """The values of the named results, grouped by the metric AND THE GRAIN they are instances of.
 
     Only `query_metric`, because only there does one call's whole result belong to one named
     metric. A decomposition spans several, and every figure in it is already a governed result in
-    its own right — the tree computed it — so it never needs to be reached by comparison."""
-    groups: dict[str, list] = {}
-    for s in steps or []:
-        if s.get("tool") != "query_metric" or s.get("error"):
-            continue
-        metric = (s.get("args") or {}).get("metric")
-        if metric:
-            groups.setdefault(metric, []).extend(step_values(s))
+    its own right — the tree computed it — so it never needs to be reached by comparison.
+
+    GRAIN IS PART OF THE KEY, and that is the whole point. `active_users` at day grain and
+    `active_users` at week grain are the same metric and NOT the same measure: one is
+    distinct-users-per-day, the other distinct-users-per-week, and the ratio between them is a
+    third quantity with its own name — stickiness — that nobody defined. Keyed on the metric
+    alone, the check read that ratio as "a comparison of two active_users results" and served
+    DAU/MAU as governed, in 6 stored answers, every one of them wrong.
+
+    A comparison holds a measure fixed and varies the period or the scope. Changing the grain
+    varies the measure, so there is nothing left to compare."""
+    groups: dict[tuple, list] = {}
+    for s in _named_steps(steps, sources):
+        args = s.get("args") or {}
+        groups.setdefault((args["metric"], args.get("time_grain")), []).extend(step_values(s))
     return groups
+
+
+def _additive_total(declared_value, steps: list, sources, semantic) -> str | None:
+    """The declared number as the TOTAL of one named result's periods — when that is governed.
+
+    Asking for a quarter at monthly grain and adding the months is the same figure as asking for
+    the quarter, but only for a metric whose aggregation composes across periods. `value_moments`
+    sums; `active_users` counts distinct users, so adding two months counts anyone active in both
+    of them twice. The layer states which is which (`additive_over_time`) rather than anything
+    here parsing `agg`, and a metric that has not been thought about is not additive — the unsafe
+    case has to be opted into.
+
+    Requires a single result, time-grained and NOT grouped: rows of a breakdown differ by
+    dimension as well as by period, and summing those is a different claim about a different
+    vocabulary."""
+    if semantic is None:
+        return None
+    for s in _named_steps(steps, sources):
+        args = s.get("args") or {}
+        metric = args["metric"]
+        if args.get("group_by") or not args.get("time_grain"):
+            continue
+        # DERIVED from the aggregate, not read from a hand-kept flag: `additive_over_time` carries
+        # True on three metrics and null on eleven, and null there means both "not additive" and
+        # "nobody decided". A stock or a distinct count is not summable across periods whether or
+        # not anyone wrote it down.
+        if semantic.additivity(metric) != "additive":
+            continue
+        values = step_values(s)
+        if len(values) > 1 and num_match(declared_value, sum(values)):
+            return f"total of {len(values)} {metric} periods ({sum(values):g}), additive over time"
+    return None
 
 
 def _renderings(x: float):
@@ -116,14 +149,28 @@ def _renderings(x: float):
     yield x * 100
 
 
-def account_for(declared_value, steps: list) -> str | None:
+def account_for(declared_value, steps: list, sources=(), semantic=None) -> str | None:
     """Where does this number come from? Returns the account, or None if there is none.
 
     The rule, in one line: YOU MAY COMPARE GOVERNED NUMBERS, YOU MAY NOT COMPOSE NEW ONES.
 
       (a) the number IS a governed result, or
       (b) it is a comparison of two governed results OF THE SAME METRIC — a difference, a ratio
-          or a percent change.
+          or a percent change, BETWEEN THE RESULTS THE ANSWER NAMED, or
+      (c) it is the total of one named result's periods, for a metric the layer declares
+          additive over time (see `_additive_total`).
+
+    (b) is settled by lookup, not by search. It used to try every ordered pair of every value
+    the metric ever returned, times three relations, times two renderings — sixteen values of
+    `active_users` in one run meant ~1,440 candidate numbers, and the pairwise differences of
+    fourteen daily counts cover 0–79 densely enough that almost any figure matches something.
+    A hand-composed DAU/WAU ratio of 31.7% was accepted as "a ratio of two active_users results
+    (281, 886)": 281 was a single Sunday's count, 886 a whole week's, and the model's own average
+    was 287.4 anyway. Scoping the pair to the named results leaves 6 candidates instead of 1,440,
+    every one of them drawn from a result the model itself pointed at.
+
+    A comparison whose operands were not named cannot be accounted for. That is the enforcement:
+    you may not serve a relationship without saying what it is between.
 
     The distinction is not whether arithmetic happened; both `ARR = mrr x 12` and `value moments
     fell 11.9%` are one operation on a governed result, and no rule about the arithmetic can
@@ -142,7 +189,7 @@ def account_for(declared_value, steps: list) -> str | None:
         for candidate in _renderings(v):
             if num_match(declared_value, candidate):
                 return f"{metric} = {v:g}"
-    for metric, values in _same_metric_results(steps).items():
+    for (metric, grain), values in _named_results(steps, sources).items():
         for a in values:
             for b in values:
                 if a == b or not b:
@@ -151,11 +198,12 @@ def account_for(declared_value, steps: list) -> str | None:
                                  ((a - b) / b, "percent change")):
                     for candidate in _renderings(base):
                         if num_match(declared_value, candidate):
-                            return f"{op} of two {metric} results ({a:g}, {b:g})"
-    return None
+                            at = f" at {grain} grain" if grain else ""
+                            return f"{op} of two {metric} results{at} ({a:g}, {b:g})"
+    return _additive_total(declared_value, steps, sources, semantic)
 
 
-def _provenance(declared_value, steps: list, source_metric, metrics, source_result=None):
+def _provenance(declared_value, steps: list, source_metric, metrics, sources=()):
     """Which governed metric produced the answer, its call args, and the value it returned
     — taken ONLY from the model's typed `source_metric` declaration, never inferred from the
     answer text. When that metric was queried more than once (say a breakdown and a total),
@@ -171,15 +219,19 @@ def _provenance(declared_value, steps: list, source_metric, metrics, source_resu
     # tolerance, and every tolerance is wrong for some metric: a 0.5 floor made two different
     # weeks of days_per_user (2.27 and 2.69) the same number, and the checks then validated a
     # figure nobody served.
-    if source_result:
-        named = next((s for s in (steps or []) if s.get("handle") == str(source_result).strip("[]")),
-                     None)
+    # Several handles only when the answer is a COMPARISON, and then the served number is in
+    # none of them — it is the relation between them. Taking the one that contains the declared
+    # value keeps a single-source answer exact and leaves a comparison with `hit=None`, which is
+    # what tells the checks below they are looking at a relation rather than an instance.
+    for handle in (sources or ()):
+        named = next((s for s in (steps or []) if s.get("handle") == str(handle).strip("[]")), None)
         if named is not None and (named.get("args") or {}).get("metric") == source_metric:
             values = step_values(named)
             # num_match returns to its real job here: verifying the declared number IS that
             # result, rather than searching for which result it might have been.
             hit = next((v for v in values if num_match(declared_value, v)), None)
-            return source_metric, (named.get("args") or {}), hit
+            if hit is not None or len(sources) == 1:
+                return source_metric, (named.get("args") or {}), hit
     calls = [s for s in (steps or []) if s.get("tool") == "query_metric"
              and (s.get("args") or {}).get("metric") == source_metric]
     if not calls:
@@ -263,9 +315,9 @@ def output_validation(metric_def: dict, value) -> Verdict:
 
 def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
                   record=None, source_metric: str | None = None, declared_value=None,
-                  source_result: str | None = None,
+                  sources=(),
                   run_output_validation: bool = True, run_governed_numbers: bool = False,
-                  verify_traj=None) -> Verdict:
+                  verify_traj=None, served_answer: str = "") -> Verdict:
     """Run the output guardrails on a completed answer. Return (ok, reason, missing, explanation);
     ok=False means convert the answer into a refuse. Each check is toggled by its own rung so
     the deltas are measured separately: `run_governed_numbers` (R7, the served number is a
@@ -273,34 +325,67 @@ def verify_answer(semantic, question: str, answer_text: str | None, steps: list,
     well-formed value), and `verify_traj` (R9, the trajectory judge). `source_metric`/
     `declared_value` are the model's typed provenance. The checks apply to a NUMERIC answer, so
     prose (no `declared_value`) passes through untouched. Refuse-only: it can turn an answer into
-    a refusal, never the reverse."""
+    a refusal, never the reverse.
+
+    `served_answer` is the `answer` field ALONE, where `answer_text` is that field joined with the
+    explanation. The join is right for the judge — the substance moves between the two fields —
+    and wrong for asking "is the answer a number", because an explanation is always prose and the
+    joined string therefore never is."""
     if semantic is None or not answer_text or declared_value is None:
         return Verdict.ok()
 
     if run_governed_numbers:
-        account = account_for(declared_value, steps)
+        account = account_for(declared_value, steps, sources, semantic)
+        # WHAT was verified, not merely that something was. The declared figure is the answer only
+        # when the answer IS that figure; on a judgement question — "is the app healthy?", "one
+        # region or broader?" — the model attaches a figure from its work and this check verifies
+        # that figure, which is real and is not the answer. Two runs of t4_business_health served
+        # "Yes, generally healthy" and "No, health is weak" with the same 3,642 and identical
+        # `allowed` verdicts on all three output guardrails.
+        #
+        # The check still runs, and should: a composed figure smuggled into prose is exactly what
+        # it exists to catch, and turning it off for prose answers would lose that. What changes
+        # is the claim it makes about its own scope.
+        answers_with_it = bare_number(served_answer or answer_text) is not None
         note(record, "governed_numbers", Position.AFTER,
-             "allowed" if account else "refused",
-             account or "the served number is neither a governed result nor a comparison of two")
+             ("allowed" if answers_with_it else "verified a figure") if account else "refused",
+             (account if answers_with_it else
+              f"{account} — but the answer is prose, so this verified ONE FIGURE IN it, "
+              f"not the answer") if account else
+             "the served number is neither a governed result nor a comparison of two")
         if account is None:
-            # Nothing governed produces this number, and no comparison of one metric with itself
-            # reaches it — so it is a COMPOSITION, and no governed definition covers what was
-            # asked (ARR = mrr x 12; revenue per dollar spent from mrr and marketing_spend).
-            # Report that root cause rather than a vague 'out_of_scope': a coverage gap is one
-            # typed signal, so downstream can label it and name the metric worth defining.
-            return Verdict(
-                False, "no_governed_definition", guardrail="governed_numbers", detail=
-                "this number was composed from different metrics (a rate times a count, metric A "
-                "over metric B), not read from a governed result or reached by comparing one "
-                "metric with itself. No governed definition covers what was asked — refuse and "
-                "name the metric that would need to exist, rather than serve a hand-built figure.",
-                missing="no governed result produces this number, and no comparison of a single "
-                        "metric across scopes reaches it (it combines different metrics)")
+            # WHICH failure this is depends on whether anything governed was queried at all, and
+            # the two are not the same claim.
+            #
+            # The composition message asserts a specific cause — "a rate times a count, metric A
+            # over metric B" — and it fired on runs that queried NOTHING. Two answers to
+            # adv_last_week_oob declared 0.0 after only calling check_coverage, and were told they
+            # had combined metrics that were never fetched. A guardrail that names a root cause it
+            # has not established is the defect this repo keeps finding in its own tools.
+            queried = any(True for _ in _governed_results(steps))
+            if queried:
+                detail = (
+                    "this number was composed from different metrics (a rate times a count, "
+                    "metric A over metric B), not read from a governed result or reached by "
+                    "comparing one metric with itself. No governed definition covers what was "
+                    "asked — refuse and name the metric that would need to exist, rather than "
+                    "serve a hand-built figure.")
+                missing = ("no governed result produces this number, and no comparison of a "
+                           "single metric across scopes reaches it (it combines different metrics)")
+            else:
+                detail = (
+                    "you served a number without querying anything governed — no metric was "
+                    "fetched in this run, so there is no governed result this figure could have "
+                    "come from. If the data you need is unavailable, refuse and say why (that is "
+                    "an answer); do not put a placeholder in `value`.")
+                missing = "no governed result was produced in this run at all"
+            return Verdict(False, "no_governed_definition", guardrail="governed_numbers",
+                           detail=detail, missing=missing)
 
     if source_metric is None:              # undeclared, but attributable when unambiguous
         source_metric = _infer_source_metric(declared_value, steps, semantic.metrics)
     metric, args, value = _provenance(declared_value, steps, source_metric, semantic.metrics,
-                                      source_result)
+                                      sources)
     if metric is None:                     # a numeric answer we can't attribute -> measure it
         _log.info("output checks: numeric answer with no usable source_metric; not verified")
         return Verdict.ok()                # no governed metric to check against
@@ -391,8 +476,9 @@ def check(args: dict, declared, run, record=None) -> Verdict:
     verify_traj = _trajectory_verifier(run, model) if (g.trajectory_verify and model) else None
     return verify_answer(
         semantic, run.question, served_text(args), run.steps, record=record,
+        served_answer=str(args.get("answer") or "").strip(),
         source_metric=args.get("source_metric"), declared_value=declared,
-        source_result=args.get("source_result"),
+        sources=declared_handles(args),
         run_output_validation=g.output_validation,
         run_governed_numbers=g.governed_numbers, verify_traj=verify_traj)
 
@@ -456,7 +542,7 @@ def causal_record(run, steps: list) -> str:
     guardrail rules on must not be a display string.
     """
     tree = getattr(run.grounding.toolbox, "tree", None)
-    calls = [s for s in steps or [] if s.get("tool") == "explain_change" and not s.get("error")]
+    calls = [s for s in steps or [] if s.get("tool") in DECOMPOSE_TOOLS and not s.get("error")]
     if tree is None or not calls:
         return ""
     a = calls[-1].get("args") or {}
@@ -477,20 +563,34 @@ def causal_record(run, steps: list) -> str:
         if share is not None:
             line += f", share {share:+.1%}"
         if c["child"] == primary:
-            line += "   <- largest contributor"
+            line += "   <- largest contributor in the direction the parent moved"
+        elif (share or 0) < 0:
+            line += "   <- pushed the OTHER way; it offset the change rather than causing it"
         lines.append(line)
-    influences = out.get("influence_candidates") or []
+    # Keyed by the child each hangs off, and shown for EVERY branch. Flattened and limited to the
+    # primary driver's branch, this told the judge that a question's other half did not exist.
+    influences = out.get("influences") or {}
     if influences:
         lines.append("  INFLUENCE children — correlational only, NOT proof of cause. May be "
-                     "offered as a likely driver WITH this evidence, never asserted as the cause:")
-        for c in influences:
-            lines.append(f"    {c['child']} ({c['label']}): {c['value_a']:g} -> {c['value_b']:g}, "
-                         f"confidence: {c['confidence']}")
-            lines.append(f"      evidence: {c['evidence']}")
+                     "offered as a likely driver WITH this evidence, never asserted as the cause. "
+                     "Listed under the child each one drives:")
+        for parent, group in influences.items():
+            for c in group:
+                lines.append(f"    {parent} <- {c['child']} ({c['label']}): "
+                             f"{c['value_a']:g} -> {c['value_b']:g}, confidence: {c['confidence']}")
+                lines.append(f"      evidence: {c['evidence']}")
     else:
-        lines.append("  INFLUENCE children: none encoded for this driver.")
-    lines.append("  No other driver is encoded. A breakdown showing WHERE a change landed (a "
-                 "region, a platform, a channel) is not a driver OF it.")
+        lines.append("  INFLUENCE children: none encoded anywhere in this decomposition.")
+    # This used to say "No other driver is encoded" unconditionally, which was false whenever the
+    # tool had pruned to one branch — the judge was told the analyst had the whole picture while
+    # holding part of it.
+    left = out.get("not_expanded") or []
+    lines.append(f"  Nodes with further structure this decomposition did not open: "
+                 f"{', '.join(left)}." if left else
+                 "  Nothing further is encoded: every child and every influence edge below this "
+                 "node is listed above.")
+    lines.append("  A breakdown showing WHERE a change landed (a region, a platform, a channel) "
+                 "is not a driver OF it.")
     return "\n".join(lines)
 
 

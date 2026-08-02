@@ -25,14 +25,15 @@ from semantic.tree import MetricTree
 from warehouse.warehouse import open_warehouse
 
 
-def _qm(metric, value, **args):
+def _qm(metric, value, handle="", **args):
     """A recorded query_metric step returning one scalar, as the trace stores it: the typed
-    `result_values` the dispatcher records, plus the display string."""
+    `result_values` the dispatcher records, plus the display string. `handle` is what an answer
+    names in `sources`; a step without one can be read but never cited."""
     try:
         vals = [float(value)]
     except (TypeError, ValueError):
         vals = []
-    return {"tool": "query_metric", "args": {"metric": metric, **args},
+    return {"tool": "query_metric", "args": {"metric": metric, **args}, "handle": handle,
             "result": f"columns: value\n({value},)", "result_values": vals}
 
 
@@ -149,16 +150,16 @@ def test_the_check_tools_can_express_every_scope_the_guardrail_enforces():
 
 
 def test_the_guardrail_registry_matches_the_set_and_names_real_files():
-    """Nine guardrail flags sat in one file while their implementations lived in two to four
-    others, with nothing connecting them — so "what does this guardrail actually do" could only
-    be answered by grepping. The registry answers it, and this keeps the answer true: every flag
-    is described, in ladder order, and every file it claims to be implemented in exists and
-    mentions it."""
+    """Guardrail flags sat in one file while their implementations lived in two to four others,
+    with nothing connecting them — so "what does this guardrail actually do" could only be
+    answered by grepping. The registry answers it, and this keeps the answer true: every flag is
+    described, in ladder order, and every file it claims to be implemented in exists and mentions
+    it."""
     from agent.guardrails import GUARDRAILS, LADDER_ORDER, GuardrailSet, Position
 
     declared = [f.name for f in dataclasses.fields(GuardrailSet)]
     assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
-        "the registry, the flag set and the ladder order must be the same nine, in one order"
+        "the registry, the flag set and the ladder order must be the same set, in one order"
 
     root = Path(__file__).resolve().parent.parent / "agent"
     for g in GUARDRAILS:
@@ -168,9 +169,15 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
             assert path.exists(), f"{g.name}: claims {rel}, which does not exist"
             assert g.name in path.read_text(), f"{g.name}: {rel} never mentions it"
 
-    # Position is the distinction that carries information, so each one must be used.
+    # Position is the distinction that carries information, so each one must be used — but not
+    # necessarily by a GUARDRAIL. REPAIR is used by the protocol layer's citation repair, which
+    # is a mechanism at a position without being a rung on the ladder. Asserting against the
+    # whole package keeps the "no dead position" guarantee while letting a position outlive the
+    # axis it was first needed for.
     used = {g.position for g in GUARDRAILS}
-    assert used == set(Position), f"unused position(s): {set(Position) - used}"
+    source = "\n".join(p.read_text() for p in root.rglob("*.py"))
+    for pos in Position:
+        assert pos in used or f'Position.{pos.name}' in source, f"unused position: {pos}"
 
 
 def test_a_tree_node_reports_the_metric_it_names():
@@ -228,22 +235,74 @@ def test_the_tree_writes_its_numbers_down():
     had written them down.
 
     Shares and percent changes are included, not just levels: they are what a diagnosis reports,
-    and the tree computes them, not the model. NO LLM."""
+    and the tree computes them, not the model. NO LLM.
+
+    Each figure carries a LABEL as well as a value, and the label is what makes it citable: a
+    decomposition holds eighteen numbers under one handle, so `r1` names none of them and
+    `r1:days_per_user.contribution_share` names exactly one. Pinning the labels rather than only
+    the values is not tidiness — when the pairs arrived, this test kept asserting on bare floats
+    and failed silently at the commit that introduced them."""
     from agent.tools import _decomposition_values
     from semantic.tree import MetricTree
 
     sem = SemanticLayer(open_warehouse())
     out = MetricTree(sem).explain_change("weekly_value_moments", "prev_week", "last_week")
-    values = _decomposition_values(out)
+    pairs = _decomposition_values(out)
+    named = dict(pairs)
 
-    assert out["value_a"] in values and out["value_b"] in values, "the levels are governed"
-    assert out["pct_change"] in values, "the change is what 'why did it move' answers with"
+    assert named["value_a"] == out["value_a"] and named["value_b"] == out["value_b"], \
+        "the levels are governed"
+    assert named["pct_change"] == out["pct_change"], \
+        "the change is what 'why did it move' answers with"
     for child in out["identity_decomposition"]:
-        assert child["contribution_share"] in values, \
-            f"{child['child']}'s share is computed by the tree, not by the model"
+        ref = f"{child['child']}.contribution_share"
+        assert named.get(ref) == child["contribution_share"], \
+            f"{child['child']}'s share is computed by the tree, not by the model, and is cited as {ref}"
     # A result carrying values is addressable — the loop hands it a handle by that rule alone,
-    # so this is what makes `source_result` able to name a decomposition.
-    assert values, "no values means no handle means the tree stays invisible to provenance"
+    # so this is what makes `sources` able to name a decomposition.
+    assert pairs, "no values means no handle means the tree stays invisible to provenance"
+    assert len(named) == len(pairs), "a duplicate label would make a citation ambiguous"
+
+
+def test_a_driver_citation_is_typed_correlational_by_the_tree():
+    """The label the tool writes and the name the audit reads must be the same name. NO LLM.
+
+    They were not, and nothing noticed, because both sides were tested against labels typed by
+    hand. Every influence edge in this tree hangs off a component rather than the root, so a
+    decomposition from the top writes `active_users.new_signups.pct_change` — three segments. The
+    audit read the FIRST one, got `active_users`, and never matched the influence set: a claim
+    resting on driver evidence was typed `exact`, and the published count of hedged claims read 0.
+
+    So this test builds its citation from what `_decomposition_values` actually emits rather than
+    from a string in the test file. A rename on either side now fails here."""
+    from agent.tools import _decomposition_values
+    from evidence import CORRELATIONAL, EXACT, audit
+    from semantic.tree import MetricTree
+
+    tree = MetricTree(SemanticLayer(open_warehouse()))
+    context = tree.audit_context()
+    out = tree.explain_change("weekly_value_moments", "prev_week", "last_week")
+    pairs = _decomposition_values(out)
+    step = {"tool": "decompose_change", "handle": "r1", "error": False,
+            "args": {"node": "weekly_value_moments"},
+            "result_labels": [k for k, _ in pairs], "result_values": [v for _, v in pairs]}
+
+    soft = context["influence_children"]
+    assert soft, "the tree carries influence edges, or this test proves nothing"
+    driver = next(k for k, _ in pairs if k.rpartition(".")[0].rpartition(".")[2] in soft)
+    assert driver.count(".") >= 2, \
+        f"{driver!r} should be nested under the component it drives; the flat shape hid the bug"
+
+    a = audit([{"text": "a driver moved", "sources": [f"r1:{driver}"]}], [step], **context)
+    assert a["findings"][0]["strength"] == CORRELATIONAL, \
+        f"citing {driver!r} rests on an influence edge, so the tree types it correlational"
+    assert a["correlational"] == 1
+
+    # …and an identity child is exact, so the distinction is a reading of the tree rather than a
+    # blanket downgrade of anything with a dot in it.
+    exact_ref = f"{out['identity_decomposition'][0]['child']}.pct_change"
+    b = audit([{"text": "a component moved", "sources": [f"r1:{exact_ref}"]}], [step], **context)
+    assert b["findings"][0]["strength"] == EXACT and b["correlational"] == 0
 
 
 def test_the_judge_is_shown_what_the_tree_vouches_for():
@@ -419,6 +478,57 @@ def test_a_check_that_cannot_run_says_so():
     assert not real.startswith("UNKNOWN"), "with a tree it must give a real verdict"
     assert "confidence: low" in real, "and carry the edge's confidence, not just yes/no"
 
+    # THE SIBLING CASE, which this test did not cover for a year. A missing TREE and a missing
+    # TERM are the same absence: `pricing_change` is not a node, so the tree has nothing that
+    # could show a link either way. It answered "NO — no encoded edge", and 5 of 40 answers to
+    # u_pricing_cause duly said "No — the pricing change did not cause it".
+    unmodelled = with_tree.dispatch("check_causal_evidence",
+                                    {"driver": "pricing_change",
+                                     "outcome": "value_moments"}).content
+    assert unmodelled.startswith("UNKNOWN"), f"an unmodelled term must not answer NO: {unmodelled[:60]}"
+    assert "'pricing_change' is not a modelled entity" in unmodelled, (
+        "and must name WHICH term it does not model — that tells an analyst what the layer needs, "
+        "where 'no encoded edge' invites them to conclude there is no effect")
+
+
+def test_the_causal_check_has_four_states_not_two():
+    """A boolean conflated the two absences that must never be conflated, and contradicted itself
+    on a third case: `causal_evidence('new_signups', 'active_users')` returned False alongside
+    prose describing the edge and its confidence, which `_verdict` rendered as
+    "NO — weak, correlational evidence…". The model reads the first word."""
+    from agent.tools import Toolbox
+    from semantic.tree import Causality
+
+    con = open_warehouse(create_star_views=True)
+    sem = SemanticLayer(con)
+    tree = MetricTree(sem)
+    tb = Toolbox(con, 7, sem, tree, LADDER[9])
+
+    cases = {
+        # an edge exists and is weak — evidence, and not proof
+        ("new_signups", "active_users"): (Causality.CORRELATIONAL, "CORRELATIONAL"),
+        ("reminder_open_rate", "days_per_user"): (Causality.CORRELATIONAL, "CORRELATIONAL"),
+        # both modelled, nothing joins them: a FINDING, weak evidence of no link
+        ("moments_per_day", "new_signups"): (Causality.NOT_ENCODED, "NOT ENCODED"),
+        # a term outside the model: an ADMISSION, carrying no evidence either way
+        ("pricing_change", "value_moments"): (Causality.UNKNOWN, "UNKNOWN"),
+    }
+    for (driver, outcome), (want, word) in cases.items():
+        got, _ = tree.causal_evidence(driver, outcome)
+        assert got == want, f"{driver} -> {outcome}: {got} (wanted {want})"
+        rendered = tb.dispatch("check_causal_evidence",
+                               {"driver": driver, "outcome": outcome}).content
+        assert rendered.startswith(word), f"{driver} -> {outcome} renders {rendered[:40]!r}"
+
+    # the two absences must not render alike — that identity is the whole bug
+    assert _CAUSAL_DISTINCT(tb, "moments_per_day", "pricing_change", "new_signups")
+
+
+def _CAUSAL_DISTINCT(tb, modelled, unmodelled, outcome) -> bool:
+    a = tb.dispatch("check_causal_evidence", {"driver": modelled, "outcome": outcome}).content
+    b = tb.dispatch("check_causal_evidence", {"driver": unmodelled, "outcome": outcome}).content
+    return a.split(" —")[0] != b.split(" —")[0]
+
 
 def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     """The rung number used to mean two things — a position on the ladder, and the capability set
@@ -564,7 +674,7 @@ def test_a_served_number_must_be_a_rounding_of_a_governed_one():
     days_per_user 2.27 and 2.69 (two different weeks) counted as the same number and the checks
     validated whichever they reached first. Its 0.5% term is huge for a count, so 371 and 372
     matched — which the docstring explicitly promised they would not."""
-    from agent.guardrails.after import num_match
+    from evidence import num_match
 
     for a, b in [(2685.08, 2685.0766666), (886, 886.0), (5648, 5648), (0.53, 0.5299999999)]:
         assert num_match(a, b), f"{a} is a rounding of {b} and must match"
@@ -574,6 +684,19 @@ def test_a_served_number_must_be_a_rounding_of_a_governed_one():
                  (2690, 2685.0766),         # rounded to significant figures, not a governed value
                  (886, 18866)]:
         assert not num_match(a, b), f"{a} is NOT a rounding of {b} and must not match"
+
+    # THE LADDER STARTS AT ONE DECIMAL PLACE. Whole-number rounding is the same forgiveness
+    # everywhere on the number line and the layer's values are not: on a count it moves 4200.6
+    # to 4201 and loses nothing, on a rate it collapses everything under a half to zero. A
+    # declared 0 matched any rate below 50% and a declared 1 matched 0.6 — neither is a rounding
+    # in any sense a reader would accept, and every rate the layer produces lives in that range.
+    for a, b in [(0, 0.4), (0, 0.49), (0, 0.5), (1, 0.6), (1, 1.4), (0, -0.4)]:
+        assert not num_match(a, b), (
+            f"{a} must not match {b}: whole-number rounding is not forgiven, because for a rate "
+            f"it is not rounding")
+    # …and the cases k=0 was there for never needed it — an integer already equals itself.
+    for a, b in [(4200, 4200.0), (0, 0), (0, 0.0), (1, 1.0)]:
+        assert num_match(a, b), f"{a} and {b} are the same number"
 
 
 def test_metrics_conform_to_ontology():
@@ -651,8 +774,8 @@ def test_governed_numbers_allows_comparison_and_refuses_composition():
     NO LLM."""
     con = open_warehouse()
     sem = SemanticLayer(con)
-    check = lambda text, value, steps, metric=None: verifier.verify_answer(  # noqa: E731
-        sem, "q", text, steps, source_metric=metric, declared_value=value,
+    check = lambda text, value, steps, metric=None, sources=(): verifier.verify_answer(  # noqa: E731
+        sem, "q", text, steps, source_metric=metric, declared_value=value, sources=sources,
         run_output_validation=False, run_governed_numbers=True)
 
     steps = [_qm("new_signups", 444, start="2026-06-01", end="2026-06-30"),
@@ -665,13 +788,54 @@ def test_governed_numbers_allows_comparison_and_refuses_composition():
     assert not composed.allowed and composed.reason == "no_governed_definition", \
         "a count times a rate invents a measure and must refuse"
 
-    # Two results of the SAME metric: every comparison between them is governed.
-    weeks = [_qm("value_moments", 4307, period="prev_week"),
-             _qm("value_moments", 3785, period="last_week")]
+    # Two results of the SAME metric: every comparison between them is governed — WHEN THE
+    # ANSWER NAMES BOTH. The handles turn the check into a lookup over two values instead of a
+    # search over every value the metric ever returned.
+    weeks = [_qm("value_moments", 4307, handle="r1", period="prev_week"),
+             _qm("value_moments", 3785, handle="r2", period="last_week")]
     for value, what in ((3785, "the level"), (-522, "the difference"),
                         (-12.12, "the percent change"), (0.8788, "the ratio")):
-        assert check(str(value), value, weeks, "value_moments").allowed, \
+        assert check(str(value), value, weeks, "value_moments", ("r1", "r2")).allowed, \
             f"{what} between two value_moments results is a comparison, not a composition"
+
+    # …and an UNNAMED comparison is refused. This is the enforcement, not a side effect: while
+    # one slot held the provenance a comparison had nothing to cite, so the check searched every
+    # ordered pair of the metric's values for one that fit — ~1,440 candidates in a live run,
+    # and a hand-composed DAU/WAU ratio matched one of them. The level still passes unnamed
+    # because it IS a governed result; only the relation needs its operands.
+    assert check("3785", 3785, weeks, "value_moments").allowed, "a level needs no operands"
+    for value, what in ((-522, "difference"), (-12.12, "percent change"), (0.8788, "ratio")):
+        unnamed = check(str(value), value, weeks, "value_moments")
+        assert not unnamed.allowed and unnamed.reason == "no_governed_definition", \
+            f"an unnamed {what} cannot be accounted for and must refuse"
+
+    # Naming ONE side of a two-sided relation is not enough either.
+    half = check("-522", -522, weeks, "value_moments", ("r1",))
+    assert not half.allowed, "one handle cannot anchor a comparison"
+
+    # (c) Totalling the periods of ONE result — governed only where the layer says the metric
+    # composes across periods. A live run asked for a quarter at monthly grain, added the two
+    # months, and got the gold figure exactly; refusing it was the rule failing to distinguish
+    # summing moments from summing distinct people.
+    months = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [1852.0, 2000.0],
+               "args": {"metric": "value_moments", "time_grain": "month",
+                        "start": "2026-05-01", "end": "2026-06-30"}}]
+    assert check("3852", 3852, months, "value_moments", ("r1",)).allowed, \
+        "value_moments sums moments, so its months total"
+    # Same shape, a metric that counts distinct users: anyone active in both months would be
+    # counted twice, so the total is not a governed figure however arithmetically tidy.
+    people = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [500.0, 600.0],
+               "args": {"metric": "active_users", "time_grain": "month",
+                        "start": "2026-05-01", "end": "2026-06-30"}}]
+    dup = check("1100", 1100, people, "active_users", ("r1",))
+    assert not dup.allowed, "count(distinct) does not compose across periods"
+    # A BREAKDOWN's rows differ by dimension as well as by period, so their total is a different
+    # claim — not licensed by additivity over time.
+    split = [{"tool": "query_metric", "handle": "r1", "result": "", "result_values": [1852.0, 2000.0],
+              "args": {"metric": "value_moments", "time_grain": "month", "group_by": ["region"],
+                       "start": "2026-05-01", "end": "2026-06-30"}}]
+    assert not check("3852", 3852, split, "value_moments", ("r1",)).allowed, \
+        "a grouped result is not a time series"
 
     # A rate rendered as a percentage must match the governed rate. Multiplying by 100 moves
     # the last bits, and num_match's rounding ladder asks whether one number is the ROUNDING of
@@ -801,6 +965,72 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     assert incoherent(LADDER[7].without("tool_restriction")) is not None
     # the verifier judges a metric+SQL trajectory, which a hand-composed number lacks
     assert incoherent(LADDER[9].without("governed_numbers")) is not None
+
+
+def test_the_protocol_is_a_peer_primitive_and_labels_itself():
+    """The third axis has to be nameable in a cell, or it is not a treatment the harness controls.
+
+    Framing lived in an environment variable: it changed the model-visible prompt, moved the
+    derived-claim rate from 6.9% to 13.6%, and could not be written into a config, put in a
+    label, or varied within a run. A framing comparison was therefore two runs at different times
+    on a shared API — a confound the harness refuses everywhere else.
+
+    Three properties, and the third is the load-bearing one."""
+    from agent.grounding import build_grounding
+    from agent.guardrails import LADDER, LADDER_ORDER
+    from agent.protocol import ROLE, RULE, Protocol, split_config
+    con = open_warehouse(create_star_views=True)
+    ALL = Protocol(purpose=True, claims=True, repair=True)
+
+    # 1. the ladder is guardrails ONLY. The declarations used to be rungs 10-12 of it, which said
+    #    that declaring sits "above" the verifier — it does not, it is orthogonal to it.
+    assert len(LADDER_ORDER) == 9 and set(LADDER_ORDER).isdisjoint({"purpose", "claims", "repair"})
+
+    # 2. the framings are genuinely different treatments — same guardrails, different surface
+    rule = build_grounding(con, 7, guardrails=LADDER[9], protocol=ALL)
+    role = build_grounding(con, 7, guardrails=LADDER[9],
+                           protocol=Protocol(purpose=True, claims=True, repair=True, framing=ROLE))
+    assert rule.system != role.system, "the framings must differ, or the arm measures nothing"
+    assert rule.fingerprint() != role.fingerprint(), "and the difference must be recorded"
+    assert rule.toolbox.specs() == role.toolbox.specs(), \
+        "only the WORDING differs — a framing that changed the action space would be a guardrail"
+
+    # 3. the default is silent, so no stored row's config changes meaning
+    assert Protocol().framing == RULE and Protocol().label() == ""
+    assert rule.guardrails.label() + rule.protocol.label() == "R9/purpose+claims+repair"
+
+    # 4. THE POINT OF THE MOVE: declarations cross with any rung and any guardrail level. The
+    #    rung-7/R9 baseline gets 4 answers wrong out of 70, so whether declaring changes accuracy
+    #    can only be asked further down — which was inexpressible while these were ladder rungs.
+    low = build_grounding(con, 5, guardrails=LADDER[5], protocol=Protocol(claims=True))
+    answer = next(s for s in low.toolbox.specs() if s["name"] == "answer")
+    assert "claims" in answer["input_schema"]["properties"], \
+        "claims must not need governed_numbers — citations resolve against handles, not checks"
+    assert "value" not in answer["input_schema"]["properties"], "…and R7's fields stay R7's"
+    assert low.guardrails.label() + low.protocol.label() == "R5/claims"
+
+    # 5. every label round-trips, so a reader recovers BOTH primitives from a stored row. Without
+    #    this the trace would fail to parse and quietly render "unknown guardrails".
+    for cell in ("R0", "R9", "R9-resolve"):
+        for proto in (Protocol(), Protocol(claims=True), ALL,
+                      Protocol(purpose=True, claims=True, repair=True, framing=ROLE)):
+            assert split_config(cell + proto.label()) == (cell, proto), cell + proto.label()
+
+    # 6. the retired rungs still read, because stored rows carry them. R11 is the only one that
+    #    ever reached a results file, and it drove the repair loop as well as the claims field.
+    assert split_config("R11") == ("R9", ALL)
+
+    for junk in ("casual", "ROLE", None):
+        try:
+            Protocol(framing=junk)
+            raise AssertionError(f"framing={junk!r} was accepted")
+        except ValueError:
+            pass
+    try:
+        Protocol(repair=True)      # nothing to repair -> zero by construction, not by evidence
+        raise AssertionError("repair without claims was accepted")
+    except ValueError:
+        pass
 
 
 def test_the_input_guardrail_blocks_an_ungoverned_dimension_and_value():
@@ -971,4 +1201,150 @@ if __name__ == "__main__":
     test_verifier_is_refuse_only()
     test_toolbox_wiring_and_rung_gate()
     test_a_refusal_that_names_a_date_is_not_a_fabrication()
+    test_a_driver_citation_is_typed_correlational_by_the_tree()
     print("OK - output guardrails (provenance/validation/verifier) + semantic layer + input guardrail + ladder: all pass.")
+
+
+def test_a_guardrail_reports_what_it_verified_not_that_it_verified():
+    """The output checks verify a NUMBER. When the answer is a number that is the same thing; when
+    the answer is a judgement it is not, and saying `allowed` implies otherwise.
+
+    Two runs of t4_business_health answered "Yes — generally healthy" and "No — health is weak",
+    both declaring 3,642, and both drew `allowed` from all three output guardrails. Identical
+    verification, opposite answers. 29 of 29 judgement-tier answers carried a figure this way.
+
+    The check still runs — a composed figure smuggled into prose is exactly what it catches — so
+    what changed is the claim it makes about its own scope."""
+    from agent.guardrails.after import verify_answer
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+    steps = [_qm("active_users", 886.0, handle="r1", period="last_week")]
+
+    def outcome(answer: str) -> str:
+        rec: list = []
+        verify_answer(sem, "q?", f"{answer} explanatory prose follows", steps, record=rec,
+                      source_metric="active_users", declared_value=886.0, sources=["r1"],
+                      run_governed_numbers=True, run_output_validation=False,
+                      served_answer=answer)
+        return next(a.outcome for a in rec if a.guardrail == "governed_numbers")
+
+    # the answer IS the number -> the check verified the answer
+    assert outcome("886") == "allowed"
+    assert outcome("886 active users") == "allowed"
+    # the answer is a judgement that mentions a number -> it verified one figure inside it
+    assert outcome("No — the app looks unhealthy this week") == "verified a figure"
+    assert outcome("Broad — all regions contributed, driven by lower days per user") == \
+        "verified a figure"
+
+    # the scope test reads the `answer` field ALONE. Joined with the explanation it is never a
+    # bare number, so every answer read as prose and the distinction collapsed.
+    rec: list = []
+    verify_answer(sem, "q?", "886 explanatory prose follows", steps, record=rec,
+                  source_metric="active_users", declared_value=886.0, sources=["r1"],
+                  run_governed_numbers=True, run_output_validation=False)
+    assert next(a.outcome for a in rec if a.guardrail == "governed_numbers") == "verified a figure"
+
+
+def _grained(handle, metric, values, grain=None, period="last_week"):
+    """A recorded query_metric step at a stated grain, as the trace stores it."""
+    args = {"metric": metric, "period": period}
+    if grain:
+        args["time_grain"] = grain
+    return {"tool": "query_metric", "handle": handle, "error": False, "args": args,
+            "result": "columns: value\n" + "\n".join(f"({v},)" for v in values),
+            "result_values": [float(v) for v in values]}
+
+
+def test_a_comparison_holds_the_grain_fixed():
+    """`active_users` at day grain and at week grain are the same METRIC and not the same MEASURE.
+
+    One is distinct-users-per-day, the other distinct-users-per-week, and the ratio between them
+    is a third quantity — stickiness — that nobody defined. Keyed on the metric alone the check
+    read that ratio as "a comparison of two active_users results" and served DAU/MAU as governed:
+    13 of 46 attempts at adv_dau_mau, every one of them wrong.
+
+    A comparison holds the measure fixed and varies the period or the scope. Changing the grain
+    varies the measure, so there is nothing left to compare."""
+    from agent.guardrails.after import account_for
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    # the exploit: daily actives over weekly actives, both real governed results
+    cross = [_grained("r1", "active_users", [278, 331, 294, 268], grain="day"),
+             _grained("r2", "active_users", [886], grain="week")]
+    assert account_for(294 / 886, cross, ["r1", "r2"], sem) is None, "a cross-grain ratio is a new measure"
+    assert account_for(886 - 294, cross, ["r1", "r2"], sem) is None
+    assert account_for((886 - 294) / 294, cross, ["r1", "r2"], sem) is None
+
+    # …while the same measure across two periods is still a comparison, and still allowed
+    same = [_grained("r1", "active_users", [886], grain="week", period="last_week"),
+            _grained("r2", "active_users", [836], grain="week", period="prev_week")]
+    for figure in (886 - 836, 886 / 836, (886 - 836) / 836):
+        account = account_for(figure, same, ["r1", "r2"], sem)
+        assert account, f"{figure} is a same-grain comparison and must stand"
+        assert "week grain" in account, f"the account must name the grain it held fixed: {account}"
+
+    # and an ungrained pair — the ordinary case — is unaffected
+    plain = [_grained("r1", "active_users", [886]), _grained("r2", "active_users", [836])]
+    assert account_for(886 - 836, plain, ["r1", "r2"], sem)
+
+
+def test_additivity_is_read_from_the_aggregate_not_annotated():
+    """Kimball's three classes fall out of the `agg`, so nobody decides them per metric.
+
+    The hand-kept `additive_over_time` carried True on five metrics and null on ten, and null
+    meant both "not additive" and "nobody decided". The derivation agrees with every True and
+    resolves every null — so the flag becomes a test OF the derivation rather than a second
+    source of truth that can drift from it."""
+    from pathlib import Path
+
+    import yaml
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    assert sem.additivity("value_moments") == "additive"          # sum(moments)
+    assert sem.additivity("active_users") == "semi_additive"      # count(distinct user_id)
+    assert sem.additivity("days_per_user") == "non_additive"      # a ratio
+    # a STOCK: count(*) reads additive by its aggregate alone, but adding January's active
+    # subscriptions to February's counts every subscription that survived both. No time column
+    # is what says so.
+    assert sem.additivity("active_subscriptions") == "semi_additive"
+
+    layer = yaml.safe_load((Path(__file__).resolve().parent.parent / "semantic" /
+                            "semantic_layer.yml").read_text())["metrics"]
+    disagreed = [n for n, spec in layer.items()
+                 if spec.get("additive_over_time") and sem.additivity(n) != "additive"]
+    assert not disagreed, (
+        f"{disagreed} are annotated additive_over_time but do not derive as additive. One of the "
+        "two is wrong, and the aggregate is the one that cannot drift")
+
+
+def test_a_refusal_names_the_failure_it_found_not_the_one_it_knows():
+    """`governed_numbers` had one refusal message, and it asserted a specific cause.
+
+    Two answers to adv_last_week_oob declared 0.0 after calling only check_coverage — nothing
+    governed was ever fetched — and were told "this number was composed from different metrics (a
+    rate times a count, metric A over metric B)". Nothing was composed; nothing was queried. A
+    guardrail that names a root cause it has not established is the defect this repo keeps finding
+    in its own tools, and the model then repeats the wrong reason back."""
+    from agent.guardrails.after import verify_answer
+    sem = SemanticLayer(open_warehouse(create_star_views=True))
+
+    checks_only = [{"tool": "check_coverage", "handle": "r1", "error": False,
+                    "args": {"start": "2026-07-13", "end": "2026-07-19"},
+                    "result": "NO — out of coverage", "result_values": [], "result_labels": []}]
+    nothing = verify_answer(sem, "q?", "prose", checks_only, declared_value=0.0,
+                            run_governed_numbers=True, run_output_validation=False,
+                            served_answer="prose")
+    assert not nothing.allowed
+    assert "without querying anything governed" in nothing.detail
+    assert "composed from different metrics" not in nothing.detail, (
+        "nothing was composed — there were no metrics to compose")
+
+    # …and where metrics WERE fetched and combined, the composition message is the true one
+    two = [{"tool": "query_metric", "handle": "r1", "error": False, "args": {"metric": "mrr"},
+            "result": "(2685,)", "result_values": [2685.0], "result_labels": [""]},
+           {"tool": "query_metric", "handle": "r2", "error": False,
+            "args": {"metric": "paying_users"}, "result": "(288,)",
+            "result_values": [288.0], "result_labels": [""]}]
+    composed = verify_answer(sem, "q?", "prose", two, declared_value=2685.0 / 288,
+                             run_governed_numbers=True, run_output_validation=False,
+                             served_answer="prose")
+    assert not composed.allowed and "composed from different metrics" in composed.detail

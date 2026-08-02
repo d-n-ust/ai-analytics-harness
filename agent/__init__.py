@@ -20,7 +20,8 @@ __all__ = ["ask_one"]
 
 
 def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrails=None,
-            mock: bool = False, verbose: bool = False, con=None, trace: bool = False):
+            protocol=None, mock: bool = False, verbose: bool = False, con=None,
+            trace: bool = False):
     """Ask one question at one rung and return the typed Answer.
 
     `trace` prints the full run — every model call, every tool call, every guardrail that acted —
@@ -35,7 +36,7 @@ def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrail
 
     con = con or open_warehouse()
     set_star(con, capabilities(rung).star)  # rung 1 is raw-only
-    grounding = build_grounding(con, rung, guardrails=guardrails)
+    grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol)
     live = get_model(model, mock=mock)
     result = run_agent(question, grounding, live)
     if trace:

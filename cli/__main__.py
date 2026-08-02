@@ -21,6 +21,8 @@ import os
 # The one eager agent import: rungs is a leaf (dataclasses only, no warehouse, no providers), and
 # the parser needs the rung table to build --rung's help and validation from the definitions
 # themselves rather than a second copy of them.
+from agent.guardrails import LADDER_ORDER
+from agent.protocol import FRAMINGS, PARTS
 from agent.rungs import RUNGS, parse_rung
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
@@ -60,18 +62,23 @@ def cmd_query(a):
 def cmd_ask(a):
     from agent import ask_one
     from agent.guardrails import parse_cell
+    from agent.protocol import Protocol
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails,
-            verbose=not a.trace, trace=a.trace)
+            protocol=Protocol.parse(a.protocol), verbose=not a.trace, trace=a.trace)
 
 
-def cmd_trace(a):
-    """Re-render a stored run. The trace is a view over what was already recorded, so any row
-    ever written can be read back — including runs that predate this command."""
+def _rows_for(a) -> list:
+    """The stored rows matching one question. Shared by `trace` and `chain`, which are two views
+    over the same row and must never disagree about which row they are showing."""
     import json
-
-    from cli.trace import render
     run = _run_dir(a.run)
+    # `results/latest` is a symlink and outlives the run it points at — deleting a scratch run
+    # leaves it dangling, and the resulting FileNotFoundError names a path the user never typed.
+    if not (run / "raw.jsonl").exists():
+        raise SystemExit(f"{run} has no raw.jsonl. "
+                         + ("`results/latest` points at a run that no longer exists; "
+                            "pass --run explicitly." if "latest" in str(a.run) else ""))
     rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
     picked = [r for r in rows if r.get("qid") == a.qid
               and (a.config is None or r.get("config") == a.config)
@@ -79,10 +86,51 @@ def cmd_trace(a):
     if not picked:
         ids = sorted({r.get("qid") for r in rows})
         raise SystemExit(f"no row for qid={a.qid!r} in {run.name}. Available: {', '.join(ids[:12])}…")
+    return picked
+
+
+def cmd_trace(a):
+    """Re-render a stored run. The trace is a view over what was already recorded, so any row
+    ever written can be read back — including runs that predate this command."""
+    from cli.trace import render
+    picked = _rows_for(a)
     for row in picked[: a.limit]:
         print(render(row))
     if len(picked) > a.limit:
         print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
+
+
+def cmd_chain(a):
+    """Render one answer as the chain from question to answer — what it asked the data, what it
+    claims, and what each claim rests on.
+
+    The counterpart to `trace`: same row, read logically instead of chronologically, and written
+    for whoever has to decide whether to act on the answer rather than for whoever is debugging
+    the run. It prints no verdict; see evidence/chain.py for why."""
+    from cli.chain import render
+    picked = _rows_for(a)
+    for row in picked[: a.limit]:
+        print(render(row))
+    if len(picked) > a.limit:
+        print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
+
+
+def cmd_ambiguity(a):
+    """Lint the governed layer for names that can be mistaken for each other.
+
+    Reads the declarations, not the traffic — so it says which confusions are POSSIBLE, before an
+    agent has ever seen the layer."""
+    import pathlib
+
+    import yaml
+
+    from semantic.ambiguity import report
+    root = pathlib.Path(__file__).resolve().parent.parent
+    layer = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())
+    metrics = layer["metrics"] if isinstance(layer.get("metrics"), dict) else layer
+    tree = yaml.safe_load((root / "semantic" / "metric_tree.yml").read_text())
+    nodes = {n: s.get("metric") for n, s in (tree.get("nodes") or {}).items()}
+    print(report(metrics, nodes))
 
 
 def cmd_run(a):
@@ -90,6 +138,7 @@ def cmd_run(a):
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
                    rrungs=[int(r) for r in _split(a.rrungs)],
+                   protocols=_split(a.protocols),
                    cells=_split(a.cells) if a.cells else None, reasoning=a.reasoning,
                    concurrency=a.concurrency)
 
@@ -142,6 +191,10 @@ def main() -> None:
     sp.add_argument("--guardrails", default=None,
                     help="reliability config: a preset (R0..R9) or an explicit cell "
                          "(e.g. R9-resolve, or coverage_check+resolve+governed_numbers). Default R1.")
+    sp.add_argument("--protocol", default="none",
+                    help=f"what the answer must DECLARE: {'+'.join(PARTS)} and a framing "
+                         f"({'|'.join(FRAMINGS)}); `none` declares nothing. "
+                         "e.g. claims+repair+role")
     sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")
@@ -152,10 +205,19 @@ def main() -> None:
     sp.add_argument("--models", default="gpt-5.6-terra,gpt-5.4-mini")
     sp.add_argument("--rungs", default="1,2,3,4,5,6",
                     help=f"grounding rungs, comma-separated; defined: {sorted(RUNGS)}")
-    sp.add_argument("--rrungs", default="1", help="reliability ladder presets R0..R9")
+    # The ceiling is COMPUTED. Typed as a literal it went stale twice — the help still said
+    # R0..R9 three guardrails later, which is the fossilised numbering REFACTOR.md names.
+    sp.add_argument("--rrungs", default="1",
+                    help=f"reliability ladder presets R0..R{len(LADDER_ORDER)}")
     sp.add_argument("--cells", default=None,
                     help="explicit guardrail cells (overrides --rrungs), e.g. R9,R9-resolve. "
                          "Incoherent cells are skipped.")
+    sp.add_argument("--protocols", default="none",
+                    help=f"what the answer must DECLARE, crossed with every cell. Parts: "
+                         f"{'+'.join(PARTS)} and a framing ({'|'.join(FRAMINGS)}); `none` "
+                         "declares nothing. Comma-separated for several arms, e.g. "
+                         "none,claims,claims+repair+role — which label themselves R9, "
+                         "R9/claims and R9/claims+repair+role.")
     sp.add_argument("--only", default=None, help="comma-separated question ids (a quick subset)")
     sp.add_argument("--sample", type=int, default=None, help="first N questions per tier")
     sp.add_argument("--repeats", type=int, default=1, help="repeat the grid N times (mean + spread)")
@@ -180,6 +242,18 @@ def main() -> None:
     sp.add_argument("--model", default=None)
     sp.add_argument("--limit", type=int, default=3)
     sp.set_defaults(func=cmd_trace)
+
+    sp = sub.add_parser("chain", help="render one answer as question -> evidence -> answer")
+    sp.add_argument("qid", help="question id, e.g. t5_why_drop")
+    sp.add_argument("--run", default="results/latest")
+    sp.add_argument("--config", default=None, help="one config label, e.g. R9/claims")
+    sp.add_argument("--model", default=None)
+    sp.add_argument("--limit", type=int, default=1)
+    sp.set_defaults(func=cmd_chain)
+
+    sub.add_parser("ambiguity",
+                   help="lint the governed layer for names that can be confused"
+                   ).set_defaults(func=cmd_ambiguity)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 

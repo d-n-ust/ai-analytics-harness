@@ -65,15 +65,119 @@ def test_aggregate_arithmetic():
 
     # wrong-by-type separates groundedness vs correctness failures
     wbt = cell["wrong_by_type"]
-    assert wbt == {"fabricated": 1, "confident_wrong": 1, "off_governance": 0, "wrong_metric": 0}
-    # the three primary types PARTITION the wrong bucket — they must sum to the wrong count, so
+    assert wbt == {"fabricated": 1, "wrong_scope": 0, "confident_wrong": 1,
+                   "off_governance": 0, "wrong_metric": 0}
+    # the four primary types PARTITION the wrong bucket — they must sum to the wrong count, so
     # no wrong answer is ever silently uncounted (wrong_metric is a subset, excluded from the sum)
-    assert (wbt["fabricated"] + wbt["confident_wrong"] + wbt["off_governance"]
+    assert (wbt["fabricated"] + wbt["wrong_scope"] + wbt["confident_wrong"] + wbt["off_governance"]
             == cell["outcomes"]["wrong"])
 
     # agent telemetry + tool profile
     assert cell["agent"]["tools_per_run"]["query_metric"] == 1.0
     assert cell["telemetry"]["in_tokens"] == 400
+
+
+def test_grounded_answers_is_all_or_nothing_and_excludes_the_layers_own_defect():
+    """The fourth headline number, and the two judgement calls inside it.
+
+    ALL-OR-NOTHING: one unfollowable citation stops a reader verifying the argument, so an answer
+    that is 90% checkable is not 0.9 of a checkable answer. A per-claim rate would report the
+    three-good-claims answer below as mostly fine.
+
+    MISLABELLED IS EXCLUDED, on purpose. It fires on 28% of real answers and is almost entirely
+    `value_moments` against `weekly_value_moments` — a collision the semantic layer creates and
+    the ambiguity lint flags without needing a run. Folding it in would report our naming defect
+    as the agent's failure. If someone later decides the gate should include it, this test is
+    where that argument has to be made rather than quietly reverted.
+    """
+    import math
+
+    from evals.selective import selective
+
+    def audited(**counts):
+        return _row(claim_audit={"n": 4, **counts})
+
+    s = selective([
+        audited(),                                   # clean
+        audited(mislabelled=2),                      # a LAYER defect — still checkable
+        audited(unresolved=1),                       # a citation naming nothing — not checkable
+        audited(value_mismatch=1),                   # states a figure its evidence does not — not
+        audited(unresolved=1, value_mismatch=1),     # both: still ONE unchecked answer, not two
+    ])
+    assert (s.checkable, s.audited) == (2, 5), (s.checkable, s.audited)
+    assert s.grounded_answers == 0.4
+
+    # a refusal declares nothing to check, and an answer never asked for claims is not a failure
+    s2 = selective([_row(outcome="refuse", abstained=True, claim_audit={"n": 3, "unresolved": 1}),
+                    _row(claim_audit=None), _row()])
+    assert math.isnan(s2.grounded_answers), "no graphs to check is not a score of zero"
+    assert (s2.checkable, s2.audited) == (0, 0)
+
+
+def _step(tool="query_metric", **kw):
+    base = dict(tool=tool, args={}, error=False, blocked_by="", blocked_reason="", result="")
+    base.update(kw)
+    return base
+
+
+def test_rejected_and_blocked_calls_are_never_pooled():
+    # One call the SURFACE refused (bad arguments — waste) and one a GUARDRAIL refused
+    # (well-formed, out of coverage — the mechanism working). Both carry error=True; pooling
+    # them would report the guardrail doing its job as agent sloppiness.
+    rows = [_row(qid="a", steps=[
+        _step("decompose_change", error=True, args={"node": "value_moments"},
+              result="Error: unknown node 'value_moments'. Nodes: weekly_value_moments, ..."),
+        _step("query_metric", error=True, blocked_by="coverage_check",
+              blocked_reason="out_of_coverage", result="BLOCKED by governance — period ends ..."),
+        _step("query_metric"),
+    ])]
+    p = report.aggregate(rows)["cells"]["m"]["R9"]["process"]
+    assert p["calls"] == 3
+    assert p["rejected_rate"] == 1 / 3 and p["rejected_by_tool"] == {"decompose_change": 1}
+    assert p["blocked_rate"] == 1 / 3 and p["blocked_by_guardrail"] == {"coverage_check": 1}
+
+    # the drill-down names the offending call — a rate alone can't tell you the node was misnamed
+    rej = report.aggregate(rows)["rejected_calls"]
+    assert len(rej) == 1 and rej[0]["tool"] == "decompose_change"
+    assert "unknown node 'value_moments'" in rej[0]["message"]
+    assert "unknown node" in report.render_markdown(report.aggregate(rows))
+
+
+def test_purpose_and_orientation_are_absent_rather_than_zero():
+    # No declared_purpose guardrail in the trace -> the surface never asked for a `because`, so
+    # the rate is None (unmeasured). Reporting 0% would read as total non-compliance.
+    plain = _row(qid="a", turns=[{"calls": ["query_metric"], "acts": []}],
+                 steps=[_step("query_metric")])
+    assert report.aggregate([plain])["cells"]["m"]["R9"]["process"]["purpose_declared"] is None
+
+    asked = _row(qid="a", steps=[_step("query_metric", args={"because": "the driver"}),
+                                 _step("query_metric", args={})],
+                 turns=[{"calls": ["get_metric_tree"], "acts": []},
+                        {"calls": ["query_metric"],
+                         "acts": [{"guardrail": "declared_purpose", "position": "action_space",
+                                   "outcome": "applied", "detail": "governed calls gained because"}]}])
+    p = report.aggregate([asked])["cells"]["m"]["R9"]["process"]
+    assert p["purpose_declared"] == 0.5
+    assert p["turns_before_evidence"] == 1        # turn 0 oriented, turn 1 hit the data
+
+    # a run that never makes a governed call has no such number — not a zero
+    none = _row(qid="a", turns=[{"calls": ["run_sql"], "acts": []}], steps=[_step("run_sql")])
+    assert report.aggregate([none])["cells"]["m"]["R9"]["process"]["turns_before_evidence"] is None
+
+
+def test_dead_rows_are_grouped_by_cause_and_warned_about():
+    # Rows that died leave every rate silently, taking the run's n with them: the surviving row
+    # here reports 100% coverage. The banner + cause table is what makes that visible.
+    boom = "BadRequestError: 400 - Function tools with reasoning_effort are not supported"
+    rows = [_row(qid="a"),
+            _row(qid="b", outcome="error", bucket="error", error=boom, correct=False),
+            _row(qid="c", outcome="error", bucket="error", error=boom, correct=False)]
+    s = report.aggregate(rows)
+    assert s["cells"]["m"]["R9"]["selective"]["coverage"] == 1.0    # the trap
+    assert len(s["dead_rows"]) == 2
+    md = report.render_markdown(s)
+    assert "2 of 3 rows died" in md and "1 distinct cause" in md
+    assert "## Rows that died" in md and "| 2 |" in md              # grouped, not listed twice
 
 
 def test_schema_skew_is_detected():
@@ -91,7 +195,8 @@ def test_summary_is_json_serialisable_and_renders():
     json.dumps(s)                              # the machine contract must serialise
     md = report.render_markdown(s)
     for section in ("## Selective prediction", "## Correctness axes", "## Outcomes",
-                    "## Refusals by coded reason", "## Agent behaviour", "## Telemetry"):
+                    "## Refusals by coded reason", "## Agent behaviour", "## Process hygiene",
+                    "## Telemetry"):
         assert section in md, f"missing section: {section}"
     # single model, single rep -> the comparison + reproducibility sections stay hidden
     assert "## Model comparison" not in md
@@ -119,8 +224,12 @@ def test_cross_model_leaderboard_only_multi_model():
 
 if __name__ == "__main__":
     test_aggregate_arithmetic()
+    test_rejected_and_blocked_calls_are_never_pooled()
+    test_purpose_and_orientation_are_absent_rather_than_zero()
+    test_dead_rows_are_grouped_by_cause_and_warned_about()
     test_schema_skew_is_detected()
     test_summary_is_json_serialisable_and_renders()
     test_per_rep_spread_is_measured_per_rep()
     test_cross_model_leaderboard_only_multi_model()
-    print("OK - report aggregator: arithmetic + json + render + spread + leaderboard all pass.")
+    print("OK - report aggregator: arithmetic + process hygiene + dead rows + json + render "
+          "+ spread + leaderboard all pass.")

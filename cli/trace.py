@@ -20,12 +20,19 @@ import shutil
 import sys
 import textwrap
 
-from agent.guardrails import GUARDRAILS, Position, parse_cell
+from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
+from agent.protocol import split_config
+from evidence.chain import premise_id
+
+from .sqlfmt import format_sql
 
 # Terminal styling, degraded to nothing when the output is not a terminal.
 _C = {"dim": "\033[2m", "bold": "\033[1m", "off": "\033[0m",
       "ok": "\033[32m", "warn": "\033[33m", "bad": "\033[31m", "cyan": "\033[36m"}
-_ENFORCED = {Position.ACTION_SPACE, Position.BEFORE, Position.AFTER}
+# REPAIR belongs here: the model has no say in being handed its answer back, so it is enforced in
+# the sense this split means — it holds regardless of whether the model cooperates. The line below
+# calls the other column "works only if the model cooperates", which a repair plainly does not.
+_ENFORCED = {Position.ACTION_SPACE, Position.BEFORE, Position.AFTER, Position.REPAIR}
 
 
 def _paint(colour: bool):
@@ -41,9 +48,11 @@ def _short(value, width: int) -> str:
 
 
 def _guardrail_line(config: str, paint) -> list[str]:
-    """Which guardrails this run had on, split by whether they hold regardless of the model."""
+    """Which guardrails this run had on, split by whether they hold regardless of the model —
+    and which protocol it declared by, when that was not the default."""
+    cell, protocol = split_config(config)
     try:
-        gset = parse_cell(config)
+        gset = parse_cell(cell)
     except (ValueError, AttributeError):
         return [f"  guardrails  {paint(config or 'unknown', 'dim')}"]
     on = [g for g in GUARDRAILS if getattr(gset, g.name, False)]
@@ -57,6 +66,8 @@ def _guardrail_line(config: str, paint) -> list[str]:
     if advisory:
         lines.append(f"     advisory {paint(' · '.join(advisory), 'dim')}"
                      f" {paint('(works only if the model cooperates)', 'dim')}")
+    lines.append(f"     protocol {paint(protocol.describe(), 'cyan' if protocol.on else 'dim')}"
+                 f" {paint('(what the answer must declare)', 'dim')}")
     off = [g.name for g in GUARDRAILS if not getattr(gset, g.name, False)]
     if off:
         lines.append(f"          off {paint(' · '.join(off), 'dim')}")
@@ -105,7 +116,12 @@ def _steps_and_turns(row: dict, width: int, paint) -> list[str]:
 
 
 _MARK = {"refused": ("✗", "bad"), "withdrew": ("−", "cyan"), "narrowed": ("▸", "cyan"),
-         "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim")}
+         "applied": ("+", "cyan"), "allowed": ("✓", "dim"), "stood down": ("·", "dim"),
+         # neither served nor refused — the answer went back for another go
+         "handed back": ("↺", "warn"),
+         # the check ran and passed, on something narrower than the answer — a reader who sees a
+         # tick here concludes the answer was verified, and on a judgement question it was not
+         "verified a figure": ("◐", "warn")}
 
 
 def _act_lines(acts, paint, indent: str) -> list[str]:
@@ -125,28 +141,236 @@ def _act_lines(acts, paint, indent: str) -> list[str]:
     return lines
 
 
+# Calls whose RESULT is shown in full rather than summarised (arguments are always in full, for
+# every tool — see _step_lines). A governed query
+# returns a bounded table — the warehouse caps it at MAX_ROWS, the loop at _TRACE_LIMIT — and that
+# table, with the [scope] and [sql] the disclosure guardrail appends, is the evidence a served
+# number is checked against. Summarising it defeats the reason anyone opens a trace: `→ 976, 1289,
+# 2042` says three regions moved and not which is which.
+#
+# `explain_change` is absent because its result is not a table: it is a JSON document, laid out by
+# `_decomposition` instead of printed verbatim. Every other tool stays summarised — `get_schema`
+# alone would bury the trace it is meant to make readable.
+_SHOWN_IN_FULL = ("query_metric",)
+
+# Where the argument text starts on a step line, so a wrapped argument lines up under itself
+# instead of under the tool name: 6 indent + mark + space + 24 name + space + 9 timing + 2.
+_ARG_COLUMN = 44
+
+
+def _purpose_and_args(step: dict) -> tuple[str, dict]:
+    """A step's declared purpose, split from the arguments that were actually executed.
+
+    `because` earns its own line rather than sitting inside the argument list: it is a sentence,
+    and wrapped inline it would push the metric and the filters — the fields a reader checks a
+    number against — down the block. Splitting it also keeps the two readings apart: the
+    arguments are what ran, the purpose is what it was for."""
+    args = dict(step.get("args") or {})
+    return str(args.pop("because", "") or "").strip(), args
+
+
 def _step_lines(step: dict, width: int, paint) -> list[str]:
     blocked_by, reason = step.get("blocked_by"), step.get("blocked_reason")
     failed = step.get("error")
     mark = paint("✗", "bad") if failed else paint("✓", "ok")
     ms = step.get("ms")
     timing = paint(f"{ms:>7.0f}ms" if ms is not None else "        —", "dim")
+    purpose, args = _purpose_and_args(step)
     lines = _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "before"],
                        paint, "        ")
+    # ARGUMENTS ARE NEVER CUT, for any tool. They are not a summary of the call — they ARE the
+    # call, and they are what a reader checks a number against. A truncated argument list hides
+    # exactly the field that decides whether a result answers the question: one run compared
+    # `period_a: last_month` against `period_b: prev_week` — a month against a week, which is
+    # why it reported a 65% collapse — and the trace cut the line at `{"node": "weekly_value_…`.
+    # Results still summarise (see _SHOWN_IN_FULL); a schema dump would bury the trace, an
+    # argument list never does.
+    shown = textwrap.wrap(json.dumps(args, default=str, sort_keys=True),
+                          max(40, width - _ARG_COLUMN)) or [""]
     lines.append(f"      {mark} {paint(step.get('tool', '?'), 'bold'):<24} {timing}  "
-                 f"{paint(_short(step.get('args'), max(20, width - 58)), 'dim')}")
+                 f"{paint(shown[0], 'dim')}")
+    lines += [f"{' ' * _ARG_COLUMN}{paint(line, 'dim')}" for line in shown[1:]]
+    if purpose:
+        # Wrapped, not truncated. Everything else on a step is evidence ABOUT the call and can be
+        # summarised; this is the model's own account of what the call was for, and it is the one
+        # thing this rung exists to read. Cutting it would be like cutting the answer — the same
+        # reason _outcome_lines wraps rather than shortens.
+        body = textwrap.wrap(purpose, max(40, width - 20)) or [""]
+        lines.append(f"          {paint('because', 'cyan')} {body[0]}")
+        lines += [f"                  {line}" for line in body[1:]]
     if blocked_by:
         lines.append(f"          {paint('blocked by', 'bad')} {paint(blocked_by, 'bad')}"
                      f" → {paint(reason or '', 'bad')}")
     lines += _act_lines([a for a in (step.get("acts") or []) if a.get("position") == "disclosure"],
                         paint, "        ")
-    values = step.get("result_values")
-    if values:
-        shown = ", ".join(f"{v:g}" for v in values[:6]) + ("…" if len(values) > 6 else "")
-        lines.append(f"          {paint('→ ' + shown, 'dim')}")
-    elif not blocked_by:
-        lines.append(f"          {paint('→ ' + _short(step.get('result'), max(20, width - 14)), 'dim')}")
+    return lines + _result_lines(step, width, paint)
+
+
+def _decomposition(step: dict, width: int) -> list[str] | None:
+    """The metric tree's decomposition as a scannable table, or None if it will not parse.
+
+    `explain_change` returns a sixty-line JSON document. Every number in it is governed — the tree
+    computed each one from governed metrics through an identity it declares — so none of it can be
+    dropped, but nobody reads a contribution share out of pretty-printed JSON.
+
+    Deliberately NOT shared with `causal_record` in the AFTER guardrails, which renders this same
+    dict for the judge. That rendering is a TREATMENT — test_surface pins it — so factoring the two
+    together would mean a tweak to this trace silently changed what the judge reads. Two audiences,
+    two renderings, and the duplication is the cheaper of the two mistakes.
+    """
+    handle = step.get("handle") or ""
+    text = str(step.get("result") or "")
+    prefix = f"[{handle}] "
+    if handle and text.startswith(prefix):
+        text = text[len(prefix):]
+    try:
+        out = json.loads(text)
+    except ValueError:
+        return None
+    if not isinstance(out, dict) or "identity_decomposition" not in out:
+        return None
+
+    def num(v) -> str:
+        return "—" if not isinstance(v, (int, float)) else f"{v:.4g}"
+
+    def pct(v) -> str:
+        return "" if not isinstance(v, (int, float)) else f"{v * 100:+.2f}%"
+
+    def row(c: dict, name_w: int) -> str:
+        return (f"    {str(c.get('child', '')):<{name_w}}  {num(c.get('value_a')):>7} → "
+                f"{num(c.get('value_b')):<7}{pct(c.get('pct_change')):>9}")
+
+    kids = out.get("identity_decomposition") or []
+    # Archived rows carry a flat `influence_candidates` (one branch's, unlabelled); current ones
+    # carry `influences` keyed by the child each hangs off. Both render.
+    infl = [dict(c, parent=parent) for parent, group in (out.get("influences") or {}).items()
+            for c in group] or list(out.get("influence_candidates") or [])
+    name_w = max((len(str(c.get("child", ""))) for c in [*kids, *infl]), default=0)
+    primary = (out.get("primary_driver") or {}).get("child")
+
+    lines = [f"{prefix if handle else ''}{out.get('node', '?')}  "
+             f"{out.get('period_a')} → {out.get('period_b')}:  {num(out.get('value_a'))} → "
+             f"{num(out.get('value_b'))}  {pct(out.get('pct_change'))}"]
+    if kids:
+        lines.append("  identity — exact arithmetic, shares sum to 1")
+        for c in kids:
+            share = c.get("contribution_share")
+            lines.append(row(c, name_w)
+                         + (f"   share {share:+.3f}" if isinstance(share, (int, float)) else "")
+                         + ("  ← primary" if c.get("child") == primary else ""))
+    if infl:
+        lines.append("  influence — correlational, never proof of cause")
+        for c in infl:
+            lines.append(row(c, name_w) + f"   confidence: {c.get('confidence', '?')}")
+            # The evidence is the whole point of an influence edge — it is what says whether the
+            # edge may be leaned on — so it wraps rather than being cut.
+            evidence = " ".join(str(c.get("evidence") or "").split())
+            lines += [f"      {line}" for line in textwrap.wrap(evidence, max(40, width - 20))]
     return lines
+
+
+_SQL_TAG = "[sql] "
+
+
+def _laid_out(lines: list[str]) -> list[str]:
+    """A governed result's lines, with the one carrying SQL expanded for reading.
+
+    Only the display changes: the model was shown, and the row still stores, the single-line query
+    the compiler emitted. Continuation lines are indented to the tag's own width so the query
+    hangs together as a block under it."""
+    out: list[str] = []
+    for line in lines:
+        if not line.startswith(_SQL_TAG):
+            out.append(line)
+            continue
+        query = format_sql(line[len(_SQL_TAG):])
+        out.append(_SQL_TAG + (query[0] if query else ""))
+        out += [" " * len(_SQL_TAG) + rest for rest in query[1:]]
+    return out
+
+
+def _result_lines(step: dict, width: int, paint) -> list[str]:
+    """What the call returned — in full for a governed query, summarised for everything else.
+
+    A blocked call has no result to show; the block was already reported above, and printing an
+    empty arrow under it would read as "returned nothing" rather than "never ran"."""
+    if step.get("blocked_by"):
+        return []
+    text = str(step.get("result") or "")
+    body = None
+    if step.get("tool") in _SHOWN_IN_FULL:
+        body = _laid_out(text.splitlines() or [""])
+    elif step.get("tool") in DECOMPOSE_TOOLS:
+        body = _decomposition(step, width)       # None when it will not parse — fall through
+    if body:
+        return ([f"          {paint('→ ' + body[0], 'dim')}"]
+                + [f"            {paint(line, 'dim')}" for line in body[1:]])
+    values = step.get("result_values")
+    if values:                                  # typed numbers read the checks read; the display
+        shown = ", ".join(f"{v:g}" for v in values[:6]) + ("…" if len(values) > 6 else "")
+        return [f"          {paint('→ ' + shown, 'dim')}"]   # text they came from is in the row
+    return [f"          {paint('→ ' + _short(text, max(20, width - 14)), 'dim')}"]
+
+
+def _claim_lines(row: dict, paint, width: int) -> list:
+    """What the answer broke itself into, and what the audit made of each piece.
+
+    The served answer is one assertion among several; without this the trace shows the one
+    number that was checked and stays silent about the four that were not.
+
+    PREMISES are rendered, not just sources. They were not, and the omission was invisible in the
+    worst way: a derived claim — the whole point of the graph — rendered as `← —`, identical to a
+    claim resting on nothing at all, while the audit counted it bound. Every trace read while
+    investigating why so few answers reason could not have shown reasoning if it were there.
+    STRENGTH is shown for the same reason: correlational is a property the tree assigns, and a
+    reader deciding what to act on needs it more than they need the figure."""
+    audit = row.get("claim_audit") or {}
+    claims = row.get("claims") or []
+    if not claims:
+        return []
+    n = audit.get("n", len(claims))
+    head = (f"{audit.get('bound', 0)}/{n} bound · {audit.get('sources', 0)} source(s)")
+    # The shape of the argument, not just its size: how much of the answer is reasoned rather than
+    # looked up, and whether any conclusion rests on another. Both are ~0 in most answers, which
+    # is the finding the reference graphs exist to make legible.
+    if audit.get("derived"):
+        head += (f" · {audit['derived']}/{n} derived, depth {audit.get('max_depth', 0)}"
+                 f", fan-in {audit.get('max_fan_in', 0)}")
+    else:
+        head += paint(" · flat list — nothing derived", "warn")
+    for k, label in (("unresolved", "unresolved"), ("mislabelled", "mislabelled"),
+                     ("value_mismatch", "value mismatch"), ("unsourced", "unsourced"),
+                     ("bad_premise", "bad premise")):
+        if audit.get(k):
+            head += paint(f" · {audit[k]} {label}", "warn")
+    out = [f"  {paint('claims', 'bold')}   {head}"]
+    findings = audit.get("findings") or [{} for _ in claims]
+    for c, f in zip(claims, findings, strict=False):
+        ok = f.get("bound", True) and not f.get("why")
+        mark = paint("✓", "ok") if ok else paint("✗", "bad")
+        text = " ".join(str(c.get("text") or "").split())
+        wrapped = textwrap.wrap(text, max(40, width - 22)) or [""]
+        val = c.get("value")
+        soft = paint("  ~correlational", "warn") if f.get("strength") == "correlational" else ""
+        # Archived rows predate claim ids and carry only the position, so fall back to it.
+        cid = f.get("id") or f"c{f.get('i', 0) + 1}"
+        out.append(f"        {mark} {cid}  {wrapped[0]}"
+                   + (paint(f"  = {val:g}", "dim") if isinstance(val, (int, float))
+                      and not isinstance(val, bool) else "") + soft)
+        out += [f"             {line}" for line in wrapped[1:]]
+        # A conclusion cites CLAIMS; a measurement cites values. Different arrows, because they
+        # are different kinds of support and a reader must not have to guess which this is.
+        if f.get("premises"):
+            # Archived rows store premises as positions, not ids — see evidence.chain.premise_id.
+            prem = ", ".join(premise_id(x) for x in f["premises"])
+            line = paint(f"             ⇐ follows from {prem}", "cyan")
+        else:
+            line = paint(f"             ← {','.join(str(s) for s in (c.get('sources') or [])) or '—'}",
+                         "dim")
+        if f.get("why"):
+            line += paint(f"   {' · '.join(f['why'])}", "bad")
+        out.append(line)
+    return out
 
 
 def _outcome_lines(row: dict, width: int, paint) -> list[str]:
@@ -163,8 +387,10 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
         typed = f"value={row['declared_value']:g}"
         if row.get("source_metric"):
             typed += f"  source_metric={row['source_metric']}"
-        typed += (f"  source_result={row['source_result']}" if row.get("source_result")
-                  else paint("  (no source_result — provenance fell back to matching numbers)", "warn"))
+        # `sources` is the current field; archived rows carry the singular `source_result`.
+        cited = row.get("sources") or ([row["source_result"]] if row.get("source_result") else [])
+        typed += (f"  sources={','.join(str(h) for h in cited)}" if cited
+                  else paint("  (no sources — a comparison cannot be accounted for)", "warn"))
         if row.get("value_recovered"):
             typed += paint("  (recovered from the answer text, not declared)", "warn")
         lines.append(f"          {paint(typed, 'dim')}")
@@ -175,6 +401,7 @@ def _outcome_lines(row: dict, width: int, paint) -> list[str]:
     if row.get("missing"):
         lines.append(f"          missing {paint(_short(row['missing'], 90), 'dim')}")
     lines += _act_lines(row.get("acts"), paint, "        ")
+    lines += _claim_lines(row, paint, width)
     verdict = row.get("verifier_verdict")
     if verdict:
         ok = verdict.get("answers_question")
@@ -231,5 +458,13 @@ def render(row: dict, colour: bool | None = None) -> str:
         parts.append(f"tools {sum(tool_timed):.0f}ms")
     if not (timed or tool_timed):
         parts.append("no timings recorded")
+    # How much of the working decomposition the run actually left behind. Reported as a share of
+    # the calls that COULD carry a purpose, because that is the only denominator the model had a
+    # choice over — counting it against every step would score `get_schema` as a missed
+    # declaration. Absent entirely when no governed call ran, rather than printed as 0/0.
+    governed = [s for s in steps if s.get("tool") in GOVERNED_TOOLS]
+    if governed:
+        stated = sum(1 for s in governed if _purpose_and_args(s)[0])
+        parts.append(f"purpose stated on {stated}/{len(governed)} governed calls")
     foot = [rule] + _outcome_lines(row, width, paint) + [f"  {paint(' · '.join(parts), 'dim')}", rule]
     return "\n".join(head + [""] + body + foot)
