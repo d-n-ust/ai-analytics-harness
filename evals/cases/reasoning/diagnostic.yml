@@ -83,3 +83,53 @@ cases:
       "no, and here is why", which is better than a bare refusal and which the agent already
       gives — "a plausible but unproven contributor; the main cause was lower days per user".
       Expecting `refuse` scored that 0/6 and measured which tool it exited through.
+
+  # DEPTH BY CONSTRUCTION. Every other diagnostic case asks about last_week vs prev_week, which
+  # `decompose_change` answers in one call — the tool hands over the driver and the answer needs
+  # no reasoning of its own, which is why 70% of stored answers are flat lists of measurements.
+  # This one names a week the tool CANNOT reach: period_a/period_b are an enum of named periods
+  # (last_week, prev_week, last_month, last_quarter, ytd, all), so mid-May is only addressable
+  # through query_metric with explicit dates, one factor at a time. The agent has to build the
+  # identity itself and then say which term offsets the others.
+  #
+  # Week 2026-05-11 -> 2026-05-18, real users:
+  #   moments  2705 -> 2707   (+0.07%, flat)
+  #   breadth   548 ->  567   (+3.5%)
+  #   depth   1.7926 -> 1.8229 (+1.7%)
+  #   frequency 2.7536 -> 2.619 (-4.9%)   <- the answer: it cancels the other two
+  - id: t5_offsetting_mid_may
+    tier: diagnostic
+    question: "Value moments barely moved in the week of 11 May 2026 compared with the week
+      before, even though we had more active users. What held them back?"
+    expect:
+      type: diagnostic
+      driver: ["days per user", "days/user", "days_per_user", "frequency", "how often"]
+    note: "Breadth and depth both rose; frequency fell 4.9% and cancels them. Not reachable by
+      decompose_change — its periods are an enum and mid-May is not in it.
+
+      Observed 2026-08-02: gpt-5-mini 14/15, reaching for query_metric with explicit dates.
+      gpt-5.6-terra 2/15 — it called decompose_change with the DEFAULT prev_week/last_week,
+      received the July figures (4,133 -> 3,642), and wrote `For the requested week of 11 May
+      2026, value moments did not barely move`, refusing false_premise. Right reasoning, wrong
+      period, described as the right one. The claim audit cannot see it: the citation resolves to
+      a real result with real values, and only the PROSE asserts those values are May's. This is
+      the case that inverts u_july_partial_month, and the pair is worth keeping together."
+
+  # Multi-domain and multi-step: the answer contradicts the headline, and the headline is true.
+  # APAC really did grow ~6x last quarter (471 -> 2,786 monthly value moments, Apr -> Jun), and
+  # every bit of it is breadth: active users 46 -> 300 (+552%) while frequency FELL 5.33 -> 4.98
+  # and depth fell 1.92 -> 1.87. So the average user got slightly LESS engaged during the fastest
+  # growth the product has seen. No single tool call says this — it needs the three factors
+  # queried per region and then read against each other.
+  #
+  # Graded on the driver rather than on a region name: "which region is healthier" cannot be
+  # keyword-graded, because any good answer names both regions and `_mentions` is an ANY match.
+  - id: t5_apac_growth_breadth
+    tier: diagnostic
+    question: "APAC value moments grew roughly six-fold last quarter. Did the average user become
+      more engaged, or did we mostly just add users?"
+    expect:
+      type: diagnostic
+      driver: ["breadth", "more users", "active users", "user count", "added users", "new users"]
+    note: "Entirely breadth. Per-user engagement went slightly backwards: frequency -6.6%,
+      depth -2.6%. An answer claiming deeper engagement is wrong on the data."
