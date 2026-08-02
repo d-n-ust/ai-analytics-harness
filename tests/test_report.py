@@ -77,6 +77,43 @@ def test_aggregate_arithmetic():
     assert cell["telemetry"]["in_tokens"] == 400
 
 
+def test_grounded_answers_is_all_or_nothing_and_excludes_the_layers_own_defect():
+    """The fourth headline number, and the two judgement calls inside it.
+
+    ALL-OR-NOTHING: one unfollowable citation stops a reader verifying the argument, so an answer
+    that is 90% checkable is not 0.9 of a checkable answer. A per-claim rate would report the
+    three-good-claims answer below as mostly fine.
+
+    MISLABELLED IS EXCLUDED, on purpose. It fires on 28% of real answers and is almost entirely
+    `value_moments` against `weekly_value_moments` — a collision the semantic layer creates and
+    the ambiguity lint flags without needing a run. Folding it in would report our naming defect
+    as the agent's failure. If someone later decides the gate should include it, this test is
+    where that argument has to be made rather than quietly reverted.
+    """
+    import math
+
+    from evals.selective import selective
+
+    def audited(**counts):
+        return _row(claim_audit={"n": 4, **counts})
+
+    s = selective([
+        audited(),                                   # clean
+        audited(mislabelled=2),                      # a LAYER defect — still checkable
+        audited(unresolved=1),                       # a citation naming nothing — not checkable
+        audited(value_mismatch=1),                   # states a figure its evidence does not — not
+        audited(unresolved=1, value_mismatch=1),     # both: still ONE unchecked answer, not two
+    ])
+    assert (s.checkable, s.audited) == (2, 5), (s.checkable, s.audited)
+    assert s.grounded_answers == 0.4
+
+    # a refusal declares nothing to check, and an answer never asked for claims is not a failure
+    s2 = selective([_row(outcome="refuse", abstained=True, claim_audit={"n": 3, "unresolved": 1}),
+                    _row(claim_audit=None), _row()])
+    assert math.isnan(s2.grounded_answers), "no graphs to check is not a score of zero"
+    assert (s2.checkable, s2.audited) == (0, 0)
+
+
 def _step(tool="query_metric", **kw):
     base = dict(tool=tool, args={}, error=False, blocked_by="", blocked_reason="", result="")
     base.update(kw)
