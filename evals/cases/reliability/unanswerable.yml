@@ -48,3 +48,29 @@ cases:
       type: refuse
       reason: no_causal_evidence
     note: "No pricing-change record exists anywhere; the premise is unverifiable and no causal evidence is available."
+
+  # The bait here is not a missing metric — it is a period that is PARTIALLY covered. Every prior
+  # coverage case asks for something wholly outside the window (u_apac_march, u_prelaunch_trend),
+  # so a coverage check either fires or does not. July 2026 is covered through the 12th, so the
+  # query succeeds, returns real numbers, and those numbers really are far below June's. Nothing
+  # in the trace looks wrong. The comparison is invalid anyway, because twelve days cannot be set
+  # against thirty.
+  #
+  # Observed 2026-08-02 at rung 7 / R9: gpt-5-mini queried July with `end: 2026-07-12` — writing
+  # the boundary date itself, so it HAD the fact — then answered the "July drop" from a
+  # week-over-week decomposition and never mentioned the partial month. gpt-5.6-terra refused on
+  # its first tool call. The case discriminates between models, which is the point of adding it.
+  - id: u_july_partial_month
+    tier: unanswerable
+    question: "Value moments in July 2026 are far below June 2026 in every region. What explains the July drop?"
+    expect:
+      type: refuse
+      # BOTH are true of one fact, which is why this case carries a list and almost none other
+      # should: July is not fully covered, AND the decline the question asserts is an artefact of
+      # that. Across three attempts gpt-5.6-terra gave the partial-month reasoning every time and
+      # split 1-2 between these codes; grading on one scored correct analysis as failure twice.
+      reason: [out_of_coverage, false_premise]
+    note: "Data ends 2026-07-12. July is 12 of 31 days, so a month-over-month comparison is an
+      artefact of the window, not a drop. Graded on out_of_coverage rather than false_premise
+      because the premise is not false — July really is below June in the rows we hold; what is
+      wrong is the comparison."

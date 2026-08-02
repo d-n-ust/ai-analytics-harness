@@ -107,6 +107,27 @@ def _metric_match(answer, expect: dict):
     return str(got).strip().lower() == str(want).strip().lower()
 
 
+def _accepted_reasons(expect: dict) -> tuple[str, ...]:
+    """The refusal codes this case counts as right. A string for the usual one-answer case, a
+    list where a defect is genuinely describable two ways.
+
+    THIS IS A LOOPHOLE IF USED CASUALLY, so the bar is that both codes describe the SAME defect
+    and a reviewer could not say which is better. `u_july_partial_month` is the case it was
+    added for: July 2026 is covered through the 12th, so "the period is not fully covered"
+    (`out_of_coverage`) and "the decline you assert is an artefact" (`false_premise`) are two
+    true sentences about one fact. gpt-5.6-terra produced the partial-month reasoning in the
+    `missing` field on all three attempts and split 1-2 across the codes; grading on one of them
+    scored correct analysis as failure two times in three.
+
+    That split is the published finding this widening rests on — RefusalBench (arXiv 2510.10390)
+    reports refusal as *separable detection and categorization skills*, with frontier models
+    below 50% on the second in grounded settings. A case with one obvious code (`u_churn_risk`
+    has exactly one) must keep a bare string, or reason accuracy stops measuring anything.
+    """
+    reason = expect.get("reason")
+    return (reason,) if isinstance(reason, str) else tuple(reason or ())
+
+
 def _missing_context(case: dict, rung) -> bool:
     """Does this case need injected context the rung did not supply?
 
@@ -134,7 +155,8 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # capabilities rather than compared against a rung number: rung 7 is governed-only and holds
     # the tree WITHOUT the knowledge base, so `rung >= 5` would get this exactly backwards.
     missing_context = _missing_context(case, getattr(answer, "rung", None))
-    is_false_premise = expects_refusal and expect.get("reason") == "false_premise"
+    accepted_reasons = _accepted_reasons(expect)
+    is_false_premise = expects_refusal and "false_premise" in accepted_reasons
     tol = expect.get("tolerance", 0.02)
     # Did it put a FIGURE forward? Where the answer schema carried a typed `value` (R7+), the
     # model has already said so and reading its prose can only invent a disagreement: one run
@@ -162,7 +184,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                 # excluded from reason accuracy rather than counted as a miss.
                 correct = True
             else:
-                reason_match = answer.reason == expect["reason"]
+                reason_match = answer.reason in accepted_reasons
                 correct = reason_match
         elif missing_context:
             correct = True     # declining a term nobody defined for it

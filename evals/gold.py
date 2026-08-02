@@ -33,8 +33,20 @@ def _validate(case: dict, where: str) -> None:
         raise ValueError(f"{where}: metric_answer case {case['id']!r} needs both metric and gold_sql")
     # `ambiguous` carries a reason for the same purpose `refuse` does — a refusal must still name
     # the right code to be correct. The extra allowance is the clarification, not a free pass.
-    if t in ("refuse", "ambiguous") and e.get("reason") not in REFUSAL_REASONS:
-        raise ValueError(f"{where}: {t} case {case['id']!r} reason {e.get('reason')!r} not in REFUSAL_REASONS")
+    #
+    # A LIST is allowed and is checked member by member, so a typo inside one cannot hide behind a
+    # valid sibling. It means the same defect is describable two ways; `_accepted_reasons` in
+    # grade.py holds the bar for when that is true, and tests/test_grade.py pins which cases use
+    # it, because every one of them widens what passes.
+    if t in ("refuse", "ambiguous"):
+        from evals.grade import _accepted_reasons
+        codes = _accepted_reasons(e)
+        if not codes:
+            raise ValueError(f"{where}: {t} case {case['id']!r} names no reason")
+        for code in codes:
+            if code not in REFUSAL_REASONS:
+                raise ValueError(f"{where}: {t} case {case['id']!r} reason {code!r} "
+                                 f"not in REFUSAL_REASONS")
     if t == "diagnostic" and not e.get("driver"):
         raise ValueError(f"{where}: diagnostic case {case['id']!r} needs a driver list")
     if t == "keywords" and not e.get("keywords"):
