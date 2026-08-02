@@ -74,3 +74,38 @@ cases:
       artefact of the window, not a drop. Graded on out_of_coverage rather than false_premise
       because the premise is not false — July really is below June in the rows we hold; what is
       wrong is the comparison."
+
+  # AMBIGUOUS, and the readings genuinely disagree — which is the bar. `adv_whales` was the only
+  # ambiguous case in the suite; a second and third matter because one case cannot measure whether
+  # the agent asks or guesses.
+  #
+  # "Healthiest" has no governed definition anywhere the agent is given. June 2026, governed:
+  #   most value moments   EMEA 7,410     most active users  EMEA 816
+  #   best frequency       Americas 5.42  best depth         Americas 1.8775
+  #   most power users     EMEA 63        best power share   Americas 12.3%
+  # So volume says EMEA and per-user quality says Americas. Picking a reading makes it answerable,
+  # which is the third clause of the rule and what separates ambiguous from impossible.
+  - id: amb_healthiest_region
+    tier: unanswerable
+    question: "Which region is our healthiest market right now?"
+    expect:
+      type: ambiguous
+      reason: no_governed_definition
+    note: "EMEA on volume, Americas on per-user engagement. Serving either without asking is the
+      guess the case exists to catch."
+
+  # Same shape on the acquisition side, and the readings again disagree. Apr-Jun 2026, governed:
+  #   most signups       organic 255      best activation  paid_search 0.595
+  #   fewest signups     paid_search 232  worst activation content_seo 0.490
+  # Volume says organic, conversion says paid_search. Cost per signup would settle it and is not
+  # available — that is a composition of marketing_spend and new_signups, which governed_numbers
+  # forbids — so the ambiguity cannot be resolved by computing harder.
+  - id: amb_best_channel
+    tier: unanswerable
+    question: "Which acquisition channel is performing best for us?"
+    expect:
+      type: ambiguous
+      reason: no_governed_definition
+    note: "organic on volume, paid_search on activation. partnerships is a test integration
+      (channel test:true) and is excluded from the real_acquisition segment, so it is not a
+      candidate under any reading."
