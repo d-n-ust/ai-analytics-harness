@@ -318,14 +318,22 @@ them (6). The difference is the correction, not the error rate.
 **And it repairs rather than deletes — which is the claim that could not previously be made.**
 A citation naming nothing has two cheap fixes, and only one is intended; both end with
 `unresolved == 0`, so the stored after-state reported the same success for either. Recording the
-before-state (`repairs` on the Answer) is what separates them:
+before-state (`repairs` on the Answer) is what separates them. Pooled over every instrumented run,
+including a targeted sweep of the six questions that trigger it most:
 
 ```
-4 repairs fired (2.3% of answers) · 9 broken claims handed back
-  still asserted afterwards (REPAIRED): 8/9
-  gone from the answer     (DELETED) : 1/9
-  still unresolved at the end: 0 of 4
+11 answers handed back · 27 broken claims · 0 left unresolved
+  came back with FEWER claims than went in:  0
+  same size:                                 8
+  larger:                                    3
 ```
+
+**The signature is the COUNT, not the text.** A first pass matched each handed-back claim's
+opening characters against the final answer and reported 7 deletions — every one of them wrong.
+Those answers went 3 claims to 11, 3 to 5, 2 to 3: the model had *rewritten* the sentence while
+fixing its citation, and a prefix match scores a reword as a disappearance. Nobody deletes their
+way to more claims. The text comparison is kept as a weaker secondary signal; the count is what
+the claim rests on.
 
 **It costs tokens and nothing else.** Split answerable / unanswerable, as this repo never pools
 them:
@@ -341,8 +349,42 @@ cost coverage — which is the predicted result, not a disappointing one: `agent
 that repair *"cannot stop a wrong number, only an unaccountable one"*, and the measurement agrees
 with the docstring.
 
-**What this does not establish.** The mechanism split rests on **9 broken claims** — the direction
-is unambiguous, the 8-of-9 rate is not precise. The framing arms are unrun. And it is one model,
+### The arm that was missing: declaring nothing (2026-08-02)
+
+`R9` against `R9/claims` against `R9/claims+repair`, same model and settings, 171 attempts each,
+0 errors. `R9` is the baseline that had never been run — the agent answers with no declaration
+asked of it at all.
+
+```
+arm                   coverage   bal.acc   silent   grounded    out tok/row
+R9                      93.6%     96.2%     0.6%       n/a           228
+R9/claims               91.0%     93.7%     1.8%     88.0%           339
+R9/claims+repair        87.2%     93.6%     0.0%     93.1%           342
+```
+
+**Asking for an account does not measurably change the answer.** Every difference against `R9`
+is within noise — coverage 68/78 against 73/78 (Fisher p = 0.28), answerable-correct 69/78
+against 74/78 (p = 0.25), unanswerable-refused 70/93 against 72/93 (p = 0.86). The apparent
+6-point coverage slide is five questions. What it does cost is **50% more output tokens**.
+
+Read that as a null with stated power, not as equivalence: at 78 answerable questions per arm
+this run could only ever have caught a large effect. A real 5-point coverage cost would need
+several hundred per arm to separate from chance.
+
+**`grounded` is `n/a` for `R9`, not low.** That arm produces no evidence graph, so there is
+nothing to check — the failure is not that its work does not survive an audit, it is that no
+audit is possible. That distinction is the whole argument for the third axis.
+
+**And the grounded-answer rate replicates.** Two independent runs, same day, same settings:
+
+```
+              R9/claims   R9/claims+repair
+first sweep      88.2%          94.6%
+this sweep       88.0%          93.1%
+```
+
+**What this does not establish.** The mechanism split rests on **27 broken claims** — the direction
+is unambiguous, the exact rate is not precise. The framing arms are unrun. And it is one model,
 which matters more here than usual:
 
 ```
