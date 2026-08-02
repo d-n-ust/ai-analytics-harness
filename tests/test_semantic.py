@@ -644,6 +644,19 @@ def test_a_served_number_must_be_a_rounding_of_a_governed_one():
                  (886, 18866)]:
         assert not num_match(a, b), f"{a} is NOT a rounding of {b} and must not match"
 
+    # THE LADDER STARTS AT ONE DECIMAL PLACE. Whole-number rounding is the same forgiveness
+    # everywhere on the number line and the layer's values are not: on a count it moves 4200.6
+    # to 4201 and loses nothing, on a rate it collapses everything under a half to zero. A
+    # declared 0 matched any rate below 50% and a declared 1 matched 0.6 — neither is a rounding
+    # in any sense a reader would accept, and every rate the layer produces lives in that range.
+    for a, b in [(0, 0.4), (0, 0.49), (0, 0.5), (1, 0.6), (1, 1.4), (0, -0.4)]:
+        assert not num_match(a, b), (
+            f"{a} must not match {b}: whole-number rounding is not forgiven, because for a rate "
+            f"it is not rounding")
+    # …and the cases k=0 was there for never needed it — an integer already equals itself.
+    for a, b in [(4200, 4200.0), (0, 0), (0, 0.0), (1, 1.0)]:
+        assert num_match(a, b), f"{a} and {b} are the same number"
+
 
 def test_metrics_conform_to_ontology():
     """Every metric's entity + segment must be a value the ontology declares, so the metric

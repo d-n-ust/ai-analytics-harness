@@ -110,6 +110,40 @@ verified one figure in it. An answer with no figure at all was always handled ho
 (`stood down: the answer is prose, not a number`); this closes the case where a figure is present
 but is not the answer.
 
+## Erratum — a declared `0` matched any rate below 50% (2026-08-02)
+
+`num_match` forgives display rounding, and its ladder ran from **zero** decimal places. Rounding
+to a whole number is the same forgiveness everywhere on the number line, and the layer's values
+are not: on a count it moves 4200.6 to 4201 and loses nothing, on a **rate** it moves every value
+below a half to `0` and everything from a half to one-and-a-half to `1`.
+
+So a declared `0` was accepted as a rounding of 0.4, 0.49 and 0.5, and a declared `1` of 0.6.
+Every rate the layer produces lives in exactly that range. The ladder now starts at one decimal
+place; a count and its whole-number self are already equal and never reach the ladder at all.
+
+**What it moves.** Replaying `account_for` over all **1,280** stored answers that served a typed
+number: **5** had no account before the change, **14** after — 1.1% of the corpus. Three of the
+fourteen sit in answers graded **correct**, and those three are the correction:
+
+| question | run | served | as |
+|---|---|---|---|
+| `t5_which_lever` | R9/claims+repair+rendered+role | 1.0 | `days_per_user` |
+| `t4_retention_trend` | R11 | 83.0 | `active_users` |
+| `t5_not_breadth` | R9 | 50.0 | `active_users` |
+
+Each would now be refused by `governed_numbers` rather than served. No headline rate in any
+published table moves by a visible amount at n≈171 per cell, but the three rows are named here
+rather than absorbed.
+
+**A figure that does not reproduce.** This audit was opened to settle an earlier claim that **66
+published answers would now be refused, 24 of them previously correct**. That number does not
+reproduce at any setting: the real check finds 5 before the fix and 14 after, of which 1 and 3
+respectively were graded correct. The 66 appears to have come from a hand-written approximation
+of the provenance rule rather than from `account_for` itself — a first pass at this audit made the
+same mistake and reported **326**, because a re-implementation does not model governed statements,
+decomposition fields or node aliases. The rule that follows from it: **never re-implement a check
+in order to audit it.** Call the real one.
+
 ## Erratum — the gold set could not say "do not guess" (2026-07-31)
 
 **This changes stored scores. Runs published before this date are not comparable to runs after

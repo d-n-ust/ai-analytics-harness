@@ -35,6 +35,16 @@ def num_match(a: float, b: float) -> bool:
     2685.08 has not served a governed result; it has served an approximation of one, and the
     guardrail that reads this exists to tell those apart.
 
+    The ladder starts at ONE decimal place, not zero. Rounding to a whole number is the same
+    forgiveness everywhere on the number line, and the layer's values are not: on a count it
+    moves 4200.6 to 4201 and loses nothing, while on a rate it moves EVERY value below a half
+    to 0 and every value from a half to one-and-a-half to 1. A declared `0` therefore matched
+    any rate under 50%, which is not a rounding of it in any sense a reader would accept.
+
+    Dropped rather than made conditional on magnitude: a threshold would be a magic number
+    guarding a special case, and the k=0 rung admits nothing at k>=1 that the harness wants.
+    A count and its whole-number self are already equal, so they never reach the ladder.
+
     `isclose` is how the first test is written, not a tolerance added to it. The rounding ladder
     asks whether one number is the ROUNDING of the other, which is false when both carry full
     precision and differ only in the last bits — so a rate rendered as a percentage failed every
@@ -44,4 +54,4 @@ def num_match(a: float, b: float) -> bool:
     a different number."""
     if a == b or isclose(a, b, rel_tol=1e-12, abs_tol=1e-12):
         return True
-    return any(a == round(b, k) or b == round(a, k) for k in range(7))
+    return any(a == round(b, k) or b == round(a, k) for k in range(1, 7))
