@@ -4,26 +4,23 @@ A controlled lab for measuring what makes an LLM "analyst" **reliable** over dat
 small agent that answers business questions over a warehouse, then change **one thing at a time**
 — holding the model and the questions fixed — and watch what it buys you.
 
-The harness runs **four experiments on the same rig**. Three vary one axis of the agent — what it
-*knows*, what it may *do*, what it must *declare* — and the fourth asks which part of the second one
-was actually doing the work.
+The harness runs **three experiments on the same rig**, one per axis of the agent — what it *knows*,
+what it may *do*, and what it must *declare*:
 
 1. **Grounding** — how much does *structure* (a schema, a semantic layer, a knowledge base, a
    metric tree) improve a capable model's answers? *The six-rung grounding ladder.*
 2. **Reliability** — how much do *guardrails* (a typed refusal channel, a coverage check, a
    governed-only data path, an answer verifier) cut **confident-wrong** answers and let the agent **refuse
-   safely** when it should? *The R0–R9 guardrail ladder.*
-3. **Attribution** — which guardrail actually did the work? A ladder can't say, because every rung
-   is only ever seen stacked on the ones below it. So the harness runs *every* coherent combination
-   of the six independent guardrails and computes an exact Shapley value per guardrail, with the
-   efficiency axiom checked to floating point. *24 coalitions, 4,104 answers.*
-4. **Protocol** — when every assertion has to name the governed value it rests on, how much of a
+   safely** when it should? *The R0–R9 guardrail ladder.* Includes an **attribution** pass that runs
+   every coherent combination of the six independent guardrails and computes an exact Shapley value
+   per guardrail — because a ladder cannot say which rung did the work.
+3. **Protocol** — when every assertion has to name the governed value it rests on, how much of a
    served answer can be *checked* — and does being asked for an account change the answer itself?
    *The evidence graph.*
 
-Grounding, reliability and protocol are independent, not one ladder. A declaration is not "stricter"
-than a verifier, so protocol crosses the guardrail cells rather than extending them, and "R5 with
-claims" is a cell you can run.
+The three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
+protocol crosses the guardrail cells rather than extending them, and "R5 with claims" is a cell you
+can run.
 
 Each experiment adds exactly one thing to the *same* agent and re-answers the **same 65 questions**.
 Nothing else changes, so every delta is attributable to that one change — not to prompt luck or
@@ -127,25 +124,26 @@ since refusing everything scores perfectly on what it answers. Three numbers, ne
 | **silent error rate** | of everything asked, the share where it served a confident number that was false — a wrong answer, or an answer to a question that had none |
 | **balanced accuracy** | the mean of the two families' accuracies, so the score describes the agent rather than how many of each kind of question the suite happens to contain |
 
-## Experiment 3 — attribution
+### Attribution — which guardrail actually did the work?
 
-A ladder cannot say which guardrail did the work, because every rung is only ever seen stacked on the
-ones below it. R9 minus one guardrail answers "what does removing it cost *here*", which is not the
-same question. So the harness runs **every coherent combination** of the six independent guardrails
-and computes an exact Shapley value per guardrail — the average marginal contribution over all
-orderings, with the efficiency axiom (the parts must sum to the whole) checked to floating point.
+The ladder cannot say, because every rung is only ever seen stacked on the ones below it. R9 minus
+one guardrail answers "what does removing it cost *here*", which is a different question. So the
+harness runs **every coherent combination** of the six independent guardrails and computes an exact
+Shapley value per guardrail — the average marginal contribution over all orderings, with the
+efficiency axiom (the parts must sum to the whole) checked to floating point. *24 coalitions, 4,104
+answers.*
 
-This adds no ladder and no axis of its own; it is an analysis of experiment 2, run over 24 coalitions
-and 4,104 answers. The finding it produced that no ladder could — one guardrail contributing exactly
-nothing while firing 656 times — is in [Results](#results).
+This is an analysis of the ladder above, not an axis of its own, which is why it sits here rather
+than as an experiment. The finding it produced that no ladder could — one guardrail contributing
+exactly nothing while firing 656 times — is in [Results](#results).
 
-## Experiment 4 — the evidence graph
+## Experiment 3 — the evidence graph
 
 The two ladders judge an answer as one thing. An answer is not one thing: a diagnostic reply averages
 ~5 assertions, and only the single declared number was ever checked. One live run served nine
 assertions, had one verified, and declared it under a metric it had not used. It graded correct.
 
-So the fourth experiment asks the answer to **declare its own structure**. Every successful tool
+So the third experiment asks the answer to **declare its own structure**. Every successful tool
 result carries a handle (`r1`, `r2`), and a result holding many numbers is addressed one value at a
 time — `r1:days_per_user.pct_change`, never a bare `r1`. Each assertion then names either:
 
