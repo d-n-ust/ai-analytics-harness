@@ -53,6 +53,10 @@ class Node:
     rests_on: tuple[Link, ...] = ()
     follows_from: tuple[str, ...] = ()
     facts: tuple[str, ...] = ()   # what governance says about this node, in plain words
+    # Gathered, stated, and cited by no conclusion. Only meaningful where the answer HAS a
+    # conclusion: in an answer that draws none, every measurement is trivially unused and saying
+    # so would be noise on top of the "flat list" note that already covers it.
+    unused: bool = False
 
 
 @dataclass(frozen=True)
@@ -138,6 +142,9 @@ def chain_of(row: dict) -> Chain:
             facts.append("no handle, so no claim could cite it")
         nodes.append(Node(id=handle or "—", kind="call", text=_call_of(step), facts=tuple(facts)))
 
+    # Which claims any conclusion rests on. Empty when nothing concludes, which switches the
+    # orphan test off rather than firing it on every measurement.
+    cited_premises = {premise_id(x) for f in findings for x in f.get("premises") or []}
     for i, f in enumerate(findings):
         c = claims[i] if i < len(claims) else {}
         refs = []
@@ -167,18 +174,34 @@ def chain_of(row: dict) -> Chain:
                           ("bad_premise", "names a claim that does not exist or comes later")):
             if why in (f.get("why") or []):
                 facts.append(said)
+        cid = f.get("id") or f"c{i + 1}"
         nodes.append(Node(
-            id=f.get("id") or f"c{i + 1}",
+            id=cid,
             kind="conclusion" if f.get("premises") else "measurement",
             text=str(f.get("text") or ""),
             rests_on=tuple(refs),
             follows_from=tuple(premise_id(x) for x in f.get("premises") or []),
-            facts=tuple(facts)))
+            facts=tuple(facts),
+            # An ORPHAN: evidence the answer went and got, stated, and then concluded without.
+            # In the cross-domain run the agent measured new_signups falling 24.84% and then
+            # concluded "primarily product, not acquisition" resting on three OTHER claims — so
+            # the assertion that acquisition is not to blame never cites the acquisition numbers.
+            # That is unsupported however deep the graph is, and it is checkable without reading a
+            # word of the prose.
+            unused=bool(cited_premises) and not f.get("premises") and cid not in cited_premises))
 
     notes = []
     if (row.get("steps") or []) and not any_citable:
         notes.append("No call in this run carries a handle, so nothing the agent read could be "
                      "cited — this row predates addressable results.")
+    orphans = [n.id for n in nodes if n.unused]
+    if orphans:
+        notes.append(
+            f"{', '.join(orphans)} " + ("was" if len(orphans) == 1 else "were") +
+            " measured and then not used: no conclusion in this answer rests on "
+            + ("it" if len(orphans) == 1 else "them") + ". Either the answer did not need "
+            + ("it" if len(orphans) == 1 else "them") + ", or a conclusion is standing on less "
+            "evidence than the analyst gathered.")
     if claims and not audit.get("derived"):
         # Said out loud because it is invisible otherwise: a wall of measurements with the verdict
         # sitting among them looks exactly like an argument until you ask what rests on what.

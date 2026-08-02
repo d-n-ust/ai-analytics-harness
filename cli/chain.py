@@ -49,6 +49,8 @@ def render(row: dict, width: int | None = None, colour: bool = True) -> str:
                     f"{paint('· measurements rest on data, conclusions rest on claims', 'dim')}"]
         for n in claims:
             tag = paint("concludes", "cyan") if n.kind == "conclusion" else paint("measures  ", "dim")
+            if n.unused:
+                tag += paint("  · not used by any conclusion", "warn")
             out.append("")
             out.append(f"    {paint(n.id, 'bold')}  {tag}")
             out += _wrap(n.text, width, "        ")

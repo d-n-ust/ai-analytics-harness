@@ -145,6 +145,7 @@ if __name__ == "__main__":
     test_a_flat_list_says_so_and_an_unmeasured_answer_says_so()
     test_a_rendered_measurement_says_only_what_its_citations_say()
     test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once()
+    test_evidence_gathered_and_not_used_is_named()
     print("OK — the chain shows provenance, names one mislabel once, carries the tree's own word "
           "for correlational, and renders a verdict nowhere.")
 
@@ -192,3 +193,39 @@ def test_a_claim_cannot_be_a_measurement_and_a_conclusion_at_once():
                {"text": "both", "sources": ["r1:pct_change"], "premises": ["c1"]}], [DECOMP])
     assert a["mixed_support"] == 1
     assert a["findings"][1]["bound"] is False
+
+
+def test_evidence_gathered_and_not_used_is_named():
+    """An ORPHAN: a measurement the answer went and got, stated, and then concluded without.
+
+    On the cross-domain question the agent measured new_signups falling 24.84% and concluded
+    "primarily product, not acquisition" resting on three OTHER claims — so the assertion that
+    acquisition is not to blame never cites the acquisition numbers. That is unsupported however
+    deep the graph is, and it is checkable without reading a word of the prose. Across every
+    stored answer that draws a conclusion, 162 of 823 measurements (20%) are orphans.
+    """
+    def row(findings):
+        return {"question": "q", "answer": "a", "outcome": "answer", "steps": [DECOMP],
+                "claims": [{} for _ in findings], "claim_audit": {
+                    "n": len(findings), "bound": len(findings),
+                    "derived": sum(1 for f in findings if f.get("premises")),
+                    "findings": findings}}
+
+    def m(cid, ref):
+        return {"id": cid, "text": cid, "sources": [ref], "bound": True,
+                "strength": "exact", "premises": [], "why": []}
+
+    concluded = row([m("c1", "r1:pct_change"), m("c2", "r1:days_per_user.pct_change"),
+                     {"id": "c3", "text": "so frequency", "sources": [], "bound": True,
+                      "strength": "exact", "premises": ["c1"], "why": []}])
+    ch = chain_of(concluded)
+    assert {n.id: n.unused for n in ch.nodes if n.kind != "call"} == {
+        "c1": False, "c2": True, "c3": False}
+    assert any("c2 was measured and then not used" in n for n in ch.notes)
+
+    # An answer that concludes NOTHING has no orphans — every measurement would be trivially
+    # unused, and the "flat list" note already says the real thing about it.
+    flat = row([m("c1", "r1:pct_change"), m("c2", "r1:days_per_user.pct_change")])
+    ch2 = chain_of(flat)
+    assert not [n for n in ch2.nodes if n.unused]
+    assert any("list of findings, not a chain of reasoning" in n for n in ch2.notes)

@@ -171,10 +171,10 @@ graphs:
     in_scored_set: false
     question: "Engagement fell last week. Is this a product problem or an acquisition problem?"
     ideal:
-      assertions: 9
-      derived: 3
-      max_depth: 3
-      max_fan_in: 3
+      assertions: 8
+      derived: 2
+      max_depth: 2
+      max_fan_in: 2
     claims:
       # ── domain A: the identity decomposition ──
       - id: c1
@@ -182,72 +182,83 @@ graphs:
         rests_on: [r1:pct_change]
         strength: exact
       - id: c2
-        text: "Breadth ROSE: active users 836 → 886, +5.98%, contributing −0.46."
-        rests_on: [r1:active_users.pct_change, r1:active_users.contribution_share]
+        text: "Breadth ROSE and pushed the other way: active users 836 → 886, +5.98%, offsetting
+               0.46 of the fall."
+        rests_on: [r1:active_users.pct_change, r1:offsetting.active_users.contribution_share]
         strength: exact
+        why: >-
+          Cites `offsetting`, which the tool now names, rather than leaving a reader to infer
+          direction from a minus sign. This is the fact the whole answer turns on.
       - id: c3
-        text: "Frequency fell: days per user 2.718 → 2.271, −16.44%, contributing +1.42."
-        rests_on: [r1:days_per_user.pct_change, r1:days_per_user.contribution_share]
+        text: "Frequency is the primary driver: days per user 2.718 → 2.271, −16.44%, contributing
+               +1.42 — the largest contribution in the direction the total moved."
+        rests_on: [r1:days_per_user.pct_change, r1:primary_driver.contribution_share]
         strength: exact
+        why: >-
+          CITES the ranking. The tree computes `primary_driver`, so an answer that re-derives it
+          from the three shares makes an uncertified copy of certified arithmetic — the same
+          correction already applied to L2, and not applied here until the tool grew `offsetting`
+          and per-branch influences.
       - id: c4
         text: "Depth was flat: −0.49%, contributing +0.04."
         rests_on: [r1:moments_per_day.pct_change, r1:moments_per_day.contribution_share]
         strength: exact
-      - id: c5
-        text: "Within the identity, frequency is the entire story: +1.42 against +0.04, with
-               breadth pushing the other way."
-        premises: [c2, c3, c4]
-        strength: exact
-        why: "Domain A's conclusion — depth 1."
 
       # ── domain B: the acquisition funnel, measured on its own ──
-      - id: c6
+      - id: c5
         text: "Acquisition weakened sharply on every governed measure: new signups 161 → 121
                (−24.84%), D7 activation 50.0% → 35.5% (−28.93%), referrals 48 → 38 (−20.83%)."
-        rests_on: [r2, r3, r4]
+        rests_on: [r1:active_users.new_signups.pct_change,
+                   r1:active_users.activation_rate.pct_change, r2]
         strength: exact
         why: >-
           One claim, three metrics, because the assertion is about the funnel as a whole and would
-          be false if any of the three had held. Splitting it into three would lose that.
+          be false if any of the three had held. Two of the three now arrive in the SAME
+          decomposition call, keyed by the child they drive — before the pruning fix they were
+          structurally invisible and no run ever fetched them.
 
       # ── the reconciliation: depth 2, then depth 3 ──
-      - id: c7
+      - id: c6
         text: "Acquisition cannot be the cause of last week's fall: breadth is an identity
-               component, it rose, and its contribution to the decline is therefore negative.
+               component, it ROSE, and its contribution to the decline is therefore negative.
                Whatever acquisition did, it did not subtract from this week's total."
-        premises: [c5, c6]
+        premises: [c2, c5]
         strength: exact
         why: >-
-          The load-bearing step, and the one that makes the obvious answer wrong. It is arithmetic
-          over an identity edge, not a judgement — which is why it is `exact` despite being a
-          causal statement.
+          THE load-bearing step, and the one that makes the obvious answer wrong. No governed
+          field states it: the tool reports that breadth rose and offset, and separately that the
+          funnel fell, and nothing joins the two. That join is the derivation.
 
-          It rests on domain A's CONCLUSION (c5), not on the raw breadth figure. Written against
-          c2 instead — which is how I first drafted it — the graph is a wide depth-2 and the third
-          layer never appears: two independent conclusions and a final one is only three deep if
-          the reconciliation itself stands on a conclusion. The validator caught that.
-      - id: c8
+          It rests on the breadth MEASUREMENT (c2) rather than on a conclusion, because the
+          conclusion it used to rest on — "frequency is the entire story" — is now a governed
+          lookup. That is why this graph is two layers and not three: improve the layer and the
+          ideal gets shallower, which is the right direction. Depth measures how much the agent
+          had to work out unaided, and unaided is where the errors live.
+      - id: c7
         text: "The tree carries active users as INFLUENCED by new signups and by activation, both
                at medium confidence, noting that most weekly actives are returning users so the
                link is partial. So the acquisition damage is a forward risk to breadth that has
                not yet reached it."
-        rests_on: [tree:active_users<-new_signups, tree:active_users<-activation_rate]
+        rests_on: [r3]
         strength: correlational
         why: >-
-          Governance as evidence. Without citing the edge this is a plausible-sounding guess about
-          the future; with it, it is a stated property of the model, carrying the confidence the
-          model assigns. The medium confidence is what stops the answer promising a decline.
-      - id: c9
+          Governance as evidence, cited whole — `check_causal_evidence` returns a governed
+          STATEMENT, and results without numbers became addressable so that a claim like this has
+          somewhere to point. Without the citation this is a plausible-sounding guess about the
+          future; with it, it is a stated property of the model carrying the confidence the model
+          assigns, and the medium confidence is what stops the answer promising a decline.
+      - id: c8
         text: "So it is a product problem this week and an acquisition risk next: retention is
                what fell, and the funnel damage should be expected to reach breadth later."
-        premises: [c7, c8]
+        premises: [c6, c7]
         strength: correlational
         why: >-
-          Depth 3 — it rests on the reconciliation (itself depth 2) and on the governed edge.
-          Citing c5 again here would be redundant: c7 already carries it, and a premise list that
-          repeats what its own premises contain inflates fan-in without adding support.
-          Weakest-link makes the whole thing correlational because c8 is, which is correct: the
-          forward half is not proven and the sentence must not read as if it were.
+          Depth 2, and the second thing no governed field says. Weakest-link makes it
+          correlational because c7 is, which is correct: the forward half is not proven and the
+          sentence must not read as if it were.
+
+          These two derivations — the reconciliation and the forward risk — are the whole of what
+          the agent must supply here. Everything else is a citation.
 
 # ─────────────────────────────────────────────────────────────────────────────────
 # THE LADDER, AS ONE TABLE
@@ -255,7 +266,7 @@ graphs:
 #        assertions   derived   depth   fan-in    what it tests
 #   L1        1           0        0       0      restraint — does it stop when there is nothing to reason about
 #   L2        5           1        1       3      the reconciliation — the one step governance cannot do for it
-#   L3        9           3        3       3      holding two domains apart, then reconciling them against arithmetic
+#   L3        8           2        2       2      holding two domains apart, then reconciling them against arithmetic
 #
 # Read across an agent's three runs and the question stops being "how good is its reasoning" and
 # becomes "where does its reasoning stop" — which is the one an engineer can act on.
