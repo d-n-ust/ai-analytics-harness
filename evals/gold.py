@@ -59,12 +59,16 @@ def _validate(case: dict, where: str) -> None:
                              f"not one of {sorted(_CONTEXT_KINDS)}")
 
 
-def load_questions() -> list[dict]:
-    """Every case across evals/**/*.yml, in a stable (path-sorted) order, validated. The
-    name is kept for callers; a case *is* the question dict (id, question, tier, expect)."""
+def load_questions(root: Path = EVALS_DIR) -> list[dict]:
+    """Every case across <root>/**/*.yml, in a stable (path-sorted) order, validated. The
+    name is kept for callers; a case *is* the question dict (id, question, tier, expect).
+
+    `root` defaults to the frozen case set. A probe passes its own directory so its throwaway
+    questions are loaded by the same validator and the same ordering, without ever joining the
+    frozen set — which would silently move the denominator under every published number."""
     cases: list[dict] = []
     seen: set[str] = set()
-    for path in sorted(EVALS_DIR.rglob("*.yml")):
+    for path in sorted(root.rglob("*.yml")):
         doc = yaml.safe_load(path.read_text()) or {}
         for case in doc.get("cases", []):
             _validate(case, path.name)
@@ -75,12 +79,12 @@ def load_questions() -> list[dict]:
     return cases
 
 
-def compute_gold(con) -> dict[str, float | None]:
+def compute_gold(con, cases: list[dict] | None = None) -> dict[str, float | None]:
     """Map case id -> gold number (None when the case declares no gold_sql). The gold_sql
     lives inside `expect`; for a refuse case it is provenance (the trap value), used by the
     grader only to tell a wrong number from a right-but-should-refuse one."""
     golds: dict[str, float | None] = {}
-    for case in load_questions():
+    for case in (load_questions() if cases is None else cases):
         sql = case["expect"].get("gold_sql")
         if sql:
             val = con.execute(sql).fetchone()[0]

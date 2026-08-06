@@ -26,6 +26,7 @@ from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
+from .provenance import ContextLedger
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
@@ -349,9 +350,21 @@ class _Run:
                       acts=self.acts, **kw)
 
 
-def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
+def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
+              record_context: bool = False) -> Answer:
     run = _Run(question, grounding, model, verifier_model)
     convo = Conversation.opening(grounding.system, question)
+
+    def done(answer: Answer) -> Answer:
+        """Attach what the model was actually shown, on every exit path.
+
+        Off by default: the blobs are the whole context, and the frozen 65-question grid has no
+        use for them. An experiment whose treatment IS the context turns it on, because there the
+        difference between "the config said so" and "the model read it" is the measurement."""
+        if record_context:
+            answer.context = ContextLedger.of(convo)
+        return answer
+
     nudges = 0
     # The budget, which one thing may extend. Corrections were skipped on the closing turn
     # because there was no next turn to correct in, and that exemption became the residue: every
@@ -400,13 +413,13 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                     budget += 1
                 convo.observe([correction.for_call(turn.exit_call)])
                 continue
-            return run.finish(turn.exit_call, it + 1)
+            return done(run.finish(turn.exit_call, it + 1))
         if results:
             convo.observe(results)
             continue
         nudges += 1
         if nudges > 1:
-            return run.gave_up(turn.text, it + 1)
+            return done(run.gave_up(turn.text, it + 1))
         convo.say(_CLOSING_NUDGE)
 
-    return run.exhausted(max_iters)
+    return done(run.exhausted(max_iters))

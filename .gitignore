@@ -13,6 +13,10 @@ warehouse/*.duckdb.wal
 # Per-run outputs are disposable dev iterations. Curated evidence lives in results/published/.
 results/runs/
 results/latest
+# Probe runs are the same class: cheap, frequent, and regenerated whenever a treatment changes.
+# A probe worth keeping is promoted into results/published/ like any other evidence — which is
+# also the only way its context blobs survive, since nothing else on disk holds them.
+results/probes/
 
 # OS
 .DS_Store

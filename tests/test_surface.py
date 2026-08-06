@@ -73,6 +73,16 @@ def _render(con) -> str:
         out.append(f"system: sha256={sys_hash} chars={len(g.system)}")
         out.append(json.dumps(g.toolbox.specs(), indent=2, sort_keys=True))
         out.append("")
+    # The governed catalogue, RENDERED and once. It reaches the model as a `list_metrics` result
+    # rather than through the prompt or a spec, which is why it went unpinned for so long — and it
+    # is a treatment as surely as any tool description: rewording one metric's description changes
+    # which metric the agent picks. Rendering it (like the judge's instructions, and unlike the
+    # system prompt) is what makes a layer edit a readable diff instead of a moved hex string.
+    # Once, not per cell: it does not vary with rung, guardrail or protocol.
+    catalog = build_grounding(con, 3, guardrails=LADDER[1]).semantic.list_metrics_text()
+    out.append("=== governed catalogue (default view) ===")
+    out.append(catalog)
+    out.append("")
     out.append("=== verifier ===")
     out.append(f"prompt_fingerprint: {prompt_fingerprint()}")
     # The judge's instructions and verdict schema are RENDERED, not hashed like the agent's system

@@ -133,6 +133,46 @@ def cmd_ambiguity(a):
     print(report(metrics, nodes))
 
 
+def _stored_run(a):
+    """The run to read: --run, or the newest experiment run.
+
+    `results/probes/` is searched only as a fallback. It holds the twelve runs of experiment 01 from
+    before it was migrated off the forked-layer probe; they are still readable, and still the
+    evidence behind numbers in the write-ups, but nothing produces new ones."""
+    import json
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    if a.run:
+        d = pathlib.Path(a.run)
+        d = d if d.is_absolute() else root / d
+    else:
+        runs = (sorted((root / "results" / "experiments").glob("*/run.json"))
+                or sorted((root / "results" / "probes").glob("*/run.json")))
+        if not runs:
+            raise SystemExit("no runs under results/experiments — run `bench experiment` first")
+        d = runs[-1].parent
+    blobs_path = d / "context_blobs.json"
+    return (json.loads((d / "run.json").read_text()),
+            json.loads(blobs_path.read_text()) if blobs_path.exists() else {}, d)
+
+
+def cmd_context(a):
+    """What the model was SHOWN, per run — the ledger, the full text, or a diff between two arms.
+
+    `trace` answers "what did the agent do"; this answers "what did it read", which is the only
+    question that can confirm an experiment whose treatment is the context actually happened."""
+    from cli.context import render_diff, render_ledger
+    run, blobs, d = _stored_run(a)
+    print(f"# {d}\n")
+    if a.diff:
+        arms = tuple(x.strip() for x in a.diff.split(","))
+        if len(arms) != 2:
+            raise SystemExit("--diff takes exactly two arms, e.g. --diff B_prose,C_typed")
+        print(render_diff(run, blobs, arms, a.source or "list_metrics", qid=a.qid))
+    else:
+        print(render_ledger(run, blobs, arm=a.arm, qid=a.qid, source=a.source, full=a.full))
+
+
 def cmd_run(a):
     from evals.runner import run_experiment
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
@@ -254,6 +294,17 @@ def main() -> None:
     sub.add_parser("ambiguity",
                    help="lint the governed layer for names that can be confused"
                    ).set_defaults(func=cmd_ambiguity)
+
+    sp = sub.add_parser("context", help="what the model was SHOWN in an experiment run (ledger / full text / diff)")
+    sp.add_argument("--run", default=None, help="run dir (default: the newest experiment run)")
+    sp.add_argument("--arm", default=None, help="one arm, e.g. C_typed")
+    sp.add_argument("--qid", default=None, help="one question id")
+    sp.add_argument("--source", default=None,
+                    help="show only this tool's results (--diff defaults to list_metrics)")
+    sp.add_argument("--full", action="store_true", help="print the exact text of every entry, untruncated")
+    sp.add_argument("--diff", default=None, metavar="ARM_A,ARM_B",
+                    help="unified diff of --source between two arms — the check that a treatment is real")
+    sp.set_defaults(func=cmd_context)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 

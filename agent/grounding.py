@@ -35,20 +35,28 @@ class Grounding:
     protocol: Protocol = field(default_factory=Protocol)
 
     def fingerprint(self) -> str:
-        """A short, stable hash of everything the model is shown: the assembled system prompt and
-        the exact tool specs (names, descriptions, enums, required fields).
+        """A short, stable hash of everything the model is shown: the assembled system prompt, the
+        exact tool specs (names, descriptions, enums, required fields), and the governed catalogue.
 
         The tool specs are as much a treatment as the prompt — a reworded description or a
         widened enum changes the agent's behaviour just as surely — yet nothing else records
         them. Two runs whose fingerprints differ are not comparable however alike their labels
         read, and a refactor that was meant to leave the model's view untouched proves it by
-        leaving this unchanged."""
+        leaving this unchanged.
+
+        The catalogue belongs here for the same reason and was missing. It reaches the model as a
+        `list_metrics` RESULT rather than through the prompt or a spec, so a run on a different
+        semantic layer — or the same layer rendered differently — used to hash identically to its
+        own control. Any experiment whose treatment IS the layer was silently unfingerprinted, and
+        the guarantee above was false in exactly the case it exists to protect."""
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
+        if self.semantic is not None:
+            surface += "\n" + self.semantic.list_metrics_text()
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
 def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
-                    protocol: Protocol | None = None) -> Grounding:
+                    protocol: Protocol | None = None, spec_path=None) -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -67,7 +75,9 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     p = protocol if protocol is not None else Protocol()
     system = system_prompt(rung, g, p)
     caps = capabilities(rung)
-    semantic = SemanticLayer(con) if caps.semantic else None
+    # `spec_path` is the semantic-maturity experiment's treatment: WHICH governed layer the agent
+    # is given. It defaults to the shipped one, so every existing caller keeps its behaviour.
+    semantic = SemanticLayer(con, **({"spec_path": spec_path} if spec_path else {})) if caps.semantic else None
     tree = MetricTree(semantic) if caps.tree else None
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p))
