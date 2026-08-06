@@ -79,7 +79,8 @@ from agent.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.loop import run_agent
 from agent.provenance import Expectation
-from agent.providers import get_model
+from agent.models import DEFAULT_MODEL
+from agent.providers import get_model, get_verifier
 from agent.rungs import capabilities
 from evals.gold import compute_gold, load_questions
 from evals.grade import grade
@@ -435,7 +436,7 @@ def vocabulary_audit(cases: list, layers: dict) -> list[dict]:
 
 # ---------------------------------------------------------------------------- running
 
-def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, reps) -> dict:
+def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, verifier, reps) -> dict:
     grounding = build_grounding(con, study.rung, guardrails=LADDER[study.guardrails], spec_path=spec_path)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
@@ -445,7 +446,8 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, 
     out = []
     for rep in range(reps):
         for case in cases:
-            answer = run_agent(case["question"], grounding, model, record_context=True)
+            answer = run_agent(case["question"], grounding, model,
+                               verifier_model=verifier, record_context=True)
             metric, segment = arm.reach(case["expect"].get("metric"))
             graded = {**case, "expect": {**case["expect"], **({"metric": metric} if metric else {})}}
             g = grade(answer, graded, golds.get(case["id"]))
@@ -537,7 +539,7 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
              if discordant < 6 else ""))
 
 
-def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, args) -> Path:
+def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, args, model, verifier) -> Path:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     kind = f"{study.name}-mock" if args.mock else study.name
     out = ROOT / "results" / "experiments" / f"{stamp}-{kind}"
@@ -551,6 +553,11 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         "experiment": study.name, "title": study.title, "rung": study.rung, "tests_rules": study.tests_rules,
         "guardrails": f"R{study.guardrails}", "base": str(study.base.relative_to(ROOT)),
         "model": args.model, "mock": args.mock, "reps": args.reps,
+        # Reasoning effort is a treatment, not a setting: a row that does not carry it cannot
+        # be compared with one run at a different depth. Read back off the model rather than
+        # off the request, because a model below the requested floor runs at its own.
+        "reasoning": model.reasoning,
+        "verifier_model": verifier.spec.name, "verifier_reasoning": verifier.reasoning,
         "arms": {a: {"fingerprint": results[a]["fingerprint"], "level": study.arms[a].level,
                      "claim": study.arms[a].claim, "metrics": len(layers[a].metrics)} for a in results},
         "vocabulary_audit": vocab, "gold": golds, "cases": cases,
@@ -593,16 +600,22 @@ def run(args) -> Path:
     vocab = vocabulary_audit(cases, layers)
     golds = compute_gold(con, cases)
     model = get_model(args.model, mock=args.mock)
+    # The judge is built even when the rung's guardrails leave it idle: which model would
+    # have checked the answer is a property of the run, and a row that cannot name it cannot
+    # be compared against one from a rung where the judge did fire.
+    verifier = get_verifier(args.model, mock=args.mock)
 
     print(f"study: {study.name} — {study.title}")
-    print(f"rung {study.rung} · guardrails R{study.guardrails} · model {args.model}"
+    print(f"rung {study.rung} · guardrails R{study.guardrails}"
+          f" · {args.model}/{model.reasoning}"
+          f" · judge {verifier.spec.name}/{verifier.reasoning}"
           + (" (MOCK)" if args.mock else "")
           + f" · {len(cases)} questions x {args.reps} reps x {len(arms)} arms")
     print("gold: " + ", ".join(f"{k}={v:g}" for k, v in golds.items() if v is not None))
 
-    results = {a: _run_arm(con, study, study.arms[a], paths[a], cases, golds, model, args.reps) for a in arms}
+    results = {a: _run_arm(con, study, study.arms[a], paths[a], cases, golds, model, verifier, args.reps) for a in arms}
     _summarise(study, results, cases, vocab)
-    out = _persist(study, results, cases, golds, vocab, layers, args)
+    out = _persist(study, results, cases, golds, vocab, layers, args, model, verifier)
     print(f"\nwrote {out}")
     print(f"inspect what the model saw:  ./bench context --run {out.relative_to(ROOT)} --full")
     return out
@@ -612,7 +625,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("experiment")
     ap.add_argument("--reps", type=int, default=3)
-    ap.add_argument("--model", default="gpt-5.6-terra")
+    ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
     ap.add_argument("--arms", default=None, help="comma-separated subset")
     ap.add_argument("--only", default=None, help="comma-separated question ids")

@@ -12,6 +12,22 @@ from dataclasses import dataclass
 # of it, and `off`/`disabled` are aliases callers use for the weakest.
 EFFORT_LADDER = ("none", "minimal", "low", "medium", "high", "xhigh")
 
+# THE HARNESS'S STANDARD PAIR, in one place because it used to be a literal in five and they were
+# free to disagree. This is the pair the published ladders were run on, and each half is chosen:
+#
+#   the agent at its FLOOR      every experiment here varies the CONTEXT. Reasoning depth is a rival
+#                               explanation for any result, so it is held at the cheapest setting
+#                               the model accepts rather than left to drift with a model swap.
+#   the judge one notch UP      checking someone else's answer is the harder job, and a judge that
+#                               thinks no harder than the worker it audits mostly agrees with it.
+#
+# `minimal` rather than `none` because gpt-5-mini 400s on `none` — `none` is not its floor, and
+# a request below a model's floor lands on the floor via `effort_for`. Terra reads both as `none`,
+# so naming `minimal` here changes nothing for it while being true of the default model.
+DEFAULT_MODEL = "gpt-5-mini"
+DEFAULT_REASONING = "minimal"
+DEFAULT_VERIFIER_REASONING = "low"
+
 
 @dataclass(frozen=True)
 class ModelSpec:

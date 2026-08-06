@@ -19,7 +19,7 @@ import json
 import os
 
 from .conversation import ToolCall, Turn, Usage
-from .models import MODEL_SPECS, ModelSpec
+from .models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING, MODEL_SPECS, ModelSpec
 
 MAX_TOKENS = 4096
 # Transient provider failures (429 / 5xx / connection / timeout) must not become data-corrupting
@@ -31,7 +31,9 @@ MAX_RETRIES = 6
 REQUEST_TIMEOUT = 120.0   # seconds — caps a hung request so a sequential run can't stall forever
 
 
-def _load_env() -> None:
+def load_env() -> None:
+    """Read `.env` from the repo root. Public because more than one subsystem needs a key and the
+    path to that file should be written down once."""
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -60,7 +62,7 @@ def _anthropic_blocks(turn: Turn) -> list:
 class AnthropicModel:
     def __init__(self, spec: ModelSpec):
         import anthropic
-        _load_env()
+        load_env()
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
         self.spec = spec
@@ -122,7 +124,7 @@ class AnthropicModel:
 class OpenAIModel:
     def __init__(self, spec: ModelSpec):
         from openai import OpenAI
-        _load_env()
+        load_env()
         if not os.environ.get(spec.api_key_env):
             raise RuntimeError(f"{spec.api_key_env} is not set (add it to .env).")
         self.spec = spec
@@ -132,7 +134,7 @@ class OpenAIModel:
         # required for function tools on gpt-5.6 via chat-completions. A model that will not go
         # that low runs at its own floor instead — `.reasoning` then reports what was actually
         # sent, which is what the run records.
-        self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", "none"))
+        self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", DEFAULT_REASONING))
 
     @staticmethod
     def _render_chat(convo) -> list:
@@ -297,3 +299,19 @@ def get_model(name: str, mock: bool = False, reasoning: str | None = None):
             model.reasoning = spec.effort_for(reasoning)
         return model
     return AnthropicModel(spec)
+
+
+def get_verifier(model_name: str, mock: bool = False):
+    """The judge that checks an answer, as its own instance rather than the agent reused.
+
+    Two things differ from the worker and both are deliberate: it runs one notch up the effort
+    ladder, because checking an answer is harder than producing one and a judge that thinks no
+    harder than the worker it audits mostly agrees with it; and `VERIFIER_MODEL` can point it at a
+    different model entirely, so a run can be audited by something other than itself.
+
+    One reader for one decision. This resolution lived only inside the eval runner, so the study
+    engine ran no verifier at all — not by choice, but because the three lines that build one were
+    somewhere else. Read the name back off `.spec.name` to record it.
+    """
+    return get_model(os.environ.get("VERIFIER_MODEL") or model_name, mock=mock,
+                     reasoning=os.environ.get("VERIFIER_REASONING", DEFAULT_VERIFIER_REASONING))

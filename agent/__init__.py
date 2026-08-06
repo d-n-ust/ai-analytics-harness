@@ -19,7 +19,10 @@ from __future__ import annotations
 __all__ = ["ask_one"]
 
 
-def ask_one(question: str, rung: int, model: str = "gpt-5.6-terra", *, guardrails=None,
+from .models import DEFAULT_MODEL
+
+
+def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
             protocol=None, mock: bool = False, verbose: bool = False, con=None,
             trace: bool = False):
     """Ask one question at one rung and return the typed Answer.

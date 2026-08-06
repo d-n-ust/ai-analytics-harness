@@ -16,7 +16,7 @@ Run:  OPENAI_REASONING=low python evaluation/verifier_eval.py
 from __future__ import annotations
 
 from agent.guardrails.judge import verify_trajectory
-from agent.providers import get_model
+from agent.providers import get_verifier
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 
@@ -45,7 +45,7 @@ CASES = [
 def main():
     con = open_warehouse()
     sem = SemanticLayer(con)
-    model = get_model("gpt-5-mini")
+    model = get_verifier("gpt-5-mini")   # the judge, at the judge's effort
 
     right = 0
     print(f"{'case':18} {'expect':6} {'verdict':7} {'mismatch':11} ok  reason")
