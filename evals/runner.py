@@ -188,6 +188,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "surface_fingerprint": surface,
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
+            "sampling": model.sampling, "verifier_sampling": verifier_model.sampling,
             "verifier_stance": verifier_stance,
             "claim_framing": proto.framing,
             # WHICH declarations were asked for. `claim_framing` says how they were asked for and

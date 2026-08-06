@@ -71,6 +71,22 @@ class AnthropicModel:
         # thinking config (disabled on all our specs), so this is "off" unless thinking is enabled.
         self.reasoning = "on" if (spec.thinking and spec.thinking.get("type") != "disabled") else "off"
 
+    @property
+    def sampling(self) -> dict:
+        """What governs this model's randomness, as actually sent — recorded on every run.
+
+        A row that does not carry this cannot be compared with one from a different setting, and
+        the question "was the temperature too high" should be answerable from a stored result
+        rather than by reading the provider code. Anthropic accepts a temperature only while
+        extended thinking is off; the agent loop passes none either way, so the provider default
+        applies.
+        """
+        thinking_on = self.reasoning == "on"
+        return {"thinking": self.reasoning,
+                "temperature": None,
+                "temperature_note": ("not accepted while extended thinking is on" if thinking_on
+                                     else "not sent by the agent loop; provider default applies")}
+
     @staticmethod
     def _render(convo) -> list:
         """The conversation as Anthropic messages. An assistant turn is echoed from the reply
@@ -135,6 +151,22 @@ class OpenAIModel:
         # that low runs at its own floor instead — `.reasoning` then reports what was actually
         # sent, which is what the run records.
         self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", DEFAULT_REASONING))
+
+    @property
+    def sampling(self) -> dict:
+        """What governs this model's randomness, as actually sent.
+
+        For a reasoning model there is NO temperature knob: the code sends `reasoning_effort` and
+        never a temperature, and the API would reject one. So repeat-to-repeat variation on these
+        models is inherent sampling rather than a setting anyone chose, and it cannot be turned
+        down — which is the answer to the obvious question about an unstable cell, and it should be
+        answerable from the row rather than from this file.
+        """
+        if self.spec.supports_reasoning_effort:
+            return {"reasoning_effort": self.reasoning, "temperature": None,
+                    "temperature_note": "reasoning model — takes reasoning_effort, not temperature"}
+        return {"reasoning_effort": None, "temperature": None,
+                "temperature_note": "not sent by the agent loop; provider default applies"}
 
     @staticmethod
     def _render_chat(convo) -> list:
@@ -278,6 +310,11 @@ class MockModel:
     def __init__(self, spec: ModelSpec):
         self.spec = spec
         self.reasoning = "mock"
+
+    @property
+    def sampling(self) -> dict:
+        return {"reasoning_effort": "mock", "temperature": None,
+                "temperature_note": "mock model — scripted, no sampling"}
 
     def respond(self, convo, tools: list, force_tool: str | None = None,
                 temperature: float | None = None, require_tool: bool = False) -> Turn:

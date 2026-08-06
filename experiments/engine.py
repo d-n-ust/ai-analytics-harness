@@ -541,8 +541,14 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
 
 def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, args, model, verifier) -> Path:
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    kind = f"{study.name}-mock" if args.mock else study.name
-    out = ROOT / "results" / "experiments" / f"{stamp}-{kind}"
+    # Mirror the source layout: results/experiments/<experiment>/<stamp>-<study>. A study's name
+    # contains a slash now, so gluing the timestamp to the whole thing attached it to the
+    # EXPERIMENT and made the study a subdirectory — `20260806-234210-04_semantic_layer_health/
+    # 02_segment_in_agg-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
+    # matched them, so cleanup silently skipped every mock run it was meant to remove.
+    experiment, _, study_name = study.name.partition("/")
+    kind = f"{study_name}-mock" if args.mock else study_name
+    out = ROOT / "results" / "experiments" / experiment / f"{stamp}-{kind}"
     # The exact layers this run used, kept beside its numbers. `.build/` is scratch and is
     # regenerated; this copy is the evidence, and without it a stored result names a treatment
     # nobody can reconstruct.
@@ -557,7 +563,12 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         # be compared with one run at a different depth. Read back off the model rather than
         # off the request, because a model below the requested floor runs at its own.
         "reasoning": model.reasoning,
+        # What governed randomness, as sent. Repeat-to-repeat disagreement within one cell is the
+        # thing that decides whether a between-arm gap is measurable at all, so a row that cannot
+        # say what the sampling settings were cannot be compared with a row from different ones.
+        "sampling": model.sampling,
         "verifier_model": verifier.spec.name, "verifier_reasoning": verifier.reasoning,
+        "verifier_sampling": verifier.sampling,
         "arms": {a: {"fingerprint": results[a]["fingerprint"], "level": study.arms[a].level,
                      "claim": study.arms[a].claim, "metrics": len(layers[a].metrics)} for a in results},
         "vocabulary_audit": vocab, "gold": golds, "cases": cases,
