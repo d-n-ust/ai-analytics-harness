@@ -21,29 +21,22 @@ from __future__ import annotations
 
 import difflib
 import json
-import shutil
-import sys
 import textwrap
 
+from cli.style import cut as _short  # noqa: F401
+from cli.style import paint as _paint  # noqa: F401
+from cli.style import use_colour as _use_colour  # noqa: F401
+from cli.style import width as _width  # noqa: F401
+
 # Same palette as trace.py — one vocabulary of colour across the CLI.
-_C = {"dim": "\033[2m", "bold": "\033[1m", "off": "\033[0m",
-      "ok": "\033[32m", "warn": "\033[33m", "bad": "\033[31m", "cyan": "\033[36m"}
 
 # The source under test. Marked in the ledger so the eye lands on the treatment rather than
 # counting rows to find it.
 TREATMENT = "list_metrics"
 
 
-def _paint(colour: bool):
-    return (lambda s, c: f"{_C[c]}{s}{_C['off']}") if colour else (lambda s, _c: s)
 
 
-def _use_colour() -> bool:
-    return sys.stdout.isatty()
-
-
-def _width() -> int:
-    return min(shutil.get_terminal_size((100, 24)).columns, 110)
 
 
 # A terminal call carries the whole answer and its explanation, which is prose, not an argument

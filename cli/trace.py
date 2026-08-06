@@ -22,29 +22,20 @@ import textwrap
 
 from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
 from agent.protocol import split_config
+from cli.style import cut as _short
+from cli.style import paint as _paint  # noqa: F401
+from cli.style import use_colour as _use_colour  # noqa: F401
+from cli.style import width as _width  # noqa: F401
 from evidence.chain import premise_id
 
 from .sqlfmt import format_sql
 
 # Terminal styling, degraded to nothing when the output is not a terminal.
-_C = {"dim": "\033[2m", "bold": "\033[1m", "off": "\033[0m",
-      "ok": "\033[32m", "warn": "\033[33m", "bad": "\033[31m", "cyan": "\033[36m"}
 # REPAIR belongs here: the model has no say in being handed its answer back, so it is enforced in
 # the sense this split means — it holds regardless of whether the model cooperates. The line below
 # calls the other column "works only if the model cooperates", which a repair plainly does not.
 _ENFORCED = {Position.ACTION_SPACE, Position.BEFORE, Position.AFTER, Position.REPAIR}
 
-
-def _paint(colour: bool):
-    return (lambda s, c: f"{_C[c]}{s}{_C['off']}") if colour else (lambda s, _c: s)
-
-
-def _short(value, width: int) -> str:
-    """One line of a value, cut to width. Args and results are often long; a trace that wraps
-    for twenty lines is not readable, and the full text is in the row."""
-    text = value if isinstance(value, str) else json.dumps(value, default=str)
-    text = " ".join(str(text).split())
-    return text if len(text) <= width else text[: width - 1] + "…"
 
 
 def _guardrail_line(config: str, paint) -> list[str]:

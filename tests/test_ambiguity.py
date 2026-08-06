@@ -172,15 +172,48 @@ def test_recall_against_stored_confusions_is_not_evidence_the_lint_works():
         "being folded into a recall number")
 
 
-if __name__ == "__main__":
-    test_the_dangerous_pair_is_the_one_that_differs_only_in_scope()
-    test_a_tree_node_is_a_third_public_name_and_is_judged_by_what_it_resolves_to()
-    test_sharing_only_a_qualifier_is_not_a_collision()
-    test_an_unambiguous_layer_reports_nothing()
-    test_recall_against_stored_confusions_is_not_evidence_the_lint_works()
-    print("OK — the lint finds the scope-only pair, judges a tree node by what it resolves to, "
-          "ignores qualifier collisions, and does NOT out-recall a trivial baseline on this "
-          "layer, which the last test asserts rather than hides.")
+# -- the coverage audit ------------------------------------------------------ #
+
+def test_the_audit_trusts_itself_only_when_the_control_ranks_first():
+    """The audit reads a COMMITTED vector cache, so this runs with no key and no network.
+
+    The control is the pair this lint proves independently is the layer's worst. A model or
+    configuration that cannot rank it first is misconfigured, and that check has already caught one
+    encoder that ranked it 17th while producing confident-looking numbers for every other row."""
+    from pathlib import Path
+
+    import yaml
+
+    from semantic.similarity import audit
+    root = Path(__file__).resolve().parent.parent
+    metrics = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())["metrics"]
+    r = audit(metrics)
+    assert r.control_rank == 1 and r.trustworthy, (
+        f"control came back at rank {r.control_rank}; the audit is not readable")
+    assert abs(r.mean - 0.327) < 0.01 and abs(r.sd - 0.093) < 0.01, (
+        f"the score distribution moved: mean {r.mean:.3f} sd {r.sd:.3f} — z values are not comparable "
+        "with anything published from the previous distribution")
+
+
+def test_the_audit_reports_what_the_lint_cannot_reach():
+    """The audit's one job. `new_signups` and `referrals` share no name token, so `confusable_pairs`
+    never compares them — but both are count(*) in `count` units over a period, and their synonyms
+    carry 'new users' and 'referred users'. A swap returns a plausible number.
+
+    Pinned because it is the only evidence this module earns its dependency."""
+    from pathlib import Path
+
+    import yaml
+
+    from semantic.ambiguity import considers
+    from semantic.similarity import audit
+    root = Path(__file__).resolve().parent.parent
+    metrics = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())["metrics"]
+
+    assert not considers("new_signups", "referrals"), "the lint now compares this pair; audit is moot"
+    found = {frozenset((p.a, p.b)) for p in audit(metrics).new_findings()}
+    assert frozenset(("new_signups", "referrals")) in found, (
+        f"the audit stopped surfacing the one pair outside the lint's reach: {found}")
 
 
 def test_the_member_lint_separates_a_defect_from_advice():
@@ -209,3 +242,16 @@ def test_the_member_lint_separates_a_defect_from_advice():
         {"channel": {"paid_search": ["ads"]}, "platform": {"android": ["ads"]}})}
     assert clash["ads"].kind == "collision" and clash["ads"].severity == "high"
     assert set(clash["ads"].claimed_by) == {"channel.paid_search", "platform.android"}
+
+
+if __name__ == "__main__":
+    # Collected rather than listed by hand, matching the other suites. The hand-written list this
+    # replaces had omitted `test_the_member_lint_separates_a_defect_from_advice` since it was
+    # written, so that test had never run once — green the whole time, checking nothing.
+    for name, fn in sorted(globals().items()):
+        if name.startswith("test_"):
+            fn()
+    print("OK — the lint finds the scope-only pair, judges a tree node by what it resolves to,\n"
+          "ignores qualifier collisions, separates a member defect from advice, and does NOT\n"
+          "out-recall a trivial baseline. The coverage audit reproduces from its committed cache,\n"
+          "ranks its control first, and surfaces the one pair the lint cannot reach.")

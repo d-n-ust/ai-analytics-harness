@@ -17,12 +17,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import yaml
-
 from dataclasses import replace
 
-from experiments.engine import (Study, _longest_shared_span, apply_patch, check_candidate_count,
-                                check_same_numbers, vocabulary_audit)
+import yaml
+
+from experiments.engine import (
+    Study,
+    _longest_shared_span,
+    apply_patch,
+    check_candidate_count,
+    check_same_numbers,
+    vocabulary_audit,
+)
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 
