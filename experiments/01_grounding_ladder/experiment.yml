@@ -1,0 +1,35 @@
+# Experiment 1 — the grounding ladder.
+#
+# How much of an AI analyst's reliability comes from what you GROUND it in, rather than from the
+# model? The rungs add context one layer at a time — raw star schema, then the semantic layer, then
+# examples, knowledge, the metric tree — and each rung is measured on the same frozen questions.
+
+title: "The grounding ladder"
+question: "How much does each layer of grounding buy, and where does the curve flatten?"
+status: shipped
+
+article:
+  slug: agentic-analytics-grounding
+  repo: decisionspine-site
+  published: 2026-07-17
+
+# HOW ITS RUNS WERE DRIVEN. This project predates the declarative study runner, so there are no
+# `study.yml` files here and looking for one is wasted time. Its sweeps were CLI-driven:
+#
+#     ./bench run --rungs 0-7 --model <m>
+#
+# The rung definitions are code (`agent/rungs.py`), not configuration, because a rung is a set of
+# capabilities the harness must actually build. Converting these to declarative studies is possible
+# and not yet worth it: the article is shipped and the numbers are published.
+runs: cli
+
+# WHERE ITS ARTIFACTS LIVE. Pointers, never copies — every path below is loaded by the harness or
+# cited by the article, so moving it here would break a path or shift the frozen denominator.
+evidence:
+  - docs/GROUNDING.md                         # what each rung is, and why it exists
+  - results/published/grounding/summary.md    # the published numbers
+  - agent/rungs.py                            # the rungs themselves, as capabilities
+  - evals/cases/                              # the frozen question set every rung is scored on
+
+notes:
+  - notes/reference-ladder-first-run.json     # the first full ladder run, kept as a reference point

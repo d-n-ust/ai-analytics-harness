@@ -1,0 +1,43 @@
+# Experiment 2 — the reliability ladder.
+#
+# Grounding decides what the analyst CAN answer; guardrails decide what it declines to answer. The
+# ladder adds one guardrail at a time — abstention, tool checks, coverage, resolution, transparency,
+# governed numbers, output validation, trajectory verification — and asks what each one is worth.
+#
+# The headline finding is the one the article is named for: a typed refusal is a feature, not a
+# failure, and most of the damage an AI analyst does is a confident wrong number rather than a
+# missing one.
+
+title: "The reliability ladder"
+question: "What is each guardrail actually worth, and can an analyst be taught to say 'I don't know'?"
+status: shipped
+
+article:
+  slug: teaching-an-ai-analyst-to-say-i-dont-know
+  repo: decisionspine-site
+  published: 2026-07-27
+
+# HOW ITS RUNS WERE DRIVEN. CLI-driven, like experiment 01 — `./bench run --ladder 0-9`. A guardrail
+# is code that intercepts a tool call, so the ladder cannot be expressed as data the way a semantic
+# layer can. What IS declarative here is the frozen case set under `evals/cases/`.
+runs: cli
+
+evidence:
+  - docs/RELIABILITY.md                # the ladder, rung by rung
+  - docs/TRUST-MODEL.md
+  - results/published/2026-07/         # the published grid: cells, tiers, tools, raw runs
+  - results/published/shapley-proof/   # the restricted-Shapley attribution
+  - agent/guardrails/                  # before / after / judge / disclosure / action_space
+  - evals/cases/reliability/
+
+notes:
+  # Registered BEFORE any ablation run, so its predictions are predictions. Its own outcome note
+  # records that the pilot falsified them — removing one input guardrail showed no effect because a
+  # backstop covered for it, so leave-one-out is confounded here and the design pivoted to the
+  # cumulative ladder plus restricted Shapley. That pivot is why this file is worth keeping.
+  - notes/loo_preregistration.md
+  - notes/r6-semantic-tests.md         # SUPERSEDED: planned an R6-R11 ladder; R0-R9 shipped
+  # The audit that motivated harness v2: it found refusals being credited as correct, and diagnostic
+  # gold words already present in the model's context before it answered — so a keyword grader could
+  # not tell reasoning from echo. Everything downstream of it depends on this having been done.
+  - notes/integrity-audit/

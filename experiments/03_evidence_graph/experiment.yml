@@ -1,0 +1,29 @@
+# Experiment 3 — the evidence graph.
+#
+# The first two experiments treat an answer as a number plus a refusal decision. This one treats it
+# as a GRAPH: every claim carries the tool results it rests on, so "where did this number come from"
+# has a mechanical answer rather than a narrated one. The agent is rearchitected around producing
+# that graph, and the graph is what gets audited.
+
+title: "The evidence graph"
+question: "If every claim must cite the tool result it rests on, what breaks — and what gets caught?"
+status: shipped
+
+article:
+  slug: the-evidence-graph-teaching-an-ai-analyst-to-show-its-work
+  repo: decisionspine-site
+  published: 2026-08-02
+
+# HOW ITS RUNS ARE DRIVEN. Not a sweep at all: this is an architecture plus the evals that hold it
+# to its promises. `evidence/` is production code on the main answer path, not an arm of anything,
+# so there is nothing here for the declarative study runner to run.
+runs: code
+
+evidence:
+  - docs/EVIDENCE-GRAPH.md            # what the graph is and what it guarantees
+  - docs/EVIDENCE-GRAPH-DESIGN.md     # the design, and the Verigraph paper it derives from
+  - evidence/                         # claims, chains, values, rendering
+  - tests/test_evidence.py            # the claim audit: citation, bare handles, wrong-metric catch
+  - tests/test_chain.py
+
+notes: []

@@ -9,7 +9,7 @@ Three questions, answered from the rows alone:
      itself — before it answered? If so, the grader's keyword match can't
      distinguish reasoning from echo.
 
-Usage: python experiments/integrity-audit/regrade.py <raw.jsonl>
+Usage: python experiments/02_reliability_ladder/notes/integrity-audit/regrade.py <raw.jsonl>
 """
 
 from __future__ import annotations
@@ -56,7 +56,7 @@ def main(path: str) -> None:
     # -- 3. diagnostic tier: dump + leak analysis --------------------------
     diags = sorted((r for r in rows if r["tier"] == "diagnostic"),
                    key=lambda r: (r["rung"], r["qid"]))
-    print(f"\n{len(diags)} diagnostic rows -> experiments/integrity-audit/diagnostic_rows.json")
+    print(f"\n{len(diags)} diagnostic rows -> experiments/02_reliability_ladder/notes/integrity-audit/diagnostic_rows.json")
     out = []
     for r in diags:
         leak = leak_source(r)
@@ -68,7 +68,7 @@ def main(path: str) -> None:
             "answer": r["answer"], "explanation": r["explanation"],
             "tools_used": [s.get("tool") for s in (r.get("steps") or [])],
         })
-    with open("experiments/integrity-audit/diagnostic_rows.json", "w") as f:
+    with open("experiments/02_reliability_ladder/notes/integrity-audit/diagnostic_rows.json", "w") as f:
         json.dump(out, f, indent=2)
 
     leaked = sum(1 for o in out if o["cause_word_in_context"])
