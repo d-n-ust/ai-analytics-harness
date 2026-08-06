@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
@@ -267,7 +268,7 @@ class SemanticLayer:
         a test channel' is a lookup, not a rule the model has to remember."""
         return [name for name, m in self._members(dimension).items() if self._meta(m).get("test")]
 
-    def _segment_where(self, segment: str) -> str:
+    def _segment_where(self, segment: str, metric: dict | None = None) -> str:
         """Compile a governed segment to a WHERE clause. Today's one form is `exclude_test`,
         which drops a dimension's test members; the segment is definitional, not an analyst
         filter, so downstream scope checks treat it as part of the definition."""
@@ -279,7 +280,25 @@ class SemanticLayer:
         if dim:
             drop = self.test_members(dim)
             return f"{dim} NOT IN ({', '.join(_literal(v) for v in drop)})" if drop else ""
-        return ""
+        # A POPULATION segment: predicates over the base table, ANDed. `exclude_test` above is one
+        # special case of this (drop a dimension's test members); `where` is the general form, and
+        # it is what lets a layer express "the same measure, a different population" as ONE metric
+        # with a named argument instead of two metrics a reader has to tell apart.
+        #
+        # A predicate segment must be DECLARED by the metric, where the dimension form need not be.
+        # The difference is real: `exclude_test: channel` binds against a dimension, so it applies
+        # to any metric carrying that dimension; a raw predicate binds against a base TABLE, and
+        # `NOT is_internal` on fct_subscriptions is not a narrower population, it is a crash. Left
+        # unchecked the layer accepts any segment on any metric and the declaration is decoration.
+        where = spec.get("where") or []
+        # `where` PRESENT, not `where` non-empty: "everyone" declares an empty predicate and is
+        # still a population choice, so passing it to a metric that offers no populations is the
+        # same category error as passing "real_users" — it just happens not to crash.
+        if "where" in spec and segment not in (metric or {}).get("segments", []):
+            offered = ", ".join((metric or {}).get("segments", [])) or "(none)"
+            raise SemanticError(
+                f"segment {segment!r} is not defined for this metric. It declares: {offered}.")
+        return " AND ".join(f"({w})" for w in where)
 
     def allowed_filters(self, metric: str) -> set[str] | None:
         """The dimensions a metric may be filtered by — governed metadata, read once from the
@@ -455,8 +474,14 @@ class SemanticLayer:
         select.append(f"{m['agg']} AS value")
 
         where = list(m.get("default_filters", []))
+        # A metric whose population is CONSTITUTIVE rather than optional names it here: `power_users`
+        # is not "users, optionally restricted to 5+ a day", it IS that restriction, so a caller who
+        # names no segment must still get it. Without this the repair for a population welded into
+        # `agg` would trade a hidden filter for a silently absent one — a bare call would return a
+        # different, plausible number, which is a worse defect than the one being repaired.
+        segment = segment or m.get("default_segment")
         if segment:
-            clause = self._segment_where(segment)   # a governed named filter (e.g. real_acquisition)
+            clause = self._segment_where(segment, m)   # a governed named filter (e.g. real_acquisition)
             if clause:
                 where.append(clause)
         if period is not None:

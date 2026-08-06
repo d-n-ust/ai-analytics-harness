@@ -1,0 +1,78 @@
+# EXPERIMENT QUESTIONS — not part of the frozen case set in evals/cases/.
+#
+# Moved here unchanged from `evals/probes/population.yml` in the 2026-08-06 migration. The ids keep
+# their `p_` (probe) prefix deliberately: twelve stored runs under `results/probes/` and every
+# number cited in the write-ups refer to them, and renaming would break that link for no gain.
+#
+# WHAT THEY TEST. Two governed metrics measure the same thing over the same rows at the same grain:
+#
+#   value_moments        entity value_moments · agg sum(moments) · segment all    · no default filter
+#   real_value_moments   entity value_moments · agg sum(moments) · segment active · NOT is_internal
+#
+# Identical in source, aggregation and grain. They differ in SEGMENT and nothing else, and the
+# catalogue never renders a segment — it survives only where a description happens to mention it.
+# Each pair below asks the same measure of two different segments, so the only fact that can
+# separate them is the one under test. A question answerable without knowing the segment would come
+# back flat for a boring reason and teach us nothing.
+#
+# The numbers are ~3.8-4.4% apart, so at the default 2% tolerance a swap fails the numeric check as
+# well as the metric check. That margin is thin on purpose: this is the near-miss case, the one
+# where a wrong pick still looks like a plausible answer. Experiment 02 deliberately chose the
+# opposite — a 15x error — to test whether a wrong pick happens at all when the fact is unstated.
+#
+# ⚠ ONLY ONE OF THESE FIVE DISCRIMINATED between arms when they were run, which is why paired
+# discordance is 1 and no number of repetitions can reach significance. Do not add reps to this set;
+# add discriminating ITEMS. Experiment 02's question block is what that looks like.
+
+cases:
+  # --- pair 1: last week -------------------------------------------------- #
+  - id: p_pop_customers_week
+    tier: population
+    question: "How many habits did our customers complete last week?"
+    expect:
+      type: metric_answer
+      metric: real_value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: "'Customers' implies real users, never staff or test accounts — but no metric name says so. The agent must read the segment off the definition."
+
+  - id: p_pop_all_week
+    tier: population
+    question: "What was the total number of habits completed last week across every account, including our own internal and test users?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: "The same measure, the opposite segment, stated explicitly. Pairs with p_pop_customers_week: a model that always picks one metric gets exactly one of the two right. NOTE: this is the question the `segment` arm shares a nine-token verbatim span with, via its bespoke `including staff` synonym."
+
+  # --- pair 2: June 2026, to keep the effect off a single period ----------- #
+  - id: p_pop_customers_june
+    tier: population
+    question: "Excluding staff and test accounts, how many habits were completed in June 2026?"
+    expect:
+      type: metric_answer
+      metric: real_value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: "Segment named in the question's own words rather than the metric's. No declared synonym matches — except in the `segment` arm, whose `excluding staff` synonym matches it verbatim."
+
+  - id: p_pop_all_june
+    tier: population
+    question: "How many habits were completed in June 2026 in total, counting every account we have?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  # --- negative control, KNOWN BROKEN -------------------------------------- #
+  - id: p_pop_control_mrr
+    tier: control
+    question: "What is our current MRR (monthly recurring revenue)?"
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END), 2) FROM fct_subscriptions WHERE is_active"
+      tolerance: 0.02
+    note: "Intended as segment-neutral: mrr has no near-twin and the treatment touches nothing it needs. IT DOES NOT WORK. All four arms answered it without ever entering the catalogue, because `mrr` is nameable straight off the `query_metric` enum — every row carries `list_metrics: never entered the context`. Kept, with the breakage recorded, because a control that silently fails is worse than one that visibly does."

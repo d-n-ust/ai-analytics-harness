@@ -1,0 +1,6 @@
+# The layer exactly as it ships. An empty patch is what makes "prose is the shipped layer" true by
+# CONSTRUCTION — the first probe needed a test to assert the same thing about a forked copy, and a
+# test only fires after someone has already edited the file.
+level: surface
+claim: "the threshold is stated in the description, exactly as the layer ships today"
+patch: {}

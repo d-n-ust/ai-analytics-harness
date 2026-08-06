@@ -1,0 +1,101 @@
+# Experiment 2 — the segment is buried in the aggregate (rule S4).
+#
+# `power_users` restricts to users with 5+ value moments in a single day, and implements that
+# restriction INSIDE its aggregate:
+#
+#     agg: "count(distinct case when moments >= 5 then user_id end)"
+#
+# The predicate decides WHO IS COUNTED, so it is a segment wearing a CASE. Nothing in the layer can
+# tell that it is one: the lint compares declared facets, and a segment welded into `agg` declares
+# nothing. `active_users ~ power_users` therefore classifies `different_measure` (severity low) when
+# the truth is `scope_only` (severity high) — the defect conceals itself from its own detector,
+# which is provable from the YAML at zero cost and needs no model.
+#
+# `segment`, not "population", throughout: .claude/TERMINOLOGY.md fixes the four spec-slot names to
+# the semantic-layer vocabulary (entity / segment / measure+agg / dimension+time-grain) and lists
+# "population" as the term not to use. Experiment 01 is the same defect in the metric NAME; this one
+# is the same defect in the AGGREGATE, which is where the two folder names come from.
+#
+# WHAT THE AGENT CAN AND CANNOT SEE, because it decides what this experiment is able to measure.
+# `agg` is NEVER rendered. So moving the predicate out of `agg` changes nothing the agent reads,
+# and the arms below do not test that move directly. What they test is where the resulting fact is
+# WRITTEN — nowhere, in prose, or as a named governed segment — on a second defect instance whose
+# repair does not delete a metric. That second property is the point: experiment 01's segment arm
+# removes a metric and so gains a candidate-count advantage worth ~50 points before any treatment
+# exists. Every arm here offers the same fifteen.
+#
+# This is therefore the REPLICATION that makes experiment 01's finding generalisable beyond one
+# twin, plus a free deterministic result that stands on its own.
+
+title: "Segment buried in the aggregate (S4) — unstated vs prose vs declared segment"
+base: semantic/semantic_layer.yml
+
+# The framework conditions this experiment bears on. Recorded here rather than in the folder name
+# because the mapping is not one-to-one: the treatment is S4, and because the repair does not delete
+# a metric it also replicates S1, which experiment 01 could only show on a single twin.
+tests_rules: [S4, S1]
+
+# Rung 3: the semantic layer with no advisory rungs above it, so the catalogue is the only thing
+# that can carry the threshold and the treatment is not competing with a second copy of the fact.
+rung: 3
+# R7 (`governed_numbers`) makes the model DECLARE which metric its number came from. Without a
+# declaration the arms can only be separated by the numbers themselves.
+guardrails: 7
+
+arms: [A_absent, B_prose, C_segment]
+
+# PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN. Recorded here because a prediction produced after
+# the numbers is not a prediction, and because one of these says the experiment may fail.
+#
+#   absent  < prose      the positive control. If it does not hold, this instrument is not measuring
+#                        whether stating a threshold helps, and no other column can be read. The
+#                        expected failure in `absent` is a confident 21 on q_thresh_week_total —
+#                        a 15x error with nothing in the catalogue to warn against it.
+#
+#   prose  vs segment    THE FINDING, and the direction is genuinely uncertain. Both arms state the
+#                        same phrase; only its location differs. Two forces pull opposite ways:
+#                        a governed segment is machine-readable and appears under its own heading,
+#                        but `list_metrics_text` renders segments in a GLOBAL list that never says
+#                        which metric offers which — so the agent must connect `power` to
+#                        `power_users` by name alone, where prose puts the fact on the metric's own
+#                        line. A loss for `segment` is a real result about the renderer, not a
+#                        failure of the experiment, and it would be evidence that per-metric
+#                        rendering of offered segments is the actual repair.
+#
+#   q_thresh_lower_bar   THE SHARPEST TEST OF THE SAME CLAIM, and the reason a second trap exists.
+#                        Grain is correct and only the threshold is misread, so it isolates the
+#                        binding step: `prose` puts "5+" on the metric's own line where 5 != 3 is
+#                        one read away; `segment` puts it in a global list keyed by a name the
+#                        metric line never mentions. If `segment` loses here but holds on the grain
+#                        trap, the defect is the renderer, not the structure.
+#
+#   q_thresh_named_week  right in all three arms. "power users" is a metric synonym everywhere. An
+#                        arm that misses this is broken; read this row before any other.
+#
+#   q_control_paid_search  flat across arms, and its `context_audit` must be empty — the governed
+#                        channel member is reachable only through the catalogue. If it moves, the
+#                        difference is not the threshold; it is noise, prompt length, or a bug.
+#
+# THE VOCABULARY AUDIT WILL FIRE ITS WARNING, AND IT SHOULD BE IGNORED FOR ONE PAIR ONLY. `absent`
+# shares less wording with every threshold question than the other two, because deleting the
+# sentence IS its treatment — there is no way to not state a threshold while still stating it. The
+# warning is only a confound where wording differs and structure is the claimed cause: that pair is
+# `prose` vs `segment`, and their catalogues carry the identical sentence, so their audit rows must
+# match. If they ever diverge, the finding is dead and the run should be discarded.
+#
+# POWER, STATED SO THE NULL IS READABLE — AND THIS SET CANNOT REACH SIGNIFICANCE. Five questions,
+# one a ceiling anchor and one a control, leaves three that can discriminate. Reps do not add
+# items: they estimate noise WITHIN an item while the effect lives ACROSS items, so 5 x 3 is five
+# statistical units, not fifteen. On an exact paired test the best attainable two-sided p is
+# 2 x (1/2)^n for n discordant items all pointing one way:
+#
+#     n = 3   p = 0.2500     <- the realistic ceiling here, if all three discriminating items flip
+#     n = 5   p = 0.0625     <- the absolute ceiling, and still above 0.05
+#     n = 6   p = 0.0313     <- the floor for a significant two-sided result
+#
+# So this run is a PILOT and must be reported as one. It is worth its cost for four things a
+# significance test would not give: whether the treatment moves anything at all, whether questions
+# of this shape discriminate, whether the two degenerate strategies really do land at 2/5 as the
+# question set intends, and a per-item effect direction to size the powered run. Reaching n >= 6
+# needs at least six discriminating questions — roughly ten in total once the anchor and control
+# are kept — which is a second question block, not more reps.

@@ -133,6 +133,46 @@ def cmd_ambiguity(a):
     print(report(metrics, nodes))
 
 
+def cmd_study(a):
+    """Run one study, or describe it without spending anything. With no argument, print the tree.
+
+    `--describe` answers the question a forked-layer design could not: what, exactly, does this arm
+    change? It prints the patch and then the catalogue lines that actually moved — the treatment as
+    the model receives it, rather than as the file claims."""
+    import difflib
+
+    from experiments.engine import ROOT, Study, run, tree
+    if not a.study:
+        print(tree())
+        return
+    if not a.describe:
+        run(a)
+        return
+
+    from semantic.semantic import SemanticLayer
+    from warehouse.warehouse import open_warehouse
+    study = Study.load(a.study)
+    con = open_warehouse(create_star_views=True)
+    paths = study.materialize(ROOT / ".build" / study.name)
+    base_text = SemanticLayer(con, spec_path=study.base).list_metrics_text().splitlines()
+    print(f"{study.title}\n  {study.name}\n"
+          f"  base: {study.base.name} · rung {study.rung} · guardrails R{study.guardrails}\n")
+    for name, arm in study.arms.items():
+        sl = SemanticLayer(con, spec_path=paths[name])
+        print(f"{name}  [{arm.level}]  {arm.claim}")
+        for key in arm.patch:
+            print(f"    patch  {key}")
+        for key in arm.delete:
+            print(f"    delete {key}")
+        moved = [ln for ln in difflib.unified_diff(base_text, sl.list_metrics_text().splitlines(),
+                                                   lineterm="", n=0)
+                 if ln[:1] in "+-" and not ln.startswith(("+++", "---"))]
+        print("    catalogue: unchanged" if not moved else "    catalogue:")
+        for ln in moved:
+            print(f"      {ln[:150]}")
+        print()
+
+
 def _stored_run(a):
     """The run to read: --run, or the newest experiment run.
 
@@ -291,9 +331,19 @@ def main() -> None:
     sp.add_argument("--limit", type=int, default=1)
     sp.set_defaults(func=cmd_chain)
 
-    sub.add_parser("ambiguity",
-                   help="lint the governed layer for names that can be confused"
-                   ).set_defaults(func=cmd_ambiguity)
+    sp = sub.add_parser("study", aliases=["experiment", "exp"],
+                        help="run one study from experiments/<experiment>/<study>/ (arms are patches)")
+    sp.add_argument("study", nargs="?", default=None,
+                    help="study name, e.g. 02_segment_in_agg or 04_semantic_layer_health/"
+                         "02_segment_in_agg (omit to print the tree)")
+    sp.add_argument("--reps", type=int, default=1)
+    sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
+    sp.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
+    sp.add_argument("--arms", default=None, help="comma-separated subset (default: all)")
+    sp.add_argument("--only", default=None, help="comma-separated question ids")
+    sp.add_argument("--describe", action="store_true",
+                    help="show each arm's patch and the lines it changes in the catalogue — then exit")
+    sp.set_defaults(func=cmd_study)
 
     sp = sub.add_parser("context", help="what the model was SHOWN in an experiment run (ledger / full text / diff)")
     sp.add_argument("--run", default=None, help="run dir (default: the newest experiment run)")
@@ -305,6 +355,10 @@ def main() -> None:
     sp.add_argument("--diff", default=None, metavar="ARM_A,ARM_B",
                     help="unified diff of --source between two arms — the check that a treatment is real")
     sp.set_defaults(func=cmd_context)
+
+    sub.add_parser("ambiguity",
+                   help="lint the governed layer for names that can be confused"
+                   ).set_defaults(func=cmd_ambiguity)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 
