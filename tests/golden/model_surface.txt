@@ -197,7 +197,7 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint 25ee7aa92f5d ===
+=== rung 3 · R0 · fingerprint 044cfb9d2f5b ===
 system: sha256=b3932ec88871 chars=951
 [
   {
@@ -349,7 +349,7 @@ system: sha256=b3932ec88871 chars=951
   }
 ]
 
-=== rung 3 · R2 · fingerprint fca9328ed999 ===
+=== rung 3 · R2 · fingerprint e4371ac9a580 ===
 system: sha256=541a80869276 chars=1546
 [
   {
@@ -616,7 +616,7 @@ system: sha256=541a80869276 chars=1546
   }
 ]
 
-=== rung 3 · R4 · fingerprint 343205b97b50 ===
+=== rung 3 · R4 · fingerprint 441f2ffa6613 ===
 system: sha256=bcd41ca8653e chars=1861
 [
   {
@@ -885,7 +885,7 @@ system: sha256=bcd41ca8653e chars=1861
   }
 ]
 
-=== rung 3 · R6 · fingerprint 51c881c6844d ===
+=== rung 3 · R6 · fingerprint a7a04154a222 ===
 system: sha256=6a06892ba048 chars=2372
 [
   {
@@ -1154,7 +1154,7 @@ system: sha256=6a06892ba048 chars=2372
   }
 ]
 
-=== rung 3 · R9 · fingerprint d0e29ac0cbcb ===
+=== rung 3 · R9 · fingerprint 56455ad85c0e ===
 system: sha256=78da06e54edc chars=3834
 [
   {
@@ -1455,7 +1455,7 @@ system: sha256=78da06e54edc chars=3834
   }
 ]
 
-=== rung 6 · R0 · fingerprint 49f9cd4ddff4 ===
+=== rung 6 · R0 · fingerprint bab66f3597b9 ===
 system: sha256=10ce3dd5f275 chars=5862
 [
   {
@@ -1657,7 +1657,7 @@ system: sha256=10ce3dd5f275 chars=5862
   }
 ]
 
-=== rung 6 · R2 · fingerprint 541365dcb112 ===
+=== rung 6 · R2 · fingerprint 47b04346d16d ===
 system: sha256=dd3f8d612279 chars=6457
 [
   {
@@ -1974,7 +1974,7 @@ system: sha256=dd3f8d612279 chars=6457
   }
 ]
 
-=== rung 6 · R4 · fingerprint 91ab6b5c8eee ===
+=== rung 6 · R4 · fingerprint deb85d60f288 ===
 system: sha256=f5657c94f5ee chars=6772
 [
   {
@@ -2302,7 +2302,7 @@ system: sha256=f5657c94f5ee chars=6772
   }
 ]
 
-=== rung 6 · R6 · fingerprint 0e49b0f05003 ===
+=== rung 6 · R6 · fingerprint e7a32c1518f7 ===
 system: sha256=0661873056fe chars=7283
 [
   {
@@ -2630,7 +2630,7 @@ system: sha256=0661873056fe chars=7283
   }
 ]
 
-=== rung 6 · R9 · fingerprint 156aa97da612 ===
+=== rung 6 · R9 · fingerprint 929465de84b2 ===
 system: sha256=2b63dd316caf chars=8745
 [
   {
@@ -2990,7 +2990,7 @@ system: sha256=2b63dd316caf chars=8745
   }
 ]
 
-=== rung 7 · R0 · fingerprint 256a4a5edd75 ===
+=== rung 7 · R0 · fingerprint 3dbe2f3e6e79 ===
 system: sha256=4ccdadfd4322 chars=1329
 [
   {
@@ -3192,7 +3192,7 @@ system: sha256=4ccdadfd4322 chars=1329
   }
 ]
 
-=== rung 7 · R2 · fingerprint 36b9934a30cd ===
+=== rung 7 · R2 · fingerprint fbcbb3ff1db4 ===
 system: sha256=21c611aa1778 chars=1924
 [
   {
@@ -3509,7 +3509,7 @@ system: sha256=21c611aa1778 chars=1924
   }
 ]
 
-=== rung 7 · R4 · fingerprint f40b39e937bd ===
+=== rung 7 · R4 · fingerprint b3f5b50944c5 ===
 system: sha256=f6fa332612c3 chars=2239
 [
   {
@@ -3837,7 +3837,7 @@ system: sha256=f6fa332612c3 chars=2239
   }
 ]
 
-=== rung 7 · R6 · fingerprint b7511a1fc957 ===
+=== rung 7 · R6 · fingerprint 40076f3bcba8 ===
 system: sha256=4fcfa635ca94 chars=2750
 [
   {
@@ -4165,7 +4165,7 @@ system: sha256=4fcfa635ca94 chars=2750
   }
 ]
 
-=== rung 7 · R9 · fingerprint a0aa52991149 ===
+=== rung 7 · R9 · fingerprint 366393d2be56 ===
 system: sha256=bc9a5349fe29 chars=4212
 [
   {
@@ -4525,7 +4525,7 @@ system: sha256=bc9a5349fe29 chars=4212
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint b04c8b04e08c ===
+=== rung 7 · R9/purpose · fingerprint 7abaf370dff2 ===
 system: sha256=f58f8e6082be chars=4586
 [
   {
@@ -4893,7 +4893,7 @@ system: sha256=f58f8e6082be chars=4586
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint 7ffa37bf89a8 ===
+=== rung 7 · R9/claims · fingerprint a2d27f939d88 ===
 system: sha256=68cafd4271e5 chars=4916
 [
   {
@@ -5288,7 +5288,7 @@ system: sha256=68cafd4271e5 chars=4916
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint e13ed7d83c39 ===
+=== rung 7 · R9/claims+repair · fingerprint a49a4ae73c29 ===
 system: sha256=eea8b0e9a393 chars=5122
 [
   {
@@ -5683,7 +5683,7 @@ system: sha256=eea8b0e9a393 chars=5122
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint f45524e6eef3 ===
+=== rung 7 · R9/purpose+claims+repair · fingerprint edb0f6823bbf ===
 system: sha256=8c766050a8fe chars=5496
 [
   {
@@ -6086,7 +6086,7 @@ system: sha256=8c766050a8fe chars=5496
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint 3e08d31825c0 ===
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint b256caaf6269 ===
 system: sha256=47984fc1fb8e chars=6315
 [
   {
@@ -6489,7 +6489,7 @@ system: sha256=47984fc1fb8e chars=6315
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint d476a0d44903 ===
+=== rung 5 · R5/claims · fingerprint 695d4447b84b ===
 system: sha256=1e342c97f77d chars=7337
 [
   {
@@ -6793,7 +6793,7 @@ system: sha256=1e342c97f77d chars=7337
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint 8a1cd90b976f ===
+=== rung 5 · R5/claims+role · fingerprint 9095c8f7ba5d ===
 system: sha256=e8e9c0005054 chars=8158
 [
   {
@@ -7098,77 +7098,99 @@ system: sha256=e8e9c0005054 chars=8158
 ]
 
 === governed catalogue (default view) ===
-Governed metrics (call query_metric with these names):
+Governed metrics (call query_metric with these names). Named segments may be passed as segment=…; governed dimension values are listed below.
 - value_moments: Number of value moments (completed habits) in the period. Raw activity volume — includes all users.
     also called: completed habits, habit completions, activity, engagement events
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - real_value_moments: Value moments from real users in the period (excludes internal/test accounts). The North Star: this is the metric the tree decomposes into breadth x frequency x depth.
     also called: north star, real value moments, real habit completions
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - new_signups: Number of user signups in the period (raw — includes all accounts).
     also called: signups, new users, registrations, new accounts
-    group_by / filter dimensions: region, channel, platform
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, channel, platform
+    filter: region, channel, platform, is_internal
+    period: supported
+    grain: day, week, month
 - active_users: Distinct real users with at least one value moment in the period (excludes internal/test accounts).
     also called: active users, actives, engaged users, MAU, WAU
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - power_users: Distinct real users who logged 5+ value moments in a single day during the period (excludes internal/test).
     also called: power users, superusers, highly engaged users
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - days_per_user: Average active days per active user in the period (frequency; excludes internal/test).
     also called: frequency, how often, active days per user
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - moments_per_day: Average value moments per active day (depth; excludes internal/test).
     also called: depth, intensity, moments per active day
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - reminder_open_rate: Share of active days on which the user opened a reminder (a retention driver; excludes internal/test).
     also called: reminder open rate, notification open rate
-    group_by / filter dimensions: region, platform, channel, country
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, platform, channel, country
+    filter: region, platform, channel, country, is_internal
+    period: supported
+    grain: day, week, month
 - activation_rate: Share of the signup cohort that reached a first value moment within 7 days (excludes internal/test).
     also called: activation, activation rate, onboarding conversion
-    group_by / filter dimensions: region, channel, platform
-    supports filter is_internal=false
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: region, channel, platform
+    filter: region, channel, platform, is_internal
+    period: supported
+    grain: day, week, month
 - mrr: Monthly recurring revenue from currently-active subscriptions (annual plans divided by 12).
     also called: MRR, monthly recurring revenue
-    group_by / filter dimensions: plan
-    point-in-time (as of now); no period filter
+    group_by: plan
+    filter: plan
+    period: point-in-time (as of now)
+    grain: —
 - active_subscriptions: Count of currently-active subscriptions.
     also called: active subscriptions, active subs
-    group_by / filter dimensions: plan
-    point-in-time (as of now); no period filter
+    group_by: plan
+    filter: plan
+    period: point-in-time (as of now)
+    grain: —
 - paying_users: Distinct users with an active subscription.
     also called: paying users, paying customers, subscribers, paid users
-    group_by / filter dimensions: plan
-    point-in-time (as of now); no period filter
+    group_by: plan
+    filter: plan
+    period: point-in-time (as of now)
+    grain: —
 - arpu: Average MRR per paying user (annual plans divided by 12).
     also called: ARPU, average revenue per user, revenue per user
-    group_by / filter dimensions: plan
-    point-in-time (as of now); no period filter
+    group_by: plan
+    filter: plan
+    period: point-in-time (as of now)
+    grain: —
 - marketing_spend: Total marketing spend in the period.
     also called: marketing spend, ad spend, marketing cost
-    group_by / filter dimensions: channel
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: channel
+    filter: channel
+    period: supported
+    grain: day, week, month
 - referrals: Number of referrals created in the period.
     also called: referrals, invites, referred users
-    time-filterable (period=…) and grainable (time_grain=week|month|day)
+    group_by: —
+    filter: status
+    period: supported
+    grain: day, week, month
 
-Named periods: last_week, prev_week, last_month, last_quarter, ytd, all (or pass explicit start/end 'YYYY-MM-DD').
+Named periods (or pass explicit start and end as 'YYYY-MM-DD'): last_week, prev_week, last_month, last_quarter, ytd, all
 
 Governed dimension values (any other value is refused, not approximated):
 - platform: ios, android, web, unknown
@@ -7178,8 +7200,9 @@ Governed dimension values (any other value is refused, not approximated):
 - country: US, GB, DE, FR, BR, ID, IN, PH
 - status: activated, joined, pending
 
-Governed segments (pass segment=… to query_metric for a named reusable filter):
-- real_acquisition: Real acquisition only — excludes test-integration channels. (also: real acquisition, real channels, real acquisition channels)
+Governed segments:
+- real_acquisition: Real acquisition only — excludes test-integration channels.
+    also called: real acquisition, real channels, real acquisition channels
 
 === verifier ===
 prompt_fingerprint: 149da8f96078

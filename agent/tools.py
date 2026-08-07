@@ -24,7 +24,7 @@ from dataclasses import dataclass, replace
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import Causality, MetricTree, TreeError
-from warehouse.config import NAMED_PERIODS
+from warehouse.config import NAMED_PERIODS, TIME_GRAINS
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
@@ -130,7 +130,7 @@ _QUERY_METRIC = {
                          "description": "Dimensions to break the metric down by."},
             "filters": {"type": "object", "additionalProperties": True,
                         "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}"},
-            "time_grain": {"type": "string", "enum": ["day", "week", "month"],
+            "time_grain": {"type": "string", "enum": list(TIME_GRAINS),
                            "description": "Bucket the time column (for trends)."},
             # The enum is read from the vocabulary itself rather than restated. It was a copy, and
             # the copy is exactly how `decompose_change` came to accept any string at all.

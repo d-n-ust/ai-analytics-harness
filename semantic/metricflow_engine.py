@@ -37,6 +37,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from semantic.engine import Capabilities
+from warehouse.config import TIME_GRAINS
 
 __all__ = ["MetricFlowLayer"]
 
@@ -121,7 +122,8 @@ class MetricFlowLayer:
             if dims:
                 lines.append(f"    group_by / filter dimensions: {', '.join(dims)}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
-            lines.append("    time-filterable (period=…) and grainable (time_grain=week|month|day)")
+            lines.append("    time-filterable (period=…) and grainable "
+                         f"(time_grain={'|'.join(TIME_GRAINS)})")
 
         from warehouse.config import NAMED_PERIODS
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} "

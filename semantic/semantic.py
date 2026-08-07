@@ -19,7 +19,7 @@ from pathlib import Path
 import yaml
 
 from semantic.engine import Capabilities
-from warehouse.config import NAMED_PERIODS, resolve_period
+from warehouse.config import TIME_GRAINS, resolve_period
 from warehouse.warehouse import run_query
 
 SPEC_PATH = Path(__file__).resolve().parent / "semantic_layer.yml"
@@ -412,40 +412,20 @@ class SemanticLayer:
         return False, f"no governed segment matches {term!r}. Defined: {', '.join(pops)}."
 
     # -- introspection the agent sees -------------------------------------- #
+    # Which rendering this layer serves. A study sets it per arm; everything else gets `prose`.
+    catalogue_format: str = "prose"
+
     def list_metrics_text(self) -> str:
-        lines = ["Governed metrics (call query_metric with these names):"]
-        for name, m in self.metrics.items():
-            dims = m.get("dimensions", [])
-            bits = [f"- {name}: {m['description']}"]
-            syn = m.get("synonyms", [])
-            if syn:
-                bits.append(f"    also called: {', '.join(syn)}")
-            if dims:
-                bits.append(f"    group_by / filter dimensions: {', '.join(dims)}")
-            if m.get("supports_internal_filter"):
-                bits.append("    supports filter is_internal=false")
-            if m.get("time_column"):
-                bits.append("    time-filterable (period=…) and grainable (time_grain=week|month|day)")
-            else:
-                bits.append("    point-in-time (as of now); no period filter")
-            lines.append("\n".join(bits))
-        lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
-        # The MEMBERS, once, rather than repeated under every metric that shares a dimension.
-        # Naming the dimension without its values told the agent that `channel` exists and left
-        # it to guess what a channel is: one run spent four of its eight turns asking three
-        # different tools whether "paid search" was defined, and never learned that `paid_search`
-        # is a governed member. There are 25 values in total — cheaper to state than to discover.
-        if self.dimensions:
-            lines.append("\nGoverned dimension values (any other value is refused, not approximated):")
-            for dim, members in self.dimensions.items():
-                lines.append(f"- {dim}: {', '.join(members)}")
-        segs = self.governance.get("segments", {}) or {}
-        if segs:
-            lines.append("\nGoverned segments (pass segment=… to query_metric for a named reusable filter):")
-            for name, s in segs.items():
-                also = f" (also: {', '.join(s.get('synonyms', []))})" if s.get("synonyms") else ""
-                lines.append(f"- {name}: {s.get('description', '')}{also}")
-        return "\n".join(lines)
+        """The catalogue the agent reads, in this layer's configured format.
+
+        The FACTS live in `semantic/renderers.py:catalogue()` and the format is a choice over them,
+        so a study can vary how a catalogue is written without varying what it says.
+
+        There is no prose implementation here. One lived alongside this method, with a test pinning
+        the two together; the same knowledge in two places, plus a test to notice when they drift,
+        is weaker than not having the second copy."""
+        from semantic.renderers import render
+        return render(self, self.catalogue_format)
 
     # -- compilation ------------------------------------------------------- #
     def _allowed_filters(self, m: dict) -> set[str]:
@@ -466,7 +446,7 @@ class SemanticLayer:
         if time_grain:
             if not time_col:
                 raise SemanticError(f"metric {name!r} has no time dimension to grain by.")
-            if time_grain not in ("day", "week", "month"):
+            if time_grain not in TIME_GRAINS:
                 raise SemanticError(f"time_grain {time_grain!r} must be day, week, or month.")
             select.append(f"date_trunc('{time_grain}', {time_col})::date AS period")
             group.append("period")
