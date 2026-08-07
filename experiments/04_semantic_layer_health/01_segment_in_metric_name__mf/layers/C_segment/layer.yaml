@@ -1,0 +1,48 @@
+# Arm C — the repair, in MetricFlow's own idiom.
+#
+# THIS IS NOT THE SAME REPAIR AS THE HAND-ROLLED ARM, and the difference is the finding.
+#
+# Our layer repairs this defect by declaring a named, described, reusable SEGMENT and offering it
+# on the metric. Cube would do the same. MetricFlow has no such construct: a metric filter is an
+# expression over a dimension, and there is no place to give the resulting population a name.
+#
+# So the repair here is: delete the twin, keep ONE metric, and let the caller state the population
+# as a where-constraint on `is_internal`. It reaches both figures correctly — verified by
+# `check.py` — but the population itself is never named. There is no `real_users` anywhere in this
+# file; there is only `is_internal = false`, and the agent has to know that this is what
+# "customers" means.
+#
+# Note what that forces: the instruction has to be written into the dimension's DESCRIPTION,
+# because nothing structural marks a dimension as a population selector. That is prose doing
+# structural work — the exact thing this study exists to criticise — and MetricFlow leaves no
+# alternative.
+semantic_model:
+  name: user_activity
+  description: "One row is one user-day."
+  node_relation: {schema_name: main, alias: agg_active_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: user, type: primary, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - name: is_internal
+      type: categorical
+      description: >-
+        Whether the account is internal or a test account. Filter on this to choose the
+        population: `is_internal = false` is real users only; unfiltered counts every account.
+    - {name: platform, type: categorical}
+  measures:
+    - {name: moments, agg: sum, expr: moments}
+    - {name: users, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: value_moments
+  description: "Number of value moments (completed habits) in the period."
+  type: simple
+  type_params: {measure: moments}
+---
+metric:
+  name: active_users
+  description: "Distinct users with at least one value moment in the period."
+  type: simple
+  type_params: {measure: users}

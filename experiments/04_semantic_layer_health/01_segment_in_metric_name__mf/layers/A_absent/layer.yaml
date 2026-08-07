@@ -1,0 +1,37 @@
+# Arm A — nothing tells the agent who each metric counts.
+# The metric NAMES are untouched, so `real_value_moments` still carries the word "real";
+# that is the point rather than an oversight. A name is not a definition.
+semantic_model:
+  name: user_activity
+  description: "One row is one user-day."
+  node_relation: {schema_name: main, alias: agg_active_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: user, type: primary, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: platform, type: categorical}
+  measures:
+    - {name: moments, agg: sum, expr: moments}
+    - {name: users, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: value_moments
+  description: "Number of value moments (completed habits) in the period. Raw activity volume."
+  type: simple
+  type_params: {measure: moments}
+---
+metric:
+  name: real_value_moments
+  description: "Value moments in the period. The North Star."
+  type: simple
+  type_params: {measure: moments}
+  filter: "{{ Dimension('user__is_internal') }} = false"
+---
+metric:
+  name: active_users
+  description: "Distinct users in the period."
+  type: simple
+  type_params: {measure: users}
+  filter: "{{ Dimension('user__is_internal') }} = false"

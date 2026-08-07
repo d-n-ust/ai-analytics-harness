@@ -1,0 +1,24 @@
+# The repair, in MetricFlow's idiom: one metric, the population as a where-constraint.
+#
+# `metric_equivalents` is what makes this arm gradable. The twin is deleted, so a case wanting
+# `real_value_moments` must be reached as `value_moments` — and unlike our own C arm there is NO
+# segment to name, because MetricFlow has none. Omitting the translation is how a correct answer
+# gets scored as a miss; that mistake was made by hand earlier today and cost an hour.
+level: structural
+claim: "one metric; the population is a where-constraint on a dimension, not a named segment"
+layer_dir: layers/C_segment
+changes_candidate_count: true
+grading:
+  metric_equivalents:
+    # No segment: this engine has none. The route is a filter, and saying so is the point —
+    # an equivalence that could only name a segment would call this arm unreachable and hide the
+    # difference between the two repairs.
+    real_value_moments:
+      metric: value_moments
+      where: "{{ Dimension('user__is_internal') }} = false"
+    # active_users too. This arm's whole claim is that NO metric bakes in a population, so the
+    # one that used to filter internally must now be reached the same way as the twin. Leaving it
+    # out is how the invariant caught this: C counted 919 where the base counts 886.
+    active_users:
+      metric: active_users
+      where: "{{ Dimension('user__is_internal') }} = false"
