@@ -71,7 +71,7 @@ def _build_layer(con, engine: str, spec_path):
 
 def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
                     protocol: Protocol | None = None, spec_path=None,
-                    engine: str = "harness") -> Grounding:
+                    engine: str = "harness", catalogue_format: str = "prose") -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -98,6 +98,11 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     # the point: a difference between engines is then a difference in what the layer SHOWS,
     # not in what the agent was built to do.
     semantic = _build_layer(con, engine, spec_path) if caps.semantic else None
+    if semantic is not None and catalogue_format:
+        # The catalogue's FORMAT is a treatment in its own right — the one thing in the prompt that
+        # varies without varying what the layer says. It reaches the fingerprint through
+        # `list_metrics_text`, so two format arms hash differently, as they must.
+        semantic.catalogue_format = catalogue_format
     if semantic is not None:
         check_compatible(semantic.capabilities, g, f"rung {rung} / {g.label()}")
     tree = MetricTree(semantic) if caps.tree else None

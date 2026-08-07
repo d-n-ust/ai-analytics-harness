@@ -173,6 +173,10 @@ class Arm:
     # the default and the better form — a forked layer drifts, which study 01 paid for once — so
     # this is opt-in and the arm file still carries claim, level and grading either way.
     layer_dir: str = ""
+    # A third kind of arm. `patch` varies WHAT the layer declares and `layer_dir` swaps the layer
+    # wholesale; this varies only HOW the same layer is written down. It is the one arm kind whose
+    # treatment provably changes no facts — which `check_same_facts` enforces.
+    catalogue_format: str = ""
     # metric -> {metric, segment}: how a case's expected metric is REACHED in this arm. A structural
     # arm may move a segment from a name into an argument; the expectation moves with it, which is a
     # translation of the same demand and not a relaxation of it.
@@ -180,7 +184,7 @@ class Arm:
     changes_candidate_count: bool = False
 
     KEYS = {"level", "claim", "patch", "delete", "reorder", "grading",
-            "changes_candidate_count", "layer_dir"}
+            "changes_candidate_count", "layer_dir", "catalogue_format"}
 
     @classmethod
     def load(cls, path: Path) -> Arm:
@@ -193,6 +197,7 @@ class Arm:
         return cls(name=path.stem, level=d["level"], claim=d.get("claim", ""),
                    patch=d.get("patch") or {}, delete=d.get("delete") or [],
                    reorder=d.get("reorder") or {}, layer_dir=d.get("layer_dir", ""),
+                   catalogue_format=d.get("catalogue_format", ""),
                    equivalents=(d.get("grading") or {}).get("metric_equivalents") or {},
                    changes_candidate_count=bool(d.get("changes_candidate_count")))
 
@@ -354,7 +359,11 @@ class Study:
         # the only discriminating question in the set — would have graded MISS in every arm, after
         # the money was spent, for a reason no output mentions. `study.yml` and `arms/*.yml` declare
         # no `cases`, so they contribute nothing and need no exclusion.
-        cases = load_questions(d)
+        # A study whose treatment does not touch the layer can use the FROZEN set rather than a
+        # purpose-written one, and says so instead of copying it — a copy is a second denominator,
+        # free to drift from the first and silently move every published rate.
+        marker = yaml.safe_load((d / "cases.yml").read_text()) or {} if (d / "cases.yml").exists() else {}
+        cases = load_questions() if marker.get("use_frozen_cases") else load_questions(d)
         # For a metricflow study this is a DIRECTORY of YAML, so it is resolved but not read here.
         base = ROOT / spec["base"] if spec.get("base") else SPEC_PATH
         return cls(name=name, title=spec.get("title", name), rung=spec.get("rung", 3),
@@ -421,6 +430,85 @@ def _value(layer, metric: str, period: str, route: dict | None = None):
         return None
     idx = cols.index("value") if "value" in cols else len(cols) - 1
     return rows[0][idx]
+
+
+def _catalogue_id(layer) -> dict:
+    """`{sha, chars}` for the catalogue a layer renders — the run's provenance for its own
+    treatment surface.
+
+    Stored per arm so a later reader can ask whether two runs saw the same catalogue. Without it,
+    results from before and after a renderer change sit in the same directory looking comparable,
+    and nothing on disk says they are not.
+    """
+    import hashlib
+    text = layer.list_metrics_text()
+    return {"sha": hashlib.sha256(text.encode()).hexdigest()[:12], "chars": len(text)}
+
+
+def check_same_facts(layers: dict, arms: dict) -> list[str]:
+    """Every rendering must CONTAIN the same facts. The stronger sibling of the same-numbers
+    invariant, and available only to a study whose arms vary the format.
+
+    Same numbers proves the arms can reach the same answers. Same facts proves they were TOLD the
+    same things — which is what "these differ only in arrangement" means, and without it a format
+    arm that quietly drops a synonym is measuring content again under a format's name. That is not
+    hypothetical: the metricflow renderer silently dropped dimension descriptions and an arm ran
+    three times with its treatment absent.
+    """
+    formats = {n: a.catalogue_format for n, a in arms.items() if a.catalogue_format}
+    if len(formats) < 2:
+        return []
+    from semantic.renderers import FIELDS, content_words, same_facts
+    problems = []
+    reference = reference_name = None
+    rendered = {}
+    for name in formats:
+        layer = layers.get(name)
+        if layer is None:
+            continue
+        facts, text = same_facts(layer), layer.list_metrics_text()
+        rendered[name] = text
+        if reference is None:
+            reference, reference_name = facts, name
+        # The DECLARED pairs must match first. A format that states fewer (metric, field) pairs is
+        # not a different arrangement of one catalogue; it is a smaller catalogue.
+        for gap in sorted(set(reference) - set(facts)):
+            problems.append(f"{name}: states nothing for {gap[0]}.{gap[1]}, which "
+                            f"{reference_name} states")
+        for pair, expected in reference.items():
+            if facts.get(pair) not in (None, expected):
+                problems.append(f"{name}: {pair[0]}.{pair[1]} differs from {reference_name}'s")
+            missing = sorted(v for v in expected if str(v) and str(v) not in text)
+            if missing:
+                problems.append(f"{name} ({formats[name]}): {pair[0]}.{pair[1]} is declared but "
+                                f"absent from the rendered catalogue, e.g. {missing[:3]}")
+    # Nothing may be said in one arm and not another. The pair check above covers facts the
+    # catalogue DECLARES; this covers the rest of the text — an instruction, a heading, a governance
+    # note — which is how one arm came to advertise the `segment` argument alone and then pass an
+    # unasked segment, answering 227 where the truth was 283.
+    #
+    # Compared as WORD SETS: arrangement legitimately changes order and repetition, so anything
+    # order-sensitive reports differences that are exactly what the study is measuring.
+    reference_words = content_words(rendered[reference_name]) if rendered else set()
+    for name, text in rendered.items():
+        if name == reference_name:
+            continue
+        words = content_words(text)
+        if words != reference_words:
+            problems.append(
+                f"{name} ({formats[name]}): does not use the same words as {reference_name} — "
+                f"extra {sorted(words - reference_words)[:4]}, "
+                f"missing {sorted(reference_words - words)[:4]}. A format carrying a word the "
+                f"others lack is a second treatment however it is laid out.")
+        # Word parity cannot see a whole FIELD dropped: metrics share dimension names, so a
+        # rendering that omits its `group_by` column still contains every value somewhere. The
+        # label is what disappears. Since each renderer iterates a shared field tuple, a single
+        # metric's field can no longer go missing on its own — only a column, which this catches.
+        for label in FIELDS:
+            if label not in text:
+                problems.append(f"{name} ({formats[name]}): states no {label!r} for any metric, "
+                                f"which is a smaller catalogue rather than a different layout")
+    return problems
 
 
 def check_same_numbers(con, base, layers: dict, arms: dict, engine: str = "harness") -> list[str]:
@@ -513,6 +601,7 @@ def _guardrails_of(study) -> object:
 
 def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, verifier, reps) -> dict:
     grounding = build_grounding(con, study.rung, guardrails=_guardrails_of(study),
+                                catalogue_format=arm.catalogue_format or "prose",
                                 spec_path=spec_path, engine=study.engine)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
@@ -600,12 +689,40 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
                     tally[key or "<none>"] = tally.get(key or "<none>", 0) + 1
                 print(f"    {a:16s} " + ", ".join(f"{k} x{v}" for k, v in sorted(tally.items())))
 
-    print(f"\n{'arm':12s} {'correct':>10s} {'silent wrong':>14s} {'audit failed':>14s}")
+    # `correct` requires a refusal to name the RIGHT code; `right action` only requires that it
+    # refused rather than invented a number. Both are printed because they answer different
+    # questions and can rank the arms differently: refusing instead of fabricating is reliability,
+    # naming the reason correctly is usability, and a single column that mixes them charges an arm
+    # for a vocabulary slip at the same rate as for a wrong number. Reason accuracy is the gap.
+    print(f"\n{'arm':12s} {'correct':>10s} {'right action':>14s} "
+          f"{'silent wrong':>14s} {'audit failed':>14s}")
     for a in arms:
         rs = results[a]["rows"]
+        action = sum(1 for r in rs
+                     if r["grade"].get("correct")
+                     or (r["grade"].get("expected_refuse") and r["outcome"] == "refuse"))
         print(f"{a:16s} {sum(1 for r in rs if r['grade'].get('correct')):>6d}/{len(rs):<3d}"
+              f" {action:>10d}/{len(rs):<3d}"
               f" {sum(1 for r in rs if r['grade'].get('confident_wrong')):>14d}"
               f" {sum(1 for r in rs if r['context_audit']):>14d}")
+
+    # Within-arm disagreement on identical input. THE number that decides whether a between-arm gap
+    # can be read at all: a cell that contradicts itself across reps is noise, and if there are more
+    # noisy cells than the gap is wide, the gap is not a measurement. Printed every run because it
+    # was computed by hand after the fact once, and the run before that was published-adjacent.
+    # Read off the rows rather than passed in, so it cannot disagree with the data it describes.
+    reps = 1 + max((r.get("rep", 0) for a in arms for r in results[a]["rows"]), default=0)
+    if reps > 1:
+        wobble = [(a, c["id"]) for a in arms for c in cases
+                  if len({r["grade"].get("correct")
+                          for r in results[a]["rows"] if r["id"] == c["id"]}) > 1]
+        cells = len(arms) * len(cases)
+        print(f"\nself-disagreement: {len(wobble)} of {cells} arm-question cells gave different "
+              f"verdicts across {reps} identical reps.")
+        if wobble:
+            print("  a gap narrower than this is noise: "
+                  + ", ".join(f"{a}/{q}" for a, q in wobble[:4])
+                  + (" …" if len(wobble) > 4 else ""))
 
     discordant = sum(1 for c in cases
                      if len({tuple(sorted(r["grade"].get("correct", False)
@@ -646,8 +763,14 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         "sampling": model.sampling,
         "verifier_model": verifier.spec.name, "verifier_reasoning": verifier.reasoning,
         "verifier_sampling": verifier.sampling,
+        # `catalogue` is the sha and length of the EXACT text this arm rendered. The fingerprint
+        # already moves when the catalogue does, but it hashes the whole grounding, so it cannot
+        # answer "was this run's catalogue the same as that one's?" — and that question decides
+        # whether two runs may be compared at all. A refactor once changed the shipped catalogue on
+        # every metric while older results stayed on disk looking comparable.
         "arms": {a: {"fingerprint": results[a]["fingerprint"], "level": study.arms[a].level,
-                     "claim": study.arms[a].claim, "metrics": len(layers[a].metrics)} for a in results},
+                     "claim": study.arms[a].claim, "metrics": len(layers[a].metrics),
+                     "catalogue": _catalogue_id(layers[a])} for a in results},
         "vocabulary_audit": vocab, "gold": golds, "cases": cases,
         "rows": [dict(arm=a, **r) for a in results for r in results[a]["rows"]],
     }, indent=2, default=str))
@@ -677,9 +800,18 @@ def run(args) -> Path:
     # and a layer that fails a check must cost nothing.
     build = ROOT / ".build" / study.name
     paths = study.materialize(build)
-    layers = {a: _reference_layer(con, paths[a], study.engine) for a in arms}
+    layers = {}
+    for a in arms:
+        layer = _reference_layer(con, paths[a], study.engine)
+        if study.arms[a].catalogue_format:
+            layer.catalogue_format = study.arms[a].catalogue_format
+        layers[a] = layer
 
     check_candidate_count(layers, study.arms)
+    fact_problems = check_same_facts(layers, study.arms)
+    if fact_problems:
+        raise SystemExit("the arms do not state the same FACTS, so a difference between them is\n"
+                         "not about arrangement:\n  " + "\n  ".join(fact_problems))
     problems = check_same_numbers(con, study.base, layers, study.arms, study.engine)
     if problems:
         raise SystemExit("the same-numbers invariant fails — the arms differ in CAPABILITY, so any\n"

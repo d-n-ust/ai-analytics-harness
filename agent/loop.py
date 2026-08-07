@@ -16,6 +16,7 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from dataclasses import dataclass, field, replace
@@ -33,7 +34,9 @@ __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 _CLOSING_NUDGE = "Finish by calling one terminal tool: answer, refuse, or clarify."
 # The tool result kept in the trace. The [scope] and [sql] lines land at the END of a result,
 # and the old 300-char cap cut exactly the evidence a later audit needs; this is only a
-# runaway guard.
+# runaway guard. Every step also records `result_len` and `result_sha` over the FULL text, so a
+# reader can always tell a clipped copy from a whole one — and `Answer.context` keeps what the
+# model actually read, whole, for the runs that ask for it.
 _TRACE_LIMIT = 4000
 
 # Enough of a handed-back claim to find it again in the answer that came back.
@@ -164,6 +167,14 @@ class _Run:
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
+                               # The stored result is CLIPPED; these two say so. Without them a
+                               # truncated trace reads as the whole thing, and an analysis of what
+                               # the model saw silently studies the first 4,000 characters of it.
+                               # The catalogue is 4.7-8.4k, so the one artefact a layer study is
+                               # about is exactly the one this limit cuts.
+                               "result_len": len(result.content),
+                               "result_sha": hashlib.sha256(
+                                   result.content.encode()).hexdigest()[:12],
                                "result_values": result.values,
                                "result_labels": result.labels,
                                "blocked_reason": result.reason,
