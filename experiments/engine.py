@@ -76,7 +76,7 @@ from pathlib import Path
 import yaml
 
 from agent.grounding import build_grounding
-from agent.guardrails import LADDER
+from agent.guardrails import LADDER, parse_cell
 from agent.loop import run_agent
 from agent.provenance import Expectation
 from agent.models import DEFAULT_MODEL
@@ -98,6 +98,14 @@ _CHECK_PERIODS = ("last_week", "last_month", "june_2026")
 
 
 # ---------------------------------------------------------------------------- patching
+
+def _reference_layer(con, base, engine: str):
+    """The layer an arm's numbers are compared against, built by whichever engine the study uses."""
+    if engine == "metricflow":
+        from semantic.metricflow_engine import MetricFlowLayer
+        return MetricFlowLayer(con, base)
+    return SemanticLayer(con, spec_path=base)
+
 
 def _walk(node: dict, path: str) -> tuple[dict, str]:
     """The container holding `path`'s final key, and that key.
@@ -160,13 +168,19 @@ class Arm:
     patch: dict = field(default_factory=dict)
     delete: list = field(default_factory=list)
     reorder: dict = field(default_factory=dict)
+    # An arm that IS a layer rather than a delta against one. Needed because MetricFlow parses a
+    # DIRECTORY of multi-document YAML, which the patch language cannot express. A patch is still
+    # the default and the better form — a forked layer drifts, which study 01 paid for once — so
+    # this is opt-in and the arm file still carries claim, level and grading either way.
+    layer_dir: str = ""
     # metric -> {metric, segment}: how a case's expected metric is REACHED in this arm. A structural
     # arm may move a segment from a name into an argument; the expectation moves with it, which is a
     # translation of the same demand and not a relaxation of it.
     equivalents: dict = field(default_factory=dict)
     changes_candidate_count: bool = False
 
-    KEYS = {"level", "claim", "patch", "delete", "reorder", "grading", "changes_candidate_count"}
+    KEYS = {"level", "claim", "patch", "delete", "reorder", "grading",
+            "changes_candidate_count", "layer_dir"}
 
     @classmethod
     def load(cls, path: Path) -> Arm:
@@ -178,14 +192,22 @@ class Arm:
             raise ValueError(f"{path.name}: level must be 'surface' or 'structural', got {d.get('level')!r}")
         return cls(name=path.stem, level=d["level"], claim=d.get("claim", ""),
                    patch=d.get("patch") or {}, delete=d.get("delete") or [],
-                   reorder=d.get("reorder") or {},
+                   reorder=d.get("reorder") or {}, layer_dir=d.get("layer_dir", ""),
                    equivalents=(d.get("grading") or {}).get("metric_equivalents") or {},
                    changes_candidate_count=bool(d.get("changes_candidate_count")))
 
-    def reach(self, metric: str | None) -> tuple[str | None, str | None]:
-        """(metric, segment) this arm expects for a case whose gold metric is `metric`."""
+    def reach(self, metric: str | None) -> tuple:
+        """`(metric, kwargs)` — how a case's gold metric is reached in this arm.
+
+        `kwargs` carries whatever the route needs: `segment` where the layer has named segments,
+        `where` where it does not. MetricFlow has no segment construct, so its repair arm reaches
+        the same rows through a filter — and an equivalence that could only say "segment" would
+        have declared the arm unreachable and hidden the very difference the study is about.
+        """
         e = self.equivalents.get(metric)
-        return (e["metric"], e.get("segment")) if e else (metric, None)
+        if not e:
+            return metric, {}
+        return e["metric"], {k: v for k, v in e.items() if k != "metric" and v is not None}
 
 
 @dataclass
@@ -273,12 +295,13 @@ class Study:
     name: str
     title: str
     rung: int
-    guardrails: int
+    guardrails: object          # a ladder index, or a cell like "R7-coverage_check"
     base: Path
     arms: dict
     cases: list
     directory: Path
     tests_rules: list = field(default_factory=list)
+    engine: str = "harness"
 
     @staticmethod
     def discover() -> dict:
@@ -316,7 +339,8 @@ class Study:
         spec = yaml.safe_load((d / "study.yml").read_text())
         # Arms have always rejected unknown keys; study.yml silently ignored them, so a typo in
         # `guardrails` would have run the whole thing at the default rung and reported nothing.
-        unknown = set(spec) - {"title", "base", "rung", "guardrails", "arms", "tests_rules"}
+        unknown = set(spec) - {"title", "base", "rung", "guardrails", "arms", "tests_rules",
+                       "engine"}
         if unknown:
             raise ValueError(f"{name}/study.yml: unknown key(s) {sorted(unknown)}")
         arms = {p.stem: Arm.load(p) for p in sorted((d / "arms").glob("*.yml"))}
@@ -331,20 +355,34 @@ class Study:
         # the money was spent, for a reason no output mentions. `study.yml` and `arms/*.yml` declare
         # no `cases`, so they contribute nothing and need no exclusion.
         cases = load_questions(d)
+        # For a metricflow study this is a DIRECTORY of YAML, so it is resolved but not read here.
         base = ROOT / spec["base"] if spec.get("base") else SPEC_PATH
         return cls(name=name, title=spec.get("title", name), rung=spec.get("rung", 3),
                    guardrails=spec.get("guardrails", 7), base=base,
                    arms={a: arms[a] for a in order}, cases=cases, directory=d,
-                   tests_rules=spec.get("tests_rules") or [])
+                   tests_rules=spec.get("tests_rules") or [],
+                   engine=spec.get("engine", "harness"))
 
     # -- generation ---------------------------------------------------------- #
     def materialize(self, into: Path) -> dict:
         """Write every arm's full layer. These files are OUTPUT: regenerated each run, never edited,
         and kept with the results so the exact layer a number came from is recoverable."""
         into.mkdir(parents=True, exist_ok=True)
-        spec = yaml.safe_load(self.base.read_text())
         paths = {}
+        # An arm that points at a directory is used AS IT IS — there is nothing to generate, and
+        # copying it would create the second copy this engine exists to avoid.
+        patched = {n: a for n, a in self.arms.items() if not a.layer_dir}
         for name, arm in self.arms.items():
+            if arm.layer_dir:
+                d = self.directory / arm.layer_dir
+                if not d.is_dir():
+                    raise SystemExit(f"{self.name}/arms/{name}.yml: layer_dir {arm.layer_dir!r} "
+                                     f"is not a directory under {self.directory}")
+                paths[name] = d
+        if not patched:
+            return paths
+        spec = yaml.safe_load(self.base.read_text())
+        for name, arm in patched.items():
             out = into / f"{name}.yml"
             out.write_text(f"# GENERATED from {self.base.name} + arms/{name}.yml — do not edit.\n"
                            f"# {arm.claim}\n"
@@ -371,32 +409,58 @@ def check_candidate_count(layers: dict, arms: dict) -> None:
               "control that shrinks by an UNRELATED metric.")
 
 
-def check_same_numbers(con, base: Path, layers: dict, arms: dict) -> list[str]:
+def _value(layer, metric: str, period: str, route: dict | None = None):
+    """One number from any engine, through the interface both implement.
+
+    `query_with_sql` rather than `query`, because that is what `semantic/engine.py` declares and a
+    MetricFlow arm has no other entry point. The measure is the `value` column every engine aliases
+    to — the same contract the AFTER guardrails rely on.
+    """
+    _sql, cols, rows = layer.query_with_sql(metric, period=period, **(route or {}))
+    if not rows:
+        return None
+    idx = cols.index("value") if "value" in cols else len(cols) - 1
+    return rows[0][idx]
+
+
+def check_same_numbers(con, base, layers: dict, arms: dict, engine: str = "harness") -> list[str]:
     """Every arm must return the base's numbers, through its own declared equivalences.
 
     This is the invariant the whole design rests on: if an arm can reach a number the others
-    cannot, the experiment measures capability and the legibility question never arises.
+    cannot, the experiment measures capability and the legibility question never arises. It runs
+    for a MetricFlow study exactly as for ours — an arm nobody held to it is an arm nobody can
+    compare, whatever engine produced it.
     """
-    ref = SemanticLayer(con, spec_path=base)
+    ref = _reference_layer(con, base, engine)
     problems, checked = [], 0
     for name in ref.metrics:
         for period in _CHECK_PERIODS:
             try:
-                want = ref.query(name, period=period)
+                want = _value(ref, name, period)
             except Exception:
+                continue
+            if want is None:
                 continue
             checked += 1
             for arm_name, sl in layers.items():
-                metric, segment = arms[arm_name].reach(name)
+                metric, route = arms[arm_name].reach(name)
+                if metric not in sl.metrics:
+                    problems.append(f"{arm_name}: {name} reaches {metric!r}, which it does not offer")
+                    continue
                 try:
-                    got = sl.query(metric, period=period, **({"segment": segment} if segment else {}))
+                    got = _value(sl, metric, period, route)
                 except Exception as exc:
                     problems.append(f"{arm_name}: {name}@{period} unreachable ({exc})")
                     continue
                 if got != want:
                     problems.append(f"{arm_name}: {name}@{period} = {got} != base {want}")
-    if checked < 20:
-        problems.append(f"only {checked} metric/period pairs compared — the invariant is barely tested")
+    # 20 was written for a fifteen-metric layer and is meaningless for a smaller one: a
+    # three-metric layer cannot reach it however thoroughly it is checked. The bar is whichever is
+    # LOWER — twenty pairs, or two periods for every metric the reference offers.
+    floor = min(20, 2 * len(ref.metrics))
+    if checked < floor:
+        problems.append(f"only {checked} metric/period pairs compared against a floor of {floor} "
+                        f"({len(ref.metrics)} metrics) — the invariant is barely tested")
     return problems
 
 
@@ -436,8 +500,20 @@ def vocabulary_audit(cases: list, layers: dict) -> list[dict]:
 
 # ---------------------------------------------------------------------------- running
 
+def _guardrails_of(study) -> object:
+    """A ladder index, or a subtractive cell.
+
+    The ladder is CUMULATIVE, so no level expresses "R7 without the two checks MetricFlow cannot
+    serve". `parse_cell` already spoke that language for ablation cells; a study may now use it,
+    which is what lets two engines be compared at the one cell they can both run.
+    """
+    g = study.guardrails
+    return parse_cell(g) if isinstance(g, str) else LADDER[g]
+
+
 def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, verifier, reps) -> dict:
-    grounding = build_grounding(con, study.rung, guardrails=LADDER[study.guardrails], spec_path=spec_path)
+    grounding = build_grounding(con, study.rung, guardrails=_guardrails_of(study),
+                                spec_path=spec_path, engine=study.engine)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
     # of the same thing, free to fall out of step with it.
@@ -448,7 +524,8 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, 
         for case in cases:
             answer = run_agent(case["question"], grounding, model,
                                verifier_model=verifier, record_context=True)
-            metric, segment = arm.reach(case["expect"].get("metric"))
+            metric, route = arm.reach(case["expect"].get("metric"))
+            segment = route.get("segment")
             graded = {**case, "expect": {**case["expect"], **({"metric": metric} if metric else {})}}
             g = grade(answer, graded, golds.get(case["id"]))
             got_segment = next((s.get("args", {}).get("segment") for s in answer.steps or ()
@@ -557,7 +634,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     (out / "context_blobs.json").write_text(json.dumps(blobs, indent=2))
     (out / "run.json").write_text(json.dumps({
         "experiment": study.name, "title": study.title, "rung": study.rung, "tests_rules": study.tests_rules,
-        "guardrails": f"R{study.guardrails}", "base": str(study.base.relative_to(ROOT)),
+        "guardrails": study.guardrails if isinstance(study.guardrails, str) else f"R{study.guardrails}", "base": str(study.base.relative_to(ROOT)),
         "model": args.model, "mock": args.mock, "reps": args.reps,
         # Reasoning effort is a treatment, not a setting: a row that does not carry it cannot
         # be compared with one run at a different depth. Read back off the model rather than
@@ -600,10 +677,10 @@ def run(args) -> Path:
     # and a layer that fails a check must cost nothing.
     build = ROOT / ".build" / study.name
     paths = study.materialize(build)
-    layers = {a: SemanticLayer(con, spec_path=paths[a]) for a in arms}
+    layers = {a: _reference_layer(con, paths[a], study.engine) for a in arms}
 
     check_candidate_count(layers, study.arms)
-    problems = check_same_numbers(con, study.base, layers, study.arms)
+    problems = check_same_numbers(con, study.base, layers, study.arms, study.engine)
     if problems:
         raise SystemExit("the same-numbers invariant fails — the arms differ in CAPABILITY, so any\n"
                          "difference between them is not about legibility:\n  " + "\n  ".join(problems))
@@ -617,7 +694,7 @@ def run(args) -> Path:
     verifier = get_verifier(args.model, mock=args.mock)
 
     print(f"study: {study.name} — {study.title}")
-    print(f"rung {study.rung} · guardrails R{study.guardrails}"
+    print(f"rung {study.rung} · guardrails {study.guardrails if isinstance(study.guardrails, str) else 'R' + str(study.guardrails)}"
           f" · {args.model}/{model.reasoning}"
           f" · judge {verifier.spec.name}/{verifier.reasoning}"
           + (" (MOCK)" if args.mock else "")

@@ -83,9 +83,18 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
             offered += [schema("get_metric_tree"),
                         decompose_schema(schema("decompose_change"), guardrails, tree, record)]
         if guardrails.check_tools and semantic is not None:
-            offered += [schema(name) for name in _CHECK_TOOLS]
+            # An engine declares what it cannot answer, and those lookups are withdrawn rather
+            # than offered and left to fail. See semantic/engine.py: TOOL_NEEDS.
+            from semantic.engine import tools_unavailable
+            gone = tools_unavailable(semantic.capabilities)
+            names = [n for n in _CHECK_TOOLS if n not in gone]
+            offered += [schema(name) for name in names]
             note(record, "check_tools", Position.ACTION_SPACE, "applied",
-                 f"offered {len(_CHECK_TOOLS)} answerability lookups")
+                 f"offered {len(names)} answerability lookups")
+            if gone:
+                note(record, "check_tools", Position.ACTION_SPACE, "withdrew",
+                     f"{', '.join(sorted(gone))} — the {semantic.capabilities.name} engine "
+                     "cannot answer it")
     offered.append(answer_schema(schema("answer"), guardrails, semantic, protocol, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))

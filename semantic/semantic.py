@@ -18,6 +18,7 @@ from pathlib import Path
 
 import yaml
 
+from semantic.engine import Capabilities
 from warehouse.config import NAMED_PERIODS, resolve_period
 from warehouse.warehouse import run_query
 
@@ -99,6 +100,11 @@ class SemanticLayer:
         self.spec = yaml.safe_load(spec_path.read_text())
         self.metrics: dict[str, dict] = self.spec["metrics"]
         self.governance: dict = self.spec.get("governance", {})
+
+    # Everything: this layer IS the governance model the others are measured against. Declared
+    # rather than assumed, so `check_compatible` has something to compare a rival engine with.
+    capabilities = Capabilities(name="harness", catalogue=True, query=True, coverage=True,
+                                segments=True, members=True, additivity=True)
 
     @property
     def ontology(self) -> dict:

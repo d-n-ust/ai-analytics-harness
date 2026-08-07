@@ -12,6 +12,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 
+from semantic.engine import check_compatible
 from semantic.semantic import SemanticLayer
 from semantic.tree import MetricTree
 
@@ -55,8 +56,22 @@ class Grounding:
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
+def _build_layer(con, engine: str, spec_path):
+    """The layer, from the named engine. Unknown names fail here rather than as an AttributeError
+    somewhere inside a paid run."""
+    if engine == "harness":
+        return SemanticLayer(con, **({"spec_path": spec_path} if spec_path else {}))
+    if engine == "metricflow":
+        if spec_path is None:
+            raise SystemExit("engine `metricflow` needs a spec_path: a DIRECTORY of MetricFlow YAML")
+        from semantic.metricflow_engine import MetricFlowLayer
+        return MetricFlowLayer(con, spec_path)
+    raise SystemExit(f"unknown engine {engine!r}; expected 'harness' or 'metricflow'")
+
+
 def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
-                    protocol: Protocol | None = None, spec_path=None) -> Grounding:
+                    protocol: Protocol | None = None, spec_path=None,
+                    engine: str = "harness") -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -77,7 +92,14 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     caps = capabilities(rung)
     # `spec_path` is the semantic-maturity experiment's treatment: WHICH governed layer the agent
     # is given. It defaults to the shipped one, so every existing caller keeps its behaviour.
-    semantic = SemanticLayer(con, **({"spec_path": spec_path} if spec_path else {})) if caps.semantic else None
+    # WHICH ENGINE serves that layer is now a study variable too. `harness` is this project's own
+    # YAML and governance model; `metricflow` is dbt MetricFlow reading a directory of its YAML.
+    # The agent is unchanged either way — it calls one interface (semantic/engine.py) — which is
+    # the point: a difference between engines is then a difference in what the layer SHOWS,
+    # not in what the agent was built to do.
+    semantic = _build_layer(con, engine, spec_path) if caps.semantic else None
+    if semantic is not None:
+        check_compatible(semantic.capabilities, g, f"rung {rung} / {g.label()}")
     tree = MetricTree(semantic) if caps.tree else None
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p))
