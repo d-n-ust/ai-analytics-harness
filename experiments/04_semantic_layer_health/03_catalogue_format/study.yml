@@ -1,0 +1,55 @@
+# Study 03 — the catalogue's FORMAT, with the layer held identical.
+#
+# Every study so far varied what the layer DECLARES and held the rendering fixed. This varies only
+# how the same facts are written down, and it is the cheapest remedy in the whole programme: a
+# customer changes one line and touches no data model.
+#
+# WHY IT IS THE CLEANEST INSTRUMENT HERE. The confounds that made study 01 uncitable cannot occur.
+# The layer is byte-identical across arms, so no arm has vocabulary the others lack, none offers
+# fewer metrics, and none can reach a number another cannot. The only variable is the serializer.
+# `check_same_facts` proves it before every run: each arm's rendered text must CONTAIN every
+# metric name, description, synonym, dimension value, segment and named period the others do. Same
+# numbers proves the arms can reach the same answers; same facts proves they were told the same
+# things, which is what "differ only in arrangement" has to mean.
+#
+# WHERE IT BELONGS. Part 2 of the plain-English document — the rival remedies — not Part 1. It is
+# the same class as "better search" and "a curated view": something a buyer does WITHOUT touching
+# their model, and cheaper than either.
+#
+# IT IS ALSO A CONTROL ON EVERY OTHER STUDY. If format moves results, then studies 01 and 02 are
+# conditional on our renderer and must say so. A null is therefore as useful as a win: it makes
+# every other finding more robust.
+
+title: "Catalogue format — the same facts as prose, JSON, or a table"
+engine: harness
+base: semantic/semantic_layer.yml
+
+tests_rules: []
+
+rung: 3
+guardrails: 7
+
+arms: [A_prose, B_structured, C_table]
+
+# WHAT IS AT STAKE, written before the first paid run.
+#
+#   A_prose vs B_structured   THE QUESTION. The practice's thesis is "structure over prose"; this
+#                             tests it at the one layer nobody has tested — the prompt itself. A
+#                             thesis only tested where it is convenient is not a thesis.
+#
+#   C_table                   between the two: aligned and scannable like JSON, prose-shaped text
+#                             like the original. If JSON beats prose, this says whether the gain is
+#                             ALIGNMENT or actual structure — the difference between advice a buyer
+#                             acts on in an afternoon and advice needing an integration.
+#
+#   the honest risk           if format wins big, the headline advice becomes "change your
+#                             renderer", which sits awkwardly beside a practice built on data
+#                             modelling. That result gets published anyway. A programme that only
+#                             reports the findings it hoped for is marketing.
+#
+# POWER, AND WHAT THIS RUN IS FOR. Five purpose-written questions, not the frozen 65. The frozen
+# set was available and free, but almost none of it can separate these arms: the layer is
+# byte-identical, so only a question turning on the BINDING of a fact to a metric can discriminate,
+# and most frozen questions turn on picking a metric by name. Five cannot reach significance —
+# study 01 proved that at a cost. This is a direction-finding run, and a result here is a reason to
+# author thirty more questions, never a finding. See cases.yml for the pre-registered prediction.

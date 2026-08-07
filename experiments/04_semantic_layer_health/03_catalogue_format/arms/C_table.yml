@@ -1,0 +1,6 @@
+# Between the other two: rows aligned and scannable like JSON, but prose-shaped text rather than a
+# data structure. It exists to split one explanation from another — if JSON beats prose, this says
+# whether the gain is ALIGNMENT or actual structure.
+level: surface
+claim: "the same facts as markdown tables"
+catalogue_format: table

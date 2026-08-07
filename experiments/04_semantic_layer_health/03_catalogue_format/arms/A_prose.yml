@@ -1,0 +1,6 @@
+# The control: exactly what ships today. `tests/test_renderers.py` pins this renderer
+# byte-for-byte against the original implementation, so this arm is CURRENT BEHAVIOUR rather than
+# a reconstruction of it — an arm that is "roughly what we do now" measures nothing.
+level: surface
+claim: "the catalogue as it ships — headings and indented sub-lines"
+catalogue_format: prose
