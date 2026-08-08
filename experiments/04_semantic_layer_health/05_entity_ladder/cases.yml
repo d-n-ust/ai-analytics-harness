@@ -10,6 +10,31 @@
 #     habits still tracked    6,357    7,467 (every habit ever created, abandoned ones included)
 #     active subscriptions      371    457 (every subscription record, live or not)
 #
+# EVERY ITEM MUST FORCE EXACTLY ONE PRIMITIVE, and three drafts did not. All three were rewritten
+# after their failures were traced, and the traces are the reason:
+#
+#   "last week"                  Below rung 3 there is no governed period vocabulary, so the agent
+#                                invents one. One rep derived the week from `max(ts)` and landed a
+#                                week early (4,307); another used `current_date` and got 0 — even
+#                                though the system prompt's first line states the analysis date.
+#                                Those are TIME failures scored inside an ENTITY study. The window
+#                                is now stated in the question, so period resolution cannot
+#                                contaminate the measurement. The observation itself is worth
+#                                keeping and belongs in the matrix's grain/time row.
+#
+#   "how many habits did         Read two ways: 3,785 completions, or 1,813 distinct habits that
+#   people complete"             had one. C_modelled answered the second and was marked wrong for
+#                                choosing a defensible reading. Now "habit completions", which
+#                                names the event rather than the thing it happened to.
+#
+#   "habits still tracking"      Read as not-archived (6,357) or recently-used (1,813 / 4,417).
+#                                E_declared answered the second twice. Now "have not been
+#                                archived", which has one reading.
+#
+# WHAT THE REWRITE DOES NOT DO. It does not add documentation to fix a failure we watched happen.
+# The agent was TOLD the analysis date and ignored it; restating that in a table comment would tune
+# the treatment to the test rather than measure it.
+#
 # EVERY ITEM MUST HAVE ONE DEFENSIBLE ANSWER, and one draft did not. "How many of our referrals
 # actually converted?" reads three ways — joined (271), activated (266), or both (537) — and the
 # first two land inside the 2% tolerance of each other, so the ambiguity graded as agreement rather
@@ -58,7 +83,7 @@ cases:
   # --- the sharpest entity trap: three event kinds in one table --------------------------- #
   - id: e_ent_completed_habits
     tier: entity
-    question: "How many habits did people complete last week?"
+    question: "How many habit completions were recorded between 6 and 12 July 2026?"
     expect:
       type: metric_answer
       metric: value_moments
@@ -74,7 +99,7 @@ cases:
   # --- the same table, a different kind — so etype cannot be guessed once and reused ------- #
   - id: e_ent_reminders
     tier: entity
-    question: "How many reminders were shown to users last week?"
+    question: "How many reminders were shown to users between 6 and 12 July 2026?"
     expect:
       type: metric_answer
       # `reminder_open_rate` is a SHARE of active days, not a count, so no metric names this
@@ -90,7 +115,7 @@ cases:
   # --- a null that means something, in a third table -------------------------------------- #
   - id: e_ent_active_habits
     tier: entity
-    question: "How many habits are people still tracking?"
+    question: "How many habits have not been archived?"
     expect:
       type: metric_answer
       # Nobody modelled a habit metric; `dim_habits` is reachable by SQL at every rung, including 3.
