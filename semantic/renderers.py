@@ -45,8 +45,8 @@ from dataclasses import dataclass
 
 from warehouse.config import TIME_GRAINS
 
-__all__ = ["FIELDS", "NONE", "PREAMBLE", "RENDERERS", "Cell", "catalogue",
-           "content_words", "render", "same_facts"]
+__all__ = ["FIELDS", "NONE", "OPTIONAL_FIELDS", "PREAMBLE", "RENDERERS", "Cell",
+           "catalogue", "content_words", "render", "same_facts"]
 
 
 # How every format states a fact that is absent. One decision in one place: the alternative is
@@ -72,6 +72,16 @@ SEGMENTS_NOTE = "Governed segments"
 FIELDS = ("description", "also called", "group_by", "filter", "period", "grain")
 
 SEGMENT_FIELDS = ("description", "also called")
+
+# Facts the catalogue CAN state but does not by default. A layer opts in via
+# `SemanticLayer.catalogue_fields`, which is how a study varies whether a fact reaches the agent
+# without varying the layer that produces the numbers.
+#
+# `additivity` is the first. The layer already DERIVES it correctly for every metric — a distinct
+# count is semi-additive whether or not anyone wrote it down — and then never tells the agent. So
+# `active_users` at day grain summed over a week reads 2,012 where the governed weekly figure is
+# 886, and nothing in the catalogue warns against the addition.
+OPTIONAL_FIELDS = ("additivity",)
 
 # Fields that hold exactly one value. JSON emits these as strings and the rest as arrays, because a
 # `description` wrapped in a one-element list is not how anyone writes JSON — and a format that
@@ -101,6 +111,18 @@ class Cell:
     @property
     def text(self) -> str:
         return ", ".join(self.items) if self.items else NONE
+
+
+def _additivity_cell(layer, name: str) -> Cell:
+    """How this measure behaves when its periods are added together, in the layer's own words."""
+    kind = layer.additivity(name)
+    return Cell("additivity", ({
+        "additive": "additive over time — periods may be summed",
+        "semi_additive": "NOT additive over time — summing periods double-counts; ask for the "
+                         "whole period instead",
+        "non_additive": "NOT additive in any direction — a ratio or average; never sum or average "
+                        "these",
+    }.get(kind, kind),))
 
 
 def cells_for(m: dict) -> tuple:
@@ -140,8 +162,15 @@ def catalogue(layer) -> dict:
     """
     from warehouse.config import NAMED_PERIODS
 
+    optional = tuple(getattr(layer, "catalogue_fields", ()) or ())
+    unknown = set(optional) - set(OPTIONAL_FIELDS)
+    if unknown:
+        raise KeyError(f"unknown catalogue field(s) {sorted(unknown)}; "
+                       f"expected any of {sorted(OPTIONAL_FIELDS)}")
     return {
-        "metrics": [{"name": n, "cells": cells_for(m)} for n, m in layer.metrics.items()],
+        "metrics": [{"name": n, "cells": cells_for(m) + tuple(
+            _additivity_cell(layer, n) for f in optional if f == "additivity")}
+            for n, m in layer.metrics.items()],
         "named_periods": list(NAMED_PERIODS),
         "dimension_values": {d: list(v)
                              for d, v in (getattr(layer, "dimensions", {}) or {}).items()},

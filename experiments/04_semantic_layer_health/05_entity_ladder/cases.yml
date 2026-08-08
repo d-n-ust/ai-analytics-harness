@@ -1,0 +1,134 @@
+# EXPERIMENT QUESTIONS — five, purpose-written for the ENTITY primitive.
+#
+# WHAT ALL FIVE TURN ON: whether the agent can tell which rows are the thing being asked about.
+# Not which metric, not which filter — which ENTITY. Each trap has a wrong answer that is
+# computable, plausible and silent.
+#
+#     question                truth    the wrong answer that is easy to reach
+#     completed habits        3,785    10,741 (every event kind) or 6,311 (app opens)
+#     reminders                 645    10,741 or 3,785 — the neighbouring event kinds
+#     habits still tracked    6,357    7,467 (every habit ever created, abandoned ones included)
+#     active subscriptions      371    457 (every subscription record, live or not)
+#
+# EVERY ITEM MUST HAVE ONE DEFENSIBLE ANSWER, and one draft did not. "How many of our referrals
+# actually converted?" reads three ways — joined (271), activated (266), or both (537) — and the
+# first two land inside the 2% tolerance of each other, so the ambiguity graded as agreement rather
+# than showing up as disagreement. It also sat near the floor in every arm (0/3, 1/3, 1/3, 1/3),
+# and what it actually measured was missing VOCABULARY: nobody had written down that "converted"
+# means `status = activated`. That is a real finding and it belongs in a vocabulary row of the
+# matrix, not here.
+#
+# EVERY ITEM MUST BE EXPRESSIBLE AT EVERY RUNG, and one draft was not. "How many real users do we
+# have, excluding staff and test accounts" is a fair entity question and the semantic layer cannot
+# answer it: `active_users` counts users with activity (2,100) and `new_signups` counts every signup
+# including staff (2,500), so the true 2,414 is reachable at rungs 1 and 2 and unreachable at rung 3.
+# The D arm answered 2,100 using the right metric for what it means and was graded wrong. That
+# measures COVERAGE — what the layer was built to express — not entity resolution, and it cost a
+# paid run to notice. The finding is real and belongs in its own study; the item is gone.
+#
+# WHY THESE ARE ENTITY QUESTIONS AND NOT SEGMENT QUESTIONS. The distinction matters, because study
+# 02 was damaged by carrying a question its treatment could not repair. A segment question asks
+# WHICH ONES of a known thing; these ask WHICH THING. `evt` holds three event kinds behind an
+# integer, so choosing etype = 2 is not filtering a population — it is identifying the entity, and
+# the same holds for a referral stage and a subscription status: each names WHICH ROWS ARE THE
+# THING, not which subset of a known thing.
+#
+# GRADEABILITY, CHECKED BEFORE WRITING. Every item is answerable by ONE number, and every arm can
+# reach it: A/B/C write SQL, D calls `query_metric`. No item asks for a breakdown as well as a
+# total — study 04 lost nine runs to a question shaped that way, which the terminal protocol cannot
+# express and which returned `idk` in every arm.
+#
+# VOCABULARY. The questions use business words (completed habits, referrals, live subscriptions),
+# never `etype`, `internal`, `st`, and never a star table name. If a question named a column, the
+# documented arm would win by transcription rather than by comprehension. The audit must be short
+# and equal across arms; if B or C shows a longer span than A, the finding is dead.
+#
+# DEGENERATE STRATEGIES. Four traps and one control, all answerable — so "refuse everything" scores
+# 0/5. There is no always-answer shortcut either: the four traps have four different wrong answers
+# reached four different ways, so no single habit produces them.
+#
+# THE CONTROL IS THE ROW TO READ FIRST. `e_ent_control_spend` names one unambiguous table with one
+# amount column, at every rung. It must be flat across all four arms. If it moves, the difference is
+# prompt length or noise rather than entity resolution, and the other four rows cannot be read.
+#
+# POWER: five questions cannot reach significance. This is a pilot. See ../FINDINGS.md.
+
+cases:
+
+  # --- the sharpest entity trap: three event kinds in one table --------------------------- #
+  - id: e_ent_completed_habits
+    tier: entity
+    question: "How many habits did people complete last week?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM evt WHERE etype = 2 AND CAST(ts AS DATE) BETWEEN DATE '2026-07-06' AND DATE '2026-07-12'"
+      tolerance: 0.02
+    note: >-
+      `evt` mixes app opens (etype 1), completed habits (etype 2) and reminders (etype 3). Counting
+      every row for the week gives 10,741 against a true 3,785 — 2.8x, computed correctly from a
+      table the agent was handed, with nothing to signal the error. Taking etype = 1 gives 6,311.
+      At rung 1 nothing states the mapping; at 1.5 the description states it; at 2 the table is
+      already restricted; at 3 the metric is.
+
+  # --- the same table, a different kind — so etype cannot be guessed once and reused ------- #
+  - id: e_ent_reminders
+    tier: entity
+    question: "How many reminders were shown to users last week?"
+    expect:
+      type: metric_answer
+      # `reminder_open_rate` is a SHARE of active days, not a count, so no metric names this
+      # number. Answerable at every rung; correctness is the number.
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM evt WHERE etype = 3 AND CAST(ts AS DATE) BETWEEN DATE '2026-07-06' AND DATE '2026-07-12'"
+      tolerance: 0.02
+    note: >-
+      The pair-mate for the item above, and the reason a single lucky guess cannot carry the set.
+      An agent that settles on one etype and reuses it answers one of these two and misses the
+      other. True 645; the neighbouring kinds give 3,785 and 6,311.
+
+  # --- a null that means something, in a third table -------------------------------------- #
+  - id: e_ent_active_habits
+    tier: entity
+    question: "How many habits are people still tracking?"
+    expect:
+      type: metric_answer
+      # Nobody modelled a habit metric; `dim_habits` is reachable by SQL at every rung, including 3.
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab WHERE arch IS NULL"
+      tolerance: 0.02
+    note: >-
+      `hab.arch` is a date, and its NULL is the fact: a habit with no archive date is still being
+      tracked. Counting the table gives 7,467 against a true 6,357 — every habit anyone ever
+      created, including the abandoned ones. At rung 1 the column is called `arch` and nothing says
+      what its NULL means; at 1.5 the description says it; at 2 the column is `is_archived` and says
+      it by name. One reading only — a habit is archived or it is not.
+
+  # --- a status code, in a different table, meaning something different -------------------- #
+  - id: e_ent_active_subs
+    tier: entity
+    question: "How many live subscriptions do we have right now?"
+    expect:
+      type: metric_answer
+      metric: active_subscriptions
+      gold_sql: "SELECT count(*) FROM subs WHERE st = 1"
+      tolerance: 0.02
+    note: >-
+      `subs.st` is 1 = active, 2 = cancelled, 4 = past due. Counting every row gives 457 against a
+      true 371 — cancelled and past-due subscriptions counted as live. A second coded column in a
+      second table, so the set does not rest on `evt` alone.
+
+  # --- CONTROL: one table, one amount, no entity ambiguity at any rung --------------------- #
+  - id: e_ent_control_spend
+    tier: control
+    question: "What did we spend on marketing in June 2026?"
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(amt), 2) FROM spend WHERE dt BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      `spend` has three columns and holds exactly one thing, at every rung. No code to resolve, no
+      kinds mixed together, no incomplete flag. It must be flat across all four arms — if it moves,
+      the arms differ in something other than entity resolution and the rest of the table cannot be
+      read. READ THIS ROW FIRST.

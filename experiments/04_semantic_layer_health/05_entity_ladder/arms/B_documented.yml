@@ -1,0 +1,7 @@
+# The cheapest intervention in the matrix: the SAME tables, each with one sentence saying what one
+# row is and what its coded columns mean. Nothing is renamed. Nothing is pre-joined. No object is
+# created. See warehouse/table_docs.py for the text and for what a description is allowed to say.
+level: surface
+claim: "the same raw tables, each carrying a one-line description"
+rung: 1.5
+patch: {}

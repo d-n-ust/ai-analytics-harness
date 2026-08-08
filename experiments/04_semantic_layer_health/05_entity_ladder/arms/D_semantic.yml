@@ -1,0 +1,7 @@
+# The governed metric layer: entities and measures declared, reached through `query_metric` rather
+# than SQL. The most expensive option and the one the practice recommends; this study exists to say
+# what the two cheaper ones buy against it.
+level: structural
+claim: "a governed semantic layer — entities and measures are declared"
+rung: 3
+patch: {}

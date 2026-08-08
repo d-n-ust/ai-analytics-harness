@@ -131,10 +131,10 @@ visible to the check intended to find it, which can be demonstrated from the YAM
 ## Running it
 
 ```bash
-./bench study 02_segment_in_agg --mock              # checks wiring, no cost
-./bench study 02_segment_in_agg --reps 3            # full run
-./bench study 02_segment_in_agg --arms B_prose,C_segment --only q_thresh_week_total --reps 5
-./bench study --describe 02_segment_in_agg          # each arm's patch and what it changes
+./bench study 02_segment_in_aggregate --mock              # checks wiring, no cost
+./bench study 02_segment_in_aggregate --reps 3            # full run
+./bench study 02_segment_in_aggregate --arms B_prose,C_segment --only q_thresh_week_total --reps 5
+./bench study --describe 02_segment_in_aggregate          # each arm's patch and what it changes
 ```
 
 To inspect the mechanism behind the result, comparing what each arm showed the model:

@@ -1,0 +1,20 @@
+# The fact, written into the descriptions of the two metrics the traps use.
+#
+# WORDING HELD AS CLOSE AS THE FORMATS ALLOW. The sentence added here is the same statement the
+# `additivity:` field makes in the C arm, in the same words, so the arms differ in WHERE the fact
+# sits rather than in what it says. The one difference that cannot be removed is coverage: prose
+# can only reasonably carry the caveat on the metrics that need it, while a field appears on every
+# metric. That asymmetry IS the treatment — it is what "declared" means — and it is stated here so
+# it is not mistaken for a confound.
+level: surface
+claim: "the fact is stated in the descriptions of the metrics that need it"
+patch:
+  metrics.active_users.description: "Distinct real users with at least one value moment in the
+    period (excludes internal/test accounts). NOT additive over time — summing periods
+    double-counts; ask for the whole period instead."
+  metrics.days_per_user.description: "Average active days per active user in the period
+    (frequency; excludes internal/test). NOT additive in any direction — a ratio or average; never
+    sum or average these."
+  metrics.power_users.description: "Distinct real users who logged 5+ value moments in a single day
+    during the period (excludes internal/test). NOT additive over time — summing periods
+    double-counts; ask for the whole period instead."

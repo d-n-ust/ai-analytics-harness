@@ -1,4 +1,14 @@
-# Experiment 2 — the segment is buried in the aggregate (rule S4).
+# Study 02 — A SEGMENT PROMOTED TO A METRIC. The population hides in the aggregate (rule S4).
+#
+# THE DEFECT CLASS, NAMED THE WAY A PRACTITIONER WOULD NAME IT. `active_users` and `power_users`
+# share an entity, a base table, a grain and a measure (a distinct count of users). They differ in
+# one thing: which users are counted. That is one measure and two segments, shipped as two metrics
+# — metric sprawl, and the reason an agent must choose between two metric NAMES where it should be
+# choosing between two values of one argument.
+#
+# STUDY 01 IS THE SAME DEFECT. `value_moments` / `real_value_moments` are also one measure and two
+# segments; there the population hides in the metric's NAME, here it hides in the AGGREGATE. Two
+# instances of one class, which is what makes the pair a replication rather than two experiments.
 #
 # `power_users` restricts to users with 5+ value moments in a single day, and implements that
 # restriction INSIDE its aggregate:
@@ -27,7 +37,7 @@
 # This is therefore the REPLICATION that makes experiment 01's finding generalisable beyond one
 # twin, plus a free deterministic result that stands on its own.
 
-title: "Segment buried in the aggregate (S4) — unstated vs prose vs declared segment"
+title: "A segment promoted to a metric — the population hides in the aggregate (S4)"
 base: semantic/semantic_layer.yml
 
 # The framework conditions this experiment bears on. Recorded here rather than in the folder name
@@ -61,6 +71,14 @@ arms: [A_absent, B_prose, C_segment]
 #                        line. A loss for `segment` is a real result about the renderer, not a
 #                        failure of the experiment, and it would be evidence that per-metric
 #                        rendering of offered segments is the actual repair.
+#
+# WHAT MOVED OUT, AND WHY. `q_thresh_week_total` — "5+ habits in TOTAL over the week" against a
+# metric that counts 5+ within one DAY — was written here as a second trap. It is not this defect.
+# It is a semi-additive measure being summed across periods, which is a GRAIN fault, and no segment
+# declaration repairs it. It is study 04's whole subject and now lives there. Leaving it here made
+# this study score a repair against a question that repair cannot fix, and the declared-segment arm
+# lost on it twice — which was read as evidence about segment rendering when it was evidence about
+# additivity.
 #
 #   q_thresh_lower_bar   THE SHARPEST TEST OF THE SAME CLAIM, and the reason a second trap exists.
 #                        Grain is correct and only the threshold is misread, so it isolates the

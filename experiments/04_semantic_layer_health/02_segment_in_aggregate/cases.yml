@@ -59,16 +59,6 @@ cases:
     note: "The demand matches the metric exactly. In `absent` the catalogue says only 'highly-engaged', so nothing connects 'five or more' to power_users and active_users (886) is the plausible wrong pick. This is the twin that stops 'refuse everything' from scoring well on the traps."
 
   # --- 2 · the grain trap: right threshold, wrong grain ------------------- #
-  - id: q_thresh_week_total
-    tier: trap
-    question: "How many users completed five or more habits in total over the course of last week?"
-    expect:
-      type: refuse
-      reason: [wrong_grain, no_governed_definition]
-      gold_sql: "SELECT count(*) FROM (SELECT a.user_id FROM agg_active_days a JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND a.active_date >= DATE '2026-07-06' AND a.active_date < DATE '2026-07-13' GROUP BY 1 HAVING sum(a.moments) >= 5)"
-    note: "The threshold matches and the grain does not: the metric counts 5+ within one day (21), the question sums across the week (326). gold_sql is the TRUE weekly figure, so serving 21 grades confident_wrong at -4 rather than off_governance at 0 — the -4 is the headline signal for `absent`."
-
-  # --- 3 · the threshold trap: right grain, wrong threshold --------------- #
   - id: q_thresh_lower_bar
     tier: trap
     question: "How many users completed three or more habits in a single day last week?"

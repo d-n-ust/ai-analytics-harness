@@ -1,0 +1,110 @@
+# EXPERIMENT QUESTIONS — five, purpose-written for the additivity defect.
+#
+# WHAT ALL FIVE TURN ON: whether the periods of a measure may be added together.
+#
+#     value_moments     sum(moments)                   additive       days sum to the week exactly
+#     marketing_spend   sum(spend)                     additive       days sum to the quarter exactly
+#     active_users      count(distinct user_id)        semi-additive  days sum to 2012 vs a true 886
+#     days_per_user     count(*) / count(distinct ...) non-additive   days sum to 7.00 vs a true 2.27
+#
+# Every one of these is derivable from the aggregate, and `SemanticLayer.additivity()` derives all
+# fifteen correctly today. None of it is rendered. The whole treatment is whether the agent is told.
+#
+# THE TRAP IS REACHED THROUGH GOVERNED CALLS ONLY. `query_metric(active_users, period=last_week,
+# time_grain=day)` returns seven rows, and adding them is arithmetic the agent does itself. No
+# invented SQL, no ungoverned filter, nothing a guardrail below R8 can see. That is what makes this
+# defect worth studying: every step is legal and the answer is 2.27x wrong.
+#
+# BALANCE, AND THE ROW TO READ FIRST. Two traps where summing is illegal, two controls where it is
+# legal and correct, one anchor. An arm that learns "never add" scores 3/5 and loses both controls;
+# an arm that learns "always add" scores 3/5 and loses both traps. Neither degenerate strategy
+# wins, and the CONTROLS are the rows to read first — an arm that starts refusing legal roll-ups
+# has not learned the distinction, it has learned a superstition, and its win on the traps means
+# nothing.
+#
+# GOLD IS THE GOVERNED FIGURE, NOT THE SUM. On the two traps the correct answer is the whole-period
+# number, which the agent can get in one call. The trap value is recorded in each note so a wrong
+# answer can be identified rather than merely marked wrong.
+#
+# POWER: five questions cannot reach significance. This is a pilot. See ../FINDINGS.md.
+
+cases:
+
+  # --- trap 1: a distinct count, summed across days ------------------------------------- #
+  - id: a_add_actives_week
+    tier: additivity
+    question: "Break our weekly active users down by day for last week, and tell me the total for
+      the week."
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT count(DISTINCT f.user_id) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: >-
+      The question asks for both the breakdown and the total, which is exactly how the mistake
+      happens in practice. The daily rows are legitimate and the total is not their sum: adding
+      them gives 2012 against a true 886, because a user active on three days is counted three
+      times. The correct move is a second call without the grain. 2012 is the trap value.
+
+  # --- trap 2: a ratio, summed across days ----------------------------------------------- #
+  - id: a_add_frequency_week
+    tier: additivity
+    question: "What were our active days per user each day last week, and what does that come to
+      for the week as a whole?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: days_per_user
+      gold_sql: "SELECT count(*) * 1.0 / nullif(count(DISTINCT f.user_id), 0) FROM (SELECT DISTINCT f.user_id, f.completed_date FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06') f"
+      tolerance: 0.02
+    note: >-
+      A ratio is non-additive in every direction. Summing the seven daily figures gives exactly
+      7.00 — one active day per user per day, which is the arithmetic of the mistake rather than a
+      fact about the business — against a true 2.27. The absurdity of 7.00 is deliberate: if an arm
+      reports it, the agent did not sanity-check a number it could have.
+
+  # --- control 1: a sum, where adding the days is CORRECT --------------------------------- #
+  - id: a_add_moments_week
+    tier: additivity_control
+    question: "Break completed habits down by day for last week, and give me the weekly total."
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: >-
+      Identical shape to trap 1, on a measure that genuinely composes. The seven days sum to 3785,
+      which IS the weekly figure. An arm that refuses this has learned "never add" rather than
+      "add what composes", and its performance on the traps cannot be credited. Read this row
+      before the traps.
+
+  # --- control 2: a sum over a longer span ------------------------------------------------ #
+  - id: a_add_spend_quarter
+    tier: additivity_control
+    question: "What did we spend on marketing last quarter, and how did that split by month?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-04-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      A second legal roll-up, at a different grain and over a different metric family, so the
+      control is not a single metric's quirk. Months sum to the quarter exactly: 61233.32.
+
+  # --- anchor: no roll-up in the question at all ------------------------------------------ #
+  - id: a_add_actives_plain
+    tier: anchor
+    question: "How many active users did we have last week?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT count(DISTINCT f.user_id) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: >-
+      The same metric as trap 1 with the grain removed from the question. It should be right in
+      every arm, and it separates "the agent cannot compute weekly actives" from "the agent adds
+      things that do not add". An arm that misses this is broken rather than uninformative.

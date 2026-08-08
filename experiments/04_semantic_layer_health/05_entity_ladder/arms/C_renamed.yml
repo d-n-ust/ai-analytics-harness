@@ -1,0 +1,7 @@
+# Kimball naming and pre-joined marts: `evt` becomes `fct_value_moments`, already restricted to the
+# event kind, so the entity is legible from the table name and the code resolution is done. No
+# descriptions — this arm tests STRUCTURE against B's SENTENCES.
+level: structural
+claim: "a conformed star schema — the entity is in the table name"
+rung: 2
+patch: {}

@@ -415,6 +415,10 @@ class SemanticLayer:
     # Which rendering this layer serves. A study sets it per arm; everything else gets `prose`.
     catalogue_format: str = "prose"
 
+    # Optional facts this layer's catalogue states. Empty is what ships. A study sets it per arm to
+    # vary whether a fact REACHES the agent while the layer computing the numbers stays identical.
+    catalogue_fields: tuple = ()
+
     def list_metrics_text(self) -> str:
         """The catalogue the agent reads, in this layer's configured format.
 
