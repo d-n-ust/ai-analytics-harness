@@ -37,6 +37,30 @@ This is the risk to plan for. A failed query is visible to everyone. A wrong num
 All four are common. None of them indicates poor engineering. They are what warehouses look like
 when they are built for people who already know the domain.
 
+### Which raw layer this describes
+
+The tables above model an **application database extract**: one table per business object, surrogate
+keys, foreign keys by convention, and enum values stored inline as integers or short strings. This
+is what a Fivetran or Airbyte load from Postgres or MySQL produces.
+
+It is deliberately **not** a normalised warehouse. There are no lookup tables for event type,
+channel, country or subscription status. That is the normal case rather than an artificial
+difficulty: in most applications the meaning of an enum lives in application code, as a Django
+choice, a Rails enum or a TypeScript union. The loader carries the integer across; the meaning stays
+in a repository the data team may not read. Nothing in the warehouse can resolve it, which is
+exactly when someone has to write it down.
+
+**If your source has proper lookup tables, you have a different and easier problem.** An agent can
+resolve `event_type_id` by joining to `event_types`, so the structure documents itself. Your task is
+making that join discoverable, not writing comments.
+
+**One way our raw layer is harder than typical.** The column names are heavily abbreviated — `uid`,
+`nm`, `cat`, `arch`, `st`, `chan`. A modern schema would give you `user_id`, `created_at`,
+`archived_at`, `status`, `channel`. Our undocumented arm therefore combines two difficulties,
+unlabelled codes and cryptic names, and only the first is universal. A warehouse with readable names
+and inline enums sits between our undocumented and documented arms, and would score better than
+10 of 15.
+
 ### One table holding several kinds of thing
 
 `evt` contains three event types, separated by an integer. An analyst who knows the domain knows
