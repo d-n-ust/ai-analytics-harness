@@ -1,4 +1,10 @@
 -- Rung 2: the star schema.
+--
+-- SOURCE TABLES ARE SCHEMA-QUALIFIED (`_source.evt`), and must stay that way. A view's references
+-- resolve in the READER's search_path, not the creator's, and an arm's agent has only its own
+-- schema in scope — so an unqualified `FROM evt` here fails the moment the arm reads the view.
+-- References BETWEEN these views stay unqualified on purpose: they must resolve inside whichever
+-- schema the star was built into, which is exactly what unqualified names do.
 -- Clean, conformed models built as views over the messy raw tables. This is the
 -- "modelling" an analytics engineer does: sane names, normalized enums, typed
 -- columns, one clean grain per fact. It fixes trap #1 (names/enums) and trap #2
@@ -31,7 +37,7 @@ SELECT
         ELSE 'unknown'
     END                              AS platform,
     ((coalesce(internal, 0) = 1) OR (lower(email) LIKE '%@internal-test.com')) AS is_internal
-FROM u;
+FROM _source.u;
 
 CREATE OR REPLACE VIEW dim_habits AS
 SELECT
@@ -42,7 +48,7 @@ SELECT
     created::date AS created_date,
     arch::date    AS archived_date,
     (arch IS NOT NULL) AS is_archived
-FROM hab;
+FROM _source.hab;
 
 -- Value moment = a completed habit. Opens and reminder clicks are excluded here
 -- (this is the fix for the grain trap: don't count opens as completions).
@@ -55,7 +61,7 @@ SELECT
     ts::date                     AS completed_date,
     date_trunc('week', ts)::date AS week,
     src                          AS source
-FROM evt
+FROM _source.evt
 WHERE etype = 2;
 
 CREATE OR REPLACE VIEW fct_reminders AS
@@ -65,7 +71,7 @@ SELECT
     ts                           AS reminded_ts,
     ts::date                     AS reminded_date,
     date_trunc('week', ts)::date AS week
-FROM evt
+FROM _source.evt
 WHERE etype = 3;
 
 -- One row per subscription term. Multiple rows per user are normal (churn +
@@ -82,7 +88,7 @@ SELECT
     "end"::date              AS ended_date,
     CASE st WHEN 1 THEN 'active' WHEN 2 THEN 'canceled' WHEN 3 THEN 'paused' WHEN 4 THEN 'refunded' END AS status,
     (st = 1 AND "end" IS NULL) AS is_active
-FROM subs;
+FROM _source.subs;
 
 CREATE OR REPLACE VIEW fct_marketing_spend AS
 SELECT
@@ -95,7 +101,7 @@ SELECT
         ELSE 'organic'
     END AS channel,
     amt AS spend
-FROM spend;
+FROM _source.spend;
 
 CREATE OR REPLACE VIEW fct_referrals AS
 SELECT
@@ -104,7 +110,7 @@ SELECT
     referred AS referred_user_id,
     ts       AS referred_ts,
     st       AS status
-FROM ref;
+FROM _source.ref;
 
 -- ---------------------------------------------------------------------------
 -- Internal marts used by the semantic layer (rung 3). NOT exposed to the agent.

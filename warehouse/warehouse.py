@@ -8,7 +8,7 @@ are internal to the semantic layer and never shown as tables.
 
 from __future__ import annotations
 
-import re
+import json
 from pathlib import Path
 
 import duckdb
@@ -25,13 +25,42 @@ STAR_TABLES = (
 
 
 def _statements(sql: str):
-    """Yield individual statements from a ;-separated script. Strips `--` line
-    comments first, so semicolons inside comments don't split a statement."""
-    no_comments = "\n".join(re.sub(r"--.*$", "", ln) for ln in sql.splitlines())
-    for chunk in no_comments.split(";"):
-        body = chunk.strip()
-        if body:
-            yield body
+    """Yield individual statements from a ;-separated script.
+
+    Aware of `--` line comments AND of single-quoted strings: a `COMMENT ON ... IS 'Archived date;
+    NULL while active'` contains a semicolon that is part of the value, and splitting there
+    produced an unterminated string. `''` inside a string is an escaped quote, not a terminator.
+    """
+    out, buf, in_string = [], [], False
+    for line in sql.splitlines():
+        i, cleaned = 0, []
+        while i < len(line):
+            ch = line[i]
+            if in_string:
+                cleaned.append(ch)
+                if ch == "'":
+                    if i + 1 < len(line) and line[i + 1] == "'":   # '' is an escaped quote
+                        cleaned.append("'")
+                        i += 1
+                    else:
+                        in_string = False
+            elif ch == "'":
+                in_string = True
+                cleaned.append(ch)
+            elif ch == "-" and i + 1 < len(line) and line[i + 1] == "-":
+                break                                              # rest of the line is a comment
+            elif ch == ";":
+                buf.append("".join(cleaned))
+                if body := "".join(buf).strip():
+                    out.append(body)
+                buf, cleaned = [], []
+            else:
+                cleaned.append(ch)
+            i += 1
+        buf.append("".join(cleaned) + "\n")
+    if body := "".join(buf).strip():
+        out.append(body)
+    return out
 
 
 # Reverse dependency order, so dropping never trips over a view that depends on another.
@@ -41,14 +70,40 @@ _STAR_DROP_ORDER = (
 )
 
 
-def create_star(con) -> None:
+# Where the star lives now that it is out of `main`. `main` is always implicitly in DuckDB's
+# search_path, so anything left there is visible to EVERY cursor — including an arm that is supposed
+# to see only messy tables. Emptying `main` is what makes an arm's isolation structural rather than
+# a matter of not mentioning the clean tables.
+STAR_SCHEMA = "_star"
+
+
+def create_star(con, schema: str = STAR_SCHEMA) -> None:
+    """Build the star into `schema`. Source tables are qualified in star.sql; references BETWEEN
+    the star's own views are not, so they resolve inside whichever schema receives them — which is
+    how one file can serve both the shared `_star` and an arm's private copy."""
+    from warehouse.environment import ensure_source
+    ensure_source(con)
+    con.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}"')
+    cur = con.cursor()
+    cur.execute(f"SET search_path='{schema}'")
     for stmt in _statements(STAR_SQL.read_text()):
-        con.execute(stmt)
+        cur.execute(stmt)
 
 
-def drop_star(con) -> None:
+def drop_star(con, schema: str = STAR_SCHEMA) -> None:
+    con.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+
+
+def _empty_main(con) -> None:
+    """Remove the originals from `main`, once `_source` and `_star` hold them.
+
+    Not tidiness: `main` cannot be excluded from a search_path, so a table left there is reachable
+    by every arm no matter what that arm declares."""
+    from warehouse.environment import RAW
     for name in _STAR_DROP_ORDER:
-        con.execute(f"DROP VIEW IF EXISTS {name}")
+        con.execute(f'DROP VIEW IF EXISTS main."{name}"')
+    for name in RAW:
+        con.execute(f'DROP TABLE IF EXISTS main."{name}"')
 
 
 def set_star(con, enabled: bool) -> None:
@@ -64,8 +119,15 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
             f"{DB_PATH} not found — run `bench data` (or `make data`) first."
         )
     con = duckdb.connect(str(DB_PATH))
+    from warehouse.environment import SOURCE, ensure_source
+    ensure_source(con)
     if create_star_views:
         create_star(con)
+    _empty_main(con)
+    # The DEFAULT connection sees everything, so every existing caller — the semantic layer, gold
+    # SQL, `bench query`, the tests — keeps working with unqualified names. Only an ARM's cursor is
+    # narrowed, and that narrowing is the experiment.
+    con.execute(f"SET search_path='{STAR_SCHEMA},{SOURCE}'")
     return con
 
 
@@ -82,30 +144,62 @@ def visible_tables(rung: float) -> tuple[str, ...]:
 # --------------------------------------------------------------------------- #
 # Introspection helpers used by the agent's tools
 # --------------------------------------------------------------------------- #
-def schema_text(con, rung: int) -> str:
+def _tables_in_scope(con, rung, schema: str | None):
+    """The tables the agent may see: the arm's own schema when it has one, otherwise the rung's set.
+
+    Asked of the DATABASE when a schema exists, so an arm that declares a view gets it listed
+    without anything restating the table list. The hardcoded tuples remain only for studies that
+    share the warehouse."""
+    if schema is None:
+        return visible_tables(rung)
+    return tuple(r[0] for r in con.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY 1",
+        [schema]).fetchall())
+
+
+def _comments(con, schema: str | None) -> tuple[dict, dict]:
+    """Table and column comments, read from the database's own catalog.
+
+    This is where a real tool would read them: `COMMENT ON` is the mechanism Snowflake, BigQuery,
+    Postgres and Databricks all expose, and dbt's `description:` compiles to it. Reading the catalog
+    rather than a file the harness carries is what lets a documentation result be about warehouses
+    rather than about this repository."""
+    if schema is None:
+        return {}, {}
+    tables = {r[0]: r[1] for r in con.execute(
+        "SELECT view_name, comment FROM duckdb_views() WHERE schema_name = ? AND comment IS NOT NULL",
+        [schema]).fetchall()}
+    cols: dict = {}
+    for table, column, comment in con.execute(
+        "SELECT table_name, column_name, comment FROM duckdb_columns() "
+        "WHERE schema_name = ? AND comment IS NOT NULL", [schema]).fetchall():
+        cols.setdefault(table, {})[column] = comment
+    return tables, cols
+
+
+def schema_text(con, rung: int, schema: str | None = None) -> str:
     """A compact 'table(col type, ...)' listing of everything visible at this rung.
 
     At a DOCUMENTED rung each table also carries its one-line description — the whole of the
     matrix's `documented` column, and the only thing that separates rung 1 from 1.5. Nothing is
     renamed and no view is created; the tables are the same objects either way.
     """
-    from agent.rungs import capabilities
-    from warehouse.table_docs import describe_columns
-
-    documented = capabilities(rung).documented
+    table_docs, column_docs = _comments(con, schema)
     lines = []
-    for t in visible_tables(rung):
+    for t in _tables_in_scope(con, rung, schema):
         cols = con.execute(f"DESCRIBE {t}").fetchall()  # (name, type, ...)
         coltxt = ", ".join(f"{c[0]} {c[1].lower()}" for c in cols)
         lines.append(f"{t}({coltxt})")
-        if documented and (doc := describe_columns(t)):
+        if doc := table_docs.get(t):
             lines.append(f"    {doc}")
+        for column, doc in (column_docs.get(t) or {}).items():
+            lines.append(f"    {column}: {doc}")
     return "\n".join(lines)
 
 
-def describe_table(con, name: str, rung: int) -> str:
+def describe_table(con, name: str, rung: int, schema: str | None = None) -> str:
     """Columns + up to 3 sample rows for one visible table."""
-    allowed = visible_tables(rung)
+    allowed = _tables_in_scope(con, rung, schema)
     if name not in allowed:
         return f"Error: unknown table {name!r}. Available: {', '.join(allowed)}"
     cols = con.execute(f"DESCRIBE {name}").fetchall()
@@ -122,7 +216,43 @@ class QueryError(Exception):
 DEFAULT_MAX_ROWS = 100   # the row cap; agent.tools reports it rather than restating it
 
 
-def run_query(con, sql: str, max_rows: int = DEFAULT_MAX_ROWS) -> tuple[list[str], list[tuple]]:
+def foreign_schemas(con, sql: str, allowed: str) -> set[str]:
+    """Schemas this statement names that are not `allowed`.
+
+    Read from DuckDB's own parse tree, never from the query text: a regex over `schema.table` is
+    defeated by quoting, casing and whitespace, and the thing it would be protecting is the claim
+    that one arm cannot read another's warehouse.
+
+    An UNQUALIFIED reference is fine and comes back with an empty schema — it resolves through
+    `search_path`, which is the arm's schema alone, so it can only find the arm's own objects.
+    Common table expressions also arrive unqualified, which is why the empty case must be allowed
+    rather than treated as suspicious.
+
+    FAILS CLOSED. If the tree cannot be read, every schema is reported foreign. A guard that
+    permits what it could not parse is not a guard.
+    """
+    try:
+        tree = json.loads(con.execute("SELECT json_serialize_sql(?)", [sql]).fetchone()[0])
+    except Exception:  # noqa: BLE001 — unreadable means refused, never allowed
+        return {"<unparseable>"}
+    found: set[str] = set()
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "BASE_TABLE" and node.get("schema_name"):
+                found.add(node["schema_name"])
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value)
+
+    walk(tree)
+    return found - {allowed}
+
+
+def run_query(con, sql: str, max_rows: int = DEFAULT_MAX_ROWS,
+              schema: str | None = None) -> tuple[list[str], list[tuple]]:
     """Run a read-only query. Returns (column_names, rows). Raises QueryError with
     the database's own message on failure — that message is what the agent's
     self-correction loop feeds back to the model.
@@ -141,6 +271,16 @@ def run_query(con, sql: str, max_rows: int = DEFAULT_MAX_ROWS) -> tuple[list[str
         raise QueryError("Run a single statement.")
     if statements[0].type != duckdb.StatementType.SELECT:
         raise QueryError("Only read-only SELECT/WITH queries are allowed.")
+    # An arm may read its own warehouse and nothing else. `search_path` HIDES the other schemas;
+    # only this FORBIDS them, and the difference matters because reaching into another arm would
+    # not crash — it would return a plausible number computed from the wrong environment, which no
+    # downstream check could catch.
+    if schema is not None:
+        foreign = foreign_schemas(con, stripped, schema)
+        if foreign:
+            raise QueryError(
+                f"This query names {', '.join(sorted(foreign))}, which is outside this "
+                f"environment. Use the tables listed by get_schema, unqualified.")
     try:
         cur = con.execute(stripped)
         columns = [d[0] for d in cur.description]
