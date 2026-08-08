@@ -69,20 +69,37 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     return con
 
 
-def visible_tables(rung: int) -> tuple[str, ...]:
-    return RAW_TABLES if rung <= 1 else STAR_TABLES
+def visible_tables(rung: float) -> tuple[str, ...]:
+    """Which tables exist at this rung — ASKED of the rung, never inferred from its number.
+
+    This read `rung <= 1` until rung 1.5 was added, at which point a documented-but-messy rung
+    silently showed the clean star tables: the number was larger, so the comparison said star. The
+    ladder is not monotonic and a rung number is not a statement about capability."""
+    from agent.rungs import capabilities
+    return STAR_TABLES if capabilities(rung).star else RAW_TABLES
 
 
 # --------------------------------------------------------------------------- #
 # Introspection helpers used by the agent's tools
 # --------------------------------------------------------------------------- #
 def schema_text(con, rung: int) -> str:
-    """A compact 'table(col type, ...)' listing of everything visible at this rung."""
+    """A compact 'table(col type, ...)' listing of everything visible at this rung.
+
+    At a DOCUMENTED rung each table also carries its one-line description — the whole of the
+    matrix's `documented` column, and the only thing that separates rung 1 from 1.5. Nothing is
+    renamed and no view is created; the tables are the same objects either way.
+    """
+    from agent.rungs import capabilities
+    from warehouse.table_docs import describe_columns
+
+    documented = capabilities(rung).documented
     lines = []
     for t in visible_tables(rung):
         cols = con.execute(f"DESCRIBE {t}").fetchall()  # (name, type, ...)
         coltxt = ", ".join(f"{c[0]} {c[1].lower()}" for c in cols)
         lines.append(f"{t}({coltxt})")
+        if documented and (doc := describe_columns(t)):
+            lines.append(f"    {doc}")
     return "\n".join(lines)
 
 
