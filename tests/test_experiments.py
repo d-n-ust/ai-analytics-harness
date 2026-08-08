@@ -76,7 +76,7 @@ def test_a_patch_does_not_mutate_the_base():
 
 def test_prose_is_the_shipped_layer_by_construction():
     """Not 'has not drifted from' — IS. An empty patch cannot drift."""
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     assert exp.arms["B_prose"].patch == {} and not exp.arms["B_prose"].delete, (
         "the prose arm has a patch — it is supposed to BE the shipped layer, not a copy of it")
     _, paths, _ = _layers(exp)
@@ -85,14 +85,14 @@ def test_prose_is_the_shipped_layer_by_construction():
 
 
 def test_every_arm_offers_the_same_metrics():
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     _, _, layers = _layers(exp)
     check_candidate_count(layers, exp.arms)          # raises SystemExit if not
     assert len({len(sl.metrics) for sl in layers.values()}) == 1
 
 
 def test_every_arm_reaches_the_same_numbers():
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     con, _, layers = _layers(exp)
     problems = check_same_numbers(con, exp.base, layers, exp.arms)
     assert not problems, "arms differ in capability, not legibility:\n  " + "\n  ".join(problems)
@@ -100,7 +100,7 @@ def test_every_arm_reaches_the_same_numbers():
 
 def test_the_threshold_moves_and_does_not_multiply():
     """The fact under test appears in exactly the arms that claim it, and exactly once."""
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     _, _, layers = _layers(exp)
     seen = {a: sl.list_metrics_text().count(THRESHOLD) for a, sl in layers.items()}
     assert seen == {"A_absent": 0, "B_prose": 1, "C_segment": 1}, (
@@ -117,7 +117,7 @@ def test_prose_and_segment_share_the_same_wording_with_every_question():
     `prose` and `segment` differ in WHERE the threshold is written. If they also differed in the
     words used, a win would be vocabulary and nobody could tell. Equality here is what makes the
     comparison structural — so it is asserted, not audited after the fact."""
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     _, _, layers = _layers(exp)
     rows = {(r["arm"], r["id"]): r["tokens"] for r in vocabulary_audit(exp.cases, layers)}
     for case in exp.cases:
@@ -127,7 +127,7 @@ def test_prose_and_segment_share_the_same_wording_with_every_question():
 
 
 def test_absent_states_the_threshold_nowhere():
-    exp = Study.load("02_segment_in_agg")
+    exp = Study.load("02_segment_in_aggregate")
     _, _, layers = _layers(exp)
     text = layers["A_absent"].list_metrics_text().lower()
     for leak in ("5+", "five or more", "moments >= 5", "single day"):

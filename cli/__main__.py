@@ -368,8 +368,8 @@ def main() -> None:
     sp = sub.add_parser("study", aliases=["experiment", "exp"],
                         help="run one study from experiments/<experiment>/<study>/ (arms are patches)")
     sp.add_argument("study", nargs="?", default=None,
-                    help="study name, e.g. 02_segment_in_agg or 04_semantic_layer_health/"
-                         "02_segment_in_agg (omit to print the tree)")
+                    help="study name, e.g. 02_segment_in_aggregate or 04_semantic_layer_health/"
+                         "02_segment_in_aggregate (omit to print the tree)")
     sp.add_argument("--reps", type=int, default=1)
     sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
     sp.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")

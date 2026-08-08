@@ -1,8 +1,8 @@
 """The runner for declarative layer studies. A study is a DIRECTORY, not a script.
 
     ./bench study                                  the tree: every experiment and its studies
-    ./bench study 02_segment_in_agg --reps 3       bare names resolve if unambiguous
-    ./bench study 04_semantic_layer_health/02_segment_in_agg --mock
+    ./bench study 02_segment_in_aggregate --reps 3       bare names resolve if unambiguous
+    ./bench study 04_semantic_layer_health/02_segment_in_aggregate --mock
 
 TWO LEVELS, BECAUSE THE WORK HAS TWO LEVELS. An EXPERIMENT is a week that ends in an article; a
 STUDY is one runnable comparison inside it. Only experiment 04 has studies — 01 and 02 are sweeps
@@ -177,6 +177,15 @@ class Arm:
     # wholesale; this varies only HOW the same layer is written down. It is the one arm kind whose
     # treatment provably changes no facts — which `check_same_facts` enforces.
     catalogue_format: str = ""
+    # Optional catalogue fields this arm renders. Lets an arm vary whether a fact REACHES the agent
+    # while the layer computing the numbers stays byte-identical — the cleanest treatment available,
+    # because no new sentence, synonym or metric can explain a difference.
+    catalogue_fields: tuple = ()
+    # The grounding rung this arm runs at, when the study compares INTERVENTION LEVELS rather than
+    # layer content. Empty means the study's rung. An arm that changes rung changes the agent's tool
+    # surface — raw SQL below rung 3, `query_metric` at and above it — so the catalogue guards below
+    # do not apply to it and are skipped rather than quietly passing on an absent catalogue.
+    rung: float = 0
     # metric -> {metric, segment}: how a case's expected metric is REACHED in this arm. A structural
     # arm may move a segment from a name into an argument; the expectation moves with it, which is a
     # translation of the same demand and not a relaxation of it.
@@ -184,7 +193,8 @@ class Arm:
     changes_candidate_count: bool = False
 
     KEYS = {"level", "claim", "patch", "delete", "reorder", "grading",
-            "changes_candidate_count", "layer_dir", "catalogue_format"}
+            "changes_candidate_count", "layer_dir", "catalogue_format", "catalogue_fields",
+            "rung"}
 
     @classmethod
     def load(cls, path: Path) -> Arm:
@@ -198,6 +208,8 @@ class Arm:
                    patch=d.get("patch") or {}, delete=d.get("delete") or [],
                    reorder=d.get("reorder") or {}, layer_dir=d.get("layer_dir", ""),
                    catalogue_format=d.get("catalogue_format", ""),
+                   catalogue_fields=tuple(d.get("catalogue_fields") or ()),
+                   rung=float(d.get("rung") or 0),
                    equivalents=(d.get("grading") or {}).get("metric_equivalents") or {},
                    changes_candidate_count=bool(d.get("changes_candidate_count")))
 
@@ -322,8 +334,8 @@ class Study:
     def resolve(name: str) -> Path:
         """A study's directory, from either its full path or its bare name.
 
-        Nesting made the honest identifier long — `04_semantic_layer_health/02_segment_in_agg` — and
-        a name nobody will type is a name nobody uses. So the bare `02_segment_in_agg` resolves too,
+        Nesting made the honest identifier long — `04_semantic_layer_health/02_segment_in_aggregate` — and
+        a name nobody will type is a name nobody uses. So the bare `02_segment_in_aggregate` resolves too,
         as long as it is unambiguous; ambiguity is reported rather than guessed at."""
         studies = Study.discover()
         if name in studies:
@@ -600,13 +612,23 @@ def _guardrails_of(study) -> object:
 
 
 def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, verifier, reps) -> dict:
-    grounding = build_grounding(con, study.rung, guardrails=_guardrails_of(study),
+    rung = arm.rung or study.rung
+    # The star views are a property of the RUNG, and an arm may set its own. Toggled here rather
+    # than once per study, so an arm at rung 1 genuinely cannot see the clean tables.
+    set_star(con, capabilities(rung).star)
+    grounding = build_grounding(con, rung, guardrails=_guardrails_of(study),
                                 catalogue_format=arm.catalogue_format or "prose",
+                                catalogue_fields=arm.catalogue_fields,
                                 spec_path=spec_path, engine=study.engine)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
     # of the same thing, free to fall out of step with it.
-    expectation = [Expectation(CATALOG, must_contain=(grounding.semantic.list_metrics_text(),))]
+    #
+    # An arm below rung 3 has no catalogue, so there is nothing to expect. Recording an empty
+    # expectation rather than a vacuous one keeps `context_audit` meaning "the treatment reached the
+    # model" everywhere it is populated, instead of silently meaning nothing for some arms.
+    expectation = ([Expectation(CATALOG, must_contain=(grounding.semantic.list_metrics_text(),))]
+                   if grounding.semantic is not None else [])
     blobs: dict = {}
     out = []
     for rep in range(reps):
@@ -645,19 +667,28 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     for a in arms:
         print(f"  {a:16s} {results[a]['fingerprint']}")
 
-    print("\nvocabulary audit — longest verbatim span each question shares with the catalogue:")
-    print(f"  {'question':26s} " + " ".join(f"{a:>16s}" for a in arms))
-    for case in cases:
-        cells = []
-        for a in arms:
-            row = next(r for r in vocab if r["id"] == case["id"] and r["arm"] == a)
-            cells.append(f"{row['tokens']:>14d}")
-        print(f"  {case['id']:26s} " + " ".join(cells))
-    worst = max(vocab, key=lambda r: r["tokens"])
-    print(f"  longest anywhere: {worst['tokens']} tokens — {worst['arm']}/{worst['id']}: {worst['span']!r}")
-    spread = {a: max(r["tokens"] for r in vocab if r["arm"] == a) for a in arms}
-    if max(spread.values()) - min(spread.values()) >= 3:
-        print("  ⚠ arms differ by 3+ tokens in shared wording. A win may be vocabulary, not structure.")
+    # Only arms with a catalogue can be audited; an arm below rung 3 has no text to share wording
+    # with. Shown as "—" rather than omitted, so the gap is visible instead of looking like a zero.
+    audited = [a for a in arms if any(r["arm"] == a for r in vocab)]
+    if audited:
+        print("\nvocabulary audit — longest verbatim span each question shares with the catalogue:")
+        print(f"  {'question':26s} " + " ".join(f"{a:>16s}" for a in arms))
+        for case in cases:
+            cells = []
+            for a in arms:
+                row = next((r for r in vocab if r["id"] == case["id"] and r["arm"] == a), None)
+                cells.append(f"{row['tokens']:>14d}" if row else f"{'—':>14s}")
+            print(f"  {case['id']:26s} " + " ".join(cells))
+        worst = max(vocab, key=lambda r: r["tokens"])
+        print(f"  longest anywhere: {worst['tokens']} tokens — {worst['arm']}/{worst['id']}: "
+              f"{worst['span']!r}")
+        if len(audited) < len(arms):
+            print(f"  not audited: {', '.join(a for a in arms if a not in audited)} "
+                  f"(no catalogue below rung 3)")
+        spread = {a: max(r["tokens"] for r in vocab if r["arm"] == a) for a in audited}
+        if max(spread.values()) - min(spread.values()) >= 3:
+            print("  ⚠ arms differ by 3+ tokens in shared wording. A win may be vocabulary, "
+                  "not structure.")
 
     print(f"\n{'question':26s} {'wanted':18s} " + " ".join(f"{a:^22s}" for a in arms))
     print("-" * (46 + 23 * len(arms)))
@@ -738,7 +769,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     # Mirror the source layout: results/experiments/<experiment>/<stamp>-<study>. A study's name
     # contains a slash now, so gluing the timestamp to the whole thing attached it to the
     # EXPERIMENT and made the study a subdirectory — `20260806-234210-04_semantic_layer_health/
-    # 02_segment_in_agg-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
+    # 02_segment_in_aggregate-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
     # matched them, so cleanup silently skipped every mock run it was meant to remove.
     experiment, _, study_name = study.name.partition("/")
     kind = f"{study_name}-mock" if args.mock else study_name
@@ -769,8 +800,11 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         # whether two runs may be compared at all. A refactor once changed the shipped catalogue on
         # every metric while older results stayed on disk looking comparable.
         "arms": {a: {"fingerprint": results[a]["fingerprint"], "level": study.arms[a].level,
-                     "claim": study.arms[a].claim, "metrics": len(layers[a].metrics),
-                     "catalogue": _catalogue_id(layers[a])} for a in results},
+                     "claim": study.arms[a].claim,
+                     "rung": study.arms[a].rung or study.rung,
+                     **({"metrics": len(layers[a].metrics),
+                         "catalogue": _catalogue_id(layers[a])} if a in layers else {})}
+                 for a in results},
         "vocabulary_audit": vocab, "gold": golds, "cases": cases,
         "rows": [dict(arm=a, **r) for a in results for r in results[a]["rows"]],
     }, indent=2, default=str))
@@ -800,19 +834,32 @@ def run(args) -> Path:
     # and a layer that fails a check must cost nothing.
     build = ROOT / ".build" / study.name
     paths = study.materialize(build)
+    # Arms whose rung has no semantic layer are excluded from the CATALOGUE guards below. They have
+    # no catalogue to check, and a guard that "passes" on an absent catalogue is worse than one that
+    # declines to look — it reports agreement it never verified. The same-numbers invariant still
+    # covers them, because the warehouse is identical and only the agent's tool surface changes.
+    catalogued = [a for a in arms if capabilities(study.arms[a].rung or study.rung).semantic]
+    if len(catalogued) < len(arms):
+        skipped = [a for a in arms if a not in catalogued]
+        print(f"note: {', '.join(skipped)} run below the semantic layer, so the catalogue guards "
+              f"(candidate count, same facts) do not apply to them.")
+
     layers = {}
-    for a in arms:
+    for a in catalogued:
         layer = _reference_layer(con, paths[a], study.engine)
         if study.arms[a].catalogue_format:
             layer.catalogue_format = study.arms[a].catalogue_format
+        if study.arms[a].catalogue_fields:
+            layer.catalogue_fields = study.arms[a].catalogue_fields
         layers[a] = layer
 
-    check_candidate_count(layers, study.arms)
-    fact_problems = check_same_facts(layers, study.arms)
+    guarded_arms = {a: study.arms[a] for a in catalogued}
+    check_candidate_count(layers, guarded_arms)
+    fact_problems = check_same_facts(layers, guarded_arms)
     if fact_problems:
         raise SystemExit("the arms do not state the same FACTS, so a difference between them is\n"
                          "not about arrangement:\n  " + "\n  ".join(fact_problems))
-    problems = check_same_numbers(con, study.base, layers, study.arms, study.engine)
+    problems = check_same_numbers(con, study.base, layers, guarded_arms, study.engine)
     if problems:
         raise SystemExit("the same-numbers invariant fails — the arms differ in CAPABILITY, so any\n"
                          "difference between them is not about legibility:\n  " + "\n  ".join(problems))
@@ -834,8 +881,11 @@ def run(args) -> Path:
     print("gold: " + ", ".join(f"{k}={v:g}" for k, v in golds.items() if v is not None))
 
     results = {a: _run_arm(con, study, study.arms[a], paths[a], cases, golds, model, verifier, args.reps) for a in arms}
-    _summarise(study, results, cases, vocab)
+    # PERSIST FIRST. The summary is a rendering of results that already exist, and it used to run
+    # before the write — so a formatting bug in it destroyed sixty completed runs that had already
+    # been paid for. Reporting may fail; evidence may not be lost.
     out = _persist(study, results, cases, golds, vocab, layers, args, model, verifier)
+    _summarise(study, results, cases, vocab)
     print(f"\nwrote {out}")
     print(f"inspect what the model saw:  ./bench context --run {out.relative_to(ROOT)} --full")
     return out
