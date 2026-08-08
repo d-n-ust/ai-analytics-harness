@@ -152,9 +152,13 @@ def _tables_in_scope(con, rung, schema: str | None):
     share the warehouse."""
     if schema is None:
         return visible_tables(rung)
+    # `agg_*` are the semantic layer's own inputs. star.sql has always said they "are internal to
+    # the semantic layer and are not shown to the agent as tables", and before per-arm schemas that
+    # held because STAR_TABLES listed the rest. An arm's schema must CONTAIN them — the layer
+    # compiles against them on this very cursor — so the hiding belongs here, at the listing.
     return tuple(r[0] for r in con.execute(
-        "SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY 1",
-        [schema]).fetchall())
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = ? "
+        "AND table_name NOT LIKE 'agg\\_%' ESCAPE '\\' ORDER BY 1", [schema]).fetchall())
 
 
 def _comments(con, schema: str | None) -> tuple[dict, dict]:
