@@ -29,8 +29,32 @@ def _validate(case: dict, where: str) -> None:
     t = e.get("type")
     if t not in _EXPECT_TYPES:
         raise ValueError(f"{where}: case {case['id']!r} has expect.type {t!r}, not one of {_EXPECT_TYPES}")
-    if t == "metric_answer" and not (e.get("metric") and e.get("gold_sql")):
-        raise ValueError(f"{where}: metric_answer case {case['id']!r} needs both metric and gold_sql")
+    if t == "metric_answer":
+        # NAMING THE METRIC IS THE DEFAULT AND STAYS THE DEFAULT. For most questions "did the agent
+        # pick the right definition?" is the measurement, and a case that forgets to say which
+        # metric it expects would silently grade a right number from the wrong definition as
+        # correct.
+        #
+        # The one honest exception is a question with NO governed metric to name. It arises in
+        # studies that span grounding rungs: below rung 3 there is no semantic layer, and some
+        # questions ("how many habits are people still tracking") have no metric at rung 3 either,
+        # because nobody modelled one. Forcing a metric there means inventing one or dropping the
+        # question, and both corrupt the study.
+        #
+        # So the exception is declared, never inferred: a case must SAY `no_governed_metric: true`,
+        # which states a fact about the layer rather than a preference about grading. A typo in
+        # `metric` still fails loudly, because silence is not the opt-out.
+        if not e.get("gold_sql"):
+            raise ValueError(f"{where}: metric_answer case {case['id']!r} needs gold_sql")
+        if not e.get("metric") and not e.get("no_governed_metric"):
+            raise ValueError(
+                f"{where}: metric_answer case {case['id']!r} names no metric. Add one, or declare "
+                f"`no_governed_metric: true` if the layer genuinely has none — the exception must "
+                f"be stated, not left to an omission.")
+        if e.get("metric") and e.get("no_governed_metric"):
+            raise ValueError(
+                f"{where}: metric_answer case {case['id']!r} both names a metric and declares "
+                f"`no_governed_metric` — one of the two is wrong.")
     # `ambiguous` carries a reason for the same purpose `refuse` does — a refusal must still name
     # the right code to be correct. The extra allowance is the clarification, not a free pass.
     #

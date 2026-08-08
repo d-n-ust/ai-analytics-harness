@@ -11,6 +11,8 @@ Run: PYTHONPATH=. uv run python tests/test_grade.py
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from agent.loop import Answer
 from evals.gold import load_questions
 from evals.grade import grade
@@ -93,10 +95,27 @@ def test_exactly_which_cases_carry_the_two_new_rules():
     assert multi == ["u_july_partial_month"], multi
 
 
+def test_the_frozen_cases_all_name_their_metric():
+    """Naming the metric is the default. A study-local case may opt out with
+    `no_governed_metric: true` where the layer genuinely has none, but the frozen set never may:
+    selecting the right metric IS the measurement there, and a case that lost its `metric` would
+    grade a right number computed from the wrong definition as correct."""
+    import yaml
+    root = Path(__file__).resolve().parent.parent / "evals" / "cases"
+    missing = [f"{path.name}:{case['id']}"
+               for path in sorted(root.rglob("*.yml"))
+               for case in (yaml.safe_load(path.read_text()) or {}).get("cases", [])
+               if case.get("expect", {}).get("type") == "metric_answer"
+               and not case["expect"].get("metric")]
+    assert not missing, f"frozen metric_answer cases with no metric: {missing}"
+
+
 if __name__ == "__main__":
+    test_the_frozen_cases_all_name_their_metric()
     test_an_ambiguous_question_accepts_both_declining_and_asking()
     test_a_case_stops_demanding_an_answer_where_its_context_was_never_supplied()
     test_the_widening_only_touches_cases_that_declare_it()
     test_exactly_which_cases_carry_the_two_new_rules()
     print("OK — ambiguous cases accept declining or asking, a case without its required context "
-          "only insists the agent did not guess, and neither rule leaks into the other 54.")
+          "only insists the agent did not guess, neither rule leaks into the other 54, and every "
+          "frozen metric_answer still names its metric.")

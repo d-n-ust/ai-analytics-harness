@@ -1,87 +1,217 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://decisionspine/ai-analytics-harness/evals/case.schema.json",
-  "title": "Eval case",
-  "description": "One question with a declared expected outcome. See README.md.",
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["id", "question", "expect"],
-  "properties": {
-    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
-    "tier": { "type": "string", "description": "Grouping label for reporting only." },
-    "question": { "type": "string", "minLength": 1 },
-    "difficulty": { "enum": ["easy", "subtle", "hard"] },
-    "tags": { "type": "array", "items": { "type": "string" } },
-    "note": { "type": "string", "description": "Why this case exists / the trap it sets." },
-    "requires": {
-      "type": "array",
-      "items": { "enum": ["star", "semantic", "examples", "knowledge", "tree"] },
-      "description": "Injected context the expected answer DEPENDS on. Where a rung does not supply it, the case stops demanding a particular answer and only requires that the agent did not guess: a refusal or a clarification is then also correct."
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "$id": "https://decisionspine/ai-analytics-harness/evals/case.schema.json",
+ "title": "Eval case",
+ "description": "One question with a declared expected outcome. See README.md.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "id",
+  "question",
+  "expect"
+ ],
+ "properties": {
+  "id": {
+   "type": "string",
+   "pattern": "^[a-z0-9_]+$"
+  },
+  "tier": {
+   "type": "string",
+   "description": "Grouping label for reporting only."
+  },
+  "question": {
+   "type": "string",
+   "minLength": 1
+  },
+  "difficulty": {
+   "enum": [
+    "easy",
+    "subtle",
+    "hard"
+   ]
+  },
+  "tags": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "note": {
+   "type": "string",
+   "description": "Why this case exists / the trap it sets."
+  },
+  "requires": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "star",
+     "semantic",
+     "examples",
+     "knowledge",
+     "tree"
+    ]
+   },
+   "description": "Injected context the expected answer DEPENDS on. Where a rung does not supply it, the case stops demanding a particular answer and only requires that the agent did not guess: a refusal or a clarification is then also correct."
+  },
+  "expect": {
+   "oneOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "gold_sql"
+     ],
+     "properties": {
+      "type": {
+       "const": "metric_answer"
+      },
+      "metric": {
+       "type": "string",
+       "description": "The governed metric the answer must come from."
+      },
+      "gold_sql": {
+       "type": "string",
+       "description": "Independent raw-SQL oracle for the number."
+      },
+      "tolerance": {
+       "type": "number",
+       "default": 0.02
+      },
+      "no_governed_metric": {
+       "type": "boolean",
+       "description": "Declares that the layer has NO governed metric for this question, so `metric` is absent on purpose. Study-local only; the frozen set must always name its metric (tests/test_grade.py). Never set alongside `metric`."
+      }
+     }
     },
-    "expect": {
-      "oneOf": [
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type", "metric", "gold_sql"],
-          "properties": {
-            "type": { "const": "metric_answer" },
-            "metric": { "type": "string", "description": "The governed metric the answer must come from." },
-            "gold_sql": { "type": "string", "description": "Independent raw-SQL oracle for the number." },
-            "tolerance": { "type": "number", "default": 0.02 }
-          }
-        },
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type", "reason"],
-          "properties": {
-            "type": { "const": "refuse" },
-            "reason": {
-              "enum": ["no_governed_definition", "out_of_coverage", "segment_undefined",
-                       "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                       "dimension_not_supported", "ungoverned_dimension_value",
-                       "result_empty", "implausible_value", "out_of_scope", "other"]
-            },
-            "gold_sql": { "type": "string", "description": "Provenance only (the trap value); NOT graded as the answer." },
-            "tolerance": { "type": "number", "default": 0.02 }
-          }
-        },
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type", "driver"],
-          "properties": {
-            "type": { "const": "diagnostic" },
-            "driver": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
-            "cause": { "type": "array", "items": { "type": "string" } }
-          }
-        },
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type", "keywords"],
-          "properties": {
-            "type": { "const": "keywords" },
-            "keywords": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
-          }
-        },
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type", "reason"],
-          "properties": {
-            "type": { "const": "ambiguous" },
-            "reason": {
-              "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
-              "enum": ["no_governed_definition", "out_of_coverage", "segment_undefined",
-                       "no_causal_evidence", "false_premise", "wrong_measure", "wrong_grain",
-                       "dimension_not_supported", "ungoverned_dimension_value",
-                       "result_empty", "implausible_value", "out_of_scope", "other"]
-            }
-          }
-        },
-        {
-          "type": "object", "additionalProperties": false,
-          "required": ["type"],
-          "properties": { "type": { "const": "clarify" } }
-        }
-      ]
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "reason"
+     ],
+     "properties": {
+      "type": {
+       "const": "refuse"
+      },
+      "reason": {
+       "enum": [
+        "no_governed_definition",
+        "out_of_coverage",
+        "segment_undefined",
+        "no_causal_evidence",
+        "false_premise",
+        "wrong_measure",
+        "wrong_grain",
+        "dimension_not_supported",
+        "ungoverned_dimension_value",
+        "result_empty",
+        "implausible_value",
+        "out_of_scope",
+        "other"
+       ]
+      },
+      "gold_sql": {
+       "type": "string",
+       "description": "Provenance only (the trap value); NOT graded as the answer."
+      },
+      "tolerance": {
+       "type": "number",
+       "default": 0.02
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "driver"
+     ],
+     "properties": {
+      "type": {
+       "const": "diagnostic"
+      },
+      "driver": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "minItems": 1
+      },
+      "cause": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "keywords"
+     ],
+     "properties": {
+      "type": {
+       "const": "keywords"
+      },
+      "keywords": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "minItems": 1
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "reason"
+     ],
+     "properties": {
+      "type": {
+       "const": "ambiguous"
+      },
+      "reason": {
+       "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
+       "enum": [
+        "no_governed_definition",
+        "out_of_coverage",
+        "segment_undefined",
+        "no_causal_evidence",
+        "false_premise",
+        "wrong_measure",
+        "wrong_grain",
+        "dimension_not_supported",
+        "ungoverned_dimension_value",
+        "result_empty",
+        "implausible_value",
+        "out_of_scope",
+        "other"
+       ]
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type"
+     ],
+     "properties": {
+      "type": {
+       "const": "clarify"
+      }
+     }
     }
+   ]
   }
+ }
 }
