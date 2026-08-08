@@ -49,10 +49,21 @@ class Grounding:
         `list_metrics` RESULT rather than through the prompt or a spec, so a run on a different
         semantic layer — or the same layer rendered differently — used to hash identically to its
         own control. Any experiment whose treatment IS the layer was silently unfingerprinted, and
-        the guarantee above was false in exactly the case it exists to protect."""
+        the guarantee above was false in exactly the case it exists to protect.
+
+        The WAREHOUSE SCHEMA belongs here for the identical reason, and was missing for the
+        identical reason: it also arrives as a tool result rather than through the prompt. A study
+        comparing documented tables against undocumented ones hashed the same in both arms — the
+        treatment was the schema text, and the fingerprint could not see it. Caught by the guard
+        that exists to catch it, one surface later than it should have been."""
+        from warehouse.warehouse import schema_text
+
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
         if self.semantic is not None:
             surface += "\n" + self.semantic.list_metrics_text()
+        con = getattr(self.toolbox, "con", None)
+        if con is not None:
+            surface += "\n" + schema_text(con, self.rung)
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -71,7 +82,8 @@ def _build_layer(con, engine: str, spec_path):
 
 def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
                     protocol: Protocol | None = None, spec_path=None,
-                    engine: str = "harness", catalogue_format: str = "prose") -> Grounding:
+                    engine: str = "harness", catalogue_format: str = "prose",
+                    catalogue_fields: tuple = ()) -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -103,6 +115,10 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
         # varies without varying what the layer says. It reaches the fingerprint through
         # `list_metrics_text`, so two format arms hash differently, as they must.
         semantic.catalogue_format = catalogue_format
+    if semantic is not None and catalogue_fields:
+        # Optional facts this arm surfaces. The layer computes them either way; this
+        # decides whether they reach the model.
+        semantic.catalogue_fields = tuple(catalogue_fields)
     if semantic is not None:
         check_compatible(semantic.capabilities, g, f"rung {rung} / {g.label()}")
     tree = MetricTree(semantic) if caps.tree else None
