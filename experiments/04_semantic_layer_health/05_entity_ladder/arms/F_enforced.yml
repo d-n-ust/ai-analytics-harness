@@ -1,0 +1,38 @@
+# The matrix's fifth column, and the one that is NOT an alternative to its neighbour.
+#
+# WHY THIS ARM IS `D_declared` PLUS A CHECK. For some primitives, `enforced` stands alone: study
+# 04's additivity trap was caught by `governed_numbers`, which refuses a number that traces to no
+# single governed result and knows nothing about additivity — it tests a property of the ANSWER, so
+# it needs no vocabulary. Entity is the other kind. The check here is "is the thing you measured
+# the thing that was asked for", and answering that needs a list of things to compare against plus
+# a declaration of which one was used. Both come from the governed layer. So E cannot be run
+# instead of D; it is D with one more guardrail.
+#
+# WHAT THE CHECK IS. `trajectory_verify` (R9) — the judge's first test: "does what the metric
+# measures, per its definition, match the thing the question asks about? If the question is about
+# one entity and the metric measures a different one, that is a thing mismatch." It is refuse-only:
+# it can add abstentions, never invent an answer.
+#
+# THE HONEST CAVEAT, and it is a real difference from study 04's enforced arm. That one was a
+# DETERMINISTIC check — provenance either holds or it does not. This one is an LLM judge, so it has
+# an error rate of its own, and a difference between D and E is partly a measurement of the judge.
+# `../FINDINGS.md` records that refusal categorisation is unstable across identical runs; the same
+# caution applies here.
+#
+# WHAT IT SHOULD CATCH. `D_declared` answered "886 active users" when asked how many habits people
+# are still tracking — the catalogue pulled it toward what the catalogue stocks. That is a THING
+# mismatch by the judge's own definition, and it is the prediction this arm exists to test.
+level: structural
+claim: "the same governed layer, plus a check that refuses when the thing measured is not the thing asked for"
+rung: 3
+patch: {}
+
+# WHAT THE AGENT IS. R9, where every other arm runs at R1 — the ONE arm whose guardrails differ,
+# because here the guardrail IS the treatment. It makes E vs F a clean comparison and A vs F an
+# unclean one, which study.yml states in its predictions.
+agent:
+  guardrails: 9
+
+environment:
+  tables: star_schema
+  semantic: semantic/semantic_layer.yml    # identical to D_declared — only the check is added

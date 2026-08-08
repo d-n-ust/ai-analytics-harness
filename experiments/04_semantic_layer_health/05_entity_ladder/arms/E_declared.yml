@@ -2,6 +2,12 @@
 # than SQL. The most expensive option and the one the practice recommends; this study exists to say
 # what the two cheaper ones buy against it.
 level: structural
-claim: "a governed semantic layer — entities and measures are declared"
+claim: "the same star, plus a governed layer where entities and measures are declared"
 rung: 3
 patch: {}
+
+# The same star as C_renamed, with the governed metric layer on top. The comparison between them is
+# therefore exactly the catalogue, because their warehouses are identical by construction.
+environment:
+  tables: star_schema
+  semantic: semantic/semantic_layer.yml    # the SAME star, plus this governed layer

@@ -21,6 +21,8 @@ from pathlib import Path
 
 import duckdb
 
+from warehouse.warehouse import STAR_SCHEMA
+
 from metricflow.data_table.mf_table import MetricFlowDataTable
 from metricflow.protocols.sql_client import SqlClient, SqlEngine
 from metricflow.sql.render.duckdb_renderer import DuckDbSqlPlanRenderer
@@ -37,12 +39,12 @@ class DuckDbClient(SqlClient):
 
     def ensure_time_spine(self) -> None:
         """One row per day, spanning the warehouse. A view, so nothing is materialised."""
-        self._con.execute("""
-            CREATE OR REPLACE VIEW main.mf_time_spine AS
+        self._con.execute(f"""
+            CREATE OR REPLACE VIEW "{STAR_SCHEMA}".mf_time_spine AS
             SELECT CAST(d AS DATE) AS ds
             FROM (SELECT UNNEST(generate_series(
-                     (SELECT min(active_date) FROM main.agg_active_days),
-                     (SELECT max(active_date) FROM main.agg_active_days),
+                     (SELECT min(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
+                     (SELECT max(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
                      INTERVAL 1 DAY)) AS d)
         """)
 

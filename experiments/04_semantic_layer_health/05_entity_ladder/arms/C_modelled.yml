@@ -2,6 +2,17 @@
 # event kind, so the entity is legible from the table name and the code resolution is done. No
 # descriptions — this arm tests STRUCTURE against B's SENTENCES.
 level: structural
-claim: "a conformed star schema — the entity is in the table name"
+claim: "a conformed star — the event kinds are already split, so the entity is the table"
 rung: 2
 patch: {}
+
+# NOT MERELY RENAMED. The star changes three things at once: naming (`evt` -> fct_value_moments),
+# shape (pre-joined marts), and CODE RESOLUTION — fct_value_moments holds only completed habits, so
+# the entity trap is gone structurally rather than described away. The third is the one that
+# matters, which is why this arm is `modelled` and not `renamed`.
+#
+# The raw tables are not merely unlisted here; they are not in scope, so `SELECT count(*) FROM evt`
+# fails.
+environment:
+  tables: star_schema
+  semantic: null       # no governed layer — the star, and nothing above it

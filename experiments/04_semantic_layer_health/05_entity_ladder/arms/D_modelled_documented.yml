@@ -1,0 +1,21 @@
+# The star, described. The most common shape in a mature warehouse, and the one the four-arm
+# version of this study skipped.
+#
+# WHY IT MATTERS THAT THIS EXISTS SEPARATELY. Documentation is not a rung — it is a property every
+# shape can have or lack, so the ladder carries it twice: A vs B asks whether describing MESSY
+# tables helps, C vs D asks whether describing WELL-NAMED ones still does. Kimball's argument for
+# conformed dimensions is that the name carries the meaning, so `fct_value_moments` should already
+# say what `evt` needed a comment to say.
+#
+# THE PREDICTION, and it is the sharpest one in the study. If C ~ D while A < B, then conformed
+# naming SUBSTITUTES for documentation and documentation does not substitute for naming — which is
+# a quotable result and an argument for spending the days rather than the afternoon.
+level: structural
+claim: "a conformed star, described — the common shape in a mature warehouse"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_schema
+  docs: star_schema        # warehouse/docs/star_schema.sql — the same COMMENT ON mechanism as B
+  semantic: null           # no governed layer above it
