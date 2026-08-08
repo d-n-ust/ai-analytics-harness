@@ -63,7 +63,10 @@ class Grounding:
             surface += "\n" + self.semantic.list_metrics_text()
         con = getattr(self.toolbox, "con", None)
         if con is not None:
-            surface += "\n" + schema_text(con, self.rung)
+            # The arm's SCHEMA must be passed, or this reads the shared warehouse and misses the
+            # treatment entirely. It did: two arms differing only in their table comments hashed
+            # identically, because comments live in the arm's own schema and this asked about none.
+            surface += "\n" + schema_text(con, self.rung, getattr(self.toolbox, "schema", None))
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -83,7 +86,8 @@ def _build_layer(con, engine: str, spec_path):
 def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
                     protocol: Protocol | None = None, spec_path=None,
                     engine: str = "harness", catalogue_format: str = "prose",
-                    catalogue_fields: tuple = ()) -> Grounding:
+                    catalogue_fields: tuple = (), schema: str | None = None,
+                    semantic_layer: bool | None = None) -> Grounding:
     # GuardrailSet is the one primitive; default R1 (abstention). A ladder preset is LADDER[n], an
     # ablation cell any GuardrailSet set. The prompt is assembled from the SAME set the Toolbox
     # enforces, so a cell can never describe a guardrail that is not running — that would make the
@@ -109,7 +113,12 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     # The agent is unchanged either way — it calls one interface (semantic/engine.py) — which is
     # the point: a difference between engines is then a difference in what the layer SHOWS,
     # not in what the agent was built to do.
-    semantic = _build_layer(con, engine, spec_path) if caps.semantic else None
+    # WHETHER there is a governed layer is normally the rung's business. An arm may say so
+    # directly (`environment: {semantic: ...}`), which is what lets two arms sharing a warehouse
+    # differ ONLY in the catalogue — and lets the difference be visible in the arm file rather than
+    # implied by a rung number.
+    wants_layer = caps.semantic if semantic_layer is None else semantic_layer
+    semantic = _build_layer(con, engine, spec_path) if wants_layer else None
     if semantic is not None and catalogue_format:
         # The catalogue's FORMAT is a treatment in its own right — the one thing in the prompt that
         # varies without varying what the layer says. It reaches the fingerprint through
@@ -123,4 +132,5 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
         check_compatible(semantic.capabilities, g, f"rung {rung} / {g.label()}")
     tree = MetricTree(semantic) if caps.tree else None
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
-                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p))
+                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p,
+                                     schema=schema))

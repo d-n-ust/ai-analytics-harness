@@ -39,7 +39,6 @@ class Rung:
 
     name: str
     star: bool = False        # the cleaned star schema (dim_*/fct_*) rather than raw tables
-    documented: bool = False  # each visible table carries a one-line description of what it holds
     semantic: bool = False    # governed catalog — list_metrics, query_metric
     examples: bool = False    # verified worked examples, in the prompt
     knowledge: bool = False   # the knowledge base, in the prompt
@@ -54,13 +53,10 @@ class Rung:
 
 RUNGS: dict[float, Rung] = {
     1: Rung("messy data"),
-    # The cheapest intervention there is: the same cryptic tables, each with one sentence saying
-    # what it holds and what one row is. It exists to split the rung 1 -> 2 step, which changes
-    # naming, shape and pre-joining at once and so cannot say which of them paid.
-    1.5: Rung("messy data, documented", documented=True),
+    # 1.5 and 2.5 existed to mean "documented", which is now a property an ARM declares
+    # (`environment: {docs: ...}`) rather than a rung. They are gone because a bundle encoded as a
+    # number is what let `visible_tables` infer "star" from `1.5 > 1`.
     2: Rung("star schema", star=True),
-    # The same split above the star: Kimball names plus a sentence per table.
-    2.5: Rung("star schema, documented", star=True, documented=True),
     3: Rung("semantic layer", star=True, semantic=True),
     4: Rung("+ verified examples", star=True, semantic=True, examples=True),
     5: Rung("+ knowledge base", star=True, semantic=True, examples=True, knowledge=True),

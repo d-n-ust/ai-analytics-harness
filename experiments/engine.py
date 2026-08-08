@@ -70,6 +70,8 @@ import copy
 import datetime as dt
 import json
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -78,6 +80,7 @@ import yaml
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER, parse_cell
 from agent.loop import run_agent
+from agent.protocol import PARTS as PROTOCOL_PARTS, Protocol
 from agent.provenance import Expectation
 from agent.models import DEFAULT_MODEL
 from agent.providers import get_model, get_verifier
@@ -181,6 +184,14 @@ class Arm:
     # while the layer computing the numbers stays byte-identical — the cleanest treatment available,
     # because no new sentence, synonym or metric can explain a difference.
     catalogue_fields: tuple = ()
+    # This arm's own warehouse: `{tables: raw|star, views: {...}, docs: {...}}`. Empty means the
+    # shared one. An arm that declares it gets a private schema, which is what lets a study compare
+    # WAREHOUSE SHAPES rather than only catalogue content.
+    environment: dict = field(default_factory=dict)
+    # WHAT THE AGENT IS: model, reasoning effort, guardrail cell, judge. A peer of `environment`,
+    # which says what the agent can SEE — together they are the whole of a run's configuration, and
+    # neither used to be written down in the arm at all.
+    agent: dict = field(default_factory=dict)
     # The grounding rung this arm runs at, when the study compares INTERVENTION LEVELS rather than
     # layer content. Empty means the study's rung. An arm that changes rung changes the agent's tool
     # surface — raw SQL below rung 3, `query_metric` at and above it — so the catalogue guards below
@@ -194,7 +205,7 @@ class Arm:
 
     KEYS = {"level", "claim", "patch", "delete", "reorder", "grading",
             "changes_candidate_count", "layer_dir", "catalogue_format", "catalogue_fields",
-            "rung"}
+            "rung", "environment", "agent"}
 
     @classmethod
     def load(cls, path: Path) -> Arm:
@@ -210,6 +221,8 @@ class Arm:
                    catalogue_format=d.get("catalogue_format", ""),
                    catalogue_fields=tuple(d.get("catalogue_fields") or ()),
                    rung=float(d.get("rung") or 0),
+                   environment=dict(d.get("environment") or {}),
+                   agent=dict(d.get("agent") or {}),
                    equivalents=(d.get("grading") or {}).get("metric_equivalents") or {},
                    changes_candidate_count=bool(d.get("changes_candidate_count")))
 
@@ -319,6 +332,9 @@ class Study:
     directory: Path
     tests_rules: list = field(default_factory=list)
     engine: str = "harness"
+    # The study's agent defaults — model, reasoning, guardrails, judge. An arm may override any of
+    # them; see `agent_config`.
+    agent: dict = field(default_factory=dict)
 
     @staticmethod
     def discover() -> dict:
@@ -357,6 +373,7 @@ class Study:
         # Arms have always rejected unknown keys; study.yml silently ignored them, so a typo in
         # `guardrails` would have run the whole thing at the default rung and reported nothing.
         unknown = set(spec) - {"title", "base", "rung", "guardrails", "arms", "tests_rules",
+                               "agent",
                        "engine"}
         if unknown:
             raise ValueError(f"{name}/study.yml: unknown key(s) {sorted(unknown)}")
@@ -382,6 +399,7 @@ class Study:
                    guardrails=spec.get("guardrails", 7), base=base,
                    arms={a: arms[a] for a in order}, cases=cases, directory=d,
                    tests_rules=spec.get("tests_rules") or [],
+                   agent=dict(spec.get("agent") or {}),
                    engine=spec.get("engine", "harness"))
 
     # -- generation ---------------------------------------------------------- #
@@ -417,7 +435,10 @@ class Study:
 
 def check_candidate_count(layers: dict, arms: dict) -> None:
     counts = {a: len(sl.metrics) for a, sl in layers.items()}
-    if len(set(counts.values())) == 1:
+    # Nothing to compare below two catalogues. `--arms X` on a single arm, or a study whose arms sit
+    # below the semantic layer, left this comparing an empty set and failing with an empty message —
+    # a guard that fires on its own degenerate input teaches nobody anything.
+    if len(counts) < 2 or len(set(counts.values())) == 1:
         return
     declared = [a for a in counts if arms[a].changes_candidate_count]
     if not declared:
@@ -600,26 +621,148 @@ def vocabulary_audit(cases: list, layers: dict) -> list[dict]:
 
 # ---------------------------------------------------------------------------- running
 
-def _guardrails_of(study) -> object:
-    """A ladder index, or a subtractive cell.
+def agent_config(study, arm=None, args=None) -> dict:
+    """What the agent IS, for this arm: model, reasoning effort, guardrail cell, and judge.
+
+    The third of the three things a run is made of — warehouse, semantic layer, agent — and the
+    only one that used to live nowhere. Model and effort came from a CLI flag and an environment
+    variable, so the same arm file produced different results depending on how it was invoked, and
+    nothing in the folder said which.
+
+    RESOLUTION ORDER, narrowest first: the arm's `agent:` block, then the study's, then the command
+    line, then the harness defaults. The command line sits BELOW the declarations on purpose — a
+    study that pins its model means it, and `--model` silently overriding a pinned study is how two
+    runs of "the same study" stop being comparable.
+    """
+    from agent.models import DEFAULT_MODEL, DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
+
+    merged: dict = {}
+    for source in (getattr(study, "agent", None) or {}, (arm.agent if arm is not None else {}) or {}):
+        for key, value in source.items():
+            if key == "judge" and isinstance(value, dict):
+                merged["judge"] = {**(merged.get("judge") or {}), **value}
+            else:
+                merged[key] = value
+
+    model = merged.get("model") or (args.model if args is not None else None) or DEFAULT_MODEL
+    judge = merged.get("judge") or {}
+
+    # THE ANSWER PROTOCOL — what an answer must declare about itself. A peer of the guardrail set,
+    # not part of it: the set says what the agent may DO, the protocol says what it must SAY.
+    #
+    #   purpose    a `because` on every governed call
+    #   claims     one declaration per assertion, each naming the value it rests on — the evidence
+    #              graph, expressed as a contract on the answer
+    #   repair     a citation naming nothing is handed back, bounded and once — the repair loop
+    #   rendered   the harness writes the measurement's sentence from the cited values, so an
+    #              argument cannot be smuggled into a number's prose
+    #   framing    rule | role
+    #
+    # No study could set any of these before, so every study in this repo has run with all four
+    # OFF. That is a defensible default and it was never a decision — it is one now.
+    protocol = dict(merged.get("protocol") or {})
+    unknown = set(protocol) - set(PROTOCOL_PARTS) - {"framing"}
+    if unknown:
+        raise ValueError(f"agent.protocol: unknown key(s) {sorted(unknown)}; "
+                         f"valid: {sorted(PROTOCOL_PARTS) + ['framing']}")
+    return {
+        "model": model,
+        "reasoning": merged.get("reasoning") or DEFAULT_REASONING,
+        "guardrails": merged.get("guardrails", None),
+        "judge_model": judge.get("model") or model,
+        "judge_reasoning": judge.get("reasoning") or DEFAULT_VERIFIER_REASONING,
+        "protocol": protocol,
+    }
+
+
+def _guardrails_of(study, arm=None) -> object:
+    """A ladder index, or a subtractive cell — the study's, or an arm's own.
 
     The ladder is CUMULATIVE, so no level expresses "R7 without the two checks MetricFlow cannot
     serve". `parse_cell` already spoke that language for ablation cells; a study may now use it,
     which is what lets two engines be compared at the one cell they can both run.
+
+    AN ARM MAY SET ITS OWN, and one kind of arm has to. The primitives matrix's `enforced` column is
+    a runtime check that refuses when a fact is violated — for some primitives that check needs
+    nothing but the answer's provenance, and for others it needs a governed layer to compare
+    against, so it is DECLARED plus a check rather than an alternative to it. An arm expressing that
+    column differs from its neighbour by exactly one guardrail, and no study-level setting can say
+    so.
+    
+    The cost is that arms at different cells are not all mutually comparable, which a study using
+    this must state in its own predictions.
     """
-    g = study.guardrails
+    declared = agent_config(study, arm).get("guardrails")
+    g = declared if declared is not None else study.guardrails
     return parse_cell(g) if isinstance(g, str) else LADDER[g]
 
 
-def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, verifier, reps) -> dict:
+def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, reps,
+             workers: int = 1) -> dict:
+    """One arm, over every (rep, case).
+
+    WHY ARMS STAY SEQUENTIAL WHILE CASES MAY NOT. The star views are database-wide objects: an arm
+    at rung 1 needs them DROPPED and an arm at rung 2 needs them CREATED, so two arms at different
+    rungs cannot share a warehouse at the same moment. Cases within one arm all see the same state,
+    so they parallelise safely.
+
+    Each worker gets its own grounding on its own DuckDB cursor — a cursor is an independent
+    connection over the same database, so no two threads share a handle. Tool execution measured
+    0.01s per run against 7-8s of model latency, so the win is entirely in overlapping the API
+    round-trips and nothing is lost to contention.
+    """
+    # The agent is built PER ARM, because an arm may declare its own model or effort. One model
+    # shared by every arm made "which model answered this row" a property of the invocation rather
+    # than of the arm, and two rows from the same file were then not necessarily comparable.
+    cfg = agent_config(study, arm, args)
+    model = get_model(cfg["model"], mock=args.mock, reasoning=cfg["reasoning"])
+    verifier = get_verifier(cfg["judge_model"], mock=args.mock)
+    # Rejected at construction if incoherent — `rendered` without `claims` offers no citation to
+    # render, so the flag could only ever fire zero times.
+    protocol = Protocol(**cfg["protocol"]) if cfg["protocol"] else None
+
     rung = arm.rung or study.rung
-    # The star views are a property of the RUNG, and an arm may set its own. Toggled here rather
-    # than once per study, so an arm at rung 1 genuinely cannot see the clean tables.
-    set_star(con, capabilities(rung).star)
-    grounding = build_grounding(con, rung, guardrails=_guardrails_of(study),
+    # An arm may declare its own warehouse. When it does, it gets a private schema holding exactly
+    # the objects it may see, and a cursor scoped to it — so "this arm cannot read the clean tables"
+    # is enforced by the database rather than by not mentioning them. When it does not, the shared
+    # warehouse is used and the star views follow the rung, as before.
+    # WHICH governed layer this arm gets, and whether it gets one at all. `environment.semantic`
+    # names the YAML file, exactly as `tables` and `docs` name theirs; declaring it null means no
+    # layer; omitting the key entirely leaves the decision to the rung, which is how every study
+    # written before per-arm environments still behaves.
+    layer_wanted = layer_path = None
+    if "semantic" in arm.environment:
+        declared = arm.environment["semantic"]
+        layer_wanted = bool(declared)
+        if declared:
+            layer_path = (ROOT / declared) if not Path(declared).is_absolute() else Path(declared)
+            if not layer_path.exists():
+                raise SystemExit(f"{arm.name}: environment.semantic names {declared!r}, "
+                                 f"which does not exist")
+            if arm.patch or arm.delete:
+                raise SystemExit(
+                    f"{arm.name}: declares both `environment.semantic` and a patch. A patch is a "
+                    f"delta against the study's `base`; naming a layer file replaces it. Use one.")
+    if layer_path is None:
+        layer_path = spec_path
+
+    env = handle = None
+    if arm.environment:
+        from warehouse.environment import build as build_environment
+        env = build_environment(con, f"arm_{study.name.replace('/', '_')}_{arm.name}",
+                                arm.environment)
+        env.create(con)
+        handle = env.cursor(con)
+    else:
+        set_star(con, capabilities(rung).star)
+    grounding = build_grounding(handle if handle is not None else con,
+                                rung, guardrails=_guardrails_of(study, arm),
+                                                                protocol=protocol,
+                                schema=env.schema if env else None,
+                                semantic_layer=layer_wanted, spec_path=layer_path,
                                 catalogue_format=arm.catalogue_format or "prose",
                                 catalogue_fields=arm.catalogue_fields,
-                                spec_path=spec_path, engine=study.engine)
+                                engine=study.engine)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
     # of the same thing, free to fall out of step with it.
@@ -631,9 +774,31 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, 
                    if grounding.semantic is not None else [])
     blobs: dict = {}
     out = []
-    for rep in range(reps):
-        for case in cases:
-            answer = run_agent(case["question"], grounding, model,
+    # One grounding per thread, built on that thread's own cursor. `build_grounding` re-reads the
+    # layer, so the copies are equal by construction rather than by being shared.
+    local = threading.local()
+
+    def _grounding():
+        if not hasattr(local, "g"):
+            if threading.current_thread() is threading.main_thread():
+                local.g = grounding
+            else:
+                # A worker's cursor must carry the ARM's search_path. A bare `con.cursor()` starts
+                # on the default one, where the arm's own tables are not in scope at all — the
+                # thread would be reading a different warehouse from the arm it belongs to.
+                cur = env.cursor(con) if env is not None else con.cursor()
+                local.g = build_grounding(cur, rung, guardrails=_guardrails_of(study, arm),
+                                          protocol=protocol,
+                                          schema=env.schema if env is not None else None,
+                                          semantic_layer=layer_wanted, spec_path=layer_path,
+                                          catalogue_format=arm.catalogue_format or "prose",
+                                          catalogue_fields=arm.catalogue_fields,
+                                          engine=study.engine)
+        return local.g
+
+    def _one(unit):
+            rep, case = unit
+            answer = run_agent(case["question"], _grounding(), model,
                                verifier_model=verifier, record_context=True)
             metric, route = arm.reach(case["expect"].get("metric"))
             segment = route.get("segment")
@@ -644,19 +809,39 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, model, 
             if segment is not None and got_segment != segment:
                 g = {**g, "correct": False, "wrong_segment": f"{got_segment!r} != {segment!r}"}
             audit = answer.context.audit(expectation) if answer.context else ("no context recorded",)
-            out.append({"id": case["id"], "rep": rep, "picked": answer.source_metric,
+            row = ({"id": case["id"], "rep": rep, "picked": answer.source_metric,
                         "answer": answer.answer, "declared_value": answer.declared_value,
                         "outcome": answer.outcome, "reason": answer.reason,
                         "explanation": answer.explanation, "steps": answer.steps,
                         "tool_calls": answer.tool_calls, "grade": g, "segment": got_segment,
                         "context_audit": list(audit),
                         "context": answer.context.digest() if answer.context else []})
-            if answer.context:
-                blobs.update(answer.context.blobs)
             print(f"  {arm.name:16s} rep{rep} {case['id']:26s} picked={answer.source_metric or '—':16s}"
                   f" {'ok' if g.get('correct') else 'MISS'}"
                   + (f"  ⚠ CONTEXT: {'; '.join(audit)}" if audit else ""), flush=True)
-    return {"fingerprint": grounding.fingerprint(), "rows": out, "blobs": blobs}
+            return row, (answer.context.blobs if answer.context else {})
+
+    units = [(rep, case) for rep in range(reps) for case in cases]
+    if workers > 1:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            done = list(pool.map(_one, units))
+    else:
+        done = [_one(u) for u in units]
+    # Sorted back into (rep, case) order: threads finish out of order, and a results file whose row
+    # order depends on which API call returned first is not comparable with the next run's.
+    order = {(rep, case["id"]): i for i, (rep, case) in enumerate(units)}
+    done.sort(key=lambda d: order[(d[0]["rep"], d[0]["id"])])
+    for row, b in done:
+        out.append(row)
+        blobs.update(b)
+    result = {"fingerprint": grounding.fingerprint(), "rows": out, "blobs": blobs,
+              "agent": {**cfg, "sampling": model.sampling}}
+    if env is not None:
+        # The schema goes with the arm that made it. Left behind, the next arm inherits objects it
+        # never declared, and every guard would still pass.
+        from warehouse.environment import teardown as drop_environment
+        drop_environment(con, env.schema)
+    return result
 
 
 def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
@@ -802,6 +987,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         "arms": {a: {"fingerprint": results[a]["fingerprint"], "level": study.arms[a].level,
                      "claim": study.arms[a].claim,
                      "rung": study.arms[a].rung or study.rung,
+                     "agent": results[a].get("agent"),
                      **({"metrics": len(layers[a].metrics),
                          "catalogue": _catalogue_id(layers[a])} if a in layers else {})}
                  for a in results},
@@ -866,11 +1052,12 @@ def run(args) -> Path:
 
     vocab = vocabulary_audit(cases, layers)
     golds = compute_gold(con, cases)
-    model = get_model(args.model, mock=args.mock)
+    resolved = agent_config(study, None, args)
+    model = get_model(resolved["model"], mock=args.mock, reasoning=resolved["reasoning"])
     # The judge is built even when the rung's guardrails leave it idle: which model would
     # have checked the answer is a property of the run, and a row that cannot name it cannot
     # be compared against one from a rung where the judge did fire.
-    verifier = get_verifier(args.model, mock=args.mock)
+    verifier = get_verifier(resolved["judge_model"], mock=args.mock)
 
     print(f"study: {study.name} — {study.title}")
     print(f"rung {study.rung} · guardrails {study.guardrails if isinstance(study.guardrails, str) else 'R' + str(study.guardrails)}"
@@ -880,7 +1067,9 @@ def run(args) -> Path:
           + f" · {len(cases)} questions x {args.reps} reps x {len(arms)} arms")
     print("gold: " + ", ".join(f"{k}={v:g}" for k, v in golds.items() if v is not None))
 
-    results = {a: _run_arm(con, study, study.arms[a], paths[a], cases, golds, model, verifier, args.reps) for a in arms}
+    results = {a: _run_arm(con, study, study.arms[a], paths[a], cases, golds, args, args.reps,
+                           getattr(args, "concurrency", 1))
+               for a in arms}
     # PERSIST FIRST. The summary is a rendering of results that already exist, and it used to run
     # before the write — so a formatting bug in it destroyed sixty completed runs that had already
     # been paid for. Reporting may fail; evidence may not be lost.

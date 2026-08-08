@@ -371,6 +371,13 @@ def main() -> None:
                     help="study name, e.g. 02_segment_in_aggregate or 04_semantic_layer_health/"
                          "02_segment_in_aggregate (omit to print the tree)")
     sp.add_argument("--reps", type=int, default=1)
+    sp.add_argument("--concurrency", type=int, default=1,
+
+        help="run this many questions at once WITHIN an arm. Arms stay "
+
+             "sequential: they sit at different rungs, and the star views "
+
+             "are database-wide, so two rungs cannot share the warehouse.")
     sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
     sp.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
     sp.add_argument("--arms", default=None, help="comma-separated subset (default: all)")
