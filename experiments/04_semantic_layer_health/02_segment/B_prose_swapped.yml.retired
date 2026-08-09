@@ -1,0 +1,33 @@
+# RETIRED, not deleted. Removed from `arms:` on 2026-08-09; kept as the worked example of what
+# `reorder` is for, and so the reasoning survives for whoever revives it.
+#
+# WHY IT WENT. It was doing two jobs and neither well.
+#
+#   As a NOISE CONTROL it is not clean: reordering changes the catalogue text, so a gap between it
+#   and B_prose is position OR noise and the arm cannot separate them. It scored 19/24 against
+#   B_prose's 21/24 and that number could not be interpreted. The runner now reports
+#   self-disagreement across identical reps directly, which measures the same thing without an arm.
+#
+#   As a POSITION TEST it is underpowered by construction. The published position effects were
+#   measured with a target buried among 10-30 distractors; a 17-item metric list at ~1,200 tokens
+#   is not that regime, so a null here says nothing about position.
+#
+# WHERE THE QUESTION BELONGS. A catalogue large enough for position to matter — hundreds of metrics,
+# as a real company has — plus ordering, compression, and showing only the relevant part. That is a
+# context-engineering experiment with its own data generation, not an arm in a semantic-health
+# study.
+#
+# The position control: byte-for-byte the prose arm, with the twin pair listed the other way round.
+# No wording changes, no structure changes — only which of the two confusable metrics the model
+# reads first. A difference between this arm and `prose` is position bias and cannot be anything
+# else, which is what makes it the cleanest pre-specified null in the experiment.
+#
+# This arm is why `reorder` exists in the engine. A patch sets values; it cannot express "the same
+# mapping, differently ordered", so the forked-file version of this control needed its own 371-line
+# copy of the layer whose only difference from another 371-line copy was two adjacent entries. The
+# named keys move to the front in the order given and everything else keeps its relative order, so
+# one line replaces the file.
+level: surface
+claim: "the shipped layer with the twin pair the other way round — position control, expected null"
+reorder:
+  metrics: [real_value_moments, value_moments]

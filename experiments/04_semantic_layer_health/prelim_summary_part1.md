@@ -159,7 +159,7 @@ out to produce.
 
 | claim | source |
 |---|---|
-| study 01 per-cell results | `20260807-142016`, `-144843`, `-145627`, all `01_segment_in_metric_name__mf` |
+| study 01 per-cell results | `20260807-142016`, `-144843`, `-145627`, all `02_segment__mf` |
 | confidently wrong values | the `answer` field of those runs' graded rows |
 | study 02 per-cell results | `20260806-114523-scope_in_agg`, 3 reps |
 | grain-restoration comparison | `20260807-180538` against `20260807-183018` |

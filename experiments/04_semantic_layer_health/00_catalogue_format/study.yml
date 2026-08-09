@@ -1,4 +1,13 @@
-# Study 03 — the catalogue's FORMAT, with the layer held identical.
+# Study 00 — the catalogue's FORMAT, with the layer held identical.
+#
+# NUMBERED 00 BECAUSE IT IS A PREREQUISITE, NOT A ROW. The primitives matrix is primitives against
+# interventions, and format is neither: it is how the catalogue is RENDERED, which cuts across every
+# row rather than filling a cell. So this study asks the question that has to be settled before any
+# other result can be trusted — does the way we write the catalogue drive what we measure?
+#
+# Its answer is a null we could not read at this sample size, and that is the useful shape. Every
+# other study holds the rendering fixed; this one checked that holding it fixed is not itself a
+# choice with consequences. Read it as the experiment's CONTROL.
 #
 # Every study so far varied what the layer DECLARES and held the rendering fixed. This varies only
 # how the same facts are written down, and it is the cheapest remedy in the whole programme: a

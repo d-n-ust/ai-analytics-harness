@@ -133,9 +133,9 @@ deserves its own study rather than being a by-product of two questions that had 
 ## Running it
 
 ```bash
-./bench study 05_entity_ladder --describe                  # the arms and what each declares
-./bench study 05_entity_ladder --mock --reps 1             # guards only, no cost
-./bench study 05_entity_ladder --reps 3 --concurrency 8    # 60 runs, ~70s, about 15 cents
+./bench study 01_entity --describe                  # the arms and what each declares
+./bench study 01_entity --mock --reps 1             # guards only, no cost
+./bench study 01_entity --reps 3 --concurrency 8    # 60 runs, ~70s, about 15 cents
 ```
 
 Read the fingerprint block first. Two arms hashing the same means the treatment never reached the

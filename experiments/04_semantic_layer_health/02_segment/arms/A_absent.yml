@@ -13,13 +13,15 @@
 # reason: a synonym list restating the name would reintroduce the word the arm exists to remove.
 # "north star" stays, because it names the metric's ROLE and not its segment.
 level: surface
-claim: "nothing tells the agent who each metric counts"
+claim: "nothing tells the agent who each metric counts — in the name or in the aggregate"
 patch:
   metrics.value_moments.description: "Number of value moments (completed habits) in the period. Raw activity volume."
   metrics.real_value_moments.description: "Value moments in the period. The North Star: this is the metric the tree decomposes into breadth x frequency x depth."
   metrics.real_value_moments.synonyms: ["north star", "north star value moments", "north star habit completions"]
   metrics.active_users.description: "Distinct users with at least one value moment in the period."
-  metrics.power_users.description: "Distinct users who logged 5+ value moments in a single day during the period."
+  # BOTH facts gone from this one: who is counted (01's defect) and the 5+ threshold
+  # (02's). The merged arm strips the population fact wherever it lives.
+  metrics.power_users.description: "Distinct highly-engaged users in the period."
   metrics.days_per_user.description: "Average active days per active user in the period (frequency)."
   metrics.moments_per_day.description: "Average value moments per active day (depth)."
   metrics.reminder_open_rate.description: "Share of active days on which the user opened a reminder (a retention driver)."

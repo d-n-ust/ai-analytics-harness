@@ -21,7 +21,7 @@ from agent.provenance import ContextLedger, Expectation
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 
-EXPERIMENT = "01_segment_in_metric_name"
+EXPERIMENT = "02_segment"
 
 
 def _convo_that_read(catalog: str) -> Conversation:

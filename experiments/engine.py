@@ -1,8 +1,8 @@
 """The runner for declarative layer studies. A study is a DIRECTORY, not a script.
 
     ./bench study                                  the tree: every experiment and its studies
-    ./bench study 02_segment_in_aggregate --reps 3       bare names resolve if unambiguous
-    ./bench study 04_semantic_layer_health/02_segment_in_aggregate --mock
+    ./bench study 02_segment --reps 3       bare names resolve if unambiguous
+    ./bench study 04_semantic_layer_health/02_segment --mock
 
 TWO LEVELS, BECAUSE THE WORK HAS TWO LEVELS. An EXPERIMENT is a week that ends in an article; a
 STUDY is one runnable comparison inside it. Only experiment 04 has studies — 01 and 02 are sweeps
@@ -35,10 +35,24 @@ So "the C arm" names a kind of repair rather than a position in a list. A letter
 looked up is what went wrong last time — `D_swapped` meant nothing to anyone and was renamed
 `B_prose_swapped` mid-run, because it is a variant OF B. Suffix the letter, never invent a new one.
 
-NUMBERS ARE LAB-NOTEBOOK PAGES at both levels: assigned when the work starts, never reused, never
-renumbered, gaps fine. A study's number deliberately does NOT encode the framework condition,
-because that mapping is not one-to-one — 02 treats S4 and replicates S1. Conditions are declared
-inside study.yml as `tests_rules`, where a list can say so.
+A STUDY'S NUMBER IS ITS ROW IN THE PRIMITIVES MATRIX. `01_entity`, `02_segment`, `05_additivity`
+name rows 1, 2 and 5 of 04_semantic_layer_health/primitives_matrix.md, so a folder listing reads as
+the framework rather than as a chronology.
+
+    00        reserved for prerequisites that fill no cell. `00_catalogue_format` asks whether the
+              way we RENDER a catalogue drives what we measure, which cuts across every row.
+    gaps      an unbuilt row. 03 and 04 missing says measure+aggregation and grain are not started.
+    __suffix  a variant of the same row: `02_segment__mf` is row 2 on dbt MetricFlow.
+
+An EXPERIMENT's number stays a lab-notebook page — 01 through 04 were assigned as the work began and
+mean nothing beyond order.
+
+This overturns the earlier rule, which said a study number was a page number and "deliberately does
+NOT encode the framework condition". That was written before the matrix existed, when the S-rules
+were the framework and their mapping to studies was not one-to-one. It became actively misleading:
+the entity study was numbered 05 and sorted after additivity, which is row 5 — the numbering said
+the opposite of the framework. Conditions are still declared inside study.yml as `tests_rules`,
+where a list can say more than a number.
 
 STUDIES ARE DISCOVERED, NOT REGISTERED. A directory holding `study.yml` is a study that runs, so
 there is no index to keep in step with the filesystem — the failure mode of every index ever
@@ -88,6 +102,7 @@ from agent.rungs import capabilities
 from evals.gold import compute_gold, load_questions
 from evals.grade import grade
 from semantic.semantic import SPEC_PATH, SemanticLayer
+from warehouse.warehouse import cursor as warehouse_cursor
 from warehouse.warehouse import open_warehouse, set_star
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -350,8 +365,8 @@ class Study:
     def resolve(name: str) -> Path:
         """A study's directory, from either its full path or its bare name.
 
-        Nesting made the honest identifier long — `04_semantic_layer_health/02_segment_in_aggregate` — and
-        a name nobody will type is a name nobody uses. So the bare `02_segment_in_aggregate` resolves too,
+        Nesting made the honest identifier long — `04_semantic_layer_health/02_segment` — and
+        a name nobody will type is a name nobody uses. So the bare `02_segment` resolves too,
         as long as it is unambiguous; ambiguity is reported rather than guessed at."""
         studies = Study.discover()
         if name in studies:
@@ -786,7 +801,7 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
                 # A worker's cursor must carry the ARM's search_path. A bare `con.cursor()` starts
                 # on the default one, where the arm's own tables are not in scope at all — the
                 # thread would be reading a different warehouse from the arm it belongs to.
-                cur = env.cursor(con) if env is not None else con.cursor()
+                cur = env.cursor(con) if env is not None else warehouse_cursor(con)
                 local.g = build_grounding(cur, rung, guardrails=_guardrails_of(study, arm),
                                           protocol=protocol,
                                           schema=env.schema if env is not None else None,
@@ -954,7 +969,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     # Mirror the source layout: results/experiments/<experiment>/<stamp>-<study>. A study's name
     # contains a slash now, so gluing the timestamp to the whole thing attached it to the
     # EXPERIMENT and made the study a subdirectory — `20260806-234210-04_semantic_layer_health/
-    # 02_segment_in_aggregate-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
+    # 02_segment-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
     # matched them, so cleanup silently skipped every mock run it was meant to remove.
     experiment, _, study_name = study.name.partition("/")
     kind = f"{study_name}-mock" if args.mock else study_name

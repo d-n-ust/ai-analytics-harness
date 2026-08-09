@@ -1,4 +1,28 @@
-# Experiment 1 — the segment is encoded in the metric NAME (rule S1).
+# Study 01 — A SEGMENT PROMOTED TO A METRIC. Two instances of one defect, in one study.
+#
+# WHAT THE DEFECT IS. Two governed metrics share an entity, a base table, a grain and a measure, and
+# differ only in which population they count. That is one measure and two segments, shipped as two
+# metrics — so the agent chooses between two metric NAMES where it should be choosing between two
+# values of one argument.
+#
+# TWO HIDING PLACES, MERGED FROM WHAT WERE STUDIES 01 AND 02:
+#
+#     in the NAME        value_moments / real_value_moments — identical in source, aggregation and
+#                        grain; the population survives only where a description happens to mention
+#                        it, and the catalogue never renders a segment
+#     in the AGGREGATE   power_users restricts to 5+ moments in a day INSIDE its `agg`, so the
+#                        predicate that decides who is counted is arithmetic no reader can see
+#
+# WHY ONE STUDY AND NOT TWO. They are the same defect and they filled the same row of
+# ../primitives_matrix.md with the same three columns. Two studies agreeing is a weaker claim than
+# one study with an internal replication, and merging takes the item count from four to eight —
+# which is the binding constraint on everything in this experiment, not the number of arms.
+#
+# The arms compose without conflict: 01's strip removes WHO IS COUNTED, 02's removes the THRESHOLD,
+# and their repairs touch different metrics. A_absent now strips both.
+#
+# THE FIRST INSTANCE, kept verbatim from when this was study 01 on its own: the segment is
+# encoded in the metric NAME (rule S1).
 #
 # Two governed metrics measure the same thing over the same rows at the same grain:
 #
@@ -37,7 +61,7 @@
 # so it offers 14 too). Until both exist, read this experiment as an instrument-development run.
 # ────────────────────────────────────────────────────────────────────────────────────────────────
 
-title: "Segment encoded in the metric name (S1) — absent vs prose vs declared segment"
+title: "A segment promoted to a metric — two instances, one defect"
 base: semantic/semantic_layer.yml
 
 # Recorded here rather than in the folder name because the mapping is not one-to-one; see
@@ -50,7 +74,10 @@ tests_rules: [S1]
 rung: 3
 guardrails: 7
 
-arms: [A_absent, B_prose, C_segment, B_prose_swapped]
+# Three arms, three matrix columns: implicit, documented, declared. The position control
+# B_prose_swapped was retired here (see B_prose_swapped.yml.retired) — it could not
+# separate position from noise, and the runner now reports the noise directly.
+arms: [A_absent, B_prose, C_segment]
 
 # PRE-REGISTERED READINGS. Written before the migration, from the design note rather than from the
 # stored results, so this file does not launder a finding into a prediction.

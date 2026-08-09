@@ -1,6 +1,6 @@
 # Study 01, rebuilt on MetricFlow
 
-The same three arms as `01_segment_in_metric_name`, expressed in **dbt MetricFlow** instead of this
+The same three arms as `02_segment`, expressed in **dbt MetricFlow** instead of this
 repository's own YAML.
 
 ## Layout
@@ -17,8 +17,8 @@ apart: an arm is a file in every other study, and making it a directory here wou
 convention to hold in mind. `layer_dir:` in an arm file points at its layer.
 
 ```bash
-./bench study 01_segment_in_metric_name__mf --reps 1
-./bench study 01_segment_in_metric_name__mf --arms C_segment --only p_pop_customers_week --reps 1
+./bench study 02_segment__mf --reps 1
+./bench study 02_segment__mf --arms C_segment --only p_pop_customers_week --reps 1
 ```
 
 ## Why it exists
@@ -48,7 +48,7 @@ properties. It lives in a `metricflow` dependency group, so the harness itself n
 
 ```bash
 PYTHONPATH=. uv run --group metricflow python \
-    experiments/04_semantic_layer_health/01_segment_in_metric_name__mf/check.py
+    experiments/04_semantic_layer_health/02_segment__mf/check.py
 ```
 
 ## What it proves

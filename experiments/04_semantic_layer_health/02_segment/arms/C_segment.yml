@@ -39,6 +39,16 @@ patch:
 # untouched — picking the wrong segment still returns the wrong number. BOTH metrics are mapped, so
 # the "everyone" questions must name their segment too: an arm where one of the two answers needs no
 # argument would be testing something easier than the arm it is compared against.
+  # 02's instance, repaired the same way: the threshold stops being arithmetic welded into `agg`
+  # and becomes a named segment the caller selects. `default_segment` keeps a bare call meaning what
+  # it always meant, so the repair does not trade a hidden filter for an absent one.
+  metrics.power_users.description: "Distinct highly-engaged real users in the period (excludes internal/test)."
+  metrics.power_users.agg: "count(distinct user_id)"
+  metrics.power_users.segments: [power]
+  metrics.power_users.default_segment: power
+  governance.segments.power:
+    description: "5+ value moments in a single day"
+    where: ["moments >= 5"]
 grading:
   metric_equivalents:
     real_value_moments: {metric: value_moments, segment: real_users}

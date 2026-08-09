@@ -1,0 +1,123 @@
+# EXPERIMENT QUESTIONS — not part of the frozen case set in evals/cases/.
+#
+# Moved here unchanged from `evals/probes/population.yml` in the 2026-08-06 migration. The ids keep
+# their `p_` (probe) prefix deliberately: twelve stored runs under `results/probes/` and every
+# number cited in the write-ups refer to them, and renaming would break that link for no gain.
+#
+# WHAT THEY TEST. Two governed metrics measure the same thing over the same rows at the same grain:
+#
+#   value_moments        entity value_moments · agg sum(moments) · segment all    · no default filter
+#   real_value_moments   entity value_moments · agg sum(moments) · segment active · NOT is_internal
+#
+# Identical in source, aggregation and grain. They differ in SEGMENT and nothing else, and the
+# catalogue never renders a segment — it survives only where a description happens to mention it.
+# Each pair below asks the same measure of two different segments, so the only fact that can
+# separate them is the one under test. A question answerable without knowing the segment would come
+# back flat for a boring reason and teach us nothing.
+#
+# The numbers are ~3.8-4.4% apart, so at the default 2% tolerance a swap fails the numeric check as
+# well as the metric check. That margin is thin on purpose: this is the near-miss case, the one
+# where a wrong pick still looks like a plausible answer. Experiment 02 deliberately chose the
+# opposite — a 15x error — to test whether a wrong pick happens at all when the fact is unstated.
+#
+# ⚠ ONLY ONE OF THESE FIVE DISCRIMINATED between arms when they were run, which is why paired
+# discordance is 1 and no number of repetitions can reach significance. Do not add reps to this set;
+# add discriminating ITEMS. Experiment 02's question block is what that looks like.
+
+cases:
+  # --- pair 1: last week -------------------------------------------------- #
+  - id: p_pop_customers_week
+    tier: population
+    question: "How many habits did our customers complete last week?"
+    expect:
+      type: metric_answer
+      metric: real_value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: "'Customers' implies real users, never staff or test accounts — but no metric name says so. The agent must read the segment off the definition."
+
+  - id: p_pop_all_week
+    tier: population
+    question: "What was the total number of habits completed last week across every account, including our own internal and test users?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE week = DATE '2026-07-06'"
+      tolerance: 0.02
+    note: "The same measure, the opposite segment, stated explicitly. Pairs with p_pop_customers_week: a model that always picks one metric gets exactly one of the two right. NOTE: this is the question the `segment` arm shares a nine-token verbatim span with, via its bespoke `including staff` synonym."
+
+  # --- pair 2: June 2026, to keep the effect off a single period ----------- #
+  - id: p_pop_customers_june
+    tier: population
+    question: "Excluding staff and test accounts, how many habits were completed in June 2026?"
+    expect:
+      type: metric_answer
+      metric: real_value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: "Segment named in the question's own words rather than the metric's. No declared synonym matches — except in the `segment` arm, whose `excluding staff` synonym matches it verbatim."
+
+  - id: p_pop_all_june
+    tier: population
+    question: "How many habits were completed in June 2026 in total, counting every account we have?"
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments WHERE completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+
+  # ============================================================================================ #
+  # THE SECOND INSTANCE — the same defect with the population welded into the AGGREGATE rather
+  # than encoded in a name. `power_users` restricts to 5+ moments in a day inside its `agg`, so the
+  # fact that decides WHO IS COUNTED is arithmetic no reader can see. These four questions came
+  # from study 02 unchanged; merging them makes this a replication inside one study rather than two
+  # studies agreeing, and takes the item count from four to eight.
+  #
+  # 01's `mrr` control was dropped in the merge. It is documented as broken: `mrr` is nameable
+  # straight off the `query_metric` enum, so every arm answered it without entering the catalogue
+  # and its `context_audit` recorded `list_metrics: never entered the context`. 02's paid-search
+  # control cannot be answered that way — "paid search" must be resolved to the governed member
+  # `paid_search`, which only the catalogue carries — so it replaces it.
+  # ============================================================================================ #
+
+  - id: q_thresh_day_week
+    tier: threshold
+    question: "How many users completed five or more habits in a single day last week?"
+    expect:
+      type: metric_answer
+      metric: power_users
+      gold_sql: "SELECT count(DISTINCT CASE WHEN a.moments >= 5 THEN a.user_id END) FROM agg_active_days a JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND a.active_date >= DATE '2026-07-06' AND a.active_date < DATE '2026-07-13'"
+      tolerance: 0.02
+    note: "The demand matches the metric exactly. In `absent` the catalogue says only 'highly-engaged', so nothing connects 'five or more' to power_users and active_users (886) is the plausible wrong pick. This is the twin that stops 'refuse everything' from scoring well on the traps."
+
+  # --- 2 · the grain trap: right threshold, wrong grain ------------------- #
+  - id: q_thresh_lower_bar
+    tier: trap
+    question: "How many users completed three or more habits in a single day last week?"
+    expect:
+      type: refuse
+      reason: [wrong_measure, no_governed_definition]
+      gold_sql: "SELECT count(DISTINCT CASE WHEN a.moments >= 3 THEN a.user_id END) FROM agg_active_days a JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND a.active_date >= DATE '2026-07-06' AND a.active_date < DATE '2026-07-13'"
+    note: "The mirror of the grain trap, and the sharpest test of the binding hypothesis. `prose` carries '5+' on the metric's own line, so 5 != 3 is visible in one read. `segment` says only 'highly-engaged' on that line and puts '5+ value moments in a single day' in a GLOBAL segment list that never says which metric offers it — an agent that fails to bind them sees a metric with no stated threshold and has nothing to notice with. Serving 21 against a true 337 is confident_wrong."
+
+  # --- 4 · the name matches directly: ceiling anchor ---------------------- #
+  - id: q_thresh_named_week
+    tier: anchor
+    question: "How many power users did we have last week?"
+    expect:
+      type: metric_answer
+      metric: power_users
+      gold_sql: "SELECT count(DISTINCT CASE WHEN a.moments >= 5 THEN a.user_id END) FROM agg_active_days a JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND a.active_date >= DATE '2026-07-06' AND a.active_date < DATE '2026-07-13'"
+      tolerance: 0.02
+    note: "'power users' is a declared synonym in EVERY arm, so this should be right everywhere. An arm that misses it is broken rather than uninformative — read this row before any other."
+
+  # --- 5 · control: must read the catalogue ------------------------------- #
+  - id: q_control_paid_search
+    tier: control
+    question: "How much did we spend on paid search in June 2026?"
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel = 'paid_search' AND spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: "Untouched by every arm, and it CANNOT be answered off the tool schema — 'paid search' has to be resolved to the governed member `paid_search`, which only the catalogue carries. Experiment 1's control failed exactly here: `mrr` was nameable from the enum, so all four of its rows never read the catalogue at all and were counted anyway."

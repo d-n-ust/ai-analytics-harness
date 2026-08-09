@@ -131,6 +131,19 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     return con
 
 
+def cursor(con):
+    """A cursor on the shared warehouse, scoped like the connection `open_warehouse` returns.
+
+    A bare `con.cursor()` starts on the DEFAULT search_path, which is `main` — and `main` is empty
+    now that the tables live in `_source` and `_star`. So a thread that made its own cursor could
+    see nothing at all. Arms with their own environment get `Environment.cursor`; everything else
+    gets this, and neither should ever call `con.cursor()` directly."""
+    from warehouse.environment import SOURCE
+    cur = con.cursor()
+    cur.execute(f"SET search_path='{STAR_SCHEMA},{SOURCE}'")
+    return cur
+
+
 def visible_tables(rung: float) -> tuple[str, ...]:
     """Which tables exist at this rung — ASKED of the rung, never inferred from its number.
 

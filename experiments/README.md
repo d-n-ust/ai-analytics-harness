@@ -14,14 +14,14 @@ experiments/
 ├── 03_evidence_graph/              ✓ shipped — what if every claim must cite its tool result?
 └── 04_semantic_layer_health/       · in progress — does a more legible metric layer help?
     ├── experiment.yml
-    ├── 01_segment_in_metric_name/  the segment hides in the metric NAME    (S1)
-    └── 02_segment_in_aggregate/          the segment hides in the AGGREGATE      (S4)
+    ├── 02_segment/  the segment hides in the metric NAME    (S1)
+    └── 02_segment/          the segment hides in the AGGREGATE      (S4)
 ```
 
 ```bash
 ./bench study                                  # the tree: every experiment, article, and study
-./bench study 02_segment_in_aggregate                # bare names resolve if unambiguous
-./bench study 04_semantic_layer_health/02_segment_in_aggregate   # or name it in full
+./bench study 02_segment                # bare names resolve if unambiguous
+./bench study 04_semantic_layer_health/02_segment   # or name it in full
 ```
 
 ## The experiment manifest
@@ -59,7 +59,7 @@ cannot be attributed. Generated layers cannot drift from their base, and a treat
 ten lines is a treatment someone will actually check.
 
 ```
-04_semantic_layer_health/02_segment_in_aggregate/
+04_semantic_layer_health/02_segment/
 ├── study.yml          what varies, against which base, at which rung — and the predictions
 ├── cases.yml          the questions and their gold
 └── arms/

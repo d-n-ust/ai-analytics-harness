@@ -34,7 +34,7 @@ from warehouse.warehouse import open_warehouse
 
 BUILD = Path(__file__).resolve().parent.parent / ".build" / "_test"
 THRESHOLD = "5+ value moments in a single day"
-EXP1 = "01_segment_in_metric_name"        # bare name resolves; the engine finds it nested
+EXP1 = "02_segment"        # bare name resolves; the engine finds it nested
 
 
 def _layers(exp: Study):
@@ -76,7 +76,7 @@ def test_a_patch_does_not_mutate_the_base():
 
 def test_prose_is_the_shipped_layer_by_construction():
     """Not 'has not drifted from' — IS. An empty patch cannot drift."""
-    exp = Study.load("02_segment_in_aggregate")
+    exp = Study.load("02_segment")
     assert exp.arms["B_prose"].patch == {} and not exp.arms["B_prose"].delete, (
         "the prose arm has a patch — it is supposed to BE the shipped layer, not a copy of it")
     _, paths, _ = _layers(exp)
@@ -84,15 +84,26 @@ def test_prose_is_the_shipped_layer_by_construction():
     assert got == yaml.safe_load(exp.base.read_text()), "prose.yml generated something != the base"
 
 
-def test_every_arm_offers_the_same_metrics():
-    exp = Study.load("02_segment_in_aggregate")
+def test_an_arm_that_shrinks_the_catalogue_declares_it():
+    """Written when study 02 existed and every one of its arms offered the same fifteen metrics.
+    That study is now merged into 01, whose repair arm DELETES the twin metric — so the property
+    worth asserting is not that the counts match, but that a mismatch is declared.
+
+    Under random choice between two confusable options, the arm with one fewer scores 50 points
+    higher before any treatment exists. `changes_candidate_count` is the arm saying so out loud,
+    and the guard exists to refuse a study where nobody has."""
+    exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
-    check_candidate_count(layers, exp.arms)          # raises SystemExit if not
-    assert len({len(sl.metrics) for sl in layers.values()}) == 1
+    check_candidate_count(layers, exp.arms)          # raises SystemExit if an arm shrinks silently
+    counts = {a: len(sl.metrics) for a, sl in layers.items()}
+    shrunk = [a for a, n in counts.items() if n < max(counts.values())]
+    assert shrunk == ["C_segment"], f"unexpected arms shrink the catalogue: {counts}"
+    assert exp.arms["C_segment"].changes_candidate_count, (
+        "C_segment offers fewer metrics than its peers and does not declare it")
 
 
 def test_every_arm_reaches_the_same_numbers():
-    exp = Study.load("02_segment_in_aggregate")
+    exp = Study.load("02_segment")
     con, _, layers = _layers(exp)
     problems = check_same_numbers(con, exp.base, layers, exp.arms)
     assert not problems, "arms differ in capability, not legibility:\n  " + "\n  ".join(problems)
@@ -100,34 +111,66 @@ def test_every_arm_reaches_the_same_numbers():
 
 def test_the_threshold_moves_and_does_not_multiply():
     """The fact under test appears in exactly the arms that claim it, and exactly once."""
-    exp = Study.load("02_segment_in_aggregate")
+    exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
+    # Stated as a PROPERTY rather than as a roster. The exact dict was written when this study had
+    # three arms; the merge added the position control, which states the threshold exactly like the
+    # arm it reorders. A test that has to be edited whenever an arm is added is a test that will be
+    # edited without being read.
     seen = {a: sl.list_metrics_text().count(THRESHOLD) for a, sl in layers.items()}
-    assert seen == {"A_absent": 0, "B_prose": 1, "C_segment": 1}, (
-        f"the threshold is not where the arms say it is: {seen}")
+    assert seen["A_absent"] == 0, f"the absent arm still states the threshold: {seen}"
+    assert all(n == 1 for a, n in seen.items() if a != "A_absent"), (
+        f"every arm but A_absent must state the threshold exactly once: {seen}")
     # ...and in `segment` it is on the segment, not on the metric.
     metric_line = next(ln for ln in layers["C_segment"].list_metrics_text().splitlines()
                        if ln.startswith("- power_users:"))
     assert THRESHOLD not in metric_line, "segment arm still states the threshold on the metric"
 
 
-def test_prose_and_segment_share_the_same_wording_with_every_question():
-    """The control that experiment 1 lacked.
+def test_prose_and_segment_share_the_same_wording_on_the_aggregate_instance():
+    """The control the NAME instance lacked, asserted on the instance that has it.
 
     `prose` and `segment` differ in WHERE the threshold is written. If they also differed in the
-    words used, a win would be vocabulary and nobody could tell. Equality here is what makes the
-    comparison structural — so it is asserted, not audited after the fact."""
-    exp = Study.load("02_segment_in_aggregate")
+    words used, a win would be vocabulary and nobody could tell. The aggregate instance was built
+    with that equality in mind — its segment description is the same phrase the prose arm puts in
+    the metric description — so it is asserted rather than audited afterwards.
+
+    SCOPED to the `q_thresh_*` questions on purpose. The NAME instance does NOT have this property:
+    its segment arm gained bespoke synonyms ("including staff", "excluding staff") that match the
+    question wording verbatim, which is the confound that cost that study its headline. That is
+    pinned by `test_the_name_instance_vocabulary_confound_is_pinned` rather than quietly fixed here,
+    because editing it would erase the evidence for why the control exists at all."""
+    exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
     rows = {(r["arm"], r["id"]): r["tokens"] for r in vocabulary_audit(exp.cases, layers)}
-    for case in exp.cases:
+    scoped = [c for c in exp.cases if c["id"].startswith("q_thresh")]
+    assert scoped, "no aggregate-instance questions found — the scope filter is wrong"
+    for case in scoped:
         p, s = rows[("B_prose", case["id"])], rows[("C_segment", case["id"])]
         assert p == s, (f"{case['id']}: prose shares {p} tokens with the catalogue, segment {s} — "
                         "the arms differ in wording as well as structure")
 
 
+def test_the_name_instance_vocabulary_confound_is_pinned():
+    """The NAME instance's segment arm shares a long verbatim span with its questions, and that is
+    recorded rather than repaired.
+
+    `C_segment` declares synonyms like "including staff" and "excluding staff" that appear in the
+    questions word for word, so its win on those items cannot be attributed to structure. Deleting
+    the synonyms would make the study look clean and lose the reason its results are unciteable.
+    The number is pinned so that a change to it is a decision someone makes, not a drift."""
+    exp = Study.load("02_segment")
+    _, _, layers = _layers(exp)
+    rows = {(r["arm"], r["id"]): r["tokens"] for r in vocabulary_audit(exp.cases, layers)}
+    worst = max((rows[("C_segment", c["id"])] for c in exp.cases if c["id"].startswith("p_pop")),
+                default=0)
+    assert worst >= 5, (
+        "the name instance's vocabulary confound has gone. If that was deliberate, update this "
+        "test and the study README; if not, a synonym list has been edited by accident.")
+
+
 def test_absent_states_the_threshold_nowhere():
-    exp = Study.load("02_segment_in_aggregate")
+    exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
     text = layers["A_absent"].list_metrics_text().lower()
     for leak in ("5+", "five or more", "moments >= 5", "single day"):
@@ -148,17 +191,16 @@ def test_experiment_1_arms_reach_the_same_numbers():
     assert not problems, "arms differ in capability, not legibility:\n  " + "\n  ".join(problems)
 
 
-def test_the_position_control_changes_only_order():
-    """`prose_swapped` is the reason `reorder` exists. Content equality is what makes a difference
-    between it and `prose` attributable to position and to nothing else."""
-    exp = Study.load(EXP1)
-    _, paths, _ = _layers(exp)
-    prose = yaml.safe_load(paths["B_prose"].read_text())
-    swapped = yaml.safe_load(paths["B_prose_swapped"].read_text())
-    assert prose == swapped, "the position control changed a metric's content — it may only reorder"
-    assert list(swapped["metrics"])[:2] == ["real_value_moments", "value_moments"]
-    assert list(prose["metrics"])[:2] == ["value_moments", "real_value_moments"], (
-        "prose and prose_swapped open with the same metric — the control controls for nothing")
+def test_reorder_still_moves_a_metric_without_changing_it():
+    """`reorder` exists so a position control is expressible as a DELTA rather than a forked file.
+    Its only user was retired, so the mechanism is proved directly here — otherwise the next study
+    to need it would find an untested feature."""
+    from experiments.engine import apply_patch
+
+    spec = {"metrics": {"a": {"x": 1}, "b": {"x": 2}, "c": {"x": 3}}}
+    out = apply_patch(spec, {}, [], {"metrics": ["b", "a"]})
+    assert list(out["metrics"]) == ["b", "a", "c"], "reorder did not move the named keys to the front"
+    assert out["metrics"] == spec["metrics"], "reorder changed a metric's content — it may only reorder"
 
 
 def test_the_metric_name_leak_is_known_and_bounded():

@@ -72,8 +72,8 @@ and one it does not. No single habit — always refuse, always answer, always di
 "Germany" — can pass the set.
 
 ```bash
-./bench study 03_catalogue_format --mock --reps 1   # checks only, costs nothing
-./bench study 03_catalogue_format --reps 1          # the real thing, about 4 cents
+./bench study 00_catalogue_format --mock --reps 1   # checks only, costs nothing
+./bench study 00_catalogue_format --reps 1          # the real thing, about 4 cents
 ```
 
 ## What went wrong the first time
