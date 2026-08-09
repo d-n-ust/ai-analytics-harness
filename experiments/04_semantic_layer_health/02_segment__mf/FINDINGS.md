@@ -74,8 +74,13 @@ explanation:  "Queried governed metric value_moments for June 2026 with filter
 as a miss and as `confidently wrong`.
 
 **Both engines show the same split**, which makes it a property of the question set rather than of
-either layer. The consequence for reporting: `A_implicit`'s six confident-wrong flags are three
-wrong numbers and three provenance mismatches, and the headline figure should say so.
+either layer. `A_implicit`'s six flags here are three wrong numbers and three provenance
+mismatches; in `../02_segment` the same arm splits five into three and two.
+
+`evals/grade.py` now separates them. `wrong_metric` is its own outcome, scored where the number is
+right and the declared metric is not the one the case names. It still costs what a wrong answer
+costs, because at R7 a number must trace to the governed result the question is about — but it is a
+routing failure rather than a correctness one.
 
 ---
 

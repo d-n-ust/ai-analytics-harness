@@ -139,6 +139,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "refused_by": ans.refused_by,
             "correct": g["correct"], "executed": g["executed"],
             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+            "wrong_metric": g["wrong_metric"],
             "fabricated": g["fabricated"], "off_governance": g.get("off_governance", False),
             "wrong_scope": g.get("wrong_scope", False),
             "needs_judge": g.get("needs_judge", False),
@@ -285,6 +286,7 @@ def regrade_run(run_dir: Path) -> None:
                      typed_value=bool(r.get("typed_value", False)))
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
+                                    "wrong_metric",
                                     "fabricated", "off_governance", "wrong_scope",
                                     "needs_judge", "bucket",
                                     "expected_refuse", "reason_match", "metric_match",

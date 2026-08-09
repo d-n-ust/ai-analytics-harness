@@ -23,10 +23,14 @@ case was being asked at a rung it does not apply to. Where its context is absent
 demanding a particular answer and only insists the agent did not GUESS.
 
 Every response still reduces to one `bucket` — the single lens the project reports:
-  right / wrong (a wrong or fabricated number) / idk (refused or clarified) /
+  right / wrong (a wrong or fabricated number, or the right one off the governed path) /
+  idk (refused or clarified) /
   deferred (a false-premise answered through the answer channel — judge rules) /
   other (a non-number miss) / error (infrastructure failure).
-`confident_wrong`, `fabricated`, `correct`, and `score` are consistent with `bucket`.
+`confident_wrong`, `wrong_metric`, `fabricated`, `correct`, and `score` are consistent with
+`bucket`. The `wrong` bucket holds three different failures and they are reported separately:
+`confident_wrong` served a wrong number, `wrong_metric` served the right number through a metric
+the case did not name, `fabricated` served a number when none exists.
 """
 
 from __future__ import annotations
@@ -167,7 +171,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                   else asserts_number(answer.answer))
 
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
-    wrong_scope = False
+    wrong_scope = wrong_metric = False
     reason_match = driver_ok = cause_ok = metric_match = None
 
     if outcome == "error":
@@ -235,22 +239,38 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             correct = num_ok and metric_match is not False   # only a KNOWN metric mismatch fails
             if correct:
                 bucket = "right"
-            elif has_number:
-                confident_wrong = True                       # asserted a wrong number
+            elif not has_number:
+                bucket = "other"
+            elif num_ok:
+                # THE RIGHT NUMBER, REACHED THROUGH A METRIC THE CASE DID NOT NAME. Not the same
+                # failure as a wrong number, and calling it one inflates the figure this project
+                # leads with. Study 02's `A_implicit` filtered `value_moments` by
+                # `is_internal = False` itself, returned the governed 15,329, and explained that it
+                # had done so; the case names `real_value_moments`, so it graded `confident_wrong`
+                # — three of that arm's five silent-error flags, on both engines.
+                #
+                # It is still not correct: at R7 a number must trace to the governed result the
+                # question is about, and reaching the same digits by a route the layer does not
+                # sanction is the failure the provenance rung exists to catch. So it costs what a
+                # wrong answer costs (`wrong_number` below) and keeps the `wrong` bucket. What
+                # changes is only what it is CALLED, and therefore what a reader would go and fix.
+                wrong_metric = True
                 bucket = "wrong"
             else:
-                bucket = "other"
+                confident_wrong = True                       # asserted a wrong number
+                bucket = "wrong"
 
     # A scope failure still put a figure in front of someone who asked something else, so it
     # costs what a wrong answer costs. Splitting it out changes what the failure is CALLED, and
     # therefore what you would fix; it does not make it cheaper.
-    wrong_number = confident_wrong or fabricated or wrong_scope
+    wrong_number = confident_wrong or fabricated or wrong_scope or wrong_metric
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         # Both terminal declines abstain: neither serves a number, which is what the
         # selective-prediction sense of the word means. `outcome` still tells them apart.
         "abstained": outcome in ("refuse", "clarify"), "confident_wrong": confident_wrong,
         "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
+        "wrong_metric": wrong_metric,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
         "reason_match": reason_match, "metric_match": metric_match,
         "driver_ok": driver_ok, "cause_ok": cause_ok,

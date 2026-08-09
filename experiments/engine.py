@@ -1015,7 +1015,7 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     # naming the reason correctly is usability, and a single column that mixes them charges an arm
     # for a vocabulary slip at the same rate as for a wrong number. Reason accuracy is the gap.
     print(f"\n{'arm':12s} {'correct':>10s} {'right action':>14s} "
-          f"{'silent wrong':>14s} {'audit failed':>14s}")
+          f"{'silent wrong':>14s} {'wrong metric':>14s} {'audit failed':>14s}")
     for a in arms:
         rs = results[a]["rows"]
         action = sum(1 for r in rs
@@ -1024,6 +1024,7 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
         print(f"{a:16s} {sum(1 for r in rs if r['grade'].get('correct')):>6d}/{len(rs):<3d}"
               f" {action:>10d}/{len(rs):<3d}"
               f" {sum(1 for r in rs if r['grade'].get('confident_wrong')):>14d}"
+              f" {sum(1 for r in rs if r['grade'].get('wrong_metric')):>14d}"
               f" {sum(1 for r in rs if r['context_audit']):>14d}")
 
     # Within-arm disagreement on identical input. THE number that decides whether a between-arm gap

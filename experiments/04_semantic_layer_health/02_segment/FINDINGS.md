@@ -109,7 +109,12 @@ Two consequences:
 
 - **The `confidently wrong` column overstates.** It is this experiment's most alarming figure — a
   wrong number served with no signal of doubt — and here it fires on a right number reached by an
-  unexpected route. Three of `A_implicit`'s five confident-wrong flags are this case.
+  unexpected route. **Two of `A_implicit`'s five flags are this case**, and three are genuinely
+  wrong numbers. `evals/grade.py` now separates them: `wrong_metric` is its own outcome, scored
+  where the number is right and the declared metric is not the one the case names. It still costs
+  what a wrong answer costs — at R7 a number must trace to the governed result the question is
+  about — but it is a routing failure rather than a correctness one, and a reader would fix a
+  different thing.
 - **The item measures metric choice, not the answer.** That is a defensible thing to measure under
   R7, where a number must trace to a declared governed result. It is not the same thing as the
   headline claim that removing the fact produces wrong numbers.

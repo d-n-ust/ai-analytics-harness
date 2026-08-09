@@ -63,14 +63,15 @@ def test_aggregate_arithmetic():
     # the failure-mode reason pivot (the typed reject option)
     assert cell["refusal_reasons"]["out_of_coverage"] == {"matched": 1, "wrong_reason": 0, "over_refused": 0}
 
-    # wrong-by-type separates groundedness vs correctness failures
+    # wrong-by-type separates groundedness vs correctness vs routing failures
     wbt = cell["wrong_by_type"]
     assert wbt == {"fabricated": 1, "wrong_scope": 0, "confident_wrong": 1,
-                   "off_governance": 0, "wrong_metric": 0}
-    # the four primary types PARTITION the wrong bucket — they must sum to the wrong count, so
-    # no wrong answer is ever silently uncounted (wrong_metric is a subset, excluded from the sum)
-    assert (wbt["fabricated"] + wbt["wrong_scope"] + wbt["confident_wrong"] + wbt["off_governance"]
-            == cell["outcomes"]["wrong"])
+                   "wrong_metric": 0, "off_governance": 0, "metric_mismatch": 0}
+    # The five primary types PARTITION the wrong bucket — they must sum to the wrong count, so no
+    # wrong answer is ever silently uncounted. `metric_mismatch` is a diagnostic that cuts across
+    # the partition (a wrong number can also carry a wrong metric), so it stays out of the sum.
+    assert (wbt["fabricated"] + wbt["wrong_scope"] + wbt["confident_wrong"] + wbt["wrong_metric"]
+            + wbt["off_governance"] == cell["outcomes"]["wrong"])
 
     # agent telemetry + tool profile
     assert cell["agent"]["tools_per_run"]["query_metric"] == 1.0
