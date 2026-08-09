@@ -148,6 +148,21 @@ A second result from that sweep bears directly on column D: the share of governe
 called `list_metrics` rises with model strength — 7/30, 8/30, **13/30**. Column D's score is
 partly a measurement of whether the layer was consulted at all. See `FINDINGS.md` §3.5.
 
+**A STUDY THAT FILLS NO CELL NOW CONDITIONS EVERY CELL.** `00_primitive_load` varies the depth of
+the question rather than the intervention, so it is numbered 00 and fills nothing here. Its results
+bear on how every cell should be read:
+
+| finding | consequence for this matrix |
+|---|---|
+| a conformed star with **no comments** scored 66/69, above the documented star (65), the semantic layer (62) and the layer with a check (64) | column C may be worth more than columns B and D on the same primitive, and the matrix has never compared them at depth |
+| documenting a population is worth **+22 to +44 pp** where a question needs it and **−50 pp** where it does not — the negative half replicated three times | a `works` in column B is conditional on the question needing the documented fact. The matrix records no such condition |
+| requiring a number to trace to one governed result took catalogue use from ~40% to **100%**, three runs running | column E does something no other column does, and it is not accuracy |
+| that requirement traded over-application for under-application rather than removing error | `works` in column E means "changed which error", not "fewer errors" |
+
+Decoding a code into a label — `country` beside `country_name` — moved column C by four points on
+its own. That is Kimball's oldest rule about dimension attributes, and it is the single largest
+modelling effect measured anywhere in this experiment. See `00_primitive_load/FINDINGS.md` §25.
+
 **Row 1 and row 2/D were refreshed on 2026-08-09** from the stored runs. Row 1 had read `open` in
 three columns although `01_entity` had run all six arms; row 2/D had read *no better than B* from a
 superseded run. Both are now read from `01_entity/FINDINGS.md` and `02_segment/FINDINGS.md`.

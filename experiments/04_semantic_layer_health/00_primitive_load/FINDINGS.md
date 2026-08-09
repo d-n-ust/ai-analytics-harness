@@ -1,4 +1,88 @@
-# Study 00 — the load ladder, and two ways to write documentation badly
+# Study 00 — primitive load: findings
+
+**This document is a chronological record and it is long.** Sections 1 to 23 are what was tried,
+what broke and what each repair changed — kept because two thirds of the defects were in the
+instrument rather than in the agent, and that record is the reason the last runs can be believed.
+**§25 below is the current state.** §24 is the run it rests on. Everything above them is history,
+and several sections are explicitly superseded by later ones.
+
+---
+
+## 25. What holds, as of 2026-08-10
+
+### The result
+
+| arm | what it is | score |
+|---|---|---|
+| `C_modelled` | conformed star, **no comments** | **66/69** |
+| `C_modelled_documented` | the same star, documented | 65/69 |
+| `E_enforced` | governed layer + provenance check | 64/69 |
+| `D_declared` | governed layer | 62/69 |
+| `B_documented` | raw tables, documented | 60/69 |
+| `A_implicit` | raw tables, nothing stated | 52/69 |
+
+Six arms, 23 items, three repetitions, `gpt-5-mini` at minimal reasoning.
+
+### Four claims, and what each rests on
+
+**1. A model that carries its own meaning beats documenting a worse one.** `C_modelled` scored
+exactly 66/69 in both runs after `dim_users` gained `country_name` and `user_type`, and the ordering
+held in both. The change was Kimball's oldest rule — a dimension attribute should be verbose and
+descriptive, so a code sits beside its label. Documenting the same mapping in a comment was the
+weaker fix and could not reach the arm that reads no comments. **Replicated.**
+
+**2. Documentation's effect scales with question depth, and its sign depends on the question.** At
+load 4, across three independent runs:
+
+| | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| question **asks** for the documented fact | +22 pp | +44 pp | +22 pp |
+| question does **not** | **−50 pp** | **−50 pp** | **−50 pp** |
+
+Documenting a population costs half the deepest questions that do not need it, because the agent
+applies the documented filter unasked and that error compounds with everything else the question
+makes it resolve. **The negative half replicated exactly three times. The middle rungs never
+replicated.**
+
+**3. A provenance requirement is the only thing that makes an agent use a governed layer.**
+`E_enforced` has never skipped the catalogue — 0 of 69, three runs running — against `D_declared`'s
+38 to 47. **Replicated.**
+
+**4. It trades one error for another rather than removing error.** `E_enforced`'s five failures are
+**all** filters the question asked for and the arm omitted. `C_modelled_documented`'s are almost all
+the population applied unasked. The two sit at opposite ends of one axis and score within two points
+of each other. **One run.**
+
+### What is not established
+
+**Power.** 23 items, 22 of 138 cells unstable at 16%, six arms separated by one to three points at
+the top. The claims rest on replication across runs, not on any single cell.
+
+**The load hypothesis in its original form** — *documentation helps, and helps more at depth* — is
+true only of the questions that ask for the documented fact. Read as one curve the gap is
+`+20, +40, −7`, which is the average of two opposite effects.
+
+**One failure mode has survived every modelling change**: the agent drops the metric's own filter
+(`habit__category`) while keeping the joined one. It survived grouping the catalogue by entity,
+marking which entity the metric counts, and moving the population out of the dimension list. It is
+`E_enforced`'s dominant remaining failure and is a property of the agent under load rather than of
+the modelling.
+
+### The instrument, for anyone re-running this
+
+Two thirds of everything found here was our own defect. The ones worth knowing about:
+
+| defect | where it is recorded |
+|---|---|
+| a comment that asserts a rule without stating it — the agent invents one | §11 |
+| a comment phrased as a rule becomes a default applied everywhere | §11, §19, §21 |
+| a control that the treatment repairs is not a control | §2, §5 |
+| a ladder whose base rung the untreated arm cannot do has no headroom | §3 |
+| `primitives:` declared and never checked — two families shipped mislabelled | §14, §18 |
+| a metric layer with no join model cannot express a segment at all | §15 |
+| a named period and explicit dates, silently resolved in favour of one | §22 |
+
+---
 
 Three runs. The first two were instrument, the third is the result.
 
