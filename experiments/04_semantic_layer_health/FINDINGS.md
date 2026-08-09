@@ -64,7 +64,7 @@ roughly a factor of three.
 
 ---
 
-## 3. What does survive: three stable observations
+## 3. What does survive: five stable observations
 
 These do not depend on the noisy scorer, either because the cell was perfectly stable across every
 repetition or because the finding is deterministic.
@@ -143,6 +143,79 @@ arm**, and any claim that one engine's documentation "works better" is unsupport
 
 The cheap test is to run `02_segment` against a three-metric catalogue and see whether
 `B_documented` recovers the week question. That is a rendering change, not a modelling one.
+
+### 3.4 The benefit of documentation is a function of model capability, and at the frontier it is zero
+
+Added 2026-08-09, and it conditions every other number in this folder.
+
+`01_entity` is the only study built well enough to re-run unchanged, so it was swept across three
+models with `--override-model`. Everything else is identical: same arms, same questions, same
+guardrails, same judge, each agent at the cheapest reasoning effort it accepts.
+
+| arm | gpt-5.4-mini | gpt-5-mini | gpt-5.6-terra |
+|---|---|---|---|
+| A_implicit — nothing documented | 12/15 | 10/15 | **15/15** |
+| B_documented — one sentence per table | 15/15 | 15/15 | 15/15 |
+| C_modelled | 13/15 | 14/15 | 15/15 |
+| C_modelled_documented | 15/15 | 14/15 | 15/15 |
+| D_declared | 14/15 | 15/15 | 15/15 |
+| E_enforced | 14/15 | 14/15 | 15/15 |
+| **A → B gap** | **3** | **5** | **0** |
+| **silent wrong, all arms** | 7 | 7 | **0** |
+
+`A_implicit` is the messy warehouse with nothing documented: `evt` holding app opens, completed
+habits and reminders behind an unlabelled integer, `u.internal` as 0/1/NULL, `subs.st` as a status
+code. **`gpt-5.6-terra` answered every question from it, three times out of three, with zero
+self-disagreement across all thirty cells.** It resolved the entity from column names, value
+distributions and its own domain knowledge; nothing in the warehouse states that `etype = 2` is a
+completed habit.
+
+This belongs in §3 rather than §2 because it does not depend on the noisy scorer: the frontier
+column is perfectly stable, and the two mini columns agree with each other on direction.
+
+**What it licenses, and what it does not.**
+
+| | |
+|---|---|
+| supported | *the cheaper the model you run, the more your documentation is doing* |
+| not supported | documentation is worthless — this defect is too easy for this model, and `04_grain/FINDINGS.md` §6 records the same model failing a different defect badly |
+| not supported | the mini tiers are broken — they serve **wrong numbers silently**, seven each, which is the failure mode that matters |
+
+**Why every other cell in this folder is now conditional.** Each was measured on `gpt-5-mini` alone.
+`primitives_matrix.md` records interventions against primitives and says nothing about the model;
+after this sweep that omission is a claim, not a gap. A cell that reads **works · measured** means
+*works on gpt-5-mini at minimal reasoning*, and on this evidence the same cell may read differently
+one tier up.
+
+**The honest caveat on the comparison.** Each model ran at its own floor — `minimal` for
+`gpt-5-mini`, `none` for the other two — because the ladders differ and neither is a prefix of the
+other. Reasoning depth is held at "cheapest available" rather than exactly constant, which is what
+`agent/models.py` documents as the harness standard.
+
+### 3.5 The stronger the model, the less it uses the semantic layer
+
+From the same sweep, and larger in consequence than 3.4.
+
+`D_declared` and `E_enforced` reach data through `query_metric` and are supposed to read the
+governed catalogue first. The context audit records when they did not:
+
+| | gpt-5-mini | gpt-5.4-mini | gpt-5.6-terra |
+|---|---|---|---|
+| governed rows that never called `list_metrics` | 7/30 | 8/30 | **13/30** |
+
+At the frontier, **43% of the governed rows answered without consulting the catalogue at all.**
+
+This is not a harness artefact — the audit records a tool that was available and not called. Two
+consequences:
+
+**Column D's score is increasingly not a measurement of the semantic layer.** On a growing share of
+rows the layer was not consulted, so what is being scored is the model answering from the schema
+with a governed tool sitting unused beside it. Any D-versus-B comparison on a frontier model must
+report that share or it is reporting something else.
+
+**It names a study the matrix does not have.** What makes an agent *use* a governed layer it has
+been given is a question about tool affordance rather than about data modelling, and on this
+evidence it may matter more than any cell in the matrix.
 
 ---
 
@@ -329,6 +402,11 @@ follows.
 
 ## 7. What to do next
 
+0. **Decide the target model before authoring any item bank.** §3.4 changes what "hard enough"
+   means: `gpt-5.6-terra` scored 15/15 in every arm of `01_entity`, so a question set written at the
+   current difficulty would max out on a frontier model and separate nothing. Running `02_segment`
+   with `--override-model gpt-5.6-terra` costs one small run and tells us whether the segment defect
+   survives a tier up. Doing it after writing thirty questions is the expensive order.
 1. **Re-estimate the variance components from our own runs** rather than the literature's generic
    calibration, and recompute what our designs can actually detect.
 2. **Score cells as rates rather than verdicts**, and replace the McNemar guidance the runner still
@@ -355,5 +433,7 @@ it destroys interval coverage.
 | catalogue sizes 3 versus 13 | the `list_metrics` result stored in each run's first step |
 | four confounds in study 03 | `20260807-170942` and the trace comparison that followed |
 | grain regression | `20260807-180538` against `20260807-183018` |
+| the three-model sweep (§3.4, §3.5) | `20260808-232437` (gpt-5-mini, pre-rename arm names), `20260809-175723` (gpt-5.4-mini), `20260809-180003` (gpt-5.6-terra) — same study, same questions, same judge |
+| catalogue-skip counts | the `context_audit` field of the `D_declared` and `E_enforced` rows of those three runs |
 | token counts | `o200k_base` over the current renderings |
 | detectable-effect figures | paired sample-size formulas from the LLM-eval statistics literature, using generic binary calibration — **not yet re-estimated from our own data** |

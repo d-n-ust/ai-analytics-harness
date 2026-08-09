@@ -219,12 +219,66 @@ difference we would defend is between doing nothing and doing something.
 period-over-period comparisons and diagnostic questions are where semantic layers are expected to
 contribute most, and we have not tested them.
 
-**Whether it applies to your model.** One model, one configuration. Sensitivity to documentation and
-format is known to decrease as models improve.
+**Whether it applies to your model.** It depends on which one you run, and section 7 gives the
+numbers. This is no longer a caveat; it is a result.
 
 **The cost of an incorrect answer.** We measured accuracy. We did not measure what a wrong number
 costs when it reaches a decision. That cost determines how much of this work is worth doing, and
 only you can estimate it.
+
+---
+
+## 7. Which model you run changes the answer
+
+We re-ran this whole test on three models. Nothing else changed: same tables, same comments, same
+questions, same grading.
+
+| version of the warehouse | cheaper model | our default model | frontier model |
+|---|---|---|---|
+| **nothing documented** | 12/15 | 10/15 | **15/15** |
+| one sentence per table | 15/15 | 15/15 | 15/15 |
+| **what documenting bought** | **+3** | **+5** | **0** |
+| wrong numbers served, all versions | 7 | 7 | **0** |
+
+**The frontier model did not need any of it.** Given the raw warehouse — a table mixing three kinds
+of event behind an unlabelled number, a flag that is 0, 1 or empty, a status held as a code — it
+answered every question correctly, three times out of three. It worked out what the codes meant from
+the column names and the data itself.
+
+**So the practical rule is narrower than "document your warehouse".**
+
+> The cheaper the model you run, the more your documentation is doing.
+
+If you run a small model for cost reasons — and most teams putting an agent in front of a warehouse
+do — table comments are buying you accuracy, and the cheaper models in our test served wrong numbers
+without them. If you run a frontier model on questions of this difficulty, this particular work may
+buy you nothing.
+
+**What this does not mean.**
+
+- It does not mean documentation is wasted. It means *this defect* is easy for *this model*. The same
+  frontier model failed a different defect in our tests badly, and harder questions may separate the
+  versions again.
+- It does not mean the cheaper models are unusable. It means they fail silently, which is the
+  expensive way to fail.
+- It is five questions on one defect. Treat it as a direction, and test it on your own questions
+  before deciding not to document something.
+
+### A second result, which may matter more
+
+Three of the six versions give the agent a governed metric layer and expect it to read the metric
+list before answering. We recorded how often it did not:
+
+| | cheaper model | our default | frontier |
+|---|---|---|---|
+| answers given without reading the metric list | 7 of 30 | 8 of 30 | **13 of 30** |
+
+**The stronger the model, the more often it ignored the semantic layer** and answered from the raw
+schema instead. At the frontier that was nearly half the time.
+
+If you have built a semantic layer and put an agent in front of it, measure how often the agent
+actually calls it. A layer that is bypassed is not governing anything, and nothing in a normal
+accuracy report would show you this.
 
 ---
 
@@ -233,6 +287,9 @@ only you can estimate it.
 1. Add comments to columns, especially those holding a kind, a status, or a NULL that carries
    meaning.
 2. Prefer good table and column names over comments where the modelling effort is affordable.
-3. If a semantic layer exists, measure whether the agent uses it.
+3. If a semantic layer exists, measure whether the agent uses it — ours was bypassed on nearly half
+   of the frontier model's answers.
 4. Do not let an agent determine what "last week" means.
 5. When evaluation results look unstable, examine the questions first.
+6. Test on the model you will actually run. Documentation bought 5 points on a small model and 0 on
+   a frontier one, on the same questions.

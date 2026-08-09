@@ -130,6 +130,24 @@ Fifteen of the forty cells carry evidence, and two of those are bundled. Two mor
 than untested: segment/C is *constant* and causality/C is *absent*. The rest mean untested, not
 unimportant.
 
+**EVERY CELL IS CONDITIONAL ON ONE MODEL, and after 2026-08-09 that is a claim rather than a
+gap.** Every number in this matrix was measured on `gpt-5-mini` at minimal reasoning. `01_entity` has
+since been swept across three tiers, and the row it fills reads differently at each:
+
+| | gpt-5.4-mini | gpt-5-mini | gpt-5.6-terra |
+|---|---|---|---|
+| entity, A_implicit — nothing documented | 12/15 | 10/15 | **15/15** |
+| entity, B_documented — one sentence per table | 15/15 | 15/15 | 15/15 |
+| **the gap this row reports** | **3** | **5** | **0** |
+
+So `1 entity · B documented` should be read as *works on gpt-5-mini*, and on the frontier model the
+same intervention buys nothing on the same questions. A cell is a statement about a primitive, an
+intervention **and a model tier**, and only the third is currently unstated. See `FINDINGS.md` §3.4.
+
+A second result from that sweep bears directly on column D: the share of governed rows that never
+called `list_metrics` rises with model strength — 7/30, 8/30, **13/30**. Column D's score is
+partly a measurement of whether the layer was consulted at all. See `FINDINGS.md` §3.5.
+
 **Row 1 and row 2/D were refreshed on 2026-08-09** from the stored runs. Row 1 had read `open` in
 three columns although `01_entity` had run all six arms; row 2/D had read *no better than B* from a
 superseded run. Both are now read from `01_entity/FINDINGS.md` and `02_segment/FINDINGS.md`.
