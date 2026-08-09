@@ -1061,3 +1061,85 @@ fact, and the effect is largest where the question is hardest.
 `D_declared` skipped the catalogue on **40 of 69 rows**, up from 31. Giving it readable table
 comments made the SQL path more attractive, not less. `E_enforced` still skips on zero — the
 provenance requirement is the only thing in this study that has ever made the layer get used.
+
+
+---
+
+## 21. The two board fixes: what they reached and what they did not
+
+**Gap 1 — the population becomes something you request by name.** `is_internal` was a filterable
+dimension described as *"true for staff and test accounts"*, and every documented arm applied it on
+questions that never asked. It is removed as a dimension and replaced by `user_type`, a descriptive
+attribute with values `staff` / `customer`. MetricFlow has no `segments:` construct, so the flag is
+simply unreachable and the default is everyone.
+
+**Gap 2 — the catalogue marks the metric's own entity.** Grouping by entity cut the dropped-filter
+failures and did not remove them, and the dropped filter was always the metric's own. The catalogue
+now says which is which:
+
+```
+- people_with_habits: Distinct people holding AT LEAST ONE habit…
+    by habit (what this metric counts): habit__category, habit__habit_created_date, habit__is_archived
+    by user (joined):  user__channel, user__country, user__platform, …
+```
+
+All 23 questions re-validated against the changed layer before the run: **23 of 23 exact.**
+
+### The run — D and E, three repetitions · `20260809-235214`
+
+| load | D_declared | E_enforced |
+|---|---|---|
+| 0 | 9/9 | 9/9 |
+| 1 | 15/15 | 14/15 |
+| 2 | **15/15** | **15/15** |
+| 3 | 14/15 | 10/15 |
+| 4 | 12/15 | **15/15** |
+| **total** | **65/69** | 63/69 |
+
+**`D_declared` at 65/69 is the highest any arm has scored in this study** — above `B_documented` and
+`C_modelled_documented` at 64/69 in the previous run of the same items. **Self-disagreement fell to
+5 of 46 cells — 11%, below the 13% floor, for the first time in this study.**
+
+### What the fixes reached
+
+**Over-application through the layer is gone.** No failure in either arm is a habits metric filtered
+to customers unasked.
+
+### What they did not reach, and it is the more interesting half
+
+**`D_declared`'s two remaining over-applications happen in raw SQL.** Both traces are `run_sql`
+against `dim_users` filtering `NOT is_internal` directly:
+
+| item | gold | answered | route |
+|---|---|---|---|
+| `pl_w3_grain` | 306 | 297 | SQL, `NOT is_internal` |
+| `pl_w4_join_path` | 49 | 47 | SQL, `NOT is_internal` |
+
+**D skipped the catalogue on 47 of 69 rows.** A fix inside the semantic layer cannot reach an arm
+that is not using the semantic layer, and the star still carries `is_internal` with its original
+comment. That is not a flaw in the fix; it is the bypass problem measured from a third angle.
+
+**One over-application survives inside the layer**, on the two-sided referral metric: `E_enforced`
+answered 229 where the gold is 236, filtering both `referrer__` and `user__`. The description added
+this session says *"Filter neither unless the question names that side"* and it was not enough.
+
+**The category drop is reduced, not removed.** `D_declared` has one left; `E_enforced` has two.
+
+### Where the board disagreed, and who was right
+
+Semantic-modelling held that gap 1 was fixable by making the population requestable. Data-modelling
+held that the agent over-applies because the concept is **salient**, and that renaming would move the
+problem rather than solve it.
+
+**Both are partly right, and the split is clean.** Inside the layer, making it requestable worked —
+the over-application is gone. Outside the layer, where the same concept is still a documented column
+on the star, it continues exactly as before. **The mechanism is salience; the remedy is removing the
+affordance; and a remedy that only covers the governed path only helps an arm that stays on it.**
+
+`E_enforced`, which never leaves the governed path, has zero staff over-applications.
+
+### The cost, stated
+
+`E_enforced` fell to 10/15 at load 3 and **refused a load-1 question** — asking whether "not archived"
+meant all time or a period. The provenance requirement makes it cautious as well as governed, and at
+63/69 it is now below D. The two arms have swapped places since §20.

@@ -28,7 +28,18 @@ semantic_model:
     - {name: user, type: primary, expr: user_id}
   dimensions:
     - {name: signup_date, type: time, type_params: {time_granularity: day}}
-    - {name: is_internal, type: categorical}
+    # `is_internal` IS DELIBERATELY NOT A DIMENSION HERE. It was, and every documented arm then
+    # filtered by it on questions that never asked: nine wrong answers in run 20260809-225835, all
+    # of them the gold with staff excluded. A boolean flag whose description says "true for staff
+    # and test accounts" reads as an instruction to exclude, and rewording it descriptively changed
+    # nothing.
+    #
+    # A population you must NAME cannot be applied by accident. MetricFlow has no `segments:`
+    # construct — that is Cube's word, and 02_segment__mf established the gap — so the idiom here is
+    # a metric filter: `..._real_users` variants below, each describing its own population, and no
+    # way to reach the flag ad hoc. The default is everyone, which is what a question that says
+    # nothing about staff means.
+    - {name: user_type, type: categorical, expr: "CASE WHEN is_internal THEN 'staff' ELSE 'customer' END"}
     - {name: platform, type: categorical}
     - {name: country, type: categorical}
     - {name: region, type: categorical}
@@ -60,7 +71,8 @@ semantic_model:
     - {name: referrer, type: primary, expr: user_id}
   dimensions:
     - {name: referrer_signup_date, type: time, type_params: {time_granularity: day}, expr: signup_date}
-    - {name: is_internal, type: categorical}
+    # Same change as on `users`: a descriptive attribute rather than an exclusion flag.
+    - {name: user_type, type: categorical, expr: "CASE WHEN is_internal THEN 'staff' ELSE 'customer' END"}
     - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
   measures:
     - {name: referrer_rows, agg: count, expr: user_id}
@@ -210,7 +222,7 @@ metric:
 ---
 metric:
   name: referrers_activated
-  description: "Distinct people who made AT LEAST ONE referral that reached the activated stage. `user__` filters describe the person REFERRED; `referrer__` filters describe the person who referred them."
+  description: "Distinct people who made AT LEAST ONE referral that reached the activated stage. `user__` filters describe the person REFERRED; `referrer__` filters describe the person who referred them. Filter neither unless the question names that side."
   type: simple
   type_params: {measure: distinct_referrers}
   filter: "{{ Dimension('referral__status') }} = 'activated'"

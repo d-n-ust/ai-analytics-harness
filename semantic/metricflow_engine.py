@@ -127,6 +127,24 @@ class MetricFlowLayer:
 
     # -- the agent surface ---------------------------------------------------- #
 
+    def _own_entity(self, metric) -> str | None:
+        """The entity of the semantic model this metric's measure lives on.
+
+        A metric's dimensions arrive from two places — its own model, and every model reachable by a
+        shared entity — and MetricFlow prefixes both identically. Which is which is the difference
+        between `habit__category`, an attribute of the rows being counted, and `user__platform`, an
+        attribute of something joined to them. The catalogue could not say."""
+        params = getattr(metric, "type_params", None)
+        agg = getattr(params, "metric_aggregation_params", None) if params else None
+        model_name = getattr(agg, "semantic_model", None) if agg else None
+        if not model_name:
+            return None
+        for sm in self._manifest.semantic_models:
+            if sm.name == model_name:
+                primary = next((e.name for e in sm.entities if str(e.type).lower().endswith("primary")), None)
+                return primary
+        return None
+
     def list_metrics_text(self) -> str:
         """The catalogue, rendered from everything MetricFlow actually exposes.
 
@@ -171,8 +189,19 @@ class MetricFlowLayer:
                 # entity. Ours printed them sorted, so `habit__category` sat between
                 # `habit__is_archived` and `metric_time` with nothing to say it was the subject of
                 # the metric rather than an attribute of something joined to it.
+                # THE METRIC'S OWN ENTITY IS MARKED, not just grouped. Grouping alone cut the
+                # dropped-filter failures from four to one per run and did not remove them, and the
+                # dropped filter is ALWAYS the metric's own — `habit__category` goes while
+                # `user__platform` stays. A positional list says there are two sources; it does not
+                # say which one is the thing being counted.
+                own = self._own_entity(m)
                 for prefix, group in _by_entity(dims):
-                    label = "time" if prefix == "metric_time" else f"by {prefix}"
+                    if prefix == "metric_time":
+                        label = "time"
+                    elif prefix == own:
+                        label = f"by {prefix} (what this metric counts)"
+                    else:
+                        label = f"by {prefix} (joined)"
                     lines.append(f"    {label}: {', '.join(group)}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
             lines.append("    time-filterable (period=…) and grainable "
