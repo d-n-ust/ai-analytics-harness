@@ -14,11 +14,26 @@
 -- rather than the effect of documentation. The rule for this file: every primitive the questions
 -- require must be stated somewhere in it, and nothing else may differ from messy_tables.sql.
 --
--- The added sentence is on `subs`, marked below.
+-- TWO ADDITIONS, both marked below, and both COMPLETE A RULE RATHER THAN INVENTING ONE.
+--
+--   subs        messy_tables.sql says "one row per subscription record" and not that a user may
+--               hold several, which is what the join-path rung turns on.
+--   u.internal  messy_tables.sql says a few NULL-flagged accounts "are internal accounts
+--               identifiable only by their email domain" AND NEVER NAMES THE DOMAIN. Both arms then
+--               guessed it. Run 20260809-201725 shows the cost: the agent excluded every email
+--               containing `test` or `@example.com` and returned 4,057 where the gold is 6,147, in
+--               the documented arm as well as the undocumented one.
+--
+-- WHY THIS IS NOT TUNING THE TREATMENT TO THE TEST. 01_entity refused to add a comment restating
+-- the analysis date, because the agent had been TOLD it and ignored it. This is the opposite case:
+-- the comment asserts that a rule exists and withholds it, so the arm is not ignoring a fact it was
+-- given — it was never given one. Stating a rule precisely is what the `documented` column IS. The
+-- undocumented arm still has to discover the domain, which is the treatment.
 
 
 COMMENT ON VIEW u IS 'One row per registered user account.';
-COMMENT ON COLUMN u.internal IS 'Staff/test account flag: 1 = internal, 0 = real, NULL = unknown. 271 rows are NULL, and a few of those are internal accounts identifiable only by their email domain.';
+-- THE SECOND ADDITION, and it completes a rule rather than adding a new one.
+COMMENT ON COLUMN u.internal IS 'Staff/test account flag: 1 = internal, 0 = real, NULL = unknown. An account is staff or test when internal = 1 OR its email ends @internal-test.com. Every other account is a real user, including the 271 whose flag is NULL.';
 COMMENT ON COLUMN u.chan IS 'Acquisition channel.';
 COMMENT ON COLUMN u.ctry IS 'Country.';
 COMMENT ON COLUMN u.plat IS 'Platform.';

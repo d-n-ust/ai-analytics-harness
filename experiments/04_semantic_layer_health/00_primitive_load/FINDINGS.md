@@ -1,8 +1,18 @@
-# Study 00 — the load ladder, run once, and why it is not yet readable
+# Study 00 — the load ladder: two rebuilds, and a frontier model that does not break
 
-Run `20260809-192455-00_primitive_load`: five questions, four arms, three repetitions, `gpt-5-mini`
-at minimal reasoning, R1. **The frontier-model half of the plan was not run**, because the trace
-audit found two defects in the instrument first.
+Three runs. The first two were instrument, the third is the result.
+
+| run | model | score | what it was |
+|---|---|---|---|
+| `20260809-192243` | gpt-5-mini | 40/60 | first build — control broken, ladder on the floor |
+| `20260809-201725` | gpt-5-mini | 48/60 | ladder rebased — exposed an under-specified comment |
+| `20260809-202056` | gpt-5-mini | 55/60 | **the readable run** |
+| `20260809-202236` | gpt-5.6-terra | **60/60** | **the readable run, one tier up** |
+
+**The answer: on `gpt-5-mini` the gap does widen with load. On `gpt-5.6-terra` there is no gap at
+any depth up to four primitives.** Sections 1–5 are the instrument history and are kept because two
+of the three defects were in our own documentation rather than in the questions. Section 6 is the
+result.
 
 ---
 
@@ -115,7 +125,106 @@ would produce a second unreadable table at a higher price.
 
 | claim | source |
 |---|---|
-| per-item results | `20260809-192455-00_primitive_load/run.json` |
+| per-item results | `20260809-192243-00_primitive_load/run.json` |
 | the three control queries | the same run, `A_implicit`, `pl_control_spend`, all three reps, `steps` |
 | the invented event mapping | the same run, `A_implicit`, `pl_l3_grain`, rep 1 |
 | `01_entity`'s per-item A scores | `20260808-232437-01_entity` |
+
+
+---
+
+## 6. The rebuilt ladder, on two models
+
+Control replaced with a signup count — one table, one date column, one row per account, and safe
+under both readings (553 counting every account, 543 excluding staff, 0.98x, inside tolerance).
+Ladder rebased from `evt` onto `hab` and `subs`, the primitives `../01_entity` shows the
+undocumented arm actually resolves.
+
+### gpt-5-mini
+
+| question | load | A_implicit | B_documented | C_modelled | D_declared |
+|---|---|---|---|---|---|
+| control | 0 | 3/3 | 3/3 | 3/3 | 3/3 |
+| L1 entity / NULL | 1 | 3/3 | 3/3 | 3/3 | 3/3 |
+| L2 + segment | 2 | 3/3 | 3/3 | 3/3 | 3/3 |
+| L3 + grain | 3 | **2/3** | 3/3 | 3/3 | 3/3 |
+| L4 + join path | 4 | **2/3** | 3/3 | **2/3** | **1/3** |
+| total | | 13/15 | **15/15** | 14/15 | 13/15 |
+
+**The predicted shape appears, weakly.** `A_implicit` holds at the first two rungs and loses a
+repetition at each of the last two; `B_documented` stays at ceiling throughout. The A-to-B gap by
+load is 0, 0, 1, 1 out of 3 — monotone non-decreasing, which is the direction the hypothesis
+predicts and far too small to be a measurement.
+
+`D_declared` is the worst arm at L4 (1/3), consistent with the pre-registered reading that a
+semantic layer stocks the questions someone thought of and a four-primitive question falls outside
+it. Four of its fifteen rows never called `list_metrics` at all.
+
+### gpt-5.6-terra
+
+| question | load | A_implicit | B_documented | C_modelled | D_declared |
+|---|---|---|---|---|---|
+| every question | 0–4 | **3/3** | 3/3 | 3/3 | 3/3 |
+| total | | **15/15** | 15/15 | 15/15 | 15/15 |
+
+**Zero self-disagreement across all twenty cells.** The frontier model answered a four-primitive
+question — event kind, population definition with a NULL-bearing flag, people-not-rows, and a
+one-to-many join it must not fan — from the raw application extract with no comments anywhere,
+three times out of three.
+
+---
+
+## 7. What this settles, and what it moves
+
+**The load hypothesis is supported on the small model and not on the frontier model.** Depth alone,
+to four primitives, does not bring `gpt-5.6-terra` off the ceiling. `../01_entity/FINDINGS.md` §3.4
+found the same at load 1; this extends it to load 4 on a different set of primitives and a different
+table.
+
+So the claim from that sweep survives in a stronger form than it was made:
+
+> The cheaper the model you run, the more your documentation is doing — and on this warehouse that
+> holds at every question depth we can currently construct.
+
+**The remaining lever is the warehouse, not the question.** Our environment has six objects at rung
+1 and seven at rung 2, with no redundancy: the frontier model reads the whole schema in one call and
+reasons about it. A real warehouse of this domain carries forty to eighty overlapping objects —
+`vw_weekly_actives_ios`, `daily_actives_v2`, `user_activity_summary` — several of which can answer
+any given question and disagree. That is what accumulated modelling debt is, and we have never
+built it.
+
+Depth was the cheaper lever and it has now been tested. Sprawl is next, and it comes with a measure
+that removes our own gold from the loop: **ask each question in several wordings and check whether
+the answers agree with each other.** Agreement needs no gold SQL, which is the one thing that
+answers the circularity objection to this whole programme.
+
+---
+
+## 8. Two defects found in our own documentation, not in the questions
+
+Worth separating from the item-design failures above, because they are the more useful kind.
+
+**`u.internal` asserted a rule and withheld it.** `messy_tables.sql` said a few NULL-flagged
+accounts "are internal accounts identifiable only by their email domain" and never named the domain.
+Both arms guessed — the agent excluded every email containing `test` or `@example.com` and returned
+**4,057** where the gold is 6,147, in the documented arm as well as the undocumented one. Naming the
+domain took `B_documented` from 11/15 to 15/15 and halved self-disagreement, 7 of 20 cells to 4.
+
+**A comment that says a rule exists without stating it is worse than no comment**, because it
+directs the reader to invent one. That is a finding about documentation quality rather than about
+documentation quantity, and it is the kind of thing this experiment is for.
+
+The fix went into `warehouse/docs/messy_load.sql` and deliberately not into the shared
+`messy_tables.sql`, which `../01_entity`'s stored runs depend on.
+
+
+---
+
+## Provenance for the rebuilt runs
+
+| claim | source |
+|---|---|
+| gpt-5-mini per-item table | `20260809-202056-00_primitive_load/run.json` |
+| gpt-5.6-terra per-item table | `20260809-202236-00_primitive_load/run.json` |
+| the 4,057 wrong value and its predicate | `20260809-201725`, `A_implicit` and `B_documented` on `pl_l2_segment`; reproduced against the warehouse as `internal=0 AND email NOT LIKE '%test%' AND email NOT LIKE '%@example.com'` |
+| catalogue-skip counts | the `context_audit` field of the `D_declared` rows in both readable runs |

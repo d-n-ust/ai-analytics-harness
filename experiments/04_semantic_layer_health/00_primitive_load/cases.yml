@@ -1,134 +1,137 @@
-# EXPERIMENT QUESTIONS — a NESTED LADDER of five, one rung per primitive.
+# EXPERIMENT QUESTIONS — a NESTED LADDER of four, one rung per primitive, plus a control.
 #
-# WHY THIS SET EXISTS. Every study in this experiment asks questions that require ONE primitive, and
-# `gpt-5.6-terra` answered all of them from the undocumented warehouse — 15/15, zero
-# self-disagreement (see ../01_entity/FINDINGS.md §8). Real analysis is not one primitive. The
-# hypothesis this set tests is that the value of documentation is a function of how many primitives
-# a question forces the agent to resolve at once.
+# REBUILT 2026-08-09 after the first run. FINDINGS.md §2-3 records what was wrong with the first
+# set and both defects are fixed here rather than argued away:
 #
-# THE ARITHMETIC THAT MOTIVATES IT. If each primitive is resolved independently with probability p,
-# an n-primitive question succeeds at p^n, so the gap between a documented and an undocumented
-# warehouse widens superlinearly with n:
+#   the control was not a control    `spend.chan` spells one channel four ways, so the question
+#                                    tested enum resolution — a primitive, and the very one the
+#                                    documented arm is handed. A_implicit scored 0/3 on it.
+#   the ladder started on the floor  it was built on `evt.etype`, which A_implicit cannot resolve
+#                                    at all: 0/3 at L1, with no room left for a gap to widen.
 #
-#     n     undocumented (p=0.8)   documented (p=1.0)   gap
-#     1              80%                 100%           20pp
-#     2              64%                 100%           36pp
-#     3              51%                 100%           49pp
-#     4              41%                 100%           59pp
+# WHY THIS LADDER SITS ON `hab` AND `subs`. Reading ../01_entity per item shows exactly which
+# primitives the undocumented arm can and cannot do:
 #
-# The measured smallest detectable difference at 5 questions x 3 reps is 59-63pp (../FINDINGS.md
-# §2). At load 4 the predicted effect reaches that threshold WITH THE SAMPLE SIZE WE ALREADY HAVE.
-# So compositional depth is a cheaper route out of the power problem than authoring thirty more
-# single-primitive items — and the SHAPE of the curve is a stronger result than any single cell,
-# because it predicts rather than describes.
+#     a NULL that means "still active"   (hab.arch)     3/3
+#     a status code that means "live"    (subs.st)      3/3
+#     which of three event kinds         (evt.etype)    0-1/3
+#
+# The base rung must be a primitive the undocumented arm resolves MOST of the time, or the effect
+# this study exists to measure has nowhere to appear. L1 below is `../01_entity`'s own
+# `e_ent_active_habits`, on which A_implicit scored 3/3 — so the ladder starts at the top and has
+# somewhere to fall.
 #
 # ────────────────────────────────────────────────────────────────────────────────────────────────
-# THE LADDER IS NESTED, AND THAT IS WHAT MAKES A FAILURE ATTRIBUTABLE.
+# THE HYPOTHESIS. If each primitive is resolved independently with probability p, an n-primitive
+# question succeeds at p^n, so the gap between a documented and an undocumented warehouse widens
+# superlinearly with n. At n=4 the predicted gap reaches the 59-63pp this design can actually
+# detect (../FINDINGS.md §2), which makes depth a cheaper route out of the power problem than
+# thirty more single-primitive items.
 #
-# Each item is the previous item plus exactly one primitive. The consequence is that the most likely
-# wrong answer at each rung IS THE PREVIOUS RUNG'S GOLD:
+# THE LADDER IS NESTED, and that is what makes a failure attributable. Each item is the previous
+# plus exactly one primitive, so the most likely wrong answer at each rung IS THE PREVIOUS RUNG'S
+# GOLD — verified against the data, not assumed:
 #
-#     L1  entity                       645     all event kinds -> 10,741
-#     L2  + segment                  3,435     segment ignored ->  3,597
-#     L3  + grain                    1,306     grain ignored   ->  3,435   <- L2's gold
-#     L4  + join path                  270     join ignored    ->  1,306   <- L3's gold
+#     L1  entity / NULL semantics    6,357     archived counted too ->  7,467
+#     L2  + segment                  6,147     segment ignored      ->  6,357   <- L1's gold
+#     L3  + grain                    2,321     grain ignored        ->  6,147   <- L2's gold
+#     L4  + join path                  382     join ignored         ->  2,321   <- L3's gold
 #
-# So an arm that fails L4 with 1,306 has resolved entity, segment and grain and lost the join. A
-# five-primitive question with an unattributable failure would tell us the gap widened and not which
-# primitive widened it; this tells us both.
+# An arm that answers 2,321 at L4 has resolved three primitives and lost the fourth. Every
+# degenerate strategy at every rung was checked against the 2% tolerance before this file was
+# written; the closest is 1.03x and it clears.
 #
-# Every degenerate strategy at every rung was checked against the 2% tolerance before writing. The
-# closest is `segment ignored` at 1.05x, which clears it; a composition rung was DESIGNED AND CUT
-# because its traps landed at 22.4%, 22.7%, 23.0% and 24.8% — a ratio divides the error into both
-# numerator and denominator, so three of four missed primitives would have graded CORRECT.
-#
-# THE EVENT KIND IS `etype = 3`, REMINDERS, and that is not cosmetic. The same ladder on completed
-# habits (etype = 2) has entity free at L4: every user who opened the app also completed a habit, so
-# ignoring the entity primitive returns the identical number and the rung silently drops to load 3.
-# Reminders are the one kind where all five degenerate strategies land outside tolerance.
+# A COMPOSITION RUNG WAS DESIGNED AND CUT, and the reason is worth keeping: its traps landed at
+# 22.4%, 22.7%, 23.0% and 24.8%. A ratio divides the error into both numerator and denominator, so
+# three of four missed primitives would have graded CORRECT.
 # ────────────────────────────────────────────────────────────────────────────────────────────────
 #
-# VOCABULARY. Business words only — reminder, staff and test accounts, paid subscription. Never
-# `etype`, `internal`, `subs`, `uid`, `distinct`, `row`, or `term`. The documented arm must win by
-# comprehension rather than transcription, and the vocabulary audit must come back short and equal.
+# VOCABULARY. Business words only. Never `arch`, `internal`, `subs`, `uid`, `distinct`, `row`.
+# "Archived" appears in the `hab.arch` comment, so the documented arm has a lexical match on L1 —
+# accepted because ../01_entity's undocumented arm already scores 3/3 there, which shows the word
+# is not carrying the answer.
 #
-# THE CONTROL IS THE ROW TO READ FIRST. `pl_control_spend` needs no primitive resolved: one table,
-# one amount column, at every rung. It must be flat across all arms and all loads. If it moves, the
-# difference is prompt length or noise and nothing else here can be read.
+# THE CONTROL IS THE ROW TO READ FIRST. One table, one date column, one row per account, no coded
+# value and nothing to join. It is also safe under BOTH readings: counting every account gives 553
+# and excluding staff gives 543, which is 0.98x and inside the tolerance — so an arm cannot lose it
+# by making a defensible choice. That property is what the previous control lacked.
 
 cases:
 
-  # --- L1 · entity ------------------------------------------------------------------------ #
+  # --- L1 · entity / NULL semantics -------------------------------------------------------- #
   - id: pl_l1_entity
     tier: primitive_load
     primitives: [entity]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM evt e JOIN u ON e.uid = u.uid WHERE e.etype = 3 AND CAST(e.ts AS DATE) BETWEEN DATE '2026-07-06' AND DATE '2026-07-12'"
+      gold_sql: "SELECT count(*) FROM hab h WHERE h.arch IS NULL"
       tolerance: 0.02
-    question: "How many reminders were shown to users between 6 and 12 July 2026?"
+    question: "How many habits have not been archived?"
     note: >-
-      True 645. `evt` mixes app opens, completed habits and reminders behind an integer; counting
-      every row gives 10,741. This rung is deliberately the same shape as ../01_entity's reminder
-      item so the load-1 baseline is comparable.
+      True 6,357. `hab.arch` holds an archive date and is NULL while the habit is still tracked, so
+      absence of a value is the fact. Counting every row gives 7,467. Identical to
+      ../01_entity's `e_ent_active_habits`, deliberately: A_implicit scores 3/3 on it, which is what
+      gives this ladder headroom.
 
-  # --- L2 · + segment --------------------------------------------------------------------- #
+  # --- L2 · + segment ---------------------------------------------------------------------- #
   - id: pl_l2_segment
     tier: primitive_load
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM evt e JOIN u ON e.uid = u.uid WHERE e.etype = 3 AND CAST(e.ts AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many reminders were shown in June 2026?"
+    question: "Excluding staff and test accounts, how many habits have not been archived?"
     note: >-
-      True 3,435. Ignoring the population gives 3,597; ignoring the event kind gives 43,952. The
-      staff flag is 0, 1 or NULL, and 271 NULLs include internal accounts identifiable only by their
-      email domain — so the segment is not a single equality test.
+      True 6,147. Ignoring the population gives 6,357 — L1's gold. The staff flag is 0, 1 or NULL,
+      and 271 NULLs include internal accounts identifiable only by their email domain, so the
+      segment is not a single equality test.
 
-  # --- L3 · + grain ----------------------------------------------------------------------- #
+  # --- L3 · + grain ------------------------------------------------------------------------ #
   - id: pl_l3_grain
     tier: primitive_load
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT e.uid) FROM evt e JOIN u ON e.uid = u.uid WHERE e.etype = 3 AND CAST(e.ts AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people were shown a reminder in June 2026?"
+    question: "Excluding staff and test accounts, how many people have at least one habit they have not archived?"
     note: >-
-      True 1,306. One row is one reminder, so counting rows answers L2's question instead — 3,435,
-      2.63x. The wording says "how many people" and the previous rung says "how many reminders";
-      that pair is the whole treatment of this rung.
+      True 2,321. One row is one habit and a person keeps several, so counting rows answers L2's
+      question instead — 6,147, 2.65x. "How many people" against L2's "how many habits" is the whole
+      treatment of this rung.
 
-  # --- L4 · + join path ------------------------------------------------------------------- #
+  # --- L4 · + join path -------------------------------------------------------------------- #
   - id: pl_l4_join
     tier: primitive_load
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT e.uid) FROM evt e JOIN u ON e.uid = u.uid WHERE e.etype = 3 AND CAST(e.ts AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND e.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription were shown a reminder in June 2026?"
+    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription have at least one habit they have not archived?"
     note: >-
-      True 270. Four ways to be wrong and each is the failure of one named primitive: ignoring the
-      subscription condition gives 1,306 (L3's gold), ignoring grain gives 754, joining to the
-      subscription table rather than testing membership gives 822 because 43 users hold more than
-      one term, and ignoring the event kind gives 320.
+      True 382. Four ways to be wrong, each the failure of one named primitive: dropping the
+      subscription condition gives 2,321 (L3's gold), counting habits rather than people gives
+      1,042, joining to the subscription table rather than testing membership gives 1,151 because
+      43 users hold more than one term, and ignoring the archive rule gives 393.
 
-  # --- the control ------------------------------------------------------------------------ #
-  - id: pl_control_spend
+  # --- the control ------------------------------------------------------------------------- #
+  - id: pl_control_signups
     tier: primitive_load
     primitives: []
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT sum(amt) FROM spend WHERE lower(chan) IN ('paid_search','paid search','ppc','paid-search') AND dt BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      gold_sql: "SELECT count(*) FROM u WHERE CAST(u.created AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
       tolerance: 0.02
-    question: "How much did we spend on paid search in June 2026?"
+    question: "How many accounts were created in June 2026?"
     note: >-
-      True $12,786.81. One table, one amount column, no primitive to resolve at any rung. Must be
-      flat across every arm and every model, or nothing else in the set can be read.
+      True 553. One table, one date column, one row per account, no coded value, nothing to join.
+      Excluding staff and test accounts gives 543 — 0.98x, inside the tolerance — so both defensible
+      readings grade correct and no arm can lose this row by making a reasonable choice. It must be
+      flat across every arm and every model tier; if it moves, nothing else in the set can be read.
