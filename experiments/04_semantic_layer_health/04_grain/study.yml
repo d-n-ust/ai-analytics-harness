@@ -70,6 +70,11 @@ columns:
   A_implicit:   "every table says what it holds; none says what one row is"
   B_documented: "one sentence per fact table: 'one row is one subscription TERM, not one subscriber'"
   C_modelled:   "the table is named for its grain — fct_subscription_terms, byte-identical data"
+  C_modelled_documented: "OPEN — the renamed table PLUS the grain sentence, which is C's treatment
+                 and B's together. Not built, and the reason is that this study's two runs never
+                 established that either one works on its own: the subscription-term grain is
+                 handled unprompted by every arm (FINDINGS.md §6). A 2x2 cell is worth building
+                 when its margins move, and here they do not."
   D_declared:   "a governed metric whose `agg` resolves the grain, so the caller never sees a row"
   E_enforced:   "R9 trajectory_verify on top of D — does the metric measure the thing asked about"
 

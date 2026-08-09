@@ -365,6 +365,20 @@ COLUMNS = {"A": "implicit", "B": "documented", "C": "modelled", "D": "declared",
 # guardrail cells, because the check is a property of the guardrails and not of the layer. See 04_semantic_layer_health/02_segment__mf/study.yml for the case that motivated it.
 NO_ARM = ("CONSTANT", "ABSENT", "OPEN", "MEASURED_ELSEWHERE")
 
+# VARIANTS A COLUMN IS EXPECTED TO ACCOUNT FOR. Documentation is a property any shape can have
+# rather than a rung of its own, so a study that builds a shape must say whether it also built the
+# described version of it — as an arm, or as a status in `columns:`.
+#
+# ONLY C. `A_implicit` plus documentation is `B_documented`, which is a column in its own right.
+# `D_declared` already contains its documentation, because in a semantic layer the description is a
+# field. `E_enforced` is a check rather than a shape, so there is nothing to describe.
+#
+# WHY THE CHECK EXISTS. `00_primitive_load` shipped without `C_modelled_documented` and without a
+# word about it, because a variant is not a column and nothing here looked for one. It was found by
+# reading a directory listing, which is exactly the failure this module's validation was added to
+# prevent. When it was finally built it produced the study's clearest result.
+VARIANTS = {"C_modelled": ("C_modelled_documented",)}
+
 # Every key a study.yml may carry. Here rather than inline in `Study.load` because a test used to
 # restate the set to assert the loader would accept the file, and a second copy of a rule is a rule
 # that can disagree with itself — it did, the first time a key was added.
@@ -423,6 +437,20 @@ def _validate_columns(name: str, spec: dict, arms: dict) -> None:
         raise ValueError(
             f"{name}/study.yml: arm file(s) {sorted(orphans)} name no declared column. "
             f"Add them to `columns:`, or rename them to a column they fill.")
+
+    # A variant is not a column, so nothing above notices when one is simply absent. If the base
+    # column is built, its variants must be accounted for — built, or declared with a reason.
+    for column, variants in VARIANTS.items():
+        if column not in arms:
+            continue
+        for variant in variants:
+            if variant in arms or variant in cols:
+                continue
+            raise ValueError(
+                f"{name}/study.yml: arm {column} is built and its variant {variant} is neither "
+                f"built nor declared. Documentation is a property any shape can have, so a study "
+                f"that models a shape must say whether it also described it. Add arms/{variant}.yml, "
+                f"or add a `columns:` entry opening with one of {NO_ARM} and say why not.")
 
 
 @dataclass
