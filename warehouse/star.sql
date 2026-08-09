@@ -26,6 +26,21 @@ SELECT
         ELSE 'organic'
     END                              AS channel,
     upper(ctry)                      AS country,
+    -- THE DECODE, BESIDE THE CODE. Kimball's rule for a dimension attribute is that it be verbose,
+    -- descriptive and in business terminology: a code is for joining, a label is for filtering and
+    -- display. Storing `DE` alone pushes the decode onto every consumer, which is the same defect as
+    -- an enum whose meaning lives only in application code, one layer up.
+    --
+    -- MEASURED. Asked for habits belonging to people "in Germany", three arms filtered
+    -- `country = 'Germany'` and returned 0 — six failures in run 20260809-232023, all in
+    -- C_modelled, which has the star and no comments. Documenting the mapping in a COMMENT ON was
+    -- the weaker fix and could not reach an arm that reads no comments. A column can.
+    CASE upper(ctry)
+        WHEN 'US' THEN 'United States' WHEN 'BR' THEN 'Brazil'
+        WHEN 'GB' THEN 'United Kingdom' WHEN 'DE' THEN 'Germany' WHEN 'FR' THEN 'France'
+        WHEN 'PH' THEN 'Philippines' WHEN 'ID' THEN 'Indonesia' WHEN 'IN' THEN 'India'
+        ELSE 'Unknown'
+    END                              AS country_name,
     CASE upper(ctry)
         WHEN 'US' THEN 'Americas' WHEN 'BR' THEN 'Americas'
         WHEN 'GB' THEN 'EMEA' WHEN 'DE' THEN 'EMEA' WHEN 'FR' THEN 'EMEA'
@@ -36,7 +51,19 @@ SELECT
         WHEN 'ios' THEN 'ios' WHEN 'android' THEN 'android' WHEN 'web' THEN 'web'
         ELSE 'unknown'
     END                              AS platform,
-    ((coalesce(internal, 0) = 1) OR (lower(email) LIKE '%@internal-test.com')) AS is_internal
+    ((coalesce(internal, 0) = 1) OR (lower(email) LIKE '%@internal-test.com')) AS is_internal,
+    -- THE SAME PRINCIPLE ON THE FLAG. Kimball's guidance on cryptic flags is to decode them into
+    -- descriptive values rather than leave a boolean the reader has to interpret. `is_internal` is
+    -- kept because twelve governed metrics and `agg_active_days` filter on it, and retiring it is a
+    -- migration rather than an edit; `user_type` is what a question should be answered from.
+    --
+    -- WHY IT MATTERS HERE. A flag named `is_internal`, commented "true for staff and test accounts",
+    -- reads as an instruction to exclude: documented arms applied it on questions that never asked,
+    -- nine times in one run. `user_type = 'staff'` states what a person IS. Whether that is enough
+    -- on its own is measured rather than assumed — the same change inside the semantic layer removed
+    -- the over-application there and did nothing for the arms that write SQL.
+    CASE WHEN ((coalesce(internal, 0) = 1) OR (lower(email) LIKE '%@internal-test.com'))
+         THEN 'staff' ELSE 'customer' END AS user_type
 FROM _source.u;
 
 CREATE OR REPLACE VIEW dim_habits AS

@@ -21,7 +21,9 @@ COMMENT ON COLUMN dim_users.is_internal IS 'True for staff and test accounts, fa
 COMMENT ON COLUMN dim_users.signup_date IS 'The date the account was created.';
 COMMENT ON COLUMN dim_users.channel IS 'Acquisition channel, normalised to one of: paid_search, organic, content_seo, partnerships, referral.';
 COMMENT ON COLUMN dim_users.region IS 'Region the country rolls up to: APAC, Americas, EMEA.';
-COMMENT ON COLUMN dim_users.country IS 'Two-letter ISO country code, normalised to upper case. DE is Germany, FR France, GB the United Kingdom, US the United States, BR Brazil, IN India, ID Indonesia, PH the Philippines.';
+COMMENT ON COLUMN dim_users.country IS 'Two-letter ISO country code, normalised to upper case. The country''s name is carried beside it in country_name.';
+COMMENT ON COLUMN dim_users.country_name IS 'The country''s name in full — Germany, France, the United Kingdom. Filter on this when a question names a country; `country` holds the code.';
+COMMENT ON COLUMN dim_users.user_type IS 'What kind of account this is: customer, or staff for internal and test accounts.';
 COMMENT ON COLUMN dim_users.platform IS 'Platform, normalised to one of: ios, android, web, unknown.';
 
 COMMENT ON VIEW dim_habits IS 'One row per habit a user created.';

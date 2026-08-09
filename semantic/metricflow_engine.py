@@ -265,6 +265,21 @@ class MetricFlowLayer:
         from warehouse.config import resolve_period
 
         start, end = kw.get("start"), kw.get("end")
+        # A NAMED PERIOD AND EXPLICIT DATES ARE A CONFLICT, NOT A PRECEDENCE. Both engines used to
+        # let `period` win and drop the caller's start/end without a word. Run 20260810-000736 shows
+        # what that costs: asked for accounts created in June, the agent sent
+        # `period="all"` alongside `start=2026-06-01, end=2026-06-30` and was handed 2,500 — the
+        # all-time figure — under a scope line that named the window it did not use. Two of three
+        # repetitions of a CONTROL failed that way.
+        #
+        # That is this project's own subject matter: a plausible number for the wrong window,
+        # produced by the layer rather than by the model. Refusing the call makes the mistake
+        # unrepresentable instead of detectable, and the agent recovers — it reissues with one of
+        # the two.
+        if kw.get("period") and (start or end):
+            raise SemanticError(
+                f"period={kw['period']!r} was given together with start/end. Use one: a named "
+                f"period, or an explicit start and end.")
         if kw.get("period"):
             start, end = resolve_period(kw["period"])
         to_dt = lambda d: (None if d is None else                       # noqa: E731

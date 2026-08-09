@@ -1014,7 +1014,7 @@ With `docs: star_schema` the ladder is cumulative: D is `C_modelled_documented` 
 E is D plus the check, so each column adds to the one below rather than trading one thing for
 another.
 
-### The run
+### The run · `20260810-000736`
 
 | load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced |
 |---|---|---|---|---|---|---|
@@ -1143,3 +1143,87 @@ affordance; and a remedy that only covers the governed path only helps an arm th
 `E_enforced` fell to 10/15 at load 3 and **refused a load-1 question** — asking whether "not archived"
 meant all time or a period. The provenance requirement makes it cautious as well as governed, and at
 63/69 it is now below D. The two arms have swapped places since §20.
+
+
+---
+
+## 22. The Kimball fix on the star: the undocumented model becomes the best arm
+
+The board's answer to the ISO failures was that they are a **modelling** gap, not a documentation
+one. Kimball's rule for a dimension attribute is that it be verbose, descriptive and in business
+terminology: a code is for joining, a label is for filtering. `warehouse/star.sql` stored `DE` alone
+and pushed the decode onto every consumer.
+
+Two attributes added to `dim_users`, beside the columns they decode:
+
+```sql
+CASE upper(ctry) WHEN 'DE' THEN 'Germany' … END          AS country_name
+CASE WHEN <internal or test email> THEN 'staff'
+     ELSE 'customer' END                                 AS user_type
+```
+
+`country` and `is_internal` are kept — twelve governed metrics and `agg_active_days` filter on the
+flag, and retiring it is a migration rather than an edit.
+
+### The run
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced |
+|---|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | **5/9** | 9/9 |
+| 1 | 15/15 | 15/15 | 14/15 | 15/15 | 14/15 | 15/15 |
+| 2 | 8/15 | 15/15 | 15/15 | 15/15 | 14/15 | 15/15 |
+| 3 | 13/15 | 14/15 | 15/15 | 13/15 | 15/15 | 11/15 |
+| 4 | 11/15 | 10/15 | 13/15 | 13/15 | 13/15 | 14/15 |
+| **total** | 56/69 | 63/69 | **66/69** | 65/69 | 61/69 | 64/69 |
+
+**`C_modelled` went from 62 to 66/69 — the best score any arm has reached in this study**, and its
+three ISO failures are gone: `pl_c2_segment`, `pl_c3_grain` and `pl_c4_join_path` all pass. The fix
+landed exactly where the board predicted.
+
+**The ordering is now `C_modelled` > `C_modelled_documented` > `E_enforced` > `B_documented` >
+`D_declared` > `A_implicit`.** The **undocumented** star beats the documented one, the semantic
+layer and everything else.
+
+> When the model carries the meaning, documentation adds nothing and a layer above it costs
+> something.
+
+That is the sharpest statement this experiment has produced, and it is one run.
+
+### A control regressed, and it exposed a defect in both engines
+
+`D_declared` fell to **5/9 at load 0** — the controls. All three failures are the all-time figure
+where June was asked: 2,500 instead of 553, 7,467 instead of 1,533, 457 instead of 106.
+
+The trace names it:
+
+| rep | arguments | result |
+|---|---|---|
+| 0 | `period: null`, `start`, `end` | **553** |
+| 1, 2 | `period: "all"`, `start`, `end` | **2,500** |
+
+**A named period and explicit dates were both supplied, and `period` silently won.** Both engines
+did this — `semantic.py` and `metricflow_engine.py` each read `if period: start, end =
+resolve_period(period)` and discarded the caller's window without a word.
+
+That is this project's own subject matter, produced by the layer rather than by the model: a
+plausible number for the wrong window, under a scope line naming the window it did not use.
+
+Both engines now **refuse the ambiguous call** rather than resolving it:
+
+```
+period='all' was given together with start/end. Use one: a named period, or an explicit
+start and end.
+```
+
+The mistake is unrepresentable rather than detectable, and the agent recovers by reissuing with one
+of the two. **The run above predates the fix**, so `D_declared`'s 61/69 carries three control
+failures that would not happen now.
+
+### What is not settled
+
+**Self-disagreement rose to 24 of 138 — 17%.** The previous D/E-only run was 11%. Larger runs are
+noisier here and the arm ordering above is separated by one to three points across six arms.
+
+**`A_implicit` fell to 8/15 at load 2** while every other arm scored 15/15. Its failures are the
+same over-application and ISO problems as before, which the star fixes and the raw tables do not —
+so the A-to-everything gap is now partly a measurement of the star rather than of documentation.
