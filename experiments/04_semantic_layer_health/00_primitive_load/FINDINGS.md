@@ -1,4 +1,4 @@
-# Study 00 — the load ladder: what documentation buys grows with the depth of the question
+# Study 00 — the load ladder, and two ways to write documentation badly
 
 Three runs. The first two were instrument, the third is the result.
 
@@ -9,7 +9,11 @@ Three runs. The first two were instrument, the third is the result.
 | `20260809-202056` | gpt-5-mini | 55/60 | **the readable run** |
 | `20260809-202236` | gpt-5.6-terra | **60/60** | **the readable run, one tier up** |
 
-**THE RESULT IS IN §9, and it needed fifteen items to see.** On `gpt-5-mini` the gap between a
+**READ §11 FIRST — IT SUPERSEDES §9.** The load curve appeared on three families and did not
+reproduce when two more were added. What did survive the expansion is two findings about how
+documentation is written, both in §11, and neither of which the study set out to look for.
+
+**§9, kept because it is what three families showed.** On `gpt-5-mini` the gap between a
 documented and an undocumented warehouse is flat to load 2 and then accelerates — 0, 0, 0, +22, +56
 percentage points. On `gpt-5.6-terra` a gap of about 20 points exists at every load and does not
 grow.
@@ -302,3 +306,99 @@ measurement of whether the layer was consulted.
 | per-load tables | `20260809-203751-00_primitive_load` (gpt-5-mini), `20260809-204041-00_primitive_load` (gpt-5.6-terra) |
 | per-item A-versus-B | the same two runs |
 | every gold | executed against the warehouse before `cases.yml` was written, and re-checked against the harness's own `compute_gold` |
+
+
+---
+
+## 11. Five families: the curve does not survive, and a new failure mode appears
+
+Two families added — `w` (fitness habits on the web platform) and `c` (learning habits in Germany) —
+because the three-family set left one family carrying no signal at the top and because their segment
+rungs are far stronger. Families h, a and r segment on staff-and-test accounts, which is 3.4% of
+users, so their segment rung barely moves the number. Families w and c segment on an enum recorded
+in several spellings: `u.plat` holds three platforms in nine spellings, `u.ctry` holds `DE` beside
+`de`. An arm matching one spelling returns 114 where the gold is 390.
+
+### The result: no trend
+
+| load | A_implicit | B_documented | C_modelled | D_declared | A→B |
+|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 7/9 | +0 pp |
+| 1 | 15/15 | 14/15 | 15/15 | 10/15 | −7 pp |
+| 2 | 9/15 | 12/15 | 13/15 | 11/15 | +20 pp |
+| 3 | 11/15 | 10/15 | 12/15 | 9/15 | −7 pp |
+| 4 | 10/15 | 12/15 | 14/15 | 7/15 | +13 pp |
+| **total** | 54/69 | 57/69 | **63/69** | 44/69 | |
+
+**The 0, 0, 0, +22, +56 curve from §9 does not reproduce.** Thirty-two of ninety-two cells disagree
+with themselves — 35%, nearly three times the measured floor.
+
+### It splits by family, and the two new ones are why
+
+| family | A_implicit | B_documented | B − A |
+|---|---|---|---|
+| h  habits still tracked | 9/12 | 10/12 | +1 |
+| a  habits archived | 7/12 | **12/12** | **+5** |
+| r  activated referrals | 11/12 | 12/12 | +1 |
+| **w  fitness × web platform** | **12/12** | **8/12** | **−4** |
+| c  learning × Germany | 6/12 | 6/12 | 0 |
+
+The three original families all favour the documented arm. **Family w reverses it: the undocumented
+arm is perfect and the documented arm loses four.** Family c is poor in both arms.
+
+So §9's curve rested on three families that agree, and adding two that do not removes it. **On the
+present evidence the load hypothesis is not established.** It has appeared once, on three families,
+and failed to reproduce on five.
+
+### The new failure mode, and it is the useful part
+
+Before the reword below, `B_documented` scored **1/5 at load 3** against `A_implicit`'s 5/5. Its
+answers were all slightly under gold, and each one is identifiable:
+
+| item | gold | B answered | what that is |
+|---|---|---|---|
+| `pl_c3_grain` | 179 | **174** | the gold **with staff excluded** — never asked for |
+| `pl_h3_grain` | 2,321 | **2,065** | `internal = 0`, dropping the 271 NULLs the comment says to keep |
+
+The cause was our own wording. The comment read:
+
+> *An account is staff or test when internal = 1 OR its email ends @internal-test.com. Every other
+> account is a real user.*
+
+**A comment phrased as a rule becomes a default the agent applies everywhere** — including to the
+two new families, whose questions say nothing about staff at all. Rewriting it to describe what the
+values mean rather than what to do with them took `B_documented` from 17/23 to 18/23 at reps=1 and
+removed the 1/5 collapse at load 3.
+
+This is the second documentation-quality finding from this study, and it pairs with the first:
+
+| defect | effect |
+|---|---|
+| a comment that asserts a rule and does not state it | the agent invents one — 4,057 against a gold of 6,147 |
+| a comment that states a rule prescriptively | the agent applies it everywhere — 174 against a gold of 179 |
+
+Neither is about how much documentation exists. Both are about how it is written, and both were
+found by reading values rather than scores.
+
+### What this leaves
+
+**`C_modelled` is the best arm at 63/69**, and it is the only arm above both A and B at every load
+above 1. That was not the study's question and it is the clearest signal in the run.
+
+**`D_declared` is the worst at 44/69**, with twenty-eight of sixty-nine rows never calling
+`list_metrics`. Its score remains partly a measurement of whether the layer was consulted.
+
+**Before this set is run again:** family w needs its traces read. An undocumented arm at 12/12 and a
+documented arm at 8/12 on the same twelve questions is not noise, and until it is understood the
+whole set carries it.
+
+---
+
+## 12. Provenance for the five-family runs
+
+| claim | source |
+|---|---|
+| per-load and per-family tables | `20260809-210443-00_primitive_load` (gpt-5-mini, reps=3) |
+| the prescriptive-comment collapse | `20260809-205533` (before the reword) against `20260809-205839` (after) |
+| the 174 and 2,065 values | reproduced against the warehouse as gold-plus-staff-excluded and `internal = 0` |
+| reps=1 preserves the shape on a fixed item set | `20260809-204*` at reps=1 against `20260809-203751` at reps=3, same 15 items |
