@@ -579,3 +579,110 @@ families, where that arm was the one most damaged by the star's prescriptive com
 | archive status open in both | state it, as families h and a do by construction |
 | `star_schema.sql` comments are prescriptive | reword descriptively, as `messy_load.sql` already was |
 | `active_habits` has one dimension | either give the layer the dimensions the questions need, or stop reading D as a measurement of the declared column |
+
+
+---
+
+## 15. Root cause of `D_declared`: using the semantic layer made the agent worse
+
+`D_declared` has been the worst or second-worst arm in every run of this study. The traces give four
+causes, and the first three are in our layer rather than in the model.
+
+### The number that frames it
+
+| how `D_declared` reached its answer | rows | correct | rate |
+|---|---|---|---|
+| **governed only** — `query_metric`, no SQL | 16 | 5 | **31%** |
+| **SQL only** — never used the layer | 44 | 31 | **70%** |
+| **layer, rejected, then SQL** | 9 | 8 | **89%** |
+
+**Using the layer was worse than ignoring it, and the best outcome was trying it, being refused, and
+falling back.** The layer's failures are loud and recoverable; its successes are quietly wrong.
+
+Only **16 of 69 rows** were answered through the governed path at all. At load 4, **all fifteen**
+fell back to SQL. For most of this study `D_declared` is not a declared arm — it is a rung-3 arm
+doing rung-2 work with a catalogue in its context.
+
+### Cause 1 — the layer has no join model
+
+`semantic/semantic.py` says so in its own docstring, and the compiler is one line:
+
+```python
+# The compiler is deliberately small: one base table per metric              (line 8)
+sql = f"SELECT {', '.join(select)} FROM {m['base']}"                          # line 515
+```
+
+A dimension is usable only if it is a **column on that one table**. So a metric's dimensionality is
+inherited from whichever mart happens to sit underneath it:
+
+| base table | user attributes on it | dimensions its metrics get |
+|---|---|---|
+| `agg_active_days` | `is_internal`, `region`, `country`, `platform`, `channel` | region, platform, channel, country |
+| `dim_habits` | **none** | `category` |
+| `fct_reminders` | **none** | — |
+| `fct_referrals` | **none** | — |
+| `fct_subscriptions` | **none** | `plan` |
+
+`agg_active_days` is a mart that `warehouse/star.sql` pre-joins `dim_users` into. The other four are
+queried directly. **Seven metrics are richly sliceable and ten are nearly unsliceable, and nothing in
+the catalogue says which is which** — they are rendered identically.
+
+Every one of the 25 rejected calls follows from this:
+
+```
+cannot filter 'active_habits' by 'is_internal'.  Allowed: ['category']    6x
+cannot filter 'paying_users'  by 'country'.      Allowed: ['plan']        3x
+```
+
+### Cause 2 — no metric exposes a user grain
+
+`cannot group 'active_habits' by 'user_id'. Dimensions: ['category']` — three times. There is no
+metric anywhere in the layer that answers *"how many people"* about habits, reminders or referrals.
+The grain rung is unreachable by construction, which is a second consequence of cause 1: `user_id`
+is on `dim_habits`, but a count-distinct over it was never declared as a metric.
+
+### Cause 3 — our own layer contains the defect this programme exists to study
+
+`active_habits` carries a filter its caller cannot see:
+
+```yaml
+active_habits:
+  description: "Habits that have not been archived — the ones users are still tracking."
+  agg: count(*)
+  default_filters: ["NOT is_archived"]
+```
+
+Asked *"how many habits are in the fitness category"*, `D_declared` reached for the governed metric
+and got **1,032**. The answer is **1,235**. The metric silently excludes archived habits and the only
+clue is the word *active* in its name.
+
+**That is `real_value_moments` wearing a different noun** — a population baked into a metric where
+the name is the sole carrier, which is exactly the defect `../02_segment` was built to measure.
+`paying_users` has the same shape with `default_filters: ["is_active"]`.
+
+So an agent that does the right thing — reach for the governed metric rather than write SQL — is
+punished for it. That is the mechanism behind the 31%.
+
+### Cause 4 — what the arm therefore measures
+
+Not the declared column. `D_declared`'s score is a blend of:
+
+- how often the layer can express the question at all (rarely, above load 1),
+- whether the agent notices and falls back (usually),
+- and whether the metric it did reach had a hidden filter (twice, wrongly).
+
+**Its 44/69 is a measurement of our layer's coverage and defaults.** Every reading of column D in
+`../primitives_matrix.md` that rests on this study has to say so.
+
+### What follows
+
+| finding | what to do |
+|---|---|
+| dimensionality is inherited from marts, invisibly | either declare joins, or render each metric's real sliceability in the catalogue so the agent is not misled |
+| no user-grain metric exists | declare one, or stop asking grain questions of column D |
+| `active_habits` and `paying_users` hide filters in their names | fix them — we cannot publish a study of this defect while shipping it |
+| the layer is worse than SQL when used | this is the most quotable result in the study and it needs its own run to confirm, not a subgroup of this one |
+
+The last line is the important one. **31% against 70% is a subgroup comparison inside one arm**, not
+a controlled contrast — the rows differ in which questions they are as well as in route. It sets up
+a study; it does not conclude one.

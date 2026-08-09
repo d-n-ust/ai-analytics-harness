@@ -213,6 +213,41 @@ one tier up.
 other. Reasoning depth is held at "cheapest available" rather than exactly constant, which is what
 `agent/models.py` documents as the harness standard.
 
+### 3.6 When the agent does use the layer, it is less accurate than when it writes SQL
+
+Added 2026-08-09 from the trace analysis in `00_primitive_load/FINDINGS.md` §15. §3.5 measured how
+often the layer is skipped; this is what happens when it is not.
+
+| how `D_declared` reached its answer | rows | correct |
+|---|---|---|
+| governed only — `query_metric`, no SQL | 16 | **31%** |
+| SQL only — never used the layer | 44 | **70%** |
+| layer, rejected, then SQL | 9 | **89%** |
+
+Three causes, all in our layer:
+
+**It has no join model.** `semantic/semantic.py` compiles every metric to `SELECT … FROM <one base
+table>`, so a dimension is usable only if it is a column on that table. Seven metrics sit on
+`agg_active_days`, which `star.sql` pre-joins `dim_users` into, and are richly sliceable. Ten sit on
+tables carrying no user attributes and have one dimension or none. **The catalogue renders both
+kinds identically**, so the agent cannot tell which metric will accept a filter until it is refused.
+
+**No metric exposes a user grain**, so "how many people" is unanswerable through the layer for
+habits, reminders or referrals.
+
+**Two metrics hide a filter in their name.** `active_habits` carries `default_filters: ["NOT
+is_archived"]` and `paying_users` carries `["is_active"]`. Asked for fitness habits, the arm that
+correctly reached for the governed metric got 1,032 where the answer is 1,235.
+
+That last one is `real_value_moments` under a different noun — **the defect `02_segment` exists to
+measure, shipped in our own layer.** It must be fixed before any of this is published, and it means
+every column-D reading in `primitives_matrix.md` that rests on `00_primitive_load` is partly a
+measurement of our layer's coverage and defaults rather than of declaring facts.
+
+**The 31%-against-70% is a subgroup comparison inside one arm**, not a controlled contrast: those
+rows differ in which questions they are as well as in which route was taken. It sets up a study
+rather than concluding one.
+
 ### 3.5 The stronger the model, the less it uses the semantic layer
 
 From the same sweep, and larger in consequence than 3.4.
