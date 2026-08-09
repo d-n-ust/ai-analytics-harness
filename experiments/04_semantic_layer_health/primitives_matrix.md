@@ -115,8 +115,8 @@ and **absent** mean there is nothing to run.
 
 | primitive | B documented | C modelled | D declared | E enforced |
 |---|---|---|---|---|
-| 1 entity | open | **works** · bundled | open | open |
-| 2 segment | **works** · measured | *constant* | **no better than B** · measured | open |
+| 1 entity | **works** · measured | **works** · measured | **works** · measured | **no better than B** · measured |
+| 2 segment | **works** · measured | *constant* | **works, confounded** · measured | open |
 | 3 measure + agg | open | open | **works** · measured | open |
 | 4 grain | open | open | open | open |
 | 5 additivity | **fails** · measured | open | **fails** · measured | **works** · measured |
@@ -126,9 +126,13 @@ and **absent** mean there is nothing to run.
 | 9 coverage | open | open | **works** · measured | open |
 | *(domain facts)* | **works** · measured | open | open | open |
 
-Twelve of the forty cells carry evidence, and three of those are bundled or argued. Two more are
-closed rather than untested: segment/C is *constant* and causality/C is *absent*. The rest mean
-untested, not unimportant.
+Fifteen of the forty cells carry evidence, and two of those are bundled. Two more are closed rather
+than untested: segment/C is *constant* and causality/C is *absent*. The rest mean untested, not
+unimportant.
+
+**Row 1 and row 2/D were refreshed on 2026-08-09** from the stored runs. Row 1 had read `open` in
+three columns although `01_entity` had run all six arms; row 2/D had read *no better than B* from a
+superseded run. Both are now read from `01_entity/FINDINGS.md` and `02_segment/FINDINGS.md`.
 
 ---
 
@@ -136,15 +140,35 @@ untested, not unimportant.
 
 ### The answer differs by row, and not in order of cost
 
-| primitive | what wins |
-|---|---|
-| join path | **modelled** — a pre-joined mart |
-| segment | **documented** — a sentence was as good as a declaration, twice |
-| measure + aggregation | **declared** — a metric definition |
-| additivity | **enforced** — documenting and declaring both failed |
+| primitive | what wins | the cheapest thing that works |
+|---|---|---|
+| join path | **modelled** — a pre-joined mart | days of modelling |
+| entity | **documented** — one sentence per table | an afternoon of `COMMENT ON` |
+| segment | **declared**, but confounded — see below | a description in the business's own words |
+| measure + aggregation | **declared** — a metric definition | a modelling project |
+| additivity | **enforced** — documenting and declaring both failed | a runtime check |
 
-Four primitives, four different answers, spanning every column. This is the finding the matrix
+Five primitives, four different answers, spanning every column. This is the finding the matrix
 exists to make legible, and it is the reason "just build a semantic layer" is not an answer.
+
+### Entity: the cheapest column closes the whole gap
+
+| arm | correct | confidently wrong |
+|---|---|---|
+| A_implicit | 10/15 | **5** |
+| B_documented | **15/15** | 0 |
+| C_modelled | 14/15 | 1 |
+| C_modelled_documented | 14/15 | 1 |
+| D_declared | **15/15** | 0 |
+| E_enforced | 14/15 | 0 |
+
+One sentence per table takes 10/15 to 15/15 and removes every silent error. Nothing above it
+improves on that, so B through E are marked **works** and the honest claim is about A against
+everything else — the set has a ceiling.
+
+The 2×2 that motivated six arms is inconclusive at this size: documenting the messy tables helped
+(10 → 15); documenting the star did not (14 → 14). That is the predicted direction — conformed
+naming substitutes for documentation — and it is not yet a result.
 
 ### Segment: the middle column is held constant, not empty
 
@@ -175,7 +199,35 @@ the delivered context. The refusal came from `governed_numbers`, which requires 
 a governed result; a figure obtained by adding seven daily rows traces to none.
 
 **Requiring provenance prevents semi-additive roll-ups without knowing anything about additivity.**
-At R6, with that check removed, the declared arm answered 2012 against a true 886.
+At R6, with that check removed, the declared arm answered 2012 against a true 886 — on all three
+repetitions, while rendering `additivity: NOT additive over time` in its own catalogue.
+
+**What "works" means in this cell, precisely.** No arm at either guardrail cell ever answered 886.
+The check converts a silent error into a visible abstention; it does not produce the right answer.
+That is a large benefit and it is not the same as being right, so a write-up must say which one it
+is claiming. See `05_additivity/FINDINGS.md` §3.
+
+### Segment: the declared cell wins on one item, and that item is the confound
+
+| arm | correct | the two discriminating questions |
+|---|---|---|
+| A_implicit | 18/24 | 0/3 · 0/3 |
+| B_documented | 21/24 | **0/3** · 3/3 |
+| D_declared | 23/24 | **3/3** · 3/3 |
+
+Six of eight questions are flat across all arms. A beats nothing; B beats A on one question; D beats
+B on one different question. **A five-point spread produced by two items is not a five-point
+effect.**
+
+The two questions differ in one word. *"Excluding staff and test accounts"* names the exclusion in
+terms that map onto a dimension the agent can see, and `B_documented`'s descriptions use those same
+words. *"Our customers"* maps onto nothing — and `D_declared` is the only arm whose segment lists
+`customers` as a synonym.
+
+So the mechanism visible in the data is **lexical, not structural**: what repaired the second
+question was that somebody wrote down what "customers" means. The vocabulary confound is not an
+objection to the result; it is the result. The cell is marked **works, confounded** until
+`D_declared_neutral` separates the two. See `02_segment/FINDINGS.md`.
 
 ### Grain is empty, and it sits upstream of two rows that are not
 
@@ -204,16 +256,20 @@ patch.
 
 ## Priority
 
-1. **Grain, column B.** Empty row, upstream of two measured failures, and the intervention is one
-   table comment — the cheapest cell in the matrix. If a grain sentence fixes the roll-up that a
-   rendered `additivity` field could not, that is the most practical and most surprising result
-   available to us.
-2. **Additivity, column C.** Materialise a weekly table so the addition never has to happen. It
+1. **Segment: `D_declared_neutral` and `B_documented_minus`.** Twenty lines each. Row 2 is the row
+   with the most evidence and the least attributable evidence; these two arms separate structure
+   from wording and equalise the candidate count. Nothing else in the matrix is this cheap.
+2. **Grain, column B.** Empty row, upstream of two measured failures, and the intervention is one
+   table comment. If a grain sentence fixes the roll-up that a rendered `additivity` field could
+   not, that is the most practical and most surprising result available to us.
+3. **Additivity, column C.** Materialise a weekly table so the addition never has to happen. It
    completes the only row with three cells already filled.
-3. **Join path, columns B and D.** The one bundled win worth separating: does declaring join keys
+4. **Join path, columns B and D.** The one bundled win worth separating: does declaring join keys
    do what a pre-joined mart does, or is the mart the whole effect?
-4. **Segment, column C.** Turn the argued cell into a measured one, since it is the matrix's most
-   counter-intuitive claim.
+
+**Item count, not arm count, is the binding constraint.** Every study here has two discriminating
+questions or fewer. More arms and more repetitions buy nothing — repetitions measure noise *within*
+an item, while the effect lives *across* items.
 
 Everything else waits. Ten rows times five columns is a multi-year programme; the value is in the
 frame plus the handful of cells that contradict the obvious advice.
@@ -229,9 +285,10 @@ frame plus the handful of cells that contradict the obvious advice.
 | domain facts B | r3→r4, knowledge tier: gpt 4/25 → 25/25 | single-variable (examples only); 5 questions |
 | causality D | r5→r6, diagnostic tier: gpt 0/25 → 18/25 | single-variable (tree only); 5 questions |
 | coverage D | R3 coverage guardrail | mechanism, not a between-arm comparison |
-| segment B, D | studies 01, 01__mf, 02 | 2 discriminating items in 01, 1 in 02 |
-| additivity B, D, E | study 04, runs `20260808-131841` (R7) and `-132436` (R6) | 1 trap question |
-| segment C | reasoning from study 01's design | **argued, not measured** |
+| entity B, C, D, E | `01_entity`, run `20260808-232437` | 2 discriminating items of 5; ceiling above B |
+| segment B, D | `02_segment` `20260809-121926`; `02_segment__mf` `20260809-124835` | **2 discriminating items**, and D's single win is on the item its synonyms contain |
+| additivity B, D, E | `05_additivity`, runs `20260808-131841` (R7) and `-132436` (R6) | 1 trap question; E refuses rather than answers |
+| segment C | present and identical in every arm | **constant, not measurable in this row** |
 
 **The tier-level numbers throughout come from 5 questions per tier**, 5 reps, 2 models. Large
 effects such as metric-tier 2/25 → 19/25 survive that; fine distinctions between adjacent tiers do

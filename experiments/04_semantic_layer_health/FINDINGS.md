@@ -96,18 +96,53 @@ nowhere to give the resulting population a name.
 This is a structural fact about the tools, established by building the layer rather than by
 measuring an agent. It does not depend on the noise floor at all.
 
-### 3.3 A named segment appears to survive paraphrase where a dimension filter does not
+### 3.3 Paraphrase is what separates the questions, and the prediction made here was wrong
 
-`D_declared` on MetricFlow failed `p_pop_customers_week` in two runs of three. The question says
-*"our customers"*, which requires knowing that customers means non-internal. The June question says
-*"excluding staff and test accounts"*, which only has to be transcribed, and was answered correctly
-every time. Our own layer carries "customers" as a segment synonym and offers `real_users` as an
-enumerated choice, so it does not have to be inferred.
+**Superseded 2026-08-09.** An earlier version of this section reported that `D_declared` on
+MetricFlow failed `p_pop_customers_week` in two runs of three, and predicted that a named segment
+survives paraphrase where a dimension filter does not. Both halves need correcting.
 
-**Treat this as a direction, not a rate.** The cell is one of the two unstable cells in that study,
-so the observation and the noise are the same event. It makes a testable prediction — the two
-engines should split on paraphrased questions and agree on literal ones — and that prediction is
-what a properly powered study should be built to check.
+**The failure is gone.** On the current layer, `20260809-124835`, `D_declared` scores 12/12 with
+zero unstable cells. The earlier runs predate the addition of `reminders_shown` and `active_habits`
+and the MetricFlow fixes.
+
+**The paraphrase effect is real and larger than reported.** Across both engines, only two of the
+questions discriminate, and they differ in one word:
+
+| question | wording | needs |
+|---|---|---|
+| week | "our **customers**" | knowing that customer means real user |
+| June | "**excluding staff and test accounts**" | knowing which dimension carries the flag |
+
+The June question is answerable by dimension inspection alone. In `02_segment__mf`, `A_implicit`
+applied `user__is_internal = False` itself and returned the correct 15,329, then graded as a miss
+only because it declared `value_moments` rather than `real_value_moments`. So the item measures
+metric choice, not the answer — and three of that arm's six `confidently wrong` flags are this case
+rather than a wrong number.
+
+**The prediction went the other way.** The two engines do split on the paraphrased question, but not
+as predicted:
+
+| engine | `B_documented` on "our customers" | picked | answered |
+|---|---|---|---|
+| MetricFlow | **3/3 correct** | `real_value_moments` | 3,642 |
+| harness | **0/3** | `value_moments` | 3,785 |
+
+The descriptions of the twin pair are **byte-identical between the two engines**. What differs is
+the catalogue around them:
+
+| | metrics in the catalogue | carrying "excludes internal/test" |
+|---|---|---|
+| MetricFlow | 3 | 2 |
+| harness | 13 | 7 |
+
+Two candidate explanations, and this run separates neither: the harness catalogue is four times
+larger, and it repeats the exclusion phrase on seven metrics, which may stop the phrase functioning
+as a distinguishing property of the twin. **The two studies are therefore not comparable on the B
+arm**, and any claim that one engine's documentation "works better" is unsupported.
+
+The cheap test is to run `02_segment` against a three-metric catalogue and see whether
+`B_documented` recovers the week question. That is a rendering change, not a modelling one.
 
 ---
 
@@ -231,6 +266,38 @@ table is cheaper.
 
 ---
 
+## 6b. Every study is decided by two questions or fewer
+
+Added 2026-08-09, from a per-item pass over all four studies. It is the most important structural
+fact in this folder and it was not visible while only arm totals were being read.
+
+| study | questions | that discriminate between arms |
+|---|---|---|
+| `00_catalogue_format` | 5 | **0** |
+| `01_entity` | 5 | **2** |
+| `02_segment` | 8 | **2** |
+| `02_segment__mf` | 4 | **2** |
+| `05_additivity` | 5 | **1** |
+
+Everything else is a constant added to every arm's total. Three consequences:
+
+**Arm totals conceal this.** `02_segment` reads 18 / 21 / 23 out of 24, which looks like a ladder. It
+is six flat questions plus two that move, and the two move in different arms.
+
+**Merging studies did not help.** `02_segment` was formed by merging the name instance with the
+aggregate instance, on the argument that item count is the binding constraint. The three aggregate
+questions are answered correctly by every arm, and `D_declared` loses a cell on one of them. The
+merge doubled the denominator and left the numerator alone, which moves every rate toward the middle
+and makes the study look more stable than the evidence is.
+
+**More repetitions cannot fix it.** Repetitions estimate noise *within* an item; the effect lives
+*across* items. Six discordant items is the floor for p < 0.05 on a paired test, and no study here
+has more than two.
+
+Each study's `FINDINGS.md` now carries its own per-item table. Read those before any arm total.
+
+---
+
 ## 7. What to do next
 
 1. **Re-estimate the variance components from our own runs** rather than the literature's generic
@@ -253,7 +320,10 @@ it destroys interval coverage.
 | claim | where it comes from |
 |---|---|
 | noise floor 13% | `results/experiments/04_semantic_layer_health/` — three MetricFlow runs, one study 02 run, one study 03 run |
-| defect reproduces on MetricFlow | `20260807-142016`, `-144843`, `-145627` |
+| defect reproduces on MetricFlow | `20260807-142016`, `-144843`, `-145627`; confirmed on `20260809-124835` |
+| discriminating-item counts (§6b) | per-item pass over `20260807-183018`, `20260808-232437`, `20260808-132436`, `20260809-121926`, `20260809-124835` |
+| the two engines' B arms split | `20260809-124835` and `20260809-121926`, `p_pop_customers_week`, all reps |
+| catalogue sizes 3 versus 13 | the `list_metrics` result stored in each run's first step |
 | four confounds in study 03 | `20260807-170942` and the trace comparison that followed |
 | grain regression | `20260807-180538` against `20260807-183018` |
 | token counts | `o200k_base` over the current renderings |
