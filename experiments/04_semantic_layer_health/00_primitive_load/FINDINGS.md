@@ -904,3 +904,95 @@ layer, and here it also scored highest.
 is five observations and a single item moves a rung by 20 points, so this run is a check that the
 instrument is sound, not a measurement of the effect. **The next thing this study needs is reps=3 on
 this exact set** — the first run that could carry a number.
+
+
+---
+
+## 19. reps=3 on the repaired set: the effect grows with depth in BOTH directions
+
+Run `20260809-225835`, six arms, 23 items, three repetitions — 414 rows, and the first run in which
+every arm is current and every item has passed the primitive check.
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced |
+|---|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | 7/9 | 9/9 |
+| 1 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 |
+| 2 | 12/15 | 14/15 | 13/15 | 15/15 | 12/15 | 15/15 |
+| 3 | 11/15 | 13/15 | 12/15 | 11/15 | 12/15 | 11/15 |
+| 4 | 9/15 | 8/15 | 12/15 | 10/15 | **15/15** | 12/15 |
+| **total** | 56/69 | 59/69 | 61/69 | 60/69 | 61/69 | **62/69** |
+
+Read as one curve the A-to-B gap is `+0, +0, +13, +13, −7` — a fifth shape, and at load 4
+documentation makes things *worse*. That reading is wrong, and the reason is the finding.
+
+### Family w reversed again, and every wrong answer had the same cause
+
+Family w was rebuilt this session — `fitness` became `finance` because the first category collided
+with `health`. It reversed anyway: `A_implicit` 12/12, `B_documented` 8/12.
+
+**All nine wrong answers in the two documented arms are the gold with staff excluded.** Family w's
+questions never mention staff.
+
+This survived the fix in §11, where the `u.internal` comment was reworded from a rule
+(*"An account is staff or test when…"*) to a description. **Phrasing was not the cause.** Naming a
+filterable population in documentation at all is enough.
+
+### Split the items by whether the question asks for the documented fact
+
+Eleven of the 23 questions say "excluding staff and test accounts". Twelve do not.
+
+| | A_implicit | B_documented | A→B |
+|---|---|---|---|
+| question **asks** to exclude staff | 25/33 | 30/33 | **+15 pp** |
+| question does **not** | 31/36 | 29/36 | **−6 pp** |
+
+And by load, which is where it becomes a result rather than an observation:
+
+| load | asks to exclude — A→B | does not — A→B |
+|---|---|---|
+| 1 | — | +0 pp |
+| 2 | +0 pp | +33 pp |
+| 3 | **+33 pp** | **−17 pp** |
+| 4 | **+22 pp** | **−50 pp** |
+
+**Both grow with depth, in opposite directions.** The reported curve is their average, which is why
+it looked flat and then negative.
+
+### The claim this supports
+
+> **What documentation does to an agent scales with the depth of the question, and its sign depends
+> on whether the question needs the documented fact.**
+>
+> If the answer requires it, documenting it pays more the deeper the question. If the answer does
+> not, documenting it costs more the deeper the question — because the agent applies the documented
+> filter unasked, and that error compounds with everything else the question makes it resolve.
+
+That is the load hypothesis, refined by the data rather than confirmed by it. The original form —
+*documentation helps, and helps more at depth* — is true only of the half of the items that ask for
+the documented fact.
+
+**It also explains every earlier shape this study produced.** Runs whose item mix leaned toward
+questions that ask showed a rising curve; runs that leaned the other way showed a flat or falling
+one. Three families ask and two do not, and the mix per rung is what moved.
+
+### What is not established
+
+**Cell sizes are two or three items.** The split table rests on 6 to 9 rows per cell. The pattern is
+monotone in both directions and the −50 pp is large, but this is a direction with a mechanism, not a
+rate.
+
+**The mechanism is one filter.** Every over-application in this run is `is_internal`. Whether a
+documented *grain* or *join* rule is over-applied the same way is untested, and it is the obvious
+next question.
+
+**23 of 138 cells disagree with themselves** — 17%, against the 13% floor. Better than the 27–35% of
+the previous builds, and still above it.
+
+### Two arm-level notes
+
+**`E_enforced` is the best arm at 62/69, with zero catalogue skips against `D_declared`'s 31.** The
+§17 result holds on a repaired item set at three repetitions.
+
+**`D_declared` scores 15/15 at load 4** — the only arm to do so, and its worst rung is the control.
+A governed layer that can express the question does best where the question is hardest, which is
+the shape the matrix's column D predicts and this experiment had not previously shown.

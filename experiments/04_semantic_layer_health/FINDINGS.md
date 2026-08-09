@@ -213,6 +213,42 @@ one tier up.
 other. Reasoning depth is held at "cheapest available" rather than exactly constant, which is what
 `agent/models.py` documents as the harness standard.
 
+### 3.8 Documentation's effect scales with question depth, and its sign depends on the question
+
+Added 2026-08-09 from `00_primitive_load/FINDINGS.md` §19 — six arms, 23 items, three repetitions,
+every item passing the primitive check.
+
+Eleven of the questions ask to exclude staff and test accounts; twelve do not. Splitting on that,
+and then by how many primitives the question forces:
+
+| load | question **asks** for the documented fact | question does **not** |
+|---|---|---|
+| 2 | +0 pp | +33 pp |
+| 3 | **+33 pp** | **−17 pp** |
+| 4 | **+22 pp** | **−50 pp** |
+
+**Both grow with depth, in opposite directions.** Read as one curve the gap is `+0, +13, +13, −7`,
+which is their average and looks like noise.
+
+> What documentation does to an agent scales with the depth of the question, and its **sign** depends
+> on whether the question needs the documented fact. If the answer requires it, documenting it pays
+> more the deeper the question. If not, documenting it costs more — the agent applies the documented
+> filter unasked, and that error compounds with everything else the question makes it resolve.
+
+**The mechanism is over-application, and rewording did not stop it.** `00_primitive_load` §11 found a
+rule-shaped comment being applied as a default and reworded it descriptively. The effect survived:
+all nine wrong answers in the documented arms of the family whose questions never mention staff are
+the gold with staff excluded. **Naming a filterable population in documentation is enough**, however
+it is phrased.
+
+**This supersedes the earlier readings of the load hypothesis** in §3.4 and in that study's §9 and
+§11. Those measured a mixture of the two directions and got a different shape each time depending on
+the item mix; three families ask and two do not.
+
+Cell sizes are two or three items and the mechanism is one filter (`is_internal`). Whether a
+documented grain or join rule over-applies the same way is untested and is the obvious next
+question.
+
 ### 3.7 Requiring provenance is what makes an agent use the layer
 
 Added 2026-08-09 from `00_primitive_load/FINDINGS.md` §17. §3.5 measured how often a governed layer
