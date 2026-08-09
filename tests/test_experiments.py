@@ -286,6 +286,9 @@ def test_an_enforced_arm_differs_from_its_declared_arm_only_in_the_guardrail():
         assert d.delete == e.delete, f"{name}: D_declared and E_enforced delete different keys"
         assert d.environment == e.environment, (
             f"{name}: D_declared and E_enforced declare different environments")
+        assert (d.layer_dir, d.engine) == (e.layer_dir, e.engine), (
+            f"{name}: D_declared and E_enforced point at different layers or engines — "
+            f"D={d.engine or 'study'}:{d.layer_dir or '-'} E={e.engine or 'study'}:{e.layer_dir or '-'}")
         assert e.agent.get("guardrails") and not d.agent.get("guardrails"), (
             f"{name}: E_enforced must override guardrails and D_declared must not — that override "
             f"IS the treatment")

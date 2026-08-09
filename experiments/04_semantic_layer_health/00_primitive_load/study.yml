@@ -58,10 +58,13 @@ columns:
   C_modelled_documented: "the same star, with table and column comments — the documentation axis
                  asked a second time, on a shape that already carries the facts structurally"
   D_declared:   "the star plus the governed layer, with no metric written for these questions"
-  E_enforced:   "OPEN — R9 would add a check on top of D, and D's own behaviour at high load has to
-                 be understood before a check on it means anything."
+  E_enforced:   "D plus R7 `governed_numbers` — a number must trace to one governed result. Added
+                 once D's own behaviour was understood: the traces showed it fetching a correct
+                 governed figure and then doing arithmetic on top of it, which is exactly what this
+                 check refuses. NOT part of the load ladder — it sits at a different guardrail cell
+                 and is a paired comparison against D alone."
 
-arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, D_declared]
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, D_declared, E_enforced]
 
 # PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
 #

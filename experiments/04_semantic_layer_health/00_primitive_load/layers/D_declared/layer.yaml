@@ -37,6 +37,11 @@ semantic_model:
     # `habits` and `subscriptions` both carry `user` as a FOREIGN entity, so each joins to this
     # model and neither joins to the other — the classic fact-to-fact problem, whose Kimball answer
     # is a bridge or an attribute carried on the conformed dimension. This is the attribute.
+    # WHAT "EVER SUBSCRIBED" COUNTS, stated because the data leaves it open. `fct_subscriptions`
+    # carries active, canceled and refunded terms; nothing says whether a refunded term makes
+    # someone a paying customer. One arm invented `billed_amount > 0` and answered 45 where the
+    # truth is 51. The rule here is membership of the table, whatever the status or the amount, and
+    # it is written into every metric description that depends on it.
     - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
   measures:
     - {name: account_rows, agg: count, expr: user_id}
@@ -150,20 +155,20 @@ metric:
 # them are different questions and both are asked.
 metric:
   name: people_with_habits
-  description: "Distinct people holding at least one habit, archived or not."
+  description: "Distinct people holding AT LEAST ONE habit, archived or not. Filtering by a habit attribute keeps a person who has at least one habit matching it, not people all of whose habits match."
   type: simple
   type_params: {measure: habit_holders}
 ---
 metric:
   name: people_tracking_habits
-  description: "Distinct people holding at least one habit they have not archived."
+  description: "Distinct people holding AT LEAST ONE habit they have not archived. Filtering by a habit attribute keeps a person who has at least one matching habit, not people all of whose habits match."
   type: simple
   type_params: {measure: habit_holders}
   filter: "{{ Dimension('habit__is_archived') }} = false"
 ---
 metric:
   name: people_who_archived_habits
-  description: "Distinct people who have archived at least one habit."
+  description: "Distinct people who have archived AT LEAST ONE habit. Filtering by a habit attribute keeps a person who has at least one matching habit, not people all of whose habits match."
   type: simple
   type_params: {measure: habit_holders}
   filter: "{{ Dimension('habit__is_archived') }} = true"
@@ -172,13 +177,13 @@ metric:
 # THE PAIR THAT REPLACES `paying_users`, which carried default_filters: ["is_active"].
 metric:
   name: subscriptions_all_time
-  description: "Subscription terms on record, live and ended. One row is one term, not one person."
+  description: "Subscription terms on record. One row is one TERM, not one person. A term counts whatever its status — active, canceled or refunded — and whatever it was billed."
   type: simple
   type_params: {measure: subscription_rows}
 ---
 metric:
   name: subscribers_all_time
-  description: "Distinct people who have ever held a subscription, live or ended."
+  description: "Distinct people who have ever held a subscription. A subscription counts whatever its status — active, canceled or refunded — and whatever it was billed."
   type: simple
   type_params: {measure: subscribers}
 ---
@@ -205,7 +210,7 @@ metric:
 ---
 metric:
   name: referrers_activated
-  description: "Distinct people who made at least one referral that reached the activated stage."
+  description: "Distinct people who made AT LEAST ONE referral that reached the activated stage. `user__` filters describe the person REFERRED; `referrer__` filters describe the person who referred them."
   type: simple
   type_params: {measure: distinct_referrers}
   filter: "{{ Dimension('referral__status') }} = 'activated'"
@@ -216,3 +221,36 @@ metric:
   description: "Registered accounts, counted by the day they signed up."
   type: simple
   type_params: {measure: account_rows}
+---
+# ── declared composition ────────────────────────────────────────────────────────────────────────
+# WHY THESE EXIST. Three failures in run 20260809-2216 were the agent doing arithmetic outside the
+# governed surface: it summed thirty daily rows of a correct 553 into 713, and twice invented a
+# table — `metric_results`, `query_results_from_metric` — to post-process a governed number. A
+# governed result was a terminal value, so any further step had to happen somewhere unaccountable.
+#
+# MetricFlow types metrics simple / ratio / derived / cumulative, and the first build declared
+# thirteen `simple` and nothing else. Composition belongs in the layer, declared, where the caller
+# can cite it.
+metric:
+  name: share_of_habits_tracked
+  description: "Of all habits on record, the share not yet archived. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: habits_tracked}
+    denominator: {name: habits_total}
+---
+metric:
+  name: habits_per_person
+  description: "Habits on record divided by the people holding them. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: habits_total}
+    denominator: {name: people_with_habits}
+---
+metric:
+  name: share_of_referrals_activated
+  description: "Of all referrals on record, the share that reached the activated stage. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: referrals_activated}
+    denominator: {name: referrals_total}

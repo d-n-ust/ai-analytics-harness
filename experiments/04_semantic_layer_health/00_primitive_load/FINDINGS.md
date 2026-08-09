@@ -756,3 +756,81 @@ named.
 **`pl_c2_segment` and the `w`/`c` families keep their item defects** — country name against ISO
 codes, `fitness` colliding with `health`. §14 voids those families and the migration does not
 change that.
+
+
+---
+
+## 17. The four repairs, and the guardrail that made the agent use the layer
+
+The board's five recommendations on §16's three failures, all applied.
+
+### D_declared, run by run
+
+| build | score | silent wrong | never read the catalogue |
+|---|---|---|---|
+| `semantic/semantic_layer.yml` | ~14.7/23 | — | 12/23 equivalent |
+| MetricFlow, first build | 17/23 | 6 | 8 |
+| + role-playing referrer entity | 20/23 | 3 | 11 |
+| + the four repairs below | **21/23** | 2 | 10 |
+
+The two remaining failures are both in family **c**, which §14 already voids for asking about a
+country by name against ISO codes.
+
+### What the four repairs were
+
+**Group the catalogue's dimensions by entity.** `people_with_habits` advertised ten dimensions on
+one sorted line, nine of them arriving across a join, and the arm dropped the one that was not a
+`user__` prefix — four times. Cube groups by cube, LookML by view, MetricFlow's own CLI by entity;
+ours printed a flat list. Now:
+
+```
+- people_with_habits: Distinct people holding AT LEAST ONE habit, archived or not. …
+    by habit: habit__category, habit__habit_created_date, habit__is_archived
+    by user:  user__channel, user__country, user__has_ever_subscribed, user__is_internal, …
+    time:     metric_time
+```
+
+Filter-drops fell from four to one.
+
+**Say what a cross-entity filter means.** A count of people filtered by an attribute of a habit is
+ambiguous by construction — *people with at least one fitness habit*, or *people all of whose habits
+are fitness*? The metric silently meant the first. Every `people_*` description now says so, and
+`referrers_activated` says which side `user__` and `referrer__` describe.
+
+**Define what "paid subscription" counts.** `fct_subscriptions` carries active, canceled and
+refunded terms and nothing said whether a refunded term makes someone a paying customer. One arm
+invented `billed_amount > 0` and answered 45 where the truth is 51. The rule — membership of the
+table, whatever the status or amount — is now in the dimension comment and in every metric
+description that depends on it. That is a **domain fact**, the matrix's tenth row, not a modelling
+one.
+
+**Declare the composition.** Thirteen `simple` metrics and nothing else meant a governed result was
+a terminal value: any further step had to happen outside the layer, and the agent's three ways of
+doing that were arithmetic in its head, an invented table, and raw SQL. Three `ratio` metrics are
+now declared and verified against SQL.
+
+### The paired comparison: D against E, same layer, one guardrail apart
+
+`E_enforced` is `D_declared` plus `governed_numbers` — a number must trace to one governed result.
+
+| | correct | silent wrong | refused | used `query_metric` | wrote SQL | **never read the catalogue** |
+|---|---|---|---|---|---|---|
+| D_declared (R1) | 20/23 | 3 | 0 | 13 | 10 | **10** |
+| E_enforced (R7 reduced) | 20/23 | **2** | 1 | **23** | **0** | **0** |
+
+**Accuracy is identical and everything else moved.** The predicted shape held: the check trades a
+wrong number for an abstention rather than producing a right answer, exactly as `../05_additivity`
+found on a different defect.
+
+**The unpredicted result is the last column, and it answers a question open since `../FINDINGS.md`
+§3.5.** That section measured how often a governed layer is skipped — 7, 8, then 13 of 30 rows as
+the model got stronger — and named "what makes an agent use a layer it has been given" as a study
+nobody had run.
+
+**Requiring provenance makes it use the layer.** A number must trace to a governed result, so raw
+SQL cannot produce an acceptable answer, so the catalogue must be read. D skipped it on 10 of 23
+rows and wrote SQL on 10; E skipped it on none and wrote SQL on none.
+
+That is one arm, 23 rows, one model, one reps — a direction, not a rate. But it is a mechanism, it
+is cheap to test again, and it reframes the bypass finding: **the layer was not being ignored
+because it was unhelpful. It was being ignored because nothing required it.**

@@ -48,6 +48,23 @@ _SPINE_LOCK = threading.Lock()
 __all__ = ["MetricFlowLayer"]
 
 
+def _by_entity(dims: list[str]) -> list[tuple[str, list[str]]]:
+    """Dimension names grouped by the entity prefix MetricFlow gives them.
+
+    `user__country` belongs to the `user` entity; `habit__category` to `habit`; `metric_time` to
+    neither and is its own group. The metric's OWN entity is not distinguishable from a joined one
+    by name alone, so the order is stable rather than meaningful: entities alphabetically, time
+    last. What the grouping buys is that a reader can see there are several sources, which a single
+    sorted line does not show."""
+    groups: dict = {}
+    for d in dims:
+        prefix = "metric_time" if d.startswith("metric_time") else d.split("__", 1)[0]
+        groups.setdefault(prefix, []).append(d)
+    ordered = sorted(k for k in groups if k != "metric_time")
+    return [(k, sorted(groups[k])) for k in ordered] + (
+        [("metric_time", sorted(groups["metric_time"]))] if "metric_time" in groups else [])
+
+
 class MetricFlowLayer:
     """The agent surface, served by MetricFlow.
 
@@ -142,7 +159,21 @@ class MetricFlowLayer:
             dims = sorted(d.granularity_free_dunder_name
                           for d in self._engine.simple_dimensions_for_metrics([m.name]))
             if dims:
-                lines.append(f"    group_by / filter dimensions: {', '.join(dims)}")
+                # GROUPED BY THE ENTITY THEY BELONG TO, not printed as one sorted list.
+                #
+                # A flat line hides the join graph. `people_with_habits` offers ten dimensions and
+                # nine of them arrive across a join from `users`; the tenth, `habit__category`, is
+                # the metric's own. Run 20260809-2216 shows the arm dropping exactly that one, four
+                # times, while keeping the `user__` filters — the shape of a list where everything
+                # looks alike.
+                #
+                # Cube groups dimensions by cube, LookML by view, and MetricFlow's own CLI by
+                # entity. Ours printed them sorted, so `habit__category` sat between
+                # `habit__is_archived` and `metric_time` with nothing to say it was the subject of
+                # the metric rather than an attribute of something joined to it.
+                for prefix, group in _by_entity(dims):
+                    label = "time" if prefix == "metric_time" else f"by {prefix}"
+                    lines.append(f"    {label}: {', '.join(group)}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
             lines.append("    time-filterable (period=…) and grainable "
                          f"(time_grain={'|'.join(TIME_GRAINS)})")

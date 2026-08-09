@@ -213,6 +213,34 @@ one tier up.
 other. Reasoning depth is held at "cheapest available" rather than exactly constant, which is what
 `agent/models.py` documents as the harness standard.
 
+### 3.7 Requiring provenance is what makes an agent use the layer
+
+Added 2026-08-09 from `00_primitive_load/FINDINGS.md` §17. §3.5 measured how often a governed layer
+is skipped and named "what makes an agent use one" as a study nobody had run. It has now been run,
+as a paired comparison inside one study: the same MetricFlow layer, the same warehouse, one
+guardrail apart.
+
+| | correct | silent wrong | used `query_metric` | wrote SQL | **never read the catalogue** |
+|---|---|---|---|---|---|
+| D_declared — R1 | 20/23 | 3 | 13 | 10 | **10** |
+| E_enforced — R7, `governed_numbers` | 20/23 | **2** | **23** | **0** | **0** |
+
+**A number must trace to one governed result, so raw SQL cannot produce an acceptable answer, so the
+catalogue has to be read.** Accuracy is identical; every other column moves.
+
+Two consequences.
+
+**The bypass finding needs restating.** §3.5 and §3.6 read as "the layer is unhelpful, so the agent
+abandons it". On this evidence the layer was abandoned because **nothing required it** — and once
+something did, it was used on every row without costing accuracy.
+
+**It changes what a semantic layer is for.** The layer alone did not beat SQL. The layer plus a
+provenance requirement got the same answers through a governed, citable path, and turned one silent
+wrong number into a refusal. Those are different products, and only the second is what the practice
+sells.
+
+One arm, 23 rows, one model, one repetition. A mechanism and a direction, not a rate.
+
 ### 3.6 When the agent does use the layer, it is less accurate than when it writes SQL
 
 Added 2026-08-09 from the trace analysis in `00_primitive_load/FINDINGS.md` §15. §3.5 measured how
