@@ -1,0 +1,24 @@
+# The governed metric layer.
+#
+# THE PREDICTION HERE IS THE MOST INTERESTING IN THE STUDY, and it is that D DEGRADES WITH LOAD.
+# The shipped layer stocks `reminders_shown` and `active_users`; it has no metric for "distinct
+# people shown a reminder who have ever paid". A semantic layer stocks the questions someone
+# thought of, and a compound question falls outside it — so coverage is itself a function of load.
+#
+# NO METRIC IS PATCHED IN, deliberately, and this is the opposite of the decision taken in
+# ../04_grain/arms/D_declared.yml. There the missing metric was OUR modelling gap on a
+# single-primitive question, and scoring it would have measured that gap. Here the layer's inability
+# to express a four-primitive question IS the phenomenon under test. Supplying a bespoke metric per
+# question would answer the question "does a metric written for this question help", which nobody
+# asked.
+#
+# At R1 the agent may still write SQL, so D will not simply refuse — it will fall back, and how far
+# up the ladder it keeps using `query_metric` is the measurement.
+level: structural
+claim: "the same star plus the governed layer, with no metric written for these questions"
+rung: 3
+patch: {}
+
+environment:
+  tables: star_schema
+  semantic: semantic/semantic_layer.yml

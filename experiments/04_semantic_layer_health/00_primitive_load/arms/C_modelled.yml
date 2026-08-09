@@ -1,0 +1,14 @@
+# The conformed star. Event kinds already split, enums resolved, typed columns.
+#
+# NOTE WHAT IT DOES NOT FIX. `fct_subscriptions` still holds one row per term, so the join-path
+# trap at L4 survives the star untouched. That is the point rather than an oversight: modelling
+# repairs entity and segment structurally and leaves the cardinality problem exactly where it was.
+# If the load hypothesis holds, C should track B at L1-L2 and fall away from it at L4.
+level: structural
+claim: "a conformed star — entity and segment are structural, the join cardinality is not"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_schema
+  semantic: null
