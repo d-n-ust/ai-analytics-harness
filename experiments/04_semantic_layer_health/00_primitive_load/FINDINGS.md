@@ -882,7 +882,9 @@ the trace audit is for. It proves the gold exercises what the label claims, whic
 mislabelled rung and the copy-paste, and it is the check that would have caught w and c before the
 run rather than after it.
 
-### The run: six arms, 23 items, reps=1
+### The run
+
+Run `20260809-232023`, six arms, 23 items, three repetitions.: six arms, 23 items, reps=1
 
 The first run in which every arm is in its current state. The previous five-arm table stitched two
 runs together, with A/B/C/C_doc predating the MetricFlow migration.
@@ -996,3 +998,66 @@ the previous builds, and still above it.
 **`D_declared` scores 15/15 at load 4** — the only arm to do so, and its worst rung is the control.
 A governed layer that can express the question does best where the question is hardest, which is
 the shape the matrix's column D predicts and this experiment had not previously shown.
+
+
+---
+
+## 20. The ladder made cumulative: D and E now see the star's documentation
+
+`D_declared` and `E_enforced` declared `tables: star_schema` and no `docs:`, so they received the
+governed layer and **no table comments at all**. On 31 of 69 rows they fell back to SQL, and there
+they were operating like `A_implicit` on a star — three failures in §19 were filtering
+`country = 'Germany'` while the ISO mapping sat documented in a file they could not see.
+
+**A team that has built a semantic layer has not left the warehouse underneath it undocumented.**
+With `docs: star_schema` the ladder is cumulative: D is `C_modelled_documented` plus the layer, and
+E is D plus the check, so each column adds to the one below rather than trading one thing for
+another.
+
+### The run
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced |
+|---|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | 9/9 | 9/9 |
+| 1 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 | 15/15 |
+| 2 | 11/15 | 15/15 | 12/15 | 15/15 | **15/15** | 15/15 |
+| 3 | 11/15 | 14/15 | 13/15 | 13/15 | 12/15 | 12/15 |
+| 4 | 10/15 | 11/15 | 13/15 | 12/15 | 12/15 | 12/15 |
+| **total** | 56/69 | **64/69** | 62/69 | **64/69** | 63/69 | 63/69 |
+
+**D's load-2 went from 12/15 to 15/15** — precisely the rung whose failures §19 traced to the missing
+comments. The fix landed where it was aimed.
+
+Against the previous run: A unchanged at 56 (nothing about it changed), B **59 → 64**, C_modelled_doc
+**60 → 64**, D **61 → 63**, E **62 → 63**. B and C_doc moved because the country-code vocabulary was
+documented this session; D and E moved because they can now read it.
+
+### Every arm above A is now within two points
+
+`B_documented` and `C_modelled_documented` tie at 64, D and E at 63, `C_modelled` at 62 — and
+`A_implicit` is **eight points below all of them.** On this set, documentation is worth eight points
+and everything after it is worth nothing measurable.
+
+That is the same ceiling `../01_entity` hit at load 1, now reproduced on a set that goes to four
+primitives.
+
+### The split, replicated
+
+| | this run | previous run |
+|---|---|---|
+| A→B at load 4, questions that **ask** for the documented fact | **+44 pp** | +22 pp |
+| A→B at load 4, questions that do **not** | **−50 pp** | −50 pp |
+
+**The deepest rung reproduces across two independent runs**: documentation is strongly positive
+where the question needs the documented fact and −50 points where it does not. The middle rungs do
+not replicate — `+11, +11` here against `+0, +33` before, and `+50, +33` against `+33, −17`.
+
+So §19's claim survives at load 4 and not below it. **The honest statement is about the deepest
+rung**: the sign of documentation's effect depends on whether the question needs the documented
+fact, and the effect is largest where the question is hardest.
+
+### One thing got worse
+
+`D_declared` skipped the catalogue on **40 of 69 rows**, up from 31. Giving it readable table
+comments made the SQL path more attractive, not less. `E_enforced` still skips on zero — the
+provenance requirement is the only thing in this study that has ever made the layer get used.

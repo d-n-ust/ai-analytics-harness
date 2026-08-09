@@ -43,3 +43,13 @@ agent:
 
 environment:
   tables: star_schema
+  # THE STAR'S DOCUMENTATION TOO, and the omission it replaces was not a decision. This arm had
+  # `tables: star_schema` alone, so it received the governed layer and NO table comments — and when
+  # it fell back to SQL, which it did on 31 of 69 rows, it was operating like A_implicit on a star.
+  # Three failures in run 20260809-225835 are exactly that: it filtered `country = 'Germany'` while
+  # the ISO mapping sat documented in a file it could not see.
+  #
+  # A team that has built a semantic layer has not left the warehouse underneath it undocumented.
+  # With this line the ladder is cumulative — D is C_modelled_documented plus the layer, and E is D
+  # plus the check — so each column adds to the one below rather than trading one thing for another.
+  docs: star_schema
