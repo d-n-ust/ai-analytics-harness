@@ -1,0 +1,218 @@
+# The governed layer for the PRIMITIVE LOAD study, on dbt MetricFlow.
+#
+# WHY METRICFLOW AND NOT semantic/semantic_layer.yml. FINDINGS.md §15 traced D_declared's failure to
+# three properties of our own layer, and two of them are architectural:
+#
+#   no join model      `SELECT ... FROM <one base table>`, so a dimension is usable only if it is a
+#                      column on that table. Metrics on dim_habits could not be filtered by any user
+#                      attribute at all, and every segment rung was unreachable.
+#   no user grain      nothing exposed count(distinct user_id), so "how many people" was unanswerable
+#   hidden filters     `active_habits` carried default_filters: ["NOT is_archived"] with the word
+#                      "active" as the only clue — the very defect 02_segment exists to measure.
+#
+# MetricFlow fixes the first two by construction: models declare ENTITIES, and a shared entity is a
+# join. The third is fixed here by discipline — see the note on the metric pairs below.
+#
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# EVERY FILTER IS ON A METRIC AND VISIBLE IN THE CATALOGUE. Where a question can mean the filtered
+# or the unfiltered thing, BOTH are declared, and the filtered one says so in its own description.
+# `habits_total` and `habits_tracked` are the pair that would have been one `active_habits` before.
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+
+semantic_model:
+  name: users
+  description: "One row is one registered account."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities:
+    - {name: user, type: primary, expr: user_id}
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: platform, type: categorical}
+    - {name: country, type: categorical}
+    - {name: region, type: categorical}
+    - {name: channel, type: categorical}
+    # A DERIVED DIMENSION ATTRIBUTE, and it exists because MetricFlow cannot join fact to fact.
+    # `habits` and `subscriptions` both carry `user` as a FOREIGN entity, so each joins to this
+    # model and neither joins to the other — the classic fact-to-fact problem, whose Kimball answer
+    # is a bridge or an attribute carried on the conformed dimension. This is the attribute.
+    - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
+  measures:
+    - {name: account_rows, agg: count, expr: user_id}
+---
+# THE ROLE-PLAYING DIMENSION. The same `dim_users` table declared a second time, keyed on
+# `referrer` instead of `user`. MetricFlow joins a FOREIGN entity to the model where that entity is
+# PRIMARY, so `referrer__has_ever_subscribed` has nowhere to resolve until a model claims `referrer`
+# as its primary key. Kimball's name for this is a role-playing dimension and the mechanism is the
+# same: one physical table, two logical roles, and the role is part of the column's identity.
+semantic_model:
+  name: users_as_referrers
+  description: "One row is one registered account, in its role as the person who made a referral."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: referrer_signup_date}
+  entities:
+    - {name: referrer, type: primary, expr: user_id}
+  dimensions:
+    - {name: referrer_signup_date, type: time, type_params: {time_granularity: day}, expr: signup_date}
+    - {name: is_internal, type: categorical}
+    - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
+  measures:
+    - {name: referrer_rows, agg: count, expr: user_id}
+---
+semantic_model:
+  name: habits
+  description: "One row is one habit a user created."
+  node_relation: {schema_name: _star, alias: dim_habits}
+  defaults: {agg_time_dimension: habit_created_date}
+  entities:
+    - {name: habit, type: primary, expr: habit_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: habit_created_date, type: time, type_params: {time_granularity: day}, expr: created_date}
+    - {name: category, type: categorical}
+    - {name: is_archived, type: categorical}
+  measures:
+    - {name: habit_rows, agg: count, expr: habit_id}
+    - {name: habit_holders, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: subscriptions
+  description: "One row is one subscription TERM. A user who cancels and resubscribes has several."
+  node_relation: {schema_name: _star, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities:
+    - {name: subscription, type: primary, expr: subscription_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: plan, type: categorical}
+    - {name: status, type: categorical}
+    - {name: is_active, type: categorical}
+  measures:
+    - {name: subscription_rows, agg: count, expr: subscription_id}
+    - {name: subscribers, agg: count_distinct, expr: user_id}
+---
+# ROLE-PLAYING ENTITY. `fct_referrals` carries two user columns, so it is declared twice — once
+# keyed on the person referred, once on the referrer. MetricFlow joins on the ENTITY NAME, so a
+# single model could only ever reach one side, and a question about "the person referred" and a
+# question about "the referrer" are different joins.
+semantic_model:
+  name: referrals_by_referred
+  description: "One row is one referral, seen from the person who was referred."
+  node_relation: {schema_name: _star, alias: fct_referrals}
+  defaults: {agg_time_dimension: referred_date}
+  entities:
+    - {name: referral, type: primary, expr: referral_id}
+    # TWO FOREIGN ENTITIES TO THE SAME DIMENSION, because a referral has two people in it and a
+    # question can be about either. `user` is the person referred and `referrer` is the person who
+    # referred them; MetricFlow prefixes a dimension with the entity name, so `user__is_internal`
+    # and `referrer__has_ever_subscribed` are unambiguous and reach different rows.
+    #
+    # THE FIRST VERSION DECLARED ONLY `user`, and `referrers_activated` therefore accepted
+    # `user__has_ever_subscribed` — which silently filtered on the person REFERRED while counting
+    # referrers. It answered 48 where the truth is 36, through a governed call that raised nothing.
+    # A role-playing entity left unmodelled is a wrong number with a clean provenance trail.
+    - {name: user, type: foreign, expr: referred_user_id}
+    - {name: referrer, type: foreign, expr: referrer_user_id}
+  dimensions:
+    - {name: referred_date, type: time, type_params: {time_granularity: day}, expr: CAST(referred_ts AS DATE)}
+    - {name: status, type: categorical}
+  measures:
+    - {name: referral_rows, agg: count, expr: referral_id}
+    - {name: distinct_referrers, agg: count_distinct, expr: referrer_user_id}
+---
+# ── habits ──────────────────────────────────────────────────────────────────────────────────────
+# THE PAIR THAT REPLACES `active_habits`. Our own layer had one metric whose name carried a filter
+# nobody could see; asked for fitness habits it answered 1,032 where the truth is 1,235. Here both
+# readings are metrics, each says what it counts, and the caller chooses.
+metric:
+  name: habits_total
+  description: "Habits on record, whether or not they have since been archived."
+  type: simple
+  type_params: {measure: habit_rows}
+---
+metric:
+  name: habits_tracked
+  description: "Habits not yet archived. Same as habits_total with archived ones removed."
+  type: simple
+  type_params: {measure: habit_rows}
+  filter: "{{ Dimension('habit__is_archived') }} = false"
+---
+metric:
+  name: habits_archived
+  description: "Habits that have been archived. The complement of habits_tracked."
+  type: simple
+  type_params: {measure: habit_rows}
+  filter: "{{ Dimension('habit__is_archived') }} = true"
+---
+# THE USER GRAIN, which our own layer had nowhere. Counting habits and counting the people who hold
+# them are different questions and both are asked.
+metric:
+  name: people_with_habits
+  description: "Distinct people holding at least one habit, archived or not."
+  type: simple
+  type_params: {measure: habit_holders}
+---
+metric:
+  name: people_tracking_habits
+  description: "Distinct people holding at least one habit they have not archived."
+  type: simple
+  type_params: {measure: habit_holders}
+  filter: "{{ Dimension('habit__is_archived') }} = false"
+---
+metric:
+  name: people_who_archived_habits
+  description: "Distinct people who have archived at least one habit."
+  type: simple
+  type_params: {measure: habit_holders}
+  filter: "{{ Dimension('habit__is_archived') }} = true"
+---
+# ── subscriptions ───────────────────────────────────────────────────────────────────────────────
+# THE PAIR THAT REPLACES `paying_users`, which carried default_filters: ["is_active"].
+metric:
+  name: subscriptions_all_time
+  description: "Subscription terms on record, live and ended. One row is one term, not one person."
+  type: simple
+  type_params: {measure: subscription_rows}
+---
+metric:
+  name: subscribers_all_time
+  description: "Distinct people who have ever held a subscription, live or ended."
+  type: simple
+  type_params: {measure: subscribers}
+---
+metric:
+  name: subscribers_live
+  description: "Distinct people whose subscription is currently live. Same as subscribers_all_time with ended terms removed."
+  type: simple
+  type_params: {measure: subscribers}
+  filter: "{{ Dimension('subscription__is_active') }} = true"
+---
+# ── referrals ───────────────────────────────────────────────────────────────────────────────────
+metric:
+  name: referrals_total
+  description: "Referrals on record, at any stage."
+  type: simple
+  type_params: {measure: referral_rows}
+---
+metric:
+  name: referrals_activated
+  description: "Referrals that reached the activated stage. Same as referrals_total restricted to that stage."
+  type: simple
+  type_params: {measure: referral_rows}
+  filter: "{{ Dimension('referral__status') }} = 'activated'"
+---
+metric:
+  name: referrers_activated
+  description: "Distinct people who made at least one referral that reached the activated stage."
+  type: simple
+  type_params: {measure: distinct_referrers}
+  filter: "{{ Dimension('referral__status') }} = 'activated'"
+---
+# ── accounts ────────────────────────────────────────────────────────────────────────────────────
+metric:
+  name: accounts_created
+  description: "Registered accounts, counted by the day they signed up."
+  type: simple
+  type_params: {measure: account_rows}

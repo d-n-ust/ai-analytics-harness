@@ -686,3 +686,73 @@ Not the declared column. `D_declared`'s score is a blend of:
 The last line is the important one. **31% against 70% is a subgroup comparison inside one arm**, not
 a controlled contrast — the rows differ in which questions they are as well as in route. It sets up
 a study; it does not conclude one.
+
+
+---
+
+## 16. `D_declared` migrated to dbt MetricFlow: 20/23, and what the last three say
+
+§15 traced this arm's failure to three properties of `semantic/semantic_layer.yml`, two of them
+architectural. The arm now runs on MetricFlow with its own layer under `layers/D_declared/`.
+
+| layer | score at reps=1 |
+|---|---|
+| `semantic/semantic_layer.yml` | ~14.7/23 equivalent (44/69 at reps=3) |
+| MetricFlow, first build | 17/23 |
+| MetricFlow, role-playing entity fixed | **20/23** |
+
+Families h, a and r are **4/4 each**. Under the old layer every question above load 1 was
+unreachable through the layer at all.
+
+### What the migration fixed, and how it was verified
+
+**Before any model call**, all 22 ladder and control questions were resolved against the layer and
+compared to the gold SQL: **22 exact matches, 0 unreachable.**
+
+| §15 cause | fix |
+|---|---|
+| no join model — `SELECT … FROM <one base>` | MetricFlow models declare **entities**, and a shared entity *is* a join. `habits` and `users` join on `user`; every segment rung became reachable |
+| no user grain | `count_distinct(user_id)` declared as a measure — `people_with_habits`, `people_tracking_habits`, `people_who_archived_habits` |
+| hidden default filters | **every filter sits on a metric and is rendered in the catalogue.** Where a question can mean the filtered or the unfiltered thing, both are declared: `habits_total` / `habits_tracked` / `habits_archived` replace the single `active_habits`, and `subscribers_all_time` / `subscribers_live` replace `paying_users` |
+
+### Two things MetricFlow could not do either, and the fixes are Kimball's
+
+**Fact-to-fact.** `habits` and `subscriptions` both hold `user` as a *foreign* entity, so each joins
+to `users` and neither joins to the other. The L4 rungs need exactly that join. The answer is a
+derived attribute carried on the conformed dimension — `users.has_ever_subscribed` — which is the
+textbook remedy rather than a workaround.
+
+**A role-playing entity, and it produced a wrong number with a clean provenance trail.** A referral
+has two people in it. The first build declared only `user` = the person referred, so
+`referrers_activated` accepted `user__has_ever_subscribed` and **silently filtered the referred side
+while counting referrers**: 48 where the truth is 36, through a governed call that raised nothing.
+
+The fix is a second declaration of `dim_users` keyed on `referrer` — one physical table, two logical
+roles — because MetricFlow joins a foreign entity to the model where that entity is *primary*, and
+`referrer` had no such model. `pl_r4` went from wrong to exact.
+
+### The three remaining failures, and two of them are one behaviour
+
+| question | gold | answered | what happened |
+|---|---|---|---|
+| `pl_c1_accounts` (a **control**) | 553 | 713 | got **553** from `query_metric`, twice, then grouped by day and summed the groups |
+| `pl_c3_grain` | 179 | 412 | dropped the `habit__category` filter, then tried `SELECT … FROM metric_results` |
+| `pl_w4_join_path` | 51 | 45 | skipped the catalogue, wrote SQL, added `billed_amount > 0` unprompted |
+
+**The agent invents a table to post-process a governed result.** Twice it reached for
+`metric_results` and `query_results_from_metric`, neither of which exists. There is no supported way
+to take a number out of `query_metric` and do anything further with it, so it fabricates one.
+
+**The control failure is the additivity defect in miniature.** It had the right answer from the
+governed path and then summed daily groups on top of it. A control that a *correct* governed call
+can be talked out of is worth keeping and worth naming: it says the failure is not retrieval.
+
+### What is not fixed
+
+**Eleven of twenty-three rows still never called `list_metrics`.** The layer being able to express
+the question does not make the agent read the catalogue, and that remains the open question §3.5
+named.
+
+**`pl_c2_segment` and the `w`/`c` families keep their item defects** — country name against ISO
+codes, `fitness` colliding with `health`. §14 voids those families and the migration does not
+change that.

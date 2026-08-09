@@ -1,24 +1,39 @@
-# The governed metric layer.
+# The governed layer, on dbt MetricFlow rather than on our own engine.
 #
-# THE PREDICTION HERE IS THE MOST INTERESTING IN THE STUDY, and it is that D DEGRADES WITH LOAD.
-# The shipped layer stocks `reminders_shown` and `active_users`; it has no metric for "distinct
-# people shown a reminder who have ever paid". A semantic layer stocks the questions someone
-# thought of, and a compound question falls outside it — so coverage is itself a function of load.
+# WHY THE MIGRATION. ../FINDINGS.md §15 traced this arm's failure — 31% correct when it used the
+# layer against 70% when it ignored it — to three properties of `semantic/semantic_layer.yml`, and
+# two are architectural rather than fixable by editing YAML:
 #
-# NO METRIC IS PATCHED IN, deliberately, and this is the opposite of the decision taken in
-# ../04_grain/arms/D_declared.yml. There the missing metric was OUR modelling gap on a
-# single-primitive question, and scoring it would have measured that gap. Here the layer's inability
-# to express a four-primitive question IS the phenomenon under test. Supplying a bespoke metric per
-# question would answer the question "does a metric written for this question help", which nobody
-# asked.
+#   no join model    it compiles `SELECT ... FROM <one base table>`, so a dimension is usable only
+#                    if it is a column on that table. `active_habits` sits on dim_habits, which
+#                    carries no user attributes, so EVERY segment rung was unreachable — six
+#                    `cannot filter 'active_habits' by 'is_internal'` in one run.
+#   no user grain    nothing declared count(distinct user_id), so "how many people" was unanswerable
+#                    for habits, reminders and referrals.
+#   hidden filters   `active_habits` carried `default_filters: ["NOT is_archived"]` with the word
+#                    "active" as the only clue. Asked for fitness habits it answered 1,032 against a
+#                    truth of 1,235 — which is `real_value_moments` under a different noun, the
+#                    exact defect ../02_segment exists to measure, shipped in our own layer.
 #
-# At R1 the agent may still write SQL, so D will not simply refuse — it will fall back, and how far
-# up the ladder it keeps using `query_metric` is the measurement.
+# MetricFlow fixes the first two by construction: a semantic model declares ENTITIES, and a shared
+# entity IS a join. The third is fixed by discipline in layers/D_declared/layer.yaml — every filter
+# sits on a metric and is rendered in the catalogue, and where a question could mean the filtered or
+# the unfiltered thing BOTH are declared as metrics.
+#
+# VALIDATED BEFORE ANY MODEL CALL. All 22 ladder and control questions were resolved against this
+# layer and compared to the gold SQL: 22 exact matches, 0 unreachable. Under the old layer, every
+# question above load 1 was unreachable.
+#
+# THE ONE THING METRICFLOW ALSO CANNOT DO, and the fix is Kimball's rather than a workaround.
+# `habits` and `subscriptions` both hold `user` as a FOREIGN entity, so each joins to `users` and
+# neither joins to the other — the fact-to-fact problem. The L4 rungs ask for people who hold a
+# habit AND have ever subscribed, which is exactly that join. The answer is a derived attribute
+# carried on the conformed dimension: `users.has_ever_subscribed`. See the layer file.
 level: structural
-claim: "the same star plus the governed layer, with no metric written for these questions"
+claim: "the same star, plus a governed layer that can express the questions"
 rung: 3
-patch: {}
+engine: metricflow
+layer_dir: layers/D_declared
 
 environment:
   tables: star_schema
-  semantic: semantic/semantic_layer.yml

@@ -205,6 +205,13 @@ class Arm:
     # the default and the better form — a forked layer drifts, which study 01 paid for once — so
     # this is opt-in and the arm file still carries claim, level and grading either way.
     layer_dir: str = ""
+    # WHICH ENGINE SERVES THIS ARM'S LAYER, when it differs from the study's. A peer of
+    # `environment` and `agent`, and per-arm for the same reason they are: a study can hold three
+    # arms below any semantic layer and one arm on a governed one, and that one arm's engine is a
+    # property of the arm rather than of the study. `00_primitive_load` is the case — A, B and C
+    # write SQL and only D has a layer, so `engine: metricflow` at study level would name an engine
+    # for three arms that never reach one.
+    engine: str = ""
     # A third kind of arm. `patch` varies WHAT the layer declares and `layer_dir` swaps the layer
     # wholesale; this varies only HOW the same layer is written down. It is the one arm kind whose
     # treatment provably changes no facts — which `check_same_facts` enforces.
@@ -233,7 +240,8 @@ class Arm:
     changes_candidate_count: bool = False
 
     KEYS = {"level", "claim", "patch", "delete", "reorder", "grading",
-            "changes_candidate_count", "layer_dir", "catalogue_format", "catalogue_fields",
+            "changes_candidate_count", "layer_dir", "engine",
+            "catalogue_format", "catalogue_fields",
             "rung", "environment", "agent"}
 
     @classmethod
@@ -247,6 +255,7 @@ class Arm:
         return cls(name=path.stem, level=d["level"], claim=d.get("claim", ""),
                    patch=d.get("patch") or {}, delete=d.get("delete") or [],
                    reorder=d.get("reorder") or {}, layer_dir=d.get("layer_dir", ""),
+                   engine=d.get("engine", ""),
                    catalogue_format=d.get("catalogue_format", ""),
                    catalogue_fields=tuple(d.get("catalogue_fields") or ()),
                    rung=float(d.get("rung") or 0),
@@ -901,7 +910,7 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
                                 semantic_layer=layer_wanted, spec_path=layer_path,
                                 catalogue_format=arm.catalogue_format or "prose",
                                 catalogue_fields=arm.catalogue_fields,
-                                engine=study.engine)
+                                engine=arm.engine or study.engine)
     # Derived, not declared: the arm promises the model sees the catalogue this layer renders, and
     # the catalogue itself is the assertion. A hand-written substring list is a second description
     # of the same thing, free to fall out of step with it.
@@ -932,7 +941,7 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
                                           semantic_layer=layer_wanted, spec_path=layer_path,
                                           catalogue_format=arm.catalogue_format or "prose",
                                           catalogue_fields=arm.catalogue_fields,
-                                          engine=study.engine)
+                                          engine=arm.engine or study.engine)
         return local.g
 
     def _one(unit):
@@ -1179,9 +1188,25 @@ def run(args) -> Path:
         print(f"note: {', '.join(skipped)} run below the semantic layer, so the catalogue guards "
               f"(candidate count, same facts) do not apply to them.")
 
+    # AN ARM ON ANOTHER ENGINE IS NOT A VARIANT OF THIS STUDY'S BASE, so the invariants that compare
+    # it to that base cannot mean anything. A `patch` arm is a delta of `base:` and must reach the
+    # base's numbers through its own equivalences; a `layer_dir` arm on a different engine REPLACES
+    # the layer, with its own metric names and its own semantics, and asking whether it offers
+    # `moments_per_day` is asking whether one layer is the other.
+    #
+    # Skipped LOUDLY rather than silently, and only for an engine mismatch — a layer_dir arm on the
+    # study's own engine is still held to the base, which is how 02_segment__mf's three arms are
+    # checked against each other.
+    foreign = [a for a in catalogued if study.arms[a].engine and study.arms[a].engine != study.engine]
+    if foreign:
+        catalogued = [a for a in catalogued if a not in foreign]
+        print(f"note: {', '.join(foreign)} declare their own engine, so they are not variants of "
+              f"`base:` and the same-numbers and catalogue guards cannot compare them to it. Their "
+              f"layer is validated on its own terms — see the arm file.")
+
     layers = {}
     for a in catalogued:
-        layer = _reference_layer(con, paths[a], study.engine)
+        layer = _reference_layer(con, paths[a], study.arms[a].engine or study.engine)
         if study.arms[a].catalogue_format:
             layer.catalogue_format = study.arms[a].catalogue_format
         if study.arms[a].catalogue_fields:

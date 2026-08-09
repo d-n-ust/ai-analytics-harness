@@ -38,6 +38,7 @@ import threading
 from pathlib import Path
 
 from semantic.engine import Capabilities
+from semantic.semantic import SemanticError
 from warehouse.config import TIME_GRAINS
 from warehouse.warehouse import STAR_SCHEMA
 
@@ -241,8 +242,21 @@ class MetricFlowLayer:
             where_constraints=[where] if where else None,
             group_by_names=kw.get("group_by") or None,
             time_constraint_start=to_dt(start), time_constraint_end=to_dt(end))
-        sql = self._engine.explain(request).sql_statement.sql
-        table = self._engine.query(request).result_df
+        # METRICFLOW'S OWN EXCEPTIONS STOP HERE. `dispatch` catches SemanticError and hands the
+        # agent a recoverable tool error; an exception type it does not know propagates out of the
+        # worker and kills the whole run. That is what happened on the first MetricFlow run of
+        # 00_primitive_load: the agent guessed a metric name, MetricFlow raised
+        # InvalidQueryException, and 23 questions were lost to one bad guess.
+        #
+        # Translating at the boundary is the adapter's job — every caller already handles
+        # SemanticError, and a second exception type would have to be handled in each of them.
+        try:
+            sql = self._engine.explain(request).sql_statement.sql
+            table = self._engine.query(request).result_df
+        except Exception as exc:            # noqa: BLE001 — the foreign boundary is the point
+            first = str(exc).strip().splitlines()
+            detail = " ".join(x.strip() for x in first if x.strip())[:400]
+            raise SemanticError(detail or f"{type(exc).__name__}") from exc
         # THE MEASURE COLUMN MUST BE CALLED `value`. That is the harness's contract — the AFTER
         # guardrails read the measure by that name and fail CLOSED when it is absent, so an
         # unaliased result does not produce a wrong answer, it produces a refusal saying nothing
