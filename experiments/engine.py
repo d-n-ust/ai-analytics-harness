@@ -748,7 +748,14 @@ def agent_config(study, arm=None, args=None) -> dict:
             else:
                 merged[key] = value
 
-    model = merged.get("model") or (args.model if args is not None else None) or DEFAULT_MODEL
+    # `--override-model` beats a pinned study; `--model` does not. The rule the docstring above
+    # protects is that an override must never be SILENT — a study that pins its model means it, and
+    # two runs of "the same study" on different models are not comparable. An explicitly named flag
+    # is not silent: it says what it is doing, the runner prints it, and the model lands in
+    # run.json. This is how a study is deliberately swept across model tiers without editing —
+    # and therefore quietly falsifying — the file that says what it ran.
+    override = getattr(args, "override_model", None) if args is not None else None
+    model = override or merged.get("model") or (args.model if args is not None else None) or DEFAULT_MODEL
     judge = merged.get("judge") or {}
 
     # THE ANSWER PROTOCOL — what an answer must declare about itself. A peer of the guardrail set,
@@ -1073,7 +1080,16 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     (out / "run.json").write_text(json.dumps({
         "experiment": study.name, "title": study.title, "rung": study.rung, "tests_rules": study.tests_rules,
         "guardrails": study.guardrails if isinstance(study.guardrails, str) else f"R{study.guardrails}", "base": str(study.base.relative_to(ROOT)),
-        "model": args.model, "mock": args.mock, "reps": args.reps,
+        # THE MODEL THAT RAN, not the one the command line asked for. `args.model` loses to a
+        # model pinned in study.yml, so storing the flag recorded a name that could be false —
+        # invisibly, because the default and the pin were the same string in every study written
+        # so far. A stored run that misnames its model cannot be compared with anything.
+        # READ OFF THE MODEL OBJECT, not off the command line. `args.model` loses to a model
+        # pinned in study.yml and to `--override-model`, so storing the flag recorded a name that
+        # could be false — invisibly, because the default and the pin were the same string in every
+        # study written so far. A stored run that misnames its model cannot be compared with
+        # anything. Same rule the line below already applies to `reasoning`.
+        "model": model.spec.name, "mock": args.mock, "reps": args.reps,
         # Reasoning effort is a treatment, not a setting: a row that does not carry it cannot
         # be compared with one run at a different depth. Read back off the model rather than
         # off the request, because a model below the requested floor runs at its own.
@@ -1164,9 +1180,14 @@ def run(args) -> Path:
     # be compared against one from a rung where the judge did fire.
     verifier = get_verifier(resolved["judge_model"], mock=args.mock)
 
+    cell = study.guardrails if isinstance(study.guardrails, str) else f"R{study.guardrails}"
+    # Loud, because an override is only safe when it is impossible to miss: two runs of one study
+    # on two models are not comparable, and the header is where a reader notices.
+    override = (f" [OVERRIDE: study.yml pins {(study.agent or {}).get('model')}]"
+                if getattr(args, "override_model", None) else "")
     print(f"study: {study.name} — {study.title}")
-    print(f"rung {study.rung} · guardrails {study.guardrails if isinstance(study.guardrails, str) else 'R' + str(study.guardrails)}"
-          f" · {args.model}/{model.reasoning}"
+    print(f"rung {study.rung} · guardrails {cell}"
+          f" · {resolved['model']}/{model.reasoning}{override}"
           f" · judge {verifier.spec.name}/{verifier.reasoning}"
           + (" (MOCK)" if args.mock else "")
           + f" · {len(cases)} questions x {args.reps} reps x {len(arms)} arms")
@@ -1190,6 +1211,10 @@ def main() -> None:
     ap.add_argument("experiment")
     ap.add_argument("--reps", type=int, default=3)
     ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--override-model", default=None,
+                    help="run every arm on this model, overriding a model pinned in study.yml. "
+                         "Use to sweep a study across model tiers; the override is printed and "
+                         "stored in run.json.")
     ap.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
     ap.add_argument("--arms", default=None, help="comma-separated subset")
     ap.add_argument("--only", default=None, help="comma-separated question ids")

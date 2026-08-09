@@ -379,6 +379,11 @@ def main() -> None:
 
              "are database-wide, so two rungs cannot share the warehouse.")
     sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
+    sp.add_argument("--override-model", default=None, choices=MODELS,
+                    help="run every arm on this model, overriding one pinned in study.yml. "
+                         "`--model` deliberately loses to a pinned study; this wins, loudly. "
+                         "Use to sweep a study across model tiers without editing the file that "
+                         "records what it ran.")
     sp.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
     sp.add_argument("--arms", default=None, help="comma-separated subset (default: all)")
     sp.add_argument("--only", default=None, help="comma-separated question ids")

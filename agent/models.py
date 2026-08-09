@@ -101,7 +101,22 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # `error` outcome, which is a lost measurement rather than a model behaviour and is invisible
     # in any rate that divides by answered questions. This model is half the write-up pair, so
     # every stored run of it should be checked for error rows before its numbers are believed.
-    _spec("gpt-5.4-mini", 0.25, 2.0, use_responses_api=True),
+    #
+    # THE EFFORT LADDER IS NOT THE DEFAULT ONE, and this spec said it was until 2026-08-09. The
+    # comment above sol claims "same family as terra, so ... the same effort ladder (no `minimal`)"
+    # and the tuple was then left off this entry, so it inherited EFFORT_LADDER and advertised a
+    # `minimal` the model rejects. Proven by the API rather than inferred:
+    #
+    #     400 - Unsupported value: 'minimal' is not supported with the 'gpt-5.4-mini' model.
+    #           Supported values are: 'none', 'low', 'medium', 'high', and 'xhigh'.
+    #
+    # It stayed invisible because every stored run pins gpt-5-mini, whose floor IS `minimal`; the
+    # first sweep that overrode the model hit it on the first call. With the tuple present,
+    # `effort_for` maps a requested `minimal` to `none` — this model's own floor — which is the
+    # comparison the DEFAULT_REASONING note above describes: each model at the cheapest setting it
+    # accepts.
+    _spec("gpt-5.4-mini", 0.25, 2.0, use_responses_api=True,
+          efforts=("none", "low", "medium", "high", "xhigh")),   # 400s on `minimal`
     # OpenAI list price, corroborated across the OpenAI model page + OpenRouter (2026-07-24).
     # Rejects reasoning_effort='none'; `minimal` is its floor. Every stored run of this model
     # used minimal or higher, so the default was never exercised until it 400'd from `bench ask`.

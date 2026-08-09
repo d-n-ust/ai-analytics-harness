@@ -298,6 +298,35 @@ Each study's `FINDINGS.md` now carries its own per-item table. Read those before
 
 ---
 
+## 6c. One word meaning two things, found twice and filed under two different rows
+
+Added 2026-08-09. Two studies have now produced the same failure, and neither was built to look for
+it.
+
+| study | the word | the two readings | what the agent did |
+|---|---|---|---|
+| `02_segment` | **customers** | real users (3,642) · every account (3,785) | served 3,785, 0/3 |
+| `04_grain` | **subscriber** | people holding a subscription (413) · users (2,500) | divided by 2,500, 5 of 9 misses |
+
+This is **polysemy**, and it is not the segment primitive. A segment question asks *which ones of a
+known thing*; here the disagreement is about *which thing the word denotes*, and both readings
+return a plausible number. Nothing downstream can tell them apart.
+
+Two things follow.
+
+**The repair that worked in both cases was vocabulary, not structure.** `02_segment`'s declared arm
+answered the "customers" question because its segment lists `customers` as a synonym. `04_grain`'s
+governed arms answered 3/3 because the metric pins the denominator. In both cases what a metric
+definition supplied was *a word pinned to one meaning*, which is a different mechanism from the one
+the matrix's column D describes.
+
+**It is not being given a matrix row yet.** The evidence is two accidental observations from studies
+built for other primitives, and `primitives_matrix.md` is already 15 cells filled of 40. A row with
+no study behind it is a to-do item wearing a framework's clothes. When a study exists, the row
+follows.
+
+---
+
 ## 7. What to do next
 
 1. **Re-estimate the variance components from our own runs** rather than the literature's generic

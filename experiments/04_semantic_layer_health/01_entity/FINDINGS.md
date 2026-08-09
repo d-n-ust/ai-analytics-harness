@@ -171,3 +171,87 @@ a choice rather than an accident.
 
 **Re-runs of studies 01–04.** The shared layer went from 15 to 17 metrics, so their stored results
 are no longer comparable with future runs of themselves.
+
+---
+
+## 8. The same study on three model tiers, and the result the programme did not want
+
+Added 2026-08-09. The entity study is the only one built well enough to re-run unchanged, so it was
+swept across three models with `--override-model`. Everything else is identical: same arms, same
+questions, same guardrails, same judge (`gpt-5-mini`/low), each agent at the cheapest reasoning
+effort it accepts.
+
+| arm | gpt-5.4-mini | gpt-5-mini | gpt-5.6-terra |
+|---|---|---|---|
+| A_implicit | 12/15 | 10/15 | **15/15** |
+| B_documented | 15/15 | 15/15 | 15/15 |
+| C_modelled | 13/15 | 14/15 | 15/15 |
+| C_modelled_documented | 15/15 | 14/15 | 15/15 |
+| D_declared | 14/15 | 15/15 | 15/15 |
+| E_enforced | 14/15 | 14/15 | 15/15 |
+| **A → B gap** | **3** | **5** | **0** |
+| **silent wrong, all arms** | 7 | 7 | **0** |
+
+### The defect is invisible to the frontier model
+
+`A_implicit` is the messy warehouse with nothing documented: `evt` holding app opens, completed
+habits and reminders behind an unlabelled integer, `u.internal` as 0/1/NULL, `subs.st` as a status
+code. **`gpt-5.6-terra` answered every question correctly from it, three times out of three, with
+zero self-disagreement across all thirty cells.**
+
+It resolved the entity from column names, value distributions and its own domain knowledge. Nothing
+in the warehouse told it that `etype = 2` is a completed habit.
+
+**So on this defect, at this difficulty, the value of documentation is a function of model
+capability, and at the frontier it is zero.** That is the opposite of what the study was built to
+show, and it is the most useful thing the study has produced.
+
+### What this does and does not license
+
+**It does not say documentation is worthless.** It says this defect is too easy for this model. Two
+of the five questions discriminate; a harder item set may separate the arms on terra as well, and
+`../04_grain/FINDINGS.md` §6 records the same model failing a different defect badly.
+
+**It does not say the cheaper models are broken.** They serve wrong numbers silently — seven each,
+across the two mini tiers — which is the failure mode that matters.
+
+**The practical claim it supports** is narrower and more useful than the original thesis: *the
+cheaper the model you run, the more your documentation is doing.* A team on a mini-tier model for
+cost reasons is buying accuracy with table comments; a team on the flagship is not, on defects of
+this kind.
+
+**The honest caveat on the comparison.** Each model ran at its own floor — `minimal` for
+`gpt-5-mini`, `none` for the other two — because the ladders differ and neither is a prefix of the
+other. Reasoning depth is therefore not held exactly constant, only held at "cheapest available",
+which is what `agent/models.py` documents as the harness standard.
+
+### The second finding, which is larger
+
+`D_declared` and `E_enforced` reach the data through `query_metric` and are supposed to read the
+governed catalogue first. The context audit records when they did not:
+
+| | gpt-5-mini | gpt-5.4-mini | gpt-5.6-terra |
+|---|---|---|---|
+| governed rows that never called `list_metrics` | 7/30 | 8/30 | **13/30** |
+
+**The stronger the model, the more often it skips the semantic layer.** At the frontier, 43% of the
+governed rows answered without reading the catalogue at all.
+
+That is not a harness artefact — the audit records a tool that was available and not called. It has
+a direct consequence for this experiment: **`D_declared`'s score is increasingly not a measurement
+of the semantic layer**, because on a growing share of rows the layer was not consulted. Any
+comparison of column D against column B on a frontier model has to report this share, or it is
+reporting something else.
+
+It also suggests a study the matrix does not have: what makes an agent *use* a governed layer it has
+been given. That is a question about tool affordance rather than about data modelling, and it may
+matter more than any cell in the matrix.
+
+### Provenance
+
+| claim | source |
+|---|---|
+| gpt-5-mini column | `20260808-232437-01_entity` (pre-rename arm names, mapped in `study.yml`) |
+| gpt-5.4-mini column | `20260809-175723-01_entity` |
+| gpt-5.6-terra column | `20260809-180003-01_entity` |
+| catalogue-skip counts | the `context_audit` field of the `D_declared` and `E_enforced` rows |
