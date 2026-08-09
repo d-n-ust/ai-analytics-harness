@@ -1276,3 +1276,68 @@ counts, and moving the population out of the dimension list. The dropped filter 
 Nothing about the layer has moved it. On the evidence it is a property of the agent under load
 rather than of the modelling, which makes it the thing this study was built to measure and the one
 finding here that no modelling change has been able to remove.
+
+
+---
+
+## 24. The full set, every fix in: what replicates
+
+Run `20260810-002638`. Six arms, 23 items, three repetitions, with the decoded star, the requestable population, the marked
+catalogue, the checked primitives and the refused ambiguous period all in place.
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced |
+|---|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | 8/9 | 9/9 |
+| 1 | 15/15 | 15/15 | 13/15 | 15/15 | 14/15 | 15/15 |
+| 2 | 11/15 | 14/15 | 15/15 | 15/15 | 15/15 | 15/15 |
+| 3 | 7/15 | 13/15 | 15/15 | 14/15 | 13/15 | 10/15 |
+| 4 | 10/15 | 9/15 | 14/15 | 12/15 | 12/15 | 15/15 |
+| **total** | 52/69 | 60/69 | **66/69** | 65/69 | 62/69 | 64/69 |
+
+### Three things now replicate, and nothing in this study did before
+
+**1. `C_modelled` is the best arm, at exactly 66/69 in both runs since the star was decoded.** The
+ordering `C > C_doc > E > D > B > A` holds in both. **The undocumented conformed star beats the
+documented star, the semantic layer, and the layer with a guardrail.**
+
+**2. The load-4 split, and the negative half is identical three times running.**
+
+| A→B at load 4 | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| questions that **ask** for the documented fact | +22 pp | +44 pp | **+22 pp** |
+| questions that do **not** | −50 pp | −50 pp | **−50 pp** |
+
+Three independent runs, the same −50. **Documentation of a population costs half the deepest
+questions that do not need it**, and that is the most stable number this study has produced.
+
+**3. `E_enforced` has never once skipped the catalogue** — 0 of 69, three runs running, against
+`D_declared`'s 38 to 47. The provenance requirement is the only thing in this experiment that has
+ever made an agent use a governed layer.
+
+### What each arm's failures are made of
+
+| arm | failures | shape |
+|---|---|---|
+| C_modelled | 3 | two refusals on one item, one wrong number |
+| C_modelled_documented | 4 | three are `w4` — the population applied unasked |
+| E_enforced | 5 | **all five are dropped filters** |
+| D_declared | 6 | mixed; two are SQL-fallback over-application |
+| B_documented | 8 | mixed |
+| A_implicit | 17 | spread across nine items |
+
+**`E_enforced`'s failures are now entirely under-application** — `c3_grain` three times and
+`r3_grain` twice, each a filter the question asked for and the arm omitted. **`C_modelled_documented`'s
+are entirely over-application.** The two arms sit at opposite ends of the same axis, and both score
+within two points of each other.
+
+### The claim this set supports
+
+> A conformed model that carries its own meaning — decoded codes, resolved flags, named grain — beats
+> documenting a worse model, and beats putting a semantic layer over it. Documentation pays where
+> the question needs the documented fact and costs about as much again where it does not. A
+> provenance requirement is what makes an agent use a layer at all, and it trades over-application
+> for under-application rather than removing error.
+
+Every clause of that is measured here. **None of it is powered**: 23 items, 22 of 138 cells unstable
+at 16%, and six arms separated by one to three points at the top. The replication of `C_modelled` at
+66 and of the −50 across three runs is what the claim rests on, not any single cell.

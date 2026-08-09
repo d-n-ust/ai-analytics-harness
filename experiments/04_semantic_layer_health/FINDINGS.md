@@ -221,11 +221,13 @@ every item passing the primitive check.
 Eleven of the questions ask to exclude staff and test accounts; twelve do not. Splitting on that,
 and then by how many primitives the question forces:
 
-| load | question **asks** for the documented fact | question does **not** |
-|---|---|---|
-| 2 | +0 pp | +33 pp |
-| 3 | **+33 pp** | **−17 pp** |
-| 4 | **+22 pp** | **−50 pp** |
+| A→B at load 4 | run 1 | run 2 | run 3 |
+|---|---|---|---|
+| question **asks** for the documented fact | +22 pp | +44 pp | **+22 pp** |
+| question does **not** | −50 pp | −50 pp | **−50 pp** |
+
+Three independent runs, the same −50 each time. The middle rungs do not replicate; the deepest one
+does.
 
 **Both grow with depth, in opposite directions.** Read as one curve the gap is `+0, +13, +13, −7`,
 which is their average and looks like noise.
@@ -248,6 +250,35 @@ the item mix; three families ask and two do not.
 Cell sizes are two or three items and the mechanism is one filter (`is_internal`). Whether a
 documented grain or join rule over-applies the same way is untested and is the obvious next
 question.
+
+### 3.9 A model that carries its own meaning beats documenting a worse one
+
+Added 2026-08-10 from `00_primitive_load/FINDINGS.md` §24 — six arms, 23 items, three repetitions,
+after the star's codes were decoded into descriptive attributes.
+
+| arm | score |
+|---|---|
+| `C_modelled` — conformed star, **no comments** | **66/69** |
+| `C_modelled_documented` | 65/69 |
+| `E_enforced` — layer plus provenance check | 64/69 |
+| `D_declared` — layer | 62/69 |
+| `B_documented` — raw tables, documented | 60/69 |
+| `A_implicit` — raw tables | 52/69 |
+
+**The undocumented conformed star beats the documented star, the semantic layer, and the layer with
+a guardrail.** `C_modelled` scored exactly 66/69 in both runs since `dim_users` gained `country_name`
+and `user_type`, and the ordering held in both.
+
+The change that produced it is Kimball's oldest rule: a dimension attribute should be verbose and
+descriptive, so a code sits beside its label. Storing `DE` alone had pushed the decode onto every
+consumer, and three items failed on it in every earlier run. **Documenting the mapping in a comment
+was the weaker fix and could not reach the arm that reads no comments.**
+
+**Three findings now replicate across runs**, which nothing in that study did before: `C_modelled` at
+66, the load-4 documentation split (below), and `E_enforced` never once skipping the catalogue —
+0 of 69, three runs running, against `D_declared`'s 38 to 47.
+
+Not powered: 23 items, 16% of cells unstable, six arms separated by one to three points at the top.
 
 ### 3.7 Requiring provenance is what makes an agent use the layer
 
