@@ -1,0 +1,53 @@
+# The governed layer, reached through `query_metric` rather than SQL. The caller never sees a row,
+# so the grain cannot be misread — it is resolved inside the metric's aggregation.
+#
+# WHY THIS ARM PATCHES IN A METRIC. The shipped layer has `paying_users` — `count(distinct user_id)`
+# filtered to `is_active`, which is 371 people with a LIVE subscription — and nothing that counts
+# people who have EVER subscribed. Two ways to handle that, and only one is honest:
+#
+#   bend the question to what the layer stocks   asks about live subscriptions, where terms and
+#                                                people coincide at 371, so the trap disappears
+#   supply the metric that ought to exist        keeps the question and lets column D be measured
+#
+# Study 01 settled this precedent: `E_enforced` there refused two ordinary questions because the
+# layer had no metric for a reminder count or a habit count, and the fix was to add the metrics
+# rather than to score our own modelling gap as the treatment failing.
+#
+# The metric is added HERE rather than to semantic/semantic_layer.yml because that file is shared,
+# and every study that renders a catalogue would go stale for a metric only this row needs.
+level: structural
+claim: "a governed metric whose aggregation resolves the grain for the caller"
+rung: 3
+patch:
+  # ONE key, not nine. `_walk` refuses to create a parent that does not exist in the base layer —
+  # a patch may add a key, never conjure the thing it hangs off — so a new metric arrives whole.
+  # That guard is why `metrics.power_user.agg`, one letter short, cannot silently create a
+  # fifteenth metric and run clean.
+  metrics.ever_subscribed_users:
+    # WORDING CHOSEN AGAINST THE VOCABULARY AUDIT, not for readability. The first draft read
+    # "Distinct users who have ever had a paid subscription", which shares a SIX-TOKEN verbatim span
+    # with the question — the same confound that made study 02's headline unattributable, caught
+    # here by the mock run before any money was spent. This wording shares two.
+    #
+    # AND IT STATES NO GRAIN. "Counts people, not terms" would be B_documented's treatment smuggled
+    # into D, and the two arms would stop being separable. Column D's claim is that the aggregation
+    # resolves the grain SILENTLY, so the caller never faces the choice; saying it out loud as well
+    # would make D a superset of B rather than an alternative to it.
+    description: "Subscribers over the full history, live and lapsed."
+    entity: users
+    segment: all
+    unit: count
+    synonyms: ["lifetime subscribers", "all-time subscribers", "total subscribers"]
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+changes_candidate_count: true
+
+environment:
+  tables: star_schema
+  # NO `semantic:` KEY, deliberately. Naming a layer file replaces the study's base and is
+  # incompatible with a patch — the engine refuses both together. Omitting the key leaves the
+  # decision to the rung, and this arm's rung is 3, so it gets the study's base with the patch
+  # above applied. 01_entity's D names the file because it patches nothing.

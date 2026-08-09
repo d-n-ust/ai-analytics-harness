@@ -1,0 +1,21 @@
+# The shape states it: `fct_subscriptions` is called `fct_subscription_terms`.
+#
+# WHAT COLUMN C MEANS FOR GRAIN. Kimball's argument is that a conformed fact table is named for its
+# grain, so the name does the work a comment would otherwise do. This arm is that argument, run.
+# The rows, columns and types are byte-identical to A_implicit — both are views over the same
+# `_star` — and the descriptions are the same file with the table name changed. The NAME is the
+# entire treatment.
+#
+# THE PREDICTION, and it is the reason this arm is worth its cost. If C ~ B, then naming a table
+# for its grain substitutes for documenting it, and the practical advice is a rename rather than a
+# documentation project. If C ~ A, a name is not a definition — which is the same sentence study 02
+# had to write about `real_value_moments`, and finding it twice on different primitives would make
+# it a finding rather than an anecdote.
+level: structural
+claim: "the same star, with the fact table named for its grain"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_grain_modelled
+  docs: grain_absent_renamed

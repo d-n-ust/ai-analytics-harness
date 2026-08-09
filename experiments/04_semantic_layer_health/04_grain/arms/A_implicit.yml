@@ -1,0 +1,15 @@
+# The floor for this row, and NOT the floor for the experiment. Every table carries a description
+# saying what it holds. None says what one row stands for. That is the only fact removed.
+#
+# WHY THIS IS NOT AN UNDOCUMENTED ARM. Row 1 already measured documentation against no
+# documentation. Repeating that here would bundle grain with everything a comment can carry, and
+# the row would be unattributable in the same way study 02's is. So A and B share a docs file to
+# the line, and differ in one sentence per view.
+level: surface
+claim: "every table says what it holds; none says what one row is"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_schema
+  docs: grain_absent

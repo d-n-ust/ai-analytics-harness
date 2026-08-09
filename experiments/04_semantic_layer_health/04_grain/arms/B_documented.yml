@@ -1,0 +1,17 @@
+# The treatment: grain_absent.sql plus one sentence per fact table saying what one row is.
+#
+#   fct_subscriptions  'One row is one subscription TERM, not one subscriber: a user who cancels
+#                       and later resubscribes has several rows, so counting rows counts terms
+#                       rather than people.'
+#
+# STATED ON EVERY FACT TABLE, not only the one the question uses. A grain sentence on the single
+# trapped table would be documentation written to pass this test, and it would also tell the agent
+# which table matters. Stating it everywhere is what a team following the practice would do.
+level: surface
+claim: "the same tables, each also saying what one of its rows stands for"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_schema
+  docs: grain_stated

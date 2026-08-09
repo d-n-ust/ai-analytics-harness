@@ -1,0 +1,51 @@
+# D_declared plus R9 `trajectory_verify` — the judge asks whether what was measured is what was
+# asked for. Identical layer, identical warehouse, identical patch: the guardrail is the treatment.
+#
+# THE EXPECTATION IS LOW, AND STATING IT BEFOREHAND IS THE POINT. The judge compares the metric
+# used against the thing asked about. It can catch an agent that answered with `paying_users` when
+# the question said "ever". It cannot catch an agent that wrote correct SQL over the right table
+# and counted rows, because there is no metric in that trajectory to compare against — which is
+# exactly A_implicit's failure. So E should help D and do nothing for A, and a gap between E and A
+# would be a gap between R9 and R1 rather than a grain result.
+#
+# It is also an LLM, so part of any D-versus-E difference measures the judge. ../FINDINGS.md
+# records that refusal categorisation is unstable across identical runs.
+level: structural
+claim: "the same governed layer, plus a check that refuses when the thing measured is not the thing asked for"
+rung: 3
+patch:
+  # ONE key, not nine. `_walk` refuses to create a parent that does not exist in the base layer —
+  # a patch may add a key, never conjure the thing it hangs off — so a new metric arrives whole.
+  # That guard is why `metrics.power_user.agg`, one letter short, cannot silently create a
+  # fifteenth metric and run clean.
+  metrics.ever_subscribed_users:
+    # WORDING CHOSEN AGAINST THE VOCABULARY AUDIT, not for readability. The first draft read
+    # "Distinct users who have ever had a paid subscription", which shares a SIX-TOKEN verbatim span
+    # with the question — the same confound that made study 02's headline unattributable, caught
+    # here by the mock run before any money was spent. This wording shares two.
+    #
+    # AND IT STATES NO GRAIN. "Counts people, not terms" would be B_documented's treatment smuggled
+    # into D, and the two arms would stop being separable. Column D's claim is that the aggregation
+    # resolves the grain SILENTLY, so the caller never faces the choice; saying it out loud as well
+    # would make D a superset of B rather than an alternative to it.
+    description: "Subscribers over the full history, live and lapsed."
+    entity: users
+    segment: all
+    unit: count
+    synonyms: ["lifetime subscribers", "all-time subscribers", "total subscribers"]
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+changes_candidate_count: true
+
+agent:
+  guardrails: 9
+
+environment:
+  tables: star_schema
+  # NO `semantic:` KEY, deliberately. Naming a layer file replaces the study's base and is
+  # incompatible with a patch — the engine refuses both together. Omitting the key leaves the
+  # decision to the rung, and this arm's rung is 3, so it gets the study's base with the patch
+  # above applied. 01_entity's D names the file because it patches nothing.
