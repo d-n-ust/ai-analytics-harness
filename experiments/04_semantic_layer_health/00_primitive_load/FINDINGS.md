@@ -834,3 +834,73 @@ rows and wrote SQL on 10; E skipped it on none and wrote SQL on none.
 That is one arm, 23 rows, one model, one reps — a direction, not a rate. But it is a mechanism, it
 is cheap to test again, and it reframes the bypass finding: **the layer was not being ignored
 because it was unhelpful. It was being ignored because nothing required it.**
+
+
+---
+
+## 18. Families repaired, primitives checked, and the first internally comparable run
+
+### The repairs
+
+**Family w: `fitness` → `finance`.** `hab.cat` holds both `fitness` and `health`, and the arm read
+the word as a topic — `cat IN ('fitness','health','exercise') OR nm LIKE '%fitness%'` — answering
+774 against a gold of 390. `finance` has no near-synonym in the column.
+
+**Family c: `learning` → `mindfulness`, and the country vocabulary is now documented.** Three arms
+had filtered `ctry = 'Germany'` and returned 0, because the column holds ISO codes. Both docs files
+now carry the mapping:
+
+```
+Two-letter ISO country code … DE is Germany, FR France, GB the United Kingdom, …
+```
+
+That makes it a **documented fact the treated arms are told and `A_implicit` must find by inspecting
+values** — which is what a segment rung is when a population is named in business terms and stored
+as a code. The case declares it.
+
+**Both: the archive status is closed in the wording.** *"Counting archived ones as well"* / *"archived
+or not"*. Six wrong answers in the previous run were exactly that open reading.
+
+**`star_schema.sql`: a correction to §14.** §14 listed its comments as prescriptive and they are not
+— they describe what values mean rather than what to do with them. The only editorial phrase,
+*"never needs interpreting"*, is removed. **The `C_modelled_documented` over-application is therefore
+not explained**, and the likelier cause is salience: `is_internal` is the one column comment naming a
+filterable business concept. That is a hypothesis, not a finding.
+
+### `primitives:` is now checked
+
+It was declared on every item and read by nothing — no validation, no reporting. That is how both
+families shipped a rung labelled load 2 that needed a third, undeclared primitive.
+
+`_validate_primitives` refuses a study whose case declares a primitive its own gold SQL shows no
+sign of. It is deliberately crude: a primitive is present if the gold shows the *shape* that
+primitive takes in this warehouse — `count(distinct` for grain, a subquery or join for join_path, a
+user attribute for segment.
+
+**It cannot prove a question needs a primitive** — that is a judgement about English, and it is what
+the trace audit is for. It proves the gold exercises what the label claims, which catches the
+mislabelled rung and the copy-paste, and it is the check that would have caught w and c before the
+run rather than after it.
+
+### The run: six arms, 23 items, reps=1
+
+The first run in which every arm is in its current state. The previous five-arm table stitched two
+runs together, with A/B/C/C_doc predating the MetricFlow migration.
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_doc | D_declared | E_enforced | A→B |
+|---|---|---|---|---|---|---|---|
+| 0 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | +0 |
+| 1 | 5/5 | 5/5 | 5/5 | 5/5 | 5/5 | 5/5 | +0 |
+| 2 | 4/5 | 5/5 | 3/5 | 5/5 | 4/5 | 5/5 | **+20** |
+| 3 | 3/5 | 4/5 | 4/5 | 3/5 | 2/5 | 4/5 | **+20** |
+| 4 | 4/5 | 4/5 | 5/5 | 4/5 | 4/5 | 5/5 | +0 |
+| **total** | 19/23 | 21/23 | 20/23 | 20/23 | 18/23 | **22/23** | |
+
+**`E_enforced` is the best arm at 22/23, with zero catalogue skips against `D_declared`'s ten.** That
+is the §17 result reproduced on a repaired item set: requiring provenance makes the agent use the
+layer, and here it also scored highest.
+
+**The load curve is still not established.** 0, 0, +20, +20, 0 is a fourth shape. At reps=1 each cell
+is five observations and a single item moves a rung by 20 points, so this run is a check that the
+instrument is sound, not a measurement of the effect. **The next thing this study needs is reps=3 on
+this exact set** — the first run that could carry a number.

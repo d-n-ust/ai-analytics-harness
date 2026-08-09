@@ -20,8 +20,8 @@
 #     h  habits still tracked            6,357   6,147   2,321     382       3.3%
 #     a  habits archived                 1,110   1,074     868     125       3.2%
 #     r  activated referrals               266     254     236      36       4.5%
-#     w  fitness habits · web platform   1,235     390     307      51      21%
-#     c  learning habits · Germany       1,249     217     179      39      18%
+#     w  finance habits · web platform   1,236     374     306      49      18%
+#     c  mindfulness habits · Germany    1,267     221     171      34      23%
 #
 # WHY THE TWO NEW FAMILIES STEP SO MUCH HARDER. Families h, a and r segment on staff-and-test
 # accounts, which is 3.4% of users — so their segment rung barely moves the number, and the measured
@@ -201,44 +201,44 @@ cases:
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'fitness'"
+      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'finance'"
       tolerance: 0.02
-    question: "How many habits are in the fitness category?"
+    question: "Counting archived ones as well, how many habits are in the finance category?"
     note: >-
-      True 1,235. `hab.cat` carries readable category names, so the entity rung is easy by design and the family's difficulty lives in the rung above.
+      True 1,236. `hab.cat` carries readable category names, so the entity rung is easy by design. CATEGORY CHANGED FROM `fitness` TO `finance` after run 20260809-212756: `hab.cat` holds both `fitness` and `health`, and the arm read "fitness" as a topic — `cat IN ('fitness','health','exercise') OR nm LIKE '%fitness%'` — answering 774 against a gold of 390. `finance` has no near-synonym in the column. The wording also now closes the archive status, which the first version left open.
   - id: pl_w2_segment
     tier: primitive_load
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'web'"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web'"
       tolerance: 0.02
-    question: "How many fitness habits belong to people using the web platform?"
+    question: "Counting archived ones as well, how many finance habits belong to people using the web platform?"
     note: >-
-      True 390. THE SEGMENT IS AN ENUM RECORDED IN NINE SPELLINGS: web, Web and WEB are one platform, and 72 rows are NULL. An arm matching a single spelling returns 114 — 3.42x from the gold. This is the strongest segment rung in the set; the staff-exclusion families step only 3.2% here, because internal accounts are 3.4% of users, and that is a property of the data rather than of the questions.
+      True 374. THE SEGMENT IS AN ENUM RECORDED IN NINE SPELLINGS: web, Web and WEB are one platform, and 72 rows are NULL. An arm matching a single spelling returns 96 — 3.90x from the gold. This is the strongest segment rung in the set; the staff-exclusion families step only 3.2% here, because internal accounts are 3.4% of users, and that is a property of the data rather than of the questions.
   - id: pl_w3_grain
     tier: primitive_load
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'web'"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web'"
       tolerance: 0.02
-    question: "How many people using the web platform have at least one fitness habit?"
+    question: "How many people using the web platform have at least one finance habit, archived or not?"
     note: >-
-      True 307. Counting habits rather than people returns 390.
+      True 306. Counting habits rather than people returns 374.
   - id: pl_w4_join_path
     tier: primitive_load
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'web' AND h.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "How many people using the web platform who have ever had a paid subscription have at least one fitness habit?"
+    question: "How many people using the web platform who have ever had a paid subscription have at least one finance habit, archived or not?"
     note: >-
-      True 51. Dropping the subscription condition gives 307.
+      True 49. Dropping the subscription condition gives 306.
 
   # ══ family c · learning habits in Germany ══
   - id: pl_c1_entity
@@ -247,44 +247,48 @@ cases:
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'learning'"
+      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'mindfulness'"
       tolerance: 0.02
-    question: "How many habits are in the learning category?"
+    question: "Counting archived ones as well, how many habits are in the mindfulness category?"
     note: >-
-      True 1,249. A second readable-category entity rung, on a different category from w1 so the two families share no question.
+      True 1,267. A second readable-category entity rung, on a different category from w1 so the two families share no question. CHANGED FROM `learning` TO `mindfulness` alongside w's change, and the archive status is closed in the wording.
   - id: pl_c2_segment
     tier: primitive_load
     primitives: [entity, segment]
+    # `segment` here includes resolving Germany to DE. The country-code vocabulary is documented in
+    # warehouse/docs/*.sql, so the documented arms are told and the implicit arm must discover it by
+    # inspecting values — which is what a segment rung IS when the population is named in business
+    # terms and stored as a code.
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'learning' AND upper(u.ctry) = 'DE'"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE'"
       tolerance: 0.02
-    question: "How many learning habits belong to people in Germany?"
+    question: "Counting archived ones as well, how many mindfulness habits belong to people in Germany?"
     note: >-
-      True 217. The same casing defect in a second column — DE and de are one country. An arm matching a single spelling returns 198, 1.10x from the gold: weaker than w2's 3.42x and still well outside the 2% tolerance.
+      True 221. TWO THINGS AT ONCE, and the first was undeclared until run 20260809-212756 exposed it. The question names a country and the column holds an ISO code: three arms filtered `ctry = 'Germany'` and returned 0. That mapping is now DOCUMENTED — warehouse/docs/messy_load.sql and star_schema.sql both list DE = Germany — so it is a fact the documented arms are told and the implicit arm must find by inspecting values, which is what a segment rung is when a population is named in business terms and stored as a code. The casing defect is the second: DE and de are one country.
   - id: pl_c3_grain
     tier: primitive_load
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'learning' AND upper(u.ctry) = 'DE'"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE'"
       tolerance: 0.02
-    question: "How many people in Germany have at least one learning habit?"
+    question: "How many people in Germany have at least one mindfulness habit, archived or not?"
     note: >-
-      True 179. Counting habits rather than people returns 217.
+      True 171. Counting habits rather than people returns 221.
   - id: pl_c4_join_path
     tier: primitive_load
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'learning' AND upper(u.ctry) = 'DE' AND h.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "How many people in Germany who have ever had a paid subscription have at least one learning habit?"
+    question: "How many people in Germany who have ever had a paid subscription have at least one mindfulness habit, archived or not?"
     note: >-
-      True 39. Dropping the subscription condition gives 179.
+      True 34. Dropping the subscription condition gives 171.
 
   # ══ controls · load 0 ══
   - id: pl_c1_accounts

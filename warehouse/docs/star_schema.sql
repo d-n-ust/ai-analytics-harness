@@ -17,11 +17,11 @@
 
 -- --------------------------------------------------------------------------------- dimensions
 COMMENT ON VIEW dim_users IS 'One row per registered user.';
-COMMENT ON COLUMN dim_users.is_internal IS 'True for staff and test accounts, false for real users. Resolves the raw flag and the email rule together, so it is never NULL and never needs interpreting.';
+COMMENT ON COLUMN dim_users.is_internal IS 'True for staff and test accounts, false for real users. Resolves the raw flag and the email rule together, so it is never NULL.';
 COMMENT ON COLUMN dim_users.signup_date IS 'The date the account was created.';
 COMMENT ON COLUMN dim_users.channel IS 'Acquisition channel, normalised to one of: paid_search, organic, content_seo, partnerships, referral.';
 COMMENT ON COLUMN dim_users.region IS 'Region the country rolls up to: APAC, Americas, EMEA.';
-COMMENT ON COLUMN dim_users.country IS 'Two-letter country code.';
+COMMENT ON COLUMN dim_users.country IS 'Two-letter ISO country code, normalised to upper case. DE is Germany, FR France, GB the United Kingdom, US the United States, BR Brazil, IN India, ID Indonesia, PH the Philippines.';
 COMMENT ON COLUMN dim_users.platform IS 'Platform, normalised to one of: ios, android, web, unknown.';
 
 COMMENT ON VIEW dim_habits IS 'One row per habit a user created.';

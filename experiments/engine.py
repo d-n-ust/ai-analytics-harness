@@ -388,6 +388,20 @@ NO_ARM = ("CONSTANT", "ABSENT", "OPEN", "MEASURED_ELSEWHERE")
 # prevent. When it was finally built it produced the study's clearest result.
 VARIANTS = {"C_modelled": ("C_modelled_documented",)}
 
+# WHAT A DECLARED PRIMITIVE MUST BE VISIBLE AS IN THE GOLD SQL. A case that says
+# `primitives: [entity, segment, grain]` is claiming its answer forces three resolutions; nothing
+# checked that claim, and two families shipped a rung labelled load 2 that needed three.
+#
+# The check is deliberately crude — a primitive is present if its gold SQL shows the SHAPE that
+# primitive takes in this warehouse. It cannot prove a question needs a primitive; it can prove the
+# gold does not exercise one the case claims, which is the direction the failures went.
+PRIMITIVE_MARKS = {
+    "entity":    (" = '", "etype", "is_archived", "arch is", "status", " st ="),
+    "segment":   ("internal", "email", "plat", "ctry", "country", "platform", "region", "channel"),
+    "grain":     ("count(distinct",),
+    "join_path": (" in (select", " join ", " exists ("),
+}
+
 # Every key a study.yml may carry. Here rather than inline in `Study.load` because a test used to
 # restate the set to assert the loader would accept the file, and a second copy of a rule is a rule
 # that can disagree with itself — it did, the first time a key was added.
@@ -403,6 +417,38 @@ def _column_letter(arm: str) -> str | None:
     letter, _, rest = arm.partition("_")
     base = COLUMNS.get(letter)
     return letter if base and (rest == base or rest.startswith(base + "_")) else None
+
+
+def _validate_primitives(name: str, cases: list) -> None:
+    """Every case's declared requirement profile must be visible in its own gold SQL.
+
+    WHY. `primitives:` was declared on every item in 00_primitive_load and read by nothing — no
+    validation, no reporting. Two families then shipped with a rung labelled `[entity, segment]`
+    that actually needed a third, undeclared primitive: one asked for a country by name against a
+    column of ISO codes, the other used a category name with a near-synonym in the same column.
+    Both were found by reading traces after a paid run. A ladder whose design is "rung N forces N
+    primitives" has to check that any rung does.
+
+    WHAT IT CANNOT DO. It cannot prove a question REQUIRES a primitive — that is a judgement about
+    English. It proves the gold SQL exercises the ones claimed, which catches the mislabelled rung
+    and the copy-paste, and leaves the harder direction to the trace audit."""
+    problems = []
+    for case in cases:
+        declared = case.get("primitives")
+        if declared is None:
+            continue
+        sql = ((case.get("expect") or {}).get("gold_sql") or "").lower()
+        if not sql:
+            continue
+        missing = [p for p in declared
+                   if p in PRIMITIVE_MARKS and not any(m in sql for m in PRIMITIVE_MARKS[p])]
+        if missing:
+            problems.append(f"{case['id']}: declares {missing} but its gold SQL shows no sign of "
+                            f"them — either the label is wrong or the gold does not test what the "
+                            f"question claims")
+    if problems:
+        raise ValueError(f"{name}/cases.yml: declared primitives do not match the gold SQL:\n  "
+                         + "\n  ".join(problems))
 
 
 def _validate_columns(name: str, spec: dict, arms: dict) -> None:
@@ -534,6 +580,9 @@ class Study:
         # free to drift from the first and silently move every published rate.
         marker = yaml.safe_load((d / "cases.yml").read_text()) or {} if (d / "cases.yml").exists() else {}
         cases = load_questions() if marker.get("use_frozen_cases") else load_questions(d)
+        # After the cases are loaded, because it reads their gold SQL. A study using the frozen set
+        # declares no primitives and is skipped item by item.
+        _validate_primitives(name, cases)
         # For a metricflow study this is a DIRECTORY of YAML, so it is resolved but not read here.
         base = ROOT / spec["base"] if spec.get("base") else SPEC_PATH
         return cls(name=name, title=spec.get("title", name), rung=spec.get("rung", 3),

@@ -50,7 +50,7 @@ COMMENT ON VIEW u IS 'One row per registered user account.';
 COMMENT ON COLUMN u.internal IS 'Staff/test account flag. 1 = internal, 0 = real, NULL = unknown, and 271 rows are NULL. Of those NULL rows, the ones whose email ends @internal-test.com are internal accounts; the rest are ordinary users.';
 COMMENT ON COLUMN u.chan IS 'Acquisition channel.';
 -- THE FOURTH ADDITION, and the same defect in a second column.
-COMMENT ON COLUMN u.ctry IS 'Two-letter country code, recorded inconsistently by case: DE and de are the same country. Match case-insensitively.';
+COMMENT ON COLUMN u.ctry IS 'Two-letter ISO country code, recorded inconsistently by case: DE and de are the same country. DE is Germany, FR France, GB the United Kingdom, US the United States, BR Brazil, IN India, ID Indonesia, PH the Philippines.';
 -- THE THIRD ADDITION. `Platform.` named the column and said nothing a reader did not already
 -- know. The values are three platforms recorded in nine spellings, and an arm that matches one
 -- spelling gets a third of the rows.
