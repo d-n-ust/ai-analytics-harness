@@ -1227,3 +1227,52 @@ noisier here and the arm ordering above is separated by one to three points acro
 **`A_implicit` fell to 8/15 at load 2** while every other arm scored 15/15. Its failures are the
 same over-application and ISO problems as before, which the star fixes and the raw tables do not —
 so the A-to-everything gap is now partly a measurement of the star rather than of documentation.
+
+
+---
+
+## 23. After the period fix: D at 22/23, and the two arms fail in opposite directions
+
+Run `20260810-001726`. D and E re-run at reps=1 with the ambiguous-period call now refused.
+
+| load | D_declared | E_enforced |
+|---|---|---|
+| 0 — controls | **3/3** | 3/3 |
+| 1 | 5/5 | 5/5 |
+| 2 | 5/5 | 5/5 |
+| 3 | **5/5** | 3/5 |
+| 4 | 4/5 | 4/5 |
+| **total** | **22/23** | 20/23 |
+
+**The three control failures are gone**, which is what §22 predicted: they were the layer discarding
+an explicit window in favour of `period="all"`, not the model. `D_declared` at 22/23 is the highest
+single-arm score in this study.
+
+### The two arms now fail in opposite directions, and the split is exact
+
+| arm | catalogue skips | failure | cause |
+|---|---|---|---|
+| D_declared | **16 of 23** | `pl_w4_join_path` 49 → 47 | SQL fallback, `NOT is_internal` applied unasked |
+| E_enforced | **0 of 23** | `pl_r3_grain` 236 → 246 | no filter at all |
+| | | `pl_c3_grain` 171 → 412 | `habit__category` dropped |
+| | | `pl_c4_join_path` 34 → 82 | `habit__category` dropped |
+
+**`D_declared` over-applies; `E_enforced` under-applies.** Every D failure is a filter added that
+nobody asked for, reached through raw SQL. Every E failure is a filter the question did ask for and
+the arm omitted, reached through the governed path.
+
+That is the same trade seen from a new angle. The provenance requirement keeps E on the governed
+path — zero skips against D's sixteen — and the governed path is where filters get dropped, because
+a `query_metric` call with a missing filter still returns a clean number. SQL that over-filters
+returns a clean number too. **Neither route makes the mistake visible; they just make different
+mistakes.**
+
+### The category drop is now the dominant remaining failure
+
+Two of E's three. It has survived grouping the catalogue by entity, marking which entity the metric
+counts, and moving the population out of the dimension list. The dropped filter is always
+`habit__category` — the metric's own — and never the joined `user__` one.
+
+Nothing about the layer has moved it. On the evidence it is a property of the agent under load
+rather than of the modelling, which makes it the thing this study was built to measure and the one
+finding here that no modelling change has been able to remove.
