@@ -1,0 +1,33 @@
+# The star, described. `C_modelled` with the same COMMENT ON layer that `B_documented` gives the raw
+# tables — warehouse/docs/star_schema.sql, the same mechanism and the same file 01_entity uses.
+#
+# WHAT THIS ARM ASKS, and it is the second half of a 2x2 the load study was missing. A vs B asks
+# whether describing MESSY tables helps. C vs this asks whether describing WELL-MODELLED ones still
+# does. Documentation is not a rung — it is a property any shape can have — so the ladder has to
+# carry it twice or the C column is only ever measured undocumented.
+#
+# THE PREDICTION, and it is the sharpest one available here. The star already resolves every
+# primitive this ladder uses, structurally rather than in prose:
+#
+#     dim_habits.is_archived   (arch IS NOT NULL) — the NULL rule computed once
+#     dim_users.is_internal    the flag and the email rule resolved together, never NULL
+#     dim_users.platform       lower() + CASE — nine spellings collapsed to four values
+#     dim_users.country        upper(ctry) — DE and de collapsed
+#
+# So the facts a comment would state are already true of the shape, and C_modelled scored 63/69 —
+# the best arm in the study. If this arm matches it, conformed modelling SUBSTITUTES for
+# documentation and the remaining six failures are something else; if it beats it, describing a
+# well-named star still pays and we can say by how much.
+#
+# EITHER RESULT IS USEFUL, WHICH IS WHY THE ARM IS WORTH ITS COST. A null here is the strongest
+# argument this experiment can make for spending the days rather than the afternoon, and a gain is
+# the strongest argument for doing both.
+level: structural
+claim: "the same conformed star, with table and column comments"
+rung: 2
+patch: {}
+
+environment:
+  tables: star_schema
+  docs: star_schema        # the same COMMENT ON mechanism B_documented uses on the raw tables
+  semantic: null           # no governed layer — the star, described, and nothing above it

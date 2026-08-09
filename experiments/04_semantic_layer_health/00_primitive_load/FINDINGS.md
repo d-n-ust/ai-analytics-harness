@@ -399,6 +399,58 @@ whole set carries it.
 | claim | source |
 |---|---|
 | per-load and per-family tables | `20260809-210443-00_primitive_load` (gpt-5-mini, reps=3) |
+| §13 five-arm run | `20260809-212756-00_primitive_load` |
 | the prescriptive-comment collapse | `20260809-205533` (before the reword) against `20260809-205839` (after) |
 | the 174 and 2,065 values | reproduced against the warehouse as gold-plus-staff-excluded and `internal = 0` |
 | reps=1 preserves the shape on a fixed item set | `20260809-204*` at reps=1 against `20260809-203751` at reps=3, same 15 items |
+
+
+---
+
+## 13. The documented star: the fifth arm, and the null it was built to produce
+
+`C_modelled_documented` added — the same conformed star as `C_modelled`, carrying
+`warehouse/docs/star_schema.sql`. It was missing and nothing in `study.yml` said why; the arm exists
+in `../01_entity` and its absence here was an oversight rather than a decision.
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_documented | D_declared |
+|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | 8/9 |
+| 1 | 15/15 | 13/15 | 15/15 | 15/15 | 9/15 |
+| 2 | 8/15 | 14/15 | 12/15 | 11/15 | 10/15 |
+| 3 | 9/15 | 10/15 | 12/15 | 9/15 | 10/15 |
+| 4 | 9/15 | 9/15 | 12/15 | 12/15 | 7/15 |
+| **total** | 50/69 | 55/69 | **60/69** | 56/69 | 44/69 |
+
+**Describing the star bought nothing: 60/69 against 56/69.** The four-point difference is inside the
+run-to-run drift — `C_modelled` scored 63/69 on the previous run of the identical arm — so the two
+are indistinguishable, and 26 of 115 cells disagree with themselves.
+
+**That null is the arm's purpose.** The star already resolves every primitive this ladder uses,
+structurally rather than in prose:
+
+| the fact | where the star puts it |
+|---|---|
+| a NULL archive date means still tracked | `dim_habits.is_archived` — computed once |
+| the staff flag plus the email rule | `dim_users.is_internal` — resolved, never NULL |
+| nine platform spellings are three platforms | `dim_users.platform` — `lower()` and a CASE |
+| `DE` and `de` are one country | `dim_users.country` — `upper()` |
+
+So the sentences a comment would add are already true of the shape, and adding them changed nothing.
+**Conformed modelling substitutes for documentation; the reverse does not hold** — `B_documented` at
+55/69 does not reach `C_modelled` at 60/69.
+
+That is the 2×2 `../01_entity` runs, reproduced on a different question set:
+
+| | undocumented | documented | what it says |
+|---|---|---|---|
+| messy tables | 50/69 | 55/69 | describing messy tables helps |
+| conformed star | **60/69** | 56/69 | describing a star does not |
+
+`../01_entity` found the same and called it inconclusive at five questions. At twenty-three it points
+the same way, and it is the strongest argument this experiment has for spending the days rather than
+the afternoon.
+
+**The caveat that matters:** the star normalises exactly the four primitives this ladder tests. A
+ladder built on facts the star does *not* encode — a business rule, a coverage window, a causal
+caveat — would not reproduce this, and the comparison would go the other way.
