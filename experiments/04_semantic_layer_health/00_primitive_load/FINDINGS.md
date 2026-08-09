@@ -9,7 +9,11 @@ Three runs. The first two were instrument, the third is the result.
 | `20260809-202056` | gpt-5-mini | 55/60 | **the readable run** |
 | `20260809-202236` | gpt-5.6-terra | **60/60** | **the readable run, one tier up** |
 
-**READ §11 FIRST — IT SUPERSEDES §9.** The load curve appeared on three families and did not
+**READ §14 FIRST.** It is the trace analysis of the latest run, and it finds five defects — two of
+which void the two families added in §11, and one of which reverses §13. Every section below it was
+written before those defects were known.
+
+**Then §11, which supersedes §9.** The load curve appeared on three families and did not
 reproduce when two more were added. What did survive the expansion is two findings about how
 documentation is written, both in §11, and neither of which the study set out to look for.
 
@@ -454,3 +458,124 @@ the afternoon.
 **The caveat that matters:** the star normalises exactly the four primitives this ladder tests. A
 ladder built on facts the star does *not* encode — a business rule, a coverage window, a causal
 caveat — would not reproduce this, and the comparison would go the other way.
+
+
+---
+
+## 14. Trace analysis: five defects, two of which invalidate two families
+
+Every one of the 345 rows of `20260809-212756` was read — outcomes, tool errors, and each wrong
+value matched against readings computed from the warehouse rather than guessed at. The run has
+**25 failed tool calls, 6 non-answers, and 74 wrong answers**, and most of the wrong answers are
+explained by five defects. Two of them are in the questions and invalidate the two families added in
+§11.
+
+### Defect 1 — family c asks for a country by name and the data holds ISO codes
+
+`pl_c2_segment` returned **0** in `A_implicit`, `C_modelled` and `D_declared`, three repetitions
+each. The reason is not subtle:
+
+```
+rows where ctry = 'Germany'   0
+rows where ctry = 'DE'      364
+rows where upper(ctry)='DE' 412
+```
+
+The question says *"people in Germany"*; the column holds `DE`. `C_modelled` refused and said so
+outright: *"You asked for users 'in Germany' but the country dimension uses ISO codes."*
+
+**So this rung tests country-code mapping, not the enum-casing defect it was built for** — a third
+primitive smuggled in, documented nowhere, and not the one the item declares. The family is void.
+
+### Defect 2 — family w's category name has a semantic neighbour in its own column
+
+`A_implicit` answered **774** where the gold is 390. The trace:
+
+```sql
+WHERE lower(cat) IN ('fitness','health','exercise') OR lower(nm) LIKE '%fitness%'
+```
+
+`hab.cat` contains both `fitness` and `health`. Asked for *"habits in the fitness category"*, the
+agent read "fitness" as a topic rather than as a category value and swept in the neighbour. That is
+a defensible reading of an English sentence, and it means the item measures whether the agent
+guesses our category taxonomy. The family is void.
+
+### Defect 3 — both new families leave the archive status open
+
+*"How many habits are in the fitness category?"* does not say whether archived habits count. The
+gold includes them. Six wrong answers across the run are exactly the not-archived reading, and one
+arm asked about it rather than guessing:
+
+> *Do you want (1) count of all habits in category "learning" including archived, or (2) count of
+> active (not archived) habits…*
+
+Families h and a do not have this problem because their questions are *about* the archive status.
+The two new families inherited it by using a different entity rung and not closing it.
+
+### Defect 4 — the star's own documentation causes over-application, and it hit the new arm hardest
+
+§11 recorded this for the raw-table comments and reworded them. **It is also true of
+`warehouse/docs/star_schema.sql`, which was not reworded**, and `C_modelled_documented` is where it
+shows:
+
+| arm | wrong answers that are "gold + staff excluded" |
+|---|---|
+| C_modelled_documented | **7** |
+| C_modelled | 1 |
+| B_documented | 2 |
+
+`dim_users.is_internal` is described as *"True for staff and test accounts, false for real users"* —
+and the arm applies it to questions that never mention staff. **The documented star is the arm most
+harmed by its own documentation**, which is why it scored 56/69 against `C_modelled`'s 60/69 in §13.
+
+### Defect 5 — the semantic layer cannot express these questions
+
+All 25 failed `query_metric` calls are `D_declared`, and they are not model errors:
+
+```
+cannot filter 'active_habits' by 'is_internal'.  Allowed: ['category']       6x
+cannot group  'active_habits' by 'user_id'.      Dimensions: ['category']    3x
+cannot filter 'paying_users'  by 'country'.      Allowed: ['plan']           3x
+metric 'active_habits' is point-in-time; it takes no period.                 3x
+```
+
+`active_habits` carries **one** dimension. Every segment rung in this study is therefore
+unreachable through the layer, and `D_declared` must abandon it and write SQL. **Its 44/69 measures
+our layer's dimension coverage, not the declared column.** This is the same finding as the
+catalogue-skip counts, seen from the other side.
+
+### The sound subset, and it is post-hoc
+
+Removing the two void families leaves families h, a and r plus the three controls — 45 rows per arm:
+
+| load | A_implicit | B_documented | C_modelled | C_modelled_documented | D_declared | A→B |
+|---|---|---|---|---|---|---|
+| 0 | 9/9 | 9/9 | 9/9 | 9/9 | 8/9 | +0 pp |
+| 1 | 9/9 | 9/9 | 9/9 | 9/9 | 4/9 | +0 pp |
+| 2 | 6/9 | 9/9 | 9/9 | 9/9 | 8/9 | **+33 pp** |
+| 3 | 6/9 | 9/9 | 9/9 | 9/9 | 9/9 | **+33 pp** |
+| 4 | 4/9 | 6/9 | 7/9 | 9/9 | 5/9 | **+22 pp** |
+| **total** | 34/45 | 42/45 | 43/45 | **45/45** | 34/45 | |
+
+`A_implicit` degrades monotonically — 9, 9, 6, 6, 4 — and `B_documented` holds at 9 until load 4.
+**The gap is zero at loads 0 and 1 and about 30 points from load 2 up.** That is a step rather than
+§9's accelerating curve, and it is the third different shape this study has produced.
+
+**THIS IS A POST-HOC SUBSET AND MUST BE LABELLED ONE.** Families were removed after the run. The
+exclusions rest on named, reproducible defects in the items — a country name against ISO codes, a
+category name colliding with its neighbour — and not on their scores, but a subset chosen after
+seeing results cannot carry a headline. It sets up the next run; it does not conclude this one.
+
+**It also reverses §13.** On the sound subset `C_modelled_documented` is **45/45**, above
+`C_modelled`'s 43/45. The "describing the star bought nothing" reading came from the two void
+families, where that arm was the one most damaged by the star's prescriptive comments.
+
+### What has to happen before this study runs again
+
+| defect | fix |
+|---|---|
+| family c asks for a country by name | use the ISO code, or drop the family |
+| family w's category has a neighbour | pick a category with no semantic twin, or name the column value |
+| archive status open in both | state it, as families h and a do by construction |
+| `star_schema.sql` comments are prescriptive | reword descriptively, as `messy_load.sql` already was |
+| `active_habits` has one dimension | either give the layer the dimensions the questions need, or stop reading D as a measurement of the declared column |
