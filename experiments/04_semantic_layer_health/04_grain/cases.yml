@@ -58,19 +58,68 @@
 
 cases:
 
+  # --- THE GRAIN ITEM: the noun does not tell you the denominator --------------------------- #
+  - id: g_grain_billed_per_subscriber
+    tier: grain
+    question: "Including our own internal and test accounts, what is the average total amount we have billed each subscriber across our whole history?"
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT sum(billed_amount) / count(DISTINCT user_id) FROM fct_subscriptions"
+      tolerance: 0.02
+    note: >-
+      True $34.92. The easy wrong answer is $31.56 — `avg(billed_amount)`, a correct average of the
+      wrong thing, because one row is one TERM and 43 users hold several. "Per subscriber" does not
+      say what the denominator is, so unlike the item this replaced, the aggregation cannot be read
+      off the question's noun. An agent that believes one row is one subscriber writes `avg` and
+      believes it has answered per subscriber.
+
+      WORDING, AND WHAT EACH PHRASE IS DEFENDING AGAINST. "Average TOTAL amount billed each
+      subscriber" blocks the reading that divides annual plans by twelve: `billed_amount` covers a
+      plan's own period, and a monthly-normalised answer is $8.00 — a 4x miss on an ambiguity
+      rather than on the grain. "Including our own internal and test accounts" holds the segment
+      primitive constant, exactly as it did in the item this replaces. Excluding refunded terms
+      gives $34.41, inside the 2% tolerance, so that reading cannot cost a correct answer.
+
+  # --- THE PAIR-MATE: here the row count IS the answer -------------------------------------- #
+  - id: g_grain_subscriptions_started
+    tier: grain
+    question: "Including our own internal and test accounts, and counting live, cancelled and refunded ones alike, how many subscriptions have been started with us in total?"
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM fct_subscriptions"
+      tolerance: 0.02
+    note: >-
+      True 457. The wrong answer is 413 — one row per user rather than per term.
+
+      THIS ITEM EXISTS BECAUSE OF WHAT RUN 20260809-163522 SHOWED: nine of nine SQL attempts wrote
+      `count(distinct user_id)` as their first query, because the question said "how many users".
+      Here that habit is wrong. An arm that answers this AND `g_grain_ever_subscribed` has
+      distinguished people from rows; an arm that answers one of the two has a habit that happened
+      to match.
+
+      It is a habit trap rather than a grain item on its own — "how many subscriptions" does name
+      the row, so the noun points at `count(*)`. Its value is as the mirror of its pair-mate, and
+      it is labelled that way rather than counted as a second grain measurement.
+
+      "Counting live, cancelled and refunded ones alike" is not padding. Without it, "sold"
+      or "started" defensibly excludes the 10 refunded terms, and 447 is 2.2% from the gold — just
+      outside tolerance, so a correct reading would grade wrong. Three items were lost to exactly
+      this in study 01.
+
+  # --- THE MIRROR, kept from the first run: the row count is NOT the answer ------------------ #
   - id: g_grain_ever_subscribed
     tier: grain
     question: "Including our own internal and test accounts, how many users have ever had a paid subscription with us?"
     expect:
       type: metric_answer
-      # The shipped layer counts people with a LIVE subscription (`paying_users`, 371) and nobody
-      # who has ever had one. Graded on the number; D_declared supplies the missing metric.
       no_governed_metric: true
       gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions"
       tolerance: 0.02
     note: >-
-      True 413. The easy wrong answer is 457 — every row of a table whose rows are subscription
-      terms — reached by correct SQL over a table the agent was handed, with nothing to signal the
-      error. 43 users hold more than one term. A_implicit is told what the table holds and not what
-      one row is; B_documented is told; C_modelled is told by the table's name; D_declared reaches
-      it through a metric whose aggregation resolves the grain for the caller.
+      True 413; the row count gives 457. Every arm answered this 3/3 in run 20260809-163522,
+      including the arm told nothing about grain, because "how many users" hands over the
+      aggregation. Kept anyway — NOT as a grain measurement, but as the mirror of
+      `g_grain_subscriptions_started`. Alone it discriminates nothing; paired, the two separate
+      understanding from habit, which is the only thing the first run left uncertain.

@@ -1,7 +1,21 @@
-# Study 04 — the first grain item, and why it is being replaced
+# Study 04 — two runs, two dead items, and where the grain trap actually lives
 
-Run `20260809-163522-04_grain`: one question, five arms, three repetitions, `gpt-5-mini` at
-`reasoning=minimal`, R1.
+Two runs of one question apiece plus a mirror pair, five arms, three repetitions, `gpt-5-mini` at
+`reasoning=minimal`, R1. **Row 4 of the primitives matrix is still empty and this is why.**
+
+| run | items | outcome |
+|---|---|---|
+| `20260809-163522` | 1 | every arm 3/3 — the noun handed over the aggregation |
+| `20260809-172908` | 3 | one item discriminated, for a reason that is not grain |
+
+Neither run fills a cell. Both narrowed where the next item must come from, and §6 says where.
+Sections 1 to 5 cover the first run; section 6 covers the second.
+
+---
+
+## Run one
+
+Run `20260809-163522-04_grain`: one question, five arms, three repetitions.
 
 **The item is dead. Every arm answered correctly on every repetition, including the arm that was
 told nothing.** The traces say why, and the reason is worth more than the run cost.
@@ -120,6 +134,77 @@ a database error surfaced to the agent rather than a check.
 
 The agent recovered — it re-listed the metrics and answered correctly — so this cost nothing here.
 It is a coverage defect in the layer and belongs in the matrix's coverage row, not this one.
+
+---
+
+## 6. Run two: the item discriminates, and not for the reason it was built to
+
+Run `20260809-172908-04_grain`: the two replacements from §4 plus the original as their mirror.
+
+| question | A_implicit | B_documented | C_modelled | D_declared | E_enforced |
+|---|---|---|---|---|---|
+| billed per subscriber | 2/3 | 1/3 | 1/3 | **3/3** | **3/3** |
+| subscriptions started (row count IS the answer) | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| users who ever subscribed (row count is NOT) | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+
+Three of fifteen cells unstable, all three on the first question.
+
+### The habit hypothesis is refuted
+
+Run one showed nine of nine SQL attempts reaching for `count(distinct user_id)`, and the pair-mate
+was built to punish that. **Every arm answered both mirror questions correctly, every time.** Asked
+for subscriptions the agents wrote `count(*)`; asked for users they wrote `count(distinct user_id)`.
+They distinguish rows from people when the question's noun is clear.
+
+### The grain trap never fired
+
+The wrong answer this item was built around is `avg(billed_amount)` — averaging over rows, which is
+per **term** rather than per person, and gives $31.56.
+
+**No arm ever produced it.** Every one of the nine SQL attempts grouped by `user_id` before
+averaging, including the arm told nothing about grain.
+
+### What did go wrong is the denominator's population
+
+Five of the nine misses answered **$5.77**, and the trace shows the route:
+
+```sql
+FROM dim_users u LEFT JOIN fct_subscriptions s USING (user_id)   -- every signup, not every subscriber
+GROUP BY u.user_id
+-> AVG(total_billed) = 5.77
+```
+
+$14,422 divided by **2,500 users** rather than by **413 subscribers**. 2,087 people have never
+subscribed and were averaged in at zero.
+
+That is a disagreement about what the word "subscriber" denotes. It is a vocabulary failure, and if
+it belongs in a row of the matrix it is coverage or segment — not grain.
+
+### Why the governed arms scored 3/3
+
+`billing_per_subscriber` fixes the denominator inside the metric, so the caller never chooses. That
+is a real observation and it is **not** evidence for column D on the grain row: what the metric
+removed was an ambiguity about the population, not a misreading of what a row stands for.
+
+### The verdict on this defect
+
+`fct_subscriptions` does not trap this model. The subscription-term grain is handled correctly by
+every arm, unprompted, on both directions of the mirror pair.
+
+That is a null worth having, and it points somewhere specific. `../05_additivity` shows the same
+model failing a grain question badly — 2,012 against a true 886, three repetitions out of three —
+on `agg_active_days`, whose grain is one row per **user-day**. The difference between the two
+defects is the candidate for what makes a grain trap fire:
+
+| defect | one row is | does the model handle it? |
+|---|---|---|
+| `fct_subscriptions` | one subscription term | **yes**, unprompted, 9/9 |
+| `agg_active_days` | one user-day | **no**, 0/9 across three arms |
+
+A user holding two subscription terms is a familiar shape. A user appearing on seven daily rows and
+counting once for the week is the same shape, and the model gets one right and the other wrong. The
+next grain item should be built on the user-day table, which means exposing it at rung 2 — a
+realistic warehouse has a daily aggregate table, and ours currently hides it from the agent.
 
 ---
 

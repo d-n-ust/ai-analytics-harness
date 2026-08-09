@@ -268,6 +268,29 @@ def test_reorder_moves_named_keys_to_the_front_and_keeps_the_rest_in_place():
     raise AssertionError("reordering an absent key passed — the control would silently do nothing")
 
 
+def test_an_enforced_arm_differs_from_its_declared_arm_only_in_the_guardrail():
+    """`E_enforced` is `D_declared` plus a check, and nothing else — asserted, not trusted.
+
+    The two arms carry the same layer patch in two files, because an arm is a file and the engine
+    has no include. Two copies of a rule is a rule that can disagree with itself: if someone adds a
+    metric to D and forgets E, the study silently starts comparing catalogues instead of
+    guardrails, and every number it produces is a measurement of the wrong thing."""
+    for name in Study.discover():
+        study = Study.load(name)
+        d, e = study.arms.get("D_declared"), study.arms.get("E_enforced")
+        if not (d and e):
+            continue
+        assert d.patch == e.patch, (
+            f"{name}: D_declared and E_enforced patches differ. The guardrail must be the only "
+            f"difference between them.")
+        assert d.delete == e.delete, f"{name}: D_declared and E_enforced delete different keys"
+        assert d.environment == e.environment, (
+            f"{name}: D_declared and E_enforced declare different environments")
+        assert e.agent.get("guardrails") and not d.agent.get("guardrails"), (
+            f"{name}: E_enforced must override guardrails and D_declared must not — that override "
+            f"IS the treatment")
+
+
 def test_study_yml_rejects_an_unknown_key():
     """A typo in `guardrails` used to run the whole experiment at the default and report nothing.
 

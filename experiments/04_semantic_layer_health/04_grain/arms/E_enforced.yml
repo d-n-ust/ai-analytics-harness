@@ -14,20 +14,23 @@ level: structural
 claim: "the same governed layer, plus a check that refuses when the thing measured is not the thing asked for"
 rung: 3
 patch:
-  # ONE key, not nine. `_walk` refuses to create a parent that does not exist in the base layer —
-  # a patch may add a key, never conjure the thing it hangs off — so a new metric arrives whole.
-  # That guard is why `metrics.power_user.agg`, one letter short, cannot silently create a
-  # fifteenth metric and run clean.
+  # THREE METRICS, ONE PER QUESTION, and D_declared and E_enforced must carry them IDENTICALLY —
+  # tests/test_experiments.py asserts the two patches are equal, so the guardrail is provably the
+  # only difference between the arms.
+  #
+  # WHY THEY ARE ADDED AT ALL. The shipped layer has the right SHAPES and only in live-subscription
+  # form: `active_subscriptions` is count(*) filtered to is_active, `arpu` is the monthly-normalised
+  # revenue per active user. Nothing counts the full history. Study 01 settled what to do about
+  # that — its enforced arm refused two ordinary questions because the layer had no metric for
+  # them, and the fix was to add the metrics rather than to score our own modelling gap as the
+  # treatment failing. A question the layer cannot express measures COVERAGE, not grain.
+  #
+  # NAMED AND DESCRIBED TO SAY NOTHING ABOUT GRAIN. `subscription_terms` would have been the
+  # natural name and it is banned here: it carries C_modelled's treatment (the name states the
+  # grain) and B_documented's (the word "term"), and D would stop being separable from either.
+  # Column D's claim is that the AGGREGATION resolves the grain silently, so the caller never faces
+  # the choice. The descriptions therefore say what each metric is and never how it is computed.
   metrics.ever_subscribed_users:
-    # WORDING CHOSEN AGAINST THE VOCABULARY AUDIT, not for readability. The first draft read
-    # "Distinct users who have ever had a paid subscription", which shares a SIX-TOKEN verbatim span
-    # with the question — the same confound that made study 02's headline unattributable, caught
-    # here by the mock run before any money was spent. This wording shares two.
-    #
-    # AND IT STATES NO GRAIN. "Counts people, not terms" would be B_documented's treatment smuggled
-    # into D, and the two arms would stop being separable. Column D's claim is that the aggregation
-    # resolves the grain SILENTLY, so the caller never faces the choice; saying it out loud as well
-    # would make D a superset of B rather than an alternative to it.
     description: "Subscribers over the full history, live and lapsed."
     entity: users
     segment: all
@@ -35,6 +38,28 @@ patch:
     synonyms: ["lifetime subscribers", "all-time subscribers", "total subscribers"]
     base: fct_subscriptions
     agg: "count(distinct user_id)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.subscriptions_all_time:
+    description: "Every subscription on record, live and ended."
+    entity: subscriptions
+    segment: all
+    unit: count
+    synonyms: ["all subscriptions", "subscription count", "lifetime subscriptions"]
+    base: fct_subscriptions
+    agg: "count(*)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.billing_per_subscriber:
+    description: "Average lifetime billing per subscriber."
+    entity: users
+    segment: all
+    unit: currency
+    synonyms: ["lifetime value", "billing per subscriber", "average spend per subscriber"]
+    base: fct_subscriptions
+    agg: "sum(billed_amount) * 1.0 / nullif(count(distinct user_id), 0)"
     additive_over_time: false
     time_column: null
     dimensions: [plan]
