@@ -77,9 +77,9 @@ A lint that reads declarations cannot see a fact that was never declared.
 
 | arm | what it does |
 |---|---|
-| `A_absent` | the population fact removed from **both** instances — nothing the agent can read states who is counted, or what the threshold is |
-| `B_prose` | the layer exactly as it ships; an empty patch, so "prose is the shipped layer" is true by construction |
-| `C_segment` | both repairs: the twin deleted and the population offered as a segment argument; the threshold moved out of `agg` into a named segment |
+| `A_implicit` | the population fact removed from **both** instances — nothing the agent can read states who is counted, or what the threshold is |
+| `B_documented` | the layer exactly as it ships; an empty patch, so "prose is the shipped layer" is true by construction |
+| `D_declared` | both repairs: the twin deleted and the population offered as a segment argument; the threshold moved out of `agg` into a named segment |
 | `B_prose_swapped` | the shipped layer with the twin pair reordered — a position control, expected null |
 
 The arms compose without conflict. Instance one's strip removes **who is counted**; instance two's
@@ -114,24 +114,24 @@ Three repetitions, eight questions, four arms.
 
 | arm | correct | confidently wrong |
 |---|---|---|
-| A_absent | 18/24 | 5 |
-| B_prose | 21/24 | 3 |
-| **C_segment** | **23/24** | **1** |
+| A_implicit | 18/24 | 5 |
+| B_documented | 21/24 | 3 |
+| **D_declared** | **23/24** | **1** |
 | B_prose_swapped | 19/24 | 4 |
 
 Three of thirty-two cells disagree with themselves across identical repetitions, against a five-point
 spread between the worst and best arm. **This is the first comparison in this experiment where the
 gap is wider than the instability**, and pooling the two instances is what bought that.
 
-### Two reasons not to quote `C_segment` yet
+### Two reasons not to quote `D_declared` yet
 
 **The vocabulary confound is still there, and is deliberately not repaired.** On the `p_pop_*`
-questions, `C_segment` declares synonyms — "including staff", "excluding staff" — that appear in the
+questions, `D_declared` declares synonyms — "including staff", "excluding staff" — that appear in the
 questions word for word, sharing a nine-token span. Its win on those items cannot be attributed to
 structure. Deleting the synonyms would make the study look clean and destroy the evidence for why
 the control exists, so the confound is **pinned by a test** instead.
 
-**`C_segment` also offers one metric fewer**, because its repair deletes the twin. Under random
+**`D_declared` also offers one metric fewer**, because its repair deletes the twin. Under random
 choice between two confusable options that is worth points before any treatment exists. The arm
 declares `changes_candidate_count: true`, and a test asserts that it is the only arm that shrinks.
 

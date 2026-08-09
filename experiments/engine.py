@@ -25,15 +25,29 @@ attributed. Forked files also drift from the layer they are supposed to be a var
 with every run still green. So an arm declares only its DELTA and the full layer is generated:
 generated files cannot drift, and the treatment is legible without a diff.
 
-THE ARM'S LETTER IS A LADDER RUNG, NOT AN INDEX, and it means the same thing in every study:
+THE ARM'S LETTER IS A MATRIX COLUMN, NOT AN INDEX, and it means the same thing in every study.
+The five columns of 04_semantic_layer_health/primitives_matrix.md, and `COLUMNS` below is the only
+place their spelling is fixed:
 
-    A_  the fact is absent — nothing the agent can read states it
-    B_  the fact is stated in PROSE, in a description, where only a reader can use it
-    C_  the fact is DECLARED — a named segment, machine-readable and selectable
+    A_implicit    the fact is true in the data and stated nowhere
+    B_documented  a sentence states it — a comment or a description
+    C_modelled    the SHAPE of the warehouse states it
+    D_declared    a typed field in the semantic layer states it
+    E_enforced    a check refuses when it is violated
 
 So "the C arm" names a kind of repair rather than a position in a list. A letter that has to be
-looked up is what went wrong last time — `D_swapped` meant nothing to anyone and was renamed
-`B_prose_swapped` mid-run, because it is a variant OF B. Suffix the letter, never invent a new one.
+looked up is what went wrong twice: `D_swapped` meant nothing to anyone and became `B_prose_swapped`
+mid-run, and three studies later ran three different vocabularies for the same three interventions.
+Suffix the letter, never invent a new one — `C_modelled_documented` is a variant OF C, because
+documentation is a property any shape can have rather than a rung of its own.
+
+WHAT EACH COLUMN MEANS DIFFERS BY PRIMITIVE, and every study says so in a `columns:` block. The
+column QUESTION is fixed; the artifact that answers it is not. Column C for entity is a conformed
+star; for segment it is one boolean on a dimension, which every arm already has, so that study
+declares the column CONSTANT and ships no arm for it. `_validate_columns` checks the block against
+the files on disk, because a block nobody checks drifts exactly as the names did. A study that fills
+no cell says `fills_matrix_row: false` instead — `00_catalogue_format` varies rendering, so its
+A_prose is not an A_implicit and must never be read as one.
 
 A STUDY'S NUMBER IS ITS ROW IN THE PRIMITIVES MATRIX. `01_entity`, `02_segment`, `05_additivity`
 name rows 1, 2 and 5 of 04_semantic_layer_health/primitives_matrix.md, so a folder listing reads as
@@ -335,6 +349,82 @@ def tree() -> str:
     return "\n".join(lines)
 
 
+# THE MATRIX COLUMNS, and the only place their spelling is fixed.
+#
+# A letter names an intervention from ../04_semantic_layer_health/primitives_matrix.md, and it means
+# the same thing in every study — that is what makes two rows comparable at a glance. A variant of a
+# column suffixes its letter (`C_modelled_documented`); it never takes a letter of its own, because
+# a letter that has to be looked up has stopped being a column.
+COLUMNS = {"A": "implicit", "B": "documented", "C": "modelled", "D": "declared", "E": "enforced"}
+
+# A `columns:` value opening with one of these declares that the column has NO arm here, and why.
+# Anything else describes the arm that fills it. PARTIAL is deliberately not in this set: it marks
+# an arm that exists but is a weaker form of the column than another study's, so it still needs a
+# file. MEASURED_ELSEWHERE covers a column that IS filled, but by something other than an arm of
+# this study — 05_additivity's enforced cell was measured by moving the whole study between two
+# guardrail cells, because the check is a property of the guardrails and not of the layer. See 04_semantic_layer_health/02_segment__mf/study.yml for the case that motivated it.
+NO_ARM = ("CONSTANT", "ABSENT", "OPEN", "MEASURED_ELSEWHERE")
+
+# Every key a study.yml may carry. Here rather than inline in `Study.load` because a test used to
+# restate the set to assert the loader would accept the file, and a second copy of a rule is a rule
+# that can disagree with itself — it did, the first time a key was added.
+STUDY_KEYS = frozenset({"title", "base", "engine", "rung", "guardrails", "arms", "tests_rules",
+                        "agent", "columns", "fills_matrix_row"})
+
+
+def _column_letter(arm: str) -> str | None:
+    """The matrix column `arm` names, or None if it names none.
+
+    `C_modelled_documented` -> "C". `C_table` -> None: the letter is there but the word is not the
+    one C stands for, so the name is this study's own vocabulary rather than a column."""
+    letter, _, rest = arm.partition("_")
+    base = COLUMNS.get(letter)
+    return letter if base and (rest == base or rest.startswith(base + "_")) else None
+
+
+def _validate_columns(name: str, spec: dict, arms: dict) -> None:
+    """Check a study's `columns:` block against the arm files that are actually on disk.
+
+    WHY THIS EXISTS. Three studies used three vocabularies for the same three interventions — the
+    letters agreed with the matrix in none of them — and nothing said so until a reader compared two
+    folders by hand. The block is the fix, and a block nobody checks drifts exactly as the names did.
+
+    A study either declares `columns:`, or declares `fills_matrix_row: false` and explains itself in
+    a comment. Silence is not an option, because silence is indistinguishable from an oversight."""
+    cols = spec.get("columns")
+    if cols is None:
+        if spec.get("fills_matrix_row") is False:
+            return
+        raise ValueError(
+            f"{name}/study.yml: no `columns:` block. Declare what each matrix column means for this "
+            f"primitive, or set `fills_matrix_row: false` if this study fills no cell of "
+            f"primitives_matrix.md.")
+
+    stray = [c for c in cols if _column_letter(c) is None]
+    if stray:
+        raise ValueError(
+            f"{name}/study.yml: `columns:` key(s) {sorted(stray)} do not name matrix columns. "
+            f"A key is a letter plus the word that letter stands for, optionally suffixed — "
+            f"{', '.join(f'{k}_{v}' for k, v in COLUMNS.items())}, or e.g. C_modelled_documented.")
+
+    for column, text in cols.items():
+        declared_empty = str(text).lstrip().startswith(NO_ARM)
+        if declared_empty and column in arms:
+            raise ValueError(
+                f"{name}/study.yml: column {column} is declared {str(text).split()[0]} — no arm — "
+                f"but arms/{column}.yml exists. Delete the file or describe the arm.")
+        if not declared_empty and column not in arms:
+            raise ValueError(
+                f"{name}/study.yml: column {column} is described as if an arm fills it, but "
+                f"arms/{column}.yml does not exist. Open the value with one of {NO_ARM} and say why.")
+
+    orphans = [a for a in arms if a not in cols]
+    if orphans:
+        raise ValueError(
+            f"{name}/study.yml: arm file(s) {sorted(orphans)} name no declared column. "
+            f"Add them to `columns:`, or rename them to a column they fill.")
+
+
 @dataclass
 class Study:
     name: str
@@ -387,9 +477,7 @@ class Study:
         spec = yaml.safe_load((d / "study.yml").read_text())
         # Arms have always rejected unknown keys; study.yml silently ignored them, so a typo in
         # `guardrails` would have run the whole thing at the default rung and reported nothing.
-        unknown = set(spec) - {"title", "base", "rung", "guardrails", "arms", "tests_rules",
-                               "agent",
-                       "engine"}
+        unknown = set(spec) - STUDY_KEYS
         if unknown:
             raise ValueError(f"{name}/study.yml: unknown key(s) {sorted(unknown)}")
         arms = {p.stem: Arm.load(p) for p in sorted((d / "arms").glob("*.yml"))}
@@ -397,6 +485,7 @@ class Study:
         missing = [a for a in order if a not in arms]
         if missing:
             raise SystemExit(f"{name}: study.yml lists arm(s) with no file: {', '.join(missing)}")
+        _validate_columns(name, spec, arms)
         # The SAME validator the frozen set uses, pointed at this directory. Reading cases.yml
         # directly is what let a refuse case carry a free-text `reason` instead of one of
         # REFUSAL_REASONS: the grader compares that field to an enum, so every refusal — including

@@ -15,13 +15,15 @@
 # An agent asked how many habits were completed can count every row and report 193,407 — 2.9x the
 # truth, computed correctly from a table it was given, with nothing to signal the error.
 #
-# THE FOUR ARMS ARE FOUR REAL BUDGETS. A team with the messy warehouse above has these options and
-# they differ by an order of magnitude in cost:
+# THE SIX ARMS ARE REAL BUDGETS. A team with the messy warehouse above has these options and they
+# differ by an order of magnitude in cost:
 #
-#     A_implicit         nothing                              rung 1
-#     B_documented  one sentence per table               rung 1.5   hours
-#     C_modelled     Kimball naming and pre-joined marts  rung 2     days
-#     D_declared    a governed metric layer              rung 3     a modelling project
+#     A_implicit             nothing                             rung 1
+#     B_documented           one sentence per table              rung 1     hours
+#     C_modelled             Kimball naming and pre-joined marts rung 2     days
+#     C_modelled_documented  the same star, described            rung 2     days + hours
+#     D_declared             a governed metric layer             rung 3     a modelling project
+#     E_enforced             the same layer plus a runtime check rung 3     engineering
 #
 # WHAT THIS SEPARATES THAT THE PUBLISHED LADDER CANNOT. The grounding-ladder article measured rung
 # 1 -> 2 as a single step worth ~6 points (gpt) and ~12 (mini). But that step changes naming, table
@@ -46,23 +48,17 @@ rung: 3
 # the lowest rung present. The harness refused R3 outright: `check_tools` and `coverage_check` have
 # no governed call to intercept below rung 3, and `tool_restriction` there removes raw SQL while no
 # governed path exists, leaving an agent that cannot reach data at all. Anything above R1 would give
-# the D arm checks the other three cannot have, and the study would compare guardrails rather than
+# the D_declared arm checks the others cannot have, and the study would compare guardrails rather than
 # data modelling.
 guardrails: 1
 
-# NAMED FOR THE MATRIX COLUMNS, not for this study's warehouse. The five interventions —
-# implicit, documented, modelled, declared, enforced — recur for every primitive, so grain,
-# additivity and join path will carry the same four names and a reader can compare rows at a
-# glance. `C_renamed` was the earlier name and it was wrong twice over: renaming is the least
-# important of the three things the star does, and it named a warehouse rather than an
-# intervention. See ../primitives_matrix.md.
 # WHAT THE AGENT IS, for every arm that does not override it. Declared rather than left to a CLI
 # flag: the same arm file used to produce different results depending on how it was invoked, and
 # nothing in the folder said which model had answered.
 agent:
   model: gpt-5-mini
   reasoning: minimal
-  guardrails: 1        # F_enforced overrides this, and only F_enforced
+  guardrails: 1        # E_enforced overrides this, and only E_enforced
   judge:
     model: gpt-5-mini
     reasoning: low
@@ -80,7 +76,29 @@ agent:
   # it as its own arm; this one cannot do either.
   protocol: {}
 
-arms: [A_implicit, B_documented, C_modelled, D_modelled_documented, E_declared, F_enforced]
+# NAMED FOR THE MATRIX COLUMNS, not for this study's warehouse. The five interventions — implicit,
+# documented, modelled, declared, enforced — recur for every primitive, so grain, additivity and
+# join path carry the same names and a reader can compare rows at a glance. A variant of a column
+# suffixes its letter (`C_modelled_documented`) rather than taking a letter of its own; documentation
+# is a property any shape can have, not a rung, so it appears as a suffix twice.
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. The five column questions are fixed for every
+# study; the artifact that answers each one is specific to the primitive. Written here so a reader
+# knows what an arm varies without reconstructing it from the arm file, and so a missing arm is
+# explained rather than merely absent.
+#
+# STATUS WORDS. A value opening with CONSTANT, ABSENT or OPEN means there is NO arm for that column,
+# and says why. PARTIAL means an arm exists but is a weaker form of the column than another study's.
+# Everything else describes the arm that fills it. See ../primitives_matrix.md.
+columns:
+  A_implicit:            "messy tables, no comments — `evt` carrying kind codes"
+  B_documented:          "the same tables, each with a one-line COMMENT ON"
+  C_modelled:            "a conformed star — the event kinds are already split, so the table name is the entity"
+  C_modelled_documented: "the same star, with table and column comments"
+  D_declared:            "the governed layer: `entity:` on every metric"
+  E_enforced:            "the R9 trajectory_verify check — does the metric measure the thing the question asks about"
+
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, D_declared, E_enforced]
 
 # PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
 #

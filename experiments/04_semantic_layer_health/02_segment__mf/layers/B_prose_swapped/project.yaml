@@ -3,6 +3,6 @@
 # and no table is added.
 project_configuration:
   time_spine_table_configurations:
-    - location: main.mf_time_spine
+    - location: _star.mf_time_spine
       column_name: ds
       grain: day

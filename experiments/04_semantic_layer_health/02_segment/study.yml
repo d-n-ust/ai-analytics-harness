@@ -19,7 +19,7 @@
 # which is the binding constraint on everything in this experiment, not the number of arms.
 #
 # The arms compose without conflict: 01's strip removes WHO IS COUNTED, 02's removes the THRESHOLD,
-# and their repairs touch different metrics. A_absent now strips both.
+# and their repairs touch different metrics. A_implicit now strips both.
 #
 # THE FIRST INSTANCE, kept verbatim from when this was study 01 on its own: the segment is
 # encoded in the metric NAME (rule S1).
@@ -74,10 +74,29 @@ tests_rules: [S1]
 rung: 3
 guardrails: 7
 
+# ARM NAMES CHANGED 2026-08-09 so a letter names a matrix column rather than this study's own
+# vocabulary. Stored runs under results/ carry the old names:
+#     A_absent -> A_implicit · B_prose -> B_documented · C_segment -> D_declared
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. See 01_entity/study.yml for the convention. A
+# value opening with CONSTANT, ABSENT or OPEN means there is NO arm for that column. PARTIAL means
+# an arm exists but is a weaker form of the column. See ../primitives_matrix.md.
+columns:
+  A_implicit:   "descriptions stripped — dim_users.is_internal exists and nothing names it"
+  B_documented: "the layer as it ships: each metric description states who is counted"
+  C_modelled:   "CONSTANT — dim_users.is_internal (warehouse/star.sql:39), a resolved boolean on a
+                 conformed dimension, present and identical in every arm. The only way to make this
+                 column vary is to remove an attribute from a conformed dimension, which measures a
+                 damaged star rather than a segment."
+  D_declared:   "governance.segments — a named, described, reusable segment offered on the metric"
+  E_enforced:   "OPEN — R9 scope-match: the population used against the population asked for.
+                 Expect little: it catches a wrong filter, not a missing one, so it cannot help
+                 A_implicit, where no population is stated anywhere to compare against."
+
 # Three arms, three matrix columns: implicit, documented, declared. The position control
 # B_prose_swapped was retired here (see B_prose_swapped.yml.retired) — it could not
 # separate position from noise, and the runner now reports the noise directly.
-arms: [A_absent, B_prose, C_segment]
+arms: [A_implicit, B_documented, D_declared]
 
 # PRE-REGISTERED READINGS. Written before the migration, from the design note rather than from the
 # stored results, so this file does not launder a finding into a prediction.

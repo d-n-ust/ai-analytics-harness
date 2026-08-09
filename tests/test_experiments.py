@@ -22,7 +22,9 @@ from dataclasses import replace
 import yaml
 
 from experiments.engine import (
+    STUDY_KEYS,
     Study,
+    _column_letter,
     _longest_shared_span,
     apply_patch,
     check_candidate_count,
@@ -77,10 +79,10 @@ def test_a_patch_does_not_mutate_the_base():
 def test_prose_is_the_shipped_layer_by_construction():
     """Not 'has not drifted from' — IS. An empty patch cannot drift."""
     exp = Study.load("02_segment")
-    assert exp.arms["B_prose"].patch == {} and not exp.arms["B_prose"].delete, (
+    assert exp.arms["B_documented"].patch == {} and not exp.arms["B_documented"].delete, (
         "the prose arm has a patch — it is supposed to BE the shipped layer, not a copy of it")
     _, paths, _ = _layers(exp)
-    got = yaml.safe_load(paths["B_prose"].read_text())
+    got = yaml.safe_load(paths["B_documented"].read_text())
     assert got == yaml.safe_load(exp.base.read_text()), "prose.yml generated something != the base"
 
 
@@ -97,9 +99,9 @@ def test_an_arm_that_shrinks_the_catalogue_declares_it():
     check_candidate_count(layers, exp.arms)          # raises SystemExit if an arm shrinks silently
     counts = {a: len(sl.metrics) for a, sl in layers.items()}
     shrunk = [a for a, n in counts.items() if n < max(counts.values())]
-    assert shrunk == ["C_segment"], f"unexpected arms shrink the catalogue: {counts}"
-    assert exp.arms["C_segment"].changes_candidate_count, (
-        "C_segment offers fewer metrics than its peers and does not declare it")
+    assert shrunk == ["D_declared"], f"unexpected arms shrink the catalogue: {counts}"
+    assert exp.arms["D_declared"].changes_candidate_count, (
+        "D_declared offers fewer metrics than its peers and does not declare it")
 
 
 def test_every_arm_reaches_the_same_numbers():
@@ -118,11 +120,11 @@ def test_the_threshold_moves_and_does_not_multiply():
     # arm it reorders. A test that has to be edited whenever an arm is added is a test that will be
     # edited without being read.
     seen = {a: sl.list_metrics_text().count(THRESHOLD) for a, sl in layers.items()}
-    assert seen["A_absent"] == 0, f"the absent arm still states the threshold: {seen}"
-    assert all(n == 1 for a, n in seen.items() if a != "A_absent"), (
-        f"every arm but A_absent must state the threshold exactly once: {seen}")
+    assert seen["A_implicit"] == 0, f"the absent arm still states the threshold: {seen}"
+    assert all(n == 1 for a, n in seen.items() if a != "A_implicit"), (
+        f"every arm but A_implicit must state the threshold exactly once: {seen}")
     # ...and in `segment` it is on the segment, not on the metric.
-    metric_line = next(ln for ln in layers["C_segment"].list_metrics_text().splitlines()
+    metric_line = next(ln for ln in layers["D_declared"].list_metrics_text().splitlines()
                        if ln.startswith("- power_users:"))
     assert THRESHOLD not in metric_line, "segment arm still states the threshold on the metric"
 
@@ -146,7 +148,7 @@ def test_prose_and_segment_share_the_same_wording_on_the_aggregate_instance():
     scoped = [c for c in exp.cases if c["id"].startswith("q_thresh")]
     assert scoped, "no aggregate-instance questions found — the scope filter is wrong"
     for case in scoped:
-        p, s = rows[("B_prose", case["id"])], rows[("C_segment", case["id"])]
+        p, s = rows[("B_documented", case["id"])], rows[("D_declared", case["id"])]
         assert p == s, (f"{case['id']}: prose shares {p} tokens with the catalogue, segment {s} — "
                         "the arms differ in wording as well as structure")
 
@@ -155,14 +157,14 @@ def test_the_name_instance_vocabulary_confound_is_pinned():
     """The NAME instance's segment arm shares a long verbatim span with its questions, and that is
     recorded rather than repaired.
 
-    `C_segment` declares synonyms like "including staff" and "excluding staff" that appear in the
+    `D_declared` declares synonyms like "including staff" and "excluding staff" that appear in the
     questions word for word, so its win on those items cannot be attributed to structure. Deleting
     the synonyms would make the study look clean and lose the reason its results are unciteable.
     The number is pinned so that a change to it is a decision someone makes, not a drift."""
     exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
     rows = {(r["arm"], r["id"]): r["tokens"] for r in vocabulary_audit(exp.cases, layers)}
-    worst = max((rows[("C_segment", c["id"])] for c in exp.cases if c["id"].startswith("p_pop")),
+    worst = max((rows[("D_declared", c["id"])] for c in exp.cases if c["id"].startswith("p_pop")),
                 default=0)
     assert worst >= 5, (
         "the name instance's vocabulary confound has gone. If that was deliberate, update this "
@@ -172,7 +174,7 @@ def test_the_name_instance_vocabulary_confound_is_pinned():
 def test_absent_states_the_threshold_nowhere():
     exp = Study.load("02_segment")
     _, _, layers = _layers(exp)
-    text = layers["A_absent"].list_metrics_text().lower()
+    text = layers["A_implicit"].list_metrics_text().lower()
     for leak in ("5+", "five or more", "moments >= 5", "single day"):
         assert leak not in text, f"absent arm still leaks the threshold: {leak!r}"
 
@@ -214,10 +216,10 @@ def test_the_metric_name_leak_is_known_and_bounded():
     _, _, layers = _layers(exp)
     names = {a: set(sl.metrics) for a, sl in layers.items()}
     # The segment arm legitimately drops the twin; every other arm must offer identical NAMES.
-    unchanged = {a: n for a, n in names.items() if a != "C_segment"}
+    unchanged = {a: n for a, n in names.items() if a != "D_declared"}
     assert len(set(map(frozenset, unchanged.values()))) == 1, (
         f"arms differ in metric NAMES, not just descriptions: {unchanged}")
-    assert "real" in " ".join(names["A_absent"]), (
+    assert "real" in " ".join(names["A_implicit"]), (
         "the absent arm no longer leaks via a name — the experiment's stated limit has moved")
 
 
@@ -229,7 +231,7 @@ def test_the_candidate_count_guard_fires_when_an_arm_shrinks_undeclared():
     exp = Study.load(EXP1)
     _, _, layers = _layers(exp)
     check_candidate_count(layers, exp.arms)                       # declared: passes
-    undeclared = {**exp.arms, "C_segment": replace(exp.arms["C_segment"], changes_candidate_count=False)}
+    undeclared = {**exp.arms, "D_declared": replace(exp.arms["D_declared"], changes_candidate_count=False)}
     try:
         check_candidate_count(layers, undeclared)
     except SystemExit:
@@ -246,8 +248,8 @@ def test_the_segment_arm_still_carries_its_known_vocabulary_confound():
     exp = Study.load(EXP1)
     _, _, layers = _layers(exp)
     rows = {(r["arm"], r["id"]): r["tokens"] for r in vocabulary_audit(exp.cases, layers)}
-    seg = rows[("C_segment", "p_pop_all_week")]
-    others = [rows[(a, "p_pop_all_week")] for a in exp.arms if a != "C_segment"]
+    seg = rows[("D_declared", "p_pop_all_week")]
+    others = [rows[(a, "p_pop_all_week")] for a in exp.arms if a != "D_declared"]
     assert seg >= 9 and seg - max(others) >= 3, (
         f"the segment arm no longer out-matches its rivals on wording ({seg} vs {others}) — either "
         "the confound was edited away without a new arm, or the audit stopped working")
@@ -267,11 +269,31 @@ def test_reorder_moves_named_keys_to_the_front_and_keeps_the_rest_in_place():
 
 
 def test_study_yml_rejects_an_unknown_key():
-    """A typo in `guardrails` used to run the whole experiment at the default and report nothing."""
+    """A typo in `guardrails` used to run the whole experiment at the default and report nothing.
+
+    Read STUDY_KEYS rather than restating it: an earlier version of this test kept its own copy of
+    the allowed set, so adding a key to the loader failed here for a reason that had nothing to do
+    with what the test is about."""
+    for name in Study.discover():
+        spec = yaml.safe_load((Study.resolve(name) / "study.yml").read_text())
+        assert set(spec) <= STUDY_KEYS, (
+            f"{name}/study.yml carries key(s) the loader would reject: "
+            f"{sorted(set(spec) - STUDY_KEYS)}")
+
+
+def test_every_arm_file_names_a_declared_matrix_column():
+    """A letter must mean the same intervention in every study, and the check must be mechanical.
+
+    Three studies once ran three vocabularies for the same three interventions — A_absent, A_raw,
+    A_implicit — and the letters agreed with primitives_matrix.md in none of them. Nothing said so
+    until two folders were compared by hand. `Study.load` now validates the `columns:` block against
+    the arm files on disk; this asserts every study on disk passes it."""
+    for name in Study.discover():
+        Study.load(name)          # raises if a column is undeclared, misnamed, or has no arm
+
     exp = Study.load(EXP1)
-    spec = yaml.safe_load((exp.directory / "study.yml").read_text())
-    assert set(spec) <= {"title", "base", "rung", "guardrails", "arms", "tests_rules"}, (
-        f"study.yml carries a key the loader would reject: {sorted(spec)}")
+    assert all(_column_letter(a) for a in exp.arms), (
+        f"{EXP1} has arms that name no matrix column: {sorted(exp.arms)}")
 
 
 # -- the audit itself -------------------------------------------------------- #
@@ -288,7 +310,7 @@ if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
             fn()
-    print("OK — patches cannot invent metrics, B_prose IS the shipped layer, 02's arms all offer the\n"
+    print("OK — patches cannot invent metrics, B_documented IS the shipped layer, 02's arms all offer the\n"
           "same fifteen metrics, both experiments reach the same numbers, the threshold moves without\n"
           "multiplying, the position control changes only order, the candidate-count guard fires when\n"
           "an arm shrinks undeclared, and 01's known vocabulary confound is pinned rather than edited\n"

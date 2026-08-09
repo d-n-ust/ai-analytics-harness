@@ -38,6 +38,14 @@ tests_rules: []
 rung: 3
 guardrails: 7
 
+# NO `columns:` BLOCK, AND THAT IS THE POINT. Every other study in this experiment declares what
+# each matrix column means for its primitive. This one fills no cell of ../primitives_matrix.md: its
+# three arms carry byte-identical FACTS in three different arrangements, so it varies presentation
+# rather than an intervention. The arm letters here are therefore NOT matrix columns — A_prose is
+# not A_implicit — and a reader comparing this folder to 01_entity must not read them as a ladder.
+# Numbered 00 for the same reason.
+fills_matrix_row: false
+
 arms: [A_prose, B_structured, C_table]
 
 # WHAT IS AT STAKE, written before the first paid run.

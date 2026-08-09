@@ -28,7 +28,7 @@
 #                                names the event rather than the thing it happened to.
 #
 #   "habits still tracking"      Read as not-archived (6,357) or recently-used (1,813 / 4,417).
-#                                E_declared answered the second twice. Now "have not been
+#                                D_declared answered the second twice. Now "have not been
 #                                archived", which has one reading.
 #
 # WHAT THE REWRITE DOES NOT DO. It does not add documentation to fix a failure we watched happen.

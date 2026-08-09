@@ -55,7 +55,25 @@ rung: 3
 # this study wants, since 886 and 2012 are 2.27x apart and no tolerance confuses them.
 guardrails: 6
 
-arms: [A_absent, B_prose, C_declared]
+# ARM NAMES CHANGED 2026-08-09 so a letter names a matrix column. Stored runs under results/ carry
+# the old names:  A_absent -> A_implicit · B_prose -> B_documented · C_declared -> D_declared
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. See 01_entity/study.yml for the convention.
+columns:
+  A_implicit:   "no metric states whether its periods may be added"
+  B_documented: "the caveat written into the descriptions of the metrics the traps use"
+  C_modelled:   "OPEN — expose only the correctly rolled-up table, so there is no daily column left
+                 to sum. An indirect artifact: the shape does not state additivity, it removes the
+                 opportunity to get it wrong. Untested."
+  D_declared:   "`additive_over_time:` in a fixed slot on every metric"
+  E_enforced:   "MEASURED_ELSEWHERE — `governed_numbers` requires a number to trace to one
+                 governed result, and a figure obtained by adding seven daily rows traces to none.
+                 It was measured by running the same three arms at R7 and at R6 rather than by a
+                 fourth arm, because the check is a property of the guardrail cell and not of the
+                 layer. This study fixes R6 so the arms can be separated by the numbers themselves;
+                 see the guardrails note above, and ../primitives_matrix.md row 5."
+
+arms: [A_implicit, B_documented, D_declared]
 
 # PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
 #

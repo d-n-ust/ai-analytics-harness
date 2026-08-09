@@ -34,10 +34,15 @@ packages and pulls no dbt-core, against 51 for the dbt route.
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 from semantic.engine import Capabilities
 from warehouse.config import TIME_GRAINS
+from warehouse.warehouse import STAR_SCHEMA
+
+# One time spine per database, however many layers are built concurrently.
+_SPINE_LOCK = threading.Lock()
 
 __all__ = ["MetricFlowLayer"]
 
@@ -77,14 +82,30 @@ class MetricFlowLayer:
 
     def _ensure_time_spine(self) -> None:
         """One row per day over the warehouse's own range. MetricFlow joins this for any
-        time-filtered query, and every question in these studies names a period."""
-        self.con.execute("""
-            CREATE OR REPLACE VIEW main.mf_time_spine AS
+        time-filtered query, and every question in these studies names a period.
+
+        SCHEMA-QUALIFIED, because `main` is empty: the generated tables live in `_source` and the
+        star in `_star`. This was the second copy of this statement — the other is in the study's
+        own `client.py`, which is used by its standalone check script — and only that one was
+        updated when the tables moved, so this failed at study load with a catalog error.
+
+        CREATED ONCE, under a lock. Every worker thread builds its own layer and so calls this;
+        concurrent `CREATE OR REPLACE VIEW` on one object raises a write-write conflict in DuckDB.
+        The view is identical whoever makes it, so the first thread wins and the rest skip."""
+        with _SPINE_LOCK:
+            exists = self.con.execute(
+                "SELECT count(*) FROM information_schema.tables "
+                "WHERE table_schema = ? AND table_name = 'mf_time_spine'", [STAR_SCHEMA],
+            ).fetchone()[0]
+            if exists:
+                return
+            self.con.execute(f'''
+            CREATE OR REPLACE VIEW "{STAR_SCHEMA}".mf_time_spine AS
             SELECT CAST(d AS DATE) AS ds FROM (SELECT UNNEST(generate_series(
-                (SELECT min(active_date) FROM main.agg_active_days),
-                (SELECT max(active_date) FROM main.agg_active_days),
+                (SELECT min(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
+                (SELECT max(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
                 INTERVAL 1 DAY)) AS d)
-        """)
+            ''')
 
     # -- the agent surface ---------------------------------------------------- #
 
@@ -201,9 +222,20 @@ class MetricFlowLayer:
             def _literal(val) -> str:
                 return str(val).lower() if isinstance(val, bool) else repr(val)
 
-            where = " AND ".join(
-                f"{{{{ Dimension('{_qualified(col)}') }}}} = {_literal(val)}"
-                for col, val in kw["filters"].items())
+            def _predicate(col: str, val) -> str:
+                """One comparison. A LIST becomes IN (...), not `= [...]`.
+
+                The harness engine has always accepted a list for a filter value, so the model
+                passes one, and the catalogue's governed member lists invite it. This built
+                `= ['android', 'ios', 'web', 'unknown']`, which DuckDB rejects with a cast error
+                against a scalar column and which killed the whole run rather than one question."""
+                dim = f"{{{{ Dimension('{_qualified(col)}') }}}}"
+                if isinstance(val, (list, tuple, set)):
+                    members = ", ".join(_literal(v) for v in val)
+                    return f"{dim} IN ({members})"
+                return f"{dim} = {_literal(val)}"
+
+            where = " AND ".join(_predicate(col, val) for col, val in kw["filters"].items())
         request = MetricFlowQueryRequest.create(
             metric_names=[name],
             where_constraints=[where] if where else None,

@@ -18,7 +18,7 @@ convention to hold in mind. `layer_dir:` in an arm file points at its layer.
 
 ```bash
 ./bench study 02_segment__mf --reps 1
-./bench study 02_segment__mf --arms C_segment --only p_pop_customers_week --reps 1
+./bench study 02_segment__mf --arms D_declared --only p_pop_customers_week --reps 1
 ```
 
 ## Why it exists
@@ -60,9 +60,9 @@ computed independently by raw SQL. Two engines, two definitions of the layer, on
 **All three arms hold the same-numbers invariant.**
 
 ```
-A_absent     everyone=  67132 real=  64257  [OK]  via two metrics
-B_prose      everyone=  67132 real=  64257  [OK]  via two metrics
-C_segment    everyone=  67132 real=  64257  [OK]  via one metric + a where-constraint
+A_implicit     everyone=  67132 real=  64257  [OK]  via two metrics
+B_documented      everyone=  67132 real=  64257  [OK]  via two metrics
+D_declared    everyone=  67132 real=  64257  [OK]  via one metric + a where-constraint
 ```
 
 **Time filtering and distinct counts both work**, which were the two open questions. Every question
@@ -78,7 +78,7 @@ on the metric. Cube does the same thing under the same name. MetricFlow has no s
 metric filter is an expression over a dimension, and there is nowhere to give the resulting
 population a name.
 
-So arm C here is a *different repair*: delete the twin, keep one metric, and let the caller state
+So arm D here is a *different repair*: delete the twin, keep one metric, and let the caller state
 the population as a where-constraint.
 
 ```
@@ -93,7 +93,7 @@ MetricFlow
 
 It reaches the right number. It does not name the thing it selected.
 
-**And it forces prose to do structural work.** Look at arm C's `is_internal` dimension: the
+**And it forces prose to do structural work.** Look at arm D's `is_internal` dimension: the
 instruction *"filter on this to choose the population"* had to be written into its description,
 because nothing structural marks a dimension as a population selector. Writing a fact into prose
 because the structure cannot hold it is precisely what this study exists to criticise, and
@@ -112,20 +112,22 @@ That gives a spectrum worth publishing, rather than a rule:
 
 ```
 arm               correct   silent wrong
-A_absent            2/4          2
-B_prose             4/4          0
-C_segment           3/4          1
-B_prose_swapped     4/4          0
+A_implicit            2/4          2
+B_documented             4/4          0
+D_declared           3/4          1
+B_prose_swapped     4/4          0   (retired — see below)
 ```
 
-**The defect reproduces on a real semantic layer.** `A_absent` served two confidently wrong numbers,
+**The defect reproduces on a real semantic layer.** `A_implicit` served two confidently wrong numbers,
 picking the shorter name both times the question meant the other twin. That is the answer to "you
 measured your own file format".
 
-**The position control held**, as it did on our engine: `B_prose` and `B_prose_swapped` are
-identical, so declaration order changed nothing.
+**The position control did NOT hold, and this write-up previously said it did.** `B_documented` scored
+4/4 in all three runs; `B_prose_swapped` scored 4/4, 3/4, 3/4. The arm has since been retired,
+because reordering changes the catalogue text and so a gap between the two is position or noise with
+nothing to separate them. See `B_prose_swapped.retired.md`.
 
-**`C_segment` failed exactly one question, and how it failed is the finding.** On
+**`D_declared` failed exactly one question, and how it failed is the finding.** On
 `p_pop_customers_week` it called `{metric: value_moments, period: last_week}` — no filter at all —
 and got a well-formed call returning the everyone figure. On `p_pop_customers_june` it filtered
 correctly. The difference is the wording: June's question says *"excluding staff and test accounts"*,

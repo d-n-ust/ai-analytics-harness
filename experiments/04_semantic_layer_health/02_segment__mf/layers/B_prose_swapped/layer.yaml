@@ -10,7 +10,7 @@
 semantic_model:
   name: user_activity
   description: "One row is one user-day."
-  node_relation: {schema_name: main, alias: agg_active_days}
+  node_relation: {schema_name: _star, alias: agg_active_days}
   defaults: {agg_time_dimension: active_date}
   entities:
     - {name: user, type: primary, expr: user_id}

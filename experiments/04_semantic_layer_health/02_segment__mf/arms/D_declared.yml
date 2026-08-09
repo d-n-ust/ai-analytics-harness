@@ -1,12 +1,12 @@
 # The repair, in MetricFlow's idiom: one metric, the population as a where-constraint.
 #
 # `metric_equivalents` is what makes this arm gradable. The twin is deleted, so a case wanting
-# `real_value_moments` must be reached as `value_moments` — and unlike our own C arm there is NO
+# `real_value_moments` must be reached as `value_moments` — and unlike our own D_declared arm there is NO
 # segment to name, because MetricFlow has none. Omitting the translation is how a correct answer
 # gets scored as a miss; that mistake was made by hand earlier today and cost an hour.
 level: structural
 claim: "one metric; the population is a where-constraint on a dimension, not a named segment"
-layer_dir: layers/C_segment
+layer_dir: layers/D_declared
 changes_candidate_count: true
 grading:
   metric_equivalents:

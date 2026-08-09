@@ -20,12 +20,12 @@ further, and in two independent studies it cost something.
 Two governed metrics measure the same thing, over the same rows, at the same grain. They differ in
 one respect: which population they count. Neither name says so.
 
-`A_absent` removes the fact entirely — nothing the agent can read states which population each
-metric covers. `B_prose` states it in the metric description.
+`A_implicit` removes the fact entirely — nothing the agent can read states which population each
+metric covers. `B_documented` states it in the metric description.
 
 Study 01, rebuilt on **dbt MetricFlow**, three independent runs of the identical configuration:
 
-| question | needs the fact? | A_absent | B_prose |
+| question | needs the fact? | A_implicit | B_documented |
 |---|---|---|---|
 | "how many habits did our customers complete last week?" | yes | **0, 0, 0** | **1, 1, 1** |
 | "excluding staff and test accounts, June 2026?" | yes | **0, 0, 0** | **1, 1, 1** |
@@ -36,7 +36,7 @@ Perfect separation on the questions that need the fact, and no variation in eith
 six observations per cell. The two controls pass everywhere, which is what makes the failure
 attributable to the missing fact rather than to the questions being harder.
 
-**The failure mode is the dangerous one.** `A_absent` did not refuse or ask for clarification. It
+**The failure mode is the dangerous one.** `A_implicit` did not refuse or ask for clarification. It
 served numbers:
 
 ```

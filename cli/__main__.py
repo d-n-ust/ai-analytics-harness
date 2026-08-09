@@ -241,7 +241,7 @@ def cmd_context(a):
     if a.diff:
         arms = tuple(x.strip() for x in a.diff.split(","))
         if len(arms) != 2:
-            raise SystemExit("--diff takes exactly two arms, e.g. --diff B_prose,C_typed")
+            raise SystemExit("--diff takes exactly two arms, e.g. --diff B_documented,C_typed")
         print(render_diff(run, blobs, arms, a.source or "list_metrics", qid=a.qid))
     else:
         print(render_ledger(run, blobs, arm=a.arm, qid=a.qid, source=a.source, full=a.full))

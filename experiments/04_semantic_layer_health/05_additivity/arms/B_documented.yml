@@ -1,7 +1,7 @@
 # The fact, written into the descriptions of the two metrics the traps use.
 #
 # WORDING HELD AS CLOSE AS THE FORMATS ALLOW. The sentence added here is the same statement the
-# `additivity:` field makes in the C arm, in the same words, so the arms differ in WHERE the fact
+# `additivity:` field makes in the D_declared arm, in the same words, so the arms differ in WHERE the fact
 # sits rather than in what it says. The one difference that cannot be removed is coverage: prose
 # can only reasonably carry the caveat on the metrics that need it, while a field appears on every
 # metric. That asymmetry IS the treatment — it is what "declared" means — and it is stated here so

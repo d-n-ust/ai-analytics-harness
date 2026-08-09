@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from client import engine_for  # noqa: E402
 
-ARMS = ("A_absent", "B_prose", "C_segment")
+ARMS = ("A_implicit", "B_documented", "D_declared")
 # Gold, computed independently by raw SQL against the same warehouse.
 EVERYONE, REAL_USERS = 67132, 64257
 
@@ -69,7 +69,7 @@ def main() -> None:
 
     print("\n\nthe two things that were untested until this folder existed")
     print("=" * 78)
-    engine = engine_for("B_prose")
+    engine = engine_for("B_documented")
     import datetime as dt
 
     week = ask(engine, "real_value_moments",

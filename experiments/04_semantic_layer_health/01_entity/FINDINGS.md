@@ -18,7 +18,7 @@ questions.
 | question | the two readings | what happened |
 |---|---|---|
 | "how many habits did people complete" | 3,785 completions, or 1,813 distinct habits | `C_modelled` answered the second and was marked wrong |
-| "how many habits are people still tracking" | 6,357 not archived, or 1,813 / 4,417 recently used | `E_declared` answered the second twice |
+| "how many habits are people still tracking" | 6,357 not archived, or 1,813 / 4,417 recently used | `D_declared` answered the second twice |
 | "how many referrals converted" | joined 271, activated 266, or both 537 | scored near the floor in every arm; removed |
 
 Rewriting them to have one reading each cut self-disagreement **from 6 of 30 cells to 1 of 30**.
@@ -55,7 +55,7 @@ now state their window explicitly.
 
 ## 3. The semantic layer could not answer two ordinary questions, and that was our gap
 
-`F_enforced` scored 9/15, refusing questions where the judge found no metric matching the thing
+`E_enforced` scored 9/15, refusing questions where the judge found no metric matching the thing
 asked. That read as "enforcement trades correctness for caution".
 
 It was not. The layer had no metric for a reminder count or a habit count — both measures a
@@ -63,7 +63,7 @@ habit-tracking company would obviously govern. Adding `reminders_shown` and `act
 
 | arm | before | after |
 |---|---|---|
-| F_enforced | 9/15 | **14/15** |
+| E_enforced | 9/15 | **14/15** |
 
 The check was never harsh. It was correctly refusing answers to questions our own modelling had
 missed, and the governed arms were being tested against a handicap built into the treatment.
@@ -75,7 +75,7 @@ deliberately instead of arriving through a gap nobody decided on.
 
 ## 4. The governed arm ignores the catalogue a third of the time
 
-`E_declared` scores 15/15. It is not fifteen governed runs:
+`D_declared` scores 15/15. It is not fifteen governed runs:
 
 | question | catalogue read? |
 |---|---|
@@ -86,7 +86,7 @@ deliberately instead of arriving through a gap nobody decided on.
 | marketing spend | read · read · read |
 
 **Five of fifteen runs never called `list_metrics` at all** — straight to `get_schema` and SQL over
-the mart. On those runs `E_declared` *is* `D_modelled_documented`.
+the mart. On those runs `D_declared` *is* `C_modelled_documented`.
 
 Two consequences. A correctness total that hides this is misleading, and the `C` / `D` / `E` arms
 scoring alike is partly because `E` was sometimes being `D`. **Catalogue usage should be a reported
@@ -124,9 +124,9 @@ Final run, three reps:
 | A_implicit | 10/15 | **5** |
 | B_documented | **15/15** | 0 |
 | C_modelled | 14/15 | 1 |
-| D_modelled_documented | 14/15 | 1 |
-| E_declared | **15/15** | 0 |
-| F_enforced | 14/15 | 0 |
+| C_modelled_documented | 14/15 | 1 |
+| D_declared | **15/15** | 0 |
+| E_enforced | 14/15 | 0 |
 
 An afternoon of `COMMENT ON` takes 10/15 to 15/15 and removes every silent error. Nothing above it
 improves on that here.

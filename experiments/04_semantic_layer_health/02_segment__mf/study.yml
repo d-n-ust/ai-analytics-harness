@@ -14,7 +14,7 @@
 title: "Segment encoded in the metric name (S1) — on dbt MetricFlow"
 engine: metricflow
 # The reference the same-numbers invariant compares every arm against: the shipped layer.
-base: experiments/04_semantic_layer_health/02_segment__mf/layers/B_prose
+base: experiments/04_semantic_layer_health/02_segment__mf/layers/B_documented
 
 tests_rules: [S1]
 
@@ -26,11 +26,31 @@ rung: 3
 # difference measured is the guardrails rather than the layer.
 guardrails: "R7-coverage_check-resolve"
 
-arms: [A_absent, B_prose, C_segment, B_prose_swapped]
+# ARM NAMES CHANGED 2026-08-09 so a letter names a matrix column. Stored runs under results/ carry
+# the old names:  A_absent -> A_implicit · B_prose -> B_documented · C_segment -> D_declared
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE ON THIS ENGINE. Same row as ../02_segment, and the
+# columns differ because the engine does. See 01_entity/study.yml for the convention.
+columns:
+  A_implicit:   "descriptions stripped from the MetricFlow YAML"
+  B_documented: "the MetricFlow YAML as it ships — descriptions state who is counted"
+  C_modelled:   "CONSTANT — the `user__is_internal` dimension, identical in every arm, exactly as in
+                 ../02_segment."
+  D_declared:   "PARTIAL — one metric plus a where-constraint over a dimension. MetricFlow has no
+                 named-segment construct, so the population is reachable but not nameable, and the
+                 selector instruction has to be written into the dimension's description. This is a
+                 weaker D than ../02_segment's and the two must not be pooled."
+  E_enforced:   "ABSENT — this study runs the reduced cell R7-coverage_check-resolve, which is what
+                 both engines can run. R9 is not reachable here, so the column cannot be filled
+                 without changing the comparison the study exists to make."
+
+# Three arms, three matrix columns. The position control was retired — see
+# B_prose_swapped.retired.md for why, including the fact that it did not hold.
+arms: [A_implicit, B_documented, D_declared]
 
 # WHAT THIS STUDY EXISTS TO SHOW, written before the first paid run.
 #
-#   the defect reproduces   A_absent should fail the "customers" questions on this engine exactly
+#   the defect reproduces   A_implicit should fail the "customers" questions on this engine exactly
 #                           as it does on ours. If it does not, the defect was an artefact of our
 #                           file format and study 01's finding does not generalise.
 #

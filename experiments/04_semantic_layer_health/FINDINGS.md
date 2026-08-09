@@ -71,14 +71,14 @@ repetition or because the finding is deterministic.
 
 ### 3.1 The defect reproduces on a production semantic layer
 
-`A_absent` scored **2/4 in all three MetricFlow runs** — no variation at all — and both failures
+`A_implicit` scored **2/4 in all three MetricFlow runs** — no variation at all — and both failures
 were confidently wrong numbers rather than refusals. The agent picked the shorter metric name both
 times the question meant the other twin.
 
 This answers the strongest objection to the whole programme: *you measured your own file format.*
 The same defect and the same failure appear in dbt MetricFlow, which thousands of teams run.
 
-`B_prose` was also stable at 4/4 across all three runs.
+`B_documented` was also stable at 4/4 across all three runs.
 
 ### 3.2 MetricFlow cannot express the repair as a named segment
 
@@ -98,7 +98,7 @@ measuring an agent. It does not depend on the noise floor at all.
 
 ### 3.3 A named segment appears to survive paraphrase where a dimension filter does not
 
-`C_segment` on MetricFlow failed `p_pop_customers_week` in two runs of three. The question says
+`D_declared` on MetricFlow failed `p_pop_customers_week` in two runs of three. The question says
 *"our customers"*, which requires knowing that customers means non-internal. The June question says
 *"excluding staff and test accounts"*, which only has to be transcribed, and was answered correctly
 every time. Our own layer carries "customers" as a segment synonym and offers `real_users` as an

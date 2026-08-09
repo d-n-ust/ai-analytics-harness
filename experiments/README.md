@@ -63,9 +63,9 @@ ten lines is a treatment someone will actually check.
 ├── study.yml          what varies, against which base, at which rung — and the predictions
 ├── cases.yml          the questions and their gold
 └── arms/
-    ├── A_absent.yml   the fact is absent          (~10 lines)
-    ├── B_prose.yml    the fact is stated in prose (an empty patch: the layer as it ships)
-    └── C_segment.yml  the fact is declared        (~28 lines)
+    ├── A_implicit.yml   the fact is absent          (~10 lines)
+    ├── B_documented.yml    the fact is stated in prose (an empty patch: the layer as it ships)
+    └── D_declared.yml  the fact is declared        (~28 lines)
 ```
 
 **Studies are discovered, not registered.** A directory holding `study.yml` is a study that runs, so

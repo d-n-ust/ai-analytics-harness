@@ -77,8 +77,8 @@ def test_audit_holds_the_real_arms_to_what_they_promise():
     exp = Study.load(EXPERIMENT)
     paths = exp.materialize(Path(__file__).resolve().parent.parent / ".build" / "_provenance")
     shipped = SemanticLayer(con).list_metrics_text()
-    absent = SemanticLayer(con, spec_path=paths["A_absent"]).list_metrics_text()
-    segment = SemanticLayer(con, spec_path=paths["C_segment"]).list_metrics_text()
+    absent = SemanticLayer(con, spec_path=paths["A_implicit"]).list_metrics_text()
+    segment = SemanticLayer(con, spec_path=paths["D_declared"]).list_metrics_text()
 
     POP = "excludes internal/test accounts"
     a_expect = [Expectation("list_metrics", must_not_contain=("population:", POP, "includes all users",
@@ -98,7 +98,7 @@ def test_audit_holds_the_real_arms_to_what_they_promise():
     # And each arm rejects the others — the audit discriminates rather than always passing.
     assert audit(shipped, a_expect), "arm A's check passed the prose catalogue"
     assert audit(segment, b_expect), "arm B's check passed the segment catalogue"
-    assert audit(absent, c_expect), "arm C's check passed a catalogue that still has the twin"
+    assert audit(absent, c_expect), "arm D's check passed a catalogue that still has the twin"
 
 
 def test_count_is_exact_not_a_minimum():

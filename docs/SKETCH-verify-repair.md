@@ -4,7 +4,7 @@ Not built. A design to argue with before anything is written.
 
 ## The failure it targets
 
-Study 01, arm `A_absent`. Two governed metrics measure the same thing over the same rows at the
+Study 01, arm `A_implicit`. Two governed metrics measure the same thing over the same rows at the
 same grain and differ only in which population they count. The arm removes the fact that says which
 is which, and leaves both metrics in the catalogue.
 
@@ -17,7 +17,7 @@ Every wrong answer, across three independent runs:
 
 Six observations, one metric, zero variation. **The right metric was reachable every time.** This
 is a wrong choice among available options — which is the shape a repair loop can fix, and the shape
-`F_enforced` in study 05 does *not* have, where the correct answer needed a table the catalogue
+`E_enforced` in study 05 does *not* have, where the correct answer needed a table the catalogue
 never modelled.
 
 ## What exists today, and what does not
@@ -79,7 +79,7 @@ difference would say it had.
 
 The interesting comparison is **model it, or catch it**:
 
-| | `A_absent` | `A_absent` + verify_repair |
+| | `A_implicit` | `A_implicit` + verify_repair |
 |---|---|---|
 | wrong numbers served | 6 of 6 | ? |
 | correct after one hand-back | — | ? |
@@ -97,7 +97,7 @@ questions needs measuring, which is a smaller and duller job that should come fi
 
 ## Where it does not belong
 
-Study 05's `F_enforced`. Its refusals are on questions with no governed metric — `reminder_open_rate`
+Study 05's `E_enforced`. Its refusals are on questions with no governed metric — `reminder_open_rate`
 is a share, nothing counts habits — so the hint would send the agent looking for a better metric
 that does not exist. The failure there is not a bad pick; it is the judge assuming a metric must be
 the answer.
@@ -108,7 +108,7 @@ the answer.
    correct answers often, stop here.
 2. Add the hand-back behind `verify_repair`, with the category-only hint and the repeated-answer
    guard.
-3. Run `A_absent` with and without it. The prediction is that it converts confidently wrong numbers
+3. Run `A_implicit` with and without it. The prediction is that it converts confidently wrong numbers
    into correct answers, because the right metric was always one step away.
 4. Report repairs as their own column. Right-first-time and right-after-a-hint are different
    products, and a customer buying a guardrail should see which one they are getting.
