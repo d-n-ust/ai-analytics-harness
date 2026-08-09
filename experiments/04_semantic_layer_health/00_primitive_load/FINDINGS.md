@@ -1,4 +1,4 @@
-# Study 00 — the load ladder: two rebuilds, and a frontier model that does not break
+# Study 00 — the load ladder: what documentation buys grows with the depth of the question
 
 Three runs. The first two were instrument, the third is the result.
 
@@ -9,10 +9,15 @@ Three runs. The first two were instrument, the third is the result.
 | `20260809-202056` | gpt-5-mini | 55/60 | **the readable run** |
 | `20260809-202236` | gpt-5.6-terra | **60/60** | **the readable run, one tier up** |
 
-**The answer: on `gpt-5-mini` the gap does widen with load. On `gpt-5.6-terra` there is no gap at
-any depth up to four primitives.** Sections 1–5 are the instrument history and are kept because two
-of the three defects were in our own documentation rather than in the questions. Section 6 is the
-result.
+**THE RESULT IS IN §9, and it needed fifteen items to see.** On `gpt-5-mini` the gap between a
+documented and an undocumented warehouse is flat to load 2 and then accelerates — 0, 0, 0, +22, +56
+percentage points. On `gpt-5.6-terra` a gap of about 20 points exists at every load and does not
+grow.
+
+Sections 1–5 are the instrument history: three defects, two of them in our own documentation rather
+than in the questions. §6 is a five-item run whose conclusion about the frontier model §9 corrects —
+it is kept rather than deleted, because "the null was a ceiling effect from too few items" is the
+most repeatable mistake in this folder.
 
 ---
 
@@ -228,3 +233,72 @@ The fix went into `warehouse/docs/messy_load.sql` and deliberately not into the 
 | gpt-5.6-terra per-item table | `20260809-202236-00_primitive_load/run.json` |
 | the 4,057 wrong value and its predicate | `20260809-201725`, `A_implicit` and `B_documented` on `pl_l2_segment`; reproduced against the warehouse as `internal=0 AND email NOT LIKE '%test%' AND email NOT LIKE '%@example.com'` |
 | catalogue-skip counts | the `context_audit` field of the `D_declared` rows in both readable runs |
+
+
+---
+
+## 9. Fifteen items: the curve appears, and §6 was wrong about the frontier model
+
+Three items per rung instead of one — three nested families of four rungs, plus three controls.
+Runs `20260809-203751` (gpt-5-mini) and `20260809-204041` (gpt-5.6-terra), 45 rows per arm.
+
+### The A-to-B gap by primitive load
+
+| load | gpt-5-mini | gpt-5.6-terra |
+|---|---|---|
+| 0 — control | +0 pp | +0 pp |
+| 1 | +0 pp | +22 pp |
+| 2 | +0 pp | +11 pp |
+| 3 | **+22 pp** | +22 pp |
+| 4 | **+56 pp** | +22 pp |
+
+**On `gpt-5-mini` the predicted curve appears, and it is sharp.** `A_implicit` scores 9/9, 9/9, 8/9,
+6/9, **3/9** as the ladder climbs; `B_documented` holds at 9, 9, 8, 8, 8. The gap is flat to load 2
+and then accelerates.
+
+The prediction written in `study.yml` before the run was that an independent-primitive model gives
+*p*ⁿ, putting the load-4 gap near 59pp — the point at which this design can detect anything at all.
+**Measured: 56pp.** That is closer than the pilot deserves and should be treated as a coincidence
+until more items exist, but the *shape* is the one the hypothesis names.
+
+### The correction
+
+**§6 of this document reported that `gpt-5.6-terra` shows no gap at any depth. With fifteen items it
+shows a gap of about 20 points.** The earlier null was five items against a ceiling, not an absence.
+
+But the frontier gap is **flat, not growing**: +22, +11, +22, +22. Its failures are scattered across
+loads rather than concentrated at depth — including `pl_a1_entity`, a **load-1** item it gets 1/3
+on. That is item difficulty, not compounding.
+
+| | small model | frontier model |
+|---|---|---|
+| is there a gap? | yes, 7/45 | yes, 7/45 |
+| does it grow with load? | **yes — 0, 0, 0, 22, 56** | **no — 22, 11, 22, 22** |
+| where do failures sit? | the join-path rung, two families of three | scattered, no pattern |
+
+**So depth is what documentation buys back on a cheap model, and it is not what the frontier model
+is failing on.** Both statements are new; the second replaces "the frontier model needs nothing".
+
+### What is not clean
+
+**Sixteen of sixty cells disagree with themselves on the small model** — 27%, twice the measured
+floor. The frontier model is far steadier at 5 of 60. A curve read off a 27%-unstable arm is a
+direction, not a rate.
+
+**One family of three does not show the effect.** On `gpt-5-mini` the referral ladder is flat at the
+top — `pl_r3` and `pl_r4` are 2/3 in both arms — so the load-4 gap rests on the two habit families.
+Three items per rung was the right change and three is still not many.
+
+**`D_declared` is the weakest arm at load 1 on both models** (7/9 and 9/9) and twelve of its
+forty-five rows on the small model never called `list_metrics`. Its numbers remain partly a
+measurement of whether the layer was consulted.
+
+---
+
+## 10. Provenance for the fifteen-item runs
+
+| claim | source |
+|---|---|
+| per-load tables | `20260809-203751-00_primitive_load` (gpt-5-mini), `20260809-204041-00_primitive_load` (gpt-5.6-terra) |
+| per-item A-versus-B | the same two runs |
+| every gold | executed against the warehouse before `cases.yml` was written, and re-checked against the harness's own `compute_gold` |

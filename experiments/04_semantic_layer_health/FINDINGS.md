@@ -146,6 +146,27 @@ The cheap test is to run `02_segment` against a three-metric catalogue and see w
 
 ### 3.4 The benefit of documentation is a function of model capability, and at the frontier it is zero
 
+**CORRECTED 2026-08-09 BY `00_primitive_load` §9.** This section concluded that documentation is
+worth nothing to a frontier model. That is a ceiling effect, not an absence. On a fifteen-item set
+built to require up to four primitives at once, `gpt-5.6-terra` scores **38/45 undocumented against
+45/45 documented** — a gap of about 20 points that this five-item study could not see.
+
+What survives, and it is the sharper claim:
+
+| | gpt-5-mini | gpt-5.6-terra |
+|---|---|---|
+| is there a gap? | yes | **yes** |
+| does it grow with question depth? | **yes — 0, 0, 0, +22, +56 pp by load** | no — flat near +20 pp |
+
+So documentation still pays at the frontier; what changes with model tier is not *whether* it pays
+but *what it pays for*. On the cheap model the benefit is concentrated in compositional depth, and
+at load 4 it reaches 56 points. On the frontier model the failures are scattered across loads with
+no pattern, which is item difficulty rather than compounding.
+
+The claim below — "the value of documentation is a function of model capability, and at the frontier
+it is zero" — should be read as *"...and at the frontier this five-item set cannot detect it"*.
+
+
 Added 2026-08-09, and it conditions every other number in this folder.
 
 `01_entity` is the only study built well enough to re-run unchanged, so it was swept across three

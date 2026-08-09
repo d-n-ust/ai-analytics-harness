@@ -240,10 +240,24 @@ questions, same grading.
 | **what documenting bought** | **+3** | **+5** | **0** |
 | wrong numbers served, all versions | 7 | 7 | **0** |
 
-**The frontier model did not need any of it.** Given the raw warehouse — a table mixing three kinds
-of event behind an unlabelled number, a flag that is 0, 1 or empty, a status held as a code — it
-answered every question correctly, three times out of three. It worked out what the codes meant from
-the column names and the data itself.
+**On these five questions the frontier model did not need any of it.** Given the raw warehouse — a
+table mixing three kinds of event behind an unlabelled number, a flag that is 0, 1 or empty, a
+status held as a code — it answered every one correctly, three times out of three.
+
+**That turned out to be the test being too easy, not the documentation being worthless.** A later
+set of fifteen questions, built so that a single question needs up to four facts resolved at once,
+put the same frontier model at **38 out of 45 without documentation and 45 out of 45 with it**.
+
+The difference between the two models is not whether documentation pays. It is what it pays for:
+
+| | cheap model | frontier model |
+|---|---|---|
+| helped by documentation? | yes | yes |
+| on simple questions | no difference | no difference |
+| on questions needing four facts at once | **+56 points** | +22 points |
+
+On the cheap model the benefit is concentrated in the hard, compound questions and grows sharply
+with them. On the frontier model it is spread evenly and does not grow.
 
 **So the practical rule is narrower than "document your warehouse".**
 

@@ -1,65 +1,49 @@
-# EXPERIMENT QUESTIONS — a NESTED LADDER of four, one rung per primitive, plus a control.
+# EXPERIMENT QUESTIONS — THREE NESTED LADDERS of four rungs, plus three controls.
 #
-# REBUILT 2026-08-09 after the first run. FINDINGS.md §2-3 records what was wrong with the first
-# set and both defects are fixed here rather than argued away:
+# FIFTEEN ITEMS, and the count is the point. The previous build had ONE question per rung, so a
+# rung's score was three repetitions of a single item — which measures the noise inside that item
+# and not the effect across items. ../FINDINGS.md §6b is the record of what that costs. Three items
+# per rung gives nine observations per load level and lets a rung's rate mean something.
 #
-#   the control was not a control    `spend.chan` spells one channel four ways, so the question
-#                                    tested enum resolution — a primitive, and the very one the
-#                                    documented arm is handed. A_implicit scored 0/3 on it.
-#   the ladder started on the floor  it was built on `evt.etype`, which A_implicit cannot resolve
-#                                    at all: 0/3 at L1, with no room left for a gap to widen.
-#
-# WHY THIS LADDER SITS ON `hab` AND `subs`. Reading ../01_entity per item shows exactly which
-# primitives the undocumented arm can and cannot do:
-#
-#     a NULL that means "still active"   (hab.arch)     3/3
-#     a status code that means "live"    (subs.st)      3/3
-#     which of three event kinds         (evt.etype)    0-1/3
-#
-# The base rung must be a primitive the undocumented arm resolves MOST of the time, or the effect
-# this study exists to measure has nowhere to appear. L1 below is `../01_entity`'s own
-# `e_ent_active_habits`, on which A_implicit scored 3/3 — so the ladder starts at the top and has
-# somewhere to fall.
-#
-# ────────────────────────────────────────────────────────────────────────────────────────────────
 # THE HYPOTHESIS. If each primitive is resolved independently with probability p, an n-primitive
 # question succeeds at p^n, so the gap between a documented and an undocumented warehouse widens
-# superlinearly with n. At n=4 the predicted gap reaches the 59-63pp this design can actually
-# detect (../FINDINGS.md §2), which makes depth a cheaper route out of the power problem than
-# thirty more single-primitive items.
+# superlinearly with n. See study.yml.
 #
-# THE LADDER IS NESTED, and that is what makes a failure attributable. Each item is the previous
-# plus exactly one primitive, so the most likely wrong answer at each rung IS THE PREVIOUS RUNG'S
-# GOLD — verified against the data, not assumed:
+# EACH LADDER IS NESTED: rung N is rung N-1 plus exactly one primitive, so the most likely wrong
+# answer at each rung IS THE RUNG BELOW'S GOLD. Verified against the warehouse, not assumed:
 #
-#     L1  entity / NULL semantics    6,357     archived counted too ->  7,467
-#     L2  + segment                  6,147     segment ignored      ->  6,357   <- L1's gold
-#     L3  + grain                    2,321     grain ignored        ->  6,147   <- L2's gold
-#     L4  + join path                  382     join ignored         ->  2,321   <- L3's gold
+#     family              L1      L2      L3      L4     smallest step
+#     habits tracked   6,357   6,147   2,321     382         3.3%
+#     habits archived  1,110   1,074     868     125         3.2%
+#     referrals          266     254     236      36         4.5%
 #
-# An arm that answers 2,321 at L4 has resolved three primitives and lost the fourth. Every
-# degenerate strategy at every rung was checked against the 2% tolerance before this file was
-# written; the closest is 1.03x and it clears.
+# Every gold below was executed against the warehouse before this file was written, and every
+# degenerate strategy at every rung clears the 2% tolerance.
 #
-# A COMPOSITION RUNG WAS DESIGNED AND CUT, and the reason is worth keeping: its traps landed at
-# 22.4%, 22.7%, 23.0% and 24.8%. A ratio divides the error into both numerator and denominator, so
-# three of four missed primitives would have graded CORRECT.
-# ────────────────────────────────────────────────────────────────────────────────────────────────
+# THREE FAMILIES ON THREE DIFFERENT FACTS, so a rung's score is not one question's luck. `habits
+# archived` is the INVERSE of `habits tracked` on the same column: an arm that has learned `IS NULL`
+# as a reflex rather than as a meaning gets one of the pair and misses the other.
+#
+# A FOURTH FAMILY WAS BUILT AND CUT — the annual-plan ladder on `subs`. Its rungs stepped by 5.3%,
+# 2.5% and 2.5%, and a 2.5% step against a 2% tolerance is a coin toss rather than a measurement.
+# `subs` has too few users holding several terms for the grain rung to bite.
+#
+# THE LADDERS SIT ON `hab` AND `ref`, NOT ON `evt`. Reading ../01_entity per item shows which
+# primitives the undocumented arm can actually resolve: a NULL that means "still active" 3/3, a
+# status code 3/3, which of three event kinds 0-1/3. A base rung the arm scores zero on leaves the
+# compounding effect nowhere to appear — which is exactly how the first build of this study failed.
 #
 # VOCABULARY. Business words only. Never `arch`, `internal`, `subs`, `uid`, `distinct`, `row`.
-# "Archived" appears in the `hab.arch` comment, so the documented arm has a lexical match on L1 —
-# accepted because ../01_entity's undocumented arm already scores 3/3 there, which shows the word
-# is not carrying the answer.
 #
-# THE CONTROL IS THE ROW TO READ FIRST. One table, one date column, one row per account, no coded
-# value and nothing to join. It is also safe under BOTH readings: counting every account gives 553
-# and excluding staff gives 543, which is 0.98x and inside the tolerance — so an arm cannot lose it
-# by making a defensible choice. That property is what the previous control lacked.
+# THE CONTROLS ARE THE ROWS TO READ FIRST. One table, one date column, one row per thing, nothing
+# coded and nothing to join. Two of them state the population in the question because their two
+# readings sit 2.5% apart, which is outside the tolerance — a control an arm can lose by making a
+# defensible choice is not a control, and that is precisely what the previous build's control was.
 
 cases:
 
-  # --- L1 · entity / NULL semantics -------------------------------------------------------- #
-  - id: pl_l1_entity
+  # ══ family h · habits still tracked ══════════════════════════════════════════════ #
+  - id: pl_h1_entity
     tier: primitive_load
     primitives: [entity]
     expect:
@@ -69,13 +53,8 @@ cases:
       tolerance: 0.02
     question: "How many habits have not been archived?"
     note: >-
-      True 6,357. `hab.arch` holds an archive date and is NULL while the habit is still tracked, so
-      absence of a value is the fact. Counting every row gives 7,467. Identical to
-      ../01_entity's `e_ent_active_habits`, deliberately: A_implicit scores 3/3 on it, which is what
-      gives this ladder headroom.
-
-  # --- L2 · + segment ---------------------------------------------------------------------- #
-  - id: pl_l2_segment
+      True 6,357. `hab.arch` holds an archive date and is NULL while the habit is still tracked, so absence of a value is the fact. Counting every row gives 7,467. This is ../01_entity's `e_ent_active_habits`, on which A_implicit scores 3/3 — which is what gives the ladder headroom.
+  - id: pl_h2_segment
     tier: primitive_load
     primitives: [entity, segment]
     expect:
@@ -85,12 +64,8 @@ cases:
       tolerance: 0.02
     question: "Excluding staff and test accounts, how many habits have not been archived?"
     note: >-
-      True 6,147. Ignoring the population gives 6,357 — L1's gold. The staff flag is 0, 1 or NULL,
-      and 271 NULLs include internal accounts identifiable only by their email domain, so the
-      segment is not a single equality test.
-
-  # --- L3 · + grain ------------------------------------------------------------------------ #
-  - id: pl_l3_grain
+      True 6,147. Dropping the population gives 6,357, this family's L1 gold. The staff flag is 0, 1 or NULL and 271 are NULL, so the population is not a single equality test.
+  - id: pl_h3_grain
     tier: primitive_load
     primitives: [entity, segment, grain]
     expect:
@@ -100,12 +75,8 @@ cases:
       tolerance: 0.02
     question: "Excluding staff and test accounts, how many people have at least one habit they have not archived?"
     note: >-
-      True 2,321. One row is one habit and a person keeps several, so counting rows answers L2's
-      question instead — 6,147, 2.65x. "How many people" against L2's "how many habits" is the whole
-      treatment of this rung.
-
-  # --- L4 · + join path -------------------------------------------------------------------- #
-  - id: pl_l4_join
+      True 2,321. One row is one habit and a person keeps several, so counting rows returns 6,147 — L2's gold, 2.65x.
+  - id: pl_h4_join_path
     tier: primitive_load
     primitives: [entity, segment, grain, join_path]
     expect:
@@ -115,13 +86,102 @@ cases:
       tolerance: 0.02
     question: "Excluding staff and test accounts, how many people who have ever had a paid subscription have at least one habit they have not archived?"
     note: >-
-      True 382. Four ways to be wrong, each the failure of one named primitive: dropping the
-      subscription condition gives 2,321 (L3's gold), counting habits rather than people gives
-      1,042, joining to the subscription table rather than testing membership gives 1,151 because
-      43 users hold more than one term, and ignoring the archive rule gives 393.
+      True 382. Dropping the subscription condition gives 2,321 (L3's gold); counting habits rather than people gives 1,042; joining to the subscription table rather than testing membership gives 1,151, because 43 users hold more than one term.
 
-  # --- the control ------------------------------------------------------------------------- #
-  - id: pl_control_signups
+  # ══ family a · habits archived ══════════════════════════════════════════════ #
+  - id: pl_a1_entity
+    tier: primitive_load
+    primitives: [entity]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h WHERE h.arch IS NOT NULL"
+      tolerance: 0.02
+    question: "How many habits have been archived?"
+    note: >-
+      True 1,110. The inverse of h1 on the same column, so an arm that has learned `IS NULL` as a habit rather than as a meaning answers this one wrong. A pair-mate, not a second measurement of the same thing.
+  - id: pl_a2_segment
+    tier: primitive_load
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "Excluding staff and test accounts, how many habits have been archived?"
+    note: >-
+      True 1,074. Dropping the population gives 1,110.
+  - id: pl_a3_grain
+    tier: primitive_load
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "Excluding staff and test accounts, how many people have archived at least one habit?"
+    note: >-
+      True 868. Counting rows returns 1,074 — L2's gold.
+  - id: pl_a4_join_path
+    tier: primitive_load
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription have archived at least one habit?"
+    note: >-
+      True 125. Dropping the subscription condition gives 868.
+
+  # ══ family r · activated referrals ══════════════════════════════════════════════ #
+  - id: pl_r1_entity
+    tier: primitive_load
+    primitives: [entity]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM ref r WHERE r.st = 'activated'"
+      tolerance: 0.02
+    question: "How many referrals reached the activated stage?"
+    note: >-
+      True 266. `ref.st` carries readable stages — pending, joined, activated — so this rung is deliberately the easiest entity step in the set. A rung the undocumented arm cannot do leaves the ladder no headroom, which is what the first build of this study got wrong.
+  - id: pl_r2_segment
+    tier: primitive_load
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "How many referrals reached the activated stage where the person who was referred is not a staff or test account?"
+    note: >-
+      True 254. NAMES WHICH SIDE OF THE REFERRAL the population applies to. `ref` carries two user columns, so 'excluding staff and test accounts' alone has two readings and would measure ambiguity rather than segment resolution.
+  - id: pl_r3_grain
+    tier: primitive_load
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT r.referrer) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "Counting each referrer once, how many different people have made a referral that reached the activated stage where the person referred is not a staff or test account?"
+    note: >-
+      True 236. Only 19 referrers made more than one activated referral, so the step is 7.1% — the tightest grain step in the set and still well clear of the 2% tolerance. Counting rows returns 254, L2's gold.
+  - id: pl_r4_join_path
+    tier: primitive_load
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT r.referrer) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND r.referrer IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "Counting each referrer once, how many different people who have ever had a paid subscription themselves have made a referral that reached the activated stage where the person referred is not a staff or test account?"
+    note: >-
+      True 36. The largest step in the set: dropping the subscription condition gives 236.
+
+  # ══ controls · load 0 ═══════════════════════════════════════════════════════ #
+  - id: pl_c1_accounts
     tier: primitive_load
     primitives: []
     expect:
@@ -131,7 +191,26 @@ cases:
       tolerance: 0.02
     question: "How many accounts were created in June 2026?"
     note: >-
-      True 553. One table, one date column, one row per account, no coded value, nothing to join.
-      Excluding staff and test accounts gives 543 — 0.98x, inside the tolerance — so both defensible
-      readings grade correct and no arm can lose this row by making a reasonable choice. It must be
-      flat across every arm and every model tier; if it moves, nothing else in the set can be read.
+      True 553. Excluding staff and test accounts gives 543 — 0.98x, inside the tolerance — so both defensible readings grade correct and the wording needs no population clause.
+  - id: pl_c2_habits
+    tier: primitive_load
+    primitives: []
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h WHERE CAST(h.created AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    question: "Counting every account, including staff and test accounts, how many habits were created in June 2026?"
+    note: >-
+      True 1,533. The population IS stated, because excluding staff gives 1,495 — 2.5% away and outside the tolerance. Saying 'counting every account' asks the arm to do nothing rather than to look something up, so the item stays at load 0.
+  - id: pl_c3_subs
+    tier: primitive_load
+    primitives: []
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM subs s WHERE CAST(s.start AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    question: "Counting every account, including staff and test accounts, how many subscriptions started in June 2026?"
+    note: >-
+      True 106. Same reason as the control above: excluding staff gives 103, 2.8% away.
