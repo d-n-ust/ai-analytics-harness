@@ -281,7 +281,15 @@ class MetricFlowLayer:
                 f"period={kw['period']!r} was given together with start/end. Use one: a named "
                 f"period, or an explicit start and end.")
         if kw.get("period"):
-            start, end = resolve_period(kw["period"])
+            # `resolve_period` raises ValueError on a name it does not know, and `dispatch` catches
+            # SemanticError. semantic.py already translates it; this adapter did not, so an agent
+            # passing `period="2026-06-01/2026-06-30"` — a date range where a NAME belongs — killed
+            # the whole run instead of getting a recoverable error naming the six valid periods.
+            # Same boundary rule as the MetricFlow exceptions below: a foreign error type stops here.
+            try:
+                start, end = resolve_period(kw["period"])
+            except ValueError as exc:
+                raise SemanticError(str(exc)) from exc
         to_dt = lambda d: (None if d is None else                       # noqa: E731
                            dt.datetime.combine(d, dt.time()) if isinstance(d, dt.date)
                            and not isinstance(d, dt.datetime)

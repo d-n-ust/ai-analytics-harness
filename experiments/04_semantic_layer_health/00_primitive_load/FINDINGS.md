@@ -1425,3 +1425,95 @@ within two points of each other.
 Every clause of that is measured here. **None of it is powered**: 23 items, 22 of 138 cells unstable
 at 16%, and six arms separated by one to three points at the top. The replication of `C_modelled` at
 66 and of the −50 across three runs is what the claim rests on, not any single cell.
+
+
+---
+
+## 26. The second pile arrives, and it reverses the reading of `E_enforced`
+
+Run `20260810-111656`. Eight unanswerable items added to the 23 answerable ones — 26% of the set. reps=1, six arms.
+
+| arm | answerable | **declined the unanswerable** | silent error | **balanced accuracy** |
+|---|---|---|---|---|
+| A_implicit | 20/23 | 3/8 | 23% | 68% |
+| B_documented | 21/23 | 5/8 | 13% | 83% |
+| C_modelled | 21/23 | 5/8 | 16% | 77% |
+| C_modelled_documented | 21/23 | 4/8 | 13% | 83% |
+| D_declared | 20/23 | 4/8 | 13% | 81% |
+| **E_enforced** | **22/23** | **7/8** | **3%** | **98%** |
+
+### The reversal
+
+Across §20 to §24, `E_enforced` looked like the weakest trade in the study. It scored 63–64 out of
+69, below `C_modelled` at 66, and it **refused a load-1 question**, which I recorded as pure cost.
+
+**With only answerable questions, caution can only ever look like loss.** Add the pile it was built
+for and `E_enforced` is not trading anything: **100% coverage of the answerable pile, 22/23 on it,
+and it serves a number on none of the eight questions that have no answer.** Its silent-error rate is
+3% against everyone else's 13–23%.
+
+That is the single largest gap between arms this study has produced, and it appears only once the
+set contains questions that should not be answered.
+
+### The ambiguous item is the sharpest discriminator in the whole study
+
+`u_amb1` and `u_amb3` ask how many users "churned" — a word with at least three defensible readings
+and none governed.
+
+| arm | u_amb1 | u_amb3 |
+|---|---|---|
+| A, B, C, C_doc | answered | answered |
+| D_declared | declined | answered |
+| **E_enforced** | **declined** | **declined** |
+
+**Four of six arms served a number for a term the warehouse does not define.** No amount of
+modelling or documentation prevented it; only the provenance requirement did.
+
+### The agent knows when to stop and does not know why
+
+This is the caveat, and it is large.
+
+| arm | declined (the action) | named the right code |
+|---|---|---|
+| E_enforced | 7/8 | **2/8** |
+| B_documented | 5/8 | 4/8 |
+| D_declared | 4/8 | **1/8** |
+
+`E_enforced` answers `no_governed_definition` to almost everything — to a period beyond coverage, to
+an undefined term, to a false premise. **One hammer.**
+
+`../01_entity/FINDINGS.md` recorded refusal categorisation as unstable across identical runs. This
+is worse than unstable: it has collapsed onto a single code. The eval-items brief anticipated
+exactly this — *grade the action, report the code separately* — and that is what the table above
+does.
+
+**Practically it barely matters and editorially it matters a great deal.** An operator who receives
+"I cannot answer that" is protected whatever the reason field says. A vendor claiming their agent
+explains *why* it declined is making a claim this data does not support.
+
+### Two numbers that look contradictory and are not
+
+`selective.py` scores `E_enforced` at **8/8** on the unanswerable pile; the per-item table says
+**7/8**. Both are correct and they measure different things.
+
+The module counts a question as served only when a **number** was served — its own note: *an
+unanswerable question answered without a figure is "abstention prose through the answer channel"*,
+and the reader sees "I cannot", so nothing about it is silent. On `u_fp1` the arm used the answer
+tool and gave no figure. **By the operator's measure it declined; by the tool it used, it did not.**
+
+### False premises are hard for everything
+
+`u_fp1` — *"signups fell in June, what drove the decline?"* when they rose 403 → 553 — was caught by
+**one arm of six**, and it was `C_modelled`. Two items is too few to conclude from, and the direction
+is worth recording: nothing in the modelling ladder helps an agent notice that the question's premise
+is false.
+
+### One more engine defect, same family as §22
+
+`resolve_period` raises `ValueError` on a name it does not know, `dispatch` catches `SemanticError`,
+and the MetricFlow adapter did not translate between them — so an agent passing
+`period="2026-06-01/2026-06-30"`, a date range where a name belongs, **killed the entire run**. Fixed
+at the same boundary as the MetricFlow query exceptions.
+
+That is the third time a foreign exception type has escaped an adapter and stopped a paid run. The
+rule is now explicit in both places: **a foreign error type stops at the adapter.**
