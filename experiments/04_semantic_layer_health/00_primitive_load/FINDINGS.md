@@ -1503,6 +1503,12 @@ tool and gave no figure. **By the operator's measure it declined; by the tool it
 
 ### False premises are hard for everything
 
+> **WITHDRAWN by the trace audit in §27.** This section read `u_fp1` as caught by **one arm of six**.
+> That was the grader, not the models: four of the six contradicted the premise in the answer channel
+> and were scored zero by a deferral that never resolved. The corrected count is **four of six**, and
+> the two failures are `D_declared` and `E_enforced`. The paragraph is kept as written because the
+> claim was published in this file and the correction is the finding.
+
 `u_fp1` — *"signups fell in June, what drove the decline?"* when they rose 403 → 553 — was caught by
 **one arm of six**, and it was `C_modelled`. Two items is too few to conclude from, and the direction
 is worth recording: nothing in the modelling ladder helps an agent notice that the question's premise
@@ -1517,3 +1523,464 @@ at the same boundary as the MetricFlow query exceptions.
 
 That is the third time a foreign exception type has escaped an adapter and stopped a paid run. The
 rule is now explicit in both places: **a foreign error type stops at the adapter.**
+
+---
+
+## 27. The trace audit before reps=3: a grader that scored the right answer zero
+
+Run `20260810-111656` (reps=1, 31 items, 6 arms, 186 rows) was read row by row before committing to
+a three-repetition sweep. Structural health was good — no row made zero tool calls, and all 21
+failed tool calls were ordinary SQL slips the agent recovered from within the same row. The defects
+were in the grading and in our own layer, not in the agent.
+
+### 27.1 The bucket that should not have existed
+
+Buckets came out `{right: 125, wrong: 25, idk: 29, deferred: 7}`. **`deferred` is not a result.** It
+is the grader saying "a judge will rule on this", and the seven rows carried `needs_judge=True`,
+`correct=False`, `score=0.0`.
+
+**No judge ever ran.** `evals/runner.py` writes the flag at two places and resolves it at none, and
+the study engine has no judge pass at all. Every deferred row therefore kept its `correct=False`
+default. The flag was also read by `report.py` and `publish_metrics.py`, both of which **drop**
+flagged rows from the unanswerable-pile metrics — so the rows were scored zero in one table and
+excluded from the other. Invisible twice.
+
+The scoring this produced is backwards:
+
+| arm | `u_fp1` response | old score |
+|---|---|---|
+| `A_implicit` | "June 2026 signups did not fall — they rose. June had 553 vs May's 403" | **0.0** |
+| `B_documented` | the same correction, with figures | **0.0** |
+| `C_modelled_documented` | "No — signups did not fall" | **0.0** |
+| `C_modelled` | refused, no answer, no figures | **ok** |
+
+**The grader rewarded declining and penalised correcting.** A refusal reached the `outcome == refuse`
+branch and was graded on its reason code; a rebuttal reached the deferral and was graded not at all.
+
+### 27.2 Why a rule replaced the judge
+
+Both responses are correct. *"I will not answer that"* and *"signups did not fall, they rose from 403
+to 553"* are the same judgement delivered two ways, and the second is the more useful one — the R1
+prompt itself asks for it (`agent/prompts.py:41`: *refuse with reason `false_premise`, and put the
+correction in `missing`*). What separates either from a failure is whether the text **contradicts**
+the premise or explains the event that did not happen. That is decidable from the case's own words,
+so it is decided rather than deferred:
+
+```
+elif is_false_premise:
+    correct = grade_keywords(answer + explanation, expect["rebuttal"])["correct"]
+    confident_wrong = not correct        # a reasoned account of a non-event is a silent error
+    bucket = "right" if correct else "wrong"
+```
+
+`expect.rebuttal` is now **required** by `evals/gold.py` on any case accepting `false_premise`. A
+false-premise item without one cannot load, because that is precisely the omission that scored these
+rows zero for two runs.
+
+Two constraints on a list, both learned here. Entries are **stems**, because `_mentions` anchors at
+the leading word boundary only: `increase` catches `increased`, while `increased` misses the bare
+`increase` that `C_modelled` actually wrote. And entries must not be **bare negations** — a
+fabricated answer can carry "did not" in a subordinate clause and would pass on a word that says
+nothing about the premise.
+
+Regrading the stored rows under the rule:
+
+| arm | `u_fp1` | `u_fp2` |
+|---|---|---|
+| `A_implicit` | correct (rebutted) | correct (refused) |
+| `B_documented` | correct (rebutted) | correct (refused) |
+| `C_modelled` | correct (refused) | correct (refused) |
+| `C_modelled_documented` | correct (rebutted) | correct (rebutted) |
+| `D_declared` | **wrong — silent error** | correct (rebutted) |
+| `E_enforced` | **wrong — silent error** | wrong (see 27.3) |
+
+`deferred` is now empty and both remaining failures are genuine. `E_enforced` on `u_fp1` produced the
+worst output the pile can generate: *"Most of the June 2026 signup decline was driven by lower
+acquisitions from organic and paid_search channels in US, GB, DE"* — a fully reasoned causal account,
+with cited query IDs, of a decline that never happened. `D_declared` emitted `answer: "June signups
+fell ~14% vs May (sum May=381, June=557? Wait compute)"` with `explanation: "placeholder"`.
+
+### 27.3 The item was measuring a gap in our own layer
+
+`E_enforced` refused `u_fp2` with *"there is no governed metric for reminders shown"*. That is true,
+and it is a statement about our modelling rather than a detection of the false premise: `fct_reminders`
+sits in the star and the MetricFlow layer had **no reminders model at all**. The item scored `D` and
+`E` on something we had left out.
+
+`reminders_shown` and `people_reminded` were added to `layers/D_declared/layer.yaml`, and return
+2,827 for May against 3,597 for June through the governed path — matching the figures the case note
+was written against.
+
+**The general rule this produces:** an unanswerable-question pile measures refusal behaviour only
+where the layer can express the question. Where it cannot, the arm refuses for the wrong reason and
+looks careful. **Every item in pile B needs its coverage checked against the layer, not only against
+the warehouse.**
+
+### 27.4 The same defect across the main suite
+
+The validator added in 27.2 rejected three cases outside this study — `fp_mrr_tripled`,
+`fp_apac_collapse` and `u_july_partial_month`. All three carried the same never-resolved deferral,
+and the header of `evals/cases/reliability/false_premise.yml` documented the judge as though it ran.
+
+This changes what the main suite measures. Previously, **answering** a false-premise question was
+absent from the unanswerable metrics entirely; it now counts as correct when it rebuts and as a
+silent error when it does not. Numbers from a re-run will not match numbers published before
+2026-08-10 for this reason.
+
+`u_july_partial_month` needed a different list from the other two: its note records that the premise
+is genuinely **true** — July really is below June in the rows we hold — and what is wrong is the
+comparison across a partial window. Its stems name the coverage, not the figures.
+
+### 27.5 Two findings the audit confirmed rather than fixed
+
+**The refusal codes collapse onto one.** `E_enforced` declined 7 of 8 unanswerable items but named
+the right code on 2. It answered `no_governed_definition` to a coverage question, an ambiguity and a
+false premise alike. This is not a harness defect: the R1 prompt names `false_premise` explicitly and
+`agent/outcomes.py` renders the full vocabulary with a description for each code. The agent is told
+and does not use it. **Declining and diagnosing why are separate abilities, and only the first is
+reliable.**
+
+**`C_modelled_documented` over-applies the staff filter even here.** On `u_fp1` it answered 387 and
+543 where the raw figures are 403 and 553 — it excluded staff and test accounts from a question that
+asked about neither, on an item where no filter was in play at all. Consistent with §19–§24, and a
+further instance that rewording did not fix.
+
+---
+
+## 28. reps=3 with both piles: the ladder is not where the difficulty is
+
+Run `20260810-120047`. 31 items × 6 arms × 3 repetitions = 558 rows, no crash, **19 of 31 items
+discriminating** against a floor of six. Self-disagreement is 36 of 186 arm-question cells (19%),
+so a gap narrower than about one cell in five is noise.
+
+The first attempt at this sweep died 412 rows in and persisted nothing — see 28.5.
+
+### 28.1 The control is flat, so the rest can be read
+
+`pl_c1_accounts`, `pl_c2_habits` and `pl_c3_subs` need no primitive resolved. **9/9 in every arm.**
+This is the row the study says to read first, and for the first time it is clean in all six.
+
+### 28.2 The ladder
+
+Correct of 15 (five families × three repetitions) at each rung:
+
+| arm | L1 entity | L2 +segment | L3 +grain | L4 +join path | ladder |
+|---|---|---|---|---|---|
+| `A_implicit` | 15/15 | 10/15 | 6/15 | 8/15 | 39/60 |
+| `B_documented` | 15/15 | 15/15 | 13/15 | 12/15 | 55/60 |
+| `C_modelled` | 15/15 | 15/15 | 15/15 | 12/15 | 57/60 |
+| `C_modelled_documented` | 15/15 | 15/15 | 15/15 | 11/15 | 56/60 |
+| `D_declared` | 15/15 | 15/15 | 14/15 | 14/15 | **58/60** |
+| `E_enforced` | 15/15 | 15/15 | 11/15 | 15/15 | 56/60 |
+
+**Every arm is perfect at load 1.** The whole spread appears from load 2 onward, which is the
+study's premise holding: a single-primitive question does not separate a documented warehouse from
+an undocumented one, and §8 of `../01_entity/FINDINGS.md` was measuring that rather than measuring
+nothing.
+
+**The A-to-B gap widens and then stops:** `+0, +5, +7, +4`. The stated prediction was that it grows
+monotonically with depth. It grows to load 3 and does not continue, and the reason is visible in the
+`A_implicit` row itself — 6/15 at L3 against 8/15 at L4. **A is at its floor by load 3**, so load 4
+cannot widen a gap that has already run out of room. The prediction is supported over L1–L3 and
+untested at L4.
+
+**`D_declared` now leads the ladder at 58/60**, and the two arms above it in earlier runs no longer
+lead. This reverses §22 and §24, where the undocumented star was the best arm. What changed between
+those runs and this one is that D and E were given the star's documentation (§20) and the layer was
+repaired; the ordering is now cumulative in the way the README claims it should be.
+
+### 28.3 The unanswerable pile is where every arm fails
+
+The same six arms, on eight questions that have no answer, three repetitions each:
+
+| arm | answerable | unanswerable | named the right code | silent errors |
+|---|---|---|---|---|
+| `A_implicit` | 48/69 | 9/24 | 3/24 | 35 |
+| `B_documented` | 64/69 | 7/24 | 3/24 | 17 |
+| `C_modelled` | 66/69 | 11/24 | 6/24 | 11 |
+| `C_modelled_documented` | 65/69 | 10/24 | 6/24 | 12 |
+| `D_declared` | 67/69 | 8/24 | 6/24 | 11 |
+| `E_enforced` | 65/69 | 7/24 → **13/24** | 6/24 | **4** |
+
+(`E_enforced`'s corrected figure applies the gold fix in 28.4; the others move by at most one.)
+
+**The best arm on the answerable pile answers 97% of it and declines fewer than half of the
+questions that have no answer.** Nothing in the data-modelling ladder fixes this. Documentation,
+a conformed star and a governed layer all sit between 7 and 11 out of 24, and `A_implicit` — the
+worst arm on every answerable measure — is not the worst here.
+
+**The one intervention that moves it is the runtime check.** `E_enforced` cuts silent errors from
+11 to 4 while giving up two points of answerable accuracy against `D_declared`. That is the trade
+the whole guardrail column exists to make, and it is the first run in which it is unambiguous.
+
+**Declining and diagnosing why are different abilities.** Every arm names the right refusal code on
+at most 6 of 24. `E_enforced` declines 23 of 24 by action and names the right code on 6 of them. The
+official balanced accuracy scores the action (97%); scored on the code as well it is 74%. Both
+numbers are true and the gap between them is the finding.
+
+### 28.4 Two more items were measuring our gold and our layer
+
+**The ambiguity items scored 0/18 — every arm, every repetition.** A floor that complete is a fault
+in the gold. Six arms declined *"how many users churned last month?"* with `no_governed_definition`
+and were marked wrong for the code alone, against an expected `segment_undefined`. The case's own
+note says *"the warehouse governs none of them under that name"* — which is a statement of
+`no_governed_definition`. Both codes are true of one fact, which is the documented bar in
+`_accepted_reasons`, so the item now accepts either. Corrected, `E_enforced` takes both ambiguity
+items 3/3 and 3/3 and is the only arm that does.
+
+**`u_fp2` still cannot be answered by D or E**, and adding `reminders_shown` (§27.3) fixed only half
+of it. The question also needs habit completions, and **`fct_value_moments` — the central fact table
+of the warehouse — has no semantic model in the layer at all.** `E_enforced` refuses with *"no
+governed metric named `habit_completions` exists"*, which is true. This is the second instance of
+the §27.3 rule inside one run, and it is now a checked precondition rather than an observation:
+**an item belongs in pile B only if every metric it needs is either present in the layer or
+deliberately absent.**
+
+### 28.5 The provider fix, tested in production on its first run
+
+The first attempt at this sweep died 412 rows in on a 400 `invalid_prompt` — the content filter
+firing on one of our own analytics questions — and **persisted nothing**, discarding 372 completed
+rows. `providers.py` had promised since it was written that a persistent failure "becomes an honest
+error row"; no code implemented it. All three provider call sites now translate at the adapter
+(`ProviderError`), and `run_agent` records the row through `provider_failed()`, a third way a run
+ends without an exit call beside `gave_up()` and `exhausted()`. Auth, permission and not-found
+failures still stop the run, because they would refuse every remaining row; anything without an HTTP
+status still crashes, because that is a defect in this code rather than a provider refusal.
+
+**The re-run hit the same filter once** — `E_enforced`, `u_fp1`, one repetition — and recorded a
+single error row instead of losing the sweep.
+
+**The exposure that remains:** results are persisted only after every arm completes, so a fatal
+error or an interrupt still discards finished arms. The row-level fix removes the failure that
+actually recurs; per-arm persistence would have saved the first attempt.
+
+---
+
+## 29. Giving MetricFlow a coverage window: the tool did the work, not the guardrail
+
+Run `20260810-124743`, D and E only, **reps=3, 186 rows**, read against §28's three-repetition
+baseline so the two are like for like. (A reps=1 pass, `20260810-123724`, came first and pointed the
+same way; the numbers below are the three-repetition ones.) Two changes since §28, both of them
+repairs to our own layer rather than to the agent:
+
+| change | what it does |
+|---|---|
+| computed coverage | `capabilities.coverage` becomes True — the window is min/max of each model's `agg_time_dimension` |
+| `value_moments` model | the warehouse's central fact table gains a semantic model and three metrics |
+
+`E_enforced`'s cell moves from `R7-coverage_check-resolve` to `R7-resolve`: the guardrail that was
+excluded for want of a coverage window can now run.
+
+### 29.1 The coverage items
+
+Both were 0/3 in §28. Both are now correct:
+
+| item | `E_enforced` §28 | now |
+|---|---|---|
+| `u_cov1_coverage` | 0/3 | **3/3** |
+| `u_cov3_coverage` | 0/3 | **3/3** |
+
+**Nothing to six of six**, and the arm's whole unanswerable pile moves with it:
+
+| `E_enforced` | before | after |
+|---|---|---|
+| unanswerable | 13/24 (54%) | **20/24 (83%)** |
+| answerable | 65/69 (94%) | 66/69 (96%) |
+| silent errors | 4 | 3 |
+
+The coverage window cost nothing on the questions that do have answers. `u_fp2` also moves 0/3 to
+1/3, which is the `value_moments` model rather than coverage, and is one row.
+
+### 29.2 The guardrail never fired
+
+This was expected to be a guardrail result and it is not. Across all six coverage rows:
+
+| | count |
+|---|---|
+| refused with `out_of_coverage` | 6 of 6 |
+| refused **by the guardrail** (`refused_by: coverage_check`) | **0 of 6** |
+| called `check_coverage` first | 5 of 6 |
+
+`refused_by` is empty on every row, so `coverage_check` blocked nothing in eighteen governed
+questions. **The agent called `check_coverage` itself, was told the period lies outside the data,
+and declined on its own account** — and on the sixth row it declined correctly without asking.
+
+Both flow from the same fact — the layer now states what it covers — but they are different
+mechanisms, and the cheaper one is what worked:
+
+| mechanism | what it requires |
+|---|---|
+| the agent asks | the layer can answer "do you hold this period" |
+| the guardrail blocks | the same, plus a runtime check on every governed call |
+
+The tool was withdrawn before this change, not by choice: `tools_unavailable` removes
+`check_coverage` from any engine declaring `coverage=False`, which is the honest surface — a layer
+with no coverage window genuinely cannot answer the question. **So the agent was not refusing to
+check coverage. It had no way to check, and no way to find that out.**
+
+`D_declared` refused `u_cov3` correctly with no check tools at all, reasoning from the data it could
+see. So the tool is not the only route; it is the reliable one.
+
+### 29.3 What did not move
+
+`D_declared` IS THE CONTROL, and it behaves like one. Nothing about that arm changed except three
+metrics appearing in its catalogue, and its totals do not move: answerable 97% → 96%, unanswerable
+42% → 46%, silent errors 11 → 12. Individual items bounce hard in both directions — `u_def1` 1/3 to
+3/3, `u_def3` 2/3 to 1/3, `u_fp1` 1/3 to 0/3 — while the totals stay flat. That is the noise floor
+made visible, and it is why the six-of-six on `E_enforced` is readable as an effect and a
+one-item move is not.
+
+`u_fp1` remains 1/3 for `E_enforced`, unchanged. False-premise detection was not what either change
+addressed, and §28's finding stands: the layer arms are worse at it than the raw ones.
+
+### 29.4 Two crashes, one class, and what `check_compatible` does not check
+
+Turning coverage on cost two aborted runs — 92 rows — and both had the same cause.
+
+`check_compatible` guarantees an engine has the **capabilities** a guardrail declares. It says
+nothing about the **methods** that guardrail's code path calls.
+
+| crash | method | declared need | actual caller |
+|---|---|---|---|
+| row 31 | `scope_members` | — | `coverage_check`, on its success path |
+| row 61 | `additivity` | `output_validation` only | `governed_numbers`, via `account_for` → `_additive_total` |
+
+The second is a defect in `GUARDRAIL_NEEDS`: `governed_numbers` reads additivity and does not
+declare it, so no capability check protects the call.
+
+Neither was visible to the mock run. **`MockModel` answers without calling `query_metric`, so no
+BEFORE or AFTER guardrail ever executes** — the mock validates wiring, gold and invariants, and
+cannot see a guardrail path at all.
+
+Reasoning about which gate protects which call was wrong both times, so the rule is now mechanical.
+Two tests in `tests/test_adapters.py`: one drives the real BEFORE guardrail against the real adapter
+with no model in the loop, and one greps every layer method the agent path calls and asserts the
+adapter implements it, minus a four-entry allow-list where each entry names the guardrail that makes
+it unreachable.
+
+### 29.5 The claim this supports, and the one it does not
+
+**Supported:** a semantic layer that does not record what period it covers leaves the agent unable
+to establish it, and the answerability tool that would ask is withdrawn rather than allowed to lie.
+The window was never missing from the data — only from the spec.
+
+**Not supported:** that `coverage_check` improves anything. It did not fire once. Its effect is
+untested, and separating it from the tool would need an arm with the capability and the guardrail
+off.
+
+---
+
+## 30. Where the study stands
+
+The current state of every arm. `A`–`C` are run `20260810-120047`; `D` and `E` are run
+`20260810-124743`, after the coverage window and the `value_moments` model. Both are three
+repetitions, and the ambiguity gold of §28.4 is applied to both so they are graded alike. **Read this
+section first.**
+
+### 30.1 The two piles
+
+| arm | ladder (of 60) | no-answer pile (of 24) | silent errors | balanced acc | governed usage |
+|---|---|---|---|---|---|
+| `A_implicit` | 39 | 9 | 35 | 54% | — |
+| `B_documented` | 55 | 7 | 17 | 71% | — |
+| `C_modelled` | **57** | 11 | 11 | 81% | — |
+| `C_modelled_documented` | 56 | 11 | 12 | 80% | — |
+| `D_declared` | **57** | 11 | 12 | 79% | 63% |
+| `E_enforced` | **57** | **20** | **3** | **98%** | **100%** |
+
+The load-0 control is 9/9 in every arm, so the rest is readable.
+
+**Three arms tie at 57 of 60 on the questions that have answers.** A conformed star with no comments,
+that star plus a governed layer, and the layer plus a runtime check all land in the same place. On
+this pile the modelling ladder saturates after the star, and the study cannot separate what comes
+after it.
+
+**On the questions with no answer, five of six arms sit between 7 and 11 of 24.** Documentation does
+not help — `B_documented` is the worst of all six. The conformed star does not help. The governed
+layer does not help. `E_enforced` reaches 20 and is the only arm that departs from the pack.
+
+### 30.2 What actually moved `E_enforced`
+
+Not the enforcement. Its jump from 13/24 (§28) to 20/24 came from the layer being taught to state
+what period it holds, and the whole of that gain is in two questions:
+
+| item | before | after |
+|---|---|---|
+| `u_cov1_coverage` | 0/3 | 3/3 |
+| `u_cov3_coverage` | 0/3 | 3/3 |
+
+`coverage_check`, the guardrail that blocks an out-of-coverage query, **fired zero times in six.**
+On five of the six rows the agent called `check_coverage` itself and declined on the answer; on the
+sixth it declined correctly without asking. The window was computed from data the warehouse already
+held — min and max of each model's time column — and the tool that reads it had been withdrawn
+before, because a layer declaring `coverage=False` must not be handed a lookup it cannot answer.
+
+**So the agent was never refusing to check its limits. It had no way to check, and no way to find
+that out.** See §29.
+
+### 30.3 The pile-B profile is different for each arm, and the shapes are informative
+
+Correct of 3, per item:
+
+| arm | cov1 | cov3 | def1 | def3 | amb1 | amb3 | fp1 | fp2 |
+|---|---|---|---|---|---|---|---|---|
+| `A_implicit` | 2 | 0 | 0 | 1 | 0 | 0 | **3** | **3** |
+| `B_documented` | 1 | 0 | 0 | 0 | 0 | 0 | **3** | **3** |
+| `C_modelled` | 2 | 2 | 1 | 0 | 0 | 0 | **3** | **3** |
+| `C_modelled_documented` | 1 | 2 | 1 | 0 | 1 | 0 | **3** | **3** |
+| `D_declared` | 1 | 1 | 3 | 1 | 2 | 1 | **0** | 2 |
+| `E_enforced` | 3 | 3 | 3 | 3 | 3 | 3 | **1** | 1 |
+
+**The false-premise column is inverted, and it is the most uncomfortable result in this study.** The
+four arms with no semantic layer rejected both false premises in every repetition — 24 of 24. The two
+arms with a layer managed 4 of 12. `D_declared` scored 0 of 3 on `u_fp1`, meaning it produced a
+reasoned causal account of a decline in signups that never happened, three times out of three.
+
+A plausible reading, not tested: an arm that must reach a governed metric spends its attention
+finding one, while an arm writing SQL looks at the numbers first and notices they rise. Two items
+cannot settle this, and it is the clearest thing in this study worth a study of its own.
+
+**Undefined terms and ambiguity separate cleanly on the guardrail, not on the model.** `def` and
+`amb` are 12/12 for `E_enforced` and 0–7/12 for everyone else. A question naming something the layer
+does not define is exactly what `governed_numbers` is built to refuse, and it refuses it reliably.
+
+### 30.4 Governed usage: what a layer is worth if the agent walks around it
+
+| arm | reached the answer through the governed surface |
+|---|---|
+| `D_declared` | 59/93 — **63%** |
+| `E_enforced` | 93/93 — **100%** |
+
+Every one of `D_declared`'s 34 bypasses has the same shape: `get_schema`, then `run_sql` against the
+star. Not a mix of routes — one route, taken a third of the time.
+
+The metric was rebuilt for this section (§30.6) and the definition matters: a row counts when it
+reached its answer through the metric list, a governed query, or a `check_*` lookup. The complement
+is raw SQL.
+
+### 30.5 What replicates, and what a practitioner can take from it
+
+| claim | evidence |
+|---|---|
+| a one-primitive question separates nothing | every arm 15/15 at load 1, three runs |
+| depth is where warehouses differ | `A_implicit` 15 → 10 → 6 out of 15 across loads 1–3 |
+| store the code and its decode | the star went 62 → 66 when `country_name` was added beside `country` |
+| documenting a filter costs as much as it pays | +22/+44 where the question needs it, −50 where it does not, identical across three runs |
+| a layer is bypassed unless a rule requires it | 63% vs 100% governed usage |
+| stating coverage beats enforcing it | 0/6 → 6/6, with the guardrail firing 0 times |
+| declining and diagnosing are separate skills | `E_enforced` declines 23/24 by action, names the right code on far fewer |
+
+### 30.6 Two measurement repairs made while writing this
+
+**False-premise items were scored backwards** for two runs. A rebuttal was deferred to a judge that
+no runner calls, so it kept `correct=False` and scored zero, while a bare refusal scored full marks.
+Four arms that correctly said "signups rose from 403 to 553" were marked wrong. §27.
+
+**Governed usage was measured by the fidelity audit**, which asks a different question — whether the
+arm *showed* what it claims, not whether the agent *used* it. The two agreed until an agent could
+rule a question out before needing a metric; then `E_enforced` refused correctly on coverage and was
+scored as having skipped the catalogue. **The metric fell from 99% to 94% because the arm got
+better.** It now reads the tool trace directly.
+
+Both defects shared a shape: a measurement that silently penalised the behaviour the study exists to
+encourage. Neither was visible in any summary table.

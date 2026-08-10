@@ -1,7 +1,12 @@
 # Study 00 — primitive load: how many things one question makes the agent resolve
 
-Findings are in `FINDINGS.md` — read §25 first, it is the current state. The practitioner summary is
-in `PRACTITIONER-NOTES.md`.
+Findings are in `FINDINGS.md` — read **§30** first, it consolidates every arm's current state. §27
+and §29 are the trace audits that produced it. The practitioner summary is in
+`PRACTITIONER-NOTES.md`, written for a reader with no access to this repository.
+
+**Where it stands.** Three arms tie at 57 of 60 on the questions that have answers, so this study can
+no longer separate a clean star from a governed layer on that pile. The separation is entirely in the
+second pile — 7 to 11 of 24 for five arms, and 20 of 24 for `E_enforced`.
 
 ## Why it exists
 
@@ -33,9 +38,34 @@ it.
 Plus three load-0 controls. Every gold is executed against the warehouse before the file is written
 and cross-checked against the value in each item's own note.
 
+## The second pile: eight questions with no answer
+
+The ladder alone measures half the job — an agent that answers everything scores perfectly on it. A
+second pile asks what happens when there is nothing to answer, two items per reason at two depths:
+
+| reason | what is wrong with the question |
+|---|---|
+| `out_of_coverage` | the period asked for is outside the data |
+| `no_governed_definition` | the thing asked for (support tickets) is nowhere in the warehouse |
+| `segment_undefined` | the group asked about ("churned") has several defensible readings and no governed one |
+| `false_premise` | the question asserts a change that did not happen |
+
+Both a refusal and a clarifying question count; so does contradicting a false premise with the real
+figures, which is the more useful response and which the grader scored **zero** until §27.
+
+**An item belongs here only if every metric it needs is present in the layer, or deliberately
+absent.** Two items in this pile were measuring gaps in our own MetricFlow layer rather than the
+behaviour they were written for — see FINDINGS.md §27.3 and §28.4.
+
 **Families h, a and r segment on staff and test accounts; w and c segment on an enum recorded in
-several spellings.** That split is not decoration — it is what §25's second claim rests on, because
-only the first three ask for a fact the documentation states.
+several spellings.** That split is not decoration — it is what the documentation finding rests on
+(§30.5), because only the first three ask for a fact the documentation states.
+
+**An item belongs in this pile only if the layer can express the question.** Where it cannot, the arm
+refuses for the wrong reason and looks careful: `E_enforced` declined `u_fp2` with "there is no
+governed metric for reminders shown", which was true and was a statement about our own modelling.
+Two items were measuring layer gaps rather than the behaviour they were written for, and both gaps
+are now closed — `reminders` and `value_moments` (FINDINGS.md §27.3, §28.4).
 
 ## The arms
 
@@ -46,7 +76,7 @@ only the first three ask for a fact the documentation states.
 | `C_modelled` | the conformed star, no comments | 2 |
 | `C_modelled_documented` | the same star, documented | 2 |
 | `D_declared` | the documented star plus a governed layer on dbt MetricFlow | 3 |
-| `E_enforced` | D plus `governed_numbers` — a number must trace to one governed result | 3 |
+| `E_enforced` | D plus `governed_numbers` and `coverage_check` (cell `R7-resolve`) | 3 |
 
 **The ladder is cumulative.** D is `C_modelled_documented` plus a layer; E is D plus a check. Each
 column adds to the one below rather than trading one thing for another.
@@ -76,6 +106,21 @@ Two things MetricFlow could not do either, and both fixes are Kimball's: **a der
 the conformed dimension** for the fact-to-fact join, and **a role-playing dimension** for the two
 people in a referral.
 
+### Coverage is computed, not declared
+
+MetricFlow's spec has no field for "what period does this hold data for", so the adapter declared
+`coverage=False` — which withdrew the `check_coverage` tool and blocked the `coverage_check`
+guardrail. `E_enforced` answered both out-of-coverage questions wrong, three times each, because
+nothing could tell it the data ends on 12 July.
+
+The window was never missing from the data. Every semantic model names an `agg_time_dimension`, and
+min/max of that column is the answer, so `semantic/metricflow_engine.py` now computes it **per
+model** — habits run to 2026-07-24 while subscriptions stop at 2026-07-12, and one layer-wide window
+would be wrong for one of them. Ratio metrics resolve through their inputs and take the narrowest.
+
+`segments`, `members` and `additivity` stay `False`: no computation recovers them. They are decisions
+somebody has to write down, and MetricFlow gives nowhere to write them.
+
 ## Running it
 
 ```
@@ -88,10 +133,35 @@ people in a referral.
 fingerprints, and validates the `columns:` block and the declared primitive profiles. Three of this
 study's defects were caught there rather than after a paid run.
 
+**The mock cannot see a guardrail.** `MockModel` answers without ever calling `query_metric`, so no
+BEFORE or AFTER guardrail executes in a mock run. Two paid runs died at rows 31 and 61 on methods the
+MetricFlow adapter did not implement, both cleared to run by `check_compatible` — **which checks
+capabilities, not methods.** `tests/test_adapters.py` now covers both: one test drives the real
+guardrail against the real adapter with no model in the loop, one asserts the adapter implements
+every layer method the agent path calls. Run the tests before spending on a sweep.
+
 ## What the study cannot do
 
-**It is not powered.** 23 items, five per load level, 16% of cells disagreeing with themselves. The
-claims in `FINDINGS.md` §25 rest on replication across runs, not on any single cell.
+**It is not powered.** 31 items — 23 answerable, five per load level, plus 8 with no answer — and
+about one cell in five disagreeing with itself across three identical repetitions. The claims in
+`FINDINGS.md` §30.5 rest on replication across runs, never on a single cell. `D_declared` is a useful
+noise gauge: between the last two runs nothing about that arm changed except three metrics appearing
+in its catalogue, and its individual items moved by up to 2 of 3 in both directions while every total
+stayed flat.
+
+**It no longer separates the top of the ladder.** Three arms tie at 57 of 60 on the answerable pile.
+Anything that distinguishes a star from a layer must now be measured on the second pile, or on a
+harder ladder.
 
 **It measures one filter.** Every over-application found here is `is_internal`. Whether a documented
 grain or join rule behaves the same way is untested and is the obvious next question.
+
+**Grounded-answer rate is not measured.** It needs the `claims` protocol, and the answer tool only
+carries a `claims` field where there is a governed surface (`action_space.py` returns the base schema
+when `semantic is None`). Switching it on would therefore change the tool surface for `D` and `E`
+alone — a second treatment applied to exactly the two arms that already differ — so the study runs
+`protocol: {}` and the column reports `—` rather than a misleading zero.
+
+**The blocking guardrail's value is unmeasured.** `coverage_check` fired zero times in six
+opportunities; the coverage gain came from the agent looking the window up itself. Separating the two
+needs an arm with the capability on and the guardrail off.
