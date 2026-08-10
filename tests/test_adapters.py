@@ -270,10 +270,11 @@ def test_every_guardrail_metricflow_may_run_can_actually_run():
 _UNREACHABLE_ON_METRICFLOW = {
     # Needs `members`, and `GUARDRAIL_NEEDS` blocks `resolve` on any engine without it.
     "resolve_member": "resolve",
-    # Both live inside `governed_notes`, which only runs under `trajectory_verify`.
-    "compile": "trajectory_verify",
-    "redundant_filters": "trajectory_verify",
-    "available_from": "trajectory_verify",
+    # `compile`, `redundant_filters` and `available_from` were here until 2026-08-10, annotated
+    # "only runs under trajectory_verify" — and then that guardrail was switched on for
+    # E_enforced_verified and the run died on the first row. An entry here is a to-do, not an
+    # exemption: it holds only until someone enables the guardrail that gates it. All three are
+    # implemented now.
 }
 
 

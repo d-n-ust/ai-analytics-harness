@@ -515,6 +515,42 @@ class MetricFlowLayer:
                 return "semi_additive" if agg in self._SEMI_ADDITIVE else "non_additive"
         return "non_additive"
 
+    # -- what `trajectory_verify` needs ---------------------------------------- #
+    #
+    # The judge recompiles the SQL the analyst ran and reads the filters it added on top of the
+    # metric's own. All three methods below were on `_UNREACHABLE_ON_METRICFLOW` in
+    # tests/test_adapters.py, annotated "only runs under trajectory_verify" — and then the guardrail
+    # was switched on, which is the allow-list working as a to-do list rather than as an excuse.
+
+    def compile(self, name, group_by=None, filters=None, time_grain=None,
+                start=None, end=None, period=None, resolve=True, segment=None) -> str:
+        """The SQL this metric call renders to. MetricFlow builds it as part of answering, so the
+        query is planned and the statement returned; the judge reads it rather than runs it.
+
+        `resolve` and `segment` are accepted and ignored: both need a governed member vocabulary
+        this engine does not have, which is why `resolve` is refused by `check_compatible`."""
+        sql, _cols, _rows = self.query_with_sql(
+            name, group_by=group_by, filters=filters, time_grain=time_grain,
+            start=start, end=end, period=period)
+        return sql
+
+    def redundant_filters(self, metric: str | None, filters: dict | None) -> dict:
+        """Analyst filters that merely restate the metric's own definition — always empty here.
+
+        The harness engine can answer this because a segment is a named, reusable object it can
+        compare against. A MetricFlow filter is an expression over a dimension, so deciding whether
+        `is_active = true` restates `subscribers_live` would mean parsing the metric's predicate and
+        the analyst's and proving them equivalent. Returning nothing is the truthful answer: this
+        layer cannot tell, and a wrong claim of redundancy would tell the judge to ignore a filter
+        that genuinely narrowed the population."""
+        return {}
+
+    def available_from(self, dimension: str, member) -> object | None:
+        """When a governed member's data begins — always None. The window lives on a dimension
+        member, and this engine has no member vocabulary to hang one on. Distinct from the layer's
+        COVERAGE, which is computed per model above and is a different fact."""
+        return None
+
     def scope_members(self, filters=None, group_by=None) -> list[tuple]:
         """The coverage-bearing (dimension, member) pairs this call reports on — always empty here.
 

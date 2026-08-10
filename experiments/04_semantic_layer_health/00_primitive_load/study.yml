@@ -66,13 +66,14 @@ columns:
   D_declared:   "the documented star plus the governed layer — C_modelled_documented with a layer on
                  top, so the ladder is cumulative. It ran without the star's comments until
                  2026-08-09 and was blind whenever it fell back to SQL."
+  E_enforced_verified: "E plus `trajectory_verify` — a judge on the metric-to-question fit.\n                 Not R9: `resolve` and `output_validation` need capabilities MetricFlow does not\n                 have, and the second has a measured contribution of zero. A paired comparison\n                 against E_enforced alone."
   E_enforced:   "D plus R7 `governed_numbers` — a number must trace to one governed result. Added
                  once D's own behaviour was understood: the traces showed it fetching a correct
                  governed figure and then doing arithmetic on top of it, which is exactly what this
                  check refuses. NOT part of the load ladder — it sits at a different guardrail cell
                  and is a paired comparison against D alone."
 
-arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, C_modelled_labelled, C_modelled_snowflaked, D_declared, E_enforced]
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, C_modelled_labelled, C_modelled_snowflaked, D_declared, E_enforced, E_enforced_verified]
 
 # PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
 #

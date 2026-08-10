@@ -1,0 +1,37 @@
+# E_enforced plus `trajectory_verify` — a judge that reads the metric, its SQL and the filters the
+# agent added, and rejects an answer to a different question from the one asked.
+#
+# WHY THIS IS NOT "ALL NINE". Two guardrails cannot run on this engine and one of them should not
+# be missed:
+#
+#   resolve             needs a governed member vocabulary. MetricFlow has none and no computation
+#                       recovers it — a member list is a decision somebody writes down.
+#   output_validation   needs a `unit` on the metric (count / currency / share) to reject a negative
+#                       count or a share above 100. MetricFlow has no unit field. Its own docstring
+#                       also records a MEASURED CONTRIBUTION OF ZERO: 656 firings over 5,814 rows,
+#                       nothing refused, because `governed_numbers` runs first and subsumes all
+#                       three checks.
+#
+# So the honest cell is R9 minus those two, and the delta against E_enforced is one guardrail.
+#
+# WHERE THE HEADROOM IS, from run 20260810-181508: E_enforced scores 83% on grain against 97% on
+# join, and 78% on the no-answer pile. Its two worst families are f_us (56%, 44% silent error) and
+# h_andr (78%), and both look like wrong-metric failures rather than arithmetic — which is the
+# defect this judge exists to catch.
+#
+# READ THE TRACES, NOT THE SCORE. `grade.py` counts a refusal carrying `refused_by:
+# trajectory_verify` as correct by construction and drops it from reason accuracy, because the judge
+# answers a different question from the refusal vocabulary. A gain here can therefore be the judge
+# working or the grader crediting it. `refused_by` separates the two and the writeup must say which.
+level: structural
+claim: "the governed layer, the provenance rule, and a judge that checks the metric against the question"
+rung: 3
+engine: metricflow
+layer_dir: layers/D_declared
+
+agent:
+  guardrails: "R9-resolve-output_validation"
+
+environment:
+  tables: star_schema
+  docs: star_schema
