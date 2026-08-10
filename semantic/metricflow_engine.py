@@ -500,11 +500,19 @@ class MetricFlowLayer:
             return "non_additive"                  # ratio or derived — built from others
         for sm in self._manifest.semantic_models:
             for meas in sm.measures:
-                if meas.name == name:
-                    agg = str(getattr(meas, "agg", "")).lower().rsplit(".", 1)[-1]
-                    if agg in self._ADDITIVE:
-                        return "additive"
-                    return "semi_additive" if agg in self._SEMI_ADDITIVE else "non_additive"
+                if meas.name != name:
+                    continue
+                # `non_additive_dimension` OVERRIDES THE AGGREGATE, and it has to. A periodic
+                # snapshot's balance is declared `agg: sum` because it IS summed across customers
+                # inside a month; what it may not do is sum across the snapshot date. Reading the
+                # aggregate alone reported `mrr` as additive, which is the opposite of what the
+                # model says one line below it.
+                if getattr(meas, "non_additive_dimension", None) is not None:
+                    return "semi_additive"
+                agg = str(getattr(meas, "agg", "")).lower().rsplit(".", 1)[-1]
+                if agg in self._ADDITIVE:
+                    return "additive"
+                return "semi_additive" if agg in self._SEMI_ADDITIVE else "non_additive"
         return "non_additive"
 
     def scope_members(self, filters=None, group_by=None) -> list[tuple]:

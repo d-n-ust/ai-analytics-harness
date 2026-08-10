@@ -189,3 +189,39 @@ SELECT
     (fm.first_moment_date IS NOT NULL AND fm.first_moment_date <= du.signup_date + 7) AS activated
 FROM dim_users du
 LEFT JOIN first_moment fm ON du.user_id = fm.user_id;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PERIODIC SNAPSHOT: one row per active subscription per month.
+--
+-- WHY IT EXISTS, and it is the correction of a real modelling error. `fct_subscriptions` is an
+-- ACCUMULATING SNAPSHOT — one row per term, updated in place as it moves through start, end and
+-- status. Its time dimension is `started_date`, and that is the right one for the questions it
+-- answers: "how many terms began in June" is sound.
+--
+-- Monthly recurring revenue is not that kind of number. It is a STOCK — what we bill this month,
+-- regardless of when each term began. Asking an accumulating snapshot for a stock over time gives
+-- "revenue from terms that STARTED in the window", which is a real metric and not the one anyone
+-- means. Measured: a governed `mrr` built on `fct_subscriptions` and filtered to last_week returned
+-- 127.37 against a true book of 2,685.08, and nothing in the layer objected.
+--
+-- Kimball's answer is a second fact table, not a fixed column, because choosing the wrong fact type
+-- is the one error that cannot be refactored away. A periodic snapshot has a snapshot date, and on
+-- it `period=last_month` means what everybody thinks it means.
+--
+-- GRAIN: one row is one subscription in one month during which it was active.
+CREATE OR REPLACE VIEW fct_subscription_months AS
+WITH months AS (
+    SELECT DISTINCT date_trunc('month', ds)::date AS snapshot_month FROM _star.mf_time_spine
+)
+SELECT
+    m.snapshot_month,
+    s.sid                    AS subscription_id,
+    s.uid                    AS user_id,
+    s.p                      AS plan,
+    -- The normalisation lives HERE, once, at the grain where it is true: an annual plan is billed
+    -- as a year's lump and contributes one twelfth of it to each month it covers.
+    CASE WHEN s.p = 'a' THEN s.amt / 12.0 ELSE s.amt END AS mrr_amount
+FROM months m
+JOIN _source.subs s
+  ON m.snapshot_month >= date_trunc('month', s.start)::date
+ AND (s."end" IS NULL OR m.snapshot_month <= date_trunc('month', s."end")::date);

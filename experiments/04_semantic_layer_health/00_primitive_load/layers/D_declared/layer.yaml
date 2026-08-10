@@ -109,6 +109,12 @@ semantic_model:
   measures:
     - {name: subscription_rows, agg: count, expr: subscription_id}
     - {name: subscribers, agg: count_distinct, expr: user_id}
+    # THE MONEY, which this layer did not model at all until 2026-08-10. A semantic layer over a
+    # subscription business that carries habits, reminders, referrals and value moments but no
+    # revenue is not a layer any team would ship, and its absence made every revenue question
+    # measure our own omission rather than the agent. `agg: sum` is the honest aggregate for a
+    # billed amount: it is a transaction, additive over anything.
+    - {name: billed_amount, agg: sum}
 ---
 # ROLE-PLAYING ENTITY. `fct_referrals` carries two user columns, so it is declared twice — once
 # keyed on the person referred, once on the referrer. MetricFlow joins on the ENTITY NAME, so a
@@ -346,3 +352,52 @@ metric:
   description: "People who completed at least one habit. Counts PEOPLE: ten completions by one person count once."
   type: simple
   type_params: {measure: completing_people}
+---
+metric:
+  name: total_billed
+  description: "The sum of the amounts billed on subscription terms. NOT monthly revenue: an annual plan is billed once as a year's lump, so this over-states a monthly figure. See `mrr`."
+  type: simple
+  type_params: {measure: billed_amount}
+---
+# THE PERIODIC SNAPSHOT. Added 2026-08-10 to correct a modelling error, not to add a feature.
+#
+# `mrr` was first declared over `fct_subscriptions`, which is an ACCUMULATING SNAPSHOT whose time
+# dimension is `started_date`. Monthly recurring revenue is a STOCK, so slicing it by start date
+# answers "revenue from terms that began in the window" — a real metric and not the one anyone
+# means. The agent asked for `mrr` with `period=last_week` and got 127.37 against a true book of
+# 2,685.08. Nothing in the layer objected, because nothing could: MetricFlow requires every measure
+# to carry an `agg_time_dimension` and rejects `null`, so the illegal slice was advertised in the
+# catalogue as a feature.
+#
+# The fix is a second fact table rather than a fixed column, because the wrong fact TYPE is the one
+# error configuration cannot reach. On a periodic snapshot `period=last_month` means what everybody
+# thinks it means.
+semantic_model:
+  name: subscription_months
+  description: "One row is one subscription in one month during which it was active. A periodic snapshot: use it for revenue AS OF a month, not for when a term began."
+  node_relation: {schema_name: _star, alias: fct_subscription_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities:
+    # Composite key: a subscription appears once per month it was live, so neither column alone is
+    # unique and MetricFlow needs a primary entity that is.
+    - {name: subscription_month, type: primary, expr: "subscription_id || '-' || snapshot_month"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
+    - {name: plan, type: categorical}
+  measures:
+    # NON-ADDITIVE OVER TIME, declared with the construct built for exactly this. A balance may be
+    # added across customers within a month and never across months — January's book and February's
+    # book are the same subscriptions counted twice. `window_choice: max` makes a multi-month range
+    # report the latest month rather than the sum, which is what a stock means over a period.
+    - name: mrr_amount
+      agg: sum
+      non_additive_dimension:
+        name: snapshot_month
+        window_choice: max
+---
+metric:
+  name: mrr
+  description: "Monthly recurring revenue: what the live book bills in a month, with annual plans counted at one twelfth. A STOCK — add it across customers, never across months. Ask for it AS OF a month."
+  type: simple
+  type_params: {measure: mrr_amount}

@@ -22,3 +22,5 @@ CREATE VIEW fct_referrals           AS SELECT * FROM _star.fct_referrals;
 -- Internal to the semantic layer: compiled against, never listed by get_schema.
 CREATE VIEW agg_active_days     AS SELECT * FROM _star.agg_active_days;
 CREATE VIEW agg_user_activation AS SELECT * FROM _star.agg_user_activation;
+
+CREATE VIEW fct_subscription_months AS SELECT * FROM _star.fct_subscription_months;
