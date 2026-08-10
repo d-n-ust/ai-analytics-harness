@@ -1,12 +1,15 @@
 # Study 00 — primitive load: how many things one question makes the agent resolve
 
-Findings are in `FINDINGS.md` — read **§30** first, it consolidates every arm's current state. §27
-and §29 are the trace audits that produced it. The practitioner summary is in
+Findings are in `FINDINGS.md` — read **§31** first: the item set was rebuilt on 2026-08-10 and its
+numbers are NOT comparable with anything before it. §30 is the last state of the old instrument, and
+§27 and §29 are the trace audits. The practitioner summary is in
 `PRACTITIONER-NOTES.md`, written for a reader with no access to this repository.
 
-**Where it stands.** Three arms tie at 57 of 60 on the questions that have answers, so this study can
-no longer separate a clean star from a governed layer on that pile. The separation is entirely in the
-second pile — 7 to 11 of 24 for five arms, and 20 of 24 for `E_enforced`.
+**Where it stands.** 62 items, 8 arms, 1,488 rows, noise floor 25%. The tie in §30 was an artefact of
+five-item rungs, on which the paired test could not reach significance at all. Rebuilt twelve wide,
+the arms spread from 87 to 170 of 186. Additivity is the sharpest rung — 0/12 for both raw arms — and
+nothing about modelling moves the second pile, where every warehouse arm sits at 13 to 17 of 36 and
+only `E_enforced` reaches 28.
 
 ## Why it exists
 
@@ -72,6 +75,9 @@ are now closed — `reminders` and `value_moments` (FINDINGS.md §27.3, §28.4).
 | arm | what it is | rung |
 |---|---|---|
 | `A_implicit` | the raw application extract, no comments | 1 |
+| `C_modelled_labelled` | the star plus `platform_name` on the dimension — a probe | 2 |
+| `C_modelled_snowflaked` | the star with labels in `dim_country` / `dim_platform` — a probe | 2 |
+| `E_enforced_verified` | E plus `trajectory_verify`; see §31.7 before reading its numbers | 3 |
 | `B_documented` | the same tables, every primitive stated in a comment | 1 |
 | `C_modelled` | the conformed star, no comments | 2 |
 | `C_modelled_documented` | the same star, documented | 2 |

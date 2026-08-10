@@ -1984,3 +1984,178 @@ better.** It now reads the tool trace directly.
 
 Both defects shared a shape: a measurement that silently penalised the behaviour the study exists to
 encourage. Neither was visible in any summary table.
+
+---
+
+## 31. The rebuilt instrument: 62 items, 8 arms, 1,488 rows
+
+Run `20260810-181508`. The item set was rebuilt first (§31.1), so **these numbers are not comparable
+to §30 or anything before it** — different questions, different denominators. Any before-and-after
+claim needs both sides re-run on this set.
+
+### 31.1 Why the instrument was rebuilt
+
+§30 reported three arms tied at 57 of 60 and could not say whether the tie was real. It could not
+have said: **McNemar's exact test on *k* discordant item pairs floors at 2 × 0.5ᵏ, so at five items
+per rung the minimum reachable p is 0.0625.** Significance was unreachable even under perfect
+separation. Six discordant pairs is the hard floor and discordance is a fraction of items, so twelve
+per rung is the least that can carry a separation claim.
+
+Repetitions were the wrong place for the budget. Intraclass correlation across identical repeats is
+0.30–0.43, so a third repetition buys about 40% of an observation and a new item buys a whole one.
+`cases.yml`'s own header already argued this and the run configuration contradicted it.
+
+Rung 1 was retired: every arm scored 15/15 on it in every run across six warehouses and three runs,
+including the raw extract. That is a finished measurement, and re-confirming it cost twelve items.
+
+### 31.2 The headline
+
+| arm | total | segment | grain | join | measure+agg | additivity | no-answer | control |
+|---|---|---|---|---|---|---|---|---|
+| `A_implicit` | 92/186 | 23/48 | 20/36 | 20/36 | 9/12 | **0/12** | 14/36 | 6/6 |
+| `B_documented` | 87/186 | 28/48 | 16/36 | 16/36 | 8/12 | **0/12** | 13/36 | 6/6 |
+| `C_modelled` | 137/186 | 41/48 | 31/36 | 24/36 | 8/12 | 10/12 | 17/36 | 6/6 |
+| `C_modelled_documented` | **159/186** | 45/48 | 34/36 | 33/36 | 12/12 | 12/12 | 17/36 | 6/6 |
+| `C_modelled_labelled` | 146/186 | 41/48 | 31/36 | 32/36 | 11/12 | 11/12 | 14/36 | 6/6 |
+| `C_modelled_snowflaked` | 144/186 | 44/48 | 34/36 | 27/36 | 9/12 | 11/12 | 13/36 | 6/6 |
+| `D_declared` | 144/186 | 43/48 | 33/36 | 31/36 | 7/12 | 11/12 | 14/36 | **5/6** |
+| `E_enforced` | **170/186** | 47/48 | 30/36 | 35/36 | 12/12 | 12/12 | **28/36** | 6/6 |
+| `E_enforced_verified` ¹ | 135/186 | 27/48 | 27/36 | 27/36 | 9/12 | 9/12 | 30/36 | 6/6 |
+
+¹ Re-run at three repetitions (`20260810-185421`) so the sample matches every row above. It
+reproduced the single-repetition result to within one point on every measure — 73% accuracy either
+way — and its self-disagreement is 18% against the study's 25% floor, the second most stable arm
+here. **The failure is systematic, not noise: it refuses the same correct answers every time.**
+§31.7 explains why these numbers measure a judge that was not told what the layer's columns mean,
+rather than the guardrail itself.
+
+| arm | coverage | silent error | accuracy | governed usage |
+|---|---|---|---|---|
+| `A_implicit` | 97% | 47% | 49% | — |
+| `B_documented` | 99% | **49%** | 47% | — |
+| `C_modelled` | 95% | 18% | 74% | — |
+| `C_modelled_documented` | 99% | 9% | 85% | — |
+| `D_declared` | 100% | 17% | 77% | 74% |
+| `E_enforced` | 99% | **5%** | **91%** | **100%** |
+| `E_enforced_verified` ¹ | **71%** | 2% | 73% | 100% |
+
+**THE NOISE FLOOR IS 25%** — 122 of 496 arm-question cells disagreed with themselves across three
+identical repetitions. That is higher than the 16–19% measured on the old item set, because the
+questions are harder. Read every cell against it: a gap below about four items on a 36-item rung is
+not a result. Nothing in this section rests on one.
+
+`D_declared` missed a **control** — a question requiring nothing to be resolved. One row, and it is
+the first thing to audit before this arm's other numbers are trusted.
+
+### 31.3 Additivity is the sharpest result in the study
+
+**`A_implicit` and `B_documented` score 0 of 12.** Thirty-six attempts between them across four
+segments and three repetitions, not one correct. Their silent-error rate on that rung is 92% and
+100%: they did not fail to answer, they served a confident wrong number every time.
+
+The trap is that an annual plan is billed as one year's lump. Summing it beside a monthly charge
+overstates monthly revenue by 282–388%, and every arm without a conformed model did exactly that.
+
+**Documentation did not help.** `B_documented` reads a comment stating the rule and still scores
+0/12 — it is the third time in this study that a rule written in prose failed to become a rule.
+
+Every modelled arm scores 10–12 of 12.
+
+### 31.4 Documentation is the largest single effect, and it reverses at the raw layer
+
+`C_modelled_documented` is best or joint-best on **every** rung and leads the warehouse arms overall
+at 159/186, with 9% silent error against `C_modelled`'s 18%. It is also the second most stable arm
+at 13% self-disagreement.
+
+**`B_documented` is the only arm worse than the raw extract** — 87/186 against 92/186, with the
+highest silent error of any arm at 49%. The same treatment applied at two layers, helping decisively
+at one and hurting at the other. Documentation over a conformed star is the study's best intervention;
+documentation over a messy extract is a net negative.
+
+The `case` column is where the reversal is sharpest: `A_implicit` 29/36, `B_documented` 14/36.
+
+### 31.5 The snowflake probe: a trade, not a win
+
+Three shapes of the same star, differing only in where the platform label lives:
+
+| arm | segment | grain | **join** | total |
+|---|---|---|---|---|
+| `C_modelled` — no label | 41/48 | 31/36 | 24/36 | 137 |
+| `C_modelled_labelled` — label on the dimension | 41/48 | 31/36 | **32/36** | 146 |
+| `C_modelled_snowflaked` — label in a lookup table | **44/48** | **34/36** | 27/36 | 144 |
+
+The snowflake leads on segment and grain and gives it back on the join rung, which is the mechanism
+Kimball's rule is argued on: a lookup table adds a join, and joins are where these arms fail. Net,
+146 against 144.
+
+**Both differences sit inside the 25% noise floor and neither is a result.** What survives is the
+narrower observation from §29-era traces: the winning arm never queried `dim_platform` once. Seeing
+`dim_platform(platform_key, platform_name)` in the schema listing told it that `dim_users.platform`
+is a KEY, and it wrote the key in lowercase. The lookup table worked as machine-readable metadata
+that happened to be shaped like a table.
+
+### 31.6 Nothing about modelling helps the second pile
+
+Every warehouse arm sits between 13 and 17 of 36 on questions with no answer. The plain star scores
+17; the two structural variants score 14 and 13, BELOW it. Only `E_enforced` departs, at 28 of 36.
+
+Across three item sets and five runs this is the most durable finding in the study: **where you put
+a fact determines whether the agent gets the answer right; whether the agent can discover what you
+do not have determines whether it knows to stop, and those are different problems with different
+fixes.**
+
+### 31.7 The judge arm, and why it is not yet a measurement
+
+`E_enforced_verified` = `E_enforced` + `trajectory_verify`, run `20260810-185421`, reps=3
+(and `20260810-182859` at reps=1, which agrees with it).
+
+"All nine guardrails" is not available on this engine and the reduction is instructive. `resolve`
+needs a governed member vocabulary; `output_validation` needs a `unit` on the metric, which
+MetricFlow has no field for — and its own docstring records a measured contribution of ZERO, 656
+firings over 5,814 rows refusing nothing, because `governed_numbers` runs first and subsumes all
+three of its checks. So R9 minus the blocked two adds exactly one guardrail.
+
+| | accuracy | coverage | silent error | self-disagreement |
+|---|---|---|---|---|
+| `E_enforced` | 170/186 · 91% | 99% | 5% | 10% |
+| `E_enforced_verified` | 135/186 · **73%** | **71%** | 2% | 18% |
+
+Both at three repetitions. The judge arm was also run at one repetition first and the two agree to
+within a point on every measure, which is the first thing to note: **this failure does not vary.**
+44 of its 71 refusals are the judge — `verifier_wrong_scope` 27, `verifier_wrong_thing` 15,
+`verifier_wrong_definition` 2 — and the damage is concentrated on the segment rung, 27 of 48 against
+`E_enforced`'s 47 of 48.
+
+**The judge traded eighteen points of accuracy for three of silent error**, refusing 27 correct
+answers under `verifier_wrong_scope` across three repetitions. Its reasoning is the same on all of them:
+
+> the analyst's filters only exclude staff (`user_type = 'customer'`) and do not filter out test
+> accounts
+
+`user_type` collapses BOTH rules into one value: the internal flag and the `@internal-test.com`
+email pattern both map to `'staff'`. The gold SQL does exactly what the analyst did. **The decode
+that makes the warehouse work makes the judge fail**, because nothing tells the judge that one
+column encodes two rules.
+
+This is a defect in what the judge is shown, not a property of judging. `governed_notes()` is the
+channel for exactly this — the layer's own definitional clauses — and it returns nothing on
+MetricFlow, because `redundant_filters` was implemented as `{}` an hour earlier on the honest
+grounds that this engine cannot prove two predicates equivalent. **The arm measures a judge that was
+not told what the layer's columns mean, and must not be reported as a measurement of
+`trajectory_verify` until it is.**
+
+### 31.8 Three capabilities computed rather than declared, and one that should not be
+
+`coverage`, `additivity` and — next — `members` are all facts MetricFlow's spec has no field for and
+the warehouse can supply. Coverage is min/max of each model's time column; additivity falls out of
+the aggregate and `non_additive_dimension`; members are already enumerable through
+`get_dimension_values`, which the catalogue calls today while printing a promise no guardrail keeps:
+*"any other value is refused, not approximated"*.
+
+`unit` is the exception and should stay unbuilt: two thirds of it is inferable, currency is not, and
+the guardrail it would unblock has a measured contribution of zero.
+
+**The pattern is worth more than any of the three instances.** A spec omits a fact; the fact is
+recoverable from the data; an adapter that computes it is strictly better than one that reports the
+capability absent. Every guardrail blocked on a missing capability should be re-asked as "can this
+be computed" before it is recorded as unavailable.
