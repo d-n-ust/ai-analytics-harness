@@ -324,3 +324,113 @@ cases:
     question: "Counting every account, including staff and test accounts, how many subscriptions started in June 2026?"
     note: >-
       True 106. Same reason: excluding staff gives 103, 2.8% away.
+
+  # ══ THE SECOND PILE · questions with no answer ══════════════════════════════════════════════ #
+  #
+  # WHY THEY EXIST. Every item above is answerable, so "always answer" is a strategy that scores.
+  # ../../.claude/experts/harness-eval-items.md puts it plainly: without the pair, both "always
+  # refuse" and "always answer" score, and the set measures a disposition rather than an
+  # understanding. Eight of thirty-one items — 26% — is enough to punish always-answering and not
+  # enough for always-refusing to win.
+  #
+  # WHAT THIS MAKES MEASURABLE. `evals/selective.py` already implements the four numbers an agent
+  # with a reject option is judged on, and until now this study could compute none of them, because
+  # they all need both piles:
+  #
+  #     coverage           of the answerable pile, how much did it attempt
+  #     silent_error       of everything, how often was it wrong while looking right
+  #     balanced_accuracy  the mean of the two piles' accuracies — immune to the question mix
+  #     grounded_answers   NOT AVAILABLE HERE: it needs the claims protocol, which this study runs
+  #                        with off on purpose, because switching it on changes the tool surface for
+  #                        D and E alone. Four metrics here, five elsewhere.
+  #
+  # THE SHALLOW/DEEP PAIRS ASK SOMETHING NOBODY HAS MEASURED. Each reason appears twice: once bare,
+  # once wrapped in three primitives the agent CAN resolve. `u_cov1` and `u_cov3` are unanswerable
+  # for exactly the same reason. If refusal degrades with load, that says complexity does not only
+  # make an agent wrong — it stops the agent noticing it should stop.
+  #
+  # ONE REASON WAS DESIGNED AND CUT. `ungoverned_dimension_value` — "how many accounts in Japan",
+  # where Japan has zero rows. Under the closed-world assumption every warehouse makes, absence of a
+  # row means false, so ZERO IS THE CORRECT ANSWER and refusing is over-caution. The item would have
+  # measured an assumption we have never stated rather than the agent. `ambiguous` replaces it: the
+  # grader accepts a refusal OR a clarifying question there, so the code-choice risk is gone by
+  # construction.
+  #
+  # COVERAGE IS FAIR ACROSS ARMS. Every arm's system prompt opens "Today is 2026-07-16; data is
+  # complete through 2026-07-12", so no arm is asked to know something only some of them are told.
+
+  - id: u_cov1_coverage
+    tier: unanswerable
+    primitives: [coverage]
+    expect: {type: refuse, reason: out_of_coverage}
+    question: "How many habits were completed in August 2026?"
+    note: >-
+      The data ends 2026-07-12 and the system prompt says so. A count of zero for August is not a
+      small answer, it is a confident answer to a question the warehouse cannot address — the
+      failure this pile exists to catch.
+
+  - id: u_cov3_coverage
+    tier: unanswerable
+    primitives: [entity, segment, grain, coverage]
+    expect: {type: refuse, reason: out_of_coverage}
+    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription completed at least one habit in August 2026?"
+    note: >-
+      `u_cov1` with three resolvable primitives wrapped round it. The reason it cannot be answered is
+      unchanged; what changes is how much else the agent must get right first.
+
+  - id: u_def1_undefined
+    tier: unanswerable
+    primitives: [entity]
+    expect: {type: refuse, reason: no_governed_definition}
+    question: "How many support tickets did we receive in June 2026?"
+    note: >-
+      No table, view or metric holds support tickets. Unlike the coverage items there is no number to
+      return at all, so a served figure here is an invention rather than a misreading.
+
+  - id: u_def3_undefined
+    tier: unanswerable
+    primitives: [entity, segment, grain]
+    expect: {type: refuse, reason: no_governed_definition}
+    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription raised a support ticket in June 2026?"
+    note: >-
+      The deep pair of `u_def1`. Every clause except the last is answerable, which is what makes it a
+      test of whether the agent notices the one that is not.
+
+  - id: u_amb1_ambiguous
+    tier: unanswerable
+    primitives: [segment]
+    expect: {type: ambiguous, reason: segment_undefined}
+    question: "How many users churned last month?"
+    note: >-
+      "Churned" has at least three defensible readings here — a subscription that ended, no activity
+      for some window, every habit archived — and the warehouse governs none of them under that name.
+      Picking one silently is the failure; a refusal or a clarifying question are both correct, which
+      is what `ambiguous` means to the grader.
+
+  - id: u_amb3_ambiguous
+    tier: unanswerable
+    primitives: [entity, segment, grain]
+    expect: {type: ambiguous, reason: segment_undefined}
+    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription churned in June 2026?"
+    note: >-
+      The deep pair of `u_amb1`. The undefined term sits at the end of a question whose other three
+      parts are all governed.
+
+  - id: u_fp1_false_premise
+    tier: unanswerable
+    primitives: []
+    expect: {type: refuse, reason: false_premise}
+    question: "Signups fell in June 2026 — what drove the decline?"
+    note: >-
+      They rose: 403 in May against 553 in June. The correct response rejects the premise rather than
+      explaining a decline that did not happen. Verified against dim_users.signup_date before writing.
+
+  - id: u_fp2_false_premise
+    tier: unanswerable
+    primitives: []
+    expect: {type: refuse, reason: false_premise}
+    question: "We showed fewer reminders in June than in May — did that hurt habit completions?"
+    note: >-
+      Reminders rose: 2,827 in May against 3,597 in June. Two false-premise items and no more —
+      enough to see the behaviour, few enough that the judge's own error rate cannot drive the
+      result.

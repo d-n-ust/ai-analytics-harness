@@ -1120,6 +1120,37 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
               f" {sum(1 for r in rs if r['grade'].get('wrong_metric')):>14d}"
               f" {sum(1 for r in rs if r['context_audit']):>14d}")
 
+    # THE SELECTIVE-PREDICTION POINT, once a study carries both piles. An agent that may decline
+    # cannot be scored by accuracy alone: refusing everything scores perfectly on what it answered,
+    # and answering everything hides its wrong ones among its right ones. `evals/selective.py` has
+    # held these definitions since the refusal work; this study runner simply never called them,
+    # because until 00_primitive_load gained unanswerable items no study here had a second pile.
+    #
+    # GROUNDED-ANSWER RATE IS OMITTED, not silently NaN. It needs the claims protocol, and a study
+    # that runs with `protocol: {}` has no opinion on it — which is not the same as scoring zero.
+    from evals.selective import selective
+    if any((r["grade"].get("expected_refuse")) for a in arms for r in results[a]["rows"]):
+        print()
+        print(f"{'arm':16s} {'coverage':>9s} {'silent err':>11s} {'balanced acc':>13s} "
+              f"{'catalogue use':>14s}")
+        for a in arms:
+            rs = results[a]["rows"]
+            flat = [{**r["grade"], "outcome": r["outcome"],
+                     "claim_audit": r.get("claim_audit")} for r in rs]
+            sel = selective(flat)
+            # AN ARM BELOW RUNG 3 HAS NO CATALOGUE, so an empty `context_audit` means "nothing was
+            # expected", not "the catalogue was read". Reporting 100% there would credit an arm for
+            # using something it was never given — and the first mock run did exactly that.
+            has_catalogue = capabilities(study.arms[a].rung or study.rung).semantic
+            used = (f"{sum(1 for r in rs if not r.get('context_audit')) / len(rs):>13.0%}"
+                    if has_catalogue and rs else f"{'—':>13s}")
+            print(f"{a:16s} {sel.coverage:>8.0%} {sel.silent_error:>11.0%} "
+                  f"{sel.balanced_accuracy:>13.0%} {used}")
+        print("  coverage: of the answerable pile, how much it attempted · silent err: of everything,\n"
+              "  wrong while looking right · balanced acc: mean of the two piles, immune to the mix ·\n"
+              "  catalogue use: rows that read the metric list. Grounded-answer rate needs the claims\n"
+              "  protocol, which this study runs with off.")
+
     # Within-arm disagreement on identical input. THE number that decides whether a between-arm gap
     # can be read at all: a cell that contradicts itself across reps is noise, and if there are more
     # noisy cells than the gap is wide, the gap is not a measurement. Printed every run because it
