@@ -70,6 +70,13 @@ cases:
       # that. Across three attempts gpt-5.6-terra gave the partial-month reasoning every time and
       # split 1-2 between these codes; grading on one scored correct analysis as failure twice.
       reason: [out_of_coverage, false_premise]
+      # NOT the usual false-premise list, because the premise here is TRUE: July really is below
+      # June in the rows we hold. What an answer must contradict is the COMPARISON, so the stems
+      # name the partial window rather than the figures. A response that explains a July drop
+      # without mentioning coverage has accepted the artefact, which is the failure being measured.
+      rebuttal: [partial, incomplete, "not complete", "12 of 31", "through the 12th", "ends on",
+                 artefact, artifact, "not comparable", "cannot be compared", coverage,
+                 "only covers", "not a full month"]
     note: "Data ends 2026-07-12. July is 12 of 31 days, so a month-over-month comparison is an
       artefact of the window, not a drop. Graded on out_of_coverage rather than false_premise
       because the premise is not false — July really is below June in the rows we hold; what is

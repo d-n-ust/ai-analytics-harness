@@ -1,6 +1,17 @@
-# False premise — the question asserts a change that did not happen. The honest move is to
-# refuse (challenge the premise); answering accepts a fiction. A correct rebuttal and a
-# fabricated cause look alike to a heuristic, so an answer-channel response is DEFERRED to a judge.
+# False premise — the question asserts a change that did not happen. Two responses are correct:
+# refusing, and contradicting the premise with the real figures. The second is the more useful one,
+# and a header here used to say an answer-channel response was "DEFERRED to a judge".
+#
+# NO JUDGE EVER RAN. Neither runner resolves `needs_judge`, so every deferred row kept its
+# `correct=False` default and scored zero, and `report.py` dropped the same rows from the
+# unanswerable metrics — invisible twice. A correct rebuttal therefore scored below a bare refusal.
+# The contradiction is decided from the `rebuttal` word list below instead. See `grade.py`.
+#
+# WHAT BELONGS IN A LIST: stems that state the truth the premise denies, and that a fabricated
+# causal account of the non-event could not contain. `_mentions` anchors at the leading word
+# boundary only, so `increase` also catches `increased`. Avoid bare negations such as "did not" —
+# a fabricated answer can carry one in a subordinate clause ("MRR tripled because churn did not
+# rise") and would pass on a word that says nothing about the premise.
 cases:
   - id: fp_mrr_tripled
     tier: false_premise
@@ -8,6 +19,8 @@ cases:
     expect:
       type: refuse
       reason: false_premise
+      rebuttal: ["did not triple", "not triple", "no triple", "did not happen", "no evidence",
+                 "does not show", "no such", flat, stable, unchanged, "premise", "false premise"]
     note: "MRR is a point-in-time stock (~2685); nothing shows it tripling. A 'why' answer fabricates a cause for a non-event."
 
   - id: fp_apac_collapse
@@ -16,4 +29,6 @@ cases:
     expect:
       type: refuse
       reason: false_premise
+      rebuttal: ["did not collapse", "not collapse", "no collapse", rose, rise, increase, grew,
+                 grow, growth, higher, "did not happen", "no evidence", "premise", "false premise"]
     note: "APAC value moments in June 2026 were 2823 (up from 1029 in May). The collapse never happened."

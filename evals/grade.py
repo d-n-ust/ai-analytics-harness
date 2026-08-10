@@ -170,6 +170,11 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     has_number = (answer.declared_value is not None if getattr(answer, "typed_value", False)
                   else asserts_number(answer.answer))
 
+    # `needs_judge` IS NOW ALWAYS FALSE and is kept only so the persisted schema does not change
+    # under existing result sets. Nothing sets it: the one branch that did — false premise — is
+    # decided here, because deferring to a judge that no runner calls scored the deferred rows zero.
+    # Do not reintroduce it without a pass that resolves it; `report.py` and `publish_metrics.py`
+    # both DROP flagged rows from the unanswerable metrics, so a deferral is invisible twice over.
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
     wrong_scope = wrong_metric = False
     reason_match = driver_ok = cause_ok = metric_match = None
@@ -197,8 +202,25 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         correct = accepts_clarify or missing_context
         bucket = "idk"
     elif is_false_premise:
-        needs_judge = True                           # rebuttal vs accepted-premise — a judge rules
-        bucket = "deferred"
+        # ANSWERED a question whose premise is false. Refusing is already handled above, and both
+        # responses are correct: "I will not answer that" and "signups did not fall, they rose from
+        # 403 to 553" are the same judgement delivered two ways, and the second is the more useful
+        # one. What separates them from a failure is whether the text CONTRADICTS the premise or
+        # explains the thing that did not happen.
+        #
+        # This was a `needs_judge` deferral until 2026-08-10, and no judge ever ran: neither runner
+        # resolves the flag, so every such row kept its `correct=False` default and scored 0. That
+        # inverted the item — an evidenced rebuttal scored below a bare refusal, and the only arm
+        # that fabricated a causal story for a decline that never happened was not distinguishable
+        # from the four that rebutted correctly. The contradiction is decidable from the case's own
+        # word list, so it is decided here rather than deferred to a model that is not called.
+        correct = grade_keywords(f"{answer.answer or ''} {answer.explanation or ''}",
+                                 expect["rebuttal"])["correct"]
+        # Accepting a false premise and explaining it is the worst outcome the pile can produce:
+        # a confident, fully reasoned account of an event that did not occur. It counts as a silent
+        # error, which is what `confident_wrong` feeds.
+        confident_wrong = not correct
+        bucket = "right" if correct else "wrong"
     elif expects_refusal:                            # answered when it should have refused
         if has_number:
             bucket = "wrong"

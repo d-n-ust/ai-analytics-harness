@@ -29,6 +29,18 @@ def _validate(case: dict, where: str) -> None:
     t = e.get("type")
     if t not in _EXPECT_TYPES:
         raise ValueError(f"{where}: case {case['id']!r} has expect.type {t!r}, not one of {_EXPECT_TYPES}")
+    # A FALSE-PREMISE CASE MUST CARRY THE WORDS THAT DECIDE IT. Refusing such a question and
+    # contradicting it are both correct, so the grader reads the answer for a contradiction
+    # (`grade.py`, the `is_false_premise` branch). Without a list there is nothing to read, and the
+    # row silently scores zero — which is what happened to both items in this suite for two runs.
+    reasons = e.get("reason")
+    reasons = (reasons,) if isinstance(reasons, str) else tuple(reasons or ())
+    if "false_premise" in reasons and not e.get("rebuttal"):
+        raise ValueError(
+            f"{where}: case {case['id']!r} expects `false_premise` but declares no `rebuttal` word "
+            f"list. An answer that contradicts the premise is correct and cannot be recognised "
+            f"without one. List the stems that state the truth, e.g. [rose, increase, higher].")
+
     if t == "metric_answer":
         # NAMING THE METRIC IS THE DEFAULT AND STAYS THE DEFAULT. For most questions "did the agent
         # pick the right definition?" is the measurement, and a case that forgets to say which

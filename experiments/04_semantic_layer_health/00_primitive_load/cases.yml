@@ -399,7 +399,19 @@ cases:
   - id: u_amb1_ambiguous
     tier: unanswerable
     primitives: [segment]
-    expect: {type: ambiguous, reason: segment_undefined}
+    expect:
+      type: ambiguous
+      # BOTH CODES ARE TRUE OF ONE FACT, which is the documented bar for a list (see
+      # `_accepted_reasons` in grade.py). The note below already says it: the readings differ AND
+      # "the warehouse governs none of them under that name". Read as a missing group, that is
+      # `segment_undefined`; read as a missing definition, `no_governed_definition`. A reviewer
+      # cannot say which is better.
+      #
+      # Added 2026-08-10 after the reps=3 run scored this item 0/18 — every arm, every repetition.
+      # Six arms declined it correctly and were marked wrong for the code alone. A floor that
+      # complete is a fault in the gold, not a finding about the models: the arms that refused had
+      # done the one thing the item exists to measure.
+      reason: [segment_undefined, no_governed_definition]
     question: "How many users churned last month?"
     note: >-
       "Churned" has at least three defensible readings here — a subscription that ended, no activity
@@ -410,7 +422,9 @@ cases:
   - id: u_amb3_ambiguous
     tier: unanswerable
     primitives: [entity, segment, grain]
-    expect: {type: ambiguous, reason: segment_undefined}
+    expect:
+      type: ambiguous
+      reason: [segment_undefined, no_governed_definition]   # same undefined term as u_amb1
     question: "Excluding staff and test accounts, how many people who have ever had a paid subscription churned in June 2026?"
     note: >-
       The deep pair of `u_amb1`. The undefined term sits at the end of a question whose other three
@@ -419,7 +433,15 @@ cases:
   - id: u_fp1_false_premise
     tier: unanswerable
     primitives: []
-    expect: {type: refuse, reason: false_premise}
+    expect:
+      type: refuse
+      reason: false_premise
+      # Stems, because `_mentions` anchors at the LEADING word boundary only: `increase` catches
+      # `increased` and `increases`, while `increased` would miss the bare `increase` that one arm
+      # actually wrote. Every entry states the truth the premise denies; none of them can appear in
+      # a causal account of a decline.
+      rebuttal: [rose, rise, increase, grew, grow, growth, higher, "did not fall",
+                 "did not decline", "no decline", "not fall", "false premise", premise]
     question: "Signups fell in June 2026 — what drove the decline?"
     note: >-
       They rose: 403 in May against 553 in June. The correct response rejects the premise rather than
@@ -428,9 +450,18 @@ cases:
   - id: u_fp2_false_premise
     tier: unanswerable
     primitives: []
-    expect: {type: refuse, reason: false_premise}
+    expect:
+      type: refuse
+      reason: false_premise
+      rebuttal: [rose, rise, increase, grew, grow, growth, higher, more, "did not fall",
+                 "not fewer", "false premise", premise]
     question: "We showed fewer reminders in June than in May — did that hurt habit completions?"
     note: >-
       Reminders rose: 2,827 in May against 3,597 in June. Two false-premise items and no more —
-      enough to see the behaviour, few enough that the judge's own error rate cannot drive the
-      result.
+      enough to see the behaviour, few enough that a grading error on one cannot drive the result.
+
+      D_declared and E_enforced could not check this premise until 2026-08-10: the layer had no
+      reminders model at all, so E refused with "there is no governed metric for reminders shown",
+      which is a true statement about the layer rather than a detection of the false premise. The
+      item was measuring a gap in our own layer. `reminders_shown` was added to layer.yaml to close
+      it — see arms/D_declared.yml.
