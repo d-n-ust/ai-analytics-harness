@@ -407,6 +407,11 @@ NO_ARM = ("CONSTANT", "ABSENT", "OPEN", "MEASURED_ELSEWHERE")
 # word about it, because a variant is not a column and nothing here looked for one. It was found by
 # reading a directory listing, which is exactly the failure this module's validation was added to
 # prevent. When it was finally built it produced the study's clearest result.
+# ONLY DOCUMENTATION. `C_modelled_snowflaked` and `C_modelled_labelled` were briefly added here and
+# taken out again: this table is GLOBAL, so registering them obliged every study that builds
+# `C_modelled` to account for two arms that exist in one study as exploratory probes. A variant
+# belongs here when the matrix expects every study to answer for it; a probe belongs in that study's
+# own `columns:` block, which is where those two now sit.
 VARIANTS = {"C_modelled": ("C_modelled_documented",)}
 
 # WHAT A DECLARED PRIMITIVE MUST BE VISIBLE AS IN THE GOLD SQL. A case that says
@@ -417,8 +422,22 @@ VARIANTS = {"C_modelled": ("C_modelled_documented",)}
 # primitive takes in this warehouse. It cannot prove a question needs a primitive; it can prove the
 # gold does not exercise one the case claims, which is the direction the failures went.
 PRIMITIVE_MARKS = {
-    "entity":    (" = '", "etype", "is_archived", "arch is", "status", " st ="),
-    "segment":   ("internal", "email", "plat", "ctry", "country", "platform", "region", "channel"),
+    # `.st =` as well as ` st =`, because a gold that aliases its table writes `s.st = 1` and the
+    # unqualified marker misses it. Found the same way as the `chan` omission below: twelve revenue
+    # golds filtering `WHERE s.st = 1` were reported as declaring an entity they did not test.
+    # `snapshot_month` because a PERIODIC SNAPSHOT resolves its entity by which month a row belongs
+    # to, not by a status flag: "subscriptions live in June" is `snapshot_month = DATE '2026-06-01'`
+    # and there is no `st = 1` to find. Third addition to this table today, all the same shape — the
+    # markers were written against one warehouse layout and the golds legitimately use others.
+    "entity":    (" = '", "etype", "is_archived", "arch is", "status", " st =", ".st =",
+                  "snapshot_month"),
+    # Both spellings of every column that carries a segment, because a gold may be written against
+    # the RAW extract or against the star and the two name the same field differently: `chan` in
+    # `_source.u`, `channel` in `dim_users`. The check caught a real omission here — nine gold
+    # queries filtering `lower(u.chan) IN (...)` were reported as declaring a segment they did not
+    # test, which is exactly the failure it exists to catch, arriving from the other direction.
+    "segment":   ("internal", "email", "plat", "ctry", "country", "platform",
+                  "region", "chan", "channel"),
     "grain":     ("count(distinct",),
     "join_path": (" in (select", " join ", " exists ("),
 }

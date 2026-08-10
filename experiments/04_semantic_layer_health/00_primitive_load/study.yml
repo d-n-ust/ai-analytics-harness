@@ -55,6 +55,12 @@ columns:
   A_implicit:   "the raw extract, no comments anywhere"
   B_documented: "the same tables, with every primitive the ladder needs stated in a comment"
   C_modelled:   "the conformed star — entity and segment structural, join cardinality untouched"
+  C_modelled_labelled: "the same star plus `platform_name` on the dimension — the control
+                 that separates 'a label exists' from 'the label lives in a lookup table'."
+  C_modelled_snowflaked: "the same star with its labels snowflaked out — `country_name` moves to
+                 `dim_country`, and a platform label it never had lands in `dim_platform`. A paired
+                 comparison against C_modelled, testing whether a label has to sit ON the dimension
+                 or whether a lookup table is as good."
   C_modelled_documented: "the same star, with table and column comments — the documentation axis
                  asked a second time, on a shape that already carries the facts structurally"
   D_declared:   "the documented star plus the governed layer — C_modelled_documented with a layer on
@@ -66,7 +72,7 @@ columns:
                  check refuses. NOT part of the load ladder — it sits at a different guardrail cell
                  and is a paired comparison against D alone."
 
-arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, D_declared, E_enforced]
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, C_modelled_labelled, C_modelled_snowflaked, D_declared, E_enforced]
 
 # PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
 #

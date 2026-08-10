@@ -1,364 +1,825 @@
-# EXPERIMENT QUESTIONS — FIVE NESTED LADDERS of four rungs, plus three controls.
+# EXPERIMENT QUESTIONS — TWELVE FAMILIES OF THREE RUNGS, two controls, twelve with no answer.
 #
-# TWENTY-THREE ITEMS. The count is the design. One question per rung made a rung's score three
-# repetitions of a single item, which measures the noise inside that item rather than the effect
-# across items; three per rung produced a readable curve on gpt-5-mini and left one family of three
-# carrying no signal. Five families give five observations per load level, and at reps=1 that is a
-# 92-call run — the budget goes to items, which is where the effect lives, and not to repetitions,
-# which estimate the noise inside one.
+# FIFTY ITEMS. The count is the design, and it changed on 2026-08-10 after a power analysis.
 #
-# THE HYPOTHESIS. If each primitive is resolved independently with probability p, an n-primitive
-# question succeeds at p^n, so the gap between a documented and an undocumented warehouse widens
-# superlinearly with n. Measured on the three-family set: 0, 0, 0, +22, +56 pp by load. See
-# FINDINGS.md §9.
+# WHY RUNG 1 IS GONE. Every arm scored 15/15 on the entity-only rung in every run: six warehouses,
+# three runs, including the raw extract with no documentation at all. That is a finished measurement,
+# not a weak one, and re-confirming it cost twelve items. Entity resolution is still exercised — it
+# sits inside all three remaining rungs, because the ladder is cumulative — it is simply no longer
+# measured alone. The two controls below hold the "an easy question is answered by everything" claim.
 #
-# EACH LADDER IS NESTED — rung N is rung N-1 plus exactly one primitive — so the most likely wrong
-# answer at each rung IS THE RUNG BELOW'S GOLD, and a failure names the step that caused it. Every
-# gold below was executed against the warehouse before this file was written.
+# WHY TWELVE FAMILIES AND NOT FIVE. McNemar's exact test on k discordant item pairs has a minimum
+# two-sided p of 2 x 0.5^k. At five items per rung that floor is 0.0625: significance is UNREACHABLE
+# even if one arm answers all five correctly and the other none. Six discordant pairs is the hard
+# floor and discordance is a fraction of items, so twelve per rung is the minimum that can carry a
+# separation claim at all. `../FINDINGS.md` §30.1 is the reason it matters — C_modelled, D_declared
+# and E_enforced tie at 57 of 60, and a five-item rung cannot tell whether that tie is real.
 #
-#     family                                L1      L2      L3      L4   smallest step
-#     h  habits still tracked            6,357   6,147   2,321     382       3.3%
-#     a  habits archived                 1,110   1,074     868     125       3.2%
-#     r  activated referrals               266     254     236      36       4.5%
-#     w  finance habits · web platform   1,236     374     306      49      18%
-#     c  mindfulness habits · Germany    1,267     221     171      34      23%
+# WHY REPETITIONS WERE TRADED FOR ITEMS. Repeat runs of one question are not independent
+# observations: measured intraclass correlation is 0.30-0.43, so a third repetition buys about 40%
+# of a new data point while a new item buys a whole one. At a fixed call budget, 15 items x 1 rep
+# beats 5 items x 3 reps on the null band (26.7pp against 33.3pp). This file's previous header
+# already argued exactly that and the run configuration contradicted it.
 #
-# WHY THE TWO NEW FAMILIES STEP SO MUCH HARDER. Families h, a and r segment on staff-and-test
-# accounts, which is 3.4% of users — so their segment rung barely moves the number, and the measured
-# A-to-B gap at load 2 was +0 pp on both models. That is a property of the data, not of the wording.
-# Families w and c segment on an enum recorded in several spellings instead: `u.plat` holds three
-# platforms in nine spellings with 72 NULLs, `u.ctry` holds DE beside de. An arm that matches one
-# spelling returns 114 where the gold is 390. Both defects are real, both are documented in
-# warehouse/docs/messy_load.sql, and neither was invented for this study.
+# THE SEGMENT RUNG IS FOUR MEASUREMENTS, NOT ONE. This is the structural change that matters most.
+# A segment can be handed to the agent in words, or it can be a value the agent must repair, and
+# those are different skills that were previously averaged into one score. The four kinds below are
+# ordered by how much repair the value needs: stated, case, code, synonym. Report them separately.
 #
-# THE PAIR THAT DEFEATS A FIXED STRATEGY: family a is family h with the NULL polarity inverted, on
-# the same column. An arm that has learned `IS NULL` as a reflex answers one and misses the other.
+# NESTING. Rung N is rung N-1 plus exactly one primitive, so the most likely wrong answer at each
+# rung IS THE RUNG BELOW's GOLD and a failure names the step that caused it. Every gold below was
+# executed against the warehouse before this file was written.
 #
-# A FAMILY WAS BUILT AND CUT — the annual-plan ladder on `subs`, whose rungs stepped 5.3%, 2.5% and
-# 2.5%. A 2.5% step against a 2% tolerance is a coin toss. `subs` has too few users holding several
-# terms for the grain rung to bite.
-#
-# GRADEABILITY. Every item is one number from one terminal call. No item asks for a breakdown as
-# well as a total; ../05_additivity lost nine runs to a question shaped that way.
-#
-# VOCABULARY. Business words only — never `arch`, `cat`, `plat`, `ctry`, `internal`, `subs`, `uid`,
-# `distinct`, `row`. The audit's longest span must be short and equal across arms.
-#
-# THE CONTROLS ARE THE ROWS TO READ FIRST. One table, one date column, one row per thing, nothing
-# coded and nothing to join. Two of them state the population because their two readings sit 2.5%
-# and 2.8% apart, which is outside the tolerance — a control an arm can lose by making a defensible
-# choice is not a control, and that is exactly what this study's first control was.
-#
-# POWER. 23 items, 20 of them on the ladder, 5 per load level. Still a pilot: the measured noise
-# floor is 13% of cells and the smallest detectable difference at this size is far above the
-# per-rung differences. The SHAPE of the curve across five load levels is the claim, not any single
-# rung's rate.
+# NO CROSS-FAMILY COLLISIONS. All twelve families were checked pairwise on all three rungs: no two
+# golds sit within the 2% tolerance of each other, so an agent that resolves the wrong family cannot
+# score. Re-run that check after any warehouse reseed.
 
 cases:
 
-  # ══ family h · habits still tracked ══
-  - id: pl_h1_entity
+  # ================================================================================================
+  # STATED SEGMENT. The question hands the filter over in words and the agent has only to apply
+  # it. This kind measures instruction following, NOT value resolution. Its steps are the weakest
+  # in the set (3.3-4.2%) because staff and test accounts are 3.4% of users, and that is a
+  # property of the data rather than of the wording. Kept deliberately: the documentation finding
+  # rests on having questions that do and do not name this exclusion.
+
+  - id: pl_f_staff_segment
     tier: primitive_load
-    primitives: [entity]
+    segment_kind: stated
+    primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.arch IS NULL"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
       tolerance: 0.02
-    question: "How many habits have not been archived?"
+    question: "How many habits are in the fitness category? Count archived habits as well. Do not count staff or test accounts."
     note: >-
-      True 6,357. `hab.arch` holds an archive date and is NULL while the habit is still tracked, so absence of a value is the fact; counting every row gives 7,467. This is ../01_entity's `e_ent_active_habits`, on which A_implicit scores 3/3, which is what gives the ladder headroom.
-  - id: pl_h2_segment
+      Rung 2 of this family: entity + segment. Gold 1,183, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_staff_grain
     tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "How many people have at least one fitness habit? Count archived habits as well. Do not count staff or test accounts."
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 926, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_staff_join_path
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people have at least one fitness habit and have ever paid for a subscription? Count archived habits as well. Do not count staff or test accounts."
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 156, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_staff_segment
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "How many habits are in the productivity category? Count archived habits as well. Do not count staff or test accounts."
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 1,234, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_staff_grain
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "How many people have at least one productivity habit? Count archived habits as well. Do not count staff or test accounts."
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 988, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_staff_join_path
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people have at least one productivity habit and have ever paid for a subscription? Count archived habits as well. Do not count staff or test accounts."
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 172, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_staff_segment
+    tier: primitive_load
+    segment_kind: stated
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
       gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many habits have not been archived?"
+    question: "How many habits have not been archived? Do not count staff or test accounts."
     note: >-
-      True 6,147. Dropping the population gives 6,357 — this family's L1 gold.
-  - id: pl_h3_grain
+      Rung 2 of this family: entity + segment. Gold 6,147, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_staff_grain
     tier: primitive_load
+    segment_kind: stated
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
       gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people have at least one habit they have not archived?"
+    question: "How many people have at least one habit they have not archived? Do not count staff or test accounts."
     note: >-
-      True 2,321. One row is one habit and a person keeps several, so counting rows returns 6,147, L2's gold.
-  - id: pl_h4_join_path
+      Rung 3 of this family: entity + segment + grain. Gold 2,321, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_staff_join_path
     tier: primitive_load
+    segment_kind: stated
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
       gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription have at least one habit they have not archived?"
+    question: "How many people have at least one habit they have not archived and have ever paid for a subscription? Do not count staff or test accounts."
     note: >-
-      True 382. Dropping the subscription condition gives 2,321 (L3's gold); counting habits rather than people gives 1,042; joining to the subscription table rather than testing membership gives 1,151, because 43 users hold more than one term.
+      Rung 4 of this family: entity + segment + grain + join path. Gold 382, executed against the warehouse before
+      this file was written.
 
-  # ══ family a · habits archived — the inverse of h ══
-  - id: pl_a1_entity
+  # ================================================================================================
+  # CASE-FOLDING SEGMENT. `u.plat` holds three platforms in nine spellings (ANDROID, Android,
+  # android, IOS, Ios, iOS, ios, WEB, Web) plus 72 NULLs. The agent must fold case to match.
+  # Measures value resolution at its easiest.
+
+  - id: pl_f_andr_segment
     tier: primitive_load
-    primitives: [entity]
-    expect:
-      type: metric_answer
-      no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.arch IS NOT NULL"
-      tolerance: 0.02
-    question: "How many habits have been archived?"
-    note: >-
-      True 1,110. The inverse of h1 on the same column, so an arm that has learned `IS NULL` as a reflex rather than as a meaning answers one of the pair and misses the other. This is the pair that defeats a fixed-polarity strategy.
-  - id: pl_a2_segment
-    tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many habits have been archived?"
+    question: "How many fitness habits belong to people who use the Android app? Count archived habits as well."
     note: >-
-      True 1,074. Dropping the population gives 1,110.
-  - id: pl_a3_grain
+      Rung 2 of this family: entity + segment. Gold 418, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_andr_grain
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people have archived at least one habit?"
+    question: "How many people who use the Android app have at least one fitness habit? Count archived habits as well."
     note: >-
-      True 868. Counting rows returns 1,074, L2's gold.
-  - id: pl_a4_join_path
+      Rung 3 of this family: entity + segment + grain. Gold 322, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_andr_join_path
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NOT NULL AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND h.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND lower(u.plat) = 'android' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "Excluding staff and test accounts, how many people who have ever had a paid subscription have archived at least one habit?"
+    question: "How many people who use the Android app have at least one fitness habit and have ever paid for a subscription? Count archived habits as well."
     note: >-
-      True 125. Dropping the subscription condition gives 868.
+      Rung 4 of this family: entity + segment + grain + join path. Gold 51, executed against the warehouse before
+      this file was written.
 
-  # ══ family r · activated referrals ══
-  - id: pl_r1_entity
+  - id: pl_h_andr_segment
     tier: primitive_load
-    primitives: [entity]
-    expect:
-      type: metric_answer
-      no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM ref r WHERE r.st = 'activated'"
-      tolerance: 0.02
-    question: "How many referrals reached the activated stage?"
-    note: >-
-      True 266. `ref.st` carries readable stages — pending, joined, activated — so this is deliberately the easiest entity rung in the set. A base rung the undocumented arm cannot do leaves the ladder no headroom, which is how the first build of this study failed.
-  - id: pl_r2_segment
-    tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'health' AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "How many referrals reached the activated stage where the person who was referred is not a staff or test account?"
+    question: "How many health habits belong to people who use the Android app? Count archived habits as well."
     note: >-
-      True 254. NAMES WHICH SIDE OF THE REFERRAL the population applies to. `ref` carries two user columns, so 'excluding staff and test accounts' alone has two readings and would measure ambiguity rather than segment resolution.
-  - id: pl_r3_grain
+      Rung 2 of this family: entity + segment. Gold 384, executed against the warehouse before
+      this file was written.
+
+  - id: pl_h_andr_grain
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT r.referrer) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'health' AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "Counting each referrer once, how many different people have made a referral that reached the activated stage where the person referred is not a staff or test account?"
+    question: "How many people who use the Android app have at least one health habit? Count archived habits as well."
     note: >-
-      True 236. Only 19 referrers made more than one activated referral, so the step is 7.1% — the tightest grain step in the set, and clear of the 2% tolerance. Counting rows returns 254.
-  - id: pl_r4_join_path
+      Rung 3 of this family: entity + segment + grain. Gold 299, executed against the warehouse before
+      this file was written.
+
+  - id: pl_h_andr_join_path
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT r.referrer) FROM ref r JOIN u ON r.referred = u.uid WHERE r.st = 'activated' AND NOT ((coalesce(u.internal,0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) AND r.referrer IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'health' AND lower(u.plat) = 'android' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "Counting each referrer once, how many different people who have ever had a paid subscription themselves have made a referral that reached the activated stage where the person referred is not a staff or test account?"
+    question: "How many people who use the Android app have at least one health habit and have ever paid for a subscription? Count archived habits as well."
     note: >-
-      True 36. Dropping the subscription condition gives 236.
+      Rung 4 of this family: entity + segment + grain + join path. Gold 60, executed against the warehouse before
+      this file was written.
 
-  # ══ family w · fitness habits on the web platform ══
-  - id: pl_w1_entity
+  - id: pl_t_andr_segment
     tier: primitive_load
-    primitives: [entity]
-    expect:
-      type: metric_answer
-      no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'finance'"
-      tolerance: 0.02
-    question: "Counting archived ones as well, how many habits are in the finance category?"
-    note: >-
-      True 1,236. `hab.cat` carries readable category names, so the entity rung is easy by design. CATEGORY CHANGED FROM `fitness` TO `finance` after run 20260809-212756: `hab.cat` holds both `fitness` and `health`, and the arm read "fitness" as a topic — `cat IN ('fitness','health','exercise') OR nm LIKE '%fitness%'` — answering 774 against a gold of 390. `finance` has no near-synonym in the column. The wording also now closes the archive status, which the first version left open.
-  - id: pl_w2_segment
-    tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web'"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "Counting archived ones as well, how many finance habits belong to people using the web platform?"
+    question: "How many habits that have not been archived belong to people who use the Android app?"
     note: >-
-      True 374. THE SEGMENT IS AN ENUM RECORDED IN NINE SPELLINGS: web, Web and WEB are one platform, and 72 rows are NULL. An arm matching a single spelling returns 96 — 3.90x from the gold. This is the strongest segment rung in the set; the staff-exclusion families step only 3.2% here, because internal accounts are 3.4% of users, and that is a property of the data rather than of the questions.
-  - id: pl_w3_grain
+      Rung 2 of this family: entity + segment. Gold 2,112, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_andr_grain
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web'"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.plat) = 'android'"
       tolerance: 0.02
-    question: "How many people using the web platform have at least one finance habit, archived or not?"
+    question: "How many people who use the Android app have at least one habit they have not archived?"
     note: >-
-      True 306. Counting habits rather than people returns 374.
-  - id: pl_w4_join_path
+      Rung 3 of this family: entity + segment + grain. Gold 781, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_andr_join_path
     tier: primitive_load
+    segment_kind: case
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'finance' AND lower(u.plat) = 'web' AND h.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.plat) = 'android' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "How many people using the web platform who have ever had a paid subscription have at least one finance habit, archived or not?"
+    question: "How many people who use the Android app have at least one habit they have not archived and have ever paid for a subscription?"
     note: >-
-      True 49. Dropping the subscription condition gives 306.
+      Rung 4 of this family: entity + segment + grain + join path. Gold 137, executed against the warehouse before
+      this file was written.
 
-  # ══ family c · learning habits in Germany ══
-  - id: pl_c1_entity
+  # ================================================================================================
+  # CODED SEGMENT. `u.ctry` holds ISO codes, `FR` beside `fr`, and never the country name. The
+  # agent must decode as well as fold case. This is the defect the star repairs with
+  # `country_name` beside `country`, and the one where an undocumented star beat a documented
+  # messy warehouse.
+
+  - id: pl_f_us_segment
     tier: primitive_load
-    primitives: [entity]
-    expect:
-      type: metric_answer
-      no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE h.cat = 'mindfulness'"
-      tolerance: 0.02
-    question: "Counting archived ones as well, how many habits are in the mindfulness category?"
-    note: >-
-      True 1,267. A second readable-category entity rung, on a different category from w1 so the two families share no question. CHANGED FROM `learning` TO `mindfulness` alongside w's change, and the archive status is closed in the wording.
-  - id: pl_c2_segment
-    tier: primitive_load
+    segment_kind: code
     primitives: [entity, segment]
-    # `segment` here includes resolving Germany to DE. The country-code vocabulary is documented in
-    # warehouse/docs/*.sql, so the documented arms are told and the implicit arm must discover it by
-    # inspecting values — which is what a segment rung IS when the population is named in business
-    # terms and stored as a code.
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE'"
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND upper(u.ctry) = 'US'"
       tolerance: 0.02
-    question: "Counting archived ones as well, how many mindfulness habits belong to people in Germany?"
+    question: "How many fitness habits belong to people in the United States? Count archived habits as well."
     note: >-
-      True 221. TWO THINGS AT ONCE, and the first was undeclared until run 20260809-212756 exposed it. The question names a country and the column holds an ISO code: three arms filtered `ctry = 'Germany'` and returned 0. That mapping is now DOCUMENTED — warehouse/docs/messy_load.sql and star_schema.sql both list DE = Germany — so it is a fact the documented arms are told and the implicit arm must find by inspecting values, which is what a segment rung is when a population is named in business terms and stored as a code. The casing defect is the second: DE and de are one country.
-  - id: pl_c3_grain
+      Rung 2 of this family: entity + segment. Gold 189, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_us_grain
     tier: primitive_load
+    segment_kind: code
     primitives: [entity, segment, grain]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE'"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND upper(u.ctry) = 'US'"
       tolerance: 0.02
-    question: "How many people in Germany have at least one mindfulness habit, archived or not?"
+    question: "How many people in the United States have at least one fitness habit? Count archived habits as well."
     note: >-
-      True 171. Counting habits rather than people returns 221.
-  - id: pl_c4_join_path
+      Rung 3 of this family: entity + segment + grain. Gold 144, executed against the warehouse before
+      this file was written.
+
+  - id: pl_f_us_join_path
     tier: primitive_load
+    segment_kind: code
     primitives: [entity, segment, grain, join_path]
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND upper(u.ctry) = 'DE' AND h.uid IN (SELECT uid FROM subs)"
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'fitness' AND upper(u.ctry) = 'US' AND h.uid IN (SELECT uid FROM subs)"
       tolerance: 0.02
-    question: "How many people in Germany who have ever had a paid subscription have at least one mindfulness habit, archived or not?"
+    question: "How many people in the United States have at least one fitness habit and have ever paid for a subscription? Count archived habits as well."
     note: >-
-      True 34. Dropping the subscription condition gives 171.
+      Rung 4 of this family: entity + segment + grain + join path. Gold 25, executed against the warehouse before
+      this file was written.
 
-  # ══ controls · load 0 ══
-  - id: pl_c1_accounts
+  - id: pl_t_fr_segment
     tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'FR'"
+      tolerance: 0.02
+    question: "How many habits that have not been archived belong to people in France?"
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 1,054, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_fr_grain
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'FR'"
+      tolerance: 0.02
+    question: "How many people in France have at least one habit they have not archived?"
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 384, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_fr_join_path
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'FR' AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people in France have at least one habit they have not archived and have ever paid for a subscription?"
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 66, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_gb_segment
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'GB'"
+      tolerance: 0.02
+    question: "How many habits that have not been archived belong to people in the United Kingdom?"
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 976, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_gb_grain
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'GB'"
+      tolerance: 0.02
+    question: "How many people in the United Kingdom have at least one habit they have not archived?"
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 376, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_gb_join_path
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND upper(u.ctry) = 'GB' AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people in the United Kingdom have at least one habit they have not archived and have ever paid for a subscription?"
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 70, executed against the warehouse before
+      this file was written.
+
+  # ================================================================================================
+  # SYNONYM SEGMENT, the hardest. `u.chan` holds five channels in seventeen spellings, and four of
+  # them are true synonyms rather than case variants: ppc = paid-search = 'Paid Search' =
+  # paid_search. Case folding is not enough; the agent needs the mapping. No documentation states
+  # it outside the star.
+
+  - id: pl_m_refr_segment
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND lower(u.chan) IN ('referral','ref')"
+      tolerance: 0.02
+    question: "How many mindfulness habits belong to people who arrived through a referral? Count archived habits as well."
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 248, executed against the warehouse before
+      this file was written.
+
+  - id: pl_m_refr_grain
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND lower(u.chan) IN ('referral','ref')"
+      tolerance: 0.02
+    question: "How many people who arrived through a referral have at least one mindfulness habit? Count archived habits as well."
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 190, executed against the warehouse before
+      this file was written.
+
+  - id: pl_m_refr_join_path
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'mindfulness' AND lower(u.chan) IN ('referral','ref') AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people who arrived through a referral have at least one mindfulness habit and have ever paid for a subscription? Count archived habits as well."
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 28, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_paid_segment
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "How many productivity habits belong to people who arrived through paid search? Count archived habits as well."
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 268, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_paid_grain
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "How many people who arrived through paid search have at least one productivity habit? Count archived habits as well."
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 209, executed against the warehouse before
+      this file was written.
+
+  - id: pl_p_paid_join_path
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.cat = 'productivity' AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search') AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people who arrived through paid search have at least one productivity habit and have ever paid for a subscription? Count archived habits as well."
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 41, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_paid_segment
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "How many habits that have not been archived belong to people who arrived through paid search?"
+    note: >-
+      Rung 2 of this family: entity + segment. Gold 1,304, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_paid_grain
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "How many people who arrived through paid search have at least one habit they have not archived?"
+    note: >-
+      Rung 3 of this family: entity + segment + grain. Gold 483, executed against the warehouse before
+      this file was written.
+
+  - id: pl_t_paid_join_path
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, grain, join_path]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT h.uid) FROM hab h JOIN u ON h.uid = u.uid WHERE h.arch IS NULL AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search') AND h.uid IN (SELECT uid FROM subs)"
+      tolerance: 0.02
+    question: "How many people who arrived through paid search have at least one habit they have not archived and have ever paid for a subscription?"
+    note: >-
+      Rung 4 of this family: entity + segment + grain + join path. Gold 83, executed against the warehouse before
+      this file was written.
+
+  # ================================================================================================
+  # FAMILY rv — REVENUE. Four families of three rungs, one per segment kind, added 2026-08-10.
+  #
+  # WHY IT EXISTS. Every other answerable item in this file is a COUNT. Not one asked the agent to
+  # sum a money column, so `measure + aggregation` (primitive 3) and `additivity` (primitive 5) were
+  # both unmeasured while the matrix claimed nine primitives. This family fills those two rows.
+  #
+  # WHY IT IS NOT A FIFTH RUNG ON THE HABIT FAMILIES. It was designed that way first and the design
+  # was wrong. Those families define their population by HABIT, and the only aggregatable number in
+  # the warehouse — `billed_amount` — sits on subscriptions, which carry no habit key. Aggregating a
+  # subscription measure over a habit-defined population crosses a one-to-many join, which is a FAN
+  # TRAP rather than an aggregation test: 43 users hold more than one term. The population here is
+  # therefore defined on USER attributes only, where the grain is stable.
+  #
+  # THE LAYER HAD NO MONEY IN IT until this family was built. `layers/D_declared/layer.yaml`
+  # modelled habits, reminders, referrals and value moments and no revenue, so a revenue question
+  # would have measured our own omission — the failure recorded twice already in ../FINDINGS.md
+  # §27.3 and §28.4. `billed_amount`, `total_billed` and a derived `mrr` were added first.
+
+  # ── stated segment ──
+
+  - id: rv_staff_segment
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "How many subscriptions are currently active? Do not count staff or test accounts."
+    note: >-
+      Rung 2: entity + segment. Gold 353.00. Counts subscription TERMS, not people. In this warehouse no one holds two live terms, so terms and subscribers coincide at 371 and this rung cannot detect a grain error — it is the base of the family, not a test of one.
+
+  - id: rv_staff_measure_agg
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, measure_agg]
+    expect:
+      type: metric_answer
+      metric: total_billed
+      gold_sql: "SELECT round(sum(s.amt),2) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "What is the total of the billed amounts on the subscriptions that are currently active? Do not count staff or test accounts."
+    note: >-
+      Rung 3: entity + segment + measure + aggregation. Gold 10,795.42. THE FIRST NUMBER IN THIS STUDY THAT IS NOT A COUNT. Every other item counts rows or people; this one sums a money column, which is a different decision and was untested until now. The likely wrong answer is the rung below's gold — a count of terms instead of a sum over them.
+
+  - id: rv_staff_additivity
+    tier: primitive_load
+    segment_kind: stated
+    primitives: [entity, segment, measure_agg, additivity]
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(m.mrr_amount),2) FROM _star.fct_subscription_months m JOIN u ON m.user_id = u.uid WHERE m.snapshot_month = DATE '2026-06-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))"
+      tolerance: 0.02
+    question: "What was the monthly recurring revenue in June 2026? Do not count staff or test accounts."
+    note: >-
+      Gold 2,465.03. REBUILT ON A PERIODIC SNAPSHOT 2026-08-10. The first version asked the same
+      question of `fct_subscriptions`, an accumulating snapshot whose time dimension is the date a
+      term STARTED; monthly recurring revenue is a stock, so that table cannot answer it for a month
+      and the layer advertised the illegal slice as a feature. E_enforced picked the right metric,
+      added `period=last_week`, and returned 127.37 against a true book of 2,685.08. The item was
+      measuring our modelling error. `fct_subscription_months` holds one row per subscription per
+      month it was live, and the annual-over-twelve normalisation lives there once, at the grain
+      where it is true. THE TRAP IS THE RUNG BELOW: summing the billed amounts on live terms gives
+      10,795.42,
+      which is an annual lump added to a monthly charge and sits far outside tolerance.
+  - id: rv_andr_segment
+    tier: primitive_load
+    segment_kind: case
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND lower(u.plat)='android'"
+      tolerance: 0.02
+    question: "How many subscriptions are currently active belonging to people who use the Android app?"
+    note: >-
+      Rung 2: entity + segment. Gold 125.00. Counts subscription TERMS, not people. In this warehouse no one holds two live terms, so terms and subscribers coincide at 371 and this rung cannot detect a grain error — it is the base of the family, not a test of one.
+
+  - id: rv_andr_measure_agg
+    tier: primitive_load
+    segment_kind: case
+    primitives: [entity, segment, measure_agg]
+    expect:
+      type: metric_answer
+      metric: total_billed
+      gold_sql: "SELECT round(sum(s.amt),2) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND lower(u.plat)='android'"
+      tolerance: 0.02
+    question: "What is the total of the billed amounts on the subscriptions that are currently active belonging to people who use the Android app?"
+    note: >-
+      Rung 3: entity + segment + measure + aggregation. Gold 3,394.49. THE FIRST NUMBER IN THIS STUDY THAT IS NOT A COUNT. Every other item counts rows or people; this one sums a money column, which is a different decision and was untested until now. The likely wrong answer is the rung below's gold — a count of terms instead of a sum over them.
+
+  - id: rv_andr_additivity
+    tier: primitive_load
+    segment_kind: case
+    primitives: [entity, segment, measure_agg, additivity]
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(m.mrr_amount),2) FROM _star.fct_subscription_months m JOIN u ON m.user_id = u.uid WHERE m.snapshot_month = DATE '2026-06-01' AND lower(u.plat)='android'"
+      tolerance: 0.02
+    question: "What was the monthly recurring revenue in June 2026 belonging to people who use the Android app?"
+    note: >-
+      Gold 889.30. REBUILT ON A PERIODIC SNAPSHOT 2026-08-10. The first version asked the same
+      question of `fct_subscriptions`, an accumulating snapshot whose time dimension is the date a
+      term STARTED; monthly recurring revenue is a stock, so that table cannot answer it for a month
+      and the layer advertised the illegal slice as a feature. E_enforced picked the right metric,
+      added `period=last_week`, and returned 127.37 against a true book of 2,685.08. The item was
+      measuring our modelling error. `fct_subscription_months` holds one row per subscription per
+      month it was live, and the annual-over-twelve normalisation lives there once, at the grain
+      where it is true. THE TRAP IS THE RUNG BELOW: summing the billed amounts on live terms gives
+      3,394.49,
+      which is an annual lump added to a monthly charge and sits far outside tolerance.
+  - id: rv_fr_segment
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND upper(u.ctry)='FR'"
+      tolerance: 0.02
+    question: "How many subscriptions are currently active belonging to people in France?"
+    note: >-
+      Rung 2: entity + segment. Gold 62.00. Counts subscription TERMS, not people. In this warehouse no one holds two live terms, so terms and subscribers coincide at 371 and this rung cannot detect a grain error — it is the base of the family, not a test of one.
+
+  - id: rv_fr_measure_agg
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, measure_agg]
+    expect:
+      type: metric_answer
+      metric: total_billed
+      gold_sql: "SELECT round(sum(s.amt),2) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND upper(u.ctry)='FR'"
+      tolerance: 0.02
+    question: "What is the total of the billed amounts on the subscriptions that are currently active belonging to people in France?"
+    note: >-
+      Rung 3: entity + segment + measure + aggregation. Gold 2,049.10. THE FIRST NUMBER IN THIS STUDY THAT IS NOT A COUNT. Every other item counts rows or people; this one sums a money column, which is a different decision and was untested until now. The likely wrong answer is the rung below's gold — a count of terms instead of a sum over them.
+
+  - id: rv_fr_additivity
+    tier: primitive_load
+    segment_kind: code
+    primitives: [entity, segment, measure_agg, additivity]
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(m.mrr_amount),2) FROM _star.fct_subscription_months m JOIN u ON m.user_id = u.uid WHERE m.snapshot_month = DATE '2026-06-01' AND upper(u.ctry)='FR'"
+      tolerance: 0.02
+    question: "What was the monthly recurring revenue in June 2026 belonging to people in France?"
+    note: >-
+      Gold 419.70. REBUILT ON A PERIODIC SNAPSHOT 2026-08-10. The first version asked the same
+      question of `fct_subscriptions`, an accumulating snapshot whose time dimension is the date a
+      term STARTED; monthly recurring revenue is a stock, so that table cannot answer it for a month
+      and the layer advertised the illegal slice as a feature. E_enforced picked the right metric,
+      added `period=last_week`, and returned 127.37 against a true book of 2,685.08. The item was
+      measuring our modelling error. `fct_subscription_months` holds one row per subscription per
+      month it was live, and the annual-over-twelve normalisation lives there once, at the grain
+      where it is true. THE TRAP IS THE RUNG BELOW: summing the billed amounts on live terms gives
+      2,049.10,
+      which is an annual lump added to a monthly charge and sits far outside tolerance.
+  - id: rv_paid_segment
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment]
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "How many subscriptions are currently active belonging to people who arrived through paid search?"
+    note: >-
+      Rung 2: entity + segment. Gold 78.00. Counts subscription TERMS, not people. In this warehouse no one holds two live terms, so terms and subscribers coincide at 371 and this rung cannot detect a grain error — it is the base of the family, not a test of one.
+
+  - id: rv_paid_measure_agg
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, measure_agg]
+    expect:
+      type: metric_answer
+      metric: total_billed
+      gold_sql: "SELECT round(sum(s.amt),2) FROM subs s JOIN u ON s.uid = u.uid WHERE s.st = 1 AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "What is the total of the billed amounts on the subscriptions that are currently active belonging to people who arrived through paid search?"
+    note: >-
+      Rung 3: entity + segment + measure + aggregation. Gold 2,623.52. THE FIRST NUMBER IN THIS STUDY THAT IS NOT A COUNT. Every other item counts rows or people; this one sums a money column, which is a different decision and was untested until now. The likely wrong answer is the rung below's gold — a count of terms instead of a sum over them.
+
+  - id: rv_paid_additivity
+    tier: primitive_load
+    segment_kind: synonym
+    primitives: [entity, segment, measure_agg, additivity]
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT round(sum(m.mrr_amount),2) FROM _star.fct_subscription_months m JOIN u ON m.user_id = u.uid WHERE m.snapshot_month = DATE '2026-06-01' AND lower(u.chan) IN ('paid_search','paid search','ppc','paid-search')"
+      tolerance: 0.02
+    question: "What was the monthly recurring revenue in June 2026 belonging to people who arrived through paid search?"
+    note: >-
+      Gold 552.70. REBUILT ON A PERIODIC SNAPSHOT 2026-08-10. The first version asked the same
+      question of `fct_subscriptions`, an accumulating snapshot whose time dimension is the date a
+      term STARTED; monthly recurring revenue is a stock, so that table cannot answer it for a month
+      and the layer advertised the illegal slice as a feature. E_enforced picked the right metric,
+      added `period=last_week`, and returned 127.37 against a true book of 2,685.08. The item was
+      measuring our modelling error. `fct_subscription_months` holds one row per subscription per
+      month it was live, and the annual-over-twelve normalisation lives there once, at the grain
+      where it is true. THE TRAP IS THE RUNG BELOW: summing the billed amounts on live terms gives
+      2,623.52,
+      which is an annual lump added to a monthly charge and sits far outside tolerance.
+  # ================================================================================================
+  # THE CONTROLS. Load 0 — no primitive to resolve, no segment, no grain choice, no join. Every arm
+  # must answer these, and if one does not, nothing else in the run can be read. Two rather than the
+  # previous three: rung 1 was retired for the same reason, and two is enough to catch a broken arm.
+
+  - id: pl_ctl_accounts
+    tier: primitive_load
+    segment_kind: control
     primitives: []
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM u WHERE CAST(u.created AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      gold_sql: "SELECT count(*) FROM u WHERE created >= '2026-06-01' AND created < '2026-07-01'"
       tolerance: 0.02
-    question: "How many accounts were created in June 2026?"
+    question: "Counting every account, including staff and test accounts, how many accounts were created in June 2026?"
     note: >-
-      True 553. Excluding staff and test accounts gives 543 — 0.98x, inside the tolerance — so both defensible readings grade correct and the wording needs no population clause.
-  - id: pl_c2_habits
+      Gold 553. The population is stated so that the question closes every choice it could otherwise
+      leave open. Read this row first.
+
+  - id: pl_ctl_habits
     tier: primitive_load
+    segment_kind: control
     primitives: []
     expect:
       type: metric_answer
       no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM hab h WHERE CAST(h.created AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      gold_sql: "SELECT count(*) FROM hab WHERE created >= '2026-06-01' AND created < '2026-07-01'"
       tolerance: 0.02
     question: "Counting every account, including staff and test accounts, how many habits were created in June 2026?"
     note: >-
-      True 1,533. The population IS stated, because excluding staff gives 1,495 — 2.5% away and outside the tolerance. 'Counting every account' asks the arm to do nothing rather than to look something up, so the item stays at load 0.
-  - id: pl_c3_subs
-    tier: primitive_load
-    primitives: []
-    expect:
-      type: metric_answer
-      no_governed_metric: true
-      gold_sql: "SELECT count(*) FROM subs s WHERE CAST(s.start AS DATE) BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
-      tolerance: 0.02
-    question: "Counting every account, including staff and test accounts, how many subscriptions started in June 2026?"
-    note: >-
-      True 106. Same reason: excluding staff gives 103, 2.8% away.
+      Gold 1,533. Counts habits rather than people on purpose: paired with pl_ctl_accounts it shows
+      an arm can count rows in one table and rows in another before any primitive is added.
 
-  # ══ THE SECOND PILE · questions with no answer ══════════════════════════════════════════════ #
+  # ================================================================================================
+  # THE SECOND PILE — TWELVE QUESTIONS WITH NO ANSWER, three per reason.
   #
-  # WHY THEY EXIST. Every item above is answerable, so "always answer" is a strategy that scores.
-  # ../../.claude/experts/harness-eval-items.md puts it plainly: without the pair, both "always
-  # refuse" and "always answer" score, and the set measures a disposition rather than an
-  # understanding. Eight of thirty-one items — 26% — is enough to punish always-answering and not
-  # enough for always-refusing to win.
+  # THREE PER REASON, NOT TWO. The false-premise pair carried the study's most striking claim — the
+  # four arms with no semantic layer rejected both premises 24/24 while the two with a layer managed
+  # 4/12 — on two items. Two items cannot support that. Three is still small and is stated as such.
   #
-  # WHAT THIS MAKES MEASURABLE. `evals/selective.py` already implements the four numbers an agent
-  # with a reject option is judged on, and until now this study could compute none of them, because
-  # they all need both piles:
+  # WHAT COUNTS AS CORRECT. A refusal with the right code, a clarifying question, and — on a false
+  # premise — contradicting the claim with the real figures. The third was scored ZERO until
+  # 2026-08-10 by a judge that no runner calls; see ../FINDINGS.md §27.
   #
-  #     coverage           of the answerable pile, how much did it attempt
-  #     silent_error       of everything, how often was it wrong while looking right
-  #     balanced_accuracy  the mean of the two piles' accuracies — immune to the question mix
-  #     grounded_answers   NOT AVAILABLE HERE: it needs the claims protocol, which this study runs
-  #                        with off on purpose, because switching it on changes the tool surface for
-  #                        D and E alone. Four metrics here, five elsewhere.
-  #
-  # THE SHALLOW/DEEP PAIRS ASK SOMETHING NOBODY HAS MEASURED. Each reason appears twice: once bare,
-  # once wrapped in three primitives the agent CAN resolve. `u_cov1` and `u_cov3` are unanswerable
-  # for exactly the same reason. If refusal degrades with load, that says complexity does not only
-  # make an agent wrong — it stops the agent noticing it should stop.
-  #
-  # ONE REASON WAS DESIGNED AND CUT. `ungoverned_dimension_value` — "how many accounts in Japan",
-  # where Japan has zero rows. Under the closed-world assumption every warehouse makes, absence of a
-  # row means false, so ZERO IS THE CORRECT ANSWER and refusing is over-caution. The item would have
-  # measured an assumption we have never stated rather than the agent. `ambiguous` replaces it: the
-  # grader accepts a refusal OR a clarifying question there, so the code-choice risk is gone by
-  # construction.
-  #
-  # COVERAGE IS FAIR ACROSS ARMS. Every arm's system prompt opens "Today is 2026-07-16; data is
-  # complete through 2026-07-12", so no arm is asked to know something only some of them are told.
-
+  # AN ITEM BELONGS HERE ONLY IF THE LAYER CAN EXPRESS THE QUESTION. Where it cannot, the arm
+  # refuses for the wrong reason and looks careful. Two items were measuring gaps in our own
+  # MetricFlow layer rather than the behaviour they were written for (§27.3, §28.4).
   - id: u_cov1_coverage
     tier: unanswerable
     primitives: [coverage]
@@ -465,3 +926,55 @@ cases:
       which is a true statement about the layer rather than a detection of the false premise. The
       item was measuring a gap in our own layer. `reminders_shown` was added to layer.yaml to close
       it — see arms/D_declared.yml.
+
+  # ── the four added on 2026-08-10 to take each reason from two items to three ──
+
+  - id: u_cov5_before_start
+    tier: unanswerable
+    primitives: []
+    expect: {type: refuse, reason: out_of_coverage}
+    question: "How many accounts were created in the second quarter of 2025?"
+    note: >-
+      THE LOWER BOUND, which the other two coverage items never test — both ask about August 2026,
+      after the data ends. The warehouse holds nothing before 2025-09-04: zero rows in `u` and zero
+      in `hab`. An arm that answers 0 has served a number for a window it does not cover, which is
+      the same failure as inventing one; the honest response is that the period is outside coverage.
+
+  - id: u_def5_session_length
+    tier: unanswerable
+    primitives: []
+    expect: {type: refuse, reason: no_governed_definition}
+    question: "How long does the average person spend in the app per session?"
+    note: >-
+      There is no session anywhere in this warehouse. `evt` records discrete events with a timestamp
+      and no session identifier, no start and no end, so session length is not derivable at any
+      grain. Distinct from the support-ticket items, which name a thing that does not exist; this
+      names a measure that cannot be computed from the things that do.
+
+  - id: u_amb5_power_users
+    tier: unanswerable
+    primitives: [segment]
+    expect:
+      type: ambiguous
+      reason: [segment_undefined, no_governed_definition]
+    question: "How many power users did we have in June 2026?"
+    note: >-
+      "Power user" has at least four defensible readings here — most habits held, most completions
+      logged, most days active, or a paying subscriber — and the warehouse governs none of them
+      under that name. Both codes describe the one fact, so both are accepted, for the reason
+      recorded on u_amb1.
+
+  - id: u_fp5_habit_creation
+    tier: unanswerable
+    primitives: []
+    expect:
+      type: refuse
+      reason: false_premise
+      rebuttal: [rose, rise, increase, grew, grow, growth, higher, more, "did not slow",
+                 "did not fall", "no slowdown", "sped up", "false premise", premise]
+    question: "Habit creation slowed down in June 2026 — what was behind it?"
+    note: >-
+      It accelerated: 1,110 habits created in May against 1,533 in June, a 38% rise. Verified
+      against `hab.created` before this file was written. The third false-premise item, and
+      deliberately about a different fact from signups (u_fp1) and reminders (u_fp2) so the three
+      do not share one route to the correction.
