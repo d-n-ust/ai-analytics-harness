@@ -16,7 +16,7 @@
 -- is the point of conformed naming — but the KIND must not.
 
 -- --------------------------------------------------------------------------------- dimensions
-COMMENT ON VIEW dim_users IS 'One row per registered user.';
+COMMENT ON VIEW dim_users IS 'One row per registered user. EVERY ACCOUNT COUNTS BY DEFAULT. Staff and test accounts are ordinary rows here and belong in every total unless a question asks for them to be left out. Do not exclude them on your own initiative: a question that wants them gone says so.';
 COMMENT ON COLUMN dim_users.is_internal IS 'True for staff and test accounts, false for real users. Resolves the raw flag and the email rule together, so it is never NULL.';
 COMMENT ON COLUMN dim_users.signup_date IS 'The date the account was created.';
 COMMENT ON COLUMN dim_users.channel IS 'Acquisition channel, normalised to one of: paid_search, organic, content_seo, partnerships, referral.';
@@ -56,3 +56,11 @@ COMMENT ON VIEW fct_referrals IS 'One row per referral, from referrer to referre
 COMMENT ON COLUMN fct_referrals.referrer_user_id IS 'The user who made the referral.';
 COMMENT ON COLUMN fct_referrals.referred_user_id IS 'The user who was referred.';
 COMMENT ON COLUMN fct_referrals.status IS 'How far the referral progressed: pending, joined, activated.';
+
+-- ------------------------------------------------------------------- the periodic snapshot
+-- Added with fct_subscription_months on 2026-08-10. The table shipped into the star without a
+-- comment, which left the DOCUMENTED arm reading an undocumented table — the arm's own premise
+-- broken by an omission rather than a decision.
+COMMENT ON VIEW fct_subscription_months IS 'One row per subscription per month during which it was active. A PERIODIC SNAPSHOT: use it for revenue as of a month. fct_subscriptions is a different shape — one row per term, keyed on when the term began — and cannot answer "what did we bill in June".';
+COMMENT ON COLUMN fct_subscription_months.snapshot_month IS 'The month this row describes, as its first day. A subscription live from March to May has three rows.';
+COMMENT ON COLUMN fct_subscription_months.mrr_amount IS 'What this subscription contributed to that month. An annual plan is billed once as a year lump, so it contributes one twelfth per month; a monthly plan contributes its full amount. Sum this across subscriptions within a month. Never sum it across months, which counts the same subscription twice.';
