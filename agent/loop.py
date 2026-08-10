@@ -27,6 +27,7 @@ from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
+from .providers import ProviderError
 from .provenance import ContextLedger
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
@@ -353,6 +354,15 @@ class _Run:
         return self._record(answer=None, explanation="", outcome="error",
                             iterations=iterations, error="max_iterations")
 
+    def provider_failed(self, exc: ProviderError, iterations: int) -> Answer:
+        """The third way. The provider refused this request and retrying will not change that.
+
+        It ends the ROW rather than the run: the failure is a property of one request, and a sweep
+        that dies on it discards every completed row with it. The exception is recorded in full so
+        an error row can be told from a model behaviour when the results are read."""
+        return self._record(answer=None, explanation=str(exc), outcome="error",
+                            iterations=iterations, error="provider_refused")
+
     def _record(self, **kw) -> Answer:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
@@ -396,7 +406,14 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         offer_acts: list = []
         offered = grounding.toolbox.specs(terminal_only=closing, record=offer_acts)
         t0 = time.perf_counter()
-        turn = model.respond(convo, offered, require_tool=closing)
+        try:
+            turn = model.respond(convo, offered, require_tool=closing)
+        except ProviderError as exc:
+            # Loud, because an error row is a lost measurement and a silent one would be read as a
+            # model behaviour. `_FATAL_STATUS` in providers.py has already re-raised the failures
+            # that would repeat on every row, so reaching here means this request specifically.
+            _log.warning("provider refused this row, recording an error row: %s", exc)
+            return run.provider_failed(exc, it)
         run.turns.append({"acts": [a.as_dict() for a in offer_acts],
                           "ms": round((time.perf_counter() - t0) * 1000, 1),
                           "tools_offered": len(offered), "closing": closing,

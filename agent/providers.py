@@ -31,6 +31,47 @@ MAX_RETRIES = 6
 REQUEST_TIMEOUT = 120.0   # seconds — caps a hung request so a sequential run can't stall forever
 
 
+class ProviderError(RuntimeError):
+    """A request the provider refused and will keep refusing. One row's failure, not the run's.
+
+    The comment above promised such a call would "become an honest error row", and nothing
+    implemented it: a 400 rose out of the SDK, through `respond`, through the agent loop, through
+    the thread pool, and killed the sweep. The fourth time an untranslated foreign exception ended
+    a paid run, and the most expensive — 372 completed rows were discarded because the run crashed
+    before anything was persisted.
+
+    The trigger was `invalid_prompt`: the content filter flagged one of our own analytics questions.
+    It is not deterministic and not reproducible on a re-run, which is precisely why one row must
+    not be able to take the other 557 with it."""
+
+    def __init__(self, exc: Exception) -> None:
+        self.status = getattr(exc, "status_code", None)
+        self.code = getattr(getattr(exc, "body", None) or {}, "get", lambda _k: None)("code")
+        super().__init__(f"{type(exc).__name__}"
+                         + (f" {self.status}" if self.status else "")
+                         + (f" ({self.code})" if self.code else "")
+                         + f": {exc}")
+
+
+# Failures that will repeat identically on every remaining row. Turning these into error rows would
+# spend a whole sweep learning one fact about the configuration, so they still stop the run.
+_FATAL_STATUS = frozenset({401, 403, 404})
+
+
+def _call(create, **kw):
+    """Every provider request goes through here, so a foreign exception type stops at the adapter.
+
+    An error with no HTTP status is not a provider refusal — it is a defect in this code, and
+    hiding it in a row would be worse than crashing."""
+    try:
+        return create(**kw)
+    except Exception as exc:
+        status = getattr(exc, "status_code", None)
+        if status is None or status in _FATAL_STATUS:
+            raise
+        raise ProviderError(exc) from exc
+
+
 def load_env() -> None:
     """Read `.env` from the repo root. Public because more than one subsystem needs a key and the
     path to that file should be written down once."""
@@ -120,7 +161,7 @@ class AnthropicModel:
         if temperature is not None and (self.spec.thinking is None
                                         or self.spec.thinking.get("type") == "disabled"):
             kw["temperature"] = temperature
-        resp = self.client.messages.create(**kw)
+        resp = _call(self.client.messages.create, **kw)
         blocks = list(resp.content)
         said, calls = [], []
         for b in blocks:
@@ -242,7 +283,7 @@ class OpenAIModel:
         )
         if self.spec.supports_reasoning_effort:
             kw["reasoning"] = {"effort": self.reasoning}          # none / low / medium / high
-        resp = self.client.responses.create(**kw)
+        resp = _call(self.client.responses.create, **kw)
         said, calls = [], []
         for item in resp.output:
             t = getattr(item, "type", None)
@@ -289,7 +330,7 @@ class OpenAIModel:
             kw["reasoning_effort"] = self.reasoning       # reasoning models: no temperature knob
         elif temperature is not None:
             kw["temperature"] = temperature               # legacy models take temperature
-        resp = self.client.chat.completions.create(**kw)
+        resp = _call(self.client.chat.completions.create, **kw)
         msg = resp.choices[0].message
         calls = [ToolCall(tc.id, tc.function.name, _args(tc.function.arguments))
                  for tc in (msg.tool_calls or [])]
