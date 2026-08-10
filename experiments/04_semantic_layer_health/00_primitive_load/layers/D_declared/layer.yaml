@@ -266,3 +266,83 @@ metric:
   type_params:
     numerator: {name: referrals_activated}
     denominator: {name: referrals_total}
+---
+# ADDED 2026-08-10, AFTER A TRACE AUDIT. `fct_reminders` sits in the star and had no semantic model,
+# so `u_fp2_false_premise` — "we showed fewer reminders in June than in May" — was unanswerable in
+# this layer for a reason that has nothing to do with its premise. E_enforced refused with "there is
+# no governed metric for reminders shown", a true statement about our modelling rather than a
+# detection of the false claim, and the item scored D and E on a gap we had left ourselves.
+#
+# The general point is worth more than the fix: an unanswerable-question pile measures refusal
+# BEHAVIOUR only where the layer can express the question. Where it cannot, the arm refuses for the
+# wrong reason and looks careful. Every item in pile B needs its coverage checked against the layer,
+# not only against the warehouse.
+semantic_model:
+  name: reminders
+  description: "One row is one reminder shown to one user."
+  node_relation: {schema_name: _star, alias: fct_reminders}
+  defaults: {agg_time_dimension: reminded_date}
+  entities:
+    - {name: reminder, type: primary, expr: reminder_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: reminded_date, type: time, type_params: {time_granularity: day}}
+  measures:
+    - {name: reminder_rows, agg: count, expr: reminder_id}
+    - {name: reminded_people, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: reminders_shown
+  description: "Reminders shown. Counts REMINDERS, not people: one person may be reminded many times."
+  type: simple
+  type_params: {measure: reminder_rows}
+---
+metric:
+  name: people_reminded
+  description: "People shown at least one reminder. Counts PEOPLE: a person reminded ten times counts once."
+  type: simple
+  type_params: {measure: reminded_people}
+---
+# ADDED 2026-08-10, for the same reason as `reminders` above and found by the same audit: the
+# warehouse's CENTRAL fact table had no semantic model. `u_fp2_false_premise` asks whether fewer
+# reminders hurt habit completions, and `E_enforced` refused all three repetitions with "no governed
+# metric named `habit_completions` exists" — true, and a statement about our layer rather than about
+# the question's false premise. Adding `reminders` alone fixed half of one item.
+#
+# A completed habit is the product's value moment, so both names are declared as metrics over the
+# same measure: an agent asking for either should not have to guess that we filed it under the
+# other. That is not redundancy of the kind study 01 warns about — the two names denote the same
+# set, and the catalogue says so.
+semantic_model:
+  name: value_moments
+  description: "One row is one completed habit — the product's value moment. Opens and reminder clicks are not here."
+  node_relation: {schema_name: _star, alias: fct_value_moments}
+  defaults: {agg_time_dimension: completed_date}
+  entities:
+    - {name: value_moment, type: primary, expr: value_moment_id}
+    - {name: user, type: foreign, expr: user_id}
+    - {name: habit, type: foreign, expr: habit_id}
+  dimensions:
+    - {name: completed_date, type: time, type_params: {time_granularity: day}}
+    - {name: source, type: categorical}
+  measures:
+    - {name: value_moment_rows, agg: count, expr: value_moment_id}
+    - {name: completing_people, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: habit_completions
+  description: "Habits completed. Counts COMPLETIONS, not people: one person may complete many."
+  type: simple
+  type_params: {measure: value_moment_rows}
+---
+metric:
+  name: value_moments
+  description: "Value moments — the same count as habit_completions, under the product's name for it."
+  type: simple
+  type_params: {measure: value_moment_rows}
+---
+metric:
+  name: people_completing_habits
+  description: "People who completed at least one habit. Counts PEOPLE: ten completions by one person count once."
+  type: simple
+  type_params: {measure: completing_people}

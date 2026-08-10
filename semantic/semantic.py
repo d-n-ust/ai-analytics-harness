@@ -237,10 +237,14 @@ class SemanticLayer:
         return out
 
     def coverage_violations(self, filters=None, group_by=None,
-                            start=None, end=None, period=None) -> list[tuple]:
+                            start=None, end=None, period=None, metric=None) -> list[tuple]:
         """Which scopes this call reports on fall outside coverage: [(dimension, member, why)].
         Empty means every number it would return is answerable. A call naming no
-        coverage-bearing member is still checked against the data window itself."""
+        coverage-bearing member is still checked against the data window itself.
+
+        `metric` is accepted and unused: this layer states one data window in its governance file
+        and applies it to every metric. It is in the signature because the MetricFlow engine reads
+        its window off each model's time column, where the two differ."""
         start, end = self.resolve_window(start, end, period)
         bad = []
         for dim, member in self.scope_members(filters, group_by) or [(None, None)]:

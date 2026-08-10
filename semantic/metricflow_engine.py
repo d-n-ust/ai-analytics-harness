@@ -48,6 +48,20 @@ _SPINE_LOCK = threading.Lock()
 __all__ = ["MetricFlowLayer"]
 
 
+def _as_date(value):
+    """A date from whatever the caller or DuckDB handed over — a `date`, a `datetime`, a string.
+    None for anything unparseable, so a bad argument reads as "no bound" rather than raising."""
+    import datetime as _dt
+    if value is None or isinstance(value, _dt.date) and not isinstance(value, _dt.datetime):
+        return value
+    if isinstance(value, _dt.datetime):
+        return value.date()
+    try:
+        return _dt.date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
 def _by_entity(dims: list[str]) -> list[tuple[str, list[str]]]:
     """Dimension names grouped by the entity prefix MetricFlow gives them.
 
@@ -73,8 +87,16 @@ class MetricFlowLayer:
     keep in step.
     """
 
+    # COVERAGE IS COMPUTED, NOT DECLARED, and that is the whole reason it can be True here.
+    # MetricFlow's spec has no field for "what period does this hold data for" — but every semantic
+    # model names an `agg_time_dimension`, and the window is min/max of that column. A layer that
+    # knows which column carries time knows what it covers; it simply never says so.
+    #
+    # `segments` and `members` stay False because no computation recovers them: a governed segment
+    # and a governed member vocabulary are decisions somebody has to write down, and MetricFlow
+    # provides nowhere to write them. `additivity` likewise.
     capabilities = Capabilities(name="metricflow", catalogue=True, query=True,
-                                coverage=False, segments=False, members=False, additivity=False)
+                                coverage=True, segments=False, members=False, additivity=False)
 
     def __init__(self, con, spec_path: Path) -> None:
         """`spec_path` is a DIRECTORY of MetricFlow YAML, not a file — that is what its parser
@@ -97,6 +119,7 @@ class MetricFlowLayer:
             semantic_manifest_lookup=SemanticManifestLookup(self._manifest),
             sql_client=_DuckDbClient(con))
         self.metrics = {m.name: {"description": m.description} for m in self._manifest.metrics}
+        self._windows: dict[str, tuple] = {}   # semantic model -> (first date, last date), lazily read
 
     def _ensure_time_spine(self) -> None:
         """One row per day over the warehouse's own range. MetricFlow joins this for any
@@ -356,12 +379,178 @@ class MetricFlowLayer:
                      f"no governed metric named {term!r}; available: "
                      + ", ".join(sorted(self.metrics)))
 
+    # -- coverage: what period this layer actually holds ---------------------- #
+    #
+    # WHY THIS EXISTS. `E_enforced` answered both out-of-coverage questions wrong, three times each,
+    # and `coverage_check` — the guardrail written to catch exactly that, emitting exactly the
+    # `out_of_coverage` code the items expect — could not run, because this engine declared no
+    # coverage. The agent was left to notice on its own that August 2026 is not in the warehouse,
+    # and it did not. See FINDINGS.md §28.
+    #
+    # THE WINDOW IS PER MODEL, not per layer, and the difference is real in our own warehouse:
+    # habits run to 2026-07-24 while subscriptions stop at 2026-07-12. A single layer-wide window
+    # would either refuse answerable habit questions or admit unanswerable subscription ones.
+
+    def _model_of(self, metric: str):
+        """The semantic model a metric's numbers come from.
+
+        A ratio or derived metric has no model of its own — it is built from others — so the search
+        follows its inputs and takes the first that lands. Two inputs on different models would make
+        the window ambiguous; the narrower one is taken in `_window_for`, because a figure is only
+        as covered as its least-covered part."""
+        by_name = {m.name: m for m in self._manifest.metrics}
+        seen, stack, models = set(), [metric], []
+        while stack:
+            name = stack.pop()
+            if name in seen or name not in by_name:
+                continue
+            seen.add(name)
+            m = by_name[name]
+            params = getattr(m, "type_params", None)
+            agg = getattr(params, "metric_aggregation_params", None) if params else None
+            own = getattr(agg, "semantic_model", None) if agg else None
+            if own:
+                models.append(own)
+            for field in ("numerator", "denominator"):
+                inp = getattr(params, field, None) if params else None
+                if inp is not None:
+                    stack.append(getattr(inp, "name", inp))
+            for inp in (getattr(params, "metrics", None) or ()) if params else ():
+                stack.append(getattr(inp, "name", inp))
+        return [sm for sm in self._manifest.semantic_models if sm.name in models]
+
+    def _window_of(self, sm) -> tuple:
+        """(first, last) dates held by one semantic model, read from the table itself."""
+        key = sm.name
+        if key not in self._windows:
+            time_dim = next((d for d in sm.dimensions if str(d.type).lower().endswith("time")), None)
+            if time_dim is None:
+                self._windows[key] = (None, None)
+            else:
+                expr = time_dim.expr or time_dim.name
+                rel = sm.node_relation
+                lo, hi = self.con.execute(
+                    f"SELECT min({expr}), max({expr}) FROM {rel.schema_name}.{rel.alias}").fetchone()
+                self._windows[key] = (_as_date(lo), _as_date(hi))
+        return self._windows[key]
+
+    def coverage_window(self, metric: str | None = None) -> tuple:
+        """The period this layer can answer for — narrowed to one metric when one is named.
+
+        With no metric the answer spans every model, which is the honest reply to "does this layer
+        hold August 2026 at all". Narrowest-common is used within a metric so a composed figure is
+        never reported as more covered than the data behind it."""
+        models = self._model_of(metric) if metric else list(self._manifest.semantic_models)
+        wins = [w for w in (self._window_of(sm) for sm in models) if w[0] and w[1]]
+        if not wins:
+            return (None, None)
+        if metric:
+            return (max(w[0] for w in wins), min(w[1] for w in wins))
+        return (min(w[0] for w in wins), max(w[1] for w in wins))
+
     def in_coverage(self, start=None, end=None, region=None, country=None) -> tuple:
-        """Refused rather than answered. This engine has no coverage window, and a cheerful True
-        would be a guardrail passing on a fact nobody established."""
-        raise NotImplementedError(
-            "the metricflow engine declares coverage=False; `check_compatible` should have "
-            "refused this study before it ran")
+        """Is the whole period inside the data window? A partial overlap is a NO, matching the
+        harness engine: a clipped answer over a window the asker did not ask for is the failure the
+        check exists to prevent.
+
+        `region` and `country` are accepted and NOT applied. This layer has no governed member
+        vocabulary, so it has no per-region launch windows to check against — and saying so is
+        better than resolving them silently against nothing."""
+        lo, hi = self.coverage_window()
+        s, e = _as_date(start), _as_date(end)
+        if s is None and e is None:
+            return False, "no period given; pass start (and end)."
+        s, e = (s or e), (e or s)
+        scope = (f" (this layer has no governed regions, so {region or country!r} was not applied)"
+                 if (region or country) else "")
+        if lo and s < lo:
+            return False, f"period begins {s}, before data starts {lo}.{scope}"
+        if hi and e > hi:
+            return False, f"period ends {e}, after data ends {hi}.{scope}"
+        return True, f"period {s}..{e} within coverage ({lo}..{hi}).{scope}"
+
+    # Kimball's three classes, keyed on the aggregate, exactly as `SemanticLayer.additivity` reads
+    # them. MetricFlow names its aggregates differently and means the same things.
+    _ADDITIVE = {"sum", "count", "sum_boolean"}
+    _SEMI_ADDITIVE = {"count_distinct"}
+
+    def additivity(self, metric: str) -> str:
+        """Whether this metric may be rolled up over time: additive / semi_additive / non_additive.
+
+        DERIVED FROM THE AGGREGATE, not annotated — a `count_distinct` double-counts anyone present
+        in two periods whether or not somebody wrote that down, and a ratio is meaningless added in
+        any direction. A metric built from other metrics is non-additive: its inputs may each be
+        summable and their combination is not.
+
+        NEEDED BY `governed_numbers`, which is not what `GUARDRAIL_NEEDS` says. That table declares
+        only `output_validation` as needing additivity, so this engine was cleared to run
+        `governed_numbers` and then reached `_additive_total`, which calls this method — a second
+        capability-versus-method gap after `scope_members`, and it cost a second paid run. The
+        capability flag stays False because it gates `output_validation`, which needs unit and
+        bounds metadata this layer genuinely lacks; the two questions were conflated under one
+        name."""
+        by_name = {m.name: m for m in self._manifest.metrics}
+        m = by_name.get(metric)
+        if m is None:
+            return "non_additive"                  # unknown: never license a sum
+        params = getattr(m, "type_params", None)
+        measure = getattr(params, "measure", None) if params else None
+        name = getattr(measure, "name", None) if measure is not None else None
+        if not name:
+            return "non_additive"                  # ratio or derived — built from others
+        for sm in self._manifest.semantic_models:
+            for meas in sm.measures:
+                if meas.name == name:
+                    agg = str(getattr(meas, "agg", "")).lower().rsplit(".", 1)[-1]
+                    if agg in self._ADDITIVE:
+                        return "additive"
+                    return "semi_additive" if agg in self._SEMI_ADDITIVE else "non_additive"
+        return "non_additive"
+
+    def scope_members(self, filters=None, group_by=None) -> list[tuple]:
+        """The coverage-bearing (dimension, member) pairs this call reports on — always empty here.
+
+        A member carries coverage when governance records when its data begins (APAC launched in
+        March). That is a written-down fact, and MetricFlow has nowhere to write it, so no filter
+        value in this layer bears a window. The period check in `coverage_violations` is the whole
+        of this engine's coverage.
+
+        IMPLEMENTED RATHER THAN OMITTED because `check_compatible` guards CAPABILITIES, not
+        METHODS: `coverage_check` declares it needs `coverage`, this engine now has it, and the
+        guardrail was cleared to run — then called `scope_members` on the success path and killed
+        the run with an AttributeError. Capability-compatible is not the same as method-complete."""
+        return []
+
+    def coverage_violations(self, filters=None, group_by=None, start=None, end=None,
+                            period=None, metric=None) -> list[tuple]:
+        """Which scopes this call reports on fall outside coverage: [(dimension, member, why)].
+
+        Only the PERIOD is checkable here. The harness engine also walks the coverage-bearing
+        members named in `filters`/`group_by`, and this layer has none — so a call is checked
+        against the data window of the metric it asks for, and nothing else."""
+        from warehouse.config import resolve_period
+        if period and (start or end):
+            return [(None, None, f"period={period!r} was given together with start/end. Use one.")]
+        if period:
+            try:
+                start, end = resolve_period(period)
+            except ValueError:
+                # NOT A COVERAGE VIOLATION. An unresolvable period name is a bad argument, and
+                # reporting it here would refuse the call with `out_of_coverage` — teaching the
+                # agent that the data does not reach a window it never actually named. The query
+                # path already raises the accurate error, so this check stands down.
+                return []
+        if start is None and end is None:
+            return []                     # an all-time call asks for exactly what is there
+        lo, hi = self.coverage_window(metric)
+        s, e = _as_date(start), _as_date(end)
+        s, e = (s or e), (e or s)
+        named = f" for {metric!r}" if metric else ""
+        if lo and s < lo:
+            return [(None, None, f"the period begins {s}, before data starts {lo}{named}.")]
+        if hi and e > hi:
+            return [(None, None, f"the period ends {e}, after data ends {hi}{named}.")]
+        return []
 
     def scope_line(self, name, filters=None, period=None, start=None, end=None,
                    group_by=None, resolve=True) -> str:

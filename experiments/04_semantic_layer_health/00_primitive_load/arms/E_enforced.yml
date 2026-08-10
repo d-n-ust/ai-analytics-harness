@@ -33,13 +33,21 @@ layer_dir: layers/D_declared
 
 agent:
   # THE REDUCED CELL, not plain R7, and the reduction is forced rather than chosen. R7 bundles
-  # `governed_numbers` with `coverage_check` and `resolve`, and MetricFlow provides neither a
-  # coverage window nor a governed member vocabulary — `check_compatible` refuses the run rather
-  # than letting a guardrail pass silently on a default it never had. `02_segment__mf` uses the same
-  # notation for the same reason.
+  # `governed_numbers` with `coverage_check` and `resolve`, and `check_compatible` refuses the run
+  # rather than letting a guardrail pass silently on a default it never had. `02_segment__mf` uses
+  # the same notation for the same reason.
   #
-  # What survives is exactly the check this arm is for: a number must trace to one governed result.
-  guardrails: "R7-coverage_check-resolve"
+  # `resolve` STAYS OFF: it needs a governed member vocabulary, which is a decision somebody writes
+  # down, and MetricFlow gives nowhere to write it. No computation recovers it.
+  #
+  # `coverage_check` CAME BACK on 2026-08-10. It was excluded because MetricFlow declares no
+  # coverage window — but the window was never missing from the DATA, only from the spec: every
+  # semantic model names an `agg_time_dimension`, and min/max of that column is the answer. The
+  # adapter now computes it per model, so the guardrail has a real fact to check against.
+  #
+  # This is the treatment being measured. §28 found this arm answering both out-of-coverage
+  # questions wrong, three times each, with the guardrail written to catch them unable to run.
+  guardrails: "R7-resolve"
 
 environment:
   tables: star_schema
