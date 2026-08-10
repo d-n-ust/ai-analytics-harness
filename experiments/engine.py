@@ -123,6 +123,27 @@ ROOT = Path(__file__).resolve().parent.parent
 EXPERIMENTS = Path(__file__).resolve().parent
 CATALOG = "list_metrics"
 
+# TOOLS THAT GO THROUGH THE GOVERNED SURFACE. `list_metrics` is the catalogue; `query_metric` reads
+# a governed definition; every `check_*` tool asks a question OF the catalogue — does this metric
+# exist, is this period covered, is this segment defined, is this edge evidenced. The complement is
+# what matters: a row absent from this set reached the data by `run_sql` against the raw star, which
+# is the layer being bypassed.
+#
+# WHY THIS IS NOT THE CONTEXT AUDIT. Catalogue use was measured as "the fidelity audit found nothing
+# to complain about", and those are different questions. The audit asks whether the arm SHOWED what
+# it claims to show; this asks whether the agent USED it. They agreed until an agent could rule a
+# question out before needing a metric — then `E_enforced` called `check_coverage`, was told August
+# 2026 is outside the data, refused correctly, and was scored as having skipped the catalogue. The
+# metric fell from 99% to 94% because the arm got better. An error row scored a miss too, having no
+# recorded context because the run ended rather than because nothing was read.
+GOVERNED_SURFACE_TOOLS = frozenset({"list_metrics", "query_metric", "check_metric_exists",
+                             "check_coverage", "check_segment_defined", "check_causal_evidence"})
+
+
+def used_governed_surface(row: dict) -> bool:
+    """Did this run reach its answer through the governed surface, by any route it offers?"""
+    return any(s.get("tool") in GOVERNED_SURFACE_TOOLS for s in (row.get("steps") or ()))
+
 # Periods the invariant is checked over. Three rather than one because a filter that changes no
 # rows in one week can change plenty in another, and an arm that differs only in July is still an
 # arm that differs.
@@ -1132,7 +1153,7 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     if any((r["grade"].get("expected_refuse")) for a in arms for r in results[a]["rows"]):
         print()
         print(f"{'arm':16s} {'coverage':>9s} {'silent err':>11s} {'balanced acc':>13s} "
-              f"{'catalogue use':>14s}")
+              f"{'governed usage':>14s}")
         for a in arms:
             rs = results[a]["rows"]
             flat = [{**r["grade"], "outcome": r["outcome"],
@@ -1142,13 +1163,15 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
             # expected", not "the catalogue was read". Reporting 100% there would credit an arm for
             # using something it was never given — and the first mock run did exactly that.
             has_catalogue = capabilities(study.arms[a].rung or study.rung).semantic
-            used = (f"{sum(1 for r in rs if not r.get('context_audit')) / len(rs):>13.0%}"
+            used = (f"{sum(1 for r in rs if used_governed_surface(r)) / len(rs):>13.0%}"
                     if has_catalogue and rs else f"{'—':>13s}")
             print(f"{a:16s} {sel.coverage:>8.0%} {sel.silent_error:>11.0%} "
                   f"{sel.balanced_accuracy:>13.0%} {used}")
         print("  coverage: of the answerable pile, how much it attempted · silent err: of everything,\n"
               "  wrong while looking right · balanced acc: mean of the two piles, immune to the mix ·\n"
-              "  catalogue use: rows that read the metric list. Grounded-answer rate needs the claims\n"
+              "  governed usage: rows that reached their answer through the governed surface — the\n"
+              "  metric list, a governed query, or a check_* lookup; the complement wrote raw SQL.\n"
+              "  Grounded-answer rate needs the claims\n"
               "  protocol, which this study runs with off.")
 
     # Within-arm disagreement on identical input. THE number that decides whether a between-arm gap
