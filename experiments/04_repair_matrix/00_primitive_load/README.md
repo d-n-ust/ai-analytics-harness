@@ -1,8 +1,9 @@
 # Study 00 — primitive load: how many things one question makes the agent resolve
 
-Findings are in `FINDINGS.md` — read **§31** first: the item set was rebuilt on 2026-08-10 and its
-numbers are NOT comparable with anything before it. §30 is the last state of the old instrument, and
-§27 and §29 are the trace audits. The practitioner summary is in
+Findings are in `FINDINGS.md` — read **§31** first (the rebuilt instrument; its numbers are NOT
+comparable with anything before 2026-08-10), then **§32** (the `gpt-5.6-terra` sweep, which splits
+the findings into model-independent and model-dependent). §30 is the last state of the old
+instrument, and §27 and §29 are the trace audits. The practitioner summary is in
 `PRACTITIONER-NOTES.md`, written for a reader with no access to this repository.
 
 **Where it stands.** 62 items, 8 arms, 1,488 rows, noise floor 25%. The tie in §30 was an artefact of

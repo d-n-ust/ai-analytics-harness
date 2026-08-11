@@ -2159,3 +2159,175 @@ the guardrail it would unblock has a measured contribution of zero.
 recoverable from the data; an adapter that computes it is strictly better than one that reports the
 capability absent. Every guardrail blocked on a missing capability should be re-asked as "can this
 be computed" before it is recorded as unavailable.
+
+---
+
+## 32. The model-tier sweep: which findings survive a frontier model
+
+Run `20260811-211447`. Seven arms (the six main plus `E_enforced_verified`, probes excluded) on
+`gpt-5.6-terra` via `--override-model`, reps=1 — 434 rows, no crashes, controls 2/2 in every arm.
+The judge stays `gpt-5-mini` per the study pin; only the agent changed.
+
+**HOW TO READ IT.** One repetition, so every cell carries full noise, and the mini baseline is
+reps=3 — the denominators are uneven and single-cell comparisons across models are worthless. What
+this run can say is which of §31's findings are properties of THE DATA and which were properties of
+THE MODEL. The five predictions were written down before the run (in the session log) and are scored
+here in order.
+
+### 32.1 The headline: the findings split cleanly into model-independent and model-dependent
+
+| finding | gpt-5-mini (§31) | gpt-5.6-terra | verdict |
+|---|---|---|---|
+| additivity, prose arms | 0/12 + 0/12 | **0/4 + 0/4** | **model-independent** |
+| the case trap (star below raw) | 21/36 vs 29/36 | **6/12 vs 10/12** | **model-independent** |
+| documentation harms the raw extract | 87 vs 92 of 186; synonym 1/36 | worst arm again: 72% vs 78% bal. acc; **synonym 2/12 vs raw's 8/12** | **model-independent, amplified** |
+| the honesty flatline | 36–47% for every warehouse arm | **58–83% without any enforcement** | **model-dependent — breaks** |
+| enforcement's value | +13pp balanced accuracy over D | **−7pp: E 89% vs D 96%, coverage 84%** | **model-dependent — inverts** |
+| bypass predicts silent error | D: 74% governed, 17% silent | D: **48% governed, 2% silent** | **model-dependent — decouples** |
+
+### 32.2 What held, in detail
+
+**The prose arms still cannot do money.** `A_implicit` and `B_documented` scored 0/4 each on the
+additivity rung — the frontier model summed the annual lump every time, with the ÷12 rule written in
+a comment above the column. Eight more runs, zero exceptions, now across two model tiers. This is
+the study's most durable result: **no model tier read a rule out of prose and applied it to
+arithmetic.**
+
+**The normalised-key trap catches the frontier model too.** `C_modelled` scored 6/12 on case values
+against the raw arm's 10/12 — terra also writes `platform = 'Android'` against a column holding
+`android`. A star that normalises to a convention nobody types is worse than the mess it replaced,
+at every tier measured.
+
+**Documentation harm grows with capability.** `B_documented` is again the worst arm, and the synonym
+column is the sharpest cell in the run: the documented arm scored 2/12 where the RAW arm scored
+8/12. Terra actually resolves some synonyms from the values alone; hand it the mapping as prose and
+it does worse. The more capable model obeys the misleading comments more diligently — which §19's
+over-application mechanism predicted and could not previously test.
+
+**Good modelling saturates the ladder completely.** `C_modelled_documented` and `D_declared` both
+scored **48/48 on the whole answerable pile** — every rung of every family. On this bench, a
+frontier model over a documented star has no accuracy problem left to fix.
+
+### 32.3 What flipped
+
+**The honesty flatline breaks: terra brings its own restraint.** The no-answer pile runs 7–10 of 12
+across the warehouse arms (58–83%) with no enforcement at all, where mini sat flat at 36–47%.
+§31.6's "nothing on the modelling axis teaches an agent to stop" stands for mini and does NOT
+generalise upward — the second article's finding that stronger models refuse more arrives here from
+the other direction.
+
+**Enforcement inverts from essential to a tax.** On mini, `E_enforced` was the best arm by 13
+points of balanced accuracy. On terra it is 89% against `D_declared`'s 96%: coverage drops to 84%
+(it refuses answerable questions), silent error is not better (5% vs 2%), and its no-answer gain
+over D is two rows. The control that mini could not do without, terra mostly pays for.
+
+**Bypass decouples from harm.** `D_declared` went around the layer on 52% of rows — twice mini's
+rate — and posted 2% silent error anyway. The stronger model's own SQL is simply right more often.
+Governed usage measured what it always measured; what changed is that the behaviour it measures
+stopped predicting damage.
+
+**The mis-briefed judge is agent-independent.** `E_enforced_verified` (judge still `gpt-5-mini`)
+over-refused 17 answerable rows, 11 under judge codes with `verifier_wrong_scope` again dominant —
+the same `user_type`-collapses-two-rules misreading from §31.7, now rejecting a frontier model's
+correct answers. Coverage 66%. A judge that has not been told what the columns mean stays wrong no
+matter who it judges; the fix remains `governed_notes()`, not a better agent.
+
+### 32.4 The four comparison tables, mini against terra
+
+Same arms, same questions, the two tiers side by side. `mini` is `gpt-5-mini` at reps=3 (n per
+cell: 36–48 ladder, 12 money, 36 pile B; the judge arm from its own run, `20260810-185421`).
+`terra` is `gpt-5.6-terra` at reps=1 (n per cell: 12–16 ladder, 4 money, 12 pile B). Read columns
+and patterns; the terra side of any single pair is one repetition.
+
+**The five metrics:**
+
+| arm | coverage | silent error | balanced acc | governed use |
+|---|---|---|---|---|
+| raw | 97% → 100% | 47% → 19% | 48% → 78% | — |
+| raw+docs | 99% → 100% | 49% → 35% | 52% → 72% | — |
+| star | 95% → 100% | 18% → 26% | 73% → 74% | — |
+| star+docs | 99% → 100% | 9% → 3% | 85% → 92% | — |
+| +layer | 100% → 100% | 17% → **2%** | 78% → **96%** | 74% → **48%** |
+| +rule | 99% → **84%** | 5% → 5% | 95% → **89%** | 100% → 100% |
+| +rule+judge | 71% → 66% | 2% → 2% | 82% → 82% | 100% → 100% |
+
+**Accuracy by primitive:**
+
+| arm | segment | grain | join | measure | additivity | no-answer |
+|---|---|---|---|---|---|---|
+| raw | 48% → 94% | 56% → 83% | 56% → 92% | 75% → 75% | **0% → 0%** | 39% → 75% |
+| raw+docs | 58% → 81% | 44% → 58% | 44% → 42% | 67% → 75% | **0% → 0%** | 36% → 83% |
+| star | 85% → 75% | 86% → 75% | 67% → 58% | 67% → 100% | 83% → 75% | 47% → 67% |
+| star+docs | 94% → 100% | 94% → 100% | 92% → 100% | 100% → 100% | 100% → 100% | 47% → 75% |
+| +layer | 90% → 100% | 92% → 100% | 86% → 100% | 58% → 100% | 92% → 100% | 39% → 58% |
+| +rule | 98% → 94% | 83% → 67% | 97% → **67%** | 100% → 100% | 100% → **50%** | 78% → 75% |
+| +rule+judge | 56% → 81% | 75% → 58% | 75% → 42% | 75% → 75% | 75% → 50% | 83% → 75% |
+
+**Silent error by primitive** (lower is better):
+
+| arm | segment | grain | join | measure | additivity | no-answer |
+|---|---|---|---|---|---|---|
+| raw | 50% → 6% | 42% → 17% | 42% → 8% | 25% → 25% | **92% → 100%** | 56% → 25% |
+| raw+docs | 40% → 19% | 56% → 42% | 56% → 58% | 33% → 25% | **100% → 100%** | 44% → 17% |
+| star | 12% → 25% | 6% → 25% | 33% → 42% | 8% → 0% | 8% → 25% | 33% → 25% |
+| star+docs | 6% → 0% | 3% → 0% | 8% → 0% | 0% → 0% | 0% → 0% | 25% → 17% |
+| +layer | 10% → 0% | 8% → 0% | 14% → 0% | 42% → 0% | 8% → 0% | 31% → 8% |
+| +rule | 0% → 6% | 17% → 8% | 3% → 0% | 0% → 0% | 0% → **25%** | 6% → 0% |
+| +rule+judge | 2% → 0% | 3% → 8% | 0% → 0% | 0% → 0% | 0% → 0% | 6% → 0% |
+
+**Accuracy by segment kind:**
+
+| arm | stated | case | code | synonym |
+|---|---|---|---|---|
+| raw | 53% → 92% | 81% → 83% | 56% → 83% | 11% → 67% |
+| raw+docs | 89% → 92% | 39% → 50% | 58% → 75% | **3% → 17%** |
+| star | 92% → 100% | 58% → **50%** | 92% → 100% | 75% → **42%** |
+| star+docs | 97% → 100% | 86% → 100% | 94% → 100% | 100% → 100% |
+| +layer | 89% → 100% | 81% → 100% | 78% → 100% | 100% → 100% |
+| +rule | 97% → 83% | 92% → 83% | 89% → 67% | 100% → 75% |
+| +rule+judge | **14% → 8%** | 86% → 83% | 83% → 75% | 92% → 83% |
+
+Five readings the single-tier tables could not show:
+
+1. **The additivity column is untouched by the upgrade.** 0% → 0% for both prose arms, silent
+   error 92–100% at both tiers. Everything else about the raw arm improved dramatically; this one
+   cell did not move.
+2. **The star's cells that got worse on terra are the case trap and its neighbours** — case
+   58→50, synonym 75→42, join 67→58. A stronger model is more confident about the conventions it
+   guesses, and the star's invisible conventions punish exactly that.
+3. **`+layer` is the upgrade's biggest winner while using the layer half as much.** Silent error
+   17→2 with governed usage 74→48: terra bypasses twice as often and its own SQL is right. On this
+   tier the layer's accuracy value is near zero; what remains is governance.
+4. **`+rule` is the only arm that got worse almost everywhere** — coverage 99→84, join 97→67,
+   additivity 100→50. Enforcement calibrated for the weaker agent refuses the stronger one's
+   legitimate work.
+5. **The judge's stated column is the diagnosis confirmed at both tiers: 14% and 8%.** Its
+   `user_type` misreading lands precisely on the stated-segment questions and destroys that column
+   for both agents. The failure follows the judge, not the model it judges.
+
+### 32.5 What this does to the practitioner guidance
+
+The spend list splits by whether the fix survives the model upgrade:
+
+| fix | survives? |
+|---|---|
+| decode beside the code, label beside the key | **yes — and stays necessary** |
+| model stocks on snapshot tables | **yes — prose still scores zero without it** |
+| state defaults, prune misleading comments | **yes — bad docs hurt MORE on the stronger model** |
+| the provenance rule | **tier-dependent** — essential at mini's tier, a coverage tax at terra's |
+| enforcement for honesty | **tier-dependent** — the flatline is a small-model property |
+
+The durable sentence: **fix the data, not the model, because the data fixes are the ones the next
+model upgrade does not refund.** The controls should be re-costed per tier — and de-tuned, not
+removed, when the agent under them improves; §31.7's judge shows what a control calibrated for a
+weaker agent does to a stronger one.
+
+### 32.6 Limits of this section
+
+reps=1 on one run; the 25% noise floor from §31 was measured on mini and is unmeasured on terra
+(the single repetition cannot measure its own). Cells of width 4 and 12 only; every verdict above
+rests on a categorical (0/4 + 0/4) or a wide gap (36–47 vs 58–83), never a cell. `E_enforced` at
+terra also refused six answerable rows the study has not yet trace-audited; "inverts" is the
+reading, "needs an audit before print" is the standard. And the judge comparison is deliberately
+confounded — the judge model was held at `gpt-5-mini` to isolate the agent change, so §32.3's last
+paragraph says nothing about what a terra-tier judge would do.
