@@ -22,6 +22,7 @@ import os
 # the parser needs the rung table to build --rung's help and validation from the definitions
 # themselves rather than a second copy of them.
 from agent.guardrails import LADDER_ORDER
+from agent.models import DEFAULT_MODEL
 from agent.protocol import FRAMINGS, PARTS
 from agent.rungs import RUNGS, parse_rung
 
@@ -115,6 +116,33 @@ def cmd_chain(a):
         print(f"  … {len(picked) - a.limit} more (raise --limit, or narrow with --config/--model)")
 
 
+def cmd_health(a):
+    """Diagnose a semantic layer, object by object — no model, no query, no warehouse.
+
+    Takes a path so it can be pointed at a customer's layer rather than only this repo's; that is
+    the difference between a repo script and something usable in the first hour of an engagement."""
+    import pathlib
+
+    import yaml
+
+    from cli.health import render
+    from semantic.health import diagnose, read_layer
+    root = pathlib.Path(__file__).resolve().parent.parent
+    path = pathlib.Path(a.layer) if a.layer else root / "semantic" / "semantic_layer.yml"
+    if not path.exists():
+        raise SystemExit(f"no such layer file: {path}")
+    metrics, dimensions = read_layer(path)
+    # The tree is this repo's; a foreign layer simply has none, and a node is only a third public
+    # name for a measure, so its absence removes findings rather than breaking any.
+    nodes = {}
+    tree_path = path.parent / "metric_tree.yml"
+    if not a.layer and tree_path.exists():
+        tree = yaml.safe_load(tree_path.read_text())
+        nodes = {n: s.get("metric") for n, s in (tree.get("nodes") or {}).items()}
+    print(render(diagnose(metrics, nodes, dimensions), metrics, source=path.name,
+                 table_only=a.summary))
+
+
 def cmd_ambiguity(a):
     """Lint the governed layer for names that can be mistaken for each other.
 
@@ -128,9 +156,95 @@ def cmd_ambiguity(a):
     root = pathlib.Path(__file__).resolve().parent.parent
     layer = yaml.safe_load((root / "semantic" / "semantic_layer.yml").read_text())
     metrics = layer["metrics"] if isinstance(layer.get("metrics"), dict) else layer
+    if getattr(a, "audit", False):
+        # Not a second detector. It answers "is the rule above missing a CATEGORY of confusion",
+        # which is a question about the lint rather than about the layer. See semantic/similarity.py.
+        from semantic.similarity import audit
+        print(audit(metrics, kind=a.surface).render())
+        return
     tree = yaml.safe_load((root / "semantic" / "metric_tree.yml").read_text())
     nodes = {n: s.get("metric") for n, s in (tree.get("nodes") or {}).items()}
     print(report(metrics, nodes))
+
+
+def cmd_study(a):
+    """Run one study, or describe it without spending anything. With no argument, print the tree.
+
+    `--describe` answers the question a forked-layer design could not: what, exactly, does this arm
+    change? It prints the patch and then the catalogue lines that actually moved — the treatment as
+    the model receives it, rather than as the file claims."""
+    import difflib
+
+    from experiments.engine import ROOT, Study, run, tree
+    if not a.study:
+        print(tree())
+        return
+    if not a.describe:
+        run(a)
+        return
+
+    from semantic.semantic import SemanticLayer
+    from warehouse.warehouse import open_warehouse
+    study = Study.load(a.study)
+    con = open_warehouse(create_star_views=True)
+    paths = study.materialize(ROOT / ".build" / study.name)
+    base_text = SemanticLayer(con, spec_path=study.base).list_metrics_text().splitlines()
+    print(f"{study.title}\n  {study.name}\n"
+          f"  base: {study.base.name} · rung {study.rung} · guardrails R{study.guardrails}\n")
+    for name, arm in study.arms.items():
+        sl = SemanticLayer(con, spec_path=paths[name])
+        print(f"{name}  [{arm.level}]  {arm.claim}")
+        for key in arm.patch:
+            print(f"    patch  {key}")
+        for key in arm.delete:
+            print(f"    delete {key}")
+        moved = [ln for ln in difflib.unified_diff(base_text, sl.list_metrics_text().splitlines(),
+                                                   lineterm="", n=0)
+                 if ln[:1] in "+-" and not ln.startswith(("+++", "---"))]
+        print("    catalogue: unchanged" if not moved else "    catalogue:")
+        for ln in moved:
+            print(f"      {ln[:150]}")
+        print()
+
+
+def _stored_run(a):
+    """The run to read: --run, or the newest experiment run.
+
+    `results/probes/` is searched only as a fallback. It holds the twelve runs of experiment 01 from
+    before it was migrated off the forked-layer probe; they are still readable, and still the
+    evidence behind numbers in the write-ups, but nothing produces new ones."""
+    import json
+    import pathlib
+    root = pathlib.Path(__file__).resolve().parent.parent
+    if a.run:
+        d = pathlib.Path(a.run)
+        d = d if d.is_absolute() else root / d
+    else:
+        runs = (sorted((root / "results" / "experiments").glob("*/run.json"))
+                or sorted((root / "results" / "probes").glob("*/run.json")))
+        if not runs:
+            raise SystemExit("no runs under results/experiments — run `bench experiment` first")
+        d = runs[-1].parent
+    blobs_path = d / "context_blobs.json"
+    return (json.loads((d / "run.json").read_text()),
+            json.loads(blobs_path.read_text()) if blobs_path.exists() else {}, d)
+
+
+def cmd_context(a):
+    """What the model was SHOWN, per run — the ledger, the full text, or a diff between two arms.
+
+    `trace` answers "what did the agent do"; this answers "what did it read", which is the only
+    question that can confirm an experiment whose treatment is the context actually happened."""
+    from cli.context import render_diff, render_ledger
+    run, blobs, d = _stored_run(a)
+    print(f"# {d}\n")
+    if a.diff:
+        arms = tuple(x.strip() for x in a.diff.split(","))
+        if len(arms) != 2:
+            raise SystemExit("--diff takes exactly two arms, e.g. --diff B_documented,C_typed")
+        print(render_diff(run, blobs, arms, a.source or "list_metrics", qid=a.qid))
+    else:
+        print(render_ledger(run, blobs, arm=a.arm, qid=a.qid, source=a.source, full=a.full))
 
 
 def cmd_run(a):
@@ -195,7 +309,7 @@ def main() -> None:
                     help=f"what the answer must DECLARE: {'+'.join(PARTS)} and a framing "
                          f"({'|'.join(FRAMINGS)}); `none` declares nothing. "
                          "e.g. claims+repair+role")
-    sp.add_argument("--model", default="gpt-5.6-terra", choices=MODELS)
+    sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")
     sp.set_defaults(func=cmd_ask)
@@ -206,7 +320,8 @@ def main() -> None:
     sp.add_argument("--rungs", default="1,2,3,4,5,6",
                     help=f"grounding rungs, comma-separated; defined: {sorted(RUNGS)}")
     # The ceiling is COMPUTED. Typed as a literal it went stale twice — the help still said
-    # R0..R9 three guardrails later, which is the fossilised numbering REFACTOR.md names.
+    # R0..R9 three guardrails later, which is the fossilised numbering the 2026-07 refactor
+    # plan named.
     sp.add_argument("--rrungs", default="1",
                     help=f"reliability ladder presets R0..R{len(LADDER_ORDER)}")
     sp.add_argument("--cells", default=None,
@@ -251,9 +366,58 @@ def main() -> None:
     sp.add_argument("--limit", type=int, default=1)
     sp.set_defaults(func=cmd_chain)
 
-    sub.add_parser("ambiguity",
-                   help="lint the governed layer for names that can be confused"
-                   ).set_defaults(func=cmd_ambiguity)
+    sp = sub.add_parser("study", aliases=["experiment", "exp"],
+                        help="run one study from experiments/<experiment>/<study>/ (arms are patches)")
+    sp.add_argument("study", nargs="?", default=None,
+                    help="study name, e.g. 02_segment or 04_repair_matrix/"
+                         "02_segment (omit to print the tree)")
+    sp.add_argument("--reps", type=int, default=1)
+    sp.add_argument("--concurrency", type=int, default=1,
+
+        help="run this many questions at once WITHIN an arm. Arms stay "
+
+             "sequential: they sit at different rungs, and the star views "
+
+             "are database-wide, so two rungs cannot share the warehouse.")
+    sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
+    sp.add_argument("--override-model", default=None, choices=MODELS,
+                    help="run every arm on this model, overriding one pinned in study.yml. "
+                         "`--model` deliberately loses to a pinned study; this wins, loudly. "
+                         "Use to sweep a study across model tiers without editing the file that "
+                         "records what it ran.")
+    sp.add_argument("--mock", action="store_true", help="mock model — checks wiring, measures nothing")
+    sp.add_argument("--arms", default=None, help="comma-separated subset (default: all)")
+    sp.add_argument("--only", default=None, help="comma-separated question ids")
+    sp.add_argument("--describe", action="store_true",
+                    help="show each arm's patch and the lines it changes in the catalogue — then exit")
+    sp.set_defaults(func=cmd_study)
+
+    sp = sub.add_parser("context", help="what the model was SHOWN in an experiment run (ledger / full text / diff)")
+    sp.add_argument("--run", default=None, help="run dir (default: the newest experiment run)")
+    sp.add_argument("--arm", default=None, help="one arm, e.g. C_typed")
+    sp.add_argument("--qid", default=None, help="one question id")
+    sp.add_argument("--source", default=None,
+                    help="show only this tool's results (--diff defaults to list_metrics)")
+    sp.add_argument("--full", action="store_true", help="print the exact text of every entry, untruncated")
+    sp.add_argument("--diff", default=None, metavar="ARM_A,ARM_B",
+                    help="unified diff of --source between two arms — the check that a treatment is real")
+    sp.set_defaults(func=cmd_context)
+
+    sp = sub.add_parser("health", help="diagnose a semantic layer, object by object")
+    sp.add_argument("layer", nargs="?", default=None,
+                    help="path to a layer YAML (default: this repo's)")
+    sp.add_argument("--summary", action="store_true",
+                    help="the table only — one row per metric, worst state on the right")
+    sp.set_defaults(func=cmd_health)
+
+    sp = sub.add_parser("ambiguity",
+                        help="lint the governed layer for names that can be confused")
+    sp.add_argument("--audit", action="store_true",
+                    help="coverage audit: does the lint MISS a category? (embedding, cached)")
+    sp.add_argument("--surface", default="name_syn",
+                    choices=["name", "name_syn", "desc", "full"],
+                    help="which facets to embed for --audit (the surface changes the answer)")
+    sp.set_defaults(func=cmd_ambiguity)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 

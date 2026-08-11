@@ -1,0 +1,63 @@
+# D_declared plus R7 `governed_numbers`, and nothing else. Same layer directory, same warehouse,
+# same engine: the guardrail IS the treatment.
+#
+# WHY R7 AND NOT R9. R9 adds `trajectory_verify`, an LLM judge asking whether the metric measures
+# the thing asked about. The failures this arm exists to catch are not wrong-metric failures — they
+# are arithmetic performed OUTSIDE the governed surface, and R7's `governed_numbers` is the check
+# that names exactly that: a number must trace to one governed result.
+#
+# WHAT IT SHOULD CATCH, from the traces of run 20260809-2216:
+#
+#   pl_c1_accounts   the arm fetched the governed 553, twice, then asked for a daily breakdown and
+#                    added the thirty rows into 713. The layer was right — 30 rows summing to 553,
+#                    verified against SQL — and the model's arithmetic was not. A figure obtained by
+#                    adding thirty governed rows traces to no single governed result.
+#   pl_c3_grain      fetched 412, then tried `SELECT ... FROM metric_results`, a table it invented
+#                    because there is no supported way to take a number out of query_metric and do
+#                    anything further with it.
+#
+# THE HONEST EXPECTATION. ../05_additivity measured this check on a different defect and found it
+# converts a confidently wrong number into a REFUSAL — it never produced the right answer. So E is
+# predicted to score no better than D on `correct` and better on `silent wrong`, and the second
+# column is the one to read. An arm that trades a wrong number for an abstention has done the
+# valuable thing, and a summary that only reports accuracy will show it as a loss.
+#
+# THIS ARM IS NOT PART OF THE LOAD LADDER. The ladder holds R1 across A, B, C and D so that the
+# four are comparable; E sits at a different guardrail cell and is a paired comparison against D
+# alone. Reading E against A or B would compare guardrails, not data modelling.
+level: structural
+claim: "the same governed layer, plus a check that a number must trace to one governed result"
+rung: 3
+engine: metricflow
+layer_dir: layers/D_declared
+
+agent:
+  # THE REDUCED CELL, not plain R7, and the reduction is forced rather than chosen. R7 bundles
+  # `governed_numbers` with `coverage_check` and `resolve`, and `check_compatible` refuses the run
+  # rather than letting a guardrail pass silently on a default it never had. `02_segment__mf` uses
+  # the same notation for the same reason.
+  #
+  # `resolve` STAYS OFF: it needs a governed member vocabulary, which is a decision somebody writes
+  # down, and MetricFlow gives nowhere to write it. No computation recovers it.
+  #
+  # `coverage_check` CAME BACK on 2026-08-10. It was excluded because MetricFlow declares no
+  # coverage window — but the window was never missing from the DATA, only from the spec: every
+  # semantic model names an `agg_time_dimension`, and min/max of that column is the answer. The
+  # adapter now computes it per model, so the guardrail has a real fact to check against.
+  #
+  # This is the treatment being measured. §28 found this arm answering both out-of-coverage
+  # questions wrong, three times each, with the guardrail written to catch them unable to run.
+  guardrails: "R7-resolve"
+
+environment:
+  tables: star_schema
+  # THE STAR'S DOCUMENTATION TOO, and the omission it replaces was not a decision. This arm had
+  # `tables: star_schema` alone, so it received the governed layer and NO table comments — and when
+  # it fell back to SQL, which it did on 31 of 69 rows, it was operating like A_implicit on a star.
+  # Three failures in run 20260809-225835 are exactly that: it filtered `country = 'Germany'` while
+  # the ISO mapping sat documented in a file it could not see.
+  #
+  # A team that has built a semantic layer has not left the warehouse underneath it undocumented.
+  # With this line the ladder is cumulative — D is C_modelled_documented plus the layer, and E is D
+  # plus the check — so each column adds to the one below rather than trading one thing for another.
+  docs: star_schema

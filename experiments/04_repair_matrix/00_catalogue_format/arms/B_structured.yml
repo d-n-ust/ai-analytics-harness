@@ -1,0 +1,6 @@
+# The same facts as JSON. Keys are spelled as the tool's arguments are spelled, so the catalogue
+# and the call share one vocabulary: prose says "pass segment=…" in a sentence, and here the
+# relationship is the shape.
+level: structural
+claim: "the same facts as JSON, keyed as the tool's own arguments"
+catalogue_format: structured

@@ -1,0 +1,76 @@
+# D_declared plus R9 `trajectory_verify` — the judge asks whether what was measured is what was
+# asked for. Identical layer, identical warehouse, identical patch: the guardrail is the treatment.
+#
+# THE EXPECTATION IS LOW, AND STATING IT BEFOREHAND IS THE POINT. The judge compares the metric
+# used against the thing asked about. It can catch an agent that answered with `paying_users` when
+# the question said "ever". It cannot catch an agent that wrote correct SQL over the right table
+# and counted rows, because there is no metric in that trajectory to compare against — which is
+# exactly A_implicit's failure. So E should help D and do nothing for A, and a gap between E and A
+# would be a gap between R9 and R1 rather than a grain result.
+#
+# It is also an LLM, so part of any D-versus-E difference measures the judge. ../FINDINGS.md
+# records that refusal categorisation is unstable across identical runs.
+level: structural
+claim: "the same governed layer, plus a check that refuses when the thing measured is not the thing asked for"
+rung: 3
+patch:
+  # THREE METRICS, ONE PER QUESTION, and D_declared and E_enforced must carry them IDENTICALLY —
+  # tests/test_experiments.py asserts the two patches are equal, so the guardrail is provably the
+  # only difference between the arms.
+  #
+  # WHY THEY ARE ADDED AT ALL. The shipped layer has the right SHAPES and only in live-subscription
+  # form: `active_subscriptions` is count(*) filtered to is_active, `arpu` is the monthly-normalised
+  # revenue per active user. Nothing counts the full history. Study 01 settled what to do about
+  # that — its enforced arm refused two ordinary questions because the layer had no metric for
+  # them, and the fix was to add the metrics rather than to score our own modelling gap as the
+  # treatment failing. A question the layer cannot express measures COVERAGE, not grain.
+  #
+  # NAMED AND DESCRIBED TO SAY NOTHING ABOUT GRAIN. `subscription_terms` would have been the
+  # natural name and it is banned here: it carries C_modelled's treatment (the name states the
+  # grain) and B_documented's (the word "term"), and D would stop being separable from either.
+  # Column D's claim is that the AGGREGATION resolves the grain silently, so the caller never faces
+  # the choice. The descriptions therefore say what each metric is and never how it is computed.
+  metrics.ever_subscribed_users:
+    description: "Subscribers over the full history, live and lapsed."
+    entity: users
+    segment: all
+    unit: count
+    synonyms: ["lifetime subscribers", "all-time subscribers", "total subscribers"]
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.subscriptions_all_time:
+    description: "Every subscription on record, live and ended."
+    entity: subscriptions
+    segment: all
+    unit: count
+    synonyms: ["all subscriptions", "subscription count", "lifetime subscriptions"]
+    base: fct_subscriptions
+    agg: "count(*)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.billing_per_subscriber:
+    description: "Average lifetime billing per subscriber."
+    entity: users
+    segment: all
+    unit: currency
+    synonyms: ["lifetime value", "billing per subscriber", "average spend per subscriber"]
+    base: fct_subscriptions
+    agg: "sum(billed_amount) * 1.0 / nullif(count(distinct user_id), 0)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+changes_candidate_count: true
+
+agent:
+  guardrails: 9
+
+environment:
+  tables: star_schema
+  # NO `semantic:` KEY, deliberately. Naming a layer file replaces the study's base and is
+  # incompatible with a patch — the engine refuses both together. Omitting the key leaves the
+  # decision to the rung, and this arm's rung is 3, so it gets the study's base with the patch
+  # above applied. 01_entity's D names the file because it patches nothing.

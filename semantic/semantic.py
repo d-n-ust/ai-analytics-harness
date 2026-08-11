@@ -18,7 +18,8 @@ from pathlib import Path
 
 import yaml
 
-from warehouse.config import NAMED_PERIODS, resolve_period
+from semantic.engine import Capabilities
+from warehouse.config import TIME_GRAINS, resolve_period
 from warehouse.warehouse import run_query
 
 SPEC_PATH = Path(__file__).resolve().parent / "semantic_layer.yml"
@@ -99,6 +100,11 @@ class SemanticLayer:
         self.spec = yaml.safe_load(spec_path.read_text())
         self.metrics: dict[str, dict] = self.spec["metrics"]
         self.governance: dict = self.spec.get("governance", {})
+
+    # Everything: this layer IS the governance model the others are measured against. Declared
+    # rather than assumed, so `check_compatible` has something to compare a rival engine with.
+    capabilities = Capabilities(name="harness", catalogue=True, query=True, coverage=True,
+                                segments=True, members=True, additivity=True)
 
     @property
     def ontology(self) -> dict:
@@ -231,10 +237,14 @@ class SemanticLayer:
         return out
 
     def coverage_violations(self, filters=None, group_by=None,
-                            start=None, end=None, period=None) -> list[tuple]:
+                            start=None, end=None, period=None, metric=None) -> list[tuple]:
         """Which scopes this call reports on fall outside coverage: [(dimension, member, why)].
         Empty means every number it would return is answerable. A call naming no
-        coverage-bearing member is still checked against the data window itself."""
+        coverage-bearing member is still checked against the data window itself.
+
+        `metric` is accepted and unused: this layer states one data window in its governance file
+        and applies it to every metric. It is in the signature because the MetricFlow engine reads
+        its window off each model's time column, where the two differ."""
         start, end = self.resolve_window(start, end, period)
         bad = []
         for dim, member in self.scope_members(filters, group_by) or [(None, None)]:
@@ -267,7 +277,7 @@ class SemanticLayer:
         a test channel' is a lookup, not a rule the model has to remember."""
         return [name for name, m in self._members(dimension).items() if self._meta(m).get("test")]
 
-    def _segment_where(self, segment: str) -> str:
+    def _segment_where(self, segment: str, metric: dict | None = None) -> str:
         """Compile a governed segment to a WHERE clause. Today's one form is `exclude_test`,
         which drops a dimension's test members; the segment is definitional, not an analyst
         filter, so downstream scope checks treat it as part of the definition."""
@@ -279,7 +289,25 @@ class SemanticLayer:
         if dim:
             drop = self.test_members(dim)
             return f"{dim} NOT IN ({', '.join(_literal(v) for v in drop)})" if drop else ""
-        return ""
+        # A POPULATION segment: predicates over the base table, ANDed. `exclude_test` above is one
+        # special case of this (drop a dimension's test members); `where` is the general form, and
+        # it is what lets a layer express "the same measure, a different population" as ONE metric
+        # with a named argument instead of two metrics a reader has to tell apart.
+        #
+        # A predicate segment must be DECLARED by the metric, where the dimension form need not be.
+        # The difference is real: `exclude_test: channel` binds against a dimension, so it applies
+        # to any metric carrying that dimension; a raw predicate binds against a base TABLE, and
+        # `NOT is_internal` on fct_subscriptions is not a narrower population, it is a crash. Left
+        # unchecked the layer accepts any segment on any metric and the declaration is decoration.
+        where = spec.get("where") or []
+        # `where` PRESENT, not `where` non-empty: "everyone" declares an empty predicate and is
+        # still a population choice, so passing it to a metric that offers no populations is the
+        # same category error as passing "real_users" — it just happens not to crash.
+        if "where" in spec and segment not in (metric or {}).get("segments", []):
+            offered = ", ".join((metric or {}).get("segments", [])) or "(none)"
+            raise SemanticError(
+                f"segment {segment!r} is not defined for this metric. It declares: {offered}.")
+        return " AND ".join(f"({w})" for w in where)
 
     def allowed_filters(self, metric: str) -> set[str] | None:
         """The dimensions a metric may be filtered by — governed metadata, read once from the
@@ -388,40 +416,24 @@ class SemanticLayer:
         return False, f"no governed segment matches {term!r}. Defined: {', '.join(pops)}."
 
     # -- introspection the agent sees -------------------------------------- #
+    # Which rendering this layer serves. A study sets it per arm; everything else gets `prose`.
+    catalogue_format: str = "prose"
+
+    # Optional facts this layer's catalogue states. Empty is what ships. A study sets it per arm to
+    # vary whether a fact REACHES the agent while the layer computing the numbers stays identical.
+    catalogue_fields: tuple = ()
+
     def list_metrics_text(self) -> str:
-        lines = ["Governed metrics (call query_metric with these names):"]
-        for name, m in self.metrics.items():
-            dims = m.get("dimensions", [])
-            bits = [f"- {name}: {m['description']}"]
-            syn = m.get("synonyms", [])
-            if syn:
-                bits.append(f"    also called: {', '.join(syn)}")
-            if dims:
-                bits.append(f"    group_by / filter dimensions: {', '.join(dims)}")
-            if m.get("supports_internal_filter"):
-                bits.append("    supports filter is_internal=false")
-            if m.get("time_column"):
-                bits.append("    time-filterable (period=…) and grainable (time_grain=week|month|day)")
-            else:
-                bits.append("    point-in-time (as of now); no period filter")
-            lines.append("\n".join(bits))
-        lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} (or pass explicit start/end 'YYYY-MM-DD').")
-        # The MEMBERS, once, rather than repeated under every metric that shares a dimension.
-        # Naming the dimension without its values told the agent that `channel` exists and left
-        # it to guess what a channel is: one run spent four of its eight turns asking three
-        # different tools whether "paid search" was defined, and never learned that `paid_search`
-        # is a governed member. There are 25 values in total — cheaper to state than to discover.
-        if self.dimensions:
-            lines.append("\nGoverned dimension values (any other value is refused, not approximated):")
-            for dim, members in self.dimensions.items():
-                lines.append(f"- {dim}: {', '.join(members)}")
-        segs = self.governance.get("segments", {}) or {}
-        if segs:
-            lines.append("\nGoverned segments (pass segment=… to query_metric for a named reusable filter):")
-            for name, s in segs.items():
-                also = f" (also: {', '.join(s.get('synonyms', []))})" if s.get("synonyms") else ""
-                lines.append(f"- {name}: {s.get('description', '')}{also}")
-        return "\n".join(lines)
+        """The catalogue the agent reads, in this layer's configured format.
+
+        The FACTS live in `semantic/renderers.py:catalogue()` and the format is a choice over them,
+        so a study can vary how a catalogue is written without varying what it says.
+
+        There is no prose implementation here. One lived alongside this method, with a test pinning
+        the two together; the same knowledge in two places, plus a test to notice when they drift,
+        is weaker than not having the second copy."""
+        from semantic.renderers import render
+        return render(self, self.catalogue_format)
 
     # -- compilation ------------------------------------------------------- #
     def _allowed_filters(self, m: dict) -> set[str]:
@@ -442,7 +454,7 @@ class SemanticLayer:
         if time_grain:
             if not time_col:
                 raise SemanticError(f"metric {name!r} has no time dimension to grain by.")
-            if time_grain not in ("day", "week", "month"):
+            if time_grain not in TIME_GRAINS:
                 raise SemanticError(f"time_grain {time_grain!r} must be day, week, or month.")
             select.append(f"date_trunc('{time_grain}', {time_col})::date AS period")
             group.append("period")
@@ -455,10 +467,31 @@ class SemanticLayer:
         select.append(f"{m['agg']} AS value")
 
         where = list(m.get("default_filters", []))
+        # A metric whose population is CONSTITUTIVE rather than optional names it here: `power_users`
+        # is not "users, optionally restricted to 5+ a day", it IS that restriction, so a caller who
+        # names no segment must still get it. Without this the repair for a population welded into
+        # `agg` would trade a hidden filter for a silently absent one — a bare call would return a
+        # different, plausible number, which is a worse defect than the one being repaired.
+        segment = segment or m.get("default_segment")
         if segment:
-            clause = self._segment_where(segment)   # a governed named filter (e.g. real_acquisition)
+            clause = self._segment_where(segment, m)   # a governed named filter (e.g. real_acquisition)
             if clause:
                 where.append(clause)
+        # A NAMED PERIOD AND EXPLICIT DATES ARE A CONFLICT, NOT A PRECEDENCE. Both engines used to
+        # let `period` win and drop the caller's start/end without a word. Run 20260810-000736 shows
+        # what that costs: asked for accounts created in June, the agent sent
+        # `period="all"` alongside `start=2026-06-01, end=2026-06-30` and was handed 2,500 — the
+        # all-time figure — under a scope line that named the window it did not use. Two of three
+        # repetitions of a CONTROL failed that way.
+        #
+        # That is this project's own subject matter: a plausible number for the wrong window,
+        # produced by the layer rather than by the model. Refusing the call makes the mistake
+        # unrepresentable instead of detectable, and the agent recovers — it reissues with one of
+        # the two.
+        if period is not None and (start or end):
+            raise SemanticError(
+                f"period={period!r} was given together with start/end. Use one: a named period, or "
+                f"an explicit start and end.")
         if period is not None:
             try:
                 start, end = resolve_period(period)

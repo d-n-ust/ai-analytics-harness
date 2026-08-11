@@ -19,7 +19,7 @@ import json
 import os
 
 from .conversation import ToolCall, Turn, Usage
-from .models import MODEL_SPECS, ModelSpec
+from .models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING, MODEL_SPECS, ModelSpec
 
 MAX_TOKENS = 4096
 # Transient provider failures (429 / 5xx / connection / timeout) must not become data-corrupting
@@ -31,7 +31,50 @@ MAX_RETRIES = 6
 REQUEST_TIMEOUT = 120.0   # seconds — caps a hung request so a sequential run can't stall forever
 
 
-def _load_env() -> None:
+class ProviderError(RuntimeError):
+    """A request the provider refused and will keep refusing. One row's failure, not the run's.
+
+    The comment above promised such a call would "become an honest error row", and nothing
+    implemented it: a 400 rose out of the SDK, through `respond`, through the agent loop, through
+    the thread pool, and killed the sweep. The fourth time an untranslated foreign exception ended
+    a paid run, and the most expensive — 372 completed rows were discarded because the run crashed
+    before anything was persisted.
+
+    The trigger was `invalid_prompt`: the content filter flagged one of our own analytics questions.
+    It is not deterministic and not reproducible on a re-run, which is precisely why one row must
+    not be able to take the other 557 with it."""
+
+    def __init__(self, exc: Exception) -> None:
+        self.status = getattr(exc, "status_code", None)
+        self.code = getattr(getattr(exc, "body", None) or {}, "get", lambda _k: None)("code")
+        super().__init__(f"{type(exc).__name__}"
+                         + (f" {self.status}" if self.status else "")
+                         + (f" ({self.code})" if self.code else "")
+                         + f": {exc}")
+
+
+# Failures that will repeat identically on every remaining row. Turning these into error rows would
+# spend a whole sweep learning one fact about the configuration, so they still stop the run.
+_FATAL_STATUS = frozenset({401, 403, 404})
+
+
+def _call(create, **kw):
+    """Every provider request goes through here, so a foreign exception type stops at the adapter.
+
+    An error with no HTTP status is not a provider refusal — it is a defect in this code, and
+    hiding it in a row would be worse than crashing."""
+    try:
+        return create(**kw)
+    except Exception as exc:
+        status = getattr(exc, "status_code", None)
+        if status is None or status in _FATAL_STATUS:
+            raise
+        raise ProviderError(exc) from exc
+
+
+def load_env() -> None:
+    """Read `.env` from the repo root. Public because more than one subsystem needs a key and the
+    path to that file should be written down once."""
     from dotenv import load_dotenv
     load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -60,7 +103,7 @@ def _anthropic_blocks(turn: Turn) -> list:
 class AnthropicModel:
     def __init__(self, spec: ModelSpec):
         import anthropic
-        _load_env()
+        load_env()
         if not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
         self.spec = spec
@@ -68,6 +111,22 @@ class AnthropicModel:
         # A uniform reasoning label so a run can record its treatment. Anthropic reasoning is the
         # thinking config (disabled on all our specs), so this is "off" unless thinking is enabled.
         self.reasoning = "on" if (spec.thinking and spec.thinking.get("type") != "disabled") else "off"
+
+    @property
+    def sampling(self) -> dict:
+        """What governs this model's randomness, as actually sent — recorded on every run.
+
+        A row that does not carry this cannot be compared with one from a different setting, and
+        the question "was the temperature too high" should be answerable from a stored result
+        rather than by reading the provider code. Anthropic accepts a temperature only while
+        extended thinking is off; the agent loop passes none either way, so the provider default
+        applies.
+        """
+        thinking_on = self.reasoning == "on"
+        return {"thinking": self.reasoning,
+                "temperature": None,
+                "temperature_note": ("not accepted while extended thinking is on" if thinking_on
+                                     else "not sent by the agent loop; provider default applies")}
 
     @staticmethod
     def _render(convo) -> list:
@@ -102,7 +161,7 @@ class AnthropicModel:
         if temperature is not None and (self.spec.thinking is None
                                         or self.spec.thinking.get("type") == "disabled"):
             kw["temperature"] = temperature
-        resp = self.client.messages.create(**kw)
+        resp = _call(self.client.messages.create, **kw)
         blocks = list(resp.content)
         said, calls = [], []
         for b in blocks:
@@ -122,7 +181,7 @@ class AnthropicModel:
 class OpenAIModel:
     def __init__(self, spec: ModelSpec):
         from openai import OpenAI
-        _load_env()
+        load_env()
         if not os.environ.get(spec.api_key_env):
             raise RuntimeError(f"{spec.api_key_env} is not set (add it to .env).")
         self.spec = spec
@@ -132,7 +191,23 @@ class OpenAIModel:
         # required for function tools on gpt-5.6 via chat-completions. A model that will not go
         # that low runs at its own floor instead — `.reasoning` then reports what was actually
         # sent, which is what the run records.
-        self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", "none"))
+        self.reasoning = spec.effort_for(os.environ.get("OPENAI_REASONING", DEFAULT_REASONING))
+
+    @property
+    def sampling(self) -> dict:
+        """What governs this model's randomness, as actually sent.
+
+        For a reasoning model there is NO temperature knob: the code sends `reasoning_effort` and
+        never a temperature, and the API would reject one. So repeat-to-repeat variation on these
+        models is inherent sampling rather than a setting anyone chose, and it cannot be turned
+        down — which is the answer to the obvious question about an unstable cell, and it should be
+        answerable from the row rather than from this file.
+        """
+        if self.spec.supports_reasoning_effort:
+            return {"reasoning_effort": self.reasoning, "temperature": None,
+                    "temperature_note": "reasoning model — takes reasoning_effort, not temperature"}
+        return {"reasoning_effort": None, "temperature": None,
+                "temperature_note": "not sent by the agent loop; provider default applies"}
 
     @staticmethod
     def _render_chat(convo) -> list:
@@ -208,7 +283,7 @@ class OpenAIModel:
         )
         if self.spec.supports_reasoning_effort:
             kw["reasoning"] = {"effort": self.reasoning}          # none / low / medium / high
-        resp = self.client.responses.create(**kw)
+        resp = _call(self.client.responses.create, **kw)
         said, calls = [], []
         for item in resp.output:
             t = getattr(item, "type", None)
@@ -255,7 +330,7 @@ class OpenAIModel:
             kw["reasoning_effort"] = self.reasoning       # reasoning models: no temperature knob
         elif temperature is not None:
             kw["temperature"] = temperature               # legacy models take temperature
-        resp = self.client.chat.completions.create(**kw)
+        resp = _call(self.client.chat.completions.create, **kw)
         msg = resp.choices[0].message
         calls = [ToolCall(tc.id, tc.function.name, _args(tc.function.arguments))
                  for tc in (msg.tool_calls or [])]
@@ -277,6 +352,11 @@ class MockModel:
         self.spec = spec
         self.reasoning = "mock"
 
+    @property
+    def sampling(self) -> dict:
+        return {"reasoning_effort": "mock", "temperature": None,
+                "temperature_note": "mock model — scripted, no sampling"}
+
     def respond(self, convo, tools: list, force_tool: str | None = None,
                 temperature: float | None = None, require_tool: bool = False) -> Turn:
         seen_a_result = any(kind == "results" for kind, _ in convo.entries)
@@ -297,3 +377,19 @@ def get_model(name: str, mock: bool = False, reasoning: str | None = None):
             model.reasoning = spec.effort_for(reasoning)
         return model
     return AnthropicModel(spec)
+
+
+def get_verifier(model_name: str, mock: bool = False):
+    """The judge that checks an answer, as its own instance rather than the agent reused.
+
+    Two things differ from the worker and both are deliberate: it runs one notch up the effort
+    ladder, because checking an answer is harder than producing one and a judge that thinks no
+    harder than the worker it audits mostly agrees with it; and `VERIFIER_MODEL` can point it at a
+    different model entirely, so a run can be audited by something other than itself.
+
+    One reader for one decision. This resolution lived only inside the eval runner, so the study
+    engine ran no verifier at all — not by choice, but because the three lines that build one were
+    somewhere else. Read the name back off `.spec.name` to record it.
+    """
+    return get_model(os.environ.get("VERIFIER_MODEL") or model_name, mock=mock,
+                     reasoning=os.environ.get("VERIFIER_REASONING", DEFAULT_VERIFIER_REASONING))

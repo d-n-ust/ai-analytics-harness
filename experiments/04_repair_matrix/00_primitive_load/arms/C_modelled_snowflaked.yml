@@ -1,0 +1,18 @@
+# C_modelled with ONE modelling decision changed: the labels move off the dimension into lookup
+# tables. Same data, same rung, same guardrails, no comments — so the delta against C_modelled is
+# the normalisation and nothing else.
+#
+# THE QUESTION IT ANSWERS. Kimball says denormalise the label onto the dimension and do not
+# snowflake. That is advice, and this experiment has a habit of finding advice that does not survive
+# measurement. Run 20260810-150549 gives the prediction: joins are the primitive these arms fail
+# most (42-58% on +join for every arm without a governed layer), and a snowflake makes every segment
+# filter a join. Predicted WORSE than C_modelled, and the interesting outcome is if it is not.
+#
+# NOT PART OF THE LOAD LADDER. It is a paired comparison against C_modelled alone.
+level: structural
+claim: "the conformed star with its labels snowflaked out into dim_country and dim_platform"
+rung: 2
+
+environment:
+  tables: star_snowflaked
+  semantic: null

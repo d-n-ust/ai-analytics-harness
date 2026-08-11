@@ -1,0 +1,403 @@
+# The governed layer for the PRIMITIVE LOAD study, on dbt MetricFlow.
+#
+# WHY METRICFLOW AND NOT semantic/semantic_layer.yml. FINDINGS.md §15 traced D_declared's failure to
+# three properties of our own layer, and two of them are architectural:
+#
+#   no join model      `SELECT ... FROM <one base table>`, so a dimension is usable only if it is a
+#                      column on that table. Metrics on dim_habits could not be filtered by any user
+#                      attribute at all, and every segment rung was unreachable.
+#   no user grain      nothing exposed count(distinct user_id), so "how many people" was unanswerable
+#   hidden filters     `active_habits` carried default_filters: ["NOT is_archived"] with the word
+#                      "active" as the only clue — the very defect 02_segment exists to measure.
+#
+# MetricFlow fixes the first two by construction: models declare ENTITIES, and a shared entity is a
+# join. The third is fixed here by discipline — see the note on the metric pairs below.
+#
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# EVERY FILTER IS ON A METRIC AND VISIBLE IN THE CATALOGUE. Where a question can mean the filtered
+# or the unfiltered thing, BOTH are declared, and the filtered one says so in its own description.
+# `habits_total` and `habits_tracked` are the pair that would have been one `active_habits` before.
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+
+semantic_model:
+  name: users
+  description: "One row is one registered account."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities:
+    - {name: user, type: primary, expr: user_id}
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    # `is_internal` IS DELIBERATELY NOT A DIMENSION HERE. It was, and every documented arm then
+    # filtered by it on questions that never asked: nine wrong answers in run 20260809-225835, all
+    # of them the gold with staff excluded. A boolean flag whose description says "true for staff
+    # and test accounts" reads as an instruction to exclude, and rewording it descriptively changed
+    # nothing.
+    #
+    # A population you must NAME cannot be applied by accident. MetricFlow has no `segments:`
+    # construct — that is Cube's word, and 02_segment__mf established the gap — so the idiom here is
+    # a metric filter: `..._real_users` variants below, each describing its own population, and no
+    # way to reach the flag ad hoc. The default is everyone, which is what a question that says
+    # nothing about staff means.
+    - {name: user_type, type: categorical, expr: "CASE WHEN is_internal THEN 'staff' ELSE 'customer' END"}
+    - {name: platform, type: categorical}
+    - {name: country, type: categorical}
+    - {name: region, type: categorical}
+    - {name: channel, type: categorical}
+    # A DERIVED DIMENSION ATTRIBUTE, and it exists because MetricFlow cannot join fact to fact.
+    # `habits` and `subscriptions` both carry `user` as a FOREIGN entity, so each joins to this
+    # model and neither joins to the other — the classic fact-to-fact problem, whose Kimball answer
+    # is a bridge or an attribute carried on the conformed dimension. This is the attribute.
+    # WHAT "EVER SUBSCRIBED" COUNTS, stated because the data leaves it open. `fct_subscriptions`
+    # carries active, canceled and refunded terms; nothing says whether a refunded term makes
+    # someone a paying customer. One arm invented `billed_amount > 0` and answered 45 where the
+    # truth is 51. The rule here is membership of the table, whatever the status or the amount, and
+    # it is written into every metric description that depends on it.
+    - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
+  measures:
+    - {name: account_rows, agg: count, expr: user_id}
+---
+# THE ROLE-PLAYING DIMENSION. The same `dim_users` table declared a second time, keyed on
+# `referrer` instead of `user`. MetricFlow joins a FOREIGN entity to the model where that entity is
+# PRIMARY, so `referrer__has_ever_subscribed` has nowhere to resolve until a model claims `referrer`
+# as its primary key. Kimball's name for this is a role-playing dimension and the mechanism is the
+# same: one physical table, two logical roles, and the role is part of the column's identity.
+semantic_model:
+  name: users_as_referrers
+  description: "One row is one registered account, in its role as the person who made a referral."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: referrer_signup_date}
+  entities:
+    - {name: referrer, type: primary, expr: user_id}
+  dimensions:
+    - {name: referrer_signup_date, type: time, type_params: {time_granularity: day}, expr: signup_date}
+    # Same change as on `users`: a descriptive attribute rather than an exclusion flag.
+    - {name: user_type, type: categorical, expr: "CASE WHEN is_internal THEN 'staff' ELSE 'customer' END"}
+    - {name: has_ever_subscribed, type: categorical, expr: "user_id IN (SELECT user_id FROM _star.fct_subscriptions)"}
+  measures:
+    - {name: referrer_rows, agg: count, expr: user_id}
+---
+semantic_model:
+  name: habits
+  description: "One row is one habit a user created."
+  node_relation: {schema_name: _star, alias: dim_habits}
+  defaults: {agg_time_dimension: habit_created_date}
+  entities:
+    - {name: habit, type: primary, expr: habit_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: habit_created_date, type: time, type_params: {time_granularity: day}, expr: created_date}
+    - {name: category, type: categorical}
+    - {name: is_archived, type: categorical}
+  measures:
+    - {name: habit_rows, agg: count, expr: habit_id}
+    - {name: habit_holders, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: subscriptions
+  description: "One row is one subscription TERM. A user who cancels and resubscribes has several."
+  node_relation: {schema_name: _star, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities:
+    - {name: subscription, type: primary, expr: subscription_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: plan, type: categorical}
+    - {name: status, type: categorical}
+    - {name: is_active, type: categorical}
+  measures:
+    - {name: subscription_rows, agg: count, expr: subscription_id}
+    - {name: subscribers, agg: count_distinct, expr: user_id}
+    # THE MONEY, which this layer did not model at all until 2026-08-10. A semantic layer over a
+    # subscription business that carries habits, reminders, referrals and value moments but no
+    # revenue is not a layer any team would ship, and its absence made every revenue question
+    # measure our own omission rather than the agent. `agg: sum` is the honest aggregate for a
+    # billed amount: it is a transaction, additive over anything.
+    - {name: billed_amount, agg: sum}
+---
+# ROLE-PLAYING ENTITY. `fct_referrals` carries two user columns, so it is declared twice — once
+# keyed on the person referred, once on the referrer. MetricFlow joins on the ENTITY NAME, so a
+# single model could only ever reach one side, and a question about "the person referred" and a
+# question about "the referrer" are different joins.
+semantic_model:
+  name: referrals_by_referred
+  description: "One row is one referral, seen from the person who was referred."
+  node_relation: {schema_name: _star, alias: fct_referrals}
+  defaults: {agg_time_dimension: referred_date}
+  entities:
+    - {name: referral, type: primary, expr: referral_id}
+    # TWO FOREIGN ENTITIES TO THE SAME DIMENSION, because a referral has two people in it and a
+    # question can be about either. `user` is the person referred and `referrer` is the person who
+    # referred them; MetricFlow prefixes a dimension with the entity name, so `user__is_internal`
+    # and `referrer__has_ever_subscribed` are unambiguous and reach different rows.
+    #
+    # THE FIRST VERSION DECLARED ONLY `user`, and `referrers_activated` therefore accepted
+    # `user__has_ever_subscribed` — which silently filtered on the person REFERRED while counting
+    # referrers. It answered 48 where the truth is 36, through a governed call that raised nothing.
+    # A role-playing entity left unmodelled is a wrong number with a clean provenance trail.
+    - {name: user, type: foreign, expr: referred_user_id}
+    - {name: referrer, type: foreign, expr: referrer_user_id}
+  dimensions:
+    - {name: referred_date, type: time, type_params: {time_granularity: day}, expr: CAST(referred_ts AS DATE)}
+    - {name: status, type: categorical}
+  measures:
+    - {name: referral_rows, agg: count, expr: referral_id}
+    - {name: distinct_referrers, agg: count_distinct, expr: referrer_user_id}
+---
+# ── habits ──────────────────────────────────────────────────────────────────────────────────────
+# THE PAIR THAT REPLACES `active_habits`. Our own layer had one metric whose name carried a filter
+# nobody could see; asked for fitness habits it answered 1,032 where the truth is 1,235. Here both
+# readings are metrics, each says what it counts, and the caller chooses.
+metric:
+  name: habits_total
+  description: "Habits on record, whether or not they have since been archived."
+  type: simple
+  type_params: {measure: habit_rows}
+---
+metric:
+  name: habits_tracked
+  description: "Habits not yet archived. Same as habits_total with archived ones removed."
+  type: simple
+  type_params: {measure: habit_rows}
+  filter: "{{ Dimension('habit__is_archived') }} = false"
+---
+metric:
+  name: habits_archived
+  description: "Habits that have been archived. The complement of habits_tracked."
+  type: simple
+  type_params: {measure: habit_rows}
+  filter: "{{ Dimension('habit__is_archived') }} = true"
+---
+# THE USER GRAIN, which our own layer had nowhere. Counting habits and counting the people who hold
+# them are different questions and both are asked.
+metric:
+  name: people_with_habits
+  description: "Distinct people holding AT LEAST ONE habit, archived or not. Filtering by a habit attribute keeps a person who has at least one habit matching it, not people all of whose habits match."
+  type: simple
+  type_params: {measure: habit_holders}
+---
+metric:
+  name: people_tracking_habits
+  description: "Distinct people holding AT LEAST ONE habit they have not archived. Filtering by a habit attribute keeps a person who has at least one matching habit, not people all of whose habits match."
+  type: simple
+  type_params: {measure: habit_holders}
+  filter: "{{ Dimension('habit__is_archived') }} = false"
+---
+metric:
+  name: people_who_archived_habits
+  description: "Distinct people who have archived AT LEAST ONE habit. Filtering by a habit attribute keeps a person who has at least one matching habit, not people all of whose habits match."
+  type: simple
+  type_params: {measure: habit_holders}
+  filter: "{{ Dimension('habit__is_archived') }} = true"
+---
+# ── subscriptions ───────────────────────────────────────────────────────────────────────────────
+# THE PAIR THAT REPLACES `paying_users`, which carried default_filters: ["is_active"].
+metric:
+  name: subscriptions_all_time
+  description: "Subscription terms on record. One row is one TERM, not one person. A term counts whatever its status — active, canceled or refunded — and whatever it was billed."
+  type: simple
+  type_params: {measure: subscription_rows}
+---
+metric:
+  name: subscribers_all_time
+  description: "Distinct people who have ever held a subscription. A subscription counts whatever its status — active, canceled or refunded — and whatever it was billed."
+  type: simple
+  type_params: {measure: subscribers}
+---
+metric:
+  name: subscribers_live
+  description: "Distinct people whose subscription is currently live. Same as subscribers_all_time with ended terms removed."
+  type: simple
+  type_params: {measure: subscribers}
+  filter: "{{ Dimension('subscription__is_active') }} = true"
+---
+# ── referrals ───────────────────────────────────────────────────────────────────────────────────
+metric:
+  name: referrals_total
+  description: "Referrals on record, at any stage."
+  type: simple
+  type_params: {measure: referral_rows}
+---
+metric:
+  name: referrals_activated
+  description: "Referrals that reached the activated stage. Same as referrals_total restricted to that stage."
+  type: simple
+  type_params: {measure: referral_rows}
+  filter: "{{ Dimension('referral__status') }} = 'activated'"
+---
+metric:
+  name: referrers_activated
+  description: "Distinct people who made AT LEAST ONE referral that reached the activated stage. `user__` filters describe the person REFERRED; `referrer__` filters describe the person who referred them. Filter neither unless the question names that side."
+  type: simple
+  type_params: {measure: distinct_referrers}
+  filter: "{{ Dimension('referral__status') }} = 'activated'"
+---
+# ── accounts ────────────────────────────────────────────────────────────────────────────────────
+metric:
+  name: accounts_created
+  description: "Registered accounts, counted by the day they signed up."
+  type: simple
+  type_params: {measure: account_rows}
+---
+# ── declared composition ────────────────────────────────────────────────────────────────────────
+# WHY THESE EXIST. Three failures in run 20260809-2216 were the agent doing arithmetic outside the
+# governed surface: it summed thirty daily rows of a correct 553 into 713, and twice invented a
+# table — `metric_results`, `query_results_from_metric` — to post-process a governed number. A
+# governed result was a terminal value, so any further step had to happen somewhere unaccountable.
+#
+# MetricFlow types metrics simple / ratio / derived / cumulative, and the first build declared
+# thirteen `simple` and nothing else. Composition belongs in the layer, declared, where the caller
+# can cite it.
+metric:
+  name: share_of_habits_tracked
+  description: "Of all habits on record, the share not yet archived. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: habits_tracked}
+    denominator: {name: habits_total}
+---
+metric:
+  name: habits_per_person
+  description: "Habits on record divided by the people holding them. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: habits_total}
+    denominator: {name: people_with_habits}
+---
+metric:
+  name: share_of_referrals_activated
+  description: "Of all referrals on record, the share that reached the activated stage. A ratio: do not add it across groups."
+  type: ratio
+  type_params:
+    numerator: {name: referrals_activated}
+    denominator: {name: referrals_total}
+---
+# ADDED 2026-08-10, AFTER A TRACE AUDIT. `fct_reminders` sits in the star and had no semantic model,
+# so `u_fp2_false_premise` — "we showed fewer reminders in June than in May" — was unanswerable in
+# this layer for a reason that has nothing to do with its premise. E_enforced refused with "there is
+# no governed metric for reminders shown", a true statement about our modelling rather than a
+# detection of the false claim, and the item scored D and E on a gap we had left ourselves.
+#
+# The general point is worth more than the fix: an unanswerable-question pile measures refusal
+# BEHAVIOUR only where the layer can express the question. Where it cannot, the arm refuses for the
+# wrong reason and looks careful. Every item in pile B needs its coverage checked against the layer,
+# not only against the warehouse.
+semantic_model:
+  name: reminders
+  description: "One row is one reminder shown to one user."
+  node_relation: {schema_name: _star, alias: fct_reminders}
+  defaults: {agg_time_dimension: reminded_date}
+  entities:
+    - {name: reminder, type: primary, expr: reminder_id}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: reminded_date, type: time, type_params: {time_granularity: day}}
+  measures:
+    - {name: reminder_rows, agg: count, expr: reminder_id}
+    - {name: reminded_people, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: reminders_shown
+  description: "Reminders shown. Counts REMINDERS, not people: one person may be reminded many times."
+  type: simple
+  type_params: {measure: reminder_rows}
+---
+metric:
+  name: people_reminded
+  description: "People shown at least one reminder. Counts PEOPLE: a person reminded ten times counts once."
+  type: simple
+  type_params: {measure: reminded_people}
+---
+# ADDED 2026-08-10, for the same reason as `reminders` above and found by the same audit: the
+# warehouse's CENTRAL fact table had no semantic model. `u_fp2_false_premise` asks whether fewer
+# reminders hurt habit completions, and `E_enforced` refused all three repetitions with "no governed
+# metric named `habit_completions` exists" — true, and a statement about our layer rather than about
+# the question's false premise. Adding `reminders` alone fixed half of one item.
+#
+# A completed habit is the product's value moment, so both names are declared as metrics over the
+# same measure: an agent asking for either should not have to guess that we filed it under the
+# other. That is not redundancy of the kind study 01 warns about — the two names denote the same
+# set, and the catalogue says so.
+semantic_model:
+  name: value_moments
+  description: "One row is one completed habit — the product's value moment. Opens and reminder clicks are not here."
+  node_relation: {schema_name: _star, alias: fct_value_moments}
+  defaults: {agg_time_dimension: completed_date}
+  entities:
+    - {name: value_moment, type: primary, expr: value_moment_id}
+    - {name: user, type: foreign, expr: user_id}
+    - {name: habit, type: foreign, expr: habit_id}
+  dimensions:
+    - {name: completed_date, type: time, type_params: {time_granularity: day}}
+    - {name: source, type: categorical}
+  measures:
+    - {name: value_moment_rows, agg: count, expr: value_moment_id}
+    - {name: completing_people, agg: count_distinct, expr: user_id}
+---
+metric:
+  name: habit_completions
+  description: "Habits completed. Counts COMPLETIONS, not people: one person may complete many."
+  type: simple
+  type_params: {measure: value_moment_rows}
+---
+metric:
+  name: value_moments
+  description: "Value moments — the same count as habit_completions, under the product's name for it."
+  type: simple
+  type_params: {measure: value_moment_rows}
+---
+metric:
+  name: people_completing_habits
+  description: "People who completed at least one habit. Counts PEOPLE: ten completions by one person count once."
+  type: simple
+  type_params: {measure: completing_people}
+---
+metric:
+  name: total_billed
+  description: "The sum of the amounts billed on subscription terms. NOT monthly revenue: an annual plan is billed once as a year's lump, so this over-states a monthly figure. See `mrr`."
+  type: simple
+  type_params: {measure: billed_amount}
+---
+# THE PERIODIC SNAPSHOT. Added 2026-08-10 to correct a modelling error, not to add a feature.
+#
+# `mrr` was first declared over `fct_subscriptions`, which is an ACCUMULATING SNAPSHOT whose time
+# dimension is `started_date`. Monthly recurring revenue is a STOCK, so slicing it by start date
+# answers "revenue from terms that began in the window" — a real metric and not the one anyone
+# means. The agent asked for `mrr` with `period=last_week` and got 127.37 against a true book of
+# 2,685.08. Nothing in the layer objected, because nothing could: MetricFlow requires every measure
+# to carry an `agg_time_dimension` and rejects `null`, so the illegal slice was advertised in the
+# catalogue as a feature.
+#
+# The fix is a second fact table rather than a fixed column, because the wrong fact TYPE is the one
+# error configuration cannot reach. On a periodic snapshot `period=last_month` means what everybody
+# thinks it means.
+semantic_model:
+  name: subscription_months
+  description: "One row is one subscription in one month during which it was active. A periodic snapshot: use it for revenue AS OF a month, not for when a term began."
+  node_relation: {schema_name: _star, alias: fct_subscription_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities:
+    # Composite key: a subscription appears once per month it was live, so neither column alone is
+    # unique and MetricFlow needs a primary entity that is.
+    - {name: subscription_month, type: primary, expr: "subscription_id || '-' || snapshot_month"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
+    - {name: plan, type: categorical}
+  measures:
+    # NON-ADDITIVE OVER TIME, declared with the construct built for exactly this. A balance may be
+    # added across customers within a month and never across months — January's book and February's
+    # book are the same subscriptions counted twice. `window_choice: max` makes a multi-month range
+    # report the latest month rather than the sum, which is what a stock means over a period.
+    - name: mrr_amount
+      agg: sum
+      non_additive_dimension:
+        name: snapshot_month
+        window_choice: max
+---
+metric:
+  name: mrr
+  description: "Monthly recurring revenue: what the live book bills in a month, with annual plans counted at one twelfth. A STOCK — add it across customers, never across months. Ask for it AS OF a month."
+  type: simple
+  type_params: {measure: mrr_amount}

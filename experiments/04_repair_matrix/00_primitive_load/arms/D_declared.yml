@@ -1,0 +1,49 @@
+# The governed layer, on dbt MetricFlow rather than on our own engine.
+#
+# WHY THE MIGRATION. ../FINDINGS.md §15 traced this arm's failure — 31% correct when it used the
+# layer against 70% when it ignored it — to three properties of `semantic/semantic_layer.yml`, and
+# two are architectural rather than fixable by editing YAML:
+#
+#   no join model    it compiles `SELECT ... FROM <one base table>`, so a dimension is usable only
+#                    if it is a column on that table. `active_habits` sits on dim_habits, which
+#                    carries no user attributes, so EVERY segment rung was unreachable — six
+#                    `cannot filter 'active_habits' by 'is_internal'` in one run.
+#   no user grain    nothing declared count(distinct user_id), so "how many people" was unanswerable
+#                    for habits, reminders and referrals.
+#   hidden filters   `active_habits` carried `default_filters: ["NOT is_archived"]` with the word
+#                    "active" as the only clue. Asked for fitness habits it answered 1,032 against a
+#                    truth of 1,235 — which is `real_value_moments` under a different noun, the
+#                    exact defect ../02_segment exists to measure, shipped in our own layer.
+#
+# MetricFlow fixes the first two by construction: a semantic model declares ENTITIES, and a shared
+# entity IS a join. The third is fixed by discipline in layers/D_declared/layer.yaml — every filter
+# sits on a metric and is rendered in the catalogue, and where a question could mean the filtered or
+# the unfiltered thing BOTH are declared as metrics.
+#
+# VALIDATED BEFORE ANY MODEL CALL. All 22 ladder and control questions were resolved against this
+# layer and compared to the gold SQL: 22 exact matches, 0 unreachable. Under the old layer, every
+# question above load 1 was unreachable.
+#
+# THE ONE THING METRICFLOW ALSO CANNOT DO, and the fix is Kimball's rather than a workaround.
+# `habits` and `subscriptions` both hold `user` as a FOREIGN entity, so each joins to `users` and
+# neither joins to the other — the fact-to-fact problem. The L4 rungs ask for people who hold a
+# habit AND have ever subscribed, which is exactly that join. The answer is a derived attribute
+# carried on the conformed dimension: `users.has_ever_subscribed`. See the layer file.
+level: structural
+claim: "the same star, plus a governed layer that can express the questions"
+rung: 3
+engine: metricflow
+layer_dir: layers/D_declared
+
+environment:
+  tables: star_schema
+  # THE STAR'S DOCUMENTATION TOO, and the omission it replaces was not a decision. This arm had
+  # `tables: star_schema` alone, so it received the governed layer and NO table comments — and when
+  # it fell back to SQL, which it did on 31 of 69 rows, it was operating like A_implicit on a star.
+  # Three failures in run 20260809-225835 are exactly that: it filtered `country = 'Germany'` while
+  # the ISO mapping sat documented in a file it could not see.
+  #
+  # A team that has built a semantic layer has not left the warehouse underneath it undocumented.
+  # With this line the ladder is cumulative — D is C_modelled_documented plus the layer, and E is D
+  # plus the check — so each column adds to the one below rather than trading one thing for another.
+  docs: star_schema

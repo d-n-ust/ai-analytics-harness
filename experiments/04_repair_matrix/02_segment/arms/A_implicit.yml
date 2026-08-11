@@ -1,0 +1,29 @@
+# The floor: no description says who its metric counts. The metric NAMES are untouched, so
+# `real_value_moments` still carries the word "real" — that is the point rather than an oversight.
+# The name is left as the only carrier of the fact precisely to show that a name is not a
+# definition: nothing anywhere says what "real" excludes, so the agent can read the word and still
+# not know whether staff are in or out.
+#
+# Ten descriptions change, not two. Scrubbing the segment from only the twin pair would leave every
+# OTHER metric still announcing "excludes internal/test", and an agent that reads the catalogue as a
+# whole could infer the missing fact by contrast — the treatment would leak through the eight
+# metrics it was not applied to.
+#
+# `real_value_moments.synonyms` drops "real value moments" and "real habit completions" for the same
+# reason: a synonym list restating the name would reintroduce the word the arm exists to remove.
+# "north star" stays, because it names the metric's ROLE and not its segment.
+level: surface
+claim: "nothing tells the agent who each metric counts — in the name or in the aggregate"
+patch:
+  metrics.value_moments.description: "Number of value moments (completed habits) in the period. Raw activity volume."
+  metrics.real_value_moments.description: "Value moments in the period. The North Star: this is the metric the tree decomposes into breadth x frequency x depth."
+  metrics.real_value_moments.synonyms: ["north star", "north star value moments", "north star habit completions"]
+  metrics.active_users.description: "Distinct users with at least one value moment in the period."
+  # BOTH facts gone from this one: who is counted (01's defect) and the 5+ threshold
+  # (02's). The merged arm strips the population fact wherever it lives.
+  metrics.power_users.description: "Distinct highly-engaged users in the period."
+  metrics.days_per_user.description: "Average active days per active user in the period (frequency)."
+  metrics.moments_per_day.description: "Average value moments per active day (depth)."
+  metrics.reminder_open_rate.description: "Share of active days on which the user opened a reminder (a retention driver)."
+  metrics.activation_rate.description: "Share of the signup cohort that reached a first value moment within 7 days."
+  metrics.new_signups.description: "Number of user signups in the period."

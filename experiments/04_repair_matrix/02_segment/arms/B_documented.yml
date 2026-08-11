@@ -1,0 +1,7 @@
+# The layer exactly as it ships, and the reference every other arm is a delta against. An empty
+# patch makes "prose IS the shipped layer" true by CONSTRUCTION; the forked-file version of this
+# arm needed a test to assert the same thing, and a test only fires after someone has edited the
+# file it was meant to protect.
+level: surface
+claim: "who each metric counts is stated in its description, exactly as the layer ships today"
+patch: {}

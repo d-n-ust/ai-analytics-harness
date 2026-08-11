@@ -3,8 +3,9 @@
 One place to reason from. Every number here is traceable to a commit or a stored run; where a
 number is not established, it says so. Ordered by what it would take to publish, not by date.
 
-Companion to `RELIABILITY.md` (the guardrail experiment), `ARCHITECTURE.md` (the three axes) and
-`TRUST-MODEL.md` (why gold-needing and gold-free metrics must not be averaged).
+Companion to `RELIABILITY.md` (the guardrail experiment), `ARCHITECTURE.md` (the three axes),
+`REPAIR-MATRIX.md` (the warehouse experiment) and `TRUST-MODEL.md` (why gold-needing and gold-free
+metrics must not be averaged).
 
 ---
 

@@ -148,3 +148,8 @@ class Answer:
     steps: list = field(default_factory=list)
     turns: list = field(default_factory=list)   # one per model call: latency, cost, what it asked
     acts: list = field(default_factory=list)    # what the AFTER guardrails did to this answer
+    # Everything the model was SHOWN, when the run asked for it (`run_agent(record_context=True)`);
+    # None otherwise, which is every run of the frozen grid. `steps` records what the agent DID and
+    # truncates each result at _TRACE_LIMIT; this records what it READ, whole. An experiment whose
+    # treatment is the context needs the second, and cannot get it from the first.
+    context: object = None

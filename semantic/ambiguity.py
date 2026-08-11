@@ -39,7 +39,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-__all__ = ["Ambiguity", "MemberClash", "confusable_pairs", "member_clashes", "report"]
+__all__ = ["Ambiguity", "MemberClash", "confusable_pairs", "considers",
+           "member_clashes", "report"]
 
 # The facets a metric declares about what it MEASURES. Two metrics agreeing on all of these
 # measure the same thing; the rest of the declaration is scope, presentation, or plumbing.
@@ -91,6 +92,16 @@ def _overlap(a: str, b: str) -> set[str]:
     is what a reader would report back and what a rename has to change. Empty when the only thing
     in common is a qualifier."""
     return (_tokens(a) & _tokens(b)) - _QUALIFIERS
+
+
+def considers(a: str, b: str) -> bool:
+    """Whether this lint would COMPARE two metric names at all.
+
+    Public because the coverage audit's whole question is "what does the detector never look at",
+    and answering it from a second, similar-looking rule is how the two come to disagree. The gate
+    is name tokens only: synonyms and descriptions are not consulted, so two metrics can share
+    plenty of words and still never be compared here."""
+    return bool(_overlap(a, b))
 
 
 def _classify(da: dict, db: dict) -> tuple[str, tuple, tuple, str]:

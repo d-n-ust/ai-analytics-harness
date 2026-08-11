@@ -18,8 +18,9 @@ from pathlib import Path
 
 from agent.grounding import build_grounding
 from agent.loop import Answer, run_agent
+from agent.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
 from agent.protocol import Protocol
-from agent.providers import get_model
+from agent.providers import get_model, get_verifier
 from agent.rungs import capabilities
 from warehouse.warehouse import open_warehouse, set_star
 
@@ -92,8 +93,9 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
     cursor_lock = threading.Lock()     # DuckDB: create each thread's cursor under a lock
     # Reasoning effort is a treatment variable — an explicit run parameter (falling back to the
     # OPENAI_REASONING env for back-compat), recorded on every row rather than left implicit.
-    main_reasoning = reasoning if reasoning is not None else os.environ.get("OPENAI_REASONING", "none")
-    verifier_reasoning = os.environ.get("VERIFIER_REASONING", "low")
+    main_reasoning = (reasoning if reasoning is not None
+                  else os.environ.get("OPENAI_REASONING", DEFAULT_REASONING))
+    verifier_reasoning = os.environ.get("VERIFIER_REASONING", DEFAULT_VERIFIER_REASONING)
     # The judge's stance is a treatment, so it is read once here and stamped on every row —
     # not left to whatever the environment held when a given question ran.
     from agent.guardrails.judge import stance_name
@@ -137,6 +139,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "refused_by": ans.refused_by,
             "correct": g["correct"], "executed": g["executed"],
             "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
+            "wrong_metric": g["wrong_metric"],
             "fabricated": g["fabricated"], "off_governance": g.get("off_governance", False),
             "wrong_scope": g.get("wrong_scope", False),
             "needs_judge": g.get("needs_judge", False),
@@ -186,6 +189,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "surface_fingerprint": surface,
             "main_reasoning": getattr(model, "reasoning", None),
             "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
+            "sampling": model.sampling, "verifier_sampling": verifier_model.sampling,
             "verifier_stance": verifier_stance,
             "claim_framing": proto.framing,
             # WHICH declarations were asked for. `claim_framing` says how they were asked for and
@@ -206,8 +210,8 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         # The trajectory verifier (R9) runs as a careful checker at its own reasoning level,
         # independent of the main agent. VERIFIER_MODEL lets it be a different model; defaults to
         # the worker.
-        verifier_used = os.environ.get("VERIFIER_MODEL") or model_name
-        verifier_model = get_model(verifier_used, mock=mock, reasoning=verifier_reasoning)
+        verifier_model = get_verifier(model_name, mock=mock)
+        verifier_used = verifier_model.spec.name
         for rung in rungs:
             set_star(con, capabilities(rung).star)  # per-rung shared catalog state; the parallel unit is within a rung
             # Coherence is a property of the PAIR, not of the cell alone: a guardrail that needs
@@ -282,6 +286,7 @@ def regrade_run(run_dir: Path) -> None:
                      typed_value=bool(r.get("typed_value", False)))
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
+                                    "wrong_metric",
                                     "fabricated", "off_governance", "wrong_scope",
                                     "needs_judge", "bucket",
                                     "expected_refuse", "reason_match", "metric_match",

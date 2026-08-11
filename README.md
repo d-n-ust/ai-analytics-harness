@@ -4,8 +4,9 @@ A controlled lab for measuring what makes an LLM "analyst" **reliable** over dat
 small agent that answers business questions over a warehouse, then change **one thing at a time**
 — holding the model and the questions fixed — and watch what it buys you.
 
-The harness runs **three experiments on the same rig**, one per axis of the agent — what it *knows*,
-what it may *do*, and what it must *declare*:
+The harness runs **four experiments on the same rig**. The first three each vary one axis of the
+agent — what it *knows*, what it may *do*, and what it must *declare*. The fourth freezes the agent
+and varies the **warehouse it reads**:
 
 1. **Grounding** — how much does *structure* (a schema, a semantic layer, a knowledge base, a
    metric tree) improve a capable model's answers? *The six-rung grounding ladder.*
@@ -17,14 +18,19 @@ what it may *do*, and what it must *declare*:
 3. **Protocol** — when every assertion has to name the governed value it rests on, how much of a
    served answer can be *checked* — and does being asked for an account change the answer itself?
    *The evidence graph.*
+4. **Repair** — when a question that stacks several primitives fails, which primitive broke, and
+   what is the cheapest location — implicit, documented, modelled, declared, enforced — where its
+   grounding reliably holds? *The repair matrix: 62 questions against eight versions of one
+   warehouse (`experiments/04_repair_matrix/`).*
 
-The three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
+The first three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
 protocol crosses the guardrail cells rather than extending them, and "R5 with claims" is a cell you
 can run.
 
-Each experiment adds exactly one thing to the *same* agent and re-answers the **same 65 questions**.
-Nothing else changes, so every delta is attributable to that one change — not to prompt luck or
-question drift.
+Each of the first three adds exactly one thing to the *same* agent and re-answers the **same 65
+questions**. The fourth inverts the design: the agent is frozen and the warehouse changes under it,
+one grounding location at a time, over its own 62-question set. Either way nothing else changes, so
+every delta is attributable to that one change — not to prompt luck or question drift.
 
 > Companion essays: [Agentic Analytics: How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
 > (the grounding experiment), [Agentic Analytics: Teaching an AI Analyst to Say I Don't Know](https://decisionspine.com/blog/teaching-an-ai-analyst-to-say-i-dont-know)
@@ -293,15 +299,16 @@ evidence/     what an answer DECLARED, resolved against the trace it was built f
 evals/        the 65 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
 cli/          the `bench` entry point (one dispatcher over every verb)
 experiments/  pre-registrations + findings logs
-docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · RESULTS-2026-07 · ARCHITECTURE ·
-              EVIDENCE-GRAPH · TRUST-MODEL · ONTOLOGY · FINDINGS
+docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · REPAIR-MATRIX · RESULTS-2026-07 ·
+              ARCHITECTURE · EVIDENCE-GRAPH · TRUST-MODEL · ONTOLOGY · FINDINGS
 results/      published/ = the evidence behind the write-ups (cells/tiers/tools CSVs + the
               runs whose raw rows back a claim); runs/ is gitignored and regenerates
 ```
 
 See [`docs/ANATOMY.md`](docs/ANATOMY.md) for the file→component map, and
 [`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) /
-[`docs/EVIDENCE-GRAPH.md`](docs/EVIDENCE-GRAPH.md) for the experiments.
+[`docs/EVIDENCE-GRAPH.md`](docs/EVIDENCE-GRAPH.md) / [`docs/REPAIR-MATRIX.md`](docs/REPAIR-MATRIX.md)
+for the experiments.
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) says why declaring is a third axis rather than a
 guardrail rung; [`docs/TRUST-MODEL.md`](docs/TRUST-MODEL.md) says what the evidence layer is
 eventually meant to compute and why those numbers must never be averaged with the ones above;

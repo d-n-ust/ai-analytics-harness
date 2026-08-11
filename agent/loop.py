@@ -16,6 +16,7 @@ rather than three levels inside a `for`. No provider's wire shape appears in thi
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from dataclasses import dataclass, field, replace
@@ -26,13 +27,17 @@ from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after
 from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
+from .providers import ProviderError
+from .provenance import ContextLedger
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
 _CLOSING_NUDGE = "Finish by calling one terminal tool: answer, refuse, or clarify."
 # The tool result kept in the trace. The [scope] and [sql] lines land at the END of a result,
 # and the old 300-char cap cut exactly the evidence a later audit needs; this is only a
-# runaway guard.
+# runaway guard. Every step also records `result_len` and `result_sha` over the FULL text, so a
+# reader can always tell a clipped copy from a whole one — and `Answer.context` keeps what the
+# model actually read, whole, for the runs that ask for it.
 _TRACE_LIMIT = 4000
 
 # Enough of a handed-back claim to find it again in the answer that came back.
@@ -163,6 +168,14 @@ class _Run:
             self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
+                               # The stored result is CLIPPED; these two say so. Without them a
+                               # truncated trace reads as the whole thing, and an analysis of what
+                               # the model saw silently studies the first 4,000 characters of it.
+                               # The catalogue is 4.7-8.4k, so the one artefact a layer study is
+                               # about is exactly the one this limit cuts.
+                               "result_len": len(result.content),
+                               "result_sha": hashlib.sha256(
+                                   result.content.encode()).hexdigest()[:12],
                                "result_values": result.values,
                                "result_labels": result.labels,
                                "blocked_reason": result.reason,
@@ -341,6 +354,15 @@ class _Run:
         return self._record(answer=None, explanation="", outcome="error",
                             iterations=iterations, error="max_iterations")
 
+    def provider_failed(self, exc: ProviderError, iterations: int) -> Answer:
+        """The third way. The provider refused this request and retrying will not change that.
+
+        It ends the ROW rather than the run: the failure is a property of one request, and a sweep
+        that dies on it discards every completed row with it. The exception is recorded in full so
+        an error row can be told from a model behaviour when the results are read."""
+        return self._record(answer=None, explanation=str(exc), outcome="error",
+                            iterations=iterations, error="provider_refused")
+
     def _record(self, **kw) -> Answer:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
@@ -349,9 +371,21 @@ class _Run:
                       acts=self.acts, **kw)
 
 
-def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None) -> Answer:
+def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
+              record_context: bool = False) -> Answer:
     run = _Run(question, grounding, model, verifier_model)
     convo = Conversation.opening(grounding.system, question)
+
+    def done(answer: Answer) -> Answer:
+        """Attach what the model was actually shown, on every exit path.
+
+        Off by default: the blobs are the whole context, and the frozen 65-question grid has no
+        use for them. An experiment whose treatment IS the context turns it on, because there the
+        difference between "the config said so" and "the model read it" is the measurement."""
+        if record_context:
+            answer.context = ContextLedger.of(convo)
+        return answer
+
     nudges = 0
     # The budget, which one thing may extend. Corrections were skipped on the closing turn
     # because there was no next turn to correct in, and that exemption became the residue: every
@@ -372,7 +406,14 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         offer_acts: list = []
         offered = grounding.toolbox.specs(terminal_only=closing, record=offer_acts)
         t0 = time.perf_counter()
-        turn = model.respond(convo, offered, require_tool=closing)
+        try:
+            turn = model.respond(convo, offered, require_tool=closing)
+        except ProviderError as exc:
+            # Loud, because an error row is a lost measurement and a silent one would be read as a
+            # model behaviour. `_FATAL_STATUS` in providers.py has already re-raised the failures
+            # that would repeat on every row, so reaching here means this request specifically.
+            _log.warning("provider refused this row, recording an error row: %s", exc)
+            return run.provider_failed(exc, it)
         run.turns.append({"acts": [a.as_dict() for a in offer_acts],
                           "ms": round((time.perf_counter() - t0) * 1000, 1),
                           "tools_offered": len(offered), "closing": closing,
@@ -400,13 +441,13 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                     budget += 1
                 convo.observe([correction.for_call(turn.exit_call)])
                 continue
-            return run.finish(turn.exit_call, it + 1)
+            return done(run.finish(turn.exit_call, it + 1))
         if results:
             convo.observe(results)
             continue
         nudges += 1
         if nudges > 1:
-            return run.gave_up(turn.text, it + 1)
+            return done(run.gave_up(turn.text, it + 1))
         convo.say(_CLOSING_NUDGE)
 
-    return run.exhausted(max_iters)
+    return done(run.exhausted(max_iters))

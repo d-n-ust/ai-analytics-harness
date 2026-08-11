@@ -1,0 +1,13 @@
+# The cheapest intervention in the matrix: the SAME tables, each with one sentence saying what one
+# row is and what its coded columns mean. Nothing is renamed. Nothing is pre-joined. No object is
+# created. See warehouse/table_docs.py for the text and for what a description is allowed to say.
+level: surface
+claim: "the same raw tables, each carrying a one-line description"
+rung: 1
+patch: {}
+
+# The SAME six views as A_raw — nothing renamed, nothing pre-joined, no object added. The only
+# difference is that each carries a sentence, supplied by warehouse/table_docs.py.
+environment:
+  tables: messy_tables
+  docs: messy_tables

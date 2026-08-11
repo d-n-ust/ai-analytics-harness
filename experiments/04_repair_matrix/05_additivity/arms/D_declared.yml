@@ -1,0 +1,11 @@
+# The repair: the catalogue renders `additivity` as a field on every metric, derived from the
+# measure rather than annotated by hand.
+#
+# NO PATCH TO THE LAYER. The numbers, the metrics and the descriptions are the shipped ones — the
+# arm changes only whether a fact the layer ALREADY COMPUTES is rendered. That is the cleanest
+# treatment in the experiment: there is no new sentence, no new synonym and no new metric, so
+# nothing but the fact's visibility can explain a difference.
+level: structural
+claim: "the derived additivity of every measure is stated in the catalogue"
+patch: {}
+catalogue_fields: [additivity]

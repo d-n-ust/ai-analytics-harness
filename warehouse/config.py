@@ -15,6 +15,13 @@ DATA_END = dt.date(2026, 7, 12)        # last day with data (a complete ISO week
 # inclusive [start, end] date ranges anchored to ANALYSIS_DATE / DATA_END.
 NAMED_PERIODS = ("last_week", "prev_week", "last_month", "last_quarter", "ytd", "all")
 
+# The grains a time-filterable metric can be bucketed by. Here, next to NAMED_PERIODS, because it
+# is the same kind of fact and had drifted into three copies: the compiler's validation, the tool
+# schema's enum, and the catalogue's prose. A refactor of the third dropped `time_grain` from the
+# catalogue entirely while the other two kept accepting it, so the catalogue advertised less than
+# the layer enforced. One tuple, imported everywhere, is why that cannot recur.
+TIME_GRAINS = ("day", "week", "month")
+
 
 def _last_complete_week(today: dt.date) -> tuple[dt.date, dt.date]:
     sunday = today - dt.timedelta(days=today.weekday() + 1)  # Sunday before this Monday

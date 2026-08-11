@@ -1,0 +1,114 @@
+# Study 04 — PRIMITIVE 4, GRAIN: what one row stands for.
+#
+# THE DEFECT. `fct_subscriptions` holds one row per subscription TERM. A user who cancels and later
+# resubscribes has several. Nothing in the warehouse says so.
+#
+#     count(*)                  457    subscription terms
+#     count(distinct user_id)   413    people                <- the answer
+#     users with >1 term         43
+#
+# A 10.7% overstatement, computed by correct SQL over a table the agent was handed, with nothing to
+# signal the error. Large enough to clear the 2% tolerance, small enough to look like a real number.
+#
+# WHY THIS ROW MATTERS OUT OF PROPORTION TO ITS SIZE. Grain sits upstream of two rows that are
+# already measured and already failing. `05_additivity`'s trap is summing user-days into user-weeks,
+# which is a grain fault wearing an additivity coat. `02_segment`'s is which users a row stands for.
+# If a grain sentence fixes what a rendered `additive_over_time: false` could not, that is the most
+# practical result this programme can produce, and the cheapest.
+#
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+# ONE QUESTION, ON PURPOSE. THIS IS A CHANGE OF METHOD.
+#
+# Every earlier study in this experiment authored five to eight questions, paid for a run, and then
+# found that at most two of them separated the arms — and twice that a question was measuring a
+# different primitive from the one it was filed under. `../FINDINGS.md` §6b has the counts.
+#
+# So this study inverts the order. One question, every arm, three repetitions, and every trace read
+# by hand before a second question is written. The run is small enough that a wasted one costs
+# almost nothing, and the traces are what actually tell us whether the item works:
+#
+#     did the agent reach the trap number by the route we predicted, or by another one
+#     did it read the grain sentence and ignore it, or never read it
+#     did a correct answer come from comprehension or from a habit that would break elsewhere
+#
+# A one-question study cannot produce a rate and is not intended to. It is intended to produce a
+# question worth authoring twenty-five more of.
+# ────────────────────────────────────────────────────────────────────────────────────────────────
+
+title: "Grain — what one row stands for: implicit, documented, modelled, or declared"
+base: semantic/semantic_layer.yml
+engine: harness
+
+tests_rules: []
+
+# The study's default; each arm overrides it. A, B and C write SQL at rung 2; D and E call
+# `query_metric` at rung 3.
+rung: 2
+
+# R1 — abstention only. The guardrail cell must be IDENTICAL across arms and coherent at the lowest
+# rung present, exactly as in 01_entity: anything above R1 gives the rung-3 arms checks the rung-2
+# arms cannot have, and the study would compare guardrails rather than data modelling. E_enforced
+# overrides it, and that override IS its treatment.
+guardrails: 1
+
+agent:
+  model: gpt-5-mini
+  reasoning: minimal
+  guardrails: 1        # E_enforced overrides this, and only E_enforced
+  judge:
+    model: gpt-5-mini
+    reasoning: low
+  # Off for the same reason as 01_entity: `purpose` and `claims` attach to the GOVERNED surface, so
+  # switching them on would change the tool surface for D and E alone — a second treatment applied
+  # to exactly the two arms that already differ.
+  protocol: {}
+
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. See 01_entity/study.yml for the convention. A
+# value opening with CONSTANT, ABSENT, OPEN or MEASURED_ELSEWHERE means there is NO arm for that
+# column. See ../primitives_matrix.md.
+columns:
+  A_implicit:   "every table says what it holds; none says what one row is"
+  B_documented: "one sentence per fact table: 'one row is one subscription TERM, not one subscriber'"
+  C_modelled:   "the table is named for its grain — fct_subscription_terms, byte-identical data"
+  C_modelled_documented: "OPEN — the renamed table PLUS the grain sentence, which is C's treatment
+                 and B's together. Not built, and the reason is that this study's two runs never
+                 established that either one works on its own: the subscription-term grain is
+                 handled unprompted by every arm (FINDINGS.md §6). A 2x2 cell is worth building
+                 when its margins move, and here they do not."
+  D_declared:   "a governed metric whose `agg` resolves the grain, so the caller never sees a row"
+  E_enforced:   "R9 trajectory_verify on top of D — does the metric measure the thing asked about"
+
+arms: [A_implicit, B_documented, C_modelled, D_declared, E_enforced]
+
+# PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
+#
+#   A < B                   the positive control and the study's whole premise. If a sentence
+#                           saying what one row is does not beat its absence, either the question
+#                           does not turn on grain or the sentence is not doing its job. Read this
+#                           first; nothing else can be interpreted without it.
+#
+#   B vs C                  THE FINDING, and the direction is genuinely uncertain. Kimball says a
+#                           fact table named for its grain needs no comment. Study 02 found that a
+#                           name is not a definition — `real_value_moments` carried "real" and
+#                           nobody could tell what it excluded. Finding the same thing on a second
+#                           primitive would make it a result; finding the opposite would say the
+#                           two primitives differ in a way worth writing about.
+#
+#   C < D or C ~ D          the governed metric removes the choice rather than informing it. This
+#                           should be the ceiling. If D fails, the layer is not resolving what it
+#                           claims to resolve.
+#
+#   E ~ D                   stated low on purpose. The judge compares a metric against the question;
+#                           A's failure has no metric in it to compare. E should help D and do
+#                           nothing for A. See E_enforced.yml.
+#
+# THE FAILURE MODE TO WATCH FOR IN THE TRACES, and the reason this run is audited by hand rather
+# than read off the summary table: an arm can reach 413 without understanding the grain, by writing
+# `count(distinct user_id)` out of habit because the question says "how many users". That is a
+# correct answer produced by a heuristic that would break the moment the question said "how many
+# subscriptions". If the traces show it, the item needs a partner question where the row count IS
+# the answer, and the score from this run means less than it appears to.
+#
+# POWER. One question. This cannot reach significance and is not a pilot for significance — it is a
+# pilot for the ITEM. See ../FINDINGS.md §6b for why item quality, not item count, is what has been
+# limiting this experiment.

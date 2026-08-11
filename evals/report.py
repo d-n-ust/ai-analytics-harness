@@ -365,14 +365,19 @@ def aggregate(rows) -> dict:
                 reasons[code]["wrong_reason"] += 1
 
         wrong = [r for r in rs if _bucket(r) == "wrong"]
-        # The first three PARTITION every wrong answer (mutually exclusive, sum to len(wrong));
-        # wrong_metric is a SUBSET of confident_wrong, scored only where metric_match is known.
+        # The first FIVE partition every wrong answer (mutually exclusive, sum to len(wrong)).
+        # `metric_mismatch` is a separate DIAGNOSTIC that cuts across them: it counts every row
+        # whose declared source_metric is not the one the case names, whether the number was right
+        # or wrong. `wrong_metric` is the subset where the number was RIGHT — the failure is the
+        # route, not the digits — and it used to be filed under confident_wrong, which made this
+        # project's silent-error figure count answers that were numerically correct.
         wrong_by_type = {
             "fabricated": sum(bool(r.get("fabricated")) for r in wrong),          # groundedness fail
             "wrong_scope": sum(bool(r.get("wrong_scope")) for r in wrong),        # real number, unasked question
             "confident_wrong": sum(bool(r.get("confident_wrong")) for r in wrong),   # correctness fail
+            "wrong_metric": sum(bool(r.get("wrong_metric")) for r in wrong),      # right number, unnamed metric
             "off_governance": sum(bool(r.get("off_governance")) for r in wrong),  # right digits, off-path
-            "wrong_metric": sum(r.get("metric_match") is False for r in wrong),   # relevancy fail (⊆ conf-wrong)
+            "metric_mismatch": sum(r.get("metric_match") is False for r in wrong),  # relevancy, cuts across
         }
 
         # agent: per-tool call profile (call-level) + trajectory verdict (task-level)
@@ -707,22 +712,25 @@ def render_markdown(summary: dict) -> str:
                 L.append(f"| {c} | " + " | ".join(cellstr) + " |")
             L += ["", "_key: matched✓ / wrong-reason✗ / over-refused-answerable-o_"]
         L += ["", f"## Wrong answers by type — {m}", "",
-              "_The first four columns **partition** every wrong answer — they sum to ❌ wrong. "
+              "_The first five columns **partition** every wrong answer — they sum to ❌ wrong. "
               "**fabricated** = invented a number where none exists (groundedness); **wrong-scope** "
               "= a real governed number, but for a question that was not asked — only separable at "
               "R7+, where nothing unaccountable can be served, so below that it reads as fabricated; "
-              "**confident-wrong** = asserted a wrong number (correctness); **off-governance** = right "
-              "digits reached off the governed path when the answer was to refuse. **wrong-metric** is "
-              "a *subset* of confident-wrong (a relevancy miss), scored only where the model declares "
-              "source_metric (R7+)._", "",
-              f"| {axis} | fabricated | wrong-scope | confident-wrong | off-governance "
-              f"| of which wrong-metric |",
-              "|" + "---|" * 6]
+              "**confident-wrong** = asserted a wrong number (correctness); **wrong-metric** = the "
+              "RIGHT number, reached through a metric the case does not name — a routing failure, "
+              "not a correctness one, and it used to be counted as confident-wrong; "
+              "**off-governance** = right digits reached off the governed path when the answer was "
+              "to refuse. **metric-mismatch** is a separate diagnostic that cuts across the "
+              "partition: every declared metric that is not the expected one, scored only where the "
+              "model declares source_metric (R7+)._", "",
+              f"| {axis} | fabricated | wrong-scope | confident-wrong | wrong-metric "
+              f"| off-governance | metric-mismatch |",
+              "|" + "---|" * 7]
         for c in _cells_for(summary, m):
             w = summary["cells"][m][c]["wrong_by_type"]
-            wm = w["wrong_metric"] if meta.get("relevancy_scored") else "n/a"
+            mm = w["metric_mismatch"] if meta.get("relevancy_scored") else "n/a"
             L.append(f"| {c} | {w['fabricated']} | {w.get('wrong_scope', 0)} | {w['confident_wrong']} "
-                     f"| {w.get('off_governance', 0)} | {wm} |")
+                     f"| {w.get('wrong_metric', 0)} | {w.get('off_governance', 0)} | {mm} |")
 
     # 5. Agent behaviour — tool-call profile (call-level) + trajectory verdicts (task-level)
     for m in meta["models"]:

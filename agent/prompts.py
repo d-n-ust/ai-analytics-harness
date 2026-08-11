@@ -171,10 +171,13 @@ _RUNG_NOTES = {
         "status codes, and columns whose meaning you must infer. Explore carefully."),
     2: ("\n\nThe data has been modelled into a clean star schema: dimension tables (dim_*) and "
         "fact tables (fct_*) with clear names, typed columns, and normalised values."),
+    # No metric names here. The parenthetical used to list five of the fifteen ("value moments,
+    # active users, MRR, power users, activation"), which made the prompt a second, stale copy of
+    # the catalogue: it survived any change to the layer, so an experiment that renamed or stripped
+    # those metrics still handed the model their names. The catalogue is the one place they live.
     3: ("\n\nA semantic layer of governed metrics is available via list_metrics and query_metric. "
-        "Prefer governed metrics for defined business measures (value moments, active users, MRR, "
-        "power users, activation, etc.) so the definition, threshold, and segment are always "
-        "correct. You may still use run_sql for anything the metrics don't cover."),
+        "Prefer governed metrics for defined business measures so the definition, threshold, and "
+        "segment are always correct. You may still use run_sql for anything the metrics don't cover."),
     6: ("\n\nA metric tree is available. For diagnostic questions - why did a metric move, what is "
         "driving a change - call decompose_change to attribute the movement to the metrics that compose it, and "
         "get_metric_tree to see its structure. The decomposition's numbers are computed for you: "

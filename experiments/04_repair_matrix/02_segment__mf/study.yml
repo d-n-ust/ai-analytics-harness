@@ -1,0 +1,66 @@
+# Study 01, on dbt MetricFlow instead of this repository's own layer.
+#
+# WHY A SEPARATE STUDY RATHER THAN AN ARM OF 01. The two engines cannot run at the same guardrail
+# level: MetricFlow has no coverage window and no governed member vocabulary, so `coverage_check`
+# and `resolve` have nothing to read. `check_compatible` refuses that pairing when this loads, and
+# the reduced cell below is what both engines CAN run. Comparing R7-harness against this would
+# measure the guardrails rather than the layer, so a comparison run needs study 01 re-run here too.
+#
+# ARMS ARE DIRECTORIES, NOT PATCHES, and that is a step backwards taken deliberately: MetricFlow
+# parses a directory of multi-document YAML, which the patch language cannot express. Forked layers
+# drift — the lesson study 01 already paid for — so this is the first thing to fix if the port
+# proves out.
+
+title: "Segment encoded in the metric name (S1) — on dbt MetricFlow"
+engine: metricflow
+# The reference the same-numbers invariant compares every arm against: the shipped layer.
+base: experiments/04_repair_matrix/02_segment__mf/layers/B_documented
+
+tests_rules: [S1]
+
+rung: 3
+# NOT R7. `coverage_check` and `resolve` need governance MetricFlow does not have, and the loader
+# refuses that combination rather than letting a guardrail pass on a default it invented.
+# The ladder is cumulative, so no level expresses this: R7 minus the two checks MetricFlow cannot
+# serve. Comparing our study 01 against this one needs it re-run at the SAME cell, or the
+# difference measured is the guardrails rather than the layer.
+guardrails: "R7-coverage_check-resolve"
+
+# ARM NAMES CHANGED 2026-08-09 so a letter names a matrix column. Stored runs under results/ carry
+# the old names:  A_absent -> A_implicit · B_prose -> B_documented · C_segment -> D_declared
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE ON THIS ENGINE. Same row as ../02_segment, and the
+# columns differ because the engine does. See 01_entity/study.yml for the convention.
+columns:
+  A_implicit:   "descriptions stripped from the MetricFlow YAML"
+  B_documented: "the MetricFlow YAML as it ships — descriptions state who is counted"
+  C_modelled:   "CONSTANT — the `user__is_internal` dimension, identical in every arm, exactly as in
+                 ../02_segment."
+  D_declared:   "PARTIAL — one metric plus a where-constraint over a dimension. MetricFlow has no
+                 named-segment construct, so the population is reachable but not nameable, and the
+                 selector instruction has to be written into the dimension's description. This is a
+                 weaker D than ../02_segment's and the two must not be pooled."
+  E_enforced:   "ABSENT — this study runs the reduced cell R7-coverage_check-resolve, which is what
+                 both engines can run. R9 is not reachable here, so the column cannot be filled
+                 without changing the comparison the study exists to make."
+
+# Three arms, three matrix columns. The position control was retired — see
+# B_prose_swapped.retired.md for why, including the fact that it did not hold.
+arms: [A_implicit, B_documented, D_declared]
+
+# WHAT THIS STUDY EXISTS TO SHOW, written before the first paid run.
+#
+#   the defect reproduces   A_implicit should fail the "customers" questions on this engine exactly
+#                           as it does on ours. If it does not, the defect was an artefact of our
+#                           file format and study 01's finding does not generalise.
+#
+#   the confound is gone    MetricFlow has NO synonym field. Study 01's headline is unattributable
+#                           partly because its C arm carried bespoke synonyms matching the question
+#                           wording; here that confound has nowhere to live.
+#
+#   C is a DIFFERENT REPAIR, and this is the finding rather than a caveat. Our C arm offers a named
+#                           `segment` argument the tool schema enumerates. MetricFlow has no segment
+#                           construct, so its C arm is one metric plus a where-constraint on a
+#                           dimension — expressible, unnamed, and not offered as a choice. A model
+#                           that simply omits the constraint gets a well-formed call and a plausible
+#                           wrong number.

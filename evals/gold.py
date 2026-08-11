@@ -29,8 +29,44 @@ def _validate(case: dict, where: str) -> None:
     t = e.get("type")
     if t not in _EXPECT_TYPES:
         raise ValueError(f"{where}: case {case['id']!r} has expect.type {t!r}, not one of {_EXPECT_TYPES}")
-    if t == "metric_answer" and not (e.get("metric") and e.get("gold_sql")):
-        raise ValueError(f"{where}: metric_answer case {case['id']!r} needs both metric and gold_sql")
+    # A FALSE-PREMISE CASE MUST CARRY THE WORDS THAT DECIDE IT. Refusing such a question and
+    # contradicting it are both correct, so the grader reads the answer for a contradiction
+    # (`grade.py`, the `is_false_premise` branch). Without a list there is nothing to read, and the
+    # row silently scores zero — which is what happened to both items in this suite for two runs.
+    reasons = e.get("reason")
+    reasons = (reasons,) if isinstance(reasons, str) else tuple(reasons or ())
+    if "false_premise" in reasons and not e.get("rebuttal"):
+        raise ValueError(
+            f"{where}: case {case['id']!r} expects `false_premise` but declares no `rebuttal` word "
+            f"list. An answer that contradicts the premise is correct and cannot be recognised "
+            f"without one. List the stems that state the truth, e.g. [rose, increase, higher].")
+
+    if t == "metric_answer":
+        # NAMING THE METRIC IS THE DEFAULT AND STAYS THE DEFAULT. For most questions "did the agent
+        # pick the right definition?" is the measurement, and a case that forgets to say which
+        # metric it expects would silently grade a right number from the wrong definition as
+        # correct.
+        #
+        # The one honest exception is a question with NO governed metric to name. It arises in
+        # studies that span grounding rungs: below rung 3 there is no semantic layer, and some
+        # questions ("how many habits are people still tracking") have no metric at rung 3 either,
+        # because nobody modelled one. Forcing a metric there means inventing one or dropping the
+        # question, and both corrupt the study.
+        #
+        # So the exception is declared, never inferred: a case must SAY `no_governed_metric: true`,
+        # which states a fact about the layer rather than a preference about grading. A typo in
+        # `metric` still fails loudly, because silence is not the opt-out.
+        if not e.get("gold_sql"):
+            raise ValueError(f"{where}: metric_answer case {case['id']!r} needs gold_sql")
+        if not e.get("metric") and not e.get("no_governed_metric"):
+            raise ValueError(
+                f"{where}: metric_answer case {case['id']!r} names no metric. Add one, or declare "
+                f"`no_governed_metric: true` if the layer genuinely has none — the exception must "
+                f"be stated, not left to an omission.")
+        if e.get("metric") and e.get("no_governed_metric"):
+            raise ValueError(
+                f"{where}: metric_answer case {case['id']!r} both names a metric and declares "
+                f"`no_governed_metric` — one of the two is wrong.")
     # `ambiguous` carries a reason for the same purpose `refuse` does — a refusal must still name
     # the right code to be correct. The extra allowance is the clarification, not a free pass.
     #
@@ -59,12 +95,16 @@ def _validate(case: dict, where: str) -> None:
                              f"not one of {sorted(_CONTEXT_KINDS)}")
 
 
-def load_questions() -> list[dict]:
-    """Every case across evals/**/*.yml, in a stable (path-sorted) order, validated. The
-    name is kept for callers; a case *is* the question dict (id, question, tier, expect)."""
+def load_questions(root: Path = EVALS_DIR) -> list[dict]:
+    """Every case across <root>/**/*.yml, in a stable (path-sorted) order, validated. The
+    name is kept for callers; a case *is* the question dict (id, question, tier, expect).
+
+    `root` defaults to the frozen case set. A probe passes its own directory so its throwaway
+    questions are loaded by the same validator and the same ordering, without ever joining the
+    frozen set — which would silently move the denominator under every published number."""
     cases: list[dict] = []
     seen: set[str] = set()
-    for path in sorted(EVALS_DIR.rglob("*.yml")):
+    for path in sorted(root.rglob("*.yml")):
         doc = yaml.safe_load(path.read_text()) or {}
         for case in doc.get("cases", []):
             _validate(case, path.name)
@@ -75,12 +115,12 @@ def load_questions() -> list[dict]:
     return cases
 
 
-def compute_gold(con) -> dict[str, float | None]:
+def compute_gold(con, cases: list[dict] | None = None) -> dict[str, float | None]:
     """Map case id -> gold number (None when the case declares no gold_sql). The gold_sql
     lives inside `expect`; for a refuse case it is provenance (the trap value), used by the
     grader only to tell a wrong number from a right-but-should-refuse one."""
     golds: dict[str, float | None] = {}
-    for case in load_questions():
+    for case in (load_questions() if cases is None else cases):
         sql = case["expect"].get("gold_sql")
         if sql:
             val = con.execute(sql).fetchone()[0]

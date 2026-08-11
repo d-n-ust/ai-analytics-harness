@@ -1,0 +1,16 @@
+# The same tables, each carrying comments that state EVERY primitive the ladder requires: the event
+# codes, the staff flag including its NULLs, what one row of `evt` is, and that a user may hold
+# several subscription rows.
+#
+# WHY NOT `docs: messy_tables`. That file states three of the four. A documented arm that does not
+# document the primitive under test measures documentation COVERAGE rather than the effect of
+# documentation, and the join-path rung would be under-treated by construction. `messy_load` is that
+# file plus one sentence on `subs`; the diff is one line.
+level: surface
+claim: "the same tables, with every primitive the questions need stated in a comment"
+rung: 1
+patch: {}
+
+environment:
+  tables: messy_tables
+  docs: messy_load

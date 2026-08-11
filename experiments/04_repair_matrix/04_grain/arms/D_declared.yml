@@ -1,0 +1,78 @@
+# The governed layer, reached through `query_metric` rather than SQL. The caller never sees a row,
+# so the grain cannot be misread — it is resolved inside the metric's aggregation.
+#
+# WHY THIS ARM PATCHES IN A METRIC. The shipped layer has `paying_users` — `count(distinct user_id)`
+# filtered to `is_active`, which is 371 people with a LIVE subscription — and nothing that counts
+# people who have EVER subscribed. Two ways to handle that, and only one is honest:
+#
+#   bend the question to what the layer stocks   asks about live subscriptions, where terms and
+#                                                people coincide at 371, so the trap disappears
+#   supply the metric that ought to exist        keeps the question and lets column D be measured
+#
+# Study 01 settled this precedent: `E_enforced` there refused two ordinary questions because the
+# layer had no metric for a reminder count or a habit count, and the fix was to add the metrics
+# rather than to score our own modelling gap as the treatment failing.
+#
+# The metric is added HERE rather than to semantic/semantic_layer.yml because that file is shared,
+# and every study that renders a catalogue would go stale for a metric only this row needs.
+level: structural
+claim: "a governed metric whose aggregation resolves the grain for the caller"
+rung: 3
+patch:
+  # THREE METRICS, ONE PER QUESTION, and D_declared and E_enforced must carry them IDENTICALLY —
+  # tests/test_experiments.py asserts the two patches are equal, so the guardrail is provably the
+  # only difference between the arms.
+  #
+  # WHY THEY ARE ADDED AT ALL. The shipped layer has the right SHAPES and only in live-subscription
+  # form: `active_subscriptions` is count(*) filtered to is_active, `arpu` is the monthly-normalised
+  # revenue per active user. Nothing counts the full history. Study 01 settled what to do about
+  # that — its enforced arm refused two ordinary questions because the layer had no metric for
+  # them, and the fix was to add the metrics rather than to score our own modelling gap as the
+  # treatment failing. A question the layer cannot express measures COVERAGE, not grain.
+  #
+  # NAMED AND DESCRIBED TO SAY NOTHING ABOUT GRAIN. `subscription_terms` would have been the
+  # natural name and it is banned here: it carries C_modelled's treatment (the name states the
+  # grain) and B_documented's (the word "term"), and D would stop being separable from either.
+  # Column D's claim is that the AGGREGATION resolves the grain silently, so the caller never faces
+  # the choice. The descriptions therefore say what each metric is and never how it is computed.
+  metrics.ever_subscribed_users:
+    description: "Subscribers over the full history, live and lapsed."
+    entity: users
+    segment: all
+    unit: count
+    synonyms: ["lifetime subscribers", "all-time subscribers", "total subscribers"]
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.subscriptions_all_time:
+    description: "Every subscription on record, live and ended."
+    entity: subscriptions
+    segment: all
+    unit: count
+    synonyms: ["all subscriptions", "subscription count", "lifetime subscriptions"]
+    base: fct_subscriptions
+    agg: "count(*)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+  metrics.billing_per_subscriber:
+    description: "Average lifetime billing per subscriber."
+    entity: users
+    segment: all
+    unit: currency
+    synonyms: ["lifetime value", "billing per subscriber", "average spend per subscriber"]
+    base: fct_subscriptions
+    agg: "sum(billed_amount) * 1.0 / nullif(count(distinct user_id), 0)"
+    additive_over_time: false
+    time_column: null
+    dimensions: [plan]
+changes_candidate_count: true
+
+environment:
+  tables: star_schema
+  # NO `semantic:` KEY, deliberately. Naming a layer file replaces the study's base and is
+  # incompatible with a patch — the engine refuses both together. Omitting the key leaves the
+  # decision to the rung, and this arm's rung is 3, so it gets the study's base with the patch
+  # above applied. 01_entity's D names the file because it patches nothing.

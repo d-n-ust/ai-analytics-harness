@@ -1,0 +1,102 @@
+# Study 04 — the measure is semi-additive and the catalogue never says so.
+#
+# THE DEFECT, AND WHY IT IS DIFFERENT FROM STUDIES 01 AND 02. Those are one defect twice: a segment
+# promoted to a metric, so the agent chooses between two metric NAMES where it should choose
+# between two values of one argument. This is a GRAIN fault, and no segment declaration repairs it.
+#
+#     active_users:  agg "count(distinct user_id)"      base agg_active_days (one row = one user-day)
+#
+# A distinct count does not compose across periods: a user active on Monday and Tuesday is one
+# weekly active user and two daily ones. So asking for the week at `time_grain=day` and adding the
+# rows gives 2012 where the governed weekly figure is 886 — a 2.27x overstatement, arrived at
+# through two entirely governed calls, with no invented SQL anywhere.
+#
+# WHAT MAKES THIS THE SHARPEST TEST IN THE EXPERIMENT. The layer ALREADY KNOWS. `SemanticLayer.
+# additivity()` derives the answer from the aggregate for all fifteen metrics and gets every one
+# right — a distinct count is semi-additive whether or not anyone annotated it. The fact is
+# computed, correct, and never rendered. So the defect is not a missing fact; it is a known fact
+# that never reaches the point of use, which is as close to a pure test of "semantic health" as
+# this project can construct.
+#
+# It is also the one repair where structure SHOULD beat prose, and the experiment currently has no
+# evidence that structure ever does — studies 01 and 02 both found a declared segment bought
+# nothing over a description. Additivity is a property of the measure, derived once and true
+# everywhere, where a segment is a sentence the model must read, remember and apply. If formalism
+# never wins here, the thesis is in real trouble, and that is worth finding out.
+
+title: "Semi-additive measures — the layer knows, the catalogue never says"
+base: semantic/semantic_layer.yml
+engine: harness
+
+tests_rules: [S6]
+
+# Rung 3 so the catalogue is the only place the fact can live.
+rung: 3
+# R6, AND THE FIRST RUN AT R7 IS WHY. Two guardrails can mask this treatment, and both had to be
+# ruled out before the catalogue could be measured at all.
+#
+#   R8  `output_validation` reads additivity and refuses the roll-up outright. Running there would
+#       measure the GUARDRAIL, not the layer.
+#
+#   R7  `governed_numbers` makes the model declare which governed result its number came from. A
+#       number obtained by ADDING seven daily rows traces to no single governed result, so it is
+#       refused — without the guardrail knowing anything about additivity. The first run at R7
+#       proved this: all three arms scored 11/15, identical, and the roll-up trap failed 0/3 in
+#       EVERY arm, including the one that states the fact outright. The refusal text was the
+#       provenance boilerplate, not additivity reasoning.
+#
+# That R7 result is a finding in its own right and is recorded in ../FINDINGS.md: requiring a number
+# to trace to a governed result already prevents semi-additive roll-ups, for free, with no
+# additivity knowledge anywhere. It also makes R7 useless for THIS question, because the catalogue
+# never gets a chance to matter.
+#
+# R6 keeps coverage, tool restriction, member resolution and transparency, and drops the provenance
+# requirement. The arms can then only be separated by the numbers themselves — which is exactly what
+# this study wants, since 886 and 2012 are 2.27x apart and no tolerance confuses them.
+guardrails: 6
+
+# ARM NAMES CHANGED 2026-08-09 so a letter names a matrix column. Stored runs under results/ carry
+# the old names:  A_absent -> A_implicit · B_prose -> B_documented · C_declared -> D_declared
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. See 01_entity/study.yml for the convention.
+columns:
+  A_implicit:   "no metric states whether its periods may be added"
+  B_documented: "the caveat written into the descriptions of the metrics the traps use"
+  C_modelled:   "OPEN — expose only the correctly rolled-up table, so there is no daily column left
+                 to sum. An indirect artifact: the shape does not state additivity, it removes the
+                 opportunity to get it wrong. Untested."
+  D_declared:   "`additive_over_time:` in a fixed slot on every metric"
+  E_enforced:   "MEASURED_ELSEWHERE — `governed_numbers` requires a number to trace to one
+                 governed result, and a figure obtained by adding seven daily rows traces to none.
+                 It was measured by running the same three arms at R7 and at R6 rather than by a
+                 fourth arm, because the check is a property of the guardrail cell and not of the
+                 layer. This study fixes R6 so the arms can be separated by the numbers themselves;
+                 see the guardrails note above, and ../primitives_matrix.md row 5."
+
+arms: [A_implicit, B_documented, D_declared]
+
+# PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
+#
+#   absent < prose          the positive control. If describing the fact does not beat hiding it,
+#                           the instrument is not measuring what it claims and no other column can
+#                           be read.
+#
+#   prose < declared        THE FINDING, and the first place in this experiment where structure is
+#                           predicted to win. A description states the fact once, in one metric's
+#                           prose, for a reader to notice and apply. `additivity:` states it on
+#                           EVERY metric in a fixed slot, including the ones where summing is fine
+#                           — so the agent is not asked to remember a caveat, it is asked to read a
+#                           field. If this loses too, "declare it rather than describe it" has
+#                           failed three times and should be retired as advice.
+#
+#   the additive controls   `value_moments` and `marketing_spend` sum correctly. They must stay
+#                           flat across arms. An arm that starts refusing legal roll-ups has learnt
+#                           "never add" rather than "add what composes", and its win on the traps
+#                           is worthless. READ THESE ROWS FIRST.
+#
+# POWER. Five questions: two traps, two legal-roll-up controls, one anchor. This is a PILOT and
+# cannot reach significance — see FINDINGS.md, where the measured noise floor is 13% of cells and
+# the smallest detectable difference at this size is roughly 59 points. It is worth its cost for
+# the same four things study 02's pilot was: whether the treatment moves anything, whether
+# questions of this shape discriminate, whether the degenerate strategies really do land where the
+# set intends, and a per-item direction to size the powered run.

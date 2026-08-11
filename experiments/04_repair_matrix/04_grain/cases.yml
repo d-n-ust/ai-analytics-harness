@@ -1,0 +1,125 @@
+# EXPERIMENT QUESTIONS — ONE, purpose-written for the GRAIN primitive.
+#
+# DELIBERATELY ONE. Every prior study in this experiment authored five to eight questions, spent a
+# paid run, and discovered afterwards that at most two of them separated the arms — and in two
+# cases that a question was measuring a different primitive than the one it was filed under. This
+# study inverts the order: one question, every arm, three repetitions, and every trace read by hand
+# before a second question is written. If the item does not discriminate, nothing has been lost but
+# one small run.
+#
+# WHAT GRAIN IS, AND HOW IT DIFFERS FROM THE ROWS ALREADY MEASURED.
+#
+#     entity      WHICH THING the rows are          `evt` holds three event kinds
+#     segment     WHICH ONES of a known thing       real users versus every account
+#     grain       WHAT ONE ROW STANDS FOR           one subscription TERM, not one subscriber
+#
+# The defect is that `fct_subscriptions` holds one row per subscription term and a user who cancels
+# and later resubscribes has several. Nothing in the warehouse says so.
+#
+#     count(*)                     457   subscription terms
+#     count(distinct user_id)      413   people            <- the answer
+#
+# A 10.7% overstatement: large enough to clear the 2% tolerance, small enough to look like a real
+# number on a slide. That is the failure shape this whole experiment is about.
+#
+# WHY THE POPULATION IS PINNED IN THE WORDING. Internal and test accounts hold 22 of the 457 terms,
+# so four different numbers are reachable:
+#
+#     457   terms, every account          grain error, no segment applied
+#     413   people, every account         CORRECT
+#     435   terms, real users only        grain error and a segment applied
+#     393   people, real users only       segment applied where none was asked for
+#
+# Without "including our own internal and test accounts" the item would be a segment question with
+# a grain question inside it, and a wrong answer could not be attributed. Study 02 was damaged
+# exactly this way. The phrase is identical in every arm, so it cannot advantage one.
+#
+# VOCABULARY. The question says "users", "subscription", "internal and test accounts" — business
+# words that appear in the questions of the other studies. It never says `subs`, `fct_subscriptions`,
+# `fct_subscription_terms`, `user_id`, `term`, `distinct`, or `row`. If it named the column or the
+# table, the documented arm would win by transcription and the modelled arm by reading its own name
+# aloud. The vocabulary audit must come back short and equal across arms; if it does not, the run
+# is void.
+#
+# THE WORD "TERM" IS BANNED FROM THE QUESTION and is the treatment's own word. B_documented's
+# comment says "one row is one subscription TERM"; a question containing that word would hand the
+# arm its answer.
+#
+# NO GOVERNED METRIC, AND WHY. `paying_users` is `count(distinct user_id)` filtered to
+# `is_active` — 371 people with a LIVE subscription. Nothing in the shipped layer counts people who
+# have EVER subscribed. Rather than bend the question to what the layer happens to stock, the case
+# grades on the number alone (`no_governed_metric`) and `D_declared` patches in the metric that
+# ought to exist. See that arm for the argument.
+#
+# DEGENERATE STRATEGIES. One item cannot defend against "always answer 413" the way a set can, and
+# that is a real limit of a one-question study rather than an oversight. What it does defend
+# against is a lucky guess being read as a result: three repetitions per arm, and any arm that is
+# right in one rep and wrong in another is reported as unstable rather than as a score.
+
+cases:
+
+  # --- THE GRAIN ITEM: the noun does not tell you the denominator --------------------------- #
+  - id: g_grain_billed_per_subscriber
+    tier: grain
+    question: "Including our own internal and test accounts, what is the average total amount we have billed each subscriber across our whole history?"
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT sum(billed_amount) / count(DISTINCT user_id) FROM fct_subscriptions"
+      tolerance: 0.02
+    note: >-
+      True $34.92. The easy wrong answer is $31.56 — `avg(billed_amount)`, a correct average of the
+      wrong thing, because one row is one TERM and 43 users hold several. "Per subscriber" does not
+      say what the denominator is, so unlike the item this replaced, the aggregation cannot be read
+      off the question's noun. An agent that believes one row is one subscriber writes `avg` and
+      believes it has answered per subscriber.
+
+      WORDING, AND WHAT EACH PHRASE IS DEFENDING AGAINST. "Average TOTAL amount billed each
+      subscriber" blocks the reading that divides annual plans by twelve: `billed_amount` covers a
+      plan's own period, and a monthly-normalised answer is $8.00 — a 4x miss on an ambiguity
+      rather than on the grain. "Including our own internal and test accounts" holds the segment
+      primitive constant, exactly as it did in the item this replaces. Excluding refunded terms
+      gives $34.41, inside the 2% tolerance, so that reading cannot cost a correct answer.
+
+  # --- THE PAIR-MATE: here the row count IS the answer -------------------------------------- #
+  - id: g_grain_subscriptions_started
+    tier: grain
+    question: "Including our own internal and test accounts, and counting live, cancelled and refunded ones alike, how many subscriptions have been started with us in total?"
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(*) FROM fct_subscriptions"
+      tolerance: 0.02
+    note: >-
+      True 457. The wrong answer is 413 — one row per user rather than per term.
+
+      THIS ITEM EXISTS BECAUSE OF WHAT RUN 20260809-163522 SHOWED: nine of nine SQL attempts wrote
+      `count(distinct user_id)` as their first query, because the question said "how many users".
+      Here that habit is wrong. An arm that answers this AND `g_grain_ever_subscribed` has
+      distinguished people from rows; an arm that answers one of the two has a habit that happened
+      to match.
+
+      It is a habit trap rather than a grain item on its own — "how many subscriptions" does name
+      the row, so the noun points at `count(*)`. Its value is as the mirror of its pair-mate, and
+      it is labelled that way rather than counted as a second grain measurement.
+
+      "Counting live, cancelled and refunded ones alike" is not padding. Without it, "sold"
+      or "started" defensibly excludes the 10 refunded terms, and 447 is 2.2% from the gold — just
+      outside tolerance, so a correct reading would grade wrong. Three items were lost to exactly
+      this in study 01.
+
+  # --- THE MIRROR, kept from the first run: the row count is NOT the answer ------------------ #
+  - id: g_grain_ever_subscribed
+    tier: grain
+    question: "Including our own internal and test accounts, how many users have ever had a paid subscription with us?"
+    expect:
+      type: metric_answer
+      no_governed_metric: true
+      gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions"
+      tolerance: 0.02
+    note: >-
+      True 413; the row count gives 457. Every arm answered this 3/3 in run 20260809-163522,
+      including the arm told nothing about grain, because "how many users" hands over the
+      aggregation. Kept anyway — NOT as a grain measurement, but as the mirror of
+      `g_grain_subscriptions_started`. Alone it discriminates nothing; paired, the two separate
+      understanding from habit, which is the only thing the first run left uncertain.

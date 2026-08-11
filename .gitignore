@@ -13,6 +13,17 @@ warehouse/*.duckdb.wal
 # Per-run outputs are disposable dev iterations. Curated evidence lives in results/published/.
 results/runs/
 results/latest
+# Probe runs are the same class: cheap, frequent, and regenerated whenever a treatment changes.
+# A probe worth keeping is promoted into results/published/ like any other evidence — which is
+# also the only way its context blobs survive, since nothing else on disk holds them.
+results/probes/
+results/experiments/
+
+# Generated layers. An arm declares a delta; the full YAML is built from base + patch on every run,
+# so these are OUTPUT and committing them would recreate the forked-layer problem the engine exists
+# to remove — two copies of one layer, free to disagree. The copy that matters is the one written
+# beside each run's numbers under results/experiments/<run>/layers/.
+.build/
 
 # OS
 .DS_Store

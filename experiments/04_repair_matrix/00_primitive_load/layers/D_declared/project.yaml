@@ -1,0 +1,8 @@
+# MetricFlow needs a time spine — one row per day — to answer anything time-filtered.
+# `client.py` creates it as a VIEW over the warehouse's own date range, so nothing is copied
+# and no table is added.
+project_configuration:
+  time_spine_table_configurations:
+    - location: _star.mf_time_spine
+      column_name: ds
+      grain: day

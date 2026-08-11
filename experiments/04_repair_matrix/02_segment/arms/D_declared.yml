@@ -1,0 +1,55 @@
+# The repair: one metric, and the segment becomes an argument the caller chooses. The twin is
+# deleted, because the whole defect was that it existed.
+#
+# ⚠ THIS ARM CARRIES BOTH OF THE EXPERIMENT'S CONFOUNDS, PRESERVED EXACTLY AS THEY RAN.
+#
+# 1. It offers 14 metrics where every other arm offers 15, hence `changes_candidate_count`. The
+#    runner would otherwise refuse the experiment outright, which is the correct default: an arm
+#    that deletes one of two confusable options scores ~50 points higher before any treatment
+#    exists. Declaring it does not FIX it — the honest control is a `prose_minus` arm that deletes
+#    an unrelated metric, and it is not built yet.
+#
+# 2. The synonyms below are vocabulary that exists in NO other arm — `customers`, `genuine users`,
+#    `excluding staff`, `including staff` — and they match the wording of the probe questions.
+#    This arm shares a nine-token verbatim span with `p_pop_all_week` where its rivals share two.
+#    So a win here may be lexical matching rather than structure. The vocabulary audit now prints
+#    that span every run; when this arm was written, nothing did.
+#
+# Both are kept rather than repaired so the stored runs under `results/probes/` still describe a
+# treatment that can be reconstructed. The repair is a NEW arm (`segment_neutral`), not an edit to
+# this one — editing it would silently redefine what twelve stored runs measured.
+level: structural
+claim: "one metric, with who-it-counts moved into a segment argument the caller must choose"
+changes_candidate_count: true
+delete:
+  - metrics.real_value_moments
+patch:
+  metrics.value_moments.description: "Number of value moments (completed habits) in the period."
+  metrics.value_moments.segments: ["everyone", "real_users"]
+  governance.segments.everyone:
+    description: "Every account, including our own internal and test users."
+    synonyms: ["everyone", "all accounts", "including staff", "including test accounts"]
+    where: []
+  governance.segments.real_users:
+    description: "Real users only — excludes internal and test accounts."
+    synonyms: ["real users", "customers", "genuine users", "excluding staff", "excluding test accounts"]
+    where: ["NOT is_internal"]
+
+# How a case's expected metric is REACHED here. The demand is unchanged and the numeric check is
+# untouched — picking the wrong segment still returns the wrong number. BOTH metrics are mapped, so
+# the "everyone" questions must name their segment too: an arm where one of the two answers needs no
+# argument would be testing something easier than the arm it is compared against.
+  # 02's instance, repaired the same way: the threshold stops being arithmetic welded into `agg`
+  # and becomes a named segment the caller selects. `default_segment` keeps a bare call meaning what
+  # it always meant, so the repair does not trade a hidden filter for an absent one.
+  metrics.power_users.description: "Distinct highly-engaged real users in the period (excludes internal/test)."
+  metrics.power_users.agg: "count(distinct user_id)"
+  metrics.power_users.segments: [power]
+  metrics.power_users.default_segment: power
+  governance.segments.power:
+    description: "5+ value moments in a single day"
+    where: ["moments >= 5"]
+grading:
+  metric_equivalents:
+    real_value_moments: {metric: value_moments, segment: real_users}
+    value_moments: {metric: value_moments, segment: everyone}

@@ -18,4 +18,4 @@ narrative is in the Decision Spine `blog-research` repo (`integrity-audit-diagno
 `harness-v2-design.md`).
 
 Paths in the scripts were repointed to the post-refactor layout (`warehouse/warehouse.duckdb`,
-`experiments/integrity-audit/…`); run them from the repo root.
+`experiments/02_reliability_ladder/notes/integrity-audit/…`); run them from the repo root.

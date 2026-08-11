@@ -24,7 +24,7 @@ from dataclasses import dataclass, replace
 
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import Causality, MetricTree, TreeError
-from warehouse.config import NAMED_PERIODS
+from warehouse.config import NAMED_PERIODS, TIME_GRAINS
 from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
 from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
 
@@ -130,7 +130,7 @@ _QUERY_METRIC = {
                          "description": "Dimensions to break the metric down by."},
             "filters": {"type": "object", "additionalProperties": True,
                         "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}"},
-            "time_grain": {"type": "string", "enum": ["day", "week", "month"],
+            "time_grain": {"type": "string", "enum": list(TIME_GRAINS),
                            "description": "Bucket the time column (for trends)."},
             # The enum is read from the vocabulary itself rather than restated. It was a copy, and
             # the copy is exactly how `decompose_change` came to accept any string at all.
@@ -279,15 +279,16 @@ def _verdict(ok: bool, detail: str) -> str:
 
 
 def _get_schema(tb, args) -> ToolResult:
-    return ToolResult(schema_text(tb.con, tb.rung))
+    return ToolResult(schema_text(tb.con, tb.rung, getattr(tb, "schema", None)))
 
 
 def _describe_table(tb, args) -> ToolResult:
-    return ToolResult(describe_table(tb.con, args["table"], tb.rung))
+    return ToolResult(describe_table(tb.con, args["table"], tb.rung,
+                                     getattr(tb, "schema", None)))
 
 
 def _run_sql(tb, args) -> ToolResult:
-    cols, rows = run_query(tb.con, args["query"])
+    cols, rows = run_query(tb.con, args["query"], schema=getattr(tb, "schema", None))
     return ToolResult(_fmt_rows(cols, rows))
 
 
@@ -454,9 +455,14 @@ class Toolbox:
 
     def __init__(self, con, rung: int, semantic: SemanticLayer | None = None,
                  tree: MetricTree | None = None, guardrails: GuardrailSet | None = None,
-                 protocol: Protocol | None = None):
+                 protocol: Protocol | None = None, schema: str | None = None):
         self.con = con
         self.rung = rung
+        # The warehouse schema this agent may read, when the study gives its arm one. None means
+        # the shared warehouse — every study before per-arm environments existed. When it is set,
+        # `run_sql` refuses any statement naming another schema: `search_path` hides the others,
+        # and only this forbids them.
+        self.schema = schema
         # GuardrailSet is the one primitive: which reliability guardrails are on. A ladder preset
         # (LADDER[n]) and an ablation cell are both just a GuardrailSet set; every guardrail below reads
         # from it, so a cell is expressible and self-describing. Default R1 (abstention).

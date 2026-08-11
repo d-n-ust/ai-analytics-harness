@@ -1,0 +1,13 @@
+# The floor. Cryptic table names, no descriptions, no star, no semantic layer — the warehouse as a
+# team actually has it before anyone has invested in it.
+level: surface
+claim: "the facts are true in the data and stated nowhere — cryptic names, coded columns"
+rung: 1
+patch: {}
+
+# This arm's own warehouse. A private schema holding exactly these six views over the generated
+# tables, and a cursor scoped to it — so "cannot see the clean tables" is enforced by the database
+# rather than by declining to list them.
+environment:
+  tables: messy_tables
+  # no `docs:` — undocumented is the baseline, and its absence is the treatment

@@ -84,9 +84,13 @@ def check(semantic, guardrails, args: dict, record=None) -> Verdict:
              else "no filters on this call")
     if not guardrails.coverage_check:
         return Verdict.ok()
+    # THE METRIC IS PASSED, because coverage is not always a property of the layer as a whole. Our
+    # own warehouse holds habits to 2026-07-24 and subscriptions to 2026-07-12, and an engine that
+    # can tell them apart should not be asked to answer for both at once. Engines whose coverage is
+    # layer-wide ignore it.
     violations = semantic.coverage_violations(
         filters=filters, group_by=args.get("group_by"), start=args.get("start"),
-        end=args.get("end"), period=args.get("period"))
+        end=args.get("end"), period=args.get("period"), metric=args.get("metric"))
     if violations:
         dim, member, detail = violations[0]
         named = f"{dim} {member!r} — " if dim else ""

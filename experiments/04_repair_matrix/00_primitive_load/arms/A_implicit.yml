@@ -1,0 +1,10 @@
+# The floor: the application-database extract, no comments anywhere. `evt` mixes three event kinds
+# behind an integer, `u.internal` is 0/1/NULL, `subs` holds one row per term.
+level: surface
+claim: "the raw tables, and nothing states any of the four facts the ladder needs"
+rung: 1
+patch: {}
+
+environment:
+  tables: messy_tables
+  # no `docs:` — the absence is the treatment

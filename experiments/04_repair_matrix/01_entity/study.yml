@@ -1,0 +1,152 @@
+# Study 05 — PRIMITIVE 1, ENTITY: which thing the question is about.
+#
+# The first full row of the primitives matrix. Every other study in this experiment holds the
+# semantic layer's existence constant and varies its content; this one varies whether there is a
+# semantic layer at all, and what the alternatives cost.
+#
+# THE DEFECT. At rung 1 the warehouse is `u`, `hab`, `evt`, `subs`, `spend`, `ref`, and the entity a
+# question asks about is not recoverable from a table name. The sharpest case is `evt`, which holds
+# three event kinds in one table behind an unlabelled integer:
+#
+#     etype = 1   app opens          111,056 rows
+#     etype = 2   COMPLETED HABITS    67,132 rows   <- the value moment
+#     etype = 3   reminders shown     15,219 rows
+#
+# An agent asked how many habits were completed can count every row and report 193,407 — 2.9x the
+# truth, computed correctly from a table it was given, with nothing to signal the error.
+#
+# THE SIX ARMS ARE REAL BUDGETS. A team with the messy warehouse above has these options and they
+# differ by an order of magnitude in cost:
+#
+#     A_implicit             nothing                             rung 1
+#     B_documented           one sentence per table              rung 1     hours
+#     C_modelled             Kimball naming and pre-joined marts rung 2     days
+#     C_modelled_documented  the same star, described            rung 2     days + hours
+#     D_declared             a governed metric layer             rung 3     a modelling project
+#     E_enforced             the same layer plus a runtime check rung 3     engineering
+#
+# WHAT THIS SEPARATES THAT THE PUBLISHED LADDER CANNOT. The grounding-ladder article measured rung
+# 1 -> 2 as a single step worth ~6 points (gpt) and ~12 (mini). But that step changes naming, table
+# shape AND code resolution at once, so it cannot say which of them paid. B holds naming and shape
+# fixed and adds only the sentences. If B lands near C, the practical advice is "write your table
+# comments", and a warehouse rebuild is not the first move.
+#
+# THE ARMS CHANGE THE AGENT'S TOOL SURFACE, AND THAT IS THE TREATMENT. Below rung 3 the agent writes
+# SQL; at rung 3 it calls `query_metric`. So the catalogue guards (candidate count, same facts) do
+# not apply to A, B and C — they have no catalogue — and the runner says so rather than passing
+# them quietly. The same-numbers invariant still holds trivially: it is one warehouse throughout.
+
+title: "Entity — which thing: implicit, documented, modelled, or declared"
+base: semantic/semantic_layer.yml
+engine: harness
+
+tests_rules: [S1]
+
+# The study's default; each arm overrides it. D_declared is the only arm that uses this value.
+rung: 3
+# R1 — abstention only — because the guardrail cell must be IDENTICAL across arms and COHERENT at
+# the lowest rung present. The harness refused R3 outright: `check_tools` and `coverage_check` have
+# no governed call to intercept below rung 3, and `tool_restriction` there removes raw SQL while no
+# governed path exists, leaving an agent that cannot reach data at all. Anything above R1 would give
+# the D_declared arm checks the others cannot have, and the study would compare guardrails rather than
+# data modelling.
+guardrails: 1
+
+# WHAT THE AGENT IS, for every arm that does not override it. Declared rather than left to a CLI
+# flag: the same arm file used to produce different results depending on how it was invoked, and
+# nothing in the folder said which model had answered.
+agent:
+  model: gpt-5-mini
+  reasoning: minimal
+  guardrails: 1        # E_enforced overrides this, and only E_enforced
+  judge:
+    model: gpt-5-mini
+    reasoning: low
+  # THE ANSWER PROTOCOL IS OFF HERE, AND THAT IS A DECISION. `purpose` puts a `because` on
+  # `query_metric`; `claims` adds the citation field to the answer tool at rung 3. Both attach to
+  # the GOVERNED surface — measured, not assumed:
+  #
+  #     rung 1 (A, B)   purpose: no effect     claims: no effect
+  #     rung 2 (C, D)   purpose: no effect     claims: no effect
+  #     rung 3 (E, F)   purpose: because on query_metric     claims: yes
+  #
+  # So switching it on would change the tool surface for E and F ALONE — a second treatment applied
+  # to exactly the two arms that already differ, making every gap between them and the rest
+  # uninterpretable. A study whose arms all sit at rung 3 (01, 02, 03, 04) can hold it on, or vary
+  # it as its own arm; this one cannot do either.
+  protocol: {}
+
+# NAMED FOR THE MATRIX COLUMNS, not for this study's warehouse. The five interventions — implicit,
+# documented, modelled, declared, enforced — recur for every primitive, so grain, additivity and
+# join path carry the same names and a reader can compare rows at a glance. A variant of a column
+# suffixes its letter (`C_modelled_documented`) rather than taking a letter of its own; documentation
+# is a property any shape can have, not a rung, so it appears as a suffix twice.
+#
+# WHAT EACH MATRIX COLUMN IS, FOR THIS PRIMITIVE. The five column questions are fixed for every
+# study; the artifact that answers each one is specific to the primitive. Written here so a reader
+# knows what an arm varies without reconstructing it from the arm file, and so a missing arm is
+# explained rather than merely absent.
+#
+# STATUS WORDS. A value opening with CONSTANT, ABSENT or OPEN means there is NO arm for that column,
+# and says why. PARTIAL means an arm exists but is a weaker form of the column than another study's.
+# Everything else describes the arm that fills it. See ../primitives_matrix.md.
+columns:
+  A_implicit:            "messy tables, no comments — `evt` carrying kind codes"
+  B_documented:          "the same tables, each with a one-line COMMENT ON"
+  C_modelled:            "a conformed star — the event kinds are already split, so the table name is the entity"
+  C_modelled_documented: "the same star, with table and column comments"
+  D_declared:            "the governed layer: `entity:` on every metric"
+  E_enforced:            "the R9 trajectory_verify check — does the metric measure the thing the question asks about"
+
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, D_declared, E_enforced]
+
+# PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
+#
+#   A < B                   the positive control, and the study's whole premise. If one sentence per
+#                           table does not beat no sentence, either the questions do not turn on
+#                           entity resolution or the descriptions are not doing their job. Read this
+#                           first; nothing downstream can be interpreted without it.
+#
+#   B vs C                  THE FINDING, and the direction is genuinely uncertain. C renames and
+#                           pre-joins; B leaves both alone and explains. If B ~ C, naming was never
+#                           the mechanism and the published rung 1 -> 2 gain was code resolution.
+#                           If C > B, structure carries something a sentence cannot.
+#
+#   C < D                   expected, from the published ladder: metric-tier questions went 2/25 to
+#                           19/25 at this step for the smaller model. If it does not reproduce, this
+#                           question set is not exercising the same thing the ladder's was.
+#
+#   the control question    must be flat across all four arms. It names a table directly and needs
+#                           no entity resolution, so a difference there is prompt length or noise,
+#                           not the treatment.
+#
+# WHICH COMPARISONS ARE CLEAN, because they are not all clean and the arms do not all sit at one
+# guardrail cell.
+#
+#   A vs B vs C vs D vs E   IDENTICAL guardrails (R1), differing environments. The five budgets,
+#                           and the comparison this study was built for.
+#   A vs B  and  C vs D     THE DOCUMENTATION AXIS, asked twice. Documentation is not a rung; it is
+#                           a property any shape can have, so it is varied at BOTH the messy tables
+#                           and the star. If C ~ D while A < B, conformed naming substitutes for
+#                           documentation and documentation does not substitute for naming.
+#   E vs F                  IDENTICAL environment, one added guardrail. What a runtime check buys
+#                           on top of a governed layer.
+#   A vs F                  NOT a clean comparison. They differ in the warehouse AND in the
+#                           guardrail, so a gap cannot be attributed. Do not report it.
+#
+# E IS DECLARED-AND-DESCRIBED, and there is no honest alternative. In every real semantic layer the
+# description is a FIELD of the object — MetricFlow's `description:` on model, measure and metric;
+# Cube's on cube, measure, dimension and segment; LookML's on view and dimension. A team may leave
+# it blank, but the slot is part of the declaration. So "declared but undocumented" is not a rung
+# below E; it is a DEFECTIVE E, and a different experiment.
+#
+# E IS D PLUS A CHECK, NOT AN ALTERNATIVE TO IT. For some primitives `enforced` stands alone —
+# study 04's additivity trap was caught by a provenance check that knew nothing about additivity,
+# because it tested a property of the ANSWER. Entity is the other kind: "is the thing you measured
+# the thing that was asked for" needs a vocabulary of things and a declaration of which was used,
+# and both come from the governed layer.
+#
+# POWER. Five questions. A PILOT — see ../FINDINGS.md: the measured noise floor is 13% of cells and
+# the smallest difference this size can detect is roughly 59 points. It is worth its cost for
+# whether the treatment moves anything, whether these questions discriminate, and a per-item
+# direction to size the powered run.

@@ -53,6 +53,9 @@ class Rung:
 
 RUNGS: dict[float, Rung] = {
     1: Rung("messy data"),
+    # 1.5 and 2.5 existed to mean "documented", which is now a property an ARM declares
+    # (`environment: {docs: ...}`) rather than a rung. They are gone because a bundle encoded as a
+    # number is what let `visible_tables` infer "star" from `1.5 > 1`.
     2: Rung("star schema", star=True),
     3: Rung("semantic layer", star=True, semantic=True),
     4: Rung("+ verified examples", star=True, semantic=True, examples=True),

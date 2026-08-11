@@ -1,0 +1,10 @@
+# C_modelled plus ONE column: `platform_name` on `dim_users`, holding Android / iOS / Web. The
+# control for C_modelled_snowflaked — without it, the snowflake comparison conflates moving labels
+# into lookup tables with giving platform a label it never had.
+level: structural
+claim: "the conformed star with the platform label denormalised onto the dimension"
+rung: 2
+
+environment:
+  tables: star_labelled
+  semantic: null

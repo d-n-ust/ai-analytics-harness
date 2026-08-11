@@ -1,0 +1,6 @@
+# The floor, and what ships today. The catalogue states nothing about additivity for any metric,
+# so nothing warns against adding a distinct count across days. The fact still EXISTS — the layer
+# derives it correctly — it simply never reaches the agent.
+level: surface
+claim: "the catalogue never states how a measure behaves when its periods are added"
+patch: {}

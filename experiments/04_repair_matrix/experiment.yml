@@ -1,0 +1,39 @@
+# Experiment 4 — the repair matrix.
+#
+# The first three experiments improve the AGENT. This one leaves the agent alone and changes the
+# WAREHOUSE it reads: the same numbers, with each grounding fact held in a different location —
+# implicit, documented, modelled, declared, enforced. Per question primitive, which is the
+# cheapest location where the grounding reliably holds?
+#
+# Every study here holds the numbers constant and varies only what the agent can READ. That is what
+# makes a difference attributable to the modelling rather than to the data, and it is enforced
+# before a token is spent rather than asserted afterwards.
+
+title: "The repair matrix"
+question: "When a question fails, which primitive broke, and what is the cheapest location where its grounding reliably holds?"
+status: in_progress
+
+article:
+  slug: null                 # unwritten
+  repo: decisionspine-site
+
+# HOW ITS RUNS ARE DRIVEN. This is the first project with DECLARATIVE studies: each subdirectory is
+# a study the engine can run, and an arm is a patch against the shipped layer rather than a forked
+# copy of it. See experiments/README.md for the two-level shape and experiments/engine.py for the
+# four guards every study passes before it costs anything.
+runs: declarative
+
+evidence:
+  - semantic/semantic_layer.yml    # the base every arm patches
+  - semantic/ambiguity.py          # the lint the S-conditions are checked by
+  - results/probes/                # 12 pre-migration runs of study 01, still readable
+  - results/experiments/           # every study run since
+
+# The framework this project is testing lives in the site repo:
+#   docs/blog-research/semantic-normalization-framework.md   the S1-S6 conditions, and their evidence
+#   docs/blog-research/experiments-plain-english.md          the defect experiments in plain English
+#
+# STUDIES ARE DISCOVERED, NOT LISTED. A study is a directory holding `study.yml`, so a folder that
+# exists is a study that runs — there is no second place to register it and therefore no way for the
+# two to disagree. Two are built; the plain-English doc has four defects and a set of rival remedies.
+notes: []

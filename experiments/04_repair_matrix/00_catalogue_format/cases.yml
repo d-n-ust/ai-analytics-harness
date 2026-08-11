@@ -1,0 +1,125 @@
+# EXPERIMENT QUESTIONS — five, purpose-written for the FORMAT study.
+#
+# WHY NOT THE FROZEN 65. They were available and would have cost nothing to reuse, but almost none
+# of them can separate these arms. The layer is byte-identical in all three, so a question is only
+# discriminating if it turns on a fact whose BINDING TO A METRIC is what the arrangement changes.
+# Most frozen questions turn on picking the right metric by name, which every format states equally.
+#
+# WHAT ALL FIVE TEST: per-metric dimension support.
+#
+# Each metric declares which dimensions it may be filtered or grouped by, and they differ:
+#
+#   value_moments     region, platform, channel, country
+#   active_users      region, platform, channel, country
+#   new_signups       region, platform, channel            <- no country
+#   marketing_spend   channel                              <- no region
+#
+# `country` is a governed dimension with DE among its members, and four metrics accept it. So a
+# question about Germany looks answerable for any metric, and is not. The fact that decides it is
+# attached to ONE metric, and attaching facts to things is exactly what the three formats do
+# differently:
+#
+#   prose        an indented sub-line, three lines under the metric's name, among ~75 such lines
+#   structured   a `group_by` field inside the metric's own object
+#   table        a cell in the metric's own row, in a column shared with every other metric
+#
+# THE PRE-REGISTERED PREDICTION, written before the first paid run. If any arm wins, C_table
+# should, and not because it is "clearer" — because a column makes ABSENCE visible. Reading down a
+# `group_by` column, the row missing `country` stands out; in prose and in JSON the same fact is a
+# short list you must read and compare against fourteen others. This makes the table arm a
+# candidate winner rather than a tiebreaker, and it is a falsifiable claim: if prose and table tie
+# and JSON wins, the explanation is structure, not alignment, and this prediction was wrong.
+#
+# THE FAILURE MODE WE ARE COUNTING. The layer refuses an unsupported filter with an explicit
+# message naming the allowed dimensions, so an agent that tries one is told. The interesting wrong
+# answer is not the failed call — it is what happens next: dropping the filter and reporting the
+# unfiltered total as if it answered the question, or switching to a metric that does accept
+# `country` and reporting a number for a different question. Both are silent wrongs. The trap value
+# is recorded on each refusal case as `gold_sql` so a wrong answer can be identified rather than
+# merely marked incorrect.
+#
+# BALANCE. Three answerable, two refusals. A model that always answers scores 3/5; one that always
+# refuses scores 2/5. Neither degenerate strategy wins, and the two pairs below hold the same
+# dimension or the same metric fixed so a single habit cannot carry both members of a pair.
+#
+# POWER. Five questions cannot reach significance on their own — study 01 proved that at a cost.
+# This set exists to establish DIRECTION cheaply before committing to a full authored set. Treat a
+# result here as a reason to write thirty more questions, never as a finding.
+
+cases:
+
+  # --- pair 1: the same dimension, on a metric that has it and one that does not ---------- #
+  - id: f_dim_signups_germany
+    tier: dimension_support
+    question: "How many people signed up from Germany last month?"
+    requires: [semantic]
+    expect:
+      type: refuse
+      reason: dimension_not_supported
+      gold_sql: "SELECT count(*) FROM dim_users WHERE country = 'DE' AND signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      new_signups accepts region, channel and platform, but not country. The question is therefore
+      not answerable from the governed layer, even though `country` is a governed dimension, DE is
+      a governed member, and four other metrics accept it. The trap value 62 exists in dim_users
+      and is unreachable at this rung, so a number here means the agent substituted a different
+      metric or dropped the filter.
+
+  - id: f_dim_actives_germany
+    tier: dimension_support
+    question: "How many active users did we have in Germany last month?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT count(DISTINCT f.user_id) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE NOT u.is_internal AND u.country = 'DE' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      The pair-mate. Same country, same period, same phrasing — and active_users does accept
+      country, so the answer is 283. An agent that refuses both has learned "country is hard"
+      rather than which metric supports it, and scores exactly one of the two.
+
+  # --- the third metric on the same dimension, to make it a triangle rather than a coin ---- #
+  - id: f_dim_moments_germany
+    tier: dimension_support
+    question: "How many habits were completed in Germany last month?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: value_moments
+      gold_sql: "SELECT count(*) FROM fct_value_moments f JOIN dim_users u USING(user_id) WHERE u.country = 'DE' AND f.completed_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      Three metrics, one dimension, one period. Two accept country and one does not, so the set
+      cannot be passed by a rule about the word "Germany" — only by reading the support list off
+      each metric.
+
+  # --- pair 2: the same metric, one dimension it has and one it does not ------------------ #
+  - id: f_dim_spend_emea
+    tier: dimension_support
+    question: "What did we spend on marketing in EMEA last month?"
+    requires: [semantic]
+    expect:
+      type: refuse
+      reason: dimension_not_supported
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      marketing_spend accepts channel and nothing else — the spend table carries no region at all.
+      `region` is governed and thirteen metrics accept it, which is what makes this look answerable.
+      The gold_sql here is the TRAP, not the answer: 21013.20 is the unfiltered total, so an agent
+      that drops the filter and reports it can be identified rather than just marked wrong.
+
+  - id: f_dim_spend_paid_search
+    tier: dimension_support
+    question: "What did we spend on paid search last month?"
+    requires: [semantic]
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      gold_sql: "SELECT round(sum(spend), 2) FROM fct_marketing_spend WHERE channel = 'paid_search' AND spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
+      tolerance: 0.02
+    note: >-
+      The pair-mate, and the tighter of the two pairs: the SAME metric, asked once by a dimension
+      it does not have and once by the only one it does. Nothing about the metric, the period or
+      the phrasing differs. The one fact that separates them is the support list.

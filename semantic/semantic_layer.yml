@@ -226,6 +226,39 @@ metrics:
     time_column: spend_date
     dimensions: [channel]
 
+  # Added after study 05 found the layer could not express two ordinary questions — "how many
+  # reminders were shown" and "how many habits are still being tracked". Both are measures a
+  # habit-tracking company would obviously govern, so their absence was a gap in THIS layer rather
+  # than a realistic limit of semantic layers, and testing the governed arms against questions our
+  # own modelling had missed measured our modelling.
+  #
+  # The coverage finding survives the fix and is stronger for it: a question outside the layer can
+  # now be chosen deliberately rather than arriving through a gap nobody decided on.
+  reminders_shown:
+    description: "Number of reminders shown to users in the period."
+    entity: reminders
+    segment: all
+    unit: count
+    synonyms: ["reminders", "reminders shown", "reminders sent", "notifications"]
+    base: fct_reminders
+    agg: "count(*)"
+    additive_over_time: true
+    time_column: reminded_date
+
+  # A STOCK, not an event count: it answers "as of now", so it declares no time column and derives
+  # as semi-additive. Two habits active in January and February are not four active habits.
+  active_habits:
+    description: "Habits that have not been archived — the ones users are still tracking."
+    entity: habits
+    segment: active
+    unit: count
+    synonyms: ["active habits", "habits being tracked", "tracked habits", "unarchived habits"]
+    base: dim_habits
+    agg: "count(*)"
+    default_filters: ["NOT is_archived"]
+    time_column: null
+    dimensions: [category]
+
   referrals:
     description: "Number of referrals created in the period."
     entity: referrals

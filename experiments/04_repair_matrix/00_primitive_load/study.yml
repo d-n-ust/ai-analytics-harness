@@ -1,0 +1,114 @@
+# Study 00 — PRIMITIVE LOAD: how many primitives one question forces the agent to resolve.
+#
+# NUMBERED 00 BECAUSE IT IS NOT A ROW. The matrix is primitives against interventions, and load is
+# neither: it is a property of the QUESTION that cuts across every row. `00_catalogue_format` is
+# numbered 00 for the same reason — it asks whether the rendering drives what we measure, and this
+# asks whether the question's depth does.
+#
+# WHY IT EXISTS. `../01_entity/FINDINGS.md` §8 swept that study across three model tiers and found
+# `gpt-5.6-terra` scoring 15/15 in every arm, including the arm told nothing: the frontier model
+# recovers a single primitive from an undocumented warehouse without help. Every question in this
+# experiment requires one primitive. Real analysis does not.
+#
+# THE HYPOTHESIS. If each primitive is resolved independently with probability p, an n-primitive
+# question succeeds at p^n, so the gap between a documented and an undocumented warehouse widens
+# superlinearly with n. At n=4 the predicted gap reaches the 59-63pp this design can actually
+# detect (../FINDINGS.md §2) — which makes compositional depth a cheaper route out of the power
+# problem than authoring thirty more single-primitive items.
+#
+# THE LADDER IS NESTED: each item is the previous plus exactly one primitive, so the most likely
+# wrong answer at each rung is the previous rung's gold, and a failure names the step that caused
+# it. See cases.yml, which also records the composition rung that was designed and cut because a
+# ratio divided its errors into both numerator and denominator.
+
+title: "Primitive load — does the value of documentation grow with the depth of the question?"
+base: semantic/semantic_layer.yml
+engine: harness
+
+tests_rules: []
+
+# THE STUDY'S DEFAULT IS 3 AND EVERY ARM OVERRIDES IT DOWNWARD — A and B to rung 1, C to rung 2.
+# It is not a claim about the questions; it is what the same-numbers invariant needs. The reference
+# layer compiles against `agg_active_days`, which lives in the star, and `run()` builds the star
+# views from the STUDY's rung rather than from any arm's. Setting 1 here left the reference
+# unreachable, so zero metric/period pairs were compared and the invariant aborted the run as
+# untested. 01_entity carries the same 3 for the same reason.
+rung: 3
+
+# R1 — abstention only. Identical across arms and coherent at the lowest rung present, exactly as
+# in 01_entity: anything above R1 would give the rung-3 arm checks the rung-1 arms cannot have, and
+# the study would compare guardrails rather than data modelling.
+guardrails: 1
+
+agent:
+  model: gpt-5-mini
+  reasoning: minimal
+  judge:
+    model: gpt-5-mini
+    reasoning: low
+  protocol: {}
+
+# WHAT EACH MATRIX COLUMN IS. This study fills no cell — it varies the QUESTION, not the
+# intervention — but it uses the same four interventions, so the block is declared for consistency
+# and to keep the arm names meaning what they mean everywhere else.
+columns:
+  A_implicit:   "the raw extract, no comments anywhere"
+  B_documented: "the same tables, with every primitive the ladder needs stated in a comment"
+  C_modelled:   "the conformed star — entity and segment structural, join cardinality untouched"
+  C_modelled_labelled: "the same star plus `platform_name` on the dimension — the control
+                 that separates 'a label exists' from 'the label lives in a lookup table'."
+  C_modelled_snowflaked: "the same star with its labels snowflaked out — `country_name` moves to
+                 `dim_country`, and a platform label it never had lands in `dim_platform`. A paired
+                 comparison against C_modelled, testing whether a label has to sit ON the dimension
+                 or whether a lookup table is as good."
+  C_modelled_documented: "the same star, with table and column comments — the documentation axis
+                 asked a second time, on a shape that already carries the facts structurally"
+  D_declared:   "the documented star plus the governed layer — C_modelled_documented with a layer on
+                 top, so the ladder is cumulative. It ran without the star's comments until
+                 2026-08-09 and was blind whenever it fell back to SQL."
+  E_enforced_verified: "E plus `trajectory_verify` — a judge on the metric-to-question fit.\n                 Not R9: `resolve` and `output_validation` need capabilities MetricFlow does not\n                 have, and the second has a measured contribution of zero. A paired comparison\n                 against E_enforced alone."
+  E_enforced:   "D plus R7 `governed_numbers` — a number must trace to one governed result. Added
+                 once D's own behaviour was understood: the traces showed it fetching a correct
+                 governed figure and then doing arithmetic on top of it, which is exactly what this
+                 check refuses. NOT part of the load ladder — it sits at a different guardrail cell
+                 and is a paired comparison against D alone."
+
+arms: [A_implicit, B_documented, C_modelled, C_modelled_documented, C_modelled_labelled, C_modelled_snowflaked, D_declared, E_enforced, E_enforced_verified]
+
+# PREDICTIONS, WRITTEN BEFORE THE FIRST PAID RUN.
+#
+#   the control is flat        `pl_control_spend` needs no primitive resolved. It must score the
+#                              same in every arm at every model tier. Read this row first; if it
+#                              moves, nothing else here can be read.
+#
+#   A degrades with load       the study's whole premise. If A holds up at L4 as well as at L1,
+#                              either the ladder is not adding difficulty or the model does not
+#                              need the facts, and the hypothesis is wrong in the direction that
+#                              matters most to this practice.
+#
+#   the A-to-B gap WIDENS      THE FINDING. Not that B beats A — 01_entity already showed that at
+#                              load 1 — but that the margin grows as the ladder climbs. A flat gap
+#                              would say documentation buys a constant amount regardless of question
+#                              depth, which is a different and less useful claim.
+#
+#   C tracks B, then falls     the star fixes entity and segment structurally and does nothing about
+#                              the subscription cardinality. Predicted equal to B at L1-L2 and below
+#                              it at L4.
+#
+#   D degrades with load       and this is the prediction most likely to be misread. The layer has
+#                              no metric for a four-primitive question, so it must fall back to SQL.
+#                              A low D at L4 is a statement about COVERAGE — what the layer was
+#                              built to express — not about the layer being unhelpful. See
+#                              arms/D_declared.yml on why no metric is patched in.
+#
+#   terra leaves the ceiling   the run that motivated this study. `gpt-5.6-terra` scored 15/15 on
+#                              every arm of 01_entity at load 1. If it also scores full marks at
+#                              load 4 on the undocumented arm, then documentation is worth nothing
+#                              to a frontier model on questions of this kind, and the article's
+#                              claim narrows sharply. If it falls off, the load curve is the result.
+#
+# POWER. Five questions, one per load level plus a control. This cannot reach significance and is
+# not meant to: it is a pilot for the SHAPE of the curve. If the gap widens monotonically across
+# four points on two models, that is a direction worth authoring a real item bank against — and
+# ../FINDINGS.md §6b is the record of what happens when a bank is authored before the shape is
+# known.
