@@ -48,7 +48,7 @@ properties. It lives in a `metricflow` dependency group, so the harness itself n
 
 ```bash
 PYTHONPATH=. uv run --group metricflow python \
-    experiments/04_semantic_layer_health/02_segment__mf/check.py
+    experiments/04_repair_matrix/02_segment__mf/check.py
 ```
 
 ## What it proves

@@ -3,8 +3,8 @@
 Two levels, because the work has two levels.
 
 An **experiment** is a week's work that ends in an article on decisionspine.com. A **study** is one
-runnable comparison inside it. Experiment 4 has two studies; experiments 1–3 have none, and that is
-a fact about them rather than a gap — their runs are sweeps over code, not over configuration.
+runnable comparison inside it. Experiment 4 has seven studies; experiments 1–3 have none, and that
+is a fact about them rather than a gap — their runs are sweeps over code, not over configuration.
 
 ```
 experiments/
@@ -12,16 +12,18 @@ experiments/
 ├── 01_grounding_ladder/            ✓ shipped — how much does each layer of grounding buy?
 ├── 02_reliability_ladder/          ✓ shipped — what is each guardrail worth?
 ├── 03_evidence_graph/              ✓ shipped — what if every claim must cite its tool result?
-└── 04_semantic_layer_health/       · in progress — does a more legible metric layer help?
+└── 04_repair_matrix/               · in progress — which primitive failed, and where must its grounding live?
     ├── experiment.yml
-    ├── 02_segment/  the segment hides in the metric NAME    (S1)
-    └── 02_segment/          the segment hides in the AGGREGATE      (S4)
+    ├── 00_primitive_load/          the flagship: 62 items × 8 arms × 3 reps — the matrix itself
+    ├── 02_segment/                 the segment hides in the metric NAME    (S1)
+    ├── 02_segment__mf/             the segment hides in the AGGREGATE      (S4)
+    └── …                           catalogue format, entity, grain, additivity
 ```
 
 ```bash
 ./bench study                                  # the tree: every experiment, article, and study
 ./bench study 02_segment                # bare names resolve if unambiguous
-./bench study 04_semantic_layer_health/02_segment   # or name it in full
+./bench study 04_repair_matrix/02_segment   # or name it in full
 ```
 
 ## The experiment manifest
@@ -59,7 +61,7 @@ cannot be attributed. Generated layers cannot drift from their base, and a treat
 ten lines is a treatment someone will actually check.
 
 ```
-04_semantic_layer_health/02_segment/
+04_repair_matrix/02_segment/
 ├── study.yml          what varies, against which base, at which rung — and the predictions
 ├── cases.yml          the questions and their gold
 └── arms/

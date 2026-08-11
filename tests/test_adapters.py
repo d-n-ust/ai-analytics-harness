@@ -238,7 +238,7 @@ def test_every_guardrail_metricflow_may_run_can_actually_run():
 
     con = open_warehouse()
     set_star(con, 3)
-    layer = MetricFlowLayer(con, Path("experiments/04_semantic_layer_health/00_primitive_load"
+    layer = MetricFlowLayer(con, Path("experiments/04_repair_matrix/00_primitive_load"
                                       "/layers/D_declared"))
 
     cell = parse_cell("R7-resolve")            # E_enforced's cell
@@ -319,7 +319,7 @@ def test_additivity_is_read_off_the_aggregate():
 
     con = open_warehouse()
     set_star(con, 3)
-    layer = MetricFlowLayer(con, _P("experiments/04_semantic_layer_health/00_primitive_load"
+    layer = MetricFlowLayer(con, _P("experiments/04_repair_matrix/00_primitive_load"
                                     "/layers/D_declared"))
     assert layer.additivity("habit_completions") == "additive"        # count of rows
     assert layer.additivity("people_reminded") == "semi_additive"     # count(distinct user)

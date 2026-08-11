@@ -63,8 +63,9 @@ mechanism here that can move the frontier outward rather than slide along it.
 
 ## A third axis, named rather than smuggled
 
-`REFACTOR.md`'s root diagnosis is that the repo *"runs two experiments but is packaged, named, and
-documented as one,"* and that almost every specific problem is a symptom of that unfinished split.
+The 2026-07 refactor plan's root diagnosis was that the repo *"runs two experiments but is packaged,
+named, and documented as one,"* and that almost every specific problem is a symptom of that
+unfinished split.
 
 The evidence graph is neither axis. Grounding is what the agent **knows**; guardrails are what it may
 **do** about not knowing. This is what it must **declare** — a protocol axis, orthogonal to both.

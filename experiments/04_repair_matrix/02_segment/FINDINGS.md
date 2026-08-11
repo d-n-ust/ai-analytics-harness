@@ -4,7 +4,7 @@ Findings from this study. The experiment-wide measurement results are in `../FIN
 practitioner summary is in `PRACTITIONER-NOTES.md`; the same row on dbt MetricFlow is in
 `../02_segment__mf/FINDINGS.md`.
 
-Every number below is computed from `results/experiments/04_semantic_layer_health/
+Every number below is computed from `results/experiments/04_repair_matrix/
 20260809-121926-01_segment_promoted_to_metric` — eight questions, three repetitions, `gpt-5-mini`
 at `reasoning=minimal`, rung 3, R7. The run directory keeps the pre-rename arm names; the mapping
 is in `study.yml`.

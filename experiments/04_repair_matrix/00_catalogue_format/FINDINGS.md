@@ -4,7 +4,7 @@ The control study. It fills no cell of `../primitives_matrix.md`: its arms carry
 facts in three arrangements, so it varies presentation rather than an intervention. The design is in
 `README.md`, the practitioner summary in `PRACTITIONER-NOTES.md`.
 
-Numbers are from `results/experiments/04_semantic_layer_health/20260807-183018-03_catalogue_format` —
+Numbers are from `results/experiments/04_repair_matrix/20260807-183018-03_catalogue_format` —
 five questions, three repetitions, `gpt-5-mini` at `reasoning=minimal`, rung 3, R7 — measured
 against `20260807-180538` where marked.
 

@@ -14,7 +14,7 @@
 title: "Segment encoded in the metric name (S1) — on dbt MetricFlow"
 engine: metricflow
 # The reference the same-numbers invariant compares every arm against: the shipped layer.
-base: experiments/04_semantic_layer_health/02_segment__mf/layers/B_documented
+base: experiments/04_repair_matrix/02_segment__mf/layers/B_documented
 
 tests_rules: [S1]
 

@@ -577,7 +577,7 @@ it destroys interval coverage.
 
 | claim | where it comes from |
 |---|---|
-| noise floor 13% | `results/experiments/04_semantic_layer_health/` — three MetricFlow runs, one study 02 run, one study 03 run |
+| noise floor 13% | `results/experiments/04_repair_matrix/` — three MetricFlow runs, one study 02 run, one study 03 run |
 | defect reproduces on MetricFlow | `20260807-142016`, `-144843`, `-145627`; confirmed on `20260809-124835` |
 | discriminating-item counts (§6b) | per-item pass over `20260807-183018`, `20260808-232437`, `20260808-132436`, `20260809-121926`, `20260809-124835` |
 | the two engines' B arms split | `20260809-124835` and `20260809-121926`, `p_pop_customers_week`, all reps |

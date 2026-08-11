@@ -4,7 +4,7 @@ The same primitive as `../02_segment`, on a semantic layer this project did not 
 practitioner summary is in `PRACTITIONER-NOTES.md`; the harness version of the row is in
 `../02_segment/FINDINGS.md`.
 
-Numbers below are from `results/experiments/04_semantic_layer_health/20260809-124835-02_segment__mf`
+Numbers below are from `results/experiments/04_repair_matrix/20260809-124835-02_segment__mf`
 — four questions, three repetitions, `gpt-5-mini` at `reasoning=minimal`, rung 3, the reduced cell
 `R7-coverage_check-resolve`. That cell is what both engines can run; comparing it against the
 harness study's full R7 would compare guardrails rather than layers.

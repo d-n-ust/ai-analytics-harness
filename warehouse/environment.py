@@ -3,7 +3,7 @@
 WHAT AN ARM COULD NOT SAY BEFORE. An arm declared a rung, and the rung selected between two
 hardcoded tuples of table names. It could not add a view, rename a table, split a mixed one, or
 carry its own documentation — so the `modelled` column of the primitives matrix, where a warehouse
-object makes a fact structurally true, was inexpressible. `experiments/04_semantic_layer_health/
+object makes a fact structurally true, was inexpressible. `experiments/04_repair_matrix/
 primitives_matrix.md` has that column empty for every row, and this is why.
 
 WHAT THIS GIVES INSTEAD. Each arm gets a DuckDB schema holding exactly the objects its agent may

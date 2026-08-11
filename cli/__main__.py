@@ -320,7 +320,8 @@ def main() -> None:
     sp.add_argument("--rungs", default="1,2,3,4,5,6",
                     help=f"grounding rungs, comma-separated; defined: {sorted(RUNGS)}")
     # The ceiling is COMPUTED. Typed as a literal it went stale twice — the help still said
-    # R0..R9 three guardrails later, which is the fossilised numbering REFACTOR.md names.
+    # R0..R9 three guardrails later, which is the fossilised numbering the 2026-07 refactor
+    # plan named.
     sp.add_argument("--rrungs", default="1",
                     help=f"reliability ladder presets R0..R{len(LADDER_ORDER)}")
     sp.add_argument("--cells", default=None,
@@ -368,7 +369,7 @@ def main() -> None:
     sp = sub.add_parser("study", aliases=["experiment", "exp"],
                         help="run one study from experiments/<experiment>/<study>/ (arms are patches)")
     sp.add_argument("study", nargs="?", default=None,
-                    help="study name, e.g. 02_segment or 04_semantic_layer_health/"
+                    help="study name, e.g. 02_segment or 04_repair_matrix/"
                          "02_segment (omit to print the tree)")
     sp.add_argument("--reps", type=int, default=1)
     sp.add_argument("--concurrency", type=int, default=1,

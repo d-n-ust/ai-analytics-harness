@@ -1,15 +1,16 @@
-# Experiment 4 — semantic layer health.
+# Experiment 4 — the repair matrix.
 #
 # The first three experiments improve the AGENT. This one leaves the agent alone and changes the
-# MODEL it reads: if a governed metric layer is made more legible — the same numbers, differently
-# declared — does the analyst get more reliable, and is that cheaper than another guardrail?
+# WAREHOUSE it reads: the same numbers, with each grounding fact held in a different location —
+# implicit, documented, modelled, declared, enforced. Per question primitive, which is the
+# cheapest location where the grounding reliably holds?
 #
 # Every study here holds the numbers constant and varies only what the agent can READ. That is what
 # makes a difference attributable to the modelling rather than to the data, and it is enforced
 # before a token is spent rather than asserted afterwards.
 
-title: "Semantic layer health"
-question: "Does making a governed metric layer more legible make an AI analyst more reliable?"
+title: "The repair matrix"
+question: "When a question fails, which primitive broke, and what is the cheapest location where its grounding reliably holds?"
 status: in_progress
 
 article:

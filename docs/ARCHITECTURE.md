@@ -1,9 +1,10 @@
 # The three axes — grounding, guardrails, protocol
 
 Status: **steps 1–3 landed 2026-07-31, and the declarations are now off the ladder entirely;
-steps 4–5 outstanding.** Companion to `REFACTOR.md`, which this extends rather than replaces.
+steps 4–5 outstanding.** Extends the 2026-07 refactor plan (formerly `REFACTOR.md`, removed
+2026-08; everything from it that still matters is restated where it is used).
 
-`REFACTOR.md` diagnosed the repo as running **two experiments packaged as one** — the grounding
+The refactor plan diagnosed the repo as running **two experiments packaged as one** — the grounding
 ladder and the reliability ladder — and said to name them as first-class peers. That diagnosis
 was right and is now incomplete. There is a **third** axis, it has been arriving one commit at a
 time since `declared_purpose`, and it is currently filed under the second one.
@@ -94,7 +95,7 @@ framing roughly doubles the share of claims that are conclusions rather than loo
 | role | 208 | 558 | 90.1% | **13.6%** | 61 |
 
 A variable that moves a headline number by 2× and cannot be written into a cell spec is the
-single-primitive problem `REFACTOR.md` Workstream B exists to solve, reintroduced.
+single-primitive problem the refactor plan's Workstream B existed to solve, reintroduced.
 
 **3. The dependency points the wrong way.** *(Fixed in step 1.)* `agent/guardrails/claims.py` is a pure function over
 a trace — no model, no tolerance, no policy. Anything that wants to read an evidence graph (the
@@ -125,7 +126,7 @@ GRACE turn to keep a correction from costing the run its answer.
 
 ## Target structure
 
-Following `REFACTOR.md`'s rule — organize by layer of the stack, so the directory tree *is* the
+Following the refactor plan's rule — organize by layer of the stack, so the directory tree *is* the
 reference architecture:
 
 ```
@@ -240,8 +241,8 @@ separate mechanisms that happen to be gated by the same flag.
 `declared_purpose` was R10, and it moved — nothing above R9 was published, so it cost nothing.
 
 `governed_numbers` is **R7, and it is published**, so it stays. Splitting it would renumber a
-ladder whose numbers appear in results and on every stored row; `REFACTOR.md` invariant 1
-requires old runs to stay re-gradeable and invariant 4 requires published numbers to stay
+ladder whose numbers appear in results and on every stored row; the refactor plan's invariant 1
+requires old runs to stay re-gradeable and its invariant 4 requires published numbers to stay
 recomputable. So one declaration remains misfiled as a guardrail, and it is written down here
 rather than pretended away. It moves with the Workstream A rename, which already carries a
 migration.

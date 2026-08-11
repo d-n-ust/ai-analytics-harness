@@ -1,7 +1,7 @@
 """Prove this layer works, and print what a real semantic layer shows an agent.
 
     PYTHONPATH=. uv run --group metricflow python \
-        experiments/04_semantic_layer_health/02_segment__mf/check.py
+        experiments/04_repair_matrix/02_segment__mf/check.py
 
 Three things are checked, because each one was an open question before this folder existed:
 

@@ -2,7 +2,7 @@
 
     ./bench study                                  the tree: every experiment and its studies
     ./bench study 02_segment --reps 3       bare names resolve if unambiguous
-    ./bench study 04_semantic_layer_health/02_segment --mock
+    ./bench study 04_repair_matrix/02_segment --mock
 
 TWO LEVELS, BECAUSE THE WORK HAS TWO LEVELS. An EXPERIMENT is a week that ends in an article; a
 STUDY is one runnable comparison inside it. Only experiment 04 has studies — 01 and 02 are sweeps
@@ -26,7 +26,7 @@ with every run still green. So an arm declares only its DELTA and the full layer
 generated files cannot drift, and the treatment is legible without a diff.
 
 THE ARM'S LETTER IS A MATRIX COLUMN, NOT AN INDEX, and it means the same thing in every study.
-The five columns of 04_semantic_layer_health/primitives_matrix.md, and `COLUMNS` below is the only
+The five columns of 04_repair_matrix/primitives_matrix.md, and `COLUMNS` below is the only
 place their spelling is fixed:
 
     A_implicit    the fact is true in the data and stated nowhere
@@ -50,7 +50,7 @@ no cell says `fills_matrix_row: false` instead — `00_catalogue_format` varies 
 A_prose is not an A_implicit and must never be read as one.
 
 A STUDY'S NUMBER IS ITS ROW IN THE PRIMITIVES MATRIX. `01_entity`, `02_segment`, `05_additivity`
-name rows 1, 2 and 5 of 04_semantic_layer_health/primitives_matrix.md, so a folder listing reads as
+name rows 1, 2 and 5 of 04_repair_matrix/primitives_matrix.md, so a folder listing reads as
 the framework rather than as a chronology.
 
     00        reserved for prerequisites that fill no cell. `00_catalogue_format` asks whether the
@@ -381,7 +381,7 @@ def tree() -> str:
 
 # THE MATRIX COLUMNS, and the only place their spelling is fixed.
 #
-# A letter names an intervention from ../04_semantic_layer_health/primitives_matrix.md, and it means
+# A letter names an intervention from ../04_repair_matrix/primitives_matrix.md, and it means
 # the same thing in every study — that is what makes two rows comparable at a glance. A variant of a
 # column suffixes its letter (`C_modelled_documented`); it never takes a letter of its own, because
 # a letter that has to be looked up has stopped being a column.
@@ -392,7 +392,7 @@ COLUMNS = {"A": "implicit", "B": "documented", "C": "modelled", "D": "declared",
 # an arm that exists but is a weaker form of the column than another study's, so it still needs a
 # file. MEASURED_ELSEWHERE covers a column that IS filled, but by something other than an arm of
 # this study — 05_additivity's enforced cell was measured by moving the whole study between two
-# guardrail cells, because the check is a property of the guardrails and not of the layer. See 04_semantic_layer_health/02_segment__mf/study.yml for the case that motivated it.
+# guardrail cells, because the check is a property of the guardrails and not of the layer. See 04_repair_matrix/02_segment__mf/study.yml for the case that motivated it.
 NO_ARM = ("CONSTANT", "ABSENT", "OPEN", "MEASURED_ELSEWHERE")
 
 # VARIANTS A COLUMN IS EXPECTED TO ACCOUNT FOR. Documentation is a property any shape can have
@@ -578,7 +578,7 @@ class Study:
     def resolve(name: str) -> Path:
         """A study's directory, from either its full path or its bare name.
 
-        Nesting made the honest identifier long — `04_semantic_layer_health/02_segment` — and
+        Nesting made the honest identifier long — `04_repair_matrix/02_segment` — and
         a name nobody will type is a name nobody uses. So the bare `02_segment` resolves too,
         as long as it is unambiguous; ambiguity is reported rather than guessed at."""
         studies = Study.discover()
@@ -1224,7 +1224,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     # Mirror the source layout: results/experiments/<experiment>/<stamp>-<study>. A study's name
     # contains a slash now, so gluing the timestamp to the whole thing attached it to the
-    # EXPERIMENT and made the study a subdirectory — `20260806-234210-04_semantic_layer_health/
+    # EXPERIMENT and made the study a subdirectory — `20260806-234210-04_repair_matrix/
     # 02_segment-mock`. Runs were findable but misnamed, and a `*-mock` glob no longer
     # matched them, so cleanup silently skipped every mock run it was meant to remove.
     experiment, _, study_name = study.name.partition("/")
