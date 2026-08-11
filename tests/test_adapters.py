@@ -207,14 +207,18 @@ def test_a_refused_request_becomes_a_row_and_a_broken_key_still_stops_the_run():
         try:
             _call(raises(Refusal(status)))
         except ProviderError:
-            raise AssertionError(f"{status} was swallowed into a row; it will refuse every row")
+            raise AssertionError(
+                f"{status} was swallowed into a row; it will refuse every row"
+            ) from None
         except Refusal:
             pass
 
     try:                                         # not a provider refusal at all
         _call(raises(TypeError("a defect in this code")))
     except ProviderError:
-        raise AssertionError("a TypeError became an error row and stopped being a visible bug")
+        raise AssertionError(
+            "a TypeError became an error row and stopped being a visible bug"
+        ) from None
     except TypeError:
         pass
 
@@ -231,8 +235,7 @@ def test_every_guardrail_metricflow_may_run_can_actually_run():
     This drives the real guardrail against the real adapter with no model in the loop."""
     from pathlib import Path
 
-    from agent.guardrails import parse_cell
-    from agent.guardrails import before
+    from agent.guardrails import before, parse_cell
     from semantic.metricflow_engine import MetricFlowLayer
     from warehouse.warehouse import open_warehouse, set_star
 

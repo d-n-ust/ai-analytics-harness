@@ -210,8 +210,14 @@ LEFT JOIN first_moment fm ON du.user_id = fm.user_id;
 --
 -- GRAIN: one row is one subscription in one month during which it was active.
 CREATE OR REPLACE VIEW fct_subscription_months AS
+-- The month spine is derived here from agg_active_days, not read from mf_time_spine: that view
+-- belongs to the semantic layer's MetricFlow engine and is created lazily on its first use, so a
+-- star view depending on it fails on a freshly generated warehouse. Same bounds, same months.
 WITH months AS (
-    SELECT DISTINCT date_trunc('month', ds)::date AS snapshot_month FROM _star.mf_time_spine
+    SELECT UNNEST(generate_series(
+        date_trunc('month', (SELECT min(active_date) FROM agg_active_days))::date,
+        date_trunc('month', (SELECT max(active_date) FROM agg_active_days))::date,
+        INTERVAL 1 MONTH))::date AS snapshot_month
 )
 SELECT
     m.snapshot_month,
