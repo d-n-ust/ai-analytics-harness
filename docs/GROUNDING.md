@@ -11,7 +11,7 @@ bench run --rungs 1,2,3,4,5,6 --repeats 5     # the full grounding grid
 ## The six rungs
 
 Each rung adds one thing to the *same* agent (`agent/prompts.py` assembles it from `warehouse/` ·
-`semantic/` · `context/`).
+`semantic/` · `agent/context/`).
 
 | # | rung | what the agent gets | failure it removes | unlocks |
 |---|------|---------------------|--------------------|---------|

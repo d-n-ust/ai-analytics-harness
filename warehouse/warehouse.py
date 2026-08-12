@@ -13,8 +13,10 @@ from pathlib import Path
 
 import duckdb
 
+# Import rather than recompute: see warehouse/config.py:default_db.
+from warehouse.config import default_db
+
 _HERE = Path(__file__).resolve().parent
-DB_PATH = _HERE / "warehouse.duckdb"      # the generated warehouse (gitignored)
 STAR_SQL = _HERE / "star.sql"             # the clean dim_/fct_ views over the raw tables
 
 RAW_TABLES = ("u", "hab", "evt", "subs", "spend", "ref")
@@ -110,16 +112,19 @@ def set_star(con, enabled: bool) -> None:
     """Toggle the star views. Rung 1 runs with them dropped, so the messy-data baseline
     is genuinely raw-only — a model can't quietly query the clean tables and cheat."""
     create_star(con) if enabled else drop_star(con)
+    # Re-point the connection: it may be scoped at a schema this call just dropped or created.
+    _scope(con)
 
 
 def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     """Open the warehouse and (by default) create the star views on top of the raw tables."""
-    if not DB_PATH.exists():
+    db = default_db()
+    if not db.exists():
         raise FileNotFoundError(
-            f"{DB_PATH} not found — run `bench data` (or `make data`) first."
+            f"{db} not found — run `bench data` (or `make data`) first."
         )
-    con = duckdb.connect(str(DB_PATH))
-    from warehouse.environment import SOURCE, ensure_source
+    con = duckdb.connect(str(db))
+    from warehouse.environment import ensure_source
     ensure_source(con)
     if create_star_views:
         create_star(con)
@@ -127,8 +132,24 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     # The DEFAULT connection sees everything, so every existing caller — the semantic layer, gold
     # SQL, `bench query`, the tests — keeps working with unqualified names. Only an ARM's cursor is
     # narrowed, and that narrowing is the experiment.
-    con.execute(f"SET search_path='{STAR_SCHEMA},{SOURCE}'")
+    _scope(con)
     return con
+
+
+def _scope(target) -> None:
+    """Point `target` at the shared warehouse's schemas — whichever of them exist.
+
+    Built by inspection rather than hardcoded to `_star,_source`, because rung 1 runs with the
+    star DROPPED (`set_star(con, False)` removes the whole schema, CASCADE) and DuckDB treats a
+    missing schema in a search_path as a catalog error, not a no-op. A fixed pair therefore
+    raised on exactly the raw-data baseline the grounding ladder is measured against.
+    """
+    from warehouse.environment import SOURCE
+    present = {r[0] for r in target.execute(
+        "SELECT schema_name FROM information_schema.schemata").fetchall()}
+    path = [s for s in (STAR_SCHEMA, SOURCE) if s in present]
+    if path:
+        target.execute(f"SET search_path='{','.join(path)}'")
 
 
 def cursor(con):
@@ -138,9 +159,8 @@ def cursor(con):
     now that the tables live in `_source` and `_star`. So a thread that made its own cursor could
     see nothing at all. Arms with their own environment get `Environment.cursor`; everything else
     gets this, and neither should ever call `con.cursor()` directly."""
-    from warehouse.environment import SOURCE
     cur = con.cursor()
-    cur.execute(f"SET search_path='{STAR_SCHEMA},{SOURCE}'")
+    _scope(cur)
     return cur
 
 

@@ -1,5 +1,5 @@
 """Sanity-check the generated warehouse: confirm each trap and the injected anomaly
-are actually present. Run with `uv run python data/verify.py`.
+are actually present. Run with `bench verify`.
 
 This is a dev/repro tool, not part of the agent. If these invariants hold, the eval's
 gold answers and the diagnostic tier are well-founded.
@@ -7,15 +7,25 @@ gold answers and the diagnostic tier are well-founded.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import duckdb
 
-DB = Path(__file__).resolve().parent / "warehouse.duckdb"
+from warehouse.config import default_db
+from warehouse.environment import SOURCE
 
 
 def main() -> None:
-    con = duckdb.connect(str(DB), read_only=True)
+    con = duckdb.connect(str(default_db()), read_only=True)
+    # The raw tables start in `main` and are moved to `_source` the first time the warehouse is
+    # opened the harness's way. This checks them by unqualified name, so without a search_path it
+    # silently found nothing after that move: every query returned zero rows and every section
+    # printed its header and no body. Scope the connection to wherever they actually are.
+    #
+    # Read-only, so nothing here can create the schema — if `_source` is absent the tables are
+    # still in `main`, which is always searched, and the unqualified names resolve anyway.
+    present = {r[0] for r in con.execute(
+        "SELECT schema_name FROM information_schema.schemata").fetchall()}
+    if SOURCE in present:
+        con.execute(f"SET search_path='{SOURCE}'")
 
     print("=" * 78)
     print("WEEKLY VALUE-MOMENT DECOMPOSITION (last 10 complete weeks)")
@@ -103,5 +113,4 @@ def main() -> None:
     con.close()
 
 
-if __name__ == "__main__":
-    main()
+# No __main__ block — see the note at the foot of generate.py. `bench verify` is the entry point.

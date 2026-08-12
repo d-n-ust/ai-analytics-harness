@@ -22,6 +22,7 @@ from agent.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
 from agent.protocol import Protocol
 from agent.providers import get_model, get_verifier
 from agent.rungs import capabilities
+from warehouse.warehouse import cursor as scoped_cursor
 from warehouse.warehouse import open_warehouse, set_star
 
 from . import report
@@ -104,9 +105,14 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
         # Each task gets its OWN DuckDB cursor — a connection sharing the catalog, so it sees the
         # star views set once per rung; one connection per thread is DuckDB's thread-safe pattern.
         # The model objects are shared: the provider SDK clients are thread-safe.
+        #
+        # Via warehouse.cursor, never con.cursor(). A bare cursor starts on the default
+        # search_path, which is `main`, and `main` is empty now that the tables live in `_source`
+        # and `_star` — so every table lookup raised a catalog error. warehouse.cursor exists for
+        # exactly this and says so in its docstring; this call site was the one that ignored it.
         rung, rrung, cfg_label, gr, proto, rep, q = task
         with cursor_lock:
-            cur = con.cursor()
+            cur = scoped_cursor(con)
         try:
             grounding = build_grounding(cur, rung, guardrails=gr, protocol=proto)
             t0 = time.perf_counter()

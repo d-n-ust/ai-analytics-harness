@@ -32,6 +32,8 @@ import numpy as np
 import pandas as pd
 from faker import Faker
 
+from warehouse.config import default_db
+
 # --------------------------------------------------------------------------- #
 # Parameters (all documented; tweak here, everything downstream follows)
 # --------------------------------------------------------------------------- #
@@ -47,8 +49,6 @@ ANOMALY_WEEK_START = dt.date(2026, 7, 6)
 REMINDER_RATE_BASE = 0.42             # share of active days with a reminder click...
 REMINDER_RATE_ANOMALY = 0.30          # ...which drops after a notification change (42% -> 30%)
 DAYS_SHRINK_ANOMALY = 0.72            # multiply per-user daily-return propensity in the anomaly week
-
-OUT_PATH = Path(__file__).resolve().parent / "warehouse.duckdb"
 
 APAC = ("PH", "ID", "IN")             # tuple -> deterministic order (sets of str are not)
 APAC_SET = set(APAC)
@@ -311,7 +311,10 @@ def write_warehouse(tables: dict[str, pd.DataFrame], out_path: Path) -> None:
         con.close()
 
 
-def generate(seed: int = SEED, out_path: Path = OUT_PATH) -> dict[str, int]:
+# Resolved on call, not at import: a default argument freezes the value at import time,
+# so AAH_WAREHOUSE_DB set after this module loads would be silently ignored.
+def generate(seed: int = SEED, out_path: Path | None = None) -> dict[str, int]:
+    out_path = out_path or default_db()
     rng = np.random.default_rng(seed)
     fake = Faker()
     Faker.seed(seed)
@@ -332,8 +335,7 @@ def generate(seed: int = SEED, out_path: Path = OUT_PATH) -> dict[str, int]:
     return {name: len(df) for name, df in tables.items()}
 
 
-if __name__ == "__main__":
-    counts = generate()
-    print("wrote", OUT_PATH)
-    for name, n in counts.items():
-        print(f"  {name:6s} {n:>8,d} rows")
+# No __main__ block. This module imports `warehouse.config`, so running it as a script puts its
+# own directory on sys.path, `warehouse` resolves to nothing, and the import fails. A block that
+# cannot execute is worse than no block: it advertises an entry point that does not exist.
+# `bench data` is the entry point, and it prints the same counts.

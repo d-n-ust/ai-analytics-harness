@@ -25,6 +25,93 @@ jobs:
       - name: Run the no-LLM test suite
         run: uv run python -m cli test
 
+      # The suite above proves guardrail behaviour; it does not run the experiment. A catalog
+      # error in the runner passed every test and failed every run — because nothing here ever
+      # called `bench run`. The mock model needs no key and no money, so there is no reason not to.
+      - name: Run the experiment end-to-end on the mock model
+        run: uv run python -m cli run --mock
+
+      # Exit 0 is not the assertion. The runner catches per-row exceptions and records them as
+      # error rows, so a run where every single question died still finishes successfully and
+      # writes a summary — which is precisely the state the catalog bug left it in. Check the
+      # output instead: rows were produced, and none of them died.
+      - name: Assert the run actually produced answers
+        run: |
+          uv run python - <<'PY'
+          import json, pathlib, sys
+          summary = json.loads(pathlib.Path("results/latest/summary.json").read_text())
+          rows = summary["meta"]["n_rows"]
+          dead = summary.get("dead_rows") or []
+          if not rows:
+              sys.exit("the run produced no rows at all")
+          if dead:
+              sys.exit(f"{len(dead)} of {rows} rows died: {dead[:3]}")
+          print(f"{rows} rows, none dead")
+          PY
+
+  # Builds a real wheel and imports it in an isolated environment. An editable install is a .pth
+  # file containing the repo root, so every top-level directory imports whether or not the build
+  # config declares it — which is how `evidence` went missing from the packages list, and
+  # `context/` was resolved from a path that only exists in a checkout, with nothing failing.
+  # setuptools' own docs say it: "When in doubt, please test your projects as installed via a
+  # regular wheel."
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Build the wheel
+        run: uv build --wheel --out-dir dist/
+
+      # Run from OUTSIDE the checkout. Python puts the working directory on sys.path, so from the
+      # repo root every import resolves to the source tree and the wheel is never exercised —
+      # `--isolated --no-project` does not prevent that. This job passed while testing nothing
+      # until it was moved out of the checkout.
+      - name: Import it with nothing else on the path
+        working-directory: /tmp
+        run: |
+          uv run --isolated --no-project --with "$GITHUB_WORKSPACE"/dist/*.whl python - <<'PY'
+          import pathlib
+          import agent.loop, agent.guardrails, agent.prompts as prompts
+          import semantic.semantic, semantic.tree
+          import evidence
+          from warehouse.environment import GRAIN_DIR, PRESETS_DIR
+
+          # Package DATA travels with the package, or the failure is silent: a prompt assembles
+          # short, a metric catalogue comes back empty, the star never builds. Every non-.py file
+          # the engine reads at runtime is asserted here, because a wheel that imports cleanly
+          # and then cannot find its own definitions is the exact failure this job exists for.
+          assert prompts._VERIFIED.exists(), "context/verified_queries.yml missing from the wheel"
+          assert prompts._KB.exists(), "context/knowledge_base.md missing from the wheel"
+          assert any(GRAIN_DIR.glob("*.sql")), "warehouse/grain/*.sql missing from the wheel"
+          assert any(PRESETS_DIR.glob("*.sql")), "warehouse/presets/*.sql missing from the wheel"
+
+          from warehouse.warehouse import STAR_SQL
+          assert STAR_SQL.exists(), "warehouse/star.sql missing from the wheel"
+
+          # Load the specs rather than stat them: a file that exists but parses to nothing is a
+          # subtler version of the same defect.
+          spec = semantic.semantic.SPEC_PATH
+          tree = semantic.tree.SPEC_PATH
+          assert spec.exists(), "semantic/semantic_layer.yml missing from the wheel"
+          assert tree.exists(), "semantic/metric_tree.yml missing from the wheel"
+          import yaml
+          assert yaml.safe_load(spec.read_text())["metrics"], "the semantic layer loaded empty"
+          assert yaml.safe_load(tree.read_text())["nodes"], "the metric tree loaded empty"
+
+          # Generated data must never land inside site-packages, where the user cannot find it
+          # and the next upgrade deletes it.
+          from warehouse.config import default_db
+          try:
+              default_db()
+          except RuntimeError:
+              pass
+          else:
+              raise SystemExit("default_db() returned a path from an installed package")
+          print("wheel imports clean")
+          PY
+
   # troodos is a separate package with its own dependency set and its own lint rules (it bans
   # driver imports outside the adapter packages), so it gets its own job rather than riding on
   # the harness's. The last step is the one that matters: it walks the exact path a person who

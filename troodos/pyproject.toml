@@ -33,10 +33,13 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-# Editable is required, not preferred: `agent/prompts.py` resolves `context/` relative to the
-# package's parent, and `semantic/` reads its YAML from beside its own source. A wheel install
-# relocates both and they break. Editable leaves the files on disk where the path arithmetic
-# expects them.
+# A path dependency, so this resolves only from inside a clone. Editable additionally means the
+# harness is imported from the working tree rather than a copy, which is what makes a change
+# there visible here without a reinstall.
+#
+# It is no longer a correctness requirement — `context/` now lives inside the agent package and
+# the harness's own data files were always resolved relative to their own source, so a real
+# wheel works. Vendoring the engine is what removes this dependency; nothing else does.
 ai-analytics-harness = { path = "..", editable = true }
 
 [project.optional-dependencies]

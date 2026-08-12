@@ -130,7 +130,9 @@ PRESETS_DIR = _HERE / "presets"
 # in an arm must point at something a reader can open. Documentation used to be switched on by a
 # RUNG NUMBER (1.5 meant "documented"), which made two arms differing only in documentation look
 # identical in their declarations — the exact opacity this whole module exists to remove.
-DOCS_DIR = _HERE / "docs"
+# Named `grain` rather than `docs` because a second directory called docs, one level
+# down from the repo's own docs/, made every grep for either return both.
+GRAIN_DIR = _HERE / "grain"
 
 
 def presets() -> tuple[str, ...]:
@@ -161,10 +163,10 @@ def build(con, schema: str, spec: dict | None = None) -> Environment:
     docs_sql = ""
     declared = spec.get("docs")
     if declared:
-        doc_path = DOCS_DIR / f"{declared}.sql"
+        doc_path = GRAIN_DIR / f"{declared}.sql"
         if not doc_path.exists():
             raise ValueError(f"unknown docs preset {declared!r}; available: "
-                             f"{sorted(q.stem for q in DOCS_DIR.glob('*.sql'))}")
+                             f"{sorted(q.stem for q in GRAIN_DIR.glob('*.sql'))}")
         docs_sql = doc_path.read_text()
 
     return Environment(schema=schema, preset_sql=path.read_text(), docs_sql=docs_sql,

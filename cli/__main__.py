@@ -42,9 +42,12 @@ def _run_dir(arg):
 
 
 def cmd_data(a):
-    from warehouse.generate import OUT_PATH, generate
-    counts = generate()
-    print(f"wrote {OUT_PATH}")
+    from warehouse.config import default_db
+    from warehouse.generate import generate
+
+    out = default_db()
+    counts = generate(out_path=out)
+    print(f"wrote {out}")
     for name, n in counts.items():
         print(f"  {name:6s} {n:>8,d} rows")
 
@@ -64,9 +67,12 @@ def cmd_ask(a):
     from agent import ask_one
     from agent.guardrails import parse_cell
     from agent.protocol import Protocol
+    from cli.trace import render
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
+    # The renderer is passed IN. The engine has no way to reach cli/, by design.
     ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails,
-            protocol=Protocol.parse(a.protocol), verbose=not a.trace, trace=a.trace)
+            protocol=Protocol.parse(a.protocol), verbose=not a.trace,
+            trace=render if a.trace else None)
 
 
 def _rows_for(a) -> list:

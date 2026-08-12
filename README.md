@@ -49,7 +49,7 @@ A canonical agent, named the way the field names it:
 - **Tools** (`agent/tools.py`) — the action space: governed metric queries, raw SQL (until
   `tool_restriction` removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
   `clarify`, so every run ends in a *typed outcome*, never a sentence to grep.
-- **Context** (`agent/prompts.py` + `agent/rungs.py`, over `warehouse/` · `semantic/` · `context/`) — what the agent is
+- **Context** (`agent/prompts.py` + `agent/rungs.py`, over `warehouse/` · `semantic/` · `agent/context/`) — what the agent is
   given: the star schema, the semantic layer, verified example queries, the knowledge base, the
   metric tree. This is the grounding-ladder axis.
 - **Guardrails** (`agent/guardrails/`) — the reliability stack, grouped by where each sits in a
@@ -290,7 +290,9 @@ measured, instead of costing a re-run.
 ```
 warehouse/    the data platform: generator, DuckDB I/O, star schema (dim_/fct_ views)
 semantic/     the governed model: the semantic layer (metrics/segments) + the metric tree
-context/      what the agent is GIVEN: verified example queries + the knowledge base (text, no code)
+agent/context/  what the agent is GIVEN: verified example queries + the knowledge base (text, no
+              code). Inside the package because they are package data: a wheel that leaves them
+              behind assembles a prompt that is silently short.
 agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
               guardrails, the answer verifier, and the declaration protocol
 evidence/     what an answer DECLARED, resolved against the trace it was built from, and the

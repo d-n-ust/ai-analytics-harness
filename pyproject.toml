@@ -30,22 +30,21 @@ metricflow = [
     "metricflow>=0.211.0",
 ]
 
-# The harness is still a runnable app first. It is made installable only so that the product
-# package in `troodos/` can depend on it as an EDITABLE path dependency during development.
+# The harness is a runnable app first, and installable second, so that `troodos/` can depend on
+# it during development.
 #
-# Editable is not a preference, it is a requirement: `agent/prompts.py` resolves `context/`
-# relative to the package's parent directory, and `semantic/` reads its YAML from beside its
-# own source. A normal wheel install relocates those and both break. An editable install
-# leaves every file where it is, so the path arithmetic keeps working.
-#
-# This is the ONE concession to the product living in the same tree. Nothing here is for the
-# product's benefit beyond making imports resolve; the harness's behaviour is unchanged.
+# `evidence` is in this list because `agent/loop.py` imports it at MODULE level. It was omitted
+# once, and nothing noticed: an editable install is a .pth file containing the repo root, so
+# every top-level directory imports whether or not it is declared here. The list was dead config
+# and the wheel was broken for as long as nobody built one. The clean-wheel job in CI exists to
+# make that impossible to repeat — it installs a real wheel into an isolated environment and
+# imports it, which is the only way this file's claims get tested.
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["agent", "semantic", "warehouse", "cli", "evals"]
+packages = ["agent", "semantic", "warehouse", "evidence", "cli", "evals"]
 
 [tool.ruff]
 line-length = 110

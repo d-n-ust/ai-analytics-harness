@@ -75,8 +75,34 @@ def _call(create, **kw):
 def load_env() -> None:
     """Read `.env` from the repo root. Public because more than one subsystem needs a key and the
     path to that file should be written down once."""
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+    from dotenv import find_dotenv, load_dotenv
+
+    # Three sources, most explicit first, because each covers a case the others cannot.
+    #
+    #   AAH_ENV_FILE  an explicit path. The only thing that works when the package is installed
+    #                 as a wheel, where there is no checkout to look beside.
+    #   beside this   the historical behaviour: the repo root, one level up from this package.
+    #                 Keeps working for anyone running from anywhere inside a checkout, including
+    #                 `troodos ask` invoked from another directory entirely.
+    #   from the CWD  a .env in the directory the user is actually working in, for a checkout
+    #                 that has none of its own.
+    #
+    # An earlier version of this used find_dotenv alone and dropped the second source. That looked
+    # more general and was strictly worse: find_dotenv walks up from the WORKING directory and
+    # returns "" when it finds nothing, so running from outside the checkout silently loaded no
+    # key at all — surfacing much later as an SDK authentication error rather than as a missing
+    # file. Never let a resolution failure become someone else's error message.
+    candidates = [
+        os.environ.get("AAH_ENV_FILE"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, ".env"),
+        find_dotenv(usecwd=True) or None,
+    ]
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            # override=False: a variable already exported wins over any file. A CI secret must not
+            # be silently replaced by a stray .env in the working directory.
+            load_dotenv(candidate, override=False)
+            return
 
 
 def _args(raw) -> dict:

@@ -14,9 +14,12 @@ import yaml
 from .protocol import ROLE, Protocol
 from .rungs import capabilities
 
-_ROOT = Path(__file__).resolve().parent.parent
-_VERIFIED = _ROOT / "context" / "verified_queries.yml"
-_KB = _ROOT / "context" / "knowledge_base.md"
+# Resolved inside this package, not from the repo root. The files are package data and must
+# travel with the wheel; reaching a level up found them from a checkout and found nothing at
+# all from site-packages, which surfaced as a missing-file error at prompt-assembly time.
+_HERE = Path(__file__).resolve().parent
+_VERIFIED = _HERE / "context" / "verified_queries.yml"
+_KB = _HERE / "context" / "knowledge_base.md"
 
 _BASE = (
     "You are a data analyst for a habit-tracking app. Today is 2026-07-16; "

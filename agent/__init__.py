@@ -24,12 +24,19 @@ from .models import DEFAULT_MODEL
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
             protocol=None, mock: bool = False, verbose: bool = False, con=None,
-            trace: bool = False):
+            trace=None):
     """Ask one question at one rung and return the typed Answer.
 
-    `trace` prints the full run — every model call, every tool call, every guardrail that acted —
-    rendered from the Answer itself. Nothing is instrumented for it: the loop already records all
-    of it, so the same view works on a stored run."""
+    `trace` is a RENDERER — a callable taking the run row and returning text — not a boolean.
+    Passing one prints the full run: every model call, every tool call, every guardrail that
+    acted. Nothing is instrumented for it; the loop already records all of it, so the same view
+    works on a stored run.
+
+    It is a parameter rather than an import because the renderer lives in `cli/`, and this was
+    the one place the engine reached into the apparatus. Inverting it means every dependency now
+    points apparatus -> engine, which is what lets the engine be installed, tested, and one day
+    shipped without the harness. The alternative — guarding the import — would leave the name
+    unbound at the call site below and raise NameError instead of degrading.""" 
     from warehouse.warehouse import open_warehouse, set_star
 
     from .grounding import RUNG_NAMES, build_grounding
@@ -42,9 +49,8 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol)
     live = get_model(model, mock=mock)
     result = run_agent(question, grounding, live)
-    if trace:
-        from cli.trace import render
-        print(render(as_row(result, grounding, getattr(live, "reasoning", None))))
+    if trace is not None:
+        print(trace(as_row(result, grounding, getattr(live, "reasoning", None))))
         return result
     if verbose:
         print(f"\nrung {rung} ({RUNG_NAMES[rung]}) · model={model}")
