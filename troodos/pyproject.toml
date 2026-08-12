@@ -1,0 +1,93 @@
+[project]
+name = "troodos"
+version = "0.0.1"
+description = "An agentic data analyst that answers questions over a governed semantic layer — and refuses when the grounding will not support the question."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+# The engine deliberately carries no scientific-Python dependency. `duckdb` is the only native
+# extension in the default install; `anthropic` and `openai` are imported inside functions, so
+# neither is paid for at startup. Keeping this list short is what makes a signed, notarized
+# bundle tractable later — every added wheel is another Mach-O object to re-sign.
+dependencies = [
+    "duckdb>=1.1",
+    "pyyaml>=6",
+    # TEMPORARY, and deliberately marked as such.
+    #
+    # The agent, guardrails and semantic compiler currently come from the research harness rather
+    # than being vendored here. That is a speed decision: it skips copying ~2,100 LOC before the
+    # product has proven it wants them in that shape.
+    #
+    # It is reversible, but not free. What it costs while it stands:
+    #   - the harness cannot be frozen, because the product's behaviour depends on it;
+    #   - the harness's coupling (rung ordinals, a DuckDB connection handle as the data
+    #     interface, a clock pinned to 2026-07-16) reaches into the product through
+    #     `troodos.engine`, which is why that adapter exists rather than direct imports;
+    #   - the product cannot ship, since a path dependency does not install for anyone else.
+    #
+    # The exit is `troodos/engine.py` and nothing else: every import of harness code goes through
+    # that one module. Vendoring later means changing that file, not every call site.
+    "ai-analytics-harness",
+]
+
+[tool.uv.sources]
+# Editable is required, not preferred: `agent/prompts.py` resolves `context/` relative to the
+# package's parent, and `semantic/` reads its YAML from beside its own source. A wheel install
+# relocates both and they break. Editable leaves the files on disk where the path arithmetic
+# expects them.
+ai-analytics-harness = { path = "..", editable = true }
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40"]
+openai = ["openai>=1.40"]
+all = ["anthropic>=0.40", "openai>=1.40"]
+
+[project.scripts]
+troodos = "troodos.cli.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.7,<0.9"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "troodos"
+module-root = "src"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "hypothesis>=6.100",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "TID"]
+# E501: many governed prompts and docstrings are intentionally long single strings.
+# TID252: relative imports inside a package are idiomatic and keep the package relocatable.
+# TID251 — the banned-api rule below — is the one this project actually wants from TID.
+ignore = ["E501", "TID252"]
+
+# The one architectural rule worth enforcing mechanically: the engine must never import a
+# concrete driver. Everything below `agent/`, `guardrails/` and `semantic/` talks to the
+# Warehouse / Dialect / Model protocols, never to duckdb, psycopg, snowflake, or an SDK.
+# Promoting `warehouse/` to a separate distribution later is then a packaging change, not a
+# refactor. `test_boundaries.py` asserts the same thing at runtime.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"duckdb".msg = "engine code must go through troodos.warehouse.base.Warehouse"
+"psycopg".msg = "engine code must go through troodos.warehouse.base.Warehouse"
+"snowflake".msg = "engine code must go through troodos.warehouse.base.Warehouse"
+
+[tool.ruff.lint.per-file-ignores]
+# The adapters are precisely where the concrete drivers are allowed to appear.
+"src/troodos/warehouse/*.py" = ["TID251"]
+"src/troodos/models/*.py" = ["TID251"]
+"tests/*.py" = ["TID251"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

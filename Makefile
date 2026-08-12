@@ -1,4 +1,4 @@
-.PHONY: install data verify smoke eval ask test clean
+.PHONY: install data verify smoke eval ask test clean troodos
 
 install:      ## Create the venv and install dependencies (uv)
 	uv sync
@@ -24,3 +24,16 @@ test:         ## Run the no-LLM test suite
 
 clean:        ## Remove the generated warehouse
 	rm -f warehouse/warehouse.duckdb warehouse/warehouse.duckdb.wal
+
+troodos:      ## Install the `troodos` CLI (editable) and set up a warehouse to try it on
+	uv tool install --editable ./troodos
+	uv run python -m cli data
+	@# Generating writes the raw tables to `main`; opening the warehouse the harness way is
+	@# what moves them to `_source` and builds the `_star` views the semantic layer reads.
+	@# Without this, `troodos ask --schema _star` cannot find a schema to answer from.
+	uv run python -m cli query "SELECT 1" >/dev/null
+	@echo
+	@echo "  troodos installed. Try it with no API key:"
+	@echo
+	@echo "    troodos ask --db warehouse/warehouse.duckdb --schema _star --mock \"how many active users?\""
+	@echo

@@ -1,0 +1,15 @@
+# This directory is self-contained so it can become its own repository by copying it out.
+# Its ignores live here rather than in the parent, so nothing is lost in that move.
+
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Local connection profiles and credentials never belong in version control.
+.env
+config.toml

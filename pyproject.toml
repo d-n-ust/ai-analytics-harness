@@ -30,9 +30,22 @@ metricflow = [
     "metricflow>=0.211.0",
 ]
 
-[tool.uv]
-# This is a runnable app, not an installable library — install deps only.
-package = false
+# The harness is still a runnable app first. It is made installable only so that the product
+# package in `troodos/` can depend on it as an EDITABLE path dependency during development.
+#
+# Editable is not a preference, it is a requirement: `agent/prompts.py` resolves `context/`
+# relative to the package's parent directory, and `semantic/` reads its YAML from beside its
+# own source. A normal wheel install relocates those and both break. An editable install
+# leaves every file where it is, so the path arithmetic keeps working.
+#
+# This is the ONE concession to the product living in the same tree. Nothing here is for the
+# product's benefit beyond making imports resolve; the harness's behaviour is unchanged.
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent", "semantic", "warehouse", "cli", "evals"]
 
 [tool.ruff]
 line-length = 110

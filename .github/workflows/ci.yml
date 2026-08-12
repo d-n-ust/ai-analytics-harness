@@ -24,3 +24,43 @@ jobs:
 
       - name: Run the no-LLM test suite
         run: uv run python -m cli test
+
+  # troodos is a separate package with its own dependency set and its own lint rules (it bans
+  # driver imports outside the adapter packages), so it gets its own job rather than riding on
+  # the harness's. The last step is the one that matters: it walks the exact path a person who
+  # cloned this repository walks, and fails if `troodos` cannot be installed and run.
+  troodos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: troodos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Lint (ruff)
+        run: uv run --group dev ruff check .
+
+      - name: Run the test suite
+        run: uv run --group dev pytest -q
+
+      - name: Install and answer a question, as a fresh clone would
+        working-directory: .
+        run: |
+          uv tool install --editable ./troodos
+          uv run python -m cli data
+          # Generating writes the raw tables to `main`; opening the warehouse the harness way
+          # is what moves them to `_source` and builds the `_star` views the semantic layer
+          # reads. Without this there is no schema for troodos to answer from.
+          uv run python -m cli query "SELECT 1" > /dev/null
+          troodos --version
+          troodos inspect warehouse/warehouse.duckdb --schema _star
+          # --mock is a deterministic stub model, so this needs no API key and costs nothing,
+          # while still exercising the whole path: connect, ground, run the agent loop, apply
+          # the guardrails, render a typed outcome.
+          troodos ask --db warehouse/warehouse.duckdb --schema _star --mock "how many active users?"
