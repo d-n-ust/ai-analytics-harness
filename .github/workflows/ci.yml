@@ -136,18 +136,40 @@ jobs:
       - name: Run the test suite
         run: uv run --group dev pytest -q
 
-      - name: Install and answer a question, as a fresh clone would
+      # NON-editable, and run from outside the checkout. Editable is precisely the mode that
+      # conceals missing package data — it leaves every file where it already is, so a package the
+      # build config forgot to declare imports anyway. Installing the built wheel is the only way
+      # to find out what a stranger actually receives.
+      - name: Install the built product and answer a question, as a stranger would
         working-directory: .
         run: |
-          uv tool install --editable ./troodos
           uv run python -m cli data
           # Generating writes the raw tables to `main`; opening the warehouse the harness way
           # is what moves them to `_source` and builds the `_star` views the semantic layer
           # reads. Without this there is no schema for troodos to answer from.
           uv run python -m cli query "SELECT 1" > /dev/null
+
+          uv tool install ./troodos
           troodos --version
-          troodos inspect warehouse/warehouse.duckdb --schema _star
+          troodos inspect "$GITHUB_WORKSPACE/runs/warehouse.duckdb" --schema _star
           # --mock is a deterministic stub model, so this needs no API key and costs nothing,
           # while still exercising the whole path: connect, ground, run the agent loop, apply
           # the guardrails, render a typed outcome.
-          troodos ask --db warehouse/warehouse.duckdb --schema _star --mock "how many active users?"
+          cd /tmp
+          troodos ask --db "$GITHUB_WORKSPACE/runs/warehouse.duckdb" --schema _star --mock \
+            "how many active users?"
+
+      # The product must get the engine and NOTHING ELSE. If the apparatus is reachable from
+      # troodos's environment, the separation is nominal: the engine cannot be published without
+      # it, and the product installs pandas, numpy and faker it never calls.
+      - name: Assert the apparatus is absent from the product's environment
+        run: |
+          uv run python - <<'PY'
+          import importlib.util as u
+          import agent, semantic, warehouse   # noqa: F401 — the engine must be present
+          leaked = [m for m in ("cli", "evals", "experiments", "scratchpad",
+                                "pandas", "numpy", "faker") if u.find_spec(m)]
+          if leaked:
+              raise SystemExit(f"the apparatus leaked into the product: {leaked}")
+          print("product environment holds the engine only")
+          PY

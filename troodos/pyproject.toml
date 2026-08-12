@@ -21,26 +21,26 @@ dependencies = [
     # product has proven it wants them in that shape.
     #
     # It is reversible, but not free. What it costs while it stands:
-    #   - the harness cannot be frozen, because the product's behaviour depends on it;
-    #   - the harness's coupling (rung ordinals, a DuckDB connection handle as the data
+    #   - the engine cannot be frozen, because the product's behaviour depends on it;
+    #   - the engine's coupling (rung ordinals, a DuckDB connection handle as the data
     #     interface, a clock pinned to 2026-07-16) reaches into the product through
     #     `troodos.engine`, which is why that adapter exists rather than direct imports;
     #   - the product cannot ship, since a path dependency does not install for anyone else.
     #
     # The exit is `troodos/engine.py` and nothing else: every import of harness code goes through
     # that one module. Vendoring later means changing that file, not every call site.
-    "ai-analytics-harness",
+    "ai-analytics-engine",
 ]
 
 [tool.uv.sources]
-# A path dependency, so this resolves only from inside a clone. Editable additionally means the
-# harness is imported from the working tree rather than a copy, which is what makes a change
-# there visible here without a reinstall.
+# The ENGINE, not the harness. troodos gets the agent, the semantic layer, the guardrails and the
+# warehouse adapters — and none of the apparatus that measures them, so `import cli` fails in this
+# environment and pandas, numpy and faker never arrive.
 #
-# It is no longer a correctness requirement — `context/` now lives inside the agent package and
-# the harness's own data files were always resolved relative to their own source, so a real
-# wheel works. Vendoring the engine is what removes this dependency; nothing else does.
-ai-analytics-harness = { path = "..", editable = true }
+# A path dependency only because the engine is not published. THIS IS THE LINE THAT CHANGES ON
+# SEPARATION DAY: it becomes `ai-analytics-engine = ">=0.1"`, and troodos leaves this repository
+# without touching a single import.
+ai-analytics-engine = { path = "../engine", editable = true }
 
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40"]

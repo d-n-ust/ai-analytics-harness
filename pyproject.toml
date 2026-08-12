@@ -1,59 +1,61 @@
 [project]
-name = "ai-analytics-harness"
-version = "0.1.0"
-description = "A controlled lab experiment: how much does structure (a schema, a semantic layer, a knowledge base, a metric tree) improve an LLM analyst's answers over messy data?"
-readme = "README.md"
+# A coordination shell, not a package. It exists so `uv sync` at the root resolves both members
+# into one environment and one lockfile, and so there is exactly one place that configures ruff
+# for the whole repository.
+#
+# The real packages are engine/ (ships) and harness/ (measures the engine, never ships). troodos/
+# is deliberately OUTSIDE the workspace: it is the product, it wants its own environment and its
+# own lockfile, and uv's own documentation sends that case to a path dependency rather than a
+# workspace member.
+name = "ai-analytics-workspace"
+version = "0.0.0"
+description = "Workspace root for the AI-analyst engine and its measurement harness."
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Dmitry Ustimov" }]
+
 dependencies = [
-    "duckdb>=1.1",
-    "anthropic>=0.40",
-    "openai>=1.40",
-    "pandas>=2.2",
-    "numpy>=1.26",
-    "faker>=30",
-    "pyyaml>=6",
-    "python-dotenv>=1.0",
-    "rich>=13",
+    "ai-analytics-engine",
+    "ai-analytics-harness",
 ]
 
+[tool.uv]
+# Nothing to build here. The root is a shell; `uv sync` installs the members.
+package = false
+
+[tool.uv.workspace]
+members = ["engine", "harness"]
+exclude = ["troodos"]
+
+[tool.uv.sources]
+ai-analytics-engine = { workspace = true }
+ai-analytics-harness = { workspace = true }
+
 [dependency-groups]
-# The structural guarantees are claimed to hold for ANY call, not just the handful a human
-# thought to enumerate. Hypothesis generates the call space so that claim is tested rather
-# than asserted; pytest is what CI already invokes the suite through.
 dev = [
     "hypothesis>=6.100",
     "pytest>=8",
 ]
-metricflow = [
-    "metricflow>=0.211.0",
-]
-
-# The harness is a runnable app first, and installable second, so that `troodos/` can depend on
-# it during development.
-#
-# `evidence` is in this list because `agent/loop.py` imports it at MODULE level. It was omitted
-# once, and nothing noticed: an editable install is a .pth file containing the repo root, so
-# every top-level directory imports whether or not it is declared here. The list was dead config
-# and the wheel was broken for as long as nobody built one. The clean-wheel job in CI exists to
-# make that impossible to repeat — it installs a real wheel into an isolated environment and
-# imports it, which is the only way this file's claims get tested.
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-packages = ["agent", "semantic", "warehouse", "evidence", "cli", "evals"]
 
 [tool.ruff]
 line-length = 110
 target-version = "py311"
 # Historical audit scripts and generated run artifacts are not part of the live surface.
-extend-exclude = ["experiments", "results"]
+extend-exclude = ["harness/experiments", "results", "runs"]
+
+# Where first-party code lives. Ruff resolves `src` against THIS FILE'S directory and defaults to
+# [".", "src"], so once the packages move under engine/src and harness/ it would classify every
+# one of them as third-party — isort then reshuffles every import block in the repo, and the
+# migration diff disappears into the noise. Set structurally here; the known-first-party list
+# below is the belt to the same braces.
+src = [".", "engine/src", "harness"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 # Many governed prompts and docstrings are intentionally long single strings; length isn't the
 # signal here. Keep the correctness rules (F/B), import order (I), and modern-Python (UP).
 ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent", "semantic", "warehouse", "evidence",
+                     "cli", "evals", "experiments", "scratchpad", "harness_paths"]

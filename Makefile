@@ -3,7 +3,7 @@
 install:      ## Create the venv and install dependencies (uv)
 	uv sync
 
-data:         ## (Re)generate the deterministic warehouse into warehouse/warehouse.duckdb
+data:         ## (Re)generate the deterministic warehouse into runs/warehouse.duckdb
 	uv run python -m cli data
 
 verify:       ## Check the generated data against its ground truth
@@ -22,8 +22,8 @@ ask:
 test:         ## Run the no-LLM test suite
 	uv run python -m cli test
 
-clean:        ## Remove the generated warehouse
-	rm -f warehouse/warehouse.duckdb warehouse/warehouse.duckdb.wal
+clean:        ## Remove everything a run regenerates (the warehouse, run output, built layers)
+	rm -rf runs/
 
 troodos:      ## Install the `troodos` CLI (editable) and set up a warehouse to try it on
 	uv tool install --editable ./troodos
@@ -35,5 +35,5 @@ troodos:      ## Install the `troodos` CLI (editable) and set up a warehouse to 
 	@echo
 	@echo "  troodos installed. Try it with no API key:"
 	@echo
-	@echo "    troodos ask --db warehouse/warehouse.duckdb --schema _star --mock \"how many active users?\""
+	@echo "    troodos ask --db runs/warehouse.duckdb --schema _star --mock \"how many active users?\""
 	@echo

@@ -5,7 +5,7 @@ on a laptop with no warehouse to provision (DuckDB, one file). It models a messy
 habit-tracking app, and it is deliberately hostile, so that *structure* has something to fix.
 
 ```
-bench data       # (re)generate warehouse/warehouse.duckdb
+bench data       # (re)generate runs/warehouse.duckdb
 bench verify     # check it against the generator's ground truth
 bench query "SELECT ..."   # run SQL with the clean dim_/fct_ views built
 ```

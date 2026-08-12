@@ -202,7 +202,7 @@ reader who sees one wrong red badge stops believing the green ones.
 
 ```bash
 make install      # uv sync
-make data         # generate warehouse/warehouse.duckdb (deterministic)
+make data         # generate runs/warehouse.duckdb (deterministic)
 make smoke        # end-to-end on a mock model — no API key needed
 # add your key:
 cp .env.example .env && $EDITOR .env   # OPENAI_API_KEY (and ANTHROPIC_API_KEY / DEEPSEEK_API_KEY as needed)
@@ -287,25 +287,46 @@ measured, instead of costing a re-run.
 
 ## Layout
 
+Three roles at the top level, and a directory belongs to exactly one of them: the code that
+ships, the apparatus that measures it, and the product built on it.
+
 ```
-warehouse/    the data platform: generator, DuckDB I/O, star schema (dim_/fct_ views)
-semantic/     the governed model: the semantic layer (metrics/segments) + the metric tree
-agent/context/  what the agent is GIVEN: verified example queries + the knowledge base (text, no
-              code). Inside the package because they are package data: a wheel that leaves them
-              behind assembles a prompt that is silently short.
-agent/        the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
-              guardrails, the answer verifier, and the declaration protocol
-evidence/     what an answer DECLARED, resolved against the trace it was built from, and the
-              question -> evidence -> answer chain a reader is shown. Pure lookups, no model — and
-              it decides nothing, which is what keeps it an instrument rather than a second judge
-evals/        the 65 questions (cases/), gold answers, the grader, and report.py (summary.md/json)
-cli/          the `bench` entry point (one dispatcher over every verb)
-experiments/  pre-registrations + findings logs
+engine/       WHAT SHIPS. Installable on its own; troodos depends on this and nothing else.
+  src/agent/       the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
+                   guardrails, the answer verifier, and the declaration protocol. `context/`
+                   sits inside it — verified example queries and the knowledge base are package
+                   data, and a wheel that leaves them behind assembles a silently short prompt
+  src/semantic/    the governed model: the semantic layer (metrics/segments) + the metric tree
+  src/warehouse/   the data platform: generator, DuckDB I/O, star schema (dim_/fct_ views)
+  src/evidence/    what an answer DECLARED, resolved against the trace it was built from. Pure
+                   lookups, no model — and it decides nothing, which is what keeps it an
+                   instrument rather than a second judge
+  tests/           tests that import nothing but engine packages
+
+harness/      WHAT MEASURES IT. Never ships, never installed by anyone but the maintainer.
+  evals/           the 65 questions (cases/), gold answers, the grader, report.py
+  experiments/     pre-registrations + findings logs
+  cli/             the `bench` entry point (one dispatcher over every verb)
+  scratchpad/      one-off analyses
+  harness_paths/   the one definition of where the repo root, runs/ and results/ are
+  tests/           tests that may import anything, including repo-shape assertions
+
+troodos/      THE PRODUCT. Its own package, environment and lockfile; leaves this repo one day
+              by changing a single dependency line.
+
+results/      The tracked evidence behind the write-ups, cited by published essays at these
+              exact paths. Nothing here is written by a run.
+runs/         Everything a run regenerates — the warehouse, per-run rows, built layers.
+              Gitignored wholesale; `make clean` is `rm -rf runs/`.
 docs/         ANATOMY · DATA · GROUNDING · RELIABILITY · REPAIR-MATRIX · RESULTS-2026-07 ·
               ARCHITECTURE · EVIDENCE-GRAPH · TRUST-MODEL · ONTOLOGY · FINDINGS
-results/      published/ = the evidence behind the write-ups (cells/tiers/tools CSVs + the
-              runs whose raw rows back a claim); runs/ is gitignored and regenerates
 ```
+
+The one rule that keeps it honest: **nothing under `engine/` may import the apparatus.** When the
+engine needs something the harness has, the harness passes it in — `ask_one` takes a renderer
+rather than importing the CLI's. `harness/tests/test_structural.py` walks the import graph,
+including function-local imports, and fails on any edge in the wrong direction.
+
 
 See [`docs/ANATOMY.md`](docs/ANATOMY.md) for the file→component map, and
 [`docs/GROUNDING.md`](docs/GROUNDING.md) / [`docs/RELIABILITY.md`](docs/RELIABILITY.md) /

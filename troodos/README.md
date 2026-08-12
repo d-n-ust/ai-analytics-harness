@@ -19,16 +19,17 @@ make troodos          # installs the `troodos` command, then sets up a warehouse
 Or by hand, which is all that target does:
 
 ```bash
-uv tool install --editable ./troodos
+uv tool install ./troodos            # or --editable, while you are working on it
 ```
 
-`--editable` is not optional today. troodos takes the agent, guardrails and semantic compiler
-from the harness in the parent directory via a path dependency, so it only resolves from inside
-a clone. Making it installable from anywhere means vendoring that code, which has not happened
-yet.
+Only from a clone: troodos takes the agent, the guardrails and the semantic compiler from
+`../engine`, which is not published yet, so the dependency is a path. Publishing the engine is
+what makes `uv tool install troodos` work from anywhere; nothing else does.
 
-`uv tool install` puts `troodos` on your `PATH` (usually `~/.local/bin`). Because the install is
-editable, edits to the source take effect immediately with no reinstall.
+`uv tool install` puts `troodos` on your `PATH` (usually `~/.local/bin`). Add `--editable` while
+developing and source edits take effect with no reinstall — but install it non-editable at least
+once before trusting it, because editable leaves every file where it already is and will happily
+hide a package the build config forgot to declare.
 
 ## Try it
 
@@ -43,14 +44,14 @@ uv run python -m cli query "SELECT 1"    # materialises the _source and _star sc
 Then, with no API key and no cost:
 
 ```bash
-troodos ask --db warehouse/warehouse.duckdb --schema _star --mock "how many active users?"
+troodos ask --db runs/warehouse.duckdb --schema _star --mock "how many active users?"
 ```
 
 For a real answer, put a key in `.env` at the repository root (`ANTHROPIC_API_KEY` or
 `OPENAI_API_KEY`) and drop `--mock`:
 
 ```bash
-troodos ask --db warehouse/warehouse.duckdb --schema _star \
+troodos ask --db runs/warehouse.duckdb --schema _star \
   --model claude-haiku-4-5 "how many active users were there last week?"
 ```
 
@@ -58,11 +59,11 @@ Two things worth trying, because they are what the tool is actually for:
 
 ```bash
 # a question the data cannot answer — the refusal is the point, not a failure
-troodos ask --db warehouse/warehouse.duckdb --schema _star \
+troodos ask --db runs/warehouse.duckdb --schema _star \
   --model claude-haiku-4-5 "what is our net promoter score?"
 
 # let the model write SQL itself. It prints which guardrails that stands down, and why
-troodos ask --db warehouse/warehouse.duckdb --schema _star --allow-raw-sql \
+troodos ask --db runs/warehouse.duckdb --schema _star --allow-raw-sql \
   --model claude-haiku-4-5 "how many users signed up on iOS in June?"
 ```
 
