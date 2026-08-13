@@ -70,7 +70,7 @@ def cmd_ask(a):
     from cli.trace import render
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     # The renderer is passed IN. The engine has no way to reach cli/, by design.
-    ask_one(question=a.question, rung=a.rung, model=a.model, guardrails=guardrails,
+    ask_one(question=a.question, rung=a.rung, model=a.model, mock=a.mock, guardrails=guardrails,
             protocol=Protocol.parse(a.protocol), verbose=not a.trace,
             trace=render if a.trace else None)
 
@@ -230,8 +230,8 @@ def _stored_run(a):
         d = pathlib.Path(a.run)
         d = d if d.is_absolute() else root / d
     else:
-        runs = (sorted((root / "results" / "experiments").glob("*/run.json"))
-                or sorted((root / "results" / "probes").glob("*/run.json")))
+        runs = (sorted(harness_paths.RUNS.glob("experiments/*/*/run.json"))
+                or sorted(harness_paths.RUNS.glob("probes/*/run.json")))
         if not runs:
             raise SystemExit("no runs under runs/experiments — run `bench experiment` first")
         d = runs[-1].parent
@@ -257,11 +257,25 @@ def cmd_context(a):
         print(render_ledger(run, blobs, arm=a.arm, qid=a.qid, source=a.source, full=a.full))
 
 
+def _rrung(value: str) -> int:
+    """A reliability rung, written `R7` or `7`.
+
+    The help said `R0..R9`, the parser said `int()`, and `--rrungs R0` died on a ValueError from
+    inside argparse's own dispatch. Every other surface in this repository — the ladder presets,
+    `--cells`, the run labels, the published tables — writes them with the R.
+    """
+    text = value.strip()
+    stripped = text[1:] if text[:1].upper() == "R" else text
+    if not stripped.isdigit():
+        raise SystemExit(f"--rrungs takes reliability rungs like R7 or 7; got {value!r}")
+    return int(stripped)
+
+
 def cmd_run(a):
     from evals.runner import run_experiment
     run_experiment(mock=a.mock, models=_split(a.models), rungs=[parse_rung(r) for r in _split(a.rungs)],
                    only=_split(a.only) if a.only else None, sample=a.sample, repeats=a.repeats,
-                   rrungs=[int(r) for r in _split(a.rrungs)],
+                   rrungs=[_rrung(r) for r in _split(a.rrungs)],
                    protocols=_split(a.protocols),
                    cells=_split(a.cells) if a.cells else None, reasoning=a.reasoning,
                    concurrency=a.concurrency)
@@ -325,6 +339,11 @@ def main() -> None:
                          f"({'|'.join(FRAMINGS)}); `none` declares nothing. "
                          "e.g. claims+repair+role")
     sp.add_argument("--model", default=DEFAULT_MODEL, choices=MODELS)
+    # Every other verb that calls a model has this; `ask` did not, which made the single-question
+    # entry point — the first thing anyone tries — the one command that could not be run without
+    # spending money. `ask_one` already took the flag; only the parser was missing it.
+    sp.add_argument("--mock", action="store_true",
+                    help="deterministic mock model (no API key). Checks the wiring, measures nothing.")
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")
     sp.set_defaults(func=cmd_ask)
