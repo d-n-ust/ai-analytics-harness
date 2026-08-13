@@ -5,6 +5,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+.pytest_cache/
+.ruff_cache/
 
 # Everything a run regenerates: the warehouse, per-run rows, probe runs, experiment output, the
 # `latest` symlink, and the layers an arm's patch builds from its base. One line, because they

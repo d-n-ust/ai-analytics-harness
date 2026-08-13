@@ -9,6 +9,7 @@ are internal to the semantic layer and never shown as tables.
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
 import duckdb
@@ -116,6 +117,32 @@ def set_star(con, enabled: bool) -> None:
     _scope(con)
 
 
+def _connect_waiting(db: Path, timeout_s: float = 10.0) -> duckdb.DuckDBPyConnection:
+    """Open the warehouse, waiting briefly if another process still holds the write lock.
+
+    DuckDB allows one writer, and the lock is not always released the instant a process exits.
+    `bench test` runs each test file as its own sequential subprocess, and roughly one run in
+    three failed because the next subprocess opened the file before the previous one's lock had
+    cleared — an IOException with no relation to anything the test was checking.
+
+    A flaky suite is worse than a failing one: it teaches the reader to re-run rather than
+    investigate, and the next real failure gets re-run too. So wait, briefly, and then give up
+    with a message that says what is actually happening rather than DuckDB's.
+    """
+    deadline = time.monotonic() + timeout_s
+    while True:
+        try:
+            return duckdb.connect(str(db))
+        except duckdb.IOException:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(
+                    f"{db} is locked by another process and did not free within {timeout_s:.0f}s. "
+                    "DuckDB allows a single writer; close any other `bench` command or open "
+                    "connection to it."
+                ) from None
+            time.sleep(0.05)
+
+
 def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
     """Open the warehouse and (by default) create the star views on top of the raw tables."""
     db = default_db()
@@ -123,7 +150,7 @@ def open_warehouse(create_star_views: bool = True) -> duckdb.DuckDBPyConnection:
         raise FileNotFoundError(
             f"{db} not found — run `bench data` (or `make data`) first."
         )
-    con = duckdb.connect(str(db))
+    con = _connect_waiting(db)
     from warehouse.environment import ensure_source
     ensure_source(con)
     if create_star_views:

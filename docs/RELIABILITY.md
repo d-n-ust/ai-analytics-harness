@@ -30,7 +30,7 @@ primitive, so any coherent configuration is expressible and self-describing.
 
 Input guardrails (R3–R5) stop a bad number being **computed**; output guardrails (R7–R9) stop one
 being **served**. The coverage check and the tool restriction are *structural* — they hold regardless of what the model
-does, and are proven exhaustively without an LLM (`tests/test_structural.py`).
+does, and are proven exhaustively without an LLM (`harness/tests/test_structural.py`).
 
 ## The typed refusal protocol
 
@@ -85,7 +85,7 @@ invalidated (7 of its cases were judged against a number the answer did not serv
 
 The deterministic core that *survives* is `governed_numbers` (R7) and the
 output-validation check (R8) — both live in `engine/src/agent/guardrails/after.py` alongside the trajectory judge, and
-both are provable without a model (`tests/test_semantic.py`).
+both are provable without a model (`harness/tests/test_semantic.py`).
 
 ## Erratum — the output guardrails do not verify a judgement answer (2026-08-01)
 
@@ -170,7 +170,7 @@ apply to. A case may now declare `requires: [knowledge]`; where the rung does no
 context, the case stops demanding a particular answer and only insists the agent did not guess.
 
 Both rules **only widen** what counts as correct, and only for cases that declare them —
-`tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
+`harness/tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
 claim. Regrading the rung-7 R9 baseline moves it from 134/171 to **141/171**; every one of the
 seven is a clarification that was previously counted as a failure, and nothing moves the other way.
 

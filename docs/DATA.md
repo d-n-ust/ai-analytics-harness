@@ -48,8 +48,8 @@ Don't trust the layer — check it. `bench query` runs SQL against the same clea
 
 ```bash
 # active users last week: the metric should equal this hand-written count
-bench query "SELECT count(DISTINCT user_id) FROM fct_sessions
-             WHERE NOT is_internal AND session_date >= DATE '2026-07-06'"
+bench query "SELECT count(DISTINCT user_id) FROM agg_active_days
+             WHERE NOT is_internal AND active_date >= DATE '2026-07-06'"
 
 # compare against the governed metric
 bench ask "how many active users did we have last week?" --rung 3

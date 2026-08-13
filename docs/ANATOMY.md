@@ -46,7 +46,7 @@ question
 The contracts between layers are where reliability lives — e.g. *"governed calls only, no raw SQL"*
 (`tool_restriction`) and *"you may compare governed numbers, you may not compose new ones"*
 (`governed_numbers`). Those are structural guarantees, provable without an LLM
-(see `tests/test_structural.py`, `tests/test_semantic.py`).
+(see `harness/tests/test_structural.py`, `harness/tests/test_semantic.py`).
 
 ## Two orthogonal axes
 

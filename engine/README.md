@@ -19,7 +19,7 @@ tests/         tests that import nothing but these packages
 
 Nothing here may import `cli`, `evals`, `experiments` or `scratchpad`. Those are the apparatus
 that measures this engine, and an edge in that direction would make the engine uninstallable
-without the instrument. `tests/test_structural.py` walks the import graph — including
+without the instrument. `harness/tests/test_structural.py` walks the import graph — including
 function-local imports — and fails on any such edge.
 
 The consequence is worth stating plainly: when the engine needs something the apparatus has, the
@@ -27,10 +27,11 @@ apparatus passes it in. `ask_one`'s `trace` parameter takes a renderer rather th
 
 ## Package data
 
-`agent/context/*`, `semantic/*.yml`, `warehouse/star.sql`, `warehouse/presets/*.sql` and
-`warehouse/grain/*.sql` are read at runtime and must travel with the wheel. Every one of them is
-asserted present by the clean-wheel job in CI, because the failure mode is silent: a prompt
-assembles short, a metric catalogue comes back empty, and nothing raises.
+`src/agent/context/*`, `src/semantic/*.yml`, `src/warehouse/star.sql`,
+`src/warehouse/presets/*.sql` and `src/warehouse/grain/*.sql` are read at runtime and must
+travel with the wheel. Every one is asserted present by the clean-wheel job in CI, because the
+failure mode is silent: a prompt assembles short, a metric catalogue comes back empty, and
+nothing raises.
 
 Anything generated — the DuckDB warehouse above all — is written outside the package.
 `warehouse.config.default_db()` refuses to return a path inside `site-packages` rather than put

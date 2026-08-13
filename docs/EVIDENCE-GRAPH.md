@@ -70,7 +70,7 @@ That is the root cause. It is not a missing guardrail.
 
 ## Three symptoms, one cause — all three already documented here
 
-**1. The diagnostic tier is provably unmeasurable.** From `experiments/integrity-audit/README.md`:
+**1. The diagnostic tier is provably unmeasurable.** From `harness/experiments/02_reliability_ladder/notes/integrity-audit/README.md`:
 
 > the gold cause-word was often **already in the model's context** (a tool result or the grounding)
 > before it answered — so **a keyword grader cannot tell reasoning from echo**.
