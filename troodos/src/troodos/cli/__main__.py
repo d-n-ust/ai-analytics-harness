@@ -9,6 +9,8 @@ and does everything a subcommand tree needs.
 from __future__ import annotations
 
 import argparse
+import importlib.util
+import pathlib
 import sys
 import time
 
@@ -107,13 +109,50 @@ def _cmd_ask(args: argparse.Namespace) -> int:
     return 1 if answer.outcome == "error" else 0
 
 
+class _PrintVersion(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(_version_text())
+        parser.exit()
+
+
+def _version_text() -> str:
+    """Version, and WHERE this troodos is running from.
+
+    `uv tool install` is global: one troodos per machine, replacing whatever was there before.
+    With the engine arriving as a path dependency, installing from a second clone silently
+    repoints everything — and the failure that follows is a missing module at the first question,
+    which looks like a broken product rather than a stale install.
+
+    So the answer to "which one am I running?" is one command. The engine's location is included
+    because it is a separate path dependency and can be stale on its own.
+    """
+
+    lines = [f"troodos {__version__}"]
+    for label, module in (("troodos", "troodos"), ("engine", "agent")):
+        try:
+            found = importlib.util.find_spec(module)
+            origin = pathlib.Path(found.origin).resolve().parent if found and found.origin else None
+        except Exception:  # noqa: BLE001 — a diagnostic must never be the thing that fails
+            origin = None
+        lines.append(f"  {label:8} {origin or 'not found'}")
+
+    missing = [m for m in ("anthropic", "openai") if not importlib.util.find_spec(m)]
+    if missing:
+        lines.append(f"  providers  MISSING {', '.join(missing)} — reinstall: uv tool install <clone>/troodos")
+    return "\n".join(lines)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="troodos",
         description="An agentic data analyst that answers over a governed semantic layer — "
                     "and refuses when the grounding will not support the question.",
     )
-    parser.add_argument("--version", action="version", version=f"troodos {__version__}")
+    # A custom action rather than argparse's built-in "version": that one routes the string
+    # through the help formatter, which re-wraps it and destroys the alignment that makes the
+    # paths readable.
+    parser.add_argument("--version", action=_PrintVersion, nargs=0,
+                        help="show the version and which source tree this is running from")
     sub = parser.add_subparsers(dest="command", metavar="<command>")
 
     inspect = sub.add_parser("inspect", help="show tables, views and metadata in a warehouse")

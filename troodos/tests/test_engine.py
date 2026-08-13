@@ -233,3 +233,37 @@ def test_a_missing_key_never_looks_like_a_broken_install():
         assert "No module named" not in str(exc), (
             f"a missing SDK is masquerading as a configuration problem: {exc}"
         )
+
+
+def test_version_names_the_source_tree_it_is_running_from():
+    """`uv tool install` is global: one troodos per machine, and installing from a second clone
+    silently repoints everything. The failure that follows is a missing module at the first
+    question, which reads as a broken product rather than a stale install — so `--version` has to
+    answer "which one am I running?" without the user having to read an uninstall list.
+
+    The engine appears separately because it is its own path dependency and can be stale alone.
+    """
+    from troodos.cli.__main__ import _version_text
+
+    text = _version_text()
+    assert "troodos" in text and "engine" in text
+    # Real resolved locations, not the module names echoed back.
+    assert "/" in text.split("troodos", 2)[-1], f"no path in the version output: {text!r}"
+
+
+def test_version_reports_missing_providers_rather_than_staying_silent():
+    """The diagnostic exists for the install that cannot call a model. If it prints a clean
+    version banner in that state, it has actively misled someone."""
+    import troodos.cli.__main__ as cli
+
+    real = cli.importlib.util.find_spec
+
+    def blind(name, *a, **kw):
+        return None if name in ("anthropic", "openai") else real(name, *a, **kw)
+
+    cli.importlib.util.find_spec = blind
+    try:
+        text = cli._version_text()
+    finally:
+        cli.importlib.util.find_spec = real
+    assert "MISSING" in text and "anthropic" in text, text
