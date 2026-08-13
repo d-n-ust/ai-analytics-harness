@@ -189,6 +189,50 @@ clarifying could not unblock it and refusing stays correct. The rule accepts **1
 questions the agent actually clarified and rejects 8, which is the evidence it is not simply the
 observed behaviour wearing a rule's clothes.
 
+## What it measured
+
+Same top-rung grounding, one guardrail at a time:
+
+| | silent error | coverage | balanced accuracy |
+|---|---|---|---|
+| **R0** no refusal channel | **48.5%** | 99% | 53% |
+| **R1** the typed `refuse` tool, nothing else | **31.0%** | 100% | 70% |
+| **R9** all nine guardrails | **2.4%** | 85% | 90% |
+
+- **The single biggest win is the cheapest.** R0→R1 is 17 points of silent error for a tool
+  description — no enforcement, no checking, just a move the model did not have before.
+- **The first six rungs are close to free.** Coverage never falls below 94.9% through R6, against
+  98.7% at R0, while invented answers fall from 69 to 20.
+- **Honesty is built, not prompted.** Half of what R0 says is a confident invisible error; the same
+  model with the stack around it is at 2.4%.
+
+### Attribution — which guardrail actually did the work
+
+A ladder cannot say, because every rung is only ever seen stacked on the ones below it. R9 minus one
+guardrail answers "what does removing it cost *here*", which is a different question. So every
+coherent combination of the six independent guardrails is run and an exact Shapley value computed per
+guardrail — the average marginal contribution over all orderings, with the efficiency axiom (the
+parts must sum to the whole) checked to floating point. 24 coalitions, 4,104 answers, 3,000 bootstrap
+resamples.
+
+Only two guardrails have an interval that clears zero on silent error: `trajectory_verify` (+8.8
+points) and `coverage_check` (+5.2). `governed_numbers` (+4.2) and `tool_restriction` (+4.1) do real
+work but overlap.
+
+`output_validation` contributes **−0.0**. Across 5,814 answers it fired 656 times and refused
+nothing, ever, because all three of its checks are already guaranteed by layers beneath it. A stack
+accumulates redundant checks, and no passing test suite will tell you — which is the finding no
+ladder could have produced.
+
+### A bigger model does not fix it
+
+At R9, `gpt-5-mini` scores 90% balanced accuracy for $0.33 a run; `gpt-5.6-terra` scores 90% for
+$0.80; `gpt-5.6-sol` scores **88%** for $1.73.
+
+The larger models make no mistakes at all — zero wrong numbers, zero inventions — and lose by
+declining more answerable questions. Past the point where guardrails have bought honesty, model size
+buys caution.
+
 ## How it's reported
 
 Rates are never pooled across the answerable / unanswerable split. Per config, `harness/evals/report.py` emits:

@@ -209,3 +209,25 @@ whose claims mostly *were* grounded. This needs no agent change and runs on rows
 It cannot become the architecture — it guesses provenance by matching, the shape this document
 argues against — but it sizes the effect before anything is built, and it is the kind of check this
 repo does before it believes itself.
+
+## What it measured
+
+Across runs, with the nulls kept — [`FINDINGS.md`](FINDINGS.md) is the full ledger:
+
+- **Asking for an account does not measurably change the answer.** Every difference against the same
+  cell without claims is within noise. Recorded as a null *with its power stated*: at 78 answerable
+  questions per arm it could only ever have caught a large effect. It costs ~50% more output tokens.
+- **Citation repair moves the fourth number and only the fourth** — grounded-answer rate 87.2% →
+  94.7%, while balanced accuracy moved 0.6. That is the shape a mechanism predicts when it checks
+  citations and knows nothing about the business question. Replicated across two independent sweeps.
+- **It repairs rather than deletes.** A broken citation has two cheap fixes and only one is intended;
+  recording what went *in* as well as what came out separates them. No handed-back answer came back
+  smaller.
+- **The graph captures the evidence and loses the argument.** Across 1,405 served answers carrying a
+  graph, **73.7% drew no conclusion at all** — a flat list of cited measurements with the diagnosis
+  left in the prose beside the graph. Seventeen reached two levels of inference. This is the single
+  largest open problem on this axis, and the lever that moves it (`rendered`) is currently confounded
+  with its framing, which makes it the most valuable unrun experiment here.
+- **Two mechanisms were tested and rejected**, and are kept as rejected: orphan repair (the signal is
+  Simpson's paradox, and its cheapest compliance is *deleting* the evidence) and broken citations as
+  a correctness predictor (same trap, found the same way).
