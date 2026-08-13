@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "An agentic data analyst that answers questions over a governed semantic layer — and refuses when the grounding will not support the question."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
 authors = [{ name = "Dmitry Ustimov" }]
 
 # The engine deliberately carries no scientific-Python dependency. `duckdb` is the only native
