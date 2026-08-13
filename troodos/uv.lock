@@ -12,6 +12,7 @@ version = "0.1.0"
 source = { editable = "../engine" }
 dependencies = [
     { name = "duckdb" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
@@ -38,6 +39,7 @@ requires-dist = [
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.40" },
     { name = "pandas", marker = "extra == 'all'", specifier = ">=2.2" },
     { name = "pandas", marker = "extra == 'fixtures'", specifier = ">=2.2" },
+    { name = "pydantic", specifier = ">=2.11" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "pyyaml", specifier = ">=6" },
 ]

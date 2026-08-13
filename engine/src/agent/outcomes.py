@@ -11,7 +11,10 @@ to learn what a refusal could say. Nothing here knows about tools, models or the
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import field
+
+from pydantic import field_validator
+from pydantic.dataclasses import dataclass
 
 # The three tools a run can END through. Every run exits by exactly one.
 TERMINAL_TOOLS = ("answer", "refuse", "clarify")
@@ -98,8 +101,20 @@ def declared_handles(args: dict) -> tuple:
     return tuple(h for h in (str(v).strip().strip("[]") for v in (value or ())) if h)
 
 
+# The four ways a run can END, as a typed field rather than a phrase to match. The three terminal
+# TOOLS, plus `error` — the non-tool exit the loop records when no terminal call was made (a run
+# that gave up, exhausted its budget, or hit a persistent provider refusal).
+OUTCOMES = (*TERMINAL_TOOLS, "error")
+
+
 @dataclass
 class Answer:
+    """The typed result of one run. A validated (Pydantic) dataclass: it stays a real dataclass, so
+    `dataclasses.asdict` still renders it for `agent.as_row` (the trace path) and the harness runner
+    still reads it field-by-field, while construction now type-checks the outcome. It is NOT the
+    on-disk contract — the stored row is hand-assembled in evals/runner.py — so validating here
+    cannot move a published number; it only catches a loop that built a malformed Answer."""
+
     question: str
     rung: int
     model: str
@@ -153,3 +168,12 @@ class Answer:
     # truncates each result at _TRACE_LIMIT; this records what it READ, whole. An experiment whose
     # treatment is the context needs the second, and cannot get it from the first.
     context: object = None
+
+    @field_validator("outcome")
+    @classmethod
+    def _outcome_is_typed(cls, value: str) -> str:
+        """A run ends as exactly one of OUTCOMES; anything else is a bug in the loop that built the
+        Answer, not a value worth storing. Cheap to check here, where every Answer is born."""
+        if value not in OUTCOMES:
+            raise ValueError(f"outcome={value!r}; expected one of {list(OUTCOMES)}")
+        return value

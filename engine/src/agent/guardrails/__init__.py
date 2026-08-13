@@ -23,6 +23,11 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 
+# GuardrailSet alone becomes a validated (Pydantic) dataclass — it is a config primitive, a peer of
+# Protocol and ModelSpec. Act/Verdict/Guardrail stay plain dataclasses: they are per-call trace
+# records on the hot path, where a validator would be cost without a contract to enforce.
+from pydantic.dataclasses import dataclass as validated_dataclass
+
 __all__ = ["DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER", "LADDER_ORDER",
            "GuardrailSet", "Position", "Verdict", "incoherent", "parse_cell"]
 
@@ -188,11 +193,20 @@ GUARDRAILS: tuple[Guardrail, ...] = (
 LADDER_ORDER = [g.name for g in GUARDRAILS]
 
 
-@dataclass(frozen=True)
+@validated_dataclass(frozen=True)
 class GuardrailSet:
     """Which guardrails are switched on. The fields are exactly GUARDRAILS, in ladder order —
     tests/test_semantic.py holds the two in step, so the registry can never describe a guardrail
-    that does not exist or miss one that does."""
+    that does not exist or miss one that does.
+
+    A validated dataclass, so the nine flags are type-checked at construction and it reads as a
+    peer of Protocol and ModelSpec. It carries NO coherence validator, and that is deliberate: the
+    dependency rules (governed_numbers needs tool_restriction, output_validation and
+    trajectory_verify need governed_numbers) live in `incoherent()`, which RETURNS a reason rather
+    than raising, precisely because an incoherent set is a first-class object the harness builds
+    and then measures — the Shapley lattice constructs every combination (harness/scratchpad/
+    shapley_compute.py) and `LADDER[n].without("governed_numbers")` is a legitimate ablation cell.
+    Making those rules raise at construction would turn a cell to be filtered into a crash."""
 
     abstain: bool = False
     check_tools: bool = False
