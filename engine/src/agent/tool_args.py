@@ -31,8 +31,10 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 def _line(value: Any) -> str:
-    """A model-supplied string as one clean line — the exact coercion `loop._line` applies, kept
-    identical here so a field cleaned at parse time and one cleaned in the loop cannot drift."""
+    """A model-supplied string as one clean line: `str(value or "").strip()`. This is the coercion
+    the loop used to apply inline (a since-removed `_line` helper); it moved here when the terminal
+    exit calls became typed, so the loop now reads already-cleaned prose off these models rather
+    than cleaning it again."""
     return str(value or "").strip()
 
 

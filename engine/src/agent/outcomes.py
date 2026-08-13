@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import field
 
-from pydantic import field_validator
+from pydantic import SkipValidation, field_validator
 from pydantic.dataclasses import dataclass
 
 # The three tools a run can END through. Every run exits by exactly one.
@@ -121,9 +121,17 @@ class Answer:
     answer: str | None
     explanation: str = ""
     outcome: str = "answer"        # answer | refuse | clarify | error
-    reason: str | None = None      # refuse only: the coded reason
-    missing: str | None = None     # refuse only: what the model says is missing
-    source_metric: str | None = None  # answer only: the governed metric the value came from
+    # SkipValidation on the three fields that carry RAW model output. The loop passes `reason`,
+    # `missing` and `source_metric` straight through from tool_args (typed `Any` there on purpose,
+    # because the boundary recovers rather than rejects), so a hallucinated refuse — `reason`
+    # arriving as `["out_of_coverage"]` instead of the string — must be STORED and graded as a
+    # mismatch, exactly as the stdlib dataclass did. Enforcing `str` here would raise a
+    # ValidationError inside _record/_served, and run_agent catches only ProviderError, so it would
+    # escape and kill the row (and a sweep with it) — the opposite of the typed-outcome guarantee.
+    # The documented type stays `str | None`; only its enforcement is waived, and only on these three.
+    reason: SkipValidation[str | None] = None      # refuse only: the coded reason
+    missing: SkipValidation[str | None] = None     # refuse only: what the model says is missing
+    source_metric: SkipValidation[str | None] = None  # answer only: the governed metric the value came from
     declared_value: float | None = None  # answer only: the served number (None = prose)
     # The handle(s) of the governed result(s) the answer reports. A list because a comparison
     # has two operands. Stored rows written before this was plural carry `source_result`, a

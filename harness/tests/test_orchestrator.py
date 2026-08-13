@@ -90,6 +90,21 @@ def test_output_checks_convert_an_answer_into_a_refusal():
     assert ans.outcome == "answer" and ans.declared_value is None
 
 
+def test_a_malformed_exit_call_is_stored_not_crashed():
+    """A model can hallucinate an exit call's SHAPE — a `refuse` whose `reason` arrives as a
+    one-element list rather than the enum string. Providers do not schema-enforce tool arguments
+    (providers._args is a bare json.loads), and the typed-outcome design is that such a call is
+    STORED and graded as a mismatch, never a validation error that escapes run_agent — which
+    catches only ProviderError — and takes the row, and in a sweep every completed row, with it.
+
+    The regression this pins: Answer's typed fields must tolerate the raw model values the loop
+    passes straight through from tool_args (`reason`/`missing`/`source_metric`), which are `Any`
+    there precisely because the boundary recovers rather than rejects."""
+    ans, _ = _run([call("1", "refuse", {"reason": ["out_of_coverage"], "missing": ["x"]})])
+    assert ans.outcome == "refuse", ans.outcome
+    assert ans.reason == ["out_of_coverage"] and ans.missing == ["x"], (ans.reason, ans.missing)
+
+
 def test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset():
     ans, _ = _run([call("1", "query_metric", QM)],
                   [call("2", "answer", {"answer": "886", "explanation": "e"})])
@@ -283,6 +298,7 @@ def test_the_empty_result_check_is_unreachable_wherever_it_is_legal():
 
 TESTS = [test_a_run_ends_through_one_typed_exit,
          test_output_checks_convert_an_answer_into_a_refusal,
+         test_a_malformed_exit_call_is_stored_not_crashed,
          test_a_numeric_answer_is_checked_even_when_the_field_is_left_unset,
          test_the_closing_phase_withdraws_the_data_tools,
          test_a_run_that_never_exits_is_an_error_not_an_answer,
