@@ -104,7 +104,7 @@ Two limits, stated because they decide what this does and does not settle:
 
 ### The evidence behind every number here
 
-`results/runs/` is gitignored — 27 runs in one day, and per-run output is a dev iteration. What is
+`runs/` is gitignored — 27 runs in one day, and per-run output is a dev iteration. What is
 tracked is the **measurements**, in `results/published/2026-07/`:
 
 | file | grain | what it holds |

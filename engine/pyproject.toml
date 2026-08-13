@@ -1,0 +1,60 @@
+[project]
+name = "ai-analytics-engine"
+version = "0.1.0"
+description = "The analyst agent: an orchestrator, a governed semantic layer, and the guardrails that decide when a number may be served."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+# The closure a product installs. Deliberately short, and kept short: this is the half of the
+# repository that ships, so every dependency here is one a stranger pays for on install, and one
+# more native object to sign if this is ever bundled into a desktop app.
+#
+# `anthropic` and `openai` are NOT here. They are imported inside functions in agent/providers.py,
+# so nothing pays for them at startup, and a deployment using one provider should not install the
+# other. `pandas`, `numpy` and `faker` are not here either — they belong to the synthetic-data
+# generator, which is apparatus, not engine.
+dependencies = [
+    "duckdb>=1.1",
+    "pyyaml>=6",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# One provider each, so a deployment installs the SDK it actually calls.
+anthropic = ["anthropic>=0.40"]
+openai = ["openai>=1.40"]
+models = ["anthropic>=0.40", "openai>=1.40"]
+# The deterministic warehouse generator. Only the harness needs this; it is here rather than in
+# the harness's own dependencies because the code that imports it (warehouse/generate.py) ships
+# with the engine, and a dependency belongs with the import that needs it.
+fixtures = ["pandas>=2.2", "numpy>=1.26", "faker>=30"]
+# Embedding-similarity checks in semantic/similarity.py, reached only from `bench ambiguity`.
+analysis = ["numpy>=1.26"]
+all = [
+    "anthropic>=0.40", "openai>=1.40",
+    "pandas>=2.2", "numpy>=1.26", "faker>=30",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# A src layout, and only here. The whole argument for `src/` is about distribution correctness —
+# it forces an installed import rather than an accidental relative one, so a missing package or a
+# missing data file fails in the test suite instead of on a stranger's machine. The harness never
+# ships, so it stays flat; the asymmetry is the signal.
+#
+# Hatchling maps `src/agent` to the module `agent`, so nothing that imports these packages had to
+# change when they moved here.
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent", "src/semantic", "src/warehouse", "src/evidence"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests"]
+exclude = ["*.duckdb", "*.duckdb.wal"]
+
+# No [tool.ruff] block. Ruff uses the NEAREST config, so one here would shadow the root's rather
+# than extend it — including the `src` setting that keeps first-party imports classified
+# correctly. One config, at the root, for the whole workspace.

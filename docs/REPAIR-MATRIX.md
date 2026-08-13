@@ -85,11 +85,11 @@ next model upgrade does not refund — and re-cost the controls per tier.
 
 ## Where the detail lives
 
-- `experiments/04_repair_matrix/00_primitive_load/FINDINGS.md` — the study ledger. §31 is the
+- `harness/experiments/04_repair_matrix/00_primitive_load/FINDINGS.md` — the study ledger. §31 is the
   rebuilt instrument (nothing before it is comparable); §32 is the model-tier sweep.
-- `experiments/04_repair_matrix/00_primitive_load/PRACTITIONER-NOTES.md` — the summary for a
+- `harness/experiments/04_repair_matrix/00_primitive_load/PRACTITIONER-NOTES.md` — the summary for a
   reader without this repository.
-- `experiments/04_repair_matrix/experiment.yml` — the manifest: status, evidence paths, how runs
+- `harness/experiments/04_repair_matrix/experiment.yml` — the manifest: status, evidence paths, how runs
   are driven.
 
 Companion essay on decisionspine.com: *The AI-Readiness Repair Matrix* (in draft).

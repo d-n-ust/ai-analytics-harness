@@ -175,5 +175,5 @@ run so far: no conclusion yet rests on another conclusion.
 The audit produces the inputs. It does not yet produce the ladder — nothing computes L3/L2/L1/L0,
 the band distribution, or the answer-level headline described above. That work, and the package
 it belongs in, are set out in `docs/ARCHITECTURE.md`: the claim audit is an **instrument**, not a
-guardrail, and a trust profile computed inside `agent/guardrails/` would be a verdict wearing a
+guardrail, and a trust profile computed inside `engine/src/agent/guardrails/` would be a verdict wearing a
 measurement's clothes.

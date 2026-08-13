@@ -12,7 +12,7 @@ bench run --rungs 3 --cells R9,R9-resolve            # any ablation cell (leave-
 ## The ladder (R0–R9)
 
 Each rung switches on one guardrail. The set that is on is one `GuardrailSet` value
-(`agent/guardrails/__init__.py`) — a ladder preset (`LADDER[n]`) and an arbitrary ablation cell are the same
+(`engine/src/agent/guardrails/__init__.py`) — a ladder preset (`LADDER[n]`) and an arbitrary ablation cell are the same
 primitive, so any coherent configuration is expressible and self-describing.
 
 | rung | guardrail | what it stops | where it runs |
@@ -24,19 +24,19 @@ primitive, so any coherent configuration is expressible and self-describing.
 | R4 | `tool_restriction` | removes raw SQL; every data path is a governed call | **input** |
 | R5 | `resolve` | filter values must resolve to a governed member | input (query-time) |
 | R6 | `transparency` | shows the compiled SQL + a plain scope line | output (soft) |
-| R7 | `governed_numbers` | the served number must **be** a governed result, or a comparison of two of the **same** metric — never a composition of different ones | **output** (`agent/guardrails/after.py`) |
+| R7 | `governed_numbers` | the served number must **be** a governed result, or a comparison of two of the **same** metric — never a composition of different ones | **output** (`engine/src/agent/guardrails/after.py`) |
 | R8 | `output_validation` | the value must be well-formed (non-empty, in range) | **output** |
 | R9 | `trajectory_verify` | an LLM critic checks the metric actually answers the question | **output** |
 
 Input guardrails (R3–R5) stop a bad number being **computed**; output guardrails (R7–R9) stop one
 being **served**. The coverage check and the tool restriction are *structural* — they hold regardless of what the model
-does, and are proven exhaustively without an LLM (`tests/test_structural.py`).
+does, and are proven exhaustively without an LLM (`harness/tests/test_structural.py`).
 
 ## The typed refusal protocol
 
 Every run ends through exactly one terminal tool — `answer` / `refuse` / `clarify` — so the outcome
 is a typed field, never a phrase to grep. A refusal carries a **coded reason** from a governed
-vocabulary (`REASON_MEANINGS` in `agent/outcomes.py`, which also states what each code means to
+vocabulary (`REASON_MEANINGS` in `engine/src/agent/outcomes.py`, which also states what each code means to
 the model) and names the specific missing thing. This is
 selective prediction *extended with a typed reject option*: we score not just *that* it abstained,
 but *which* reason and whether it was the right one.
@@ -47,7 +47,7 @@ The hardest failure is a **real, correctly-computed** metric that answers a *sli
 question (active users reported as the user total). Two mechanisms once guarded this: a deterministic
 4-slot spec comparison and an LLM **trajectory verifier**. The deterministic 4-slot subsystem has
 been **retired** — the trajectory verifier subsumes it. So wrong-metric selection is now judged
-*entirely by one LLM critic* (`agent/guardrails/judge.py`): it inspects the metric, its definition, the
+*entirely by one LLM critic* (`engine/src/agent/guardrails/judge.py`): it inspects the metric, its definition, the
 compiled SQL, and the analyst's added filters, and finds a concrete reason the number does not answer
 the question (THING / KIND / SCOPE / DEFINITION / SEGMENT). It is refuse-only — it can downgrade a
 confident answer, never rescue a refusal, so it can only add safety.
@@ -62,13 +62,13 @@ The judge's decisions split into two populations, and only one of them needs lab
 
 **Numeric decisions — settled by independent gold, no human in the loop.** Where the question has
 a `gold_sql` answer, or is unanswerable and any served number is therefore wrong, the gold decides
-and the judge is scored against it (`evals/components/verifier_vs_gold.py`). n=58, agreement
+and the judge is scored against it (`harness/evals/components/verifier_vs_gold.py`). n=58, agreement
 **98.3%**, catch rate 100%, one false flag. Current against the live prompt fingerprint.
 
 **Prose decisions — the ones gold cannot settle**, on diagnostic and keyword-graded questions.
 These are re-labelled by a three-lens panel (strict / pragmatic / skeptical), blind to the judge's
 verdict, **unanimous-only**, with splits escalated to a human rather than out-voted
-(`evals/components/prose_panel.py`). Pooled over all 22 stored runs:
+(`harness/evals/components/prose_panel.py`). Pooled over all 22 stored runs:
 
 ```
 28 prose decisions · 24 unanimous · 4 escalated
@@ -84,8 +84,8 @@ of the judge's error rate is **not established**, and the earlier 37-case labell
 invalidated (7 of its cases were judged against a number the answer did not serve).
 
 The deterministic core that *survives* is `governed_numbers` (R7) and the
-output-validation check (R8) — both live in `agent/guardrails/after.py` alongside the trajectory judge, and
-both are provable without a model (`tests/test_semantic.py`).
+output-validation check (R8) — both live in `engine/src/agent/guardrails/after.py` alongside the trajectory judge, and
+both are provable without a model (`harness/tests/test_semantic.py`).
 
 ## Erratum — the output guardrails do not verify a judgement answer (2026-08-01)
 
@@ -170,7 +170,7 @@ apply to. A case may now declare `requires: [knowledge]`; where the rung does no
 context, the case stops demanding a particular answer and only insists the agent did not guess.
 
 Both rules **only widen** what counts as correct, and only for cases that declare them —
-`tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
+`harness/tests/test_grade.py` pins which cases those are, by name, because the list is itself a published
 claim. Regrading the rung-7 R9 baseline moves it from 134/171 to **141/171**; every one of the
 seven is a clarification that was previously counted as a failure, and nothing moves the other way.
 
@@ -189,9 +189,53 @@ clarifying could not unblock it and refusing stays correct. The rule accepts **1
 questions the agent actually clarified and rejects 8, which is the evidence it is not simply the
 observed behaviour wearing a rule's clothes.
 
+## What it measured
+
+Same top-rung grounding, one guardrail at a time:
+
+| | silent error | coverage | balanced accuracy |
+|---|---|---|---|
+| **R0** no refusal channel | **48.5%** | 99% | 53% |
+| **R1** the typed `refuse` tool, nothing else | **31.0%** | 100% | 70% |
+| **R9** all nine guardrails | **2.4%** | 85% | 90% |
+
+- **The single biggest win is the cheapest.** R0→R1 is 17 points of silent error for a tool
+  description — no enforcement, no checking, just a move the model did not have before.
+- **The first six rungs are close to free.** Coverage never falls below 94.9% through R6, against
+  98.7% at R0, while invented answers fall from 69 to 20.
+- **Honesty is built, not prompted.** Half of what R0 says is a confident invisible error; the same
+  model with the stack around it is at 2.4%.
+
+### Attribution — which guardrail actually did the work
+
+A ladder cannot say, because every rung is only ever seen stacked on the ones below it. R9 minus one
+guardrail answers "what does removing it cost *here*", which is a different question. So every
+coherent combination of the six independent guardrails is run and an exact Shapley value computed per
+guardrail — the average marginal contribution over all orderings, with the efficiency axiom (the
+parts must sum to the whole) checked to floating point. 24 coalitions, 4,104 answers, 3,000 bootstrap
+resamples.
+
+Only two guardrails have an interval that clears zero on silent error: `trajectory_verify` (+8.8
+points) and `coverage_check` (+5.2). `governed_numbers` (+4.2) and `tool_restriction` (+4.1) do real
+work but overlap.
+
+`output_validation` contributes **−0.0**. Across 5,814 answers it fired 656 times and refused
+nothing, ever, because all three of its checks are already guaranteed by layers beneath it. A stack
+accumulates redundant checks, and no passing test suite will tell you — which is the finding no
+ladder could have produced.
+
+### A bigger model does not fix it
+
+At R9, `gpt-5-mini` scores 90% balanced accuracy for $0.33 a run; `gpt-5.6-terra` scores 90% for
+$0.80; `gpt-5.6-sol` scores **88%** for $1.73.
+
+The larger models make no mistakes at all — zero wrong numbers, zero inventions — and lose by
+declining more answerable questions. Past the point where guardrails have bought honesty, model size
+buys caution.
+
 ## How it's reported
 
-Rates are never pooled across the answerable / unanswerable split. Per config, `evals/report.py` emits:
+Rates are never pooled across the answerable / unanswerable split. Per config, `harness/evals/report.py` emits:
 
 - a **selective-prediction operating point** — coverage (share answered) and risk (error among
   answered); the ladder traces a *frontier* as guardrails tighten (not a threshold-swept curve, so no

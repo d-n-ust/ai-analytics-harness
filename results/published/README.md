@@ -1,7 +1,7 @@
 # results/published/ — the evidence behind the write-up
 
 Curated results a Decision Spine write-up cites, committed so a reader can check the numbers.
-Disposable dev runs live in `results/runs/` (gitignored) and regenerate with a run.
+Disposable dev runs live in `runs/` (gitignored) and regenerate with a run.
 
 ## 2026-07 — the reliability series
 
@@ -11,7 +11,7 @@ Backs *Agentic Analytics: Teaching an AI Analyst to Say I Don't Know*.
 
 ```
 PYTHONPATH=. uv run python evals/components/publish_metrics.py \
-    results/published/2026-07 results/runs/<run> [...]
+    results/published/2026-07 runs/<run> [...]
 ```
 
 | file | grain | what it answers |

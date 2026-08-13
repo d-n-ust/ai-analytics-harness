@@ -93,7 +93,7 @@ is the taxonomy noticing the missing axis.
 
 ## Three tool kinds, not two
 
-`agent/loop.py` recognises two kinds of tool: data tools (dispatched through `Toolbox`, query the
+`engine/src/agent/loop.py` recognises two kinds of tool: data tools (dispatched through `Toolbox`, query the
 world) and terminal tools (handled by `_Run.finish`, end the run). `bind` and `infer` are neither.
 They mutate **run-scoped state** — they touch no data and end nothing.
 
@@ -151,7 +151,7 @@ naming the result it describes.
 ### `strength` is where we beat the paper
 
 VeriGraph's derivations are untyped — every `infer` edge is the same kind of thing. Ours are not,
-because `semantic/tree.py` already separates **identity** children (exact arithmetic, shares sum to
+because `engine/src/semantic/tree.py` already separates **identity** children (exact arithmetic, shares sum to
 1) from **influence** children (correlational, carrying evidence and a confidence). `after.py:461`
 already states the distinction is *"different in KIND, not degree"*.
 
@@ -168,7 +168,7 @@ stops existing.
 
 ## Worked: *"why did weekly value moments drop?"*
 
-On this repo's actual tree (`semantic/metric_tree.yml`) — identity children `active_users ×
+On this repo's actual tree (`engine/src/semantic/metric_tree.yml`) — identity children `active_users ×
 days_per_user × moments_per_day`, and the low-confidence `days_per_user ← reminder_open_rate`
 influence edge that `generator_check.py` found *"rests on a single anomaly week, not a real
 mechanism."*

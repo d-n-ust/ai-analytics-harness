@@ -92,7 +92,7 @@ wrong *sentence*: an agent queries four weekly figures and writes "so roughly 3,
 
 ### What our layer has, and what it is missing
 
-`semantic/semantic_layer.yml`, 15 metrics, fields:
+`engine/src/semantic/semantic_layer.yml`, 15 metrics, fields:
 `description · entity · segment · unit · synonyms · base · agg · time_column · dimensions ·
 default_filters · supports_internal_filter · filterable`
 

@@ -11,7 +11,7 @@ metrics must not be averaged).
 
 ## 1. The headline metrics, and what each is for
 
-Four numbers, reported side by side and never blended (`evals/selective.py`).
+Four numbers, reported side by side and never blended (`harness/evals/selective.py`).
 
 | metric | the question it answers | needs gold? |
 |---|---|---|
@@ -50,7 +50,7 @@ value in one executed tool call, as `handle:field`) OR `premises` (indices of ea
 Carrying both is itself a defect. So the graph is bipartite by role: measurements cite evidence,
 conclusions cite claims.
 
-Seven defect codes per claim (`evidence/claims.py`): `unresolved`, `unsourced`, `value_mismatch`,
+Seven defect codes per claim (`engine/src/evidence/claims.py`): `unresolved`, `unsourced`, `value_mismatch`,
 `mislabelled`, `bad_premise`, `mixed_support`, `composed`. Six structural descriptors per answer:
 `derived`, `max_depth`, `max_fan_in`, `correlational`, `orphans`, `sources`.
 
@@ -137,7 +137,7 @@ hiding evidence is a training signal for opacity. Kept as a displayed fact, neve
 **Broken citations as a correctness predictor.** Same trap, found the same way. Aggregate 17.0% vs
 1.7% on answers the judge passed; within tier it predicts nothing (diagnostic 3% vs 0%, knowledge
 1% vs 0% — *better* with a broken citation). The case for repair was never that it predicts a wrong
-answer; `agent/protocol.py` already says it "cannot stop a wrong number, only an unaccountable
+answer; `engine/src/agent/protocol.py` already says it "cannot stop a wrong number, only an unaccountable
 one", and the measurement agrees with the docstring.
 
 **Showing orphans to the judge.** Refuse-only, so a difficulty-correlated signal can only cost
@@ -153,23 +153,23 @@ reachability in a graph with no conclusions.
 
 ## 5. The semantic layer is what made the failures diagnosable
 
-The pattern is easy to miss because most fixes LAND in `agent/` — that is where the check lives —
+The pattern is easy to miss because most fixes LAND in `engine/src/agent/` — that is where the check lives —
 while the DIAGNOSIS repeatedly points at the layer.
 
 **Four failures diagnosed one at a time, and where each actually resolved:**
 
 | case | wrong | root cause | where the fix landed |
 |---|---|---|---|
-| `adv_dau_mau` | 35% | a cross-grain ratio read as "a comparison of two active_users results" | grain became part of the comparison key — `semantic/semantic.py` gained `additivity()` derived from `agg` + `time_column` (`eddc7b0`) |
-| `u_pricing_cause` | 15% | the tree said NO about a term it had never modelled | four-state causality in `semantic/tree.py` — PROVEN / CORRELATIONAL / NOT_ENCODED / UNKNOWN (`4a6925f`) |
-| `adv_last_week_oob` | 12% | refusal asserted "composed from different metrics" when nothing was queried | `agent/guardrails/after.py` only (`13a4804`) |
+| `adv_dau_mau` | 35% | a cross-grain ratio read as "a comparison of two active_users results" | grain became part of the comparison key — `engine/src/semantic/semantic.py` gained `additivity()` derived from `agg` + `time_column` (`eddc7b0`) |
+| `u_pricing_cause` | 15% | the tree said NO about a term it had never modelled | four-state causality in `engine/src/semantic/tree.py` — PROVEN / CORRELATIONAL / NOT_ENCODED / UNKNOWN (`4a6925f`) |
+| `adv_last_week_oob` | 12% | refusal asserted "composed from different metrics" when nothing was queried | `engine/src/agent/guardrails/after.py` only (`13a4804`) |
 | `t2_paid_search_spend_q2` | 38% | the channel filter is omitted and the total served as the segment | **UNFIXED** — the deterministic detector does not exist because the member vocabulary is unsafe for prose scanning, which is a LAYER property |
 
 **The biggest single unfixed defect is a layer naming defect.** `mislabelled` fires on **28% of
 answers**, almost all of it `value_moments` against `weekly_value_moments` — two governed names a
 quarter of a point apart. It is excluded from the grounded-answer gate for exactly this reason
 (`cfcc4cc`): requiring it would drop the number from 94.6% to 70.3% and report our naming problem
-as the agent's failure. The ambiguity lint (`semantic/ambiguity.py`, `14f2b0c`) flags the pair with
+as the agent's failure. The ambiguity lint (`engine/src/semantic/ambiguity.py`, `14f2b0c`) flags the pair with
 no run at all — the defect is visible from the declarations alone.
 
 **On 2026-08-02 the layer caught three authoring errors of mine, in a row.** Each time I wrote a

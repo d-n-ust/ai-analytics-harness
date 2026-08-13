@@ -24,3 +24,187 @@ jobs:
 
       - name: Run the no-LLM test suite
         run: uv run python -m cli test
+
+      # `bench test` runs each file as a SCRIPT, so a test function absent from a file's
+      # __main__ block executes nowhere. Nineteen had accumulated that way, and three of them
+      # were failing — two on a fixture path a restructure broke, one on an assertion nobody had
+      # seen fail. pytest collects by name, so this is the run that cannot be silently opted out
+      # of. Both suites, and the metricflow group, because two adapter tests need it and were
+      # skipping themselves by ImportError.
+      - name: Collect every test by name (pytest)
+        run: uv run --group dev --group metricflow python -m pytest engine/tests harness/tests -q
+
+      # The suite above proves guardrail behaviour; it does not run the experiment. A catalog
+      # error in the runner passed every test and failed every run — because nothing here ever
+      # called `bench run`. The mock model needs no key and no money, so there is no reason not to.
+      - name: Run the experiment end-to-end on the mock model
+        run: uv run python -m cli run --mock
+
+      # Exit 0 is not the assertion. The runner catches per-row exceptions and records them as
+      # error rows, so a run where every single question died still finishes successfully and
+      # writes a summary — which is precisely the state the catalog bug left it in. Check the
+      # output instead: rows were produced, and none of them died.
+      - name: Assert the run actually produced answers
+        run: |
+          uv run python - <<'PY'
+          import json, pathlib, sys
+          summary = json.loads(pathlib.Path("runs/latest/summary.json").read_text())
+          rows = summary["meta"]["n_rows"]
+          dead = summary.get("dead_rows") or []
+          if not rows:
+              sys.exit("the run produced no rows at all")
+          if dead:
+              sys.exit(f"{len(dead)} of {rows} rows died: {dead[:3]}")
+          print(f"{rows} rows, none dead")
+          PY
+
+  # Builds a real wheel and imports it in an isolated environment. An editable install is a .pth
+  # file containing the repo root, so every top-level directory imports whether or not the build
+  # config declares it — which is how `evidence` went missing from the packages list, and
+  # `context/` was resolved from a path that only exists in a checkout, with nothing failing.
+  # setuptools' own docs say it: "When in doubt, please test your projects as installed via a
+  # regular wheel."
+  wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+
+      # `--package`, because the root is a workspace shell with no build backend: `uv build` there
+      # falls back to setuptools' legacy path, which refuses a flat layout holding five top-level
+      # directories, and the job died at step one.
+      - name: Build the engine wheel
+        run: uv build --wheel --package ai-analytics-engine --out-dir dist/
+
+      # Run from OUTSIDE the checkout. Python puts the working directory on sys.path, so from the
+      # repo root every import resolves to the source tree and the wheel is never exercised —
+      # `--isolated --no-project` does not prevent that. This job passed while testing nothing
+      # until it was moved out of the checkout.
+      - name: Import it with nothing else on the path
+        working-directory: /tmp
+        run: |
+          uv run --isolated --no-project --with "$GITHUB_WORKSPACE"/dist/*.whl python - <<'PY'
+          import pathlib
+          import agent.loop, agent.guardrails, agent.prompts as prompts
+          import semantic.semantic, semantic.tree
+          import evidence
+          from warehouse.environment import GRAIN_DIR, PRESETS_DIR
+
+          # Package DATA travels with the package, or the failure is silent: a prompt assembles
+          # short, a metric catalogue comes back empty, the star never builds. Every non-.py file
+          # the engine reads at runtime is asserted here, because a wheel that imports cleanly
+          # and then cannot find its own definitions is the exact failure this job exists for.
+          assert prompts._VERIFIED.exists(), "context/verified_queries.yml missing from the wheel"
+          assert prompts._KB.exists(), "context/knowledge_base.md missing from the wheel"
+          assert any(GRAIN_DIR.glob("*.sql")), "warehouse/grain/*.sql missing from the wheel"
+          assert any(PRESETS_DIR.glob("*.sql")), "warehouse/presets/*.sql missing from the wheel"
+
+          from warehouse.warehouse import STAR_SQL
+          assert STAR_SQL.exists(), "warehouse/star.sql missing from the wheel"
+
+          # Load the specs rather than stat them: a file that exists but parses to nothing is a
+          # subtler version of the same defect.
+          spec = semantic.semantic.SPEC_PATH
+          tree = semantic.tree.SPEC_PATH
+          assert spec.exists(), "semantic/semantic_layer.yml missing from the wheel"
+          assert tree.exists(), "semantic/metric_tree.yml missing from the wheel"
+          import yaml
+          assert yaml.safe_load(spec.read_text())["metrics"], "the semantic layer loaded empty"
+          assert yaml.safe_load(tree.read_text())["nodes"], "the metric tree loaded empty"
+
+          # Generated data must never land inside site-packages, where the user cannot find it
+          # and the next upgrade deletes it.
+          from warehouse.config import default_db
+          try:
+              default_db()
+          except RuntimeError:
+              pass
+          else:
+              raise SystemExit("default_db() returned a path from an installed package")
+          print("wheel imports clean")
+          PY
+
+  # troodos is a separate package with its own dependency set and its own lint rules (it bans
+  # driver imports outside the adapter packages), so it gets its own job rather than riding on
+  # the harness's. The last step is the one that matters: it walks the exact path a person who
+  # cloned this repository walks, and fails if `troodos` cannot be installed and run.
+  troodos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: troodos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync dependencies
+        run: uv sync --group dev
+
+      - name: Lint (ruff)
+        run: uv run --group dev ruff check .
+
+      - name: Run the test suite
+        run: uv run --group dev pytest -q
+
+      # NON-editable, and run from outside the checkout. Editable is precisely the mode that
+      # conceals missing package data — it leaves every file where it already is, so a package the
+      # build config forgot to declare imports anyway. Installing the built wheel is the only way
+      # to find out what a stranger actually receives.
+      - name: Install the built product and answer a question, as a stranger would
+        working-directory: .
+        run: |
+          uv run python -m cli data
+          # Generating writes the raw tables to `main`; opening the warehouse the harness way
+          # is what moves them to `_source` and builds the `_star` views the semantic layer
+          # reads. Without this there is no schema for troodos to answer from.
+          uv run python -m cli query "SELECT 1" > /dev/null
+
+          # troodos itself installs non-editable. Its engine dependency still arrives editable,
+          # because troodos/pyproject.toml declares the path source that way — so this job proves
+          # troodos's own packaging, not the engine's. The `wheel` job above is what proves the
+          # engine's, by importing a built wheel with nothing else on the path.
+          uv tool install ./troodos
+          troodos --version
+          troodos inspect "$GITHUB_WORKSPACE/runs/warehouse.duckdb" --schema _star
+          # --mock is a deterministic stub model, so this needs no API key and costs nothing,
+          # while still exercising the whole path: connect, ground, run the agent loop, apply
+          # the guardrails, render a typed outcome.
+          cd /tmp
+          troodos ask --db "$GITHUB_WORKSPACE/runs/warehouse.duckdb" --schema _star --mock \
+            "how many active users?"
+
+      # The product must get the engine and NOTHING ELSE. If the apparatus is reachable from
+      # troodos's environment, the separation is nominal: the engine cannot be published without
+      # it, and the product installs pandas, numpy and faker it never calls.
+      #
+      # Run by the INSTALLED tool's own interpreter, found through `uv tool dir`. An earlier
+      # version used `uv run` from the troodos directory, which is troodos's DEVELOPMENT venv —
+      # so it asserted the shape of the environment a maintainer works in, and said nothing about
+      # the one a user receives. A dependency missing from the installed artifact, or an
+      # apparatus package leaking into it, passed that check.
+      - name: Assert the installed product holds the engine and nothing else
+        working-directory: .
+        run: |
+          PY_BIN="$(uv tool dir)/troodos/bin/python"
+          test -x "$PY_BIN" || { echo "no interpreter at $PY_BIN — did uv tool install run?"; exit 1; }
+          "$PY_BIN" - <<'PY'
+          import importlib.util as u
+
+          # Present, or the product cannot answer anything. The provider SDKs are on this list
+          # because structure is not capability: every engine package imported cleanly while a
+          # default install still could not call a model, and `--mock` needs no SDK, so every
+          # test and every step here passed anyway.
+          missing = [m for m in ("agent", "semantic", "warehouse", "troodos",
+                                 "anthropic", "openai") if not u.find_spec(m)]
+          if missing:
+              raise SystemExit(f"the installed product is missing: {missing}")
+
+          # Absent, or the separation is nominal.
+          leaked = [m for m in ("cli", "evals", "experiments", "scratchpad",
+                                "pandas", "numpy", "faker") if u.find_spec(m)]
+          if leaked:
+              raise SystemExit(f"the apparatus leaked into the installed product: {leaked}")
+          print("installed product holds the engine only")
+          PY

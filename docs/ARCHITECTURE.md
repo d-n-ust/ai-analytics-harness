@@ -17,9 +17,9 @@ This document names it, says why it is not a guardrail, and says where it goes.
 
 | axis | the question it varies | primitive | lives in |
 |---|---|---|---|
-| **grounding** | what the agent **knows** | `rung` 1–7 | `agent/rungs.py`, `agent/grounding.py` |
-| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R9 | `agent/guardrails/` |
-| **protocol** | what the agent must **declare** | `Protocol` | `agent/protocol.py`, `evidence/` |
+| **grounding** | what the agent **knows** | `rung` 1–7 | `engine/src/agent/rungs.py`, `engine/src/agent/grounding.py` |
+| **guardrails** | what the agent **may do** | `GuardrailSet` R0–R9 | `engine/src/agent/guardrails/` |
+| **protocol** | what the agent must **declare** | `Protocol` | `engine/src/agent/protocol.py`, `engine/src/evidence/` |
 
 Each is independent in the sense that matters for an experiment: hold two fixed, move the third,
 and the run means something. That is what makes it an axis rather than a setting.
@@ -44,7 +44,7 @@ families of metric that cannot be merged should not be produced by one package.*
 
 ## Why protocol is not a guardrail
 
-`agent/guardrails/__init__.py` classifies guardrails by `Position`, and the docstring is explicit
+`engine/src/agent/guardrails/__init__.py` classifies guardrails by `Position`, and the docstring is explicit
 that the classification is by **failure mode**, because failure mode is what predicts behaviour:
 
 ```
@@ -140,8 +140,8 @@ agent/
   guardrails/            ✅ unchanged, minus claims.py; consults evidence/ for num_match
 ```
 
-`evidence/` sits beside `warehouse/` and `semantic/`, not inside `agent/`, and it has the same
-shape as `semantic/`: it reads a certified model plus a trace and returns facts. **It decides
+`engine/src/evidence/` sits beside `engine/src/warehouse/` and `engine/src/semantic/`, not inside `engine/src/agent/`, and it has the same
+shape as `engine/src/semantic/`: it reads a certified model plus a trace and returns facts. **It decides
 nothing.** `audit()` already holds that property — it returns findings and never refuses — and
 making it structural is what stops it drifting into a judge the first time a check is
 inconvenient. It is also what makes it publishable: a component that renders no verdict can be
@@ -184,7 +184,7 @@ Where each piece of `claim_binding` went:
 | `CLAIM_FRAMING` env var | ✅ `Protocol.framing` | protocol |
 | `because` on governed calls (R10) | ✅ `Protocol.purpose` | protocol |
 | reject-and-retry on unresolved citations (R12) | ✅ `Protocol.repair`, at `Position.REPAIR` | protocol — it enforces the DECLARATION contract |
-| the stored audit | ✅ always on, `evidence/` | neither — it is the instrument |
+| the stored audit | ✅ always on, `engine/src/evidence/` | neither — it is the instrument |
 | typed `value` / `source_metric` / `sources` (R7) | ⬜ still `GuardrailSet.governed_numbers` | protocol, misfiled — R7 is published |
 
 The audit becoming unconditional is the point of the split: measurement is not a treatment. An
@@ -228,7 +228,7 @@ against result handles, which exist from rung 3 up, and never needed the R7 chec
 
 `Position.REPAIR` outlives the guardrail that introduced it. A repair is still a mechanism at a
 position; it is simply not a rung. The registry test now asserts every position is used
-*somewhere in `agent/`* rather than by a `Guardrail`, so the no-dead-position guarantee survives
+*somewhere in `engine/src/agent/`* rather than by a `Guardrail`, so the no-dead-position guarantee survives
 the axis it was written for.
 
 ### Design it twice — the alternative, and why not
@@ -265,7 +265,7 @@ migration.
 
 ## Sequencing
 
-1. ✅ **`claims.py` → `evidence/`.** `num_match` moved with it — both ends of the stack ask the
+1. ✅ **`claims.py` → `engine/src/evidence/`.** `num_match` moved with it — both ends of the stack ask the
    same question, so one definition, in the layer that owns it. The dependency direction is a
    test (`test_the_evidence_layer_never_reaches_back_into_the_agent`) that catches a real
    violation, not just an absent one.
@@ -292,7 +292,7 @@ third axis, and it is cheap: the audit is a lookup, so it costs one sweep and no
 The framing was not an oversight — it was the first treatment that is **not a boolean**, and
 `GuardrailSet` can only say on/off. Anything with more than two levels, or that varies *wording*
 rather than *mechanism*, has nowhere to live and ends up in the environment. Two others are still
-there: `VERIFIER_STANCE` (`agent/guardrails/judge.py`) and the reasoning-effort settings. They are
+there: `VERIFIER_STANCE` (`engine/src/agent/guardrails/judge.py`) and the reasoning-effort settings. They are
 read once per run and stamped on every row, which is most of the discipline — but they still
 cannot be named in a cell or vary within a run, so a stance comparison is two runs at different
 times on a shared API. `Protocol` is the pattern for fixing that; the judge's stance is the
@@ -346,7 +346,7 @@ output tokens per row            319 -> 351  (+10%)
 ```
 
 Every one of those movements is one or two questions. Repair does not buy accuracy and does not
-cost coverage — which is the predicted result, not a disappointing one: `agent/protocol.py` states
+cost coverage — which is the predicted result, not a disappointing one: `engine/src/agent/protocol.py` states
 that repair *"cannot stop a wrong number, only an unaccountable one"*, and the measurement agrees
 with the docstring.
 
@@ -424,7 +424,7 @@ scoring gap, not a result.
 ### The judge's prose decisions are unmeasurable at this question set
 
 Re-labelled with three independent lenses (strict / pragmatic / skeptical), blind, unanimous-only,
-splits escalated rather than out-voted — see `evals/components/prose_panel.py`. Pooled across
+splits escalated rather than out-voted — see `harness/evals/components/prose_panel.py`. Pooled across
 **all 22 stored runs**:
 
 ```
@@ -439,7 +439,7 @@ Pooling every run ever stored raises it to 28.
 
 The numeric half is fine and current: n=58, agreement 98.3%, catch rate 100%, one false flag.
 
-The four escalated cases are in `evals/labels/prose_panel_escalations.yml` awaiting a human.
+The four escalated cases are in `harness/evals/labels/prose_panel_escalations.yml` awaiting a human.
 Averaging a three-way split into a majority label is how a validation set encodes a coin flip as
 ground truth.
 

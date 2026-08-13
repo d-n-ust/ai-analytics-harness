@@ -1,0 +1,48 @@
+[project]
+# The name the published measurements were produced under. Kept deliberately: essays cite this
+# repository, and renaming the thing that generated the numbers is a cost with no benefit.
+name = "ai-analytics-harness"
+version = "0.1.0"
+description = "The apparatus: the experiment runner, the graders, the pre-registrations, and the CLI. Measures the engine; never ships with it."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+dependencies = [
+    # Everything the engine offers. The harness runs every provider, generates the synthetic
+    # warehouse, and computes similarity, so it takes the lot — which is exactly why the engine
+    # keeps them optional rather than assuming them.
+    "ai-analytics-engine[all]",
+    "rich>=13",
+]
+
+[dependency-groups]
+# The structural guarantees are claimed to hold for ANY call, not just the handful a human
+# thought to enumerate. Hypothesis generates the call space so that claim is tested rather
+# than asserted.
+dev = [
+    "hypothesis>=6.100",
+    "pytest>=8",
+]
+metricflow = [
+    "metricflow>=0.211.0",
+]
+
+[tool.uv.sources]
+ai-analytics-engine = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Flat, not src/. This package is never built as a wheel and never installed by anyone but the
+# maintainer — `src/` exists to catch distribution defects, and there is no distribution to
+# defend. Putting 94 inert pre-registration YAML files inside a source root would be cargo cult.
+#
+# It is still a real package rather than a bare directory, because that is what puts `cli`,
+# `evals` and `harness_paths` on the path of an editable install without a repo-root .pth.
+[tool.hatch.build.targets.wheel]
+packages = ["cli", "evals", "experiments", "scratchpad", "harness_paths"]
+
+# No [tool.ruff] and no [tool.pytest] — see the note in engine/pyproject.toml. Nearest config
+# wins, so a block here would shadow the root's rather than add to it.
