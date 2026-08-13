@@ -10,7 +10,7 @@ So: resample the rows within each coalition, recompute the whole exact Shapley e
 report the interval. A component whose interval straddles a neighbour's is not ranked by this
 data, however precisely the point estimate is printed.
 
-    PYTHONPATH=. uv run python scratchpad/shapley_bootstrap.py <run>/raw.jsonl [iters]
+    PYTHONPATH=. uv run python harness/scratchpad/shapley_bootstrap.py <run>/raw.jsonl [iters]
 """
 from __future__ import annotations
 

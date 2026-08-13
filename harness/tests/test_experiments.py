@@ -1,6 +1,6 @@
 """The experiment engine keeps the promises the arms make — NO LLM.
 
-    PYTHONPATH=. uv run python tests/test_experiments.py
+    PYTHONPATH=. uv run python harness/tests/test_experiments.py
 
 An arm file is a claim about what changes. These check that the claim is true of the layer the
 engine actually generates, because the alternative is what happened last time: an arm that had

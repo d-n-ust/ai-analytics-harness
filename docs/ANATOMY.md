@@ -20,13 +20,13 @@ the directory tree *is* the reference architecture. Read it top (the consumer) t
 
 | component | what it is | file(s) |
 |---|---|---|
-| **Orchestrator** | the control loop: reason → call a tool → observe → stop on a terminal tool. The part that is *not* the model. | `agent/loop.py` |
-| **Model** | the LLM, reached by an outbound **API call** (OpenAI / Anthropic / DeepSeek behind one interface). The swappable part. | `agent/providers.py` |
-| **Tools** | the action space: `list_metrics` / `query_metric`, raw `run_sql` (until `tool_restriction` removes it), `check_*` answerability tools, the metric tree, and the terminal `answer` / `refuse` / `clarify`. Which are OFFERED is decided by the ACTION_SPACE guardrails, not here. | `agent/tools.py`, `agent/guardrails/action_space.py` |
-| **Context** | everything assembled into the prompt: the system prompt + the grounding sources, built per rung. What each rung gives is declared in one table. | `agent/prompts.py`, `agent/rungs.py` reading `warehouse/` · `semantic/` · `agent/context/` |
-| **Guardrails** | what the system *enforces*, grouped by WHERE they sit in a request: `action_space` (which tools exist), `before` (a call may not run), `disclosure` (what the result really covers), `after` (the answer may not be served). | `agent/guardrails/` — `__init__.py` (registry) · `action_space.py` · `before.py` · `disclosure.py` · `after.py` · `judge.py` |
+| **Orchestrator** | the control loop: reason → call a tool → observe → stop on a terminal tool. The part that is *not* the model. | `engine/src/agent/loop.py` |
+| **Model** | the LLM, reached by an outbound **API call** (OpenAI / Anthropic / DeepSeek behind one interface). The swappable part. | `engine/src/agent/providers.py` |
+| **Tools** | the action space: `list_metrics` / `query_metric`, raw `run_sql` (until `tool_restriction` removes it), `check_*` answerability tools, the metric tree, and the terminal `answer` / `refuse` / `clarify`. Which are OFFERED is decided by the ACTION_SPACE guardrails, not here. | `engine/src/agent/tools.py`, `engine/src/agent/guardrails/action_space.py` |
+| **Context** | everything assembled into the prompt: the system prompt + the grounding sources, built per rung. What each rung gives is declared in one table. | `engine/src/agent/prompts.py`, `engine/src/agent/rungs.py` reading `engine/src/warehouse/` · `engine/src/semantic/` · `engine/src/agent/context/` |
+| **Guardrails** | what the system *enforces*, grouped by WHERE they sit in a request: `action_space` (which tools exist), `before` (a call may not run), `disclosure` (what the result really covers), `after` (the answer may not be served). | `engine/src/agent/guardrails/` — `__init__.py` (registry) · `action_space.py` · `before.py` · `disclosure.py` · `after.py` · `judge.py` |
 | **Memory** | none, by design — each question is a fresh conversation (stateless). | — |
-| **Observability** | typed outcomes on every run + the aggregator that turns stored rows into `summary.md` / `summary.json`. | `evals/report.py` |
+| **Observability** | typed outcomes on every run + the aggregator that turns stored rows into `summary.md` / `summary.json`. | `harness/evals/report.py` |
 
 ## The request lifecycle
 
@@ -55,6 +55,6 @@ The same agent runs at every point of a **2-D grid** — this is what the two ex
 - **grounding rung** — how much *context* the agent is given (`GROUNDING.md`). Rungs 1–6 each add
   to the one below; rung 7 is the governed-only cell (semantic layer + metric tree, without the
   advisory blocks), so the ladder is no longer monotonic and capabilities are asked of
-  `agent/rungs.py` rather than inferred from the number.
+  `engine/src/agent/rungs.py` rather than inferred from the number.
 - **guardrail config (R0–R9, or any ablation cell)** — which reliability *guardrails* are on
-  (`RELIABILITY.md`). One `GuardrailSet` is the sole primitive (`agent/guardrails/__init__.py`).
+  (`RELIABILITY.md`). One `GuardrailSet` is the sole primitive (`engine/src/agent/guardrails/__init__.py`).

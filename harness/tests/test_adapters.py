@@ -10,7 +10,7 @@ adapters BEFORE the conversation types existed, when each one walked hand-assemb
 dicts. Rendering the same conversation through the new types must produce byte-identical
 payloads — that is what makes moving the boundary a refactor rather than a rewrite.
 
-Run: PYTHONPATH=. uv run python tests/test_adapters.py
+Run: PYTHONPATH=. uv run python harness/tests/test_adapters.py
 """
 
 from __future__ import annotations
@@ -293,7 +293,9 @@ def test_metricflow_implements_every_layer_method_the_agent_can_reach():
     from semantic.metricflow_engine import MetricFlowLayer
     from semantic.semantic import SemanticLayer
 
-    files = subprocess.run(["git", "ls-files", "agent/*.py", "agent/**/*.py"],
+    # Repo-relative pathspec. When agent/ moved under engine/src/ this matched zero files and the
+    # capability-gap guard passed by examining nothing.
+    files = subprocess.run(["git", "ls-files", "engine/src/agent/*.py", "engine/src/agent/**/*.py"],
                            capture_output=True, text=True, check=True).stdout.split()
     called = set()
     for path in files:

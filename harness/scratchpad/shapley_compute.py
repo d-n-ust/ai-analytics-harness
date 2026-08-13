@@ -15,7 +15,7 @@ fact about the guardrail.
 
 Any earlier output is superseded: recompute from a run whose cells are all coherent.
 
-    PYTHONPATH=. uv run python scratchpad/shapley_compute.py <run>/raw.jsonl
+    PYTHONPATH=. uv run python harness/scratchpad/shapley_compute.py <run>/raw.jsonl
 """
 from __future__ import annotations
 

@@ -12,16 +12,16 @@ bench query "SELECT ..."   # run SQL with the clean dim_/fct_ views built
 
 ## Raw → star (the transformation layer)
 
-- **Raw tables** (`warehouse/generate.py`) — the application database as it really is: cryptic column
+- **Raw tables** (`engine/src/warehouse/generate.py`) — the application database as it really is: cryptic column
   names, inconsistent enums (`platform` stored as `ios` / `iOS` / `IOS` / `1`), integer status codes,
   internal/test users mixed into production, and grain traps that silently double numbers.
-- **Star schema** (`warehouse/star.sql`) — clean `dim_*` / `fct_*` views over the raw tables: sane
+- **Star schema** (`engine/src/warehouse/star.sql`) — clean `dim_*` / `fct_*` views over the raw tables: sane
   names, typed columns, normalised enums, timezone-free ISO dates. Built at query time by
-  `warehouse/warehouse.py`.
+  `engine/src/warehouse/warehouse.py`.
 
 ## The governed model (the semantic layer)
 
-`semantic/semantic_layer.yml` defines the metrics — each a named, governed query spec (entity +
+`engine/src/semantic/semantic_layer.yml` defines the metrics — each a named, governed query spec (entity +
 segment + aggregate + grain), the same shape a MetricFlow/Cube layer uses. A metric already *is* a
 structured query definition; the harness reads it back, it never re-declares it. Examples:
 
@@ -55,7 +55,7 @@ bench query "SELECT count(DISTINCT user_id) FROM fct_sessions
 bench ask "how many active users did we have last week?" --rung 3
 ```
 
-The gold answers behind the eval are computed the same way (independent gold SQL, `evals/gold.py`) and
+The gold answers behind the eval are computed the same way (independent gold SQL, `harness/evals/gold.py`) and
 are treated as **fallible** — benchmark "gold" is wrong more often than anyone admits, so they are
 sanity-checked, not trusted.
 
@@ -63,4 +63,4 @@ sanity-checked, not trusted.
 
 A known anomaly is injected into the most recent week, so the diagnostic questions have a
 *computable* correct root cause (which driver moved, by how much), not a vibe. The metric tree
-(`semantic/metric_tree.yml`) carries the identity + influence edges the diagnostic tier walks.
+(`engine/src/semantic/metric_tree.yml`) carries the identity + influence edges the diagnostic tier walks.

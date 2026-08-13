@@ -18,7 +18,7 @@ Unanimous verdicts become labels. **Any split is escalated to a human** rather t
 majority: a 2-1 is the panel telling you the case is genuinely arguable, and averaging that away
 is how a validation set comes to encode a coin flip as ground truth.
 
-    sample:  uv run python evals/components/prose_panel.py sample runs/latest/raw.jsonl
+    sample:  uv run python harness/evals/components/prose_panel.py sample runs/latest/raw.jsonl
     review:  the escalations are written to evals/labels/prose_panel_escalations.yml
 """
 

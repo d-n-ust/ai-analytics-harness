@@ -3,7 +3,7 @@
 `audit()` resolves what an answer committed to against the trace it was built from. Every case
 below is a shape seen in a live run, so the test pins behaviour rather than intention.
 
-Run: PYTHONPATH=. uv run python tests/test_claims.py
+Run: PYTHONPATH=. uv run python engine/tests/test_evidence.py
 """
 
 from __future__ import annotations

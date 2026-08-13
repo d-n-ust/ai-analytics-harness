@@ -1,6 +1,6 @@
 """The context ledger — NO LLM.
 
-    PYTHONPATH=. uv run python tests/test_provenance.py
+    PYTHONPATH=. uv run python harness/tests/test_provenance.py
 
 An experiment whose treatment is the semantic layer needs to prove, per run, that the model was
 shown the layer that run's arm promised. `Grounding.fingerprint()` cannot: it hashes a

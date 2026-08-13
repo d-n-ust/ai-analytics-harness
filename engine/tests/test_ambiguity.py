@@ -5,7 +5,7 @@ test measures its recall against real confusions AND against two trivial baselin
 this layer one collision dominates and recall alone cannot tell the lint apart from a rule that
 flags any two names sharing a word.
 
-Run: PYTHONPATH=. uv run python tests/test_ambiguity.py
+Run: PYTHONPATH=. uv run python engine/tests/test_ambiguity.py
 """
 
 from __future__ import annotations

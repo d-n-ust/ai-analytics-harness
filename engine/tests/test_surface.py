@@ -9,8 +9,8 @@ This pins that surface to a golden file. A deliberate change shows up as a reada
 review and is accepted by regenerating; an accidental one fails the build. The same discipline
 `verifier.prompt_fingerprint` already applies to the judge, applied to the agent.
 
-    uv run python tests/test_surface.py              # check
-    uv run python tests/test_surface.py --update     # accept a deliberate change
+    uv run python engine/tests/test_surface.py              # check
+    uv run python engine/tests/test_surface.py --update     # accept a deliberate change
 """
 
 from __future__ import annotations
@@ -159,7 +159,7 @@ def check(update: bool = False) -> int:
         raise AssertionError(
             "the model-visible surface changed — the experiment's treatment changed with it.\n"
             "If deliberate: re-run the affected cells, then accept with\n"
-            "    uv run python tests/test_surface.py --update\n\n" + diff[:4000])
+            "    uv run python engine/tests/test_surface.py --update\n\n" + diff[:4000])
     return len(GRID)
 
 

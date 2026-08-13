@@ -9,7 +9,7 @@ If they do, the gap was never measurable, and no amount of staring at the origin
 have revealed that. That is the whole argument for running the lattice instead of reading rows
 off a leaderboard, in a form that needs no statistics to see.
 
-    PYTHONPATH=. uv run python scratchpad/replication_check.py <run-dir> [more-run-dirs...]
+    PYTHONPATH=. uv run python harness/scratchpad/replication_check.py <run-dir> [more-run-dirs...]
 """
 from __future__ import annotations
 

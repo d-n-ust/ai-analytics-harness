@@ -3,7 +3,7 @@
 `chain_of` turns a stored row into what a reader is shown: each assertion above the evidence it
 rests on. The tests below pin the two things that are easy to lose.
 
-Run: PYTHONPATH=. uv run python tests/test_chain.py
+Run: PYTHONPATH=. uv run python engine/tests/test_chain.py
 """
 
 from __future__ import annotations

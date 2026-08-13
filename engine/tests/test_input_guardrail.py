@@ -20,7 +20,7 @@ The oracle is `SemanticLayer.in_coverage` and `resolve_member`: both independent
 and neither is the thing under test. The coverage check's defect is not that they are wrong, it is
 that the coverage check does not consult them for every way a scope can be named.
 
-    uv run python tests/test_input_guardrail.py
+    uv run python engine/tests/test_input_guardrail.py
 """
 
 from __future__ import annotations

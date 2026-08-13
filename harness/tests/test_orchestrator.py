@@ -8,7 +8,7 @@ real model calls, which meant they were exercised by luck.
 becomes deterministic. It also records the tool specs it was offered, which is how the closing
 phase — the guardrail that stops a truncated run becoming a lost measurement — is checked at all.
 
-Run: uv run python tests/test_orchestrator.py
+Run: uv run python harness/tests/test_orchestrator.py
 """
 
 from __future__ import annotations

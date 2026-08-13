@@ -15,7 +15,12 @@ __pycache__/
 # published essays cite it by GitHub-relative path. It is the one thing in this repository that
 # an outside link depends on, which is why it kept its name and its place while everything around
 # it moved.
-runs/
+#
+# Anchored with a leading slash. Unanchored, `runs/` matches a directory of that name at ANY
+# depth — including results/published/2026-07/runs/, which holds the gzipped raw rows behind the
+# published tables. Those files were already tracked so they did not vanish, but the next
+# published run could not have been committed at all.
+/runs/
 
 # OS
 .DS_Store

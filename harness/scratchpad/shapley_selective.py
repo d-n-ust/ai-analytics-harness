@@ -18,7 +18,7 @@ is a cost axis, and a guardrail that buys safety by declining more will show a r
 That is the price, not a defect, and it is the reason coverage is reported next to the other two
 rather than folded into them.
 
-    PYTHONPATH=. uv run python scratchpad/shapley_selective.py <run>/raw.jsonl [more.jsonl ...] [--iters N]
+    PYTHONPATH=. uv run python harness/scratchpad/shapley_selective.py <run>/raw.jsonl [more.jsonl ...] [--iters N]
 """
 from __future__ import annotations
 

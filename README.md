@@ -21,7 +21,7 @@ and varies the **warehouse it reads**:
 4. **Repair** — when a question that stacks several primitives fails, which primitive broke, and
    what is the cheapest location — implicit, documented, modelled, declared, enforced — where its
    grounding reliably holds? *The repair matrix: 62 questions against eight versions of one
-   warehouse (`experiments/04_repair_matrix/`).*
+   warehouse (`harness/experiments/04_repair_matrix/`).*
 
 The first three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
 protocol crosses the guardrail cells rather than extending them, and "R5 with claims" is a cell you
@@ -42,24 +42,24 @@ every delta is attributable to that one change — not to prompt luck or questio
 
 A canonical agent, named the way the field names it:
 
-- **Orchestrator** (`agent/loop.py`) — the control loop: call the model, run the tool it asks
+- **Orchestrator** (`engine/src/agent/loop.py`) — the control loop: call the model, run the tool it asks
   for, feed the result back, stop on a terminal tool. The part that is *not* the model.
-- **Model** (`agent/providers.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
+- **Model** (`engine/src/agent/providers.py`) — the LLM, reached by an external API call (OpenAI / Anthropic /
   DeepSeek behind one interface). The interchangeable part.
-- **Tools** (`agent/tools.py`) — the action space: governed metric queries, raw SQL (until
+- **Tools** (`engine/src/agent/tools.py`) — the action space: governed metric queries, raw SQL (until
   `tool_restriction` removes it), answerability checks, and the three **terminal** tools `answer` / `refuse` /
   `clarify`, so every run ends in a *typed outcome*, never a sentence to grep.
-- **Context** (`agent/prompts.py` + `agent/rungs.py`, over `warehouse/` · `semantic/` · `agent/context/`) — what the agent is
+- **Context** (`engine/src/agent/prompts.py` + `engine/src/agent/rungs.py`, over `engine/src/warehouse/` · `engine/src/semantic/` · `engine/src/agent/context/`) — what the agent is
   given: the star schema, the semantic layer, verified example queries, the knowledge base, the
   metric tree. This is the grounding-ladder axis.
-- **Guardrails** (`agent/guardrails/`) — the reliability stack, grouped by where each sits in a
+- **Guardrails** (`engine/src/agent/guardrails/`) — the reliability stack, grouped by where each sits in a
   request: the coverage check, the tool restriction, member resolution, governed_numbers, output validation, the trajectory
   verifier. What the system *enforces*, not behaviours the model chooses. This is the
   reliability-ladder axis.
-- **Protocol** (`agent/protocol.py`) — what the answer must *declare* about its own work: a purpose
+- **Protocol** (`engine/src/agent/protocol.py`) — what the answer must *declare* about its own work: a purpose
   per governed call, one claim per assertion, each naming the governed value it rests on. A peer of
   the guardrail set, not a part of it. This is the evidence-graph axis.
-- **Evidence layer** (`evidence/`) — resolves every declaration against the trace it was built from.
+- **Evidence layer** (`engine/src/evidence/`) — resolves every declaration against the trace it was built from.
   It **decides nothing**: no verdict, no refusal, no downgrade. That is what keeps it an instrument
   rather than a second judge, and it is why its numbers need no gold answers.
 - **Memory** — none, by design: each question is a fresh conversation.
@@ -99,7 +99,7 @@ beats the example); rung 6 buys **usefulness** — the jump from "what was the n
 
 The grounding ladder makes the agent *capable*. The reliability ladder makes it *trustworthy* —
 answer when the data supports it, and **refuse with a typed reason** when it does not, instead of
-serving a confident wrong number. Each rung switches on one guardrail (`agent/guardrails/__init__.py`):
+serving a confident wrong number. Each rung switches on one guardrail (`engine/src/agent/guardrails/__init__.py`):
 
 | Rung | Guardrail | What it stops |
 |---|---|---|
@@ -122,7 +122,7 @@ shared with the grounding experiment.
 
 Scoring is **selective prediction** — an agent that may decline cannot be judged on accuracy alone,
 since refusing everything scores perfectly on what it answers. Three numbers, never pooled into one
-(`evals/selective.py` is the single definition):
+(`harness/evals/selective.py` is the single definition):
 
 | | |
 |---|---|
@@ -243,7 +243,7 @@ compares against **gpt-5.6-terra** and **gpt-5.6-sol**, the two larger models in
 Reasoning effort is a **ladder per model, not a floor**: `gpt-5-mini` accepts
 `minimal/low/medium/high` and 400s on `none`; the `gpt-5.6` models accept `none/low/medium/high/xhigh`
 and 400s on `minimal`. Neither is a prefix of the other, so a model runs at its nearest accepted
-effort and the row records what was actually sent (`agent/models.py`).
+effort and the row records what was actually sent (`engine/src/agent/models.py`).
 
 ## How answers are graded
 
@@ -293,7 +293,7 @@ ships, the apparatus that measures it, and the product built on it.
 ```
 engine/       WHAT SHIPS. Installable on its own; troodos depends on this and nothing else.
   src/agent/       the agent: orchestrator loop, prompt/context assembly, tools, model adapters,
-                   guardrails, the answer verifier, and the declaration protocol. `context/`
+                   guardrails, the answer verifier, and the declaration protocol. `engine/src/agent/context/`
                    sits inside it — verified example queries and the knowledge base are package
                    data, and a wheel that leaves them behind assembles a silently short prompt
   src/semantic/    the governed model: the semantic layer (metrics/segments) + the metric tree
@@ -342,7 +342,7 @@ measured null, and what was tried and rejected.
 
 Every published figure lives in [`results/published/2026-07/`](results/published/2026-07/) — 70 cells
 across the 12 runs the write-ups cite, one row per (run, rung, config), regenerable with
-`evals/components/publish_metrics.py`. The four runs whose *raw* rows back a claim the tables can't
+`harness/evals/components/publish_metrics.py`. The four runs whose *raw* rows back a claim the tables can't
 express (replaying a judge call, re-deriving a coalition value) are in `2026-07/runs/`, gzipped with
 traces intact.
 

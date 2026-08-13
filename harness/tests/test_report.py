@@ -4,7 +4,7 @@ aggregate() is the measurement half of the report: rows -> a structured summary.
 pure, a handful of hand-built rows pin the arithmetic (coverage, precision, groundedness, the
 reason pivot) exactly, and prove the answerable / unanswerable rates are never pooled.
 
-Run: PYTHONPATH=. uv run python tests/test_report.py
+Run: PYTHONPATH=. uv run python harness/tests/test_report.py
 """
 
 from __future__ import annotations

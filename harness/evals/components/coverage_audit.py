@@ -21,8 +21,8 @@ Dependence is decided by recompiling the call and reading LABELLED rows back out
 warehouse — for a breakdown, only the out-of-coverage member's own row counts, not the
 whole result set.
 
-    uv run python evals/components/coverage_audit.py                    # every stored run
-    uv run python evals/components/coverage_audit.py --run runs/latest --json out.json
+    uv run python harness/evals/components/coverage_audit.py                    # every stored run
+    uv run python harness/evals/components/coverage_audit.py --run runs/latest --json out.json
 """
 
 from __future__ import annotations
@@ -174,7 +174,10 @@ def audit_optout(rows: list[dict]) -> dict:
 
 
 def load_rows(run: str | None) -> list[dict]:
-    runs = [Path(run)] if run else sorted((RESULTS / "runs").glob("*"))
+    # RESULTS is already the runs directory; the extra "runs" segment was left over from when
+    # run output lived at results/runs/, and made this glob match nothing at all. An audit that
+    # silently examines zero rows reports a clean bill of health, which is the worst way to fail.
+    runs = [Path(run)] if run else sorted(d for d in RESULTS.glob("*") if d.is_dir())
     rows = []
     for d in runs:
         raw = d / "raw.jsonl"

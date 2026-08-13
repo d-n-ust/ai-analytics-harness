@@ -6,7 +6,7 @@ sweep exposed the same blind spot twice: the gold set could say "refuse" or "ans
 no way to say **"do not guess"** — which is what a genuinely ambiguous question, or a question
 asked without the context that defines its terms, actually demands.
 
-Run: PYTHONPATH=. uv run python tests/test_grade.py
+Run: PYTHONPATH=. uv run python harness/tests/test_grade.py
 """
 
 from __future__ import annotations

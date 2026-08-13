@@ -39,7 +39,7 @@ jobs:
         run: |
           uv run python - <<'PY'
           import json, pathlib, sys
-          summary = json.loads(pathlib.Path("results/latest/summary.json").read_text())
+          summary = json.loads(pathlib.Path("runs/latest/summary.json").read_text())
           rows = summary["meta"]["n_rows"]
           dead = summary.get("dead_rows") or []
           if not rows:
@@ -61,8 +61,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
 
-      - name: Build the wheel
-        run: uv build --wheel --out-dir dist/
+      # `--package`, because the root is a workspace shell with no build backend: `uv build` there
+      # falls back to setuptools' legacy path, which refuses a flat layout holding five top-level
+      # directories, and the job died at step one.
+      - name: Build the engine wheel
+        run: uv build --wheel --package ai-analytics-engine --out-dir dist/
 
       # Run from OUTSIDE the checkout. Python puts the working directory on sys.path, so from the
       # repo root every import resolves to the source tree and the wheel is never exercised —
@@ -149,6 +152,10 @@ jobs:
           # reads. Without this there is no schema for troodos to answer from.
           uv run python -m cli query "SELECT 1" > /dev/null
 
+          # troodos itself installs non-editable. Its engine dependency still arrives editable,
+          # because troodos/pyproject.toml declares the path source that way — so this job proves
+          # troodos's own packaging, not the engine's. The `wheel` job above is what proves the
+          # engine's, by importing a built wheel with nothing else on the path.
           uv tool install ./troodos
           troodos --version
           troodos inspect "$GITHUB_WORKSPACE/runs/warehouse.duckdb" --schema _star

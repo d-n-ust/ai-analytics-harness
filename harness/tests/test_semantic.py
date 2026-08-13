@@ -6,7 +6,7 @@ stubbed here so the file never calls an LLM). Everything asserted below is deter
 provable by construction. The rest exercises the semantic layer, the coverage check, and the
 guardrail ladder.
 
-Run: uv run python -m pytest tests/test_semantic.py -q     (or run this file directly)
+Run: uv run python -m pytest harness/tests/test_semantic.py -q     (or run this file directly)
 """
 
 from __future__ import annotations
@@ -1295,7 +1295,6 @@ def test_additivity_is_read_from_the_aggregate_not_annotated():
     meant both "not additive" and "nobody decided". The derivation agrees with every True and
     resolves every null — so the flag becomes a test OF the derivation rather than a second
     source of truth that can drift from it."""
-    from pathlib import Path
 
     import yaml
     sem = SemanticLayer(open_warehouse(create_star_views=True))
@@ -1308,8 +1307,9 @@ def test_additivity_is_read_from_the_aggregate_not_annotated():
     # is what says so.
     assert sem.additivity("active_subscriptions") == "semi_additive"
 
-    layer = yaml.safe_load((Path(__file__).resolve().parent.parent / "semantic" /
-                            "semantic_layer.yml").read_text())["metrics"]
+    from semantic.semantic import SPEC_PATH
+
+    layer = yaml.safe_load(SPEC_PATH.read_text())["metrics"]
     disagreed = [n for n, spec in layer.items()
                  if spec.get("additive_over_time") and sem.additivity(n) != "additive"]
     assert not disagreed, (

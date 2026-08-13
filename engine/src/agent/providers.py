@@ -94,7 +94,10 @@ def load_env() -> None:
     # file. Never let a resolution failure become someone else's error message.
     candidates = [
         os.environ.get("AAH_ENV_FILE"),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, ".env"),
+        # The repo root, from inside the package: agent -> src -> engine -> root. Counted rather
+        # than assumed, because this line used a single `..` when the package sat at the root and
+        # silently began pointing at engine/src/.env when it moved.
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), *([os.pardir] * 3), ".env"),
         find_dotenv(usecwd=True) or None,
     ]
     for candidate in candidates:

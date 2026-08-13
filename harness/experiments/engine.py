@@ -349,8 +349,11 @@ class Experiment:
 
     def problems(self) -> list:
         """Pointers that have gone stale. A manifest nobody checks is a manifest that lies."""
+        # Resolved the same way a study's own paths are, or `bench exp` reports every
+        # pre-registration pointer as stale on a perfectly healthy tree — and a manifest check
+        # that cries wolf is one nobody reads.
         missing = [p for p in list(self.evidence) + list(self.notes)
-                   if not (ROOT / p).exists() and not (self.directory / p).exists()]
+                   if not _resolve_declared(p).exists() and not (self.directory / p).exists()]
         out = [f"{self.name}: evidence path does not exist: {p}" for p in missing]
         if self.runs == "declarative" and not self.studies():
             out.append(f"{self.name}: declares declarative runs but holds no study.yml")
@@ -788,15 +791,36 @@ def _resolve_declared(declared: str) -> Path:
     path that genuinely does not exist still fails loudly rather than silently reading the wrong
     file.
     """
-    moved = {"semantic/": "engine/src/semantic/",
-             "warehouse/": "engine/src/warehouse/",
-             "agent/": "engine/src/agent/",
-             "context/": "engine/src/agent/context/",
-             "experiments/": "harness/experiments/",
-             "evals/": "harness/evals/"}
+    moved = {
+        # engine packages
+        "semantic/": "engine/src/semantic/",
+        "warehouse/": "engine/src/warehouse/",
+        "agent/": "engine/src/agent/",
+        "evidence/": "engine/src/evidence/",
+        "context/": "engine/src/agent/context/",
+        # apparatus
+        "experiments/": "harness/experiments/",
+        "evals/": "harness/evals/",
+        "cli/": "harness/cli/",
+        "scratchpad/": "harness/scratchpad/",
+        # run output, which left results/ for runs/
+        "results/runs/": "runs/",
+        "results/latest": "runs/latest",
+        "results/probes/": "runs/probes/",
+        "results/experiments/": "runs/experiments/",
+    }
     for old, new in moved.items():
         if declared.startswith(old):
             return ROOT / (new + declared[len(old):])
+
+    # `tests/` split in two and a pre-registration cannot know which half holds a given file.
+    # Try both rather than guess.
+    if declared.startswith("tests/"):
+        for half in ("engine", "harness"):
+            candidate = ROOT / half / declared
+            if candidate.exists():
+                return candidate
+
     return ROOT / declared
 
 
@@ -998,7 +1022,10 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
         declared = arm.environment["semantic"]
         layer_wanted = bool(declared)
         if declared:
-            layer_path = (ROOT / declared) if not Path(declared).is_absolute() else Path(declared)
+            # Through _resolve_declared, like `base:` — these are pre-registered paths written
+            # against the old tree, and a study that resolves its base but not its environment
+            # aborts mid-run rather than at load.
+            layer_path = Path(declared) if Path(declared).is_absolute() else _resolve_declared(declared)
             if not layer_path.exists():
                 raise SystemExit(f"{arm.name}: environment.semantic names {declared!r}, "
                                  f"which does not exist")
@@ -1255,7 +1282,7 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
     # matched them, so cleanup silently skipped every mock run it was meant to remove.
     experiment, _, study_name = study.name.partition("/")
     kind = f"{study_name}-mock" if args.mock else study_name
-    out = ROOT / "results" / "experiments" / experiment / f"{stamp}-{kind}"
+    out = harness_paths.RUNS / "experiments" / experiment / f"{stamp}-{kind}"
     # The exact layers this run used, kept beside its numbers. `.build/` is scratch and is
     # regenerated; this copy is the evidence, and without it a stored result names a treatment
     # nobody can reconstruct.

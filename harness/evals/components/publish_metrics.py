@@ -18,13 +18,12 @@ than hidden — these tables let you CHECK a published figure and compare cells;
 you audit an individual answer. For that, re-run the cell: the manifest records the model,
 reasoning effort and surface fingerprint needed to reproduce it.
 
-    PYTHONPATH=. uv run python evals/components/publish_metrics.py <out-dir> <run-dir> [...]
+    PYTHONPATH=. uv run python harness/evals/components/publish_metrics.py <out-dir> <run-dir> [...]
 """
 
 from __future__ import annotations
 
 import csv
-import glob
 import json
 import sys
 from collections import Counter
@@ -40,7 +39,10 @@ CACHED_DISCOUNT = 0.1
 
 def _cases() -> dict:
     out = {}
-    for p in glob.glob("evals/cases/*/*.yml"):
+    # Anchored to this package, not the working directory. A CWD-relative glob matched nothing
+    # whenever the script ran from anywhere but the repo root, and a case that is not found is
+    # not an error here — it is silently labelled `tier=retired` in the published table.
+    for p in sorted((Path(__file__).resolve().parents[1] / "cases").glob("*/*.yml")):
         d = yaml.safe_load(open(p))
         for c in (d if isinstance(d, list) else d.get("cases") or []):
             out[c["id"]] = c

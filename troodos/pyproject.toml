@@ -16,7 +16,7 @@ dependencies = [
     "pyyaml>=6",
     # TEMPORARY, and deliberately marked as such.
     #
-    # The agent, guardrails and semantic compiler currently come from the research harness rather
+    # The agent, guardrails and semantic compiler currently come from the engine package rather
     # than being vendored here. That is a speed decision: it skips copying ~2,100 LOC before the
     # product has proven it wants them in that shape.
     #
@@ -27,7 +27,7 @@ dependencies = [
     #     `troodos.engine`, which is why that adapter exists rather than direct imports;
     #   - the product cannot ship, since a path dependency does not install for anyone else.
     #
-    # The exit is `troodos/engine.py` and nothing else: every import of harness code goes through
+    # The exit is `troodos/engine.py` and nothing else: every import of engine code goes through
     # that one module. Vendoring later means changing that file, not every call site.
     "ai-analytics-engine",
 ]

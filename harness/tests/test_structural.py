@@ -7,7 +7,7 @@ the *system*, so it can be proven by exhaustion. This file is a deterministic
 guardrails block all of them. If a technique is truly structural, an omniscient,
 maximally-adversarial caller still cannot get a bad number out.
 
-Run: uv run python -m pytest tests/test_structural.py -q     (or run this file directly)
+Run: uv run python -m pytest harness/tests/test_structural.py -q     (or run this file directly)
 """
 
 from __future__ import annotations
@@ -168,14 +168,25 @@ def test_the_engine_never_imports_the_apparatus():
     """
     import ast
 
-    engine = ("agent", "semantic", "warehouse", "evidence")
-    apparatus = {"cli", "evals", "experiments", "scratchpad", "tests"}
+    # Discovered, not listed. A hardcoded tuple checks the four packages that existed when it was
+    # written and silently ignores the fifth.
     root = harness_paths.ROOT / "engine" / "src"
+    engine = tuple(sorted(d.name for d in root.iterdir()
+                          if d.is_dir() and (d / "__init__.py").exists()))
+    _check(len(engine) >= 4, f"expected the engine's packages under {root}, found {engine}")
+    # `harness_paths` is in this set because the engine must not know it lives beside an
+    # apparatus, let alone where that apparatus keeps its runs.
+    apparatus = {"cli", "evals", "experiments", "scratchpad", "tests", "harness_paths"}
     # Per package, not a single total: one large package can satisfy a global floor on its own
     # while another is renamed out from under the test and silently stops being checked.
-    checked = dict.fromkeys(engine, 0)
-    for package in engine:
-        for path in sorted((root / package).rglob("*.py")):
+    # engine/tests/ is checked too, and for the same reason: it travels in the engine's sdist, so
+    # a test there that imports the apparatus makes the shipped artefact untestable on its own.
+    # This was not covered when the rule was written, and one such test had already moved in.
+    targets = {p: root / p for p in engine}
+    targets["tests"] = harness_paths.ROOT / "engine" / "tests"
+    checked = dict.fromkeys(targets, 0)
+    for package, directory in targets.items():
+        for path in sorted(directory.rglob("*.py")):
             for node in ast.walk(ast.parse(path.read_text(), filename=str(path))):
                 if isinstance(node, ast.Import):
                     tops = [a.name.split(".")[0] for a in node.names]
@@ -184,8 +195,11 @@ def test_the_engine_never_imports_the_apparatus():
                 else:
                     continue
                 for top in tops:
+                    # A test may name its own directory; only cross-boundary imports are the rule.
+                    if package == "tests" and top == "tests":
+                        continue
                     _check(top not in apparatus,
-                           f"{path.relative_to(root)}:{node.lineno} imports {top!r} — the engine "
+                           f"{path.relative_to(harness_paths.ROOT)}:{node.lineno} imports {top!r} — the engine "
                            "must not depend on the apparatus that measures it. Pass the thing in "
                            "(see ask_one's `trace` parameter) rather than importing it.")
                     checked[package] += 1

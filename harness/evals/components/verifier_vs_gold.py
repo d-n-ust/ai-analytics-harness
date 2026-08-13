@@ -25,7 +25,7 @@ which are why it complements the human panel rather than replacing it:
     homework" — the gold never goes through it — and it does not kill "the author graded their
     own homework".
 
-    uv run python evals/components/verifier_vs_gold.py runs/latest/raw.jsonl [more.jsonl ...]
+    uv run python harness/evals/components/verifier_vs_gold.py runs/latest/raw.jsonl [more.jsonl ...]
 """
 
 from __future__ import annotations

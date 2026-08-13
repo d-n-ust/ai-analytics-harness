@@ -9,7 +9,7 @@ moves about five rows in 171, and tier-level run-to-run variance is around three
 inside the noise. Replay is paired — identical inputs, one variable — so it measures the change
 rather than the afternoon.
 
-    uv run python scratchpad/replay_judge.py runs/<run>/raw.jsonl
+    uv run python harness/scratchpad/replay_judge.py runs/<run>/raw.jsonl
 """
 from __future__ import annotations
 
