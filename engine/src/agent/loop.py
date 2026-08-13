@@ -29,6 +29,7 @@ from .numbers import bare_number
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from .provenance import ContextLedger
 from .providers import ProviderError
+from .tool_args import AnswerArgs, ClarifyArgs, RefuseArgs
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 
@@ -45,11 +46,6 @@ _REPAIR_TEXT = 200
 
 
 _log = logging.getLogger(__name__)
-
-
-def _line(value) -> str:
-    """A model-supplied string as one clean line."""
-    return str(value or "").strip()
 
 
 def _citable(handle: str, result) -> str:
@@ -286,27 +282,35 @@ class _Run:
         if exit_call.name == "answer":
             return self._served(args, iterations)
         if exit_call.name == "refuse":
-            return self._record(answer=None, explanation=_line(args.get("explanation")),
-                                outcome="refuse", reason=args.get("reason"),
-                                missing=args.get("missing"), abstained=True, iterations=iterations)
+            a = RefuseArgs.of(args)
+            return self._record(answer=None, explanation=a.explanation,
+                                outcome="refuse", reason=a.reason,
+                                missing=a.missing, abstained=True, iterations=iterations)
         # A clarify DECLINES — it serves no number — so it abstains and carries a coded reason,
         # like any other decline. It keeps its own outcome rather than folding into `refuse`
         # because the two differ in the one way that will matter next: a refusal is terminal,
         # and a clarification is resumable. Collapsing them would erase the distinction a
         # multi-turn flow is built on.
-        return self._record(answer=None, explanation=_line(args.get("question")),
+        a = ClarifyArgs.of(args)
+        return self._record(answer=None, explanation=a.question,
                             outcome="clarify", reason="clarify", abstained=True,
                             iterations=iterations)
 
     def _served(self, args: dict, iterations: int) -> Answer:
         """An answer, put through the output guardrails before it is served. A failed check does
-        not discard the run — it becomes a refusal carrying the coded reason it failed for."""
-        text = _line(args.get("answer"))
+        not discard the run — it becomes a refusal carrying the coded reason it failed for.
+
+        `AnswerArgs` names the fields; the recovery below is unchanged and still owns them — the
+        raw `args` dict is what `after.check`, `declared_handles` and the audit read, so every
+        byte those produce is identical whether the plain fields are read through the model or off
+        the dict (`parsed.value is args.get("value")`, and so on)."""
+        parsed = AnswerArgs.of(args)
+        text = parsed.answer
         # `value` is optional so a prose answer isn't forced to invent one — and a model that
         # writes "3852" into `answer` and leaves it unset therefore stood every output check
         # down. Recovering it here makes being checked a property of the answer rather than of
         # the model remembering to ask for it.
-        declared = _as_number(args.get("value"))
+        declared = _as_number(parsed.value)
         # Recover from the answer text whenever the typed field yielded no number — whether it
         # was absent, or present and unusable. A model that writes "3852" into `answer` and
         # leaves `value` unset used to stand every output check down; one that writes "about 400"
@@ -321,17 +325,19 @@ class _Run:
         # finally passed, and overwriting here would erase the record of every run that had to be
         # corrected — leaving a corrected run indistinguishable from one that got it right first
         # time, which is exactly the distinction claim_retries exists to keep.
-        self.acts += [a.as_dict() for a in after_acts]
+        self.acts += [act.as_dict() for act in after_acts]
         # The model's typed claims and the judge's verdict travel with the Answer, so a stored
         # run is enough to score the judge later without re-running anything.
         # The audit is a lookup over the trace, so it costs nothing and cannot fail the run.
-        declared_claims = tuple(c for c in (args.get("claims") or []) if isinstance(c, dict))
+        # `claims` is fed to the audit UNCHANGED — the raw dicts, not re-typed through a model —
+        # so the stored `claim_audit` and the audit input stay byte-identical to before.
+        declared_claims = tuple(c for c in (parsed.claims or []) if isinstance(c, dict))
         if self.grounding.protocol.rendered:
             declared_claims = self._rendered(declared_claims)
-        audited = (claim_audit.audit(declared_claims, self.steps, args.get("source_metric"),
+        audited = (claim_audit.audit(declared_claims, self.steps, parsed.source_metric,
                                      **self._audit_context())
                    if self.grounding.protocol.claims else None)
-        claims = dict(source_metric=args.get("source_metric"), declared_value=declared,
+        claims = dict(source_metric=parsed.source_metric, declared_value=declared,
                       claims=declared_claims, claim_audit=audited,
                       sources=declared_handles(args),
                       value_recovered=recovered is not None,
@@ -342,7 +348,7 @@ class _Run:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
                                 reason=verdict.reason, missing=verdict.missing, abstained=True,
                                 refused_by=verdict.guardrail, iterations=iterations, **claims)
-        return self._record(answer=text, explanation=_line(args.get("explanation")),
+        return self._record(answer=text, explanation=parsed.explanation,
                             outcome="answer", iterations=iterations, **claims)
 
     # -- the two ways a run ends without an exit call ----------------------- #

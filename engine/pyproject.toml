@@ -15,8 +15,16 @@ authors = [{ name = "Dmitry Ustimov" }]
 # so nothing pays for them at startup, and a deployment using one provider should not install the
 # other. `pandas`, `numpy` and `faker` are not here either — they belong to the synthetic-data
 # generator, which is apparatus, not engine.
+#
+# `pydantic` earns the fourth slot: it is the type/validation layer for the domain contracts —
+# the config primitives (Protocol/ModelSpec/GuardrailSet), the evidence findings, and the tool-call
+# arguments the model hands back. It validates inbound data at the stage boundaries; it never
+# authors the model-visible tool schemas (those stay the hand-written dicts fingerprint() pins) and
+# never touches how a run row is serialised to disk. A fast Rust core, and already in the resolved
+# lockfile transitively — so this makes a real dependency explicit rather than adding a new one.
 dependencies = [
     "duckdb>=1.1",
+    "pydantic>=2.11",
     "pyyaml>=6",
     "python-dotenv>=1.0",
 ]

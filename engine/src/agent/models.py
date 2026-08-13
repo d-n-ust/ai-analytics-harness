@@ -6,7 +6,8 @@ get one, which is what a single models.py forced.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from pydantic import field_validator
+from pydantic.dataclasses import dataclass
 
 # Reasoning effort, weakest to strongest. The canonical vocabulary; a model accepts some slice
 # of it, and `off`/`disabled` are aliases callers use for the weakest.
@@ -55,6 +56,31 @@ class ModelSpec:
     # them — asking terra for `minimal` is not "below its floor", it is a word it does not know,
     # and it 400s. That killed 342 rows of a sweep before this was a list.
     efforts: tuple[str, ...] = EFFORT_LADDER
+
+    @field_validator("efforts")
+    @classmethod
+    def _efforts_are_ladder_words(cls, efforts: tuple[str, ...]) -> tuple[str, ...]:
+        """Every accepted effort must be a word on the canonical ladder, and there must be at least
+        one. This catches a TYPO (`minimial`) or an empty ladder — it does NOT catch the subtler
+        bug this class exists to remember, where a model rejects a real ladder word (`minimal`)
+        that only a live 400 reveals. That one is a fact about the provider's API, not the
+        vocabulary, so it cannot be checked here; the standing note is the `gpt-5.4-mini` comment."""
+        if not efforts:
+            raise ValueError("a model with no accepted effort cannot be called")
+        bad = [e for e in efforts if e not in EFFORT_LADDER]
+        if bad:
+            raise ValueError(f"efforts {bad} are not on the ladder {list(EFFORT_LADDER)}")
+        return efforts
+
+    @field_validator("provider")
+    @classmethod
+    def _provider_is_routable(cls, provider: str) -> str:
+        """get_model (providers.py) routes on this string, and an unknown value falls through to
+        the Anthropic adapter silently — a typo would run the wrong client rather than fail. Keep
+        it to the three the providers module actually implements."""
+        if provider not in ("openai", "anthropic", "deepseek"):
+            raise ValueError(f"provider={provider!r}; expected openai, anthropic or deepseek")
+        return provider
 
     def effort_for(self, requested: str) -> str:
         """The effort to actually SEND for a requested one.

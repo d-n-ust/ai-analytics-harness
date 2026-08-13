@@ -23,7 +23,7 @@ pretended away.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 __all__ = ["FRAMINGS", "PARTS", "ROLE", "RULE", "Protocol", "split_config"]
 
@@ -51,14 +51,21 @@ _LEGACY_NAMES = {"declared_purpose": "purpose", "claim_binding": "claims",
                  "citation_repair": "repair"}
 
 
-@dataclass(frozen=True)
-class Protocol:
+class Protocol(BaseModel):
     """What an answer must declare about itself. A peer of GuardrailSet, not a part of it.
 
     `repair` is the one member that ACTS — a claim citing something that does not exist is handed
     back rather than served. It lives here anyway, because what it enforces is the declaration
     contract and not the data contract: it cannot stop a wrong number, only an unaccountable one.
+
+    A frozen Pydantic model. The construction-time checks below were a dataclass `__post_init__`
+    and are now validators — the same guarantee in Pydantic's vocabulary, and the reason this file
+    is where the type layer earns its place. `frozen` keeps it immutable and hashable exactly as
+    the dataclass was; `extra="forbid"` keeps an unknown declaration key an error rather than a
+    silently dropped field, so a mistyped protocol part in a config spec fails instead of vanishing.
     """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     purpose: bool = False    # `because` on every governed call — one line on what it is for
     claims: bool = False     # one declaration per assertion, each naming the value it rests on
@@ -72,9 +79,15 @@ class Protocol:
     rendered: bool = False
     framing: str = RULE
 
-    def __post_init__(self) -> None:
-        if self.framing not in FRAMINGS:
-            raise ValueError(f"framing={self.framing!r}; expected one of {list(FRAMINGS)}")
+    @field_validator("framing")
+    @classmethod
+    def _framing_is_known(cls, value: str) -> str:
+        if value not in FRAMINGS:
+            raise ValueError(f"framing={value!r}; expected one of {list(FRAMINGS)}")
+        return value
+
+    @model_validator(mode="after")
+    def _declaration_is_coherent(self) -> Protocol:
         # Rejected at construction rather than reported by a checker, because unlike a guardrail
         # cell there is no reading of it that measures a different system — with no `claims` field
         # offered there is never a citation to repair, so the flag could only ever fire zero times.
@@ -84,6 +97,7 @@ class Protocol:
             raise ValueError("repair without claims: nothing offers a citation to hand back, so "
                              "the repair can only fire zero times — a contribution of zero by "
                              "construction rather than by evidence")
+        return self
 
     @property
     def on(self) -> tuple[str, ...]:
@@ -162,10 +176,14 @@ def _legacy(spec: str) -> tuple[str, Protocol]:
 
 
 def _assert_fields_match_parts() -> None:
-    """PARTS drives the label, the parser and the CLI help; the dataclass drives behaviour. A part
+    """PARTS drives the label, the parser and the CLI help; the model drives behaviour. A part
     added to one and not the other would silently stop appearing in labels — the same class of bug
-    as a guardrail missing from the registry, which tests/test_semantic.py already guards."""
-    declared = tuple(f.name for f in fields(Protocol) if f.type == "bool")
+    as a guardrail missing from the registry, which tests/test_semantic.py already guards.
+
+    Reads `model_fields` rather than `dataclasses.fields`: Pydantic resolves the annotations to
+    real types, so a bool part is `info.annotation is bool` (the old check compared the string
+    `"bool"`, which only worked because `from __future__ import annotations` deferred it)."""
+    declared = tuple(name for name, info in Protocol.model_fields.items() if info.annotation is bool)
     if declared != PARTS:
         raise AssertionError(f"Protocol fields {declared} do not match PARTS {PARTS}")
 
