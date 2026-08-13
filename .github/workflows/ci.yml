@@ -192,8 +192,12 @@ jobs:
           "$PY_BIN" - <<'PY'
           import importlib.util as u
 
-          # Present, or the product cannot answer anything.
-          missing = [m for m in ("agent", "semantic", "warehouse", "troodos") if not u.find_spec(m)]
+          # Present, or the product cannot answer anything. The provider SDKs are on this list
+          # because structure is not capability: every engine package imported cleanly while a
+          # default install still could not call a model, and `--mock` needs no SDK, so every
+          # test and every step here passed anyway.
+          missing = [m for m in ("agent", "semantic", "warehouse", "troodos",
+                                 "anthropic", "openai") if not u.find_spec(m)]
           if missing:
               raise SystemExit(f"the installed product is missing: {missing}")
 

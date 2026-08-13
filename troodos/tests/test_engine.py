@@ -190,3 +190,46 @@ def test_the_product_does_not_reach_the_apparatus():
     leaked = [m for m in ("cli", "evals", "experiments", "scratchpad", "harness_paths")
               if importlib.util.find_spec(m)]
     assert not leaked, f"the apparatus is reachable from the product: {leaked}"
+
+
+def test_a_real_model_is_reachable_without_extras():
+    """A default install can call a model, not only the stub.
+
+    The previous test asserted the engine's PACKAGES were present. That is structure, not
+    capability: every package imported, and the product still could not answer a question,
+    because the provider SDKs were optional extras nobody passes. `troodos ask --model
+    claude-haiku-4-5` failed with "No module named 'anthropic'" on a clean install, and the mock
+    model — which needs no SDK — meant every test and every CI step passed anyway.
+
+    So this asserts the thing the product is for. No API key is involved: a key is the user's to
+    supply, and its absence is a NotConfigured, which is a different and legitimate outcome.
+    A missing SDK is not.
+    """
+    import importlib.util
+
+    missing = [m for m in ("anthropic", "openai") if not importlib.util.find_spec(m)]
+    assert not missing, (
+        f"a default install cannot reach {missing} — the product ships both providers, "
+        f"so `pip install troodos` must not require an extra to answer a question"
+    )
+
+
+def test_a_missing_key_never_looks_like_a_broken_install():
+    """Two failures that look alike to a user and mean opposite things.
+
+    Without a key, the answer is "add one" and the product is fine. Without the SDK, the product
+    is broken and no amount of configuring fixes it. Both surfaced as the same
+    unknown-or-unavailable-model error, so this pins the distinction.
+
+    The assertion is deliberately indifferent to whether a key happens to be present: on a
+    developer's machine `load_env` finds the repository's own `.env` and the model constructs,
+    which is a pass. What must never happen either way is a failure that says "No module named".
+    """
+    from troodos.engine import EngineError, get_model
+
+    try:
+        get_model("claude-haiku-4-5")
+    except EngineError as exc:
+        assert "No module named" not in str(exc), (
+            f"a missing SDK is masquerading as a configuration problem: {exc}"
+        )

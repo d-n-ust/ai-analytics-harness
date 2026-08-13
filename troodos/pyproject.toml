@@ -29,7 +29,11 @@ dependencies = [
     #
     # The exit is `troodos/engine.py` and nothing else: every import of engine code goes through
     # that one module. Vendoring later means changing that file, not every call site.
-    "ai-analytics-engine",
+    # [models], not bare. The engine keeps its provider SDKs optional because it is a LIBRARY:
+    # a deployment picks the one it calls and should not pay for the other. troodos is the
+    # PRODUCT, and a data analyst that cannot reach a model is not one — a default install could
+    # only run --mock, and said so with "No module named 'anthropic'" at the first real question.
+    "ai-analytics-engine[models]",
 ]
 
 [tool.uv.sources]
@@ -42,6 +46,8 @@ dependencies = [
 # without touching a single import.
 ai-analytics-engine = { path = "../engine", editable = true }
 
+# Both providers ship by default (see the dependency note above). These remain for anyone who
+# wants to name one explicitly; they add nothing a default install does not already have.
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.40"]
 openai = ["openai>=1.40"]
