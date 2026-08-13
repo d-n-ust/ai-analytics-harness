@@ -12,6 +12,7 @@ from __future__ import annotations
 import duckdb
 import pytest
 
+import troodos.engine as troodos_engine
 from troodos.engine import Capabilities, EngineError, Guardrails, build_engine
 from troodos.warehouse import connect
 
@@ -139,3 +140,53 @@ def test_engine_rejects_a_warehouse_it_cannot_drive(wh):
 
     with pytest.raises(EngineError, match="cannot drive the harness engine"):
         build_engine(NotDuckDB())
+
+
+# --------------------------------------------------------------- the engine dependency is real
+
+def test_every_deferred_engine_import_resolves():
+    """Every engine symbol `troodos.engine` reaches for, imported now rather than mid-question.
+
+    The imports in that module are function-local by design — the quarantine keeps the harness out
+    of troodos's import graph at module level. The cost of that design is that a missing or
+    renamed engine symbol raises nothing until a user asks a question, which is the worst possible
+    moment to discover the product was installed incompletely. This test pays that cost up front.
+
+    It is written by reading the module's own source rather than by listing the imports here,
+    because a hand-maintained list is a second copy that goes stale the first time someone adds
+    an import and does not think to update a test.
+    """
+    import ast
+    import importlib
+    import pathlib
+
+    source = pathlib.Path(troodos_engine.__file__).read_text()
+    found = 0
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.ImportFrom) or node.level or not node.module:
+            continue
+        if node.module.split(".")[0] not in {"agent", "semantic", "warehouse"}:
+            continue
+        module = importlib.import_module(node.module)
+        for alias in node.names:
+            assert hasattr(module, alias.name), (
+                f"troodos.engine imports {alias.name!r} from {node.module!r}, which does not "
+                f"have it — the engine has moved or been renamed under the product"
+            )
+            found += 1
+    assert found >= 6, f"expected troodos.engine's deferred engine imports, found {found}"
+
+
+def test_the_product_does_not_reach_the_apparatus():
+    """troodos installs the engine. The apparatus that measures the engine must not come with it.
+
+    If `cli` or `evals` is importable here, the separation is nominal: the engine cannot be
+    published without the instrument that measures it, and the product carries pandas, numpy and
+    faker it never calls. The engine's own boundary test enforces the same rule from the other
+    side; this one asserts the consequence a user actually receives.
+    """
+    import importlib.util
+
+    leaked = [m for m in ("cli", "evals", "experiments", "scratchpad", "harness_paths")
+              if importlib.util.find_spec(m)]
+    assert not leaked, f"the apparatus is reachable from the product: {leaked}"

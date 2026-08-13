@@ -178,14 +178,29 @@ jobs:
       # The product must get the engine and NOTHING ELSE. If the apparatus is reachable from
       # troodos's environment, the separation is nominal: the engine cannot be published without
       # it, and the product installs pandas, numpy and faker it never calls.
-      - name: Assert the apparatus is absent from the product's environment
+      #
+      # Run by the INSTALLED tool's own interpreter, found through `uv tool dir`. An earlier
+      # version used `uv run` from the troodos directory, which is troodos's DEVELOPMENT venv —
+      # so it asserted the shape of the environment a maintainer works in, and said nothing about
+      # the one a user receives. A dependency missing from the installed artifact, or an
+      # apparatus package leaking into it, passed that check.
+      - name: Assert the installed product holds the engine and nothing else
+        working-directory: .
         run: |
-          uv run python - <<'PY'
+          PY_BIN="$(uv tool dir)/troodos/bin/python"
+          test -x "$PY_BIN" || { echo "no interpreter at $PY_BIN — did uv tool install run?"; exit 1; }
+          "$PY_BIN" - <<'PY'
           import importlib.util as u
-          import agent, semantic, warehouse   # noqa: F401 — the engine must be present
+
+          # Present, or the product cannot answer anything.
+          missing = [m for m in ("agent", "semantic", "warehouse", "troodos") if not u.find_spec(m)]
+          if missing:
+              raise SystemExit(f"the installed product is missing: {missing}")
+
+          # Absent, or the separation is nominal.
           leaked = [m for m in ("cli", "evals", "experiments", "scratchpad",
                                 "pandas", "numpy", "faker") if u.find_spec(m)]
           if leaked:
-              raise SystemExit(f"the apparatus leaked into the product: {leaked}")
-          print("product environment holds the engine only")
+              raise SystemExit(f"the apparatus leaked into the installed product: {leaked}")
+          print("installed product holds the engine only")
           PY
