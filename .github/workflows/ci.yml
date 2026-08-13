@@ -25,6 +25,15 @@ jobs:
       - name: Run the no-LLM test suite
         run: uv run python -m cli test
 
+      # `bench test` runs each file as a SCRIPT, so a test function absent from a file's
+      # __main__ block executes nowhere. Nineteen had accumulated that way, and three of them
+      # were failing — two on a fixture path a restructure broke, one on an assertion nobody had
+      # seen fail. pytest collects by name, so this is the run that cannot be silently opted out
+      # of. Both suites, and the metricflow group, because two adapter tests need it and were
+      # skipping themselves by ImportError.
+      - name: Collect every test by name (pytest)
+        run: uv run --group dev --group metricflow python -m pytest engine/tests harness/tests -q
+
       # The suite above proves guardrail behaviour; it does not run the experiment. A catalog
       # error in the runner passed every test and failed every run — because nothing here ever
       # called `bench run`. The mock model needs no key and no money, so there is no reason not to.

@@ -373,6 +373,11 @@ def test_every_measured_field_reaches_the_row():
         "question", "rung", "model",        # written from the case/config, not the Answer
         "answer", "explanation", "outcome", "reason", "missing",   # written explicitly above
         "abstained",                        # the grader's, not the Answer's mirror of it
+        # Recorded by the EXPERIMENT runner, not this one: it is only populated under
+        # `run_agent(record_context=True)`, which experiments/engine.py sets and evals/runner.py
+        # does not. It is written at experiments/engine.py:1108, so the field is measured and
+        # stored — just not on this row.
+        "context",
     }
     for name in sorted(carried - ELSEWHERE):
         assert f'"{name}"' in src, (

@@ -126,6 +126,9 @@ dev = [
     { name = "hypothesis" },
     { name = "pytest" },
 ]
+metricflow = [
+    { name = "metricflow" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -138,6 +141,7 @@ dev = [
     { name = "hypothesis", specifier = ">=6.100" },
     { name = "pytest", specifier = ">=8" },
 ]
+metricflow = [{ name = "metricflow", specifier = ">=0.211.0" }]
 
 [[package]]
 name = "annotated-types"

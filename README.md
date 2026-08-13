@@ -224,7 +224,7 @@ Cross either ladder with the **protocol** axis, and read one answer's graph back
 ```bash
 ./bench run --rungs 7 --cells R9 --protocols none,claims,claims+repair   # what declaring buys
 ./bench ask "why did value moments fall?" --rung 6 --protocol claims --trace
-./bench chain --run results/latest        # the question -> evidence -> answer chain, no verdict
+./bench chain --run runs/latest        # the question -> evidence -> answer chain, no verdict
 ./bench ambiguity                         # confusable governed names, from the YAML alone
 ```
 

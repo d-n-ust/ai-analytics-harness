@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import harness_paths
 from agent.conversation import Conversation, ToolCall, ToolResult, Turn
 from agent.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
 
@@ -233,7 +234,6 @@ def test_every_guardrail_metricflow_may_run_can_actually_run():
     executed.
 
     This drives the real guardrail against the real adapter with no model in the loop."""
-    from pathlib import Path
 
     from agent.guardrails import before, parse_cell
     from semantic.metricflow_engine import MetricFlowLayer
@@ -241,7 +241,7 @@ def test_every_guardrail_metricflow_may_run_can_actually_run():
 
     con = open_warehouse()
     set_star(con, 3)
-    layer = MetricFlowLayer(con, Path("experiments/04_repair_matrix/00_primitive_load"
+    layer = MetricFlowLayer(con, harness_paths.ROOT / ("harness/experiments/04_repair_matrix/00_primitive_load"
                                       "/layers/D_declared"))
 
     cell = parse_cell("R7-resolve")            # E_enforced's cell
@@ -317,14 +317,13 @@ def test_metricflow_implements_every_layer_method_the_agent_can_reach():
 def test_additivity_is_read_off_the_aggregate():
     """`governed_numbers` asks whether governed results may be summed across periods, and gets the
     answer from the measure's `agg`. A hand-kept flag drifts; an aggregate cannot."""
-    from pathlib import Path as _P
 
     from semantic.metricflow_engine import MetricFlowLayer
     from warehouse.warehouse import open_warehouse, set_star
 
     con = open_warehouse()
     set_star(con, 3)
-    layer = MetricFlowLayer(con, _P("experiments/04_repair_matrix/00_primitive_load"
+    layer = MetricFlowLayer(con, harness_paths.ROOT / ("harness/experiments/04_repair_matrix/00_primitive_load"
                                     "/layers/D_declared"))
     assert layer.additivity("habit_completions") == "additive"        # count of rows
     assert layer.additivity("people_reminded") == "semi_additive"     # count(distinct user)
