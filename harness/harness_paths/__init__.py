@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from agent import NotConfigured
+
 # harness_paths/ -> harness/ -> the repo root.
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -28,7 +30,7 @@ if not (ROOT / "pyproject.toml").exists():
     # Reached when the harness is installed as a wheel rather than editable from a checkout, at
     # which point `parents[2]` is somewhere in site-packages and every path below is fiction.
     # Fail here, naming the cause, rather than three layers down as a mysterious missing file.
-    raise RuntimeError(
+    raise NotConfigured(
         f"the harness expects to run from a checkout; {ROOT} has no pyproject.toml. "
         "Install it editable (`uv sync`) rather than as a wheel."
     )

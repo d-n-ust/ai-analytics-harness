@@ -22,6 +22,7 @@ import os
 # the parser needs the rung table to build --rung's help and validation from the definitions
 # themselves rather than a second copy of them.
 import harness_paths
+from agent import NotConfigured
 from agent.guardrails import LADDER_ORDER
 from agent.models import DEFAULT_MODEL
 from agent.protocol import FRAMINGS, PARTS
@@ -456,7 +457,12 @@ def main() -> None:
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
 
     args = p.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    except NotConfigured as exc:
+        # The message is the whole answer; a traceback would bury it. Same treatment the CLI
+        # already gives its own SystemExit errors.
+        raise SystemExit(str(exc)) from None
 
 
 if __name__ == "__main__":

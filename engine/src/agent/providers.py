@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import os
 
+from . import NotConfigured
 from .conversation import ToolCall, Turn, Usage
 from .models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING, MODEL_SPECS, ModelSpec
 
@@ -134,7 +135,7 @@ class AnthropicModel:
         import anthropic
         load_env()
         if not os.environ.get("ANTHROPIC_API_KEY"):
-            raise RuntimeError("ANTHROPIC_API_KEY is not set (add it to .env or run with --mock).")
+            raise NotConfigured("ANTHROPIC_API_KEY is not set (add it to .env, or run with --mock).")
         self.spec = spec
         self.client = anthropic.Anthropic(max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)
         # A uniform reasoning label so a run can record its treatment. Anthropic reasoning is the
@@ -212,7 +213,7 @@ class OpenAIModel:
         from openai import OpenAI
         load_env()
         if not os.environ.get(spec.api_key_env):
-            raise RuntimeError(f"{spec.api_key_env} is not set (add it to .env).")
+            raise NotConfigured(f"{spec.api_key_env} is not set (add it to .env, or run with --mock).")
         self.spec = spec
         self.client = OpenAI(base_url=spec.base_url, api_key=os.environ[spec.api_key_env],
                              max_retries=MAX_RETRIES, timeout=REQUEST_TIMEOUT)

@@ -16,10 +16,21 @@ imports light.
 
 from __future__ import annotations
 
-__all__ = ["ask_one"]
-
+__all__ = ["NotConfigured", "ask_one"]
 
 from .models import DEFAULT_MODEL
+
+
+class NotConfigured(RuntimeError):
+    """Something the run needs is absent from the environment — an API key, a generated
+    warehouse, a checkout.
+
+    A distinct type because it is not a bug: nothing is broken, the caller simply has not set
+    something up yet, and every message of this class already names the fix. The CLI catches it
+    and prints that message alone. A traceback here says "this program crashed" when the truth is
+    "add your key to .env", and the fifteen lines above the useful sentence are pure noise.
+    """
+
 
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,

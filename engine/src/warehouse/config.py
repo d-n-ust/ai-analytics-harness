@@ -10,6 +10,8 @@ import datetime as dt
 import os
 from pathlib import Path
 
+from agent import NotConfigured
+
 ANALYSIS_DATE = dt.date(2026, 7, 16)   # "today" for the agent
 DATA_END = dt.date(2026, 7, 12)        # last day with data (a complete ISO week)
 
@@ -81,7 +83,7 @@ def default_db() -> Path:
     # warehouse/ -> src/ -> engine/ -> the repo root.
     root = Path(__file__).resolve().parents[3]
     if not (root / "pyproject.toml").exists():
-        raise RuntimeError(
+        raise NotConfigured(
             "the engine is installed rather than checked out, so there is no working tree to "
             "hold the generated database. Set AAH_WAREHOUSE_DB to an explicit path."
         )
