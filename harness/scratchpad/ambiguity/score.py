@@ -50,12 +50,11 @@ gtoks = [gold_tokens(f) for f in GOLD]
 
 
 def matches(d: dict, gi: int) -> bool:
-    """Every endpoint label of detector finding d appears in gold finding gi's tokens."""
+    """A (possibly clustered) detector finding matches gold gi when it shares >=2 endpoint labels
+    with the gold's tokens (>=1 for a single-item finding)."""
     gt = gtoks[gi]
-    for forms in det_labels(d):
-        if not (forms & gt):
-            return False
-    return True
+    hits = sum(1 for forms in det_labels(d) if forms & gt)
+    return hits >= (1 if len(d["items"]) == 1 else 2)
 
 
 # recall: which gold findings are covered by >=1 detector finding
