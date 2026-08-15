@@ -120,12 +120,13 @@ class Union:
         self.p[self.find(x)] = self.find(y)
 
 
-def main() -> None:
-    facts = load_env(ENV)
+def detect_facts(facts, model) -> list[dict]:
+    """Run the whole detector over an arbitrary set of grounding facts. Reusable across configs
+    (with the semantic layer, with welded queries instead, or warehouse+docs only)."""
     by_id = {f.id: f for f in facts}
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-
-    primary = [f for f in facts if (f.layer == "semantic" and f.kind in ("metric", "segment", "dimension"))
+    # the grounding surface an agent queries on = everything except raw warehouse structure
+    primary = [f for f in facts if (f.layer in ("semantic", "queries")
+                                    and f.kind in ("metric", "segment", "dimension", "query"))
                or (f.layer == "docs")]
     warehouse = [f for f in facts if f.layer == "warehouse"]
     pool = primary + warehouse
@@ -189,6 +190,13 @@ def main() -> None:
                              "items": [{"id": f"wh:*.{label}", "label": label, "layer": "warehouse"}]})
 
     findings.sort(key=lambda f: (danger_rank[f["danger"]], f["type"], -len(f["items"])))
+    return findings
+
+
+def main() -> None:
+    facts = load_env(ENV)
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    findings = detect_facts(facts, model)
     OUT_JSON.write_text(json.dumps(findings, indent=1))
 
     bt, bd = Counter(f["type"] for f in findings), Counter(f["danger"] for f in findings)

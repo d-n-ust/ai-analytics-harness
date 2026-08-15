@@ -34,6 +34,7 @@ class GroundingFact:
     scope: tuple = ()             # which-rows clauses (filters, segment) — the scope facet
     text: str = ""                # source text for embedding + human review
     derived: bool = False         # a ratio/derived metric that references other metrics, not rows
+    recovered: dict | None = None # for query facts: which facets sqlglot recovered from the SQL
 
     @property
     def meaning(self) -> dict:
@@ -164,6 +165,50 @@ def adapt_docs(path: pathlib.Path) -> list[GroundingFact]:
         elif cur is not None:
             buf.append(ln.strip())
     flush()
+    return out
+
+
+# ── no-semantic-layer team: saved BI queries with scope WELDED into WHERE ─────────────────────────
+def adapt_queries(path: pathlib.Path) -> list[GroundingFact]:
+    """Each `-- name: X` block is one saved metric-query. Recover agg/measure/base/scope from the
+    SQL (the Test-3 question: is welded scope recoverable from a real query? sqlglot says how often)."""
+    text = path.read_text()
+    blocks = re.split(r"(?m)^--\s*name:\s*", text)
+    out = []
+    for blk in blocks[1:]:
+        nl = blk.find("\n")
+        name = blk[:nl].strip() if nl >= 0 else blk.strip()
+        sql = blk[nl + 1:] if nl >= 0 else ""
+        agg = measure = base = None
+        scope: tuple = ()
+        recovered = {"agg": False, "base": False, "scope": False}
+        try:
+            tree = sqlglot.parse_one(sql, read="postgres")
+            sel = tree.find(exp.Select) if tree else None
+            if sel is not None:
+                af = sel.find(exp.AggFunc)
+                if af is not None:
+                    agg = af.key.lower()
+                    measure = af.this.sql().lower() if af.this else None
+                    recovered["agg"] = True
+                frm = sel.find(exp.Table)
+                if frm is not None:
+                    base = _norm_table(frm.name)
+                    recovered["base"] = True
+                where = sel.find(exp.Where)
+                if where is not None:
+                    scope = tuple(sorted(c.strip().lower()
+                                         for c in re.split(r"\band\b", where.this.sql(), flags=re.I)
+                                         if c.strip()))
+                    recovered["scope"] = True
+        except Exception:
+            pass
+        f = GroundingFact(
+            id=f"q:{name}", label=name.lower(), layer="queries", kind="query",
+            agg=agg, base=base, measure=measure, scope=scope,
+            text=f"{name}. {sql.strip()[:200]}")
+        f.recovered = recovered            # attach recovery flags for the Test-3 tally
+        out.append(f)
     return out
 
 
