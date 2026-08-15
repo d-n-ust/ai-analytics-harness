@@ -1,0 +1,25 @@
+version: 2
+
+metrics:
+  - name: revenue
+    label: Revenue
+    model: ref('orders')
+    description: "The total revenue of our jaffle business"
+
+    calculation_method: sum
+    expression: amount 
+
+    timestamp: order_date
+    time_grains: [day, week, month, year]
+
+    dimensions:
+      - customer_status
+      - had_credit_card_payment
+      - had_coupon_payment
+      - had_bank_transfer_payment
+      - had_gift_card_payment
+
+    filters:
+      - field: status
+        operator: '='
+        value: "'completed'"

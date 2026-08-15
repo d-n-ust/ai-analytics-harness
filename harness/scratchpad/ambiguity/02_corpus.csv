@@ -1,0 +1,4 @@
+project,metrics,raw_metrics,gated_pairs,alias_native,scope_only_native,diff_measure_native,scope_only_inferred,diff_measure_inferred,facets_populated_%,unit_native_%
+jaffle-shop,17,23,28,0,0,28,10,18,60.5,0.0
+jaffle-sl-template,11,17,13,1,0,12,2,10,46.8,0.0
+jaffle_shop_metrics,4,4,0,0,0,0,0,0,57.1,0.0
