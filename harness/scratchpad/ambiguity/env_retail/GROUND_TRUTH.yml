@@ -1,0 +1,1246 @@
+# Harborstone Market — confusable / colliding groundings
+# Data-audit findings. Documenting risk only; nothing here is a fix.
+# Layers: warehouse = schema.sql, docs = data_dictionary.md, semantic = semantic_layer.yml
+# Ordered roughly by danger (high first).
+
+findings:
+
+  # ==========================================================================
+  # HIGH
+  # ==========================================================================
+
+  - id: sales_gross_vs_net
+    items:
+      - {ref: "gross_sales", layer: semantic, where: "metrics"}
+      - {ref: "net_sales", layer: semantic, where: "metrics"}
+      - {ref: "Sales (gross) — Merchandising default", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "Net sales", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "fct_transactions.gross_sales / fct_transactions.net_sales", layer: docs, where: "Transactions section"}
+    category: "one word, two measures (gross vs net)"
+    confusable_because: >
+      "Sales" means merchandise rung at the register (gross, before returns/markdowns) to
+      Merchandising and net-of-returns-and-markdowns to Finance. A bare "what were sales" maps to
+      either gross_sales or net_sales with no signal which is meant. The gap is returns + markdowns,
+      a few percent, so the wrong one looks completely plausible.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: revenue_vs_sales_vs_gmv
+    items:
+      - {ref: "Revenue — Finance default", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "total_revenue", layer: semantic, where: "metrics"}
+      - {ref: "Sales (gross)", layer: docs, where: "Business metrics & definitions"}
+    category: "third near-synonym for the money number (revenue)"
+    confusable_because: >
+      "Revenue" is Finance net sales plus recognized online revenue, explicitly NOT gross sales and
+      NOT GMV. semantic total_revenue sits on base fct_sales with measure `revenue` and a filter
+      order_status='completed'. An agent asked for "revenue" may reach for gross_sales, net_sales, or
+      total_revenue and land three different numbers, all believable.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: net_sales_tax_variants
+    items:
+      - {ref: "net_sales", layer: semantic, where: "metrics (expr gross_amt - return_amt - markdown_amt)"}
+      - {ref: "net_sales_finance", layer: semantic, where: "metrics (measure net_sales_amt, model finance.fct_net_sales)"}
+      - {ref: "Net sales", layer: docs, where: "Business metrics & definitions"}
+    category: "same metric name, tax-in vs tax-out"
+    confusable_because: >
+      semantic net_sales subtracts returns and markdowns but NOT tax; net_sales_finance is net of
+      returns, markdowns AND sales tax. They are two "net sales" numbers differing by the whole tax
+      line (roughly 5-9%). Nothing in a bare request selects between them, and neither name warns of
+      the tax difference.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: store_ops_legacy_sales_includes_tax
+    items:
+      - {ref: "store_ops.daily_sales.sales (includes sales tax)", layer: docs, where: "store_ops.daily_sales"}
+      - {ref: "retail_sales (base store_ops_daily)", layer: semantic, where: "metrics"}
+      - {ref: "store_sales_daily.sales", layer: warehouse, where: "RAW"}
+      - {ref: "fct_transactions.gross_sales (tax-exclusive)", layer: docs, where: "Transactions section"}
+    category: "legacy 'sales by store' number carries tax the modern one excludes"
+    confusable_because: >
+      The long-running "sales by store" spreadsheet leadership watches (store_ops.daily_sales,
+      surfaced as semantic retail_sales) is gross tax-INCLUSIVE, while fct_transactions.gross_sales is
+      tax-EXCLUSIVE. Same phrase, "store sales", differs by the tax rate. The legacy number is
+      referenced constantly, so an agent may anchor on it and silently overstate by tax.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: net_sales_tax_partition_drift
+    items:
+      - {ref: "fct_transactions.net_sales (older partitions fold tax in)", layer: docs, where: "fct_transactions.net_sales"}
+      - {ref: "net_sales", layer: semantic, where: "metrics"}
+    category: "documented default that no longer matches older data (temporal)"
+    confusable_because: >
+      Current net_sales partitions are net of tax; partitions before the summer refactor still have
+      tax folded in. A trailing-year comparison mixes tax-in and tax-out rows and is off by the tax
+      rate for the old period. An agent trusting "net of tax" applies it uniformly and produces a
+      wrong year-over-year without any error.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: v_net_sales_is_secretly_comp_only
+    items:
+      - {ref: "v_net_sales (WHERE status='settled' AND is_comp=true)", layer: warehouse, where: "VIEWS"}
+      - {ref: "net_sales", layer: semantic, where: "metrics"}
+      - {ref: "Net sales", layer: docs, where: "Business metrics & definitions"}
+    category: "view name promises a total, definition is a filtered subset"
+    confusable_because: >
+      A view literally named v_net_sales silently restricts to comparable stores (is_comp=true) and to
+      status='settled'. An agent that grounds "net sales" on this view returns only comp-store settled
+      net sales, a believable but materially smaller number, with nothing in the name warning that
+      ~non-comp stores and non-settled baskets were dropped.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: comp_metric_triplet
+    items:
+      - {ref: "comparable_store_sales (filter store.months_open >= 13, measure gross_amt)", layer: semantic, where: "metrics"}
+      - {ref: "same_store_sales (segment comp_stores, expr gross_amt-return_amt-markdown_amt)", layer: semantic, where: "metrics"}
+      - {ref: "comp_sales (case comp_flag=1 AND months_open>=12, gross_amt)", layer: semantic, where: "metrics"}
+    category: "three near-identical metric names, three different definitions"
+    confusable_because: >
+      Three comp metrics ship side by side. They disagree on the qualification rule (months_open>=13
+      vs comp_flag=1 vs comp_flag=1 AND months_open>=12) AND on the measure (two use raw gross_amt,
+      one nets returns and markdowns). "Comp sales" resolves to any of the three and each gives a
+      different number; the store-set difference and the gross-vs-net difference are both small enough
+      to look right.
+    detectability: invisible
+    danger: high
+    cross_layer: false
+    uncertain: false
+
+  - id: comp_qualification_rules_disagree
+    items:
+      - {ref: "Comparable-store sales (Finance 13 fiscal periods; Merch 12 months; Ops 52 weeks + no remodel)", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "dim_store.comp_flag (13 fiscal periods, Finance rule)", layer: docs, where: "dim_store.comp_flag"}
+      - {ref: "comparable_stores segment (months_open >= 13)", layer: semantic, where: "segments"}
+      - {ref: "comp_stores segment (comp_flag = 1)", layer: semantic, where: "segments"}
+      - {ref: "dim_store.is_comparable / stores.comparable", layer: warehouse, where: "dim_store, stores"}
+    category: "which stores are 'comparable' has three or four answers"
+    confusable_because: >
+      Store qualification differs by team: Finance 13 fiscal PERIODS, Merch 12 MONTHS, Ops 52 weeks
+      plus no remodel/relocation. The semantic segment writes "13 months" where docs say "13 fiscal
+      periods" (13 periods in a 4-5-4 calendar is a full year, not 13 months), so the semantic layer
+      encodes a fourth base. Different base set = different comp %, and the numbers are close enough to
+      pass review.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: margin_which_cost
+    items:
+      - {ref: "dim_product cost columns landed_cost / standard_cost / last_cost", layer: docs, where: "dim_product cost columns"}
+      - {ref: "gross_margin_pct (landed_cost / net_sales)", layer: semantic, where: "metrics"}
+      - {ref: "margin_standard (std_cost)", layer: semantic, where: "metrics"}
+      - {ref: "gross_margin (ext_ring_amt - ext_cost)", layer: semantic, where: "metrics"}
+      - {ref: "Gross margin (Finance=landed, Merch=standard, deals=last)", layer: docs, where: "Business metrics & definitions"}
+    category: "same margin, three different cost bases"
+    confusable_because: >
+      Gross margin uses landed_cost (Finance reported), standard_cost (Merch), or last_cost (deal
+      reports). semantic ships gross_margin_pct on landed, margin_standard on std, and a plain
+      gross_margin whose `ext_cost` cost basis is unstated. Merch and Finance margin "never quite
+      agree" by the landed-vs-standard gap, and each is a plausible margin figure.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: margin_pct_gross_numerator_net_denominator
+    items:
+      - {ref: "gross_margin_pct ((sum(ext_ring_amt) - sum(landed_cost*quantity)) / sum(net_sales_amt))", layer: semantic, where: "metrics"}
+      - {ref: "Gross margin (against gross or net depending on report)", layer: docs, where: "Business metrics & definitions"}
+    category: "margin ratio mixes a gross numerator with a net denominator"
+    confusable_because: >
+      gross_margin_pct puts gross rung sales (ext_ring_amt) in the numerator but net_sales in the
+      denominator. Docs also note Merch computes margin "against gross or net depending on the
+      report." The ratio is internally inconsistent yet lands in a normal 20-40% range, so the
+      mismatch is invisible.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: inventory_three_ways
+    items:
+      - {ref: "Inventory position on-hand / available / owned", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "inventory_on_hand / inventory_available / inventory_in_transit", layer: semantic, where: "metrics"}
+      - {ref: "inventory_snapshot on_hand / available_qty / in_transit / on_order", layer: warehouse, where: "inventory_snapshot"}
+    category: "one 'inventory' number is three different quantities"
+    confusable_because: >
+      On-hand (physical), available (on-hand minus reserved), and owned (on-hand plus in-transit, or
+      plus on-order) are three inventory figures. A bare "how much inventory" maps to any of them, and
+      they feed sell-through and weeks-of-supply, so a clearance/reorder decision flips depending on
+      which one an agent silently chose.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: available_computed_vs_stored
+    items:
+      - {ref: "fct_inventory_snapshot.available = on_hand - reserved (reserved null=0)", layer: docs, where: "fct_inventory_snapshot.available"}
+      - {ref: "inventory_available (expr on_hand_qty - reserved_qty)", layer: semantic, where: "metrics"}
+      - {ref: "inventory_snapshot.available_qty (stored column, no reserved column exists)", layer: warehouse, where: "inventory_snapshot"}
+    category: "'available' is a stored column in one layer and a formula in another"
+    confusable_because: >
+      Docs and semantic define available as on_hand minus a `reserved`/`reserved_qty` quantity, but
+      the warehouse has no reserved column at all and instead stores available_qty directly. The
+      computed value and the stored column can diverge (e.g. if available_qty was populated by a
+      different rule), and the semantic formula references a column that does not exist, so an agent
+      either errors or recomputes a different "available" than the site uses.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: member_active_enrolled_populations
+    items:
+      - {ref: "Members / active members / enrolled (three populations)", layer: docs, where: "Business metrics & definitions"}
+      - {ref: "loyalty_members / active_members / enrolled_members / member_count", layer: semantic, where: "metrics"}
+      - {ref: "loyalty_members.enrolled_flag / active_flag / member_status", layer: warehouse, where: "loyalty_members"}
+    category: "'member' is three (here four) different populations"
+    confusable_because: >
+      Member (every issued card), enrolled (marketing_optin + valid email), and active (recent
+      transaction) are three populations quoted interchangeably. semantic exposes four count metrics
+      (loyalty_members, active_members, enrolled_members, member_count) over the same table. "How many
+      members" resolves to any of them and the counts differ by large factors, all plausible.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: active_member_window_90_vs_365
+    items:
+      - {ref: "active_members (filter last_purchase_date >= -90 days)", layer: semantic, where: "metrics + segments"}
+      - {ref: "Active members (90 days Merch dashboard, 12 months Finance/CRM)", layer: docs, where: "dim_member.status / Members section"}
+    category: "'active' window is 90 days or 12 months (count roughly doubles)"
+    confusable_because: >
+      "Active member" is a 90-day window on the Merch dashboard and a trailing-12-month window for
+      Finance/CRM, so the active count roughly doubles between them. semantic hardcodes 90 days in both
+      the metric and the segment, silently committing to the Merch definition. An agent answering a
+      Finance question with the 90-day metric is off by ~2x with no signal.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: loyalty_members_metric_mislabeled_enrolled
+    items:
+      - {ref: "loyalty_members (description 'Enrolled Harborstone Rewards members', no enrolled filter)", layer: semantic, where: "metrics"}
+      - {ref: "enrolled_members (filter enrolled = true)", layer: semantic, where: "metrics"}
+      - {ref: "dim_member (broadest count, includes never-shopped cards)", layer: docs, where: "dim_member"}
+    category: "metric description says 'enrolled' but it counts everyone"
+    confusable_because: >
+      The loyalty_members metric is described as "Enrolled Harborstone Rewards members" yet applies no
+      enrolled filter, so it returns the broadest member count (including register-issued cards that
+      never completed enrollment). An agent that trusts the description picks it for an "enrolled"
+      question and overcounts, while enrolled_members (the correctly filtered one) sits right beside it.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: status_value_settled_vs_completed
+    items:
+      - {ref: "fct_transactions.status enum completed/voided/suspended/training (default completed)", layer: docs, where: "fct_transactions.status"}
+      - {ref: "v_net_sales WHERE status='settled'", layer: warehouse, where: "VIEWS"}
+      - {ref: "pos_transactions.txn_status='settled' / v_settled_transactions", layer: warehouse, where: "pos_transactions, VIEWS"}
+      - {ref: "total_revenue filter order_status='completed'", layer: semantic, where: "metrics"}
+    category: "the 'valid sale' status value is 'completed' in one layer and 'settled' in another"
+    confusable_because: >
+      Docs list the transaction status values as completed/voided/suspended/training and say the
+      default is completed; the warehouse views instead filter status='settled', and pos_transactions
+      uses txn_status='settled'. semantic filters order_status='completed'. If both value sets coexist
+      in the data, filtering on one silently drops the rows carrying the other; if only one value
+      exists, the wrong filter returns nothing.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: pos_transactions_total_vs_gross
+    items:
+      - {ref: "pos_transactions.total (tax-inclusive) + net_sales, NO gross_sales column", layer: warehouse, where: "pos_transactions"}
+      - {ref: "gross_sales (measure gross_amt, base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "fct_transactions.gross_sales", layer: warehouse, where: "MARTS"}
+    category: "semantic gross grounds on a table whose only total is tax-inclusive"
+    confusable_because: >
+      semantic gross_sales names measure gross_amt on base pos_transactions, but pos_transactions has
+      no gross_amt/gross_sales; its money columns are `total` (roughly what the customer paid, tax
+      included), net_sales, tax_amount. An agent resolving "gross_amt" to the nearest column picks
+      `total` and reports gross sales inflated by tax, or points at fct_transactions instead and gets a
+      different grain. Either way "gross sales" is wrong.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: sales_source_txn_vs_line_vs_daily
+    items:
+      - {ref: "gross_sales (base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "merch_sales (measure ext_ring_amt, base pos_line_items)", layer: semantic, where: "metrics"}
+      - {ref: "store_sales (base pos_transactions, filter channel='store')", layer: semantic, where: "metrics"}
+      - {ref: "retail_sales (base store_ops_daily)", layer: semantic, where: "metrics"}
+      - {ref: "store_sales_daily.sales / fct_transactions.gross_sales / fct_sales_line", layer: warehouse, where: "RAW, MARTS"}
+    category: "the same 'sales' total summed from four different grains/tables"
+    confusable_because: >
+      Sales can be summed from the transaction table (gross_sales), the line table (merch_sales /
+      ext_ring_amt), a store-channel-filtered transaction metric (store_sales), or the legacy daily
+      feed (retail_sales). Each has different tax treatment, void handling, and grain, so the totals
+      differ by a few percent. An agent picks whichever base it grounds on first and the number looks
+      right.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: artifacts_describe_different_table_namespaces
+    items:
+      - {ref: "docs tables: dim_member, fct_transaction_lines, fct_online_orders, fct_markdowns, fct_coupon_redemptions, fct_inventory_receipts, store_ops.daily_sales", layer: docs, where: "throughout"}
+      - {ref: "warehouse tables: loyalty_members, pos_line_items, online_orders, returns_raw, po_receipts, store_sales_daily", layer: warehouse, where: "throughout"}
+      - {ref: "semantic bases: fct_sales, store_ops_daily, dim_location, dim_member, finance.fct_net_sales", layer: semantic, where: "metrics/dimensions"}
+    category: "the three artifacts name three overlapping-but-different schemas"
+    confusable_because: >
+      The glossary, the DDL, and the semantic layer refer to the same concepts under different table
+      names, and several tables each artifact relies on do not exist in the others (docs' fct_markdowns
+      and fct_coupon_redemptions have no warehouse table; semantic's fct_sales, store_ops_daily,
+      dim_location, dim_member have none). An agent handed one artifact writes SQL that fails against
+      the schema, or maps to the nearest real table with different semantics, so the answer depends on
+      which artifact it happened to read.
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  # ==========================================================================
+  # MEDIUM
+  # ==========================================================================
+
+  - id: status_column_means_different_per_table
+    items:
+      - {ref: "stores.status / suppliers.status / promotions.status", layer: warehouse, where: "stores, suppliers, promotions"}
+      - {ref: "pos_transactions.txn_status / fct_transactions.status / stg_transactions.status", layer: warehouse, where: "transactions"}
+      - {ref: "online_orders.order_status / online_order_lines.status", layer: warehouse, where: "online"}
+      - {ref: "po_status / line_status / return_status / member_status / return_status", layer: warehouse, where: "po, returns, loyalty"}
+    category: "a 'status' column in almost every table, each with its own enum"
+    confusable_because: >
+      Nearly every table has a status column, each with a different value set (settled vs completed vs
+      fulfilled vs open/received vs active/inactive/closed). An agent that carries a status filter from
+      one table to another (or that assumes a shared enum) filters on a value the target never uses and
+      silently returns the wrong subset.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: online_order_status_not_filtered
+    items:
+      - {ref: "online_sales / online_orders / average_order_value (filter only channel='online')", layer: semantic, where: "metrics"}
+      - {ref: "fct_online_orders.order_status revenue = fulfilled only; cart/cancelled never money", layer: docs, where: "fct_online_orders.order_status"}
+      - {ref: "total_revenue filter order_status='completed'", layer: semantic, where: "metrics"}
+    category: "online revenue metrics keep cart/cancelled/refunded rows"
+    confusable_because: >
+      Docs say online revenue must filter to fulfilled (cart rows are abandoned baskets, never money);
+      the semantic online metrics filter only channel='online' and never touch order_status, so they
+      sum cart, placed, picking, cancelled and refunded together. Meanwhile total_revenue filters
+      order_status='completed', a value that isn't in the documented online enum
+      (cart/placed/picking/fulfilled/cancelled/refunded), so it may match nothing. Both directions
+      misstate online revenue.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: store_vs_location_vs_site_vs_market
+    items:
+      - {ref: "store (expr store_id, source dim_store) / location (expr store_id, source dim_location)", layer: semantic, where: "dimensions"}
+      - {ref: "site (site_id) / market (market_name, dim_location)", layer: semantic, where: "dimensions"}
+      - {ref: "stores.store_id vs pos_transactions.location_id vs online_orders.site_id; dim_store has both store_id and location_id", layer: warehouse, where: "stores, pos_transactions, online_orders, dim_store"}
+    category: "store vs location vs site vs market as the same-or-different key"
+    confusable_because: >
+      The physical-outlet key is store_id in some tables and location_id in others (PO, shrink, labor,
+      pos_transactions), while online uses site_id; dim_store carries store_id AND a separate
+      location_id, implying they are not identical. semantic offers store and location as two
+      dimensions with identical expr store_id but different sources (dim_store vs dim_location, which
+      the warehouse lacks), plus site and market. "By store" can group on a different key space than
+      intended.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: region_five_vs_six
+    items:
+      - {ref: "dim_store.region (5 historical vs 6 after Inland split into Inland + High Desert)", layer: docs, where: "dim_store.region / dim_store.district"}
+      - {ref: "region (expr region_name, source dim_store)", layer: semantic, where: "dimensions"}
+      - {ref: "stores.region / dim_store.region", layer: warehouse, where: "stores, dim_store"}
+    category: "region has five values in old rollups, six after a reorg"
+    confusable_because: >
+      Region was five values, is now six (Inland split into Inland and High Desert), and many
+      dashboards still group to the old five. A regional total or a per-region average changes
+      depending on which mapping is applied, and neither the semantic dimension nor the column warns
+      which era it reflects.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: region_actually_district
+    items:
+      - {ref: "dim_store.district (~14 ops groupings; ops weekly groups by district but labels it region)", layer: docs, where: "dim_store.region / dim_store.district"}
+      - {ref: "region dimension", layer: semantic, where: "dimensions"}
+    category: "a 'by region' report may actually be grouping by district"
+    confusable_because: >
+      District is a finer ops grouping (~14) that rolls up under region, and the ops weekly groups by
+      district while labeling it "region." An agent reproducing "by region" from that lineage produces
+      ~14 buckets instead of 5-6, or vice versa, and the mislabel hides the difference.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: banner_vs_format
+    items:
+      - {ref: "dim_store.banner (HM/HX/HG) vs 'format' used loosely as synonym", layer: docs, where: "dim_store.banner"}
+      - {ref: "banner / store_format dimensions", layer: semantic, where: "dimensions"}
+      - {ref: "stores.banner / stores.store_format; dim_store.banner / dim_store.store_format", layer: warehouse, where: "stores, dim_store"}
+    category: "banner and store-format used interchangeably but are distinct"
+    confusable_because: >
+      People say "the Express banner" and "the express format" for the same thing, but banner
+      (HM/HX/HG) and store_format are distinct columns, and HG stores span two footprints where only
+      the larger is a superstore. Grouping "by banner" vs "by format" gives different buckets that a
+      reader assumes are the same.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: online_channel_store_9999
+    items:
+      - {ref: "web channel = synthetic store_number 9999 in some rollups, excluded in others", layer: docs, where: "dim_store"}
+      - {ref: "channel dimension (no source) / store_channel + online_channel segments", layer: semantic, where: "dimensions, segments"}
+    category: "is online a store? store counts and totals move"
+    confusable_because: >
+      Online is represented as synthetic store 9999 in some rollups and dropped entirely in others, so
+      store counts and any "all stores" total shift depending on the report. An agent counting stores
+      or summing store sales gets a different answer with no indication whether web was folded in.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: transaction_count_metrics_diverge
+    items:
+      - {ref: "transactions (count_distinct transaction_id, base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "transaction_count (count txn_id, base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "baskets (count_distinct basket_id, base pos_line_items)", layer: semantic, where: "metrics"}
+    category: "three transaction-count metrics, different keys and distinctness"
+    confusable_because: >
+      transactions counts distinct transaction_id, transaction_count counts (non-distinct) txn_id (the
+      alternate VARCHAR id), and baskets counts distinct basket_id from the line table. Non-distinct
+      count and counting from lines both inflate relative to distinct transaction_id. The three names
+      are near-synonyms and an agent may pick any.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: txn_vs_basket_grain
+    items:
+      - {ref: "fct_transactions grain transaction_id; 'basket' and 'transaction' interchangeable", layer: docs, where: "fct_transactions / Transactions & baskets"}
+      - {ref: "pos_transactions.transaction_id + txn_id + basket_id (three ids on one row)", layer: warehouse, where: "pos_transactions"}
+      - {ref: "baskets counts basket_id, transactions counts transaction_id", layer: semantic, where: "metrics"}
+    category: "basket and transaction treated as one thing across three id columns"
+    confusable_because: >
+      A single POS row carries transaction_id, txn_id, and basket_id, and the team uses "basket" and
+      "transaction" interchangeably. If basket_id is not one-to-one with transaction_id (split/merged
+      baskets), counting or joining on the wrong id changes counts and denominators for basket-size
+      metrics.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: aov_mislabeled_transaction_value
+    items:
+      - {ref: "aov (description 'Average order value', expr sum(net_sales_amt)/count(distinct transaction_id))", layer: semantic, where: "metrics"}
+      - {ref: "average_basket_value (avg basket_total, base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "average_order_value (avg order_total, base fct_online_orders)", layer: semantic, where: "metrics"}
+      - {ref: "Average basket / average transaction value (merch gross/txn vs finance net/txn)", layer: docs, where: "Business metrics & definitions"}
+    category: "'aov' is really average net transaction value, sits next to two other averages"
+    confusable_because: >
+      aov is described as "Average order value" but is computed as net sales per in-store transaction,
+      not per online order; average_order_value is the real online figure and average_basket_value is
+      gross per basket. Docs add that merch uses gross/txn and finance uses net/txn. An agent asked for
+      "average order value" may grab aov (net, in-store) and be both wrong-channel and wrong-basis.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: basket_size_dollars_or_items
+    items:
+      - {ref: "'basket size' = dollars (average_basket_value) or items (items_per_basket)", layer: docs, where: "Average basket / average transaction value"}
+      - {ref: "fct_transactions.basket_size (column, unit unstated)", layer: warehouse, where: "fct_transactions"}
+      - {ref: "items_per_basket / average_basket_value", layer: semantic, where: "metrics"}
+    category: "'basket size' means dollars to some, items to others"
+    confusable_because: >
+      "Basket size" is used both for dollars per basket and units per basket, and fct_transactions has
+      a bare basket_size column whose unit is unstated. "Basket size went up" and the basket_size
+      column could each mean either, so an agent may report dollars when items were meant.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: units_weighed_items_mix_pounds_and_eaches
+    items:
+      - {ref: "quantity holds pounds for weighed items (produce/deli/bulk), not eaches", layer: docs, where: "fct_transaction_lines / Units"}
+      - {ref: "units_sold (sum quantity) / units (sum qty)", layer: semantic, where: "metrics"}
+    category: "summing quantity mixes weights and counts"
+    confusable_because: >
+      Weighed items carry weight (pounds) in quantity, so sum(quantity) as "units sold" blends pounds
+      and pieces and overstates item count. The semantic unit metrics just sum quantity/qty with no
+      guard, so any units figure is quietly inflated by the weighed departments.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: units_metrics_source_and_column
+    items:
+      - {ref: "units_sold (measure quantity, base pos_line_items)", layer: semantic, where: "metrics"}
+      - {ref: "units (measure qty, model fct_sales, filter line_type='sale')", layer: semantic, where: "metrics"}
+      - {ref: "pos_line_items.qty (column is qty, not quantity)", layer: warehouse, where: "pos_line_items"}
+    category: "two unit metrics, different sources, and a wrong column name"
+    confusable_because: >
+      units_sold sums `quantity` from pos_line_items, but that table's column is `qty`; units sums
+      `qty` from a model fct_sales that isn't in the schema, filtered line_type='sale' (no such column
+      in the warehouse). Two "units" metrics on two different bases, at least one grounded on a
+      non-existent column, give different or broken results.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: shrink_grounded_on_wrong_table
+    items:
+      - {ref: "shrink (measure shrink_amt, base inventory_snapshot)", layer: semantic, where: "metrics"}
+      - {ref: "shrink_rate (sum(shrink_amt)/sum(gross_amt), base inventory_snapshot)", layer: semantic, where: "metrics"}
+      - {ref: "inventory_shrink.cost / inventory_shrink.qty (the actual shrink table)", layer: warehouse, where: "inventory_shrink"}
+      - {ref: "fct_markdowns / Shrink definition", layer: docs, where: "fct_markdowns, Shrink"}
+    category: "shrink metric points at the snapshot table, not the shrink table"
+    confusable_because: >
+      Shrink lives in inventory_shrink (columns qty, cost), but the semantic shrink and shrink_rate
+      metrics ground on inventory_snapshot with a shrink_amt column that doesn't exist there (and a
+      gross_amt denominator that also isn't on that table). The metric either errors or resolves to the
+      wrong column, and the shrink denominator (gross vs net sales) is itself unsettled per docs.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: shrink_denominator_gross_or_net
+    items:
+      - {ref: "Shrink reported as % of sales, gross or net not consistent", layer: docs, where: "Shrink"}
+      - {ref: "shrink_rate uses gross_amt denominator", layer: semantic, where: "metrics"}
+    category: "shrink % uses gross or net sales inconsistently"
+    confusable_because: >
+      Shrink is quoted as a percent of sales, but whether the denominator is gross or net differs
+      between the shrink deck and the P&L; semantic pins it to gross. The percent shifts with the
+      denominator and both look like a normal shrink rate.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: on_hand_duplicate_columns
+    items:
+      - {ref: "inventory_snapshot.on_hand AND inventory_snapshot.qty_on_hand", layer: warehouse, where: "inventory_snapshot"}
+      - {ref: "fct_inventory_daily.on_hand AND qty_on_hand", layer: warehouse, where: "fct_inventory_daily"}
+      - {ref: "inventory_on_hand (measure on_hand_qty)", layer: semantic, where: "metrics"}
+    category: "two on-hand columns, and the metric names a third variant"
+    confusable_because: >
+      Both inventory_snapshot and fct_inventory_daily carry on_hand and qty_on_hand side by side, and
+      the semantic metric names on_hand_qty (a third spelling). If the two columns were loaded by
+      different rules they can disagree, and an agent has no way to know which is authoritative.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: sell_through_and_wos_input_inventory
+    items:
+      - {ref: "Sell-through & weeks of supply depend on on-hand vs available vs owned", layer: docs, where: "Sell-through & weeks of supply"}
+      - {ref: "sell_through_rate (uses on_hand_qty)", layer: semantic, where: "metrics"}
+    category: "sell-through/WOS change with the inventory number fed in"
+    confusable_because: >
+      Sell-through and weeks-of-supply take an inventory quantity, and the choice of on-hand vs
+      available vs owned changes the result enough to flip a clearance or reorder decision. semantic
+      pins sell_through to on_hand_qty, silently choosing one basis.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: inventory_value_cost_basis
+    items:
+      - {ref: "Inventory dollars valued at cost (usually landed) unless 'at retail'", layer: docs, where: "Inventory position"}
+      - {ref: "fct_inventory_daily.inventory_value + unit_cost + standard_cost", layer: warehouse, where: "fct_inventory_daily"}
+      - {ref: "inventory_snapshot.unit_cost + standard_cost", layer: warehouse, where: "inventory_snapshot"}
+    category: "inventory value at which cost, or at retail"
+    confusable_because: >
+      Inventory dollars can be at landed cost, standard cost, or retail; fct_inventory_daily carries a
+      precomputed inventory_value plus both unit_cost and standard_cost, and it isn't stated which cost
+      backs inventory_value. An agent recomputing value can pick a different cost than the stored
+      column and get a different dollar figure.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: member_id_vs_customer_id_vs_loyalty_id
+    items:
+      - {ref: "loyalty_members.member_id / customer_id / loyalty_id", layer: warehouse, where: "loyalty_members"}
+      - {ref: "member_count (count_distinct customer_id) vs loyalty_members (count_distinct member_id)", layer: semantic, where: "metrics"}
+      - {ref: "dim_customer.customer_id + member_id + loyalty_id; dim_member key member_id", layer: warehouse/docs, where: "dim_customer / dim_member"}
+    category: "three member keys, and member counts computed on different ones"
+    confusable_because: >
+      A member is keyed by member_id, but rows also carry customer_id and loyalty_id, and dim_customer
+      mixes all three. member_count counts distinct customer_id while loyalty_members counts distinct
+      member_id; if one customer holds multiple member_ids (or vice versa) the two "member" counts
+      differ. Joining sales to members on the wrong key also drops or duplicates rows.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: member_status_defaults_active
+    items:
+      - {ref: "dim_member.status defaults 'active' until nightly re-score", layer: docs, where: "dim_member.status"}
+      - {ref: "loyalty_members.active_flag / enrolled_flag / member_status", layer: warehouse, where: "loyalty_members"}
+      - {ref: "v_active_members (active_flag=true AND enrolled_flag=true)", layer: warehouse, where: "VIEWS"}
+    category: "member 'active' has three signals and a misleading default"
+    confusable_because: >
+      status defaults to active on card creation, so a never-shopped card reads active until re-score,
+      and the warehouse offers three flags (active_flag, enrolled_flag, member_status) that can
+      disagree. v_active_members requires active_flag AND enrolled_flag, a stricter rule than
+      active_flag alone. "Active members" from status vs the flags vs the view give different counts.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: active_members_missing_column
+    items:
+      - {ref: "active_members filter last_purchase_date >= -90 days, base loyalty_members", layer: semantic, where: "metrics/segments"}
+      - {ref: "loyalty_members has no last_purchase_date; dim_member has last_transaction_date", layer: warehouse/docs, where: "loyalty_members / dim_member"}
+    category: "active-member filter references a column that isn't there"
+    confusable_because: >
+      active_members filters last_purchase_date, but loyalty_members has no such column; the recency
+      field docs mention is last_transaction_date on dim_member. The metric errors or, if mapped to
+      the wrong date, computes activity off the wrong timestamp.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: returns_metric_return_amt_vs_refund_amount
+    items:
+      - {ref: "returns (measure return_amt, base fct_returns) / return_rate (return_amt/gross_amt)", layer: semantic, where: "metrics"}
+      - {ref: "fct_returns.refund_amount (tax included); returns_raw.refund_amount", layer: warehouse, where: "fct_returns, returns_raw"}
+      - {ref: "fct_returns.refund_amount (tax included, can exceed retail)", layer: docs, where: "fct_returns.refund_amount"}
+    category: "returns metric names return_amt but the column is refund_amount (tax-inclusive)"
+    confusable_because: >
+      The returns metric sums return_amt, but fct_returns stores refund_amount, which is tax-INCLUSIVE
+      and can exceed current retail. return_rate then divides that tax-inclusive refund by tax-EXCLUSIVE
+      gross_amt, mixing tax bases. The metric either errors on the missing column or, resolved to
+      refund_amount, overstates returns versus a retail-value basis.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: returns_two_tables
+    items:
+      - {ref: "returns_raw (original_txn_id + transaction_id + order_id)", layer: warehouse, where: "returns_raw"}
+      - {ref: "fct_returns (transaction_id + order_id)", layer: warehouse, where: "fct_returns"}
+    category: "returns exist in a raw and a fact table with different keys"
+    confusable_because: >
+      Returns land in returns_raw and fct_returns, with returns_raw additionally carrying a VARCHAR
+      original_txn_id alongside the BIGINT transaction_id. Summing from both, or joining returns to
+      sales on the wrong transaction id (VARCHAR original vs BIGINT), double-counts or drops returns.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: markdown_line_items_vs_markdowns_table
+    items:
+      - {ref: "markdown (measure markdown_amount, base pos_line_items)", layer: semantic, where: "metrics"}
+      - {ref: "fct_markdowns grain store_id + sku + markdown_date (mixes permanent + promo)", layer: docs, where: "fct_markdowns"}
+      - {ref: "pos_line_items.markdown_amount; inventory_shrink.markdown_flag; no fct_markdowns table", layer: warehouse, where: "pos_line_items, inventory_shrink"}
+    category: "markdowns summed per-basket-line vs per-store/SKU/day"
+    confusable_because: >
+      Docs describe a fct_markdowns table at store/SKU/day grain mixing permanent and promotional
+      markdowns; the warehouse has no such table and markdown_amount lives on pos_line_items (per
+      basket line). The semantic markdown metric sums the line column. Line-level markdowns (only those
+      hitting a sold basket) and a markdowns table (all markdown events) give different totals.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: promo_flag_does_not_exist
+    items:
+      - {ref: "promo_sales (case when promo_flag=1) / promo_baskets segment (promo_flag=1) / clearance segment (markdown_amt>0)", layer: semantic, where: "metrics/segments"}
+      - {ref: "pos_line_items.promo_id (int FK), markdown_amount (no promo_flag, no markdown_amt)", layer: warehouse, where: "pos_line_items"}
+      - {ref: "promotion dimension (expr promo_type, source pos_line_items)", layer: semantic, where: "dimensions"}
+    category: "promo/clearance filters reference columns that aren't on the line table"
+    confusable_because: >
+      promo_sales and promo_baskets filter promo_flag, and the promotion dimension reads promo_type
+      from pos_line_items, but that table has neither a promo_flag nor a promo_type; it has promo_id (a
+      FK to promotions) and markdown_amount. The filters error or get mapped to some other field,
+      making "sales on promotion" unreliable.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: channel_filter_on_pos_transactions
+    items:
+      - {ref: "store_sales (base pos_transactions, filter channel='store')", layer: semantic, where: "metrics"}
+      - {ref: "store_channel / online_channel segments (filter channel=...)", layer: semantic, where: "segments"}
+      - {ref: "pos_transactions has no channel column (POS-only); fct_sales_line/online_orders have channel", layer: warehouse, where: "pos_transactions, fct_sales_line, online_orders"}
+    category: "a channel filter applied to a table with no channel column"
+    confusable_because: >
+      store_sales and the channel segments filter channel on pos_transactions, but pos_transactions has
+      no channel column (it is POS-only by design); channel lives on fct_sales_line and online_orders.
+      The filter errors or is silently dropped, so "store channel" and "online channel" splits may not
+      partition the way an agent assumes.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: hours_vs_hours_worked
+    items:
+      - {ref: "labor_hours.hours (paid) AND hours_worked (excl breaks)", layer: warehouse, where: "labor_hours"}
+      - {ref: "fct_labor_hours.hours vs hours_worked; SPLH net/hours_worked vs gross/hours", layer: docs, where: "fct_labor_hours"}
+    category: "paid hours vs worked hours, and two sales-per-labor-hour formulas"
+    confusable_because: >
+      hours is paid hours and hours_worked excludes paid breaks; productivity uses hours_worked.
+      Sales-per-labor-hour is net_sales/hours_worked in the ops report but gross_sales/hours in the old
+      store-ops sheet, so the two SPLH numbers differ on both numerator and denominator. An agent may
+      combine either pair.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: labor_home_vs_worked_store
+    items:
+      - {ref: "employees.store_id (home store)", layer: warehouse, where: "employees"}
+      - {ref: "labor_hours.location_id (worked store)", layer: warehouse, where: "labor_hours"}
+      - {ref: "hours tagged to worked store; headcount-by-store vs hours-by-store disagree", layer: docs, where: "dim_employee / fct_labor_hours"}
+    category: "employee home store vs the store where hours were worked"
+    confusable_because: >
+      An employee's home store (employees.store_id) and the store a shift was worked at
+      (labor_hours.location_id) differ when staff cover other stores. Headcount-by-store (home) and
+      hours-by-store (worked) roll up differently, so a per-store labor figure depends on which key an
+      agent groups on.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: cost_columns_split_across_tables
+    items:
+      - {ref: "products.standard_cost + last_cost (no landed_cost)", layer: warehouse, where: "products"}
+      - {ref: "dim_product.standard_cost + landed_cost (no last_cost)", layer: warehouse, where: "dim_product"}
+      - {ref: "inventory_snapshot.unit_cost + standard_cost; po_lines.unit_cost + landed_cost", layer: warehouse, where: "inventory_snapshot, po_lines"}
+      - {ref: "dim_product landed/standard/last all present", layer: docs, where: "dim_product cost columns"}
+    category: "the three costs are not all present on the same table"
+    confusable_because: >
+      Docs say landed, standard, and last cost all live on dim_product, but the warehouse splits them:
+      products has standard and last (no landed), dim_product has standard and landed (no last). An
+      agent needing landed cost from products can't find it and may substitute last_cost or unit_cost,
+      silently changing margin.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: unit_cost_means_different_costs
+    items:
+      - {ref: "pos_line_items.unit_cost / inventory_snapshot.unit_cost / po_lines.unit_cost / po_receipts (received_cost) / fct_sales_line.unit_cost", layer: warehouse, where: "multiple tables"}
+      - {ref: "received_cost feeds last_cost; PO cost close to last_cost, not landed", layer: docs, where: "fct_inventory_receipts / fct_purchase_orders"}
+    category: "'unit_cost' is a different cost concept per table"
+    confusable_because: >
+      unit_cost appears on line items, snapshots, PO lines, receipts, and the sales fact, but it is a
+      captured cost, a receipt (last) cost, a valuation cost, or a PO cost depending on the table.
+      Treating them as one cost when computing margin or inventory value blends incompatible cost
+      bases.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: null_cost_shows_100pct_margin
+    items:
+      - {ref: "null cost coalesced to 0 shows ~100% margin on new/one-off SKUs", layer: docs, where: "dim_product cost columns / Gross margin"}
+      - {ref: "gross_margin_pct / margin_standard / gross_margin (no null guard on cost)", layer: semantic, where: "metrics"}
+    category: "documented default (null cost -> 0) inflates margin"
+    confusable_because: >
+      Margin models coalesce a null cost to 0, so new items read at ~100% margin. The semantic margin
+      metrics multiply cost by quantity with no null handling, so a batch of new SKUs pushes category
+      margin up and it looks like a real gain rather than a cost gap.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: markup_vs_margin
+    items:
+      - {ref: "Markup (retail-cost)/cost vs Gross margin (sales-cost)/sales", layer: docs, where: "Markup / Gross margin"}
+    category: "markup and margin said interchangeably, different denominators"
+    confusable_because: >
+      Markup divides by cost and margin divides by sales, and merch conversations use the words
+      interchangeably. A "40%" target could be either; picking the wrong denominator changes the
+      number by a large factor (though large enough that a gross swap is often noticeable).
+    detectability: loud
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: dept_free_text_vs_hierarchy
+    items:
+      - {ref: "store_sales_daily.dept (free-text VARCHAR)", layer: warehouse, where: "store_sales_daily"}
+      - {ref: "departments.department_id/department_name; categories.dept_name", layer: warehouse, where: "departments, categories"}
+      - {ref: "department dimension (expr dept_name, source dim_product) / category (expr category)", layer: semantic, where: "dimensions"}
+    category: "department is a free-text string here and a keyed hierarchy there"
+    confusable_because: >
+      store_sales_daily carries dept as a free-text string, while the modelled path is
+      department_id -> department_name via departments/categories/dim_product. The semantic department
+      dimension reads dept_name from dim_product (which actually has department_name, not dept_name),
+      and category reads `category` (the column is category_name). "By department" from the legacy
+      string and from the hierarchy produce different groupings and the dimension exprs miss the real
+      column names.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: category_strings_drift_from_hierarchy
+    items:
+      - {ref: "dim_product category/subcategory strings vs dim_department (trust data over the list)", layer: docs, where: "dim_department"}
+      - {ref: "categories.category_name vs dim_product.category_name", layer: warehouse, where: "categories, dim_product"}
+    category: "category names on the product don't match the department table"
+    confusable_because: >
+      Merch renames and adds categories faster than either dim_product or dim_department is updated, so
+      the category strings on the product drift from the hierarchy table. Grouping by the product's
+      category string versus joining to the category dimension yields different buckets.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: fiscal_period_vs_calendar_month
+    items:
+      - {ref: "'period' means a fiscal period (retail 4-5-4), not a calendar month", layer: docs, where: "header / preamble"}
+      - {ref: "dim_date.fiscal_period / fiscal_week / fiscal_year vs calendar_date", layer: warehouse, where: "dim_date"}
+      - {ref: "time_column business_date/order_date grain day (no fiscal-period awareness)", layer: semantic, where: "dimensions"}
+    category: "'period' is fiscal, but time grouping can fall back to calendar"
+    confusable_because: >
+      "Period" means a 4-5-4 fiscal period, and comp requires fiscal-week alignment, but the semantic
+      time dimensions only expose calendar day grain. An agent grouping "by month" on calendar_date
+      buckets differently than a fiscal period and misaligns comp week-over-week comparisons.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: staging_tables_used_directly
+    items:
+      - {ref: "stg_transactions (gross_sales + net_sales + units), stg_orders, stg_line_items, stg_inventory", layer: warehouse, where: "STAGING"}
+      - {ref: "'stg_* are staging and not meant for direct use, but people use them'", layer: docs, where: "preamble"}
+      - {ref: "inventory_in_transit (base stg_inventory_daily)", layer: semantic, where: "metrics"}
+    category: "unmodeled staging tables queried as if they were marts"
+    confusable_because: >
+      Docs warn stg_* are staging, yet note people query them, and the semantic in-transit metric
+      actually grounds on a stg base (stg_inventory_daily). Staging carries pre-cleaning values (e.g.
+      stg_transactions has its own gross_sales/net_sales that the raw pos_transactions lacks), so a
+      total from staging differs from the mart.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: two_plus_line_tables
+    items:
+      - {ref: "pos_line_items / stg_line_items / online_order_lines", layer: warehouse, where: "line tables"}
+      - {ref: "fct_sales_line (has qty AND quantity, extended_price AND line_amount, gross_sales AND net_sales)", layer: warehouse, where: "MARTS"}
+    category: "sales lines exist in four tables with overlapping money/qty columns"
+    confusable_because: >
+      Line-level sales sit in pos_line_items, stg_line_items, online_order_lines, and fct_sales_line.
+      fct_sales_line in particular has both qty and quantity, both extended_price and line_amount, and
+      both gross_sales and net_sales, so even within one row it is unclear which column is "units" or
+      "sales." Summing from different line tables or different columns gives different totals.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: extended_price_vs_line_amount
+    items:
+      - {ref: "pos_line_items.extended_price AND line_amount", layer: warehouse, where: "pos_line_items"}
+      - {ref: "extended_retail = quantity*unit_retail before line discount; line discount separate", layer: docs, where: "fct_transaction_lines"}
+      - {ref: "merch_sales (measure ext_ring_amt)", layer: warehouse/semantic, where: "pos_line_items has no ext_ring_amt"}
+    category: "line has a pre-discount extended price and a post-discount line amount"
+    confusable_because: >
+      A line carries extended_price (quantity x price, before line discount) and line_amount (after),
+      and docs describe extended_retail as the pre-discount figure with discount held separately. The
+      semantic merch_sales names ext_ring_amt, which is neither column. Summing extended_price vs
+      line_amount as "sales" differs by line discounts, and the semantic name doesn't match either.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: points_balance_three_ways
+    items:
+      - {ref: "loyalty_points_ledger.points_earned + points_redeemed (two positive columns)", layer: warehouse, where: "loyalty_points_ledger"}
+      - {ref: "fct_loyalty_points.points signed (earn +, redeem/expire -)", layer: docs, where: "fct_loyalty_points"}
+      - {ref: "loyalty_members.points_balance (stored balance)", layer: warehouse, where: "loyalty_members"}
+    category: "points balance from a stored column, a signed ledger, or two-column arithmetic"
+    confusable_because: >
+      Docs describe a single signed `points` column whose running sum is the balance; the warehouse
+      ledger instead has separate points_earned and points_redeemed (both positive), and loyalty_members
+      also stores points_balance. Balance from sum(signed), from sum(earned)-sum(redeemed), and from
+      the stored column can disagree, and the docs' signed column doesn't exist as such.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: is_comp_char_vs_boolean
+    items:
+      - {ref: "store_sales_daily.is_comp CHAR(1) ('Y') AND comp_flag BOOLEAN", layer: warehouse, where: "store_sales_daily"}
+      - {ref: "v_comp_store_sales WHERE is_comp='Y'; v_net_sales WHERE is_comp=true", layer: warehouse, where: "VIEWS"}
+      - {ref: "online_orders.is_comp BOOLEAN; fct_transactions.is_comp BOOLEAN", layer: warehouse, where: "online_orders, fct_transactions"}
+    category: "the comp flag is 'Y'/CHAR in one table and boolean in others, plus a duplicate column"
+    confusable_because: >
+      store_sales_daily has is_comp as CHAR (values like 'Y') and a separate comp_flag BOOLEAN, while
+      other tables use is_comp as a boolean. A filter is_comp=true works on the boolean tables but not
+      on the CHAR one (and vice versa), and it's unclear whether is_comp or comp_flag on
+      store_sales_daily is authoritative.
+    detectability: loud
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: v_comp_store_sales_on_gross
+    items:
+      - {ref: "v_comp_store_sales exposes store_sales_daily.sales (gross) for comp stores", layer: warehouse, where: "VIEWS"}
+      - {ref: "Comp is reported on net sales", layer: docs, where: "Comparable-store sales"}
+    category: "a comp-sales view built on gross while comp is defined on net"
+    confusable_because: >
+      v_comp_store_sales surfaces the gross `sales` column from the legacy daily table for comp stores,
+      but docs say comp is reported on net sales. An agent taking comp sales from this view reports it
+      on gross, a different (higher) number than the net comp everyone quotes.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: void_flag_vs_status_voided
+    items:
+      - {ref: "pos_transactions.void_flag AND txn_status; pos_line_items.void_flag only", layer: warehouse, where: "pos_transactions, pos_line_items"}
+      - {ref: "fct_transactions.status ('voided') no void_flag", layer: warehouse, where: "fct_transactions"}
+      - {ref: "Suspended/voided excluded here; training not always excluded", layer: docs, where: "fct_transactions / status"}
+    category: "voids excluded via a boolean in one table and a status value in another"
+    confusable_because: >
+      Some tables mark voids with a void_flag boolean, others with status='voided', and pos_line_items
+      has void_flag but no status. An agent that filters one mechanism misses voids flagged the other
+      way, leaving voided sales in or dropping valid ones.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: training_baskets_not_always_excluded
+    items:
+      - {ref: "fct_transactions.status 'training' should always be excluded, not always is in older views", layer: docs, where: "fct_transactions.status"}
+    category: "documented exclusion (training rows) not applied consistently"
+    confusable_because: >
+      Register-training baskets (status='training') should always be excluded from sales but are not
+      excluded in some older views. A total that includes them is slightly inflated with no obvious
+      sign.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: dsd_thin_in_purchase_orders
+    items:
+      - {ref: "DSD suppliers' receipts don't flow through a PO; DSD volume thin in fct_purchase_orders", layer: docs, where: "dim_supplier"}
+    category: "DSD purchases largely absent from the PO tables"
+    confusable_because: >
+      Direct-store-delivery suppliers (bread, soda, chips) deliver without a normal PO, so their volume
+      barely appears in the purchase-order tables and shows only as receipts. "Total purchases" or
+      supplier spend from PO tables understates DSD categories.
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: online_gross_after_substitutions
+    items:
+      - {ref: "online gross_sales captured after substitutions/out-of-stocks (reflects fulfilled, not ordered)", layer: docs, where: "fct_online_orders"}
+      - {ref: "online_orders.gross_sales; substituted_flag / is_substitution", layer: warehouse, where: "online_orders, online_order_lines"}
+    category: "online gross reflects what was fulfilled, in-store gross reflects what was rung"
+    confusable_because: >
+      Online gross_sales is captured after substitutions and out-of-stocks resolve, so it is fulfilled
+      value, not ordered value, whereas in-store gross is rung value. Comparing or summing the two as
+      one "gross sales" mixes demand and fulfillment bases, and lost-sales on subs needs raw_ecom.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: order_status_completed_value_absent
+    items:
+      - {ref: "total_revenue filter order_status='completed'", layer: semantic, where: "metrics"}
+      - {ref: "fct_online_orders.order_status enum cart/placed/picking/fulfilled/cancelled/refunded", layer: docs, where: "fct_online_orders.order_status"}
+      - {ref: "online_orders.order_status; fct_orders.order_status", layer: warehouse, where: "online_orders, fct_orders"}
+    category: "revenue filters on an order-status value the enum doesn't contain"
+    confusable_because: >
+      total_revenue filters order_status='completed', but the documented online order-status enum has
+      no 'completed' value (revenue is 'fulfilled'). The filter may match nothing and understate
+      revenue, or match only a rare stray value, without erroring.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: net_sales_expr_fans_out_three_tables
+    items:
+      - {ref: "net_sales (expr gross_amt - return_amt - markdown_amt, base pos_transactions)", layer: semantic, where: "metrics"}
+      - {ref: "returns in fct_returns; markdowns in pos_line_items; no gross_amt/return_amt/markdown_amt on pos_transactions", layer: warehouse, where: "pos_transactions, fct_returns, pos_line_items"}
+    category: "a single-table net formula whose three inputs live in three tables"
+    confusable_because: >
+      net_sales is expressed as gross_amt minus return_amt minus markdown_amt on base
+      pos_transactions, but none of those columns exist there: gross is a rung line/transaction value,
+      returns live in fct_returns, markdowns in pos_line_items. Resolving this needs joins that can
+      fan out and double-count, and the metric as written is broken.
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  # ==========================================================================
+  # LOW
+  # ==========================================================================
+
+  - id: active_flag_vs_status_redundant
+    items:
+      - {ref: "suppliers.active BOOLEAN AND suppliers.status VARCHAR", layer: warehouse, where: "suppliers"}
+      - {ref: "employees.active BOOLEAN (docs dim_employee.status active/terminated/leave)", layer: warehouse/docs, where: "employees / dim_employee"}
+      - {ref: "products.active_flag; loyalty_members.active_flag + member_status", layer: warehouse, where: "products, loyalty_members"}
+    category: "redundant active boolean plus a status enum on the same entity"
+    confusable_because: >
+      Several entities carry both an active/active_flag boolean and a status column, which can
+      disagree (e.g. status='leave' but active=true). An agent filtering "active suppliers/employees"
+      picks one signal and includes or excludes rows the other signal would classify differently.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: fill_rate_over_100_capped_inconsistently
+    items:
+      - {ref: "po_lines received_qty > ordered_qty on catch-weight; fill rate can exceed 100%, capped in some reports", layer: docs, where: "fct_po_lines"}
+      - {ref: "po_lines.ordered_qty / received_qty", layer: warehouse, where: "po_lines"}
+    category: "fill rate capped at 100% in some reports, uncapped in others"
+    confusable_because: >
+      Catch-weight lines can over-receive, pushing line fill rate above 100%; some reports cap it and
+      some don't, so an aggregated fill rate differs by the capping choice.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: po_cost_vs_landed_cost
+    items:
+      - {ref: "purchase_orders.total_cost / po at PO cost (close to last_cost), not landed", layer: warehouse/docs, where: "purchase_orders / fct_purchase_orders"}
+      - {ref: "po_lines.unit_cost AND landed_cost", layer: warehouse, where: "po_lines"}
+    category: "PO header cost is PO cost, not landed cost"
+    confusable_because: >
+      PO header costs are at PO cost (near last_cost), while po_lines separately carry a landed_cost.
+      A spend or margin figure built from PO cost differs from one built on landed cost.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: receipt_timing_double_counts_owned
+    items:
+      - {ref: "receipt reduces on_order and increases on_hand on possibly different nights; owned can double-count for a day", layer: docs, where: "fct_inventory_receipts / in_transit"}
+      - {ref: "po_receipts vs inventory_snapshot on_order/on_hand", layer: warehouse, where: "po_receipts, inventory_snapshot"}
+    category: "receipt posting lag can double-count owned inventory for a day"
+    confusable_because: >
+      A receipt lowers on_order and raises on_hand but the two updates don't always land the same
+      night, so end-of-period owned inventory (on_hand + on_order/in_transit) can count a receipt
+      twice for a day. A period-close owned figure is slightly overstated.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: fct_orders_gross_net_amount
+    items:
+      - {ref: "fct_orders.gross_sales + net_sales + amount", layer: warehouse, where: "fct_orders"}
+      - {ref: "online_order_lines.amount; online_orders.gross_sales/net_sales", layer: warehouse, where: "online"}
+      - {ref: "total_revenue (measure revenue); average_order_value (measure order_total)", layer: semantic, where: "metrics"}
+    category: "orders carry gross, net, and a generic 'amount' money column"
+    confusable_because: >
+      fct_orders has gross_sales, net_sales, and a bare `amount`, and semantic order metrics reference
+      yet other names (revenue, order_total) that don't appear on the table. Which money column is the
+      order's revenue is unstated, so an order total depends on the column chosen.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: true
+
+  - id: online_orders_metric_shadows_table
+    items:
+      - {ref: "online_orders (metric, count_distinct order_id)", layer: semantic, where: "metrics"}
+      - {ref: "online_orders (table)", layer: warehouse, where: "online_orders"}
+      - {ref: "fct_online_orders (base referenced by the metric)", layer: semantic/docs, where: "metric base / docs"}
+    category: "a metric named identically to a warehouse table"
+    confusable_because: >
+      The semantic metric online_orders has the same name as the warehouse table online_orders, and
+      the metric's base is fct_online_orders (docs name) which isn't the warehouse table name. Name
+      clashes make it easy to reference the count metric when the table was meant, or vice versa.
+    detectability: loud
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: store_key_vs_store_id
+    items:
+      - {ref: "dim_store.store_key (surrogate PK) + store_id + location_id", layer: warehouse, where: "dim_store"}
+      - {ref: "fct_* carry both store_key and store_id", layer: warehouse, where: "fct_transactions, fct_inventory_daily"}
+    category: "surrogate store_key vs natural store_id both present on facts"
+    confusable_because: >
+      Facts carry both the surrogate store_key and the natural store_id (plus location_id on the dim).
+      Joining a fact to dim_store on store_id instead of store_key, or grouping on the wrong one, can
+      mis-map or fan out rows.
+    detectability: loud
+    danger: low
+    cross_layer: false
+    uncertain: false
+
+  - id: coupon_funding_null_before_cutover
+    items:
+      - {ref: "is_vendor_funded reliable only for digital coupons; paper often null", layer: docs, where: "fct_coupon_redemptions"}
+      - {ref: "promotions.funded_by; dim_promotion vendor_funded/retailer_funded", layer: warehouse/docs, where: "promotions / dim_promotion"}
+      - {ref: "no coupon table in the warehouse (fct_coupon_redemptions absent)", layer: warehouse, where: "(missing)"}
+    category: "vendor-vs-retailer funding split unreliable and stored in several places"
+    confusable_because: >
+      Coupon/promo funding lives as funded_by on promotions, vendor_funded/retailer_funded on
+      dim_promotion, and is_vendor_funded on a coupon table that isn't in the warehouse; the split is
+      unreliable for paper coupons before the digital cutover. A funded-vs-unfunded cost split is
+      unstable and source-dependent.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: gross_margin_precomputed_columns
+    items:
+      - {ref: "store_sales_daily.gross_margin; fct_sales_line.gross_margin (precomputed, cost basis unstated)", layer: warehouse, where: "store_sales_daily, fct_sales_line"}
+      - {ref: "Gross margin (which cost varies)", layer: docs, where: "Gross margin"}
+    category: "precomputed gross_margin columns of unknown cost basis"
+    confusable_because: >
+      store_sales_daily and fct_sales_line each store a gross_margin column, but which cost was used to
+      compute it isn't stated. Summing the stored column versus recomputing sales minus a chosen cost
+      gives different margin, and the stored one may not match either Finance or Merch convention.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: true
+
+  - id: member_id_column_aliases
+    items:
+      - {ref: "fct_transactions.member_id was loyalty_id then rewards_id; aliases persist in staging/dashboards", layer: docs, where: "fct_transactions.member_id"}
+      - {ref: "online_orders.loyalty_id; loyalty_members.loyalty_id", layer: warehouse, where: "online_orders, loyalty_members"}
+    category: "the loyalty key has legacy aliases (loyalty_id, rewards_id)"
+    confusable_because: >
+      The basket loyalty key was renamed twice (rewards_id -> loyalty_id -> member_id) and old aliases
+      still appear in staging and dashboards; online uses loyalty_id (a VARCHAR) while POS uses
+      member_id (a BIGINT). Loyalty attach rate joined on the wrong alias mis-links baskets to members.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: discount_fields_scattered
+    items:
+      - {ref: "pos_transactions.discount_amount; pos_line_items has no discount col (markdown_amount)", layer: warehouse, where: "pos_transactions, pos_line_items"}
+      - {ref: "online_orders.discount_total; online_order_lines.line_discount", layer: warehouse, where: "online"}
+      - {ref: "fct_transaction_lines.discount_amount (null=0); fct_coupon_redemptions.discount_value", layer: docs, where: "line / coupon sections"}
+    category: "'discount' spread across transaction, line, order, and coupon fields"
+    confusable_because: >
+      Discounts appear as discount_amount (transaction), line_discount / discount_total (online),
+      markdown_amount (POS line), and discount_value (coupon), at different grains and with different
+      null conventions. Summing "discounts" across these mixes basket-level and line-level and can
+      double-count promo effects.
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: member_tier_dimension_missing
+    items:
+      - {ref: "member_tier dimension (expr tier, source loyalty_members)", layer: semantic, where: "dimensions"}
+      - {ref: "loyalty_members has no tier column", layer: warehouse, where: "loyalty_members"}
+    category: "a loyalty-tier dimension over a table with no tier column"
+    confusable_because: >
+      The semantic member_tier dimension reads `tier` from loyalty_members, but that table has no tier
+      column. Any "by tier" breakdown errors or silently returns nothing, and a reader may assume tiers
+      exist in the data.
+    detectability: loud
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: supplier_and_dim_supplier_names
+    items:
+      - {ref: "suppliers.supplier_code (warehouse) vs dim_supplier.vendor_number + is_dsd (docs)", layer: warehouse/docs, where: "suppliers / dim_supplier"}
+      - {ref: "supplier dimension (source dim_supplier, not in warehouse)", layer: semantic, where: "dimensions"}
+    category: "supplier attributes (is_dsd, vendor_number) documented but absent from the table"
+    confusable_because: >
+      Docs describe dim_supplier with vendor_number and is_dsd, and the semantic supplier dimension
+      sources dim_supplier, but the warehouse table is `suppliers` with supplier_code and no is_dsd. A
+      DSD-vs-warehouse split or a vendor-number lookup has no backing column in the actual schema.
+    detectability: loud
+    danger: low
+    cross_layer: true
+    uncertain: false
