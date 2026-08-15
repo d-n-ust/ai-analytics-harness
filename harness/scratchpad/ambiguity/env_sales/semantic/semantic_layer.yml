@@ -1,0 +1,446 @@
+# Northwind Threads — semantic layer
+# owner: data team (analytics-eng)
+# consumed by: Looker sync + the metrics API + finance board
+
+metrics:
+  # ---- revenue ----
+  - name: gross_revenue
+    description: Order revenue before discounts, returns, tax.
+    entity: order
+    agg: sum
+    measure: gross_amount
+    base: analytics.fct_orders
+    time_column: order_date
+    unit: USD
+
+  - name: gross_sales
+    description: Gross merchandise sales rolled up from line items.
+    entity: order_item
+    agg: sum
+    expr: quantity * unit_price
+    model: analytics.fct_order_items
+    time_column: created_at
+    unit: USD
+
+  - name: gmv
+    entity: order
+    agg: sum
+    measure: gross_amount
+    base: analytics.orders
+    filter: "status not in ('cancelled')"
+    time_column: order_date
+    unit: USD
+
+  - name: net_revenue
+    description: Revenue net of discounts and returns. Finance definition.
+    entity: order
+    agg: sum
+    expr: gross_amount - discount_amount - return_amount
+    base: analytics.fct_orders
+    filter: "is_test = false"
+    time_column: order_date
+    unit: USD
+
+  - name: net_sales
+    description: Net sales (post-discount, post-refund).
+    entity: order
+    agg: sum
+    measure: net_amount
+    model: analytics.fct_orders
+    time_column: order_date
+    unit: USD
+
+  - name: order_revenue
+    description: Revenue from one-off orders only, excludes club.
+    entity: order
+    agg: sum
+    expr: "case when order_type <> 'subscription' then net_amount else 0 end"
+    base: analytics.fct_orders
+    time_column: order_date
+    unit: USD
+
+  - name: subscription_revenue
+    description: Recognised revenue from Threads Club.
+    entity: subscription
+    agg: sum
+    measure: amount
+    base: analytics.fct_subscription_invoices
+    filter: "status = 'paid'"
+    time_column: invoice_date
+    unit: USD
+
+  - name: total_revenue
+    description: Orders plus subscriptions.
+    agg: sum
+    expr: net_amount
+    base: analytics.fct_revenue_all
+    time_column: recognised_at
+    unit: USD
+
+  - name: recognised_revenue
+    description: Revenue recognised in period per finance close.
+    entity: invoice
+    agg: sum
+    measure: recognised_amount
+    model: finance.fct_invoices
+    filter: "recognised = true and is_test = false"
+    grain: month
+    unit: USD
+
+  - name: booked_revenue
+    description: Bookings (contract value at order time).
+    entity: order
+    agg: sum
+    measure: booked_amount
+    base: analytics.fct_orders
+    time_column: order_date
+    unit: USD
+
+  - name: revenue
+    entity: order
+    agg: sum
+    measure: net_amount
+    base: analytics.fct_orders
+    time_column: order_date
+
+  # ---- orders ----
+  - name: order_count
+    description: Number of orders placed.
+    entity: order
+    agg: count
+    base: analytics.fct_orders
+    time_column: order_date
+
+  - name: orders
+    entity: order
+    agg: count_distinct
+    measure: order_id
+    model: analytics.orders
+    time_column: order_date
+
+  - name: completed_orders
+    description: Orders that reached a completed/fulfilled state.
+    entity: order
+    agg: count
+    base: analytics.fct_orders
+    filter: "status in ('completed','fulfilled','delivered')"
+    time_column: order_date
+
+  - name: paid_orders
+    entity: order
+    agg: count_distinct
+    expr: "case when payment_status = 'paid' then order_id end"
+    base: analytics.fct_orders
+    time_column: order_date
+
+  # ---- AOV ----
+  - name: aov
+    description: Average order value (net).
+    entity: order
+    agg: average
+    measure: net_amount
+    base: analytics.fct_orders
+    filter: "is_test = false"
+    time_column: order_date
+    unit: USD
+
+  - name: average_order_value
+    description: AOV on gross.
+    agg: ratio
+    expr: gross_revenue / order_count
+    unit: USD
+
+  # ---- customers ----
+  - name: total_customers
+    description: Distinct customers with at least one order.
+    entity: customer
+    agg: count_distinct
+    measure: customer_id
+    base: analytics.fct_orders
+    time_column: order_date
+
+  - name: new_customers
+    description: First-time customers in period.
+    entity: customer
+    agg: count_distinct
+    measure: customer_id
+    model: analytics.dim_customers
+    filter: "first_order_date is not null"
+    time_column: first_order_date
+
+  - name: active_customers
+    description: Customers active in the period.
+    entity: customer
+    agg: count_distinct
+    measure: customer_id
+    base: analytics.fct_orders
+    segment: active
+    time_column: order_date
+
+  - name: paying_customers
+    entity: customer
+    agg: count_distinct
+    expr: "case when net_amount > 0 then customer_id end"
+    base: analytics.fct_orders
+    time_column: order_date
+
+  - name: engaged_customers
+    description: Customers with a session or an order.
+    entity: customer
+    agg: count_distinct
+    measure: customer_id
+    base: analytics.fct_sessions
+    segment: engaged
+    time_column: session_date
+
+  # ---- subscriptions / MRR ----
+  - name: mrr
+    description: Monthly recurring revenue.
+    entity: subscription
+    agg: sum
+    measure: mrr_amount
+    base: analytics.fct_subscriptions
+    filter: "status = 'active'"
+    grain: month
+    unit: USD
+
+  - name: arr
+    description: Annual recurring revenue.
+    agg: sum
+    expr: mrr_amount * 12
+    base: analytics.fct_subscriptions
+    filter: "status = 'active'"
+    grain: month
+    unit: USD
+
+  - name: active_subscriptions
+    description: Count of active club subscriptions.
+    entity: subscription
+    agg: count_distinct
+    measure: subscription_id
+    base: analytics.fct_subscriptions
+    segment: active
+    grain: month
+
+  - name: new_mrr
+    description: MRR added from new subscriptions.
+    entity: subscription
+    agg: sum
+    measure: mrr_amount
+    base: analytics.fct_subscription_events
+    filter: "event_type = 'created'"
+    time_column: event_date
+    unit: USD
+
+  - name: churned_mrr
+    entity: subscription
+    agg: sum
+    expr: "case when event_type = 'cancelled' then -mrr_amount else 0 end"
+    base: analytics.fct_subscription_events
+    time_column: event_date
+    unit: USD
+
+  # ---- returns / refunds ----
+  - name: returns
+    description: Number of returns.
+    entity: return
+    agg: count
+    base: analytics.fct_returns
+    time_column: return_date
+
+  - name: refund_amount
+    description: Total refunded to customers.
+    entity: refund
+    agg: sum
+    measure: amount
+    base: analytics.fct_refunds
+    filter: "status = 'processed'"
+    time_column: refund_date
+    unit: USD
+
+  - name: return_rate
+    description: Returns over orders.
+    agg: ratio
+    expr: returns / order_count
+    unit: pct
+
+  # ---- discounts / promo ----
+  - name: discount_amount
+    description: Total discount given.
+    entity: order
+    agg: sum
+    measure: discount_amount
+    base: analytics.fct_orders
+    time_column: order_date
+    unit: USD
+
+  - name: discount_rate
+    agg: ratio
+    expr: discount_amount / gross_revenue
+    unit: pct
+
+  # ---- retention ----
+  - name: repeat_purchase_rate
+    description: Share of customers with more than one order.
+    agg: ratio
+    expr: repeat_customers / total_customers
+    base: analytics.dim_customers
+    unit: pct
+
+  - name: churn_rate
+    description: Subscription churn in period.
+    agg: ratio
+    expr: churned_subscriptions / active_subscriptions
+    base: analytics.fct_subscriptions
+    grain: month
+    unit: pct
+
+  # ---- marketing ----
+  - name: marketing_spend
+    description: Paid media spend.
+    agg: sum
+    measure: spend
+    base: analytics.fct_marketing_spend
+    time_column: spend_date
+    unit: USD
+
+  - name: cac
+    description: Blended customer acquisition cost.
+    agg: ratio
+    expr: marketing_spend / new_customers
+    unit: USD
+
+  - name: roas
+    description: Return on ad spend.
+    agg: ratio
+    expr: gross_revenue / marketing_spend
+
+  - name: sessions
+    entity: session
+    agg: count
+    base: analytics.fct_sessions
+    time_column: session_date
+
+  - name: conversion_rate
+    description: Orders per session.
+    agg: ratio
+    expr: order_count / sessions
+    unit: pct
+
+
+dimensions:
+  - name: order_date
+    type: time
+    grain: day
+    source: analytics.fct_orders
+
+  - name: created_at
+    type: time
+    grain: day
+    source: analytics.fct_orders
+
+  - name: channel
+    type: categorical
+    description: Marketing channel (paid_search, paid_social, email, organic).
+    source: analytics.fct_marketing_spend
+    column: channel
+
+  - name: source
+    type: categorical
+    description: Traffic / attribution source.
+    source: analytics.fct_sessions
+    column: utm_source
+
+  - name: campaign
+    type: categorical
+    source: analytics.fct_marketing_spend
+    column: campaign_name
+
+  - name: region
+    type: categorical
+    description: Sales region.
+    source: analytics.dim_customers
+    column: region
+
+  - name: market
+    type: categorical
+    description: Go-to-market region grouping.
+    source: analytics.dim_customers
+    column: market
+
+  - name: country
+    type: categorical
+    source: analytics.dim_customers
+    column: country_code
+
+  - name: product_category
+    type: categorical
+    source: analytics.dim_products
+    column: category
+
+  - name: plan
+    type: categorical
+    description: Subscription plan tier.
+    source: analytics.fct_subscriptions
+    column: plan_name
+
+  - name: order_status
+    type: categorical
+    source: analytics.fct_orders
+    column: status
+
+  - name: status
+    type: categorical
+    source: analytics.fct_subscriptions
+    column: status
+
+  - name: customer_type
+    type: categorical
+    description: new / returning / vip.
+    source: analytics.dim_customers
+    column: customer_type
+
+  - name: device
+    type: categorical
+    source: analytics.fct_sessions
+    column: device_type
+
+
+segments:
+  - name: active
+    description: Customers with an order in the last 90 days.
+    filter: "last_order_date >= dateadd('day', -90, current_date)"
+    entity: customer
+
+  - name: active_customers
+    description: Active club members.
+    filter: "status = 'active'"
+    entity: subscription
+
+  - name: engaged
+    description: Had a session in the last 30 days.
+    filter: "last_session_date >= dateadd('day', -30, current_date)"
+    entity: customer
+
+  - name: paying
+    description: Has at least one paid order.
+    filter: "lifetime_net_amount > 0"
+    entity: customer
+
+  - name: subscribers
+    filter: "is_subscriber = true"
+    entity: customer
+
+  - name: new
+    description: First order within the period.
+    filter: "first_order_date is not null"
+    entity: customer
+
+  - name: test_accounts
+    description: Internal / QA accounts.
+    filter: "is_test = true or email like '%@northwindthreads.com'"
+    entity: customer
+
+  - name: churned
+    filter: "status = 'cancelled'"
+    entity: subscription
