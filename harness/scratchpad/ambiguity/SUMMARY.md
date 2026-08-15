@@ -1,0 +1,188 @@
+# Static ambiguity / collision detection — investigation summary
+
+Scope of this document: the whole investigation, not only the five viability tests it began with.
+Tests 1 and 2 were run as specified; they validated the core, and the work then pivoted to building
+and evaluating a real cross-layer collision detector on two blind, realistic environments. Numbers are
+reported as they came out, with n, including the nulls.
+
+All artifacts and code live under `harness/scratchpad/ambiguity/`. Nothing here touched `engine/`.
+
+---
+
+## Verdict
+
+**Proceed, with a narrowed claim.** The exact qualification the claim now needs:
+
+> The dangerous, numerically-silent confusions in an analytics stack — where a bare question resolves
+> to two governed definitions whose numbers land close enough to pass every check — are computable
+> offline from the declared artifacts, across the whole grounding surface (warehouse + docs + semantic
+> layer), and the method generalises across domains. Two conditions bound it:
+>
+> 1. **It needs a definition surface.** A governed semantic layer, or at least saved queries a parser
+>    can read. Bare schema + docs cannot surface metric-level ambiguity, and an agent grounding on
+>    schema + docs alone welds its own scope invisibly (config C below: 0 catchable).
+> 2. **It detects name-and-definition collisions between grounding facts.** It does not check the
+>    values/enums inside a column, single-fact correctness, or (yet) warehouse near-synonym columns.
+>    Those are real and need complementary checks.
+
+And one repositioning, from the no-semantic-layer contrast: the semantic layer's value is **governance**
+— one authoritative surface on which to resolve the forks — not merely making ambiguity visible to a
+parser. Welded SQL is visible to a parser too; it is the *governed answer* that a no-SL shop lacks.
+
+---
+
+## The three headline numbers (the reference pair)
+
+For `value_moments` vs `real_value_moments` in the harness's own layer:
+
+| number | value | source |
+|---|---|---|
+| static classification | `scope_only` / **high** (same measure, differs only in segment + `default_filters`) | `engine/src/semantic/ambiguity.py` |
+| divergence when swapped | **~4–6%** on levels (observed scope swaps: 6.0% and 4.7% off gold); the module docstring cites 12.12% vs 11.88% ≈ 2% on the week-over-week framing | Test 1 mechanism inspection |
+| share of observed mislabels | the four predicted-clarify cases hold **48%** of answerable mislabels (99.5th pct of a per-case shuffle null); the module claims 59% of *all* mislabels are this pair | Test 1 regrade |
+
+The divergence is framing-dependent (level ~4–6%, week-over-week ~2%), which is itself a result: the
+"damage number" is not a single stable figure and must be stated with its framing.
+
+---
+
+## Phase-by-phase results
+
+| phase | question | result | verdict |
+|---|---|---|---|
+| **T1** frozen regrade | is the static prediction predictive, not post-hoc? | clarify wrong-rate 29.8% vs answer 5.8%, shuffle p=0.038; lexical baseline p=0.149 (n.s.) | **met**, narrowed |
+| **T2** corpus | property of semantic layers, or of *this* one? | scope separable in 3 real dialects; native scope_only 0/3 projects, unit-inferred 12 | **met in principle**, code fix required |
+| **Embeddings** | do embeddings beat the token gate? | reference pair #1 of 136 (MiniLM 0.904, OpenAI 0.816, cross-model ρ=0.71) | gate: **yes**; danger signal: **no** |
+| **Pipeline** | does the combined design work? | 5/5 isolated examples correct; real layer: 1 scope trap (= the collision), 8 recall-win pairs all safe | **works** |
+| **Sales env** | on a realistic blind 3-layer environment? | 454 facts, 57 findings; recall 16/16 high, 55/61 (90%); precision 53/57 (93%) | **strong** |
+| **No-SL contrast** | does removing the semantic layer hide it? | welded scope recoverable (agg 41/41, base 41/41, WHERE 34/41); bare config catches 0 metric-level | governance, not detectability |
+| **Retail** | does it generalise to a second domain? | 525 facts, 61 findings; recall 18/19 high (95%), 60/79 (76%); precision 53/61 (87%) | core **generalises** |
+
+### T1 — frozen-prediction regrade
+Prediction committed before any run was read (freeze at commit `94e9cac`). Regraded run
+`20260726-224953-gpt-5-mini` (the doc's `20260810-181508` does not exist). The four `scope_only`-
+predicted cases were wrong 29.8% of the time vs 5.8% on predicted-answer cases; the concentration
+survives a 1,000× per-case label shuffle (p=0.038 on the gap, 99.5th pct on mislabel share). A
+lexical name-overlap baseline does **not** reproduce it (p=0.149) — so the kill condition is **not**
+met; the structural stage earns its place. Mechanism inspection of the actual answers: `t2_web` (6.0%
+off) and `t2_americas` (4.7% off) are genuine scope swaps (agent applied the non-internal filter);
+`t4_apac` (+13%, correct metric) is the APAC coverage-window trap, not a scope swap; `t2_referral`
+(55.6% wrong) is a genuine scope swap the classifier **cannot** see, because no `real_new_signups`
+metric exists to pair against — the welded-scope blind spot. Strict grader-escaped silent errors: **0**
+(every wrong number was caught by the gold-based grade; the "silence" is relative to a downstream
+consumer without that gold).
+
+### T2 — corpus smoke test (n = 3 public MetricFlow/dbt projects)
+Every dialect declares scope as a first-class field (`filter:` / `filters:`), so the pessimistic kill
+condition (scope not separable) is **not** met. But the classifier found **0** `scope_only` pairs
+natively across all projects, and **12** once `unit` was inferred — because `ambiguity.py:113` requires
+all four meaning facets present, including `unit`, which no MetricFlow/dbt dialect declares. Hand-
+inspection: on jaffle-shop the gate over-generated (4 of 10 order-family pairs genuine, the rest sibling
+noise). Gate scaling was inconclusive (n = 4, 11, 17 — public MetricFlow projects are all small).
+
+### Embeddings (local MiniLM, validated against OpenAI)
+The reference pair is the #1 closest pair by name in both models; the two rank all 136 pairs the same
+(Spearman 0.71). Embeddings out-recall the token gate (they catch `reminder_open_rate ~
+reminders_shown`, which a plural defeats). But cosine ranks *similarity*, not *danger* — the safe
+`different_measure` pairs cluster right below the dangerous one, and nearest-neighbour cosine does
+**not** predict mislabel rate (Spearman 0.42, n.s.; −0.53 with descriptions). Conclusion: embeddings
+replace the confusability **gate**; the structural test stays for **danger**; embed names, not
+descriptions.
+
+### Combined pipeline
+`gate (embedding) → same-measure (declared facets, unit dropped) → scope subsumption`. On five isolated
+examples each path fired correctly, including the sibling-noise case (`food_orders ~ drink_orders`
+downgraded to non-danger) and the recall win (`revenue ~ net_sales`, no shared token, caught). On the
+real 17-metric layer it flagged exactly one scope trap — the known collision, which carried the highest
+mislabel rate — and marked all 8 embedding-recall additions safe.
+
+### Sales environment (blind, three layers)
+`Northwind Threads`, a DTC apparel + subscription company. Three generators built the warehouse (25
+tables), docs (52 entries) and semantic layer (39 metrics) blind to the detector; a separate agent
+labelled 61 ground-truth collisions blind; the detector was frozen before scoring. Result (v2,
+clustered): **16/16 high-danger recall, 90% total, 93% precision**, 57 findings. The false positives
+exposed a real bug (same-measure passed on a single shared facet) — reported, then fixed by requiring
+≥2 shared facets. Four gold misses, each an explainable gap (British/US spelling, a within-fact
+filter/description mismatch, a stoplisted `email`, a threshold).
+
+### No-semantic-layer contrast (same company, three configs)
+41 saved BI queries with scope welded into `WHERE` stood in for the governed layer. sqlglot recovered
+agg 41/41, table 41/41, and WHERE-scope 34/41 — **welded scope is recoverable from real query SQL.**
+Detector on three configs: bare warehouse+docs catches **0** metric-level collisions; +semantic layer
+catches 43 (incl. 2 scope traps, 3 concept forks); +welded queries catches 17. Two readings: (1) you
+need *some* definition surface — schema+docs alone is blind to metric-level ambiguity; (2) welding does
+not hide scope from a parser, but it hides it from the **agent**, whose seat is config C — it grounds on
+schema+docs and welds its own unreviewed scope, which is the T1 finding at environment scale. The
+semantic layer's contribution is a single authoritative surface, not detectability per se.
+
+### Retail (cross-domain generalisation)
+`Harborstone Market`, an omnichannel grocery + general-merchandise retailer — deliberately far from DTC
+apparel. Same frozen detector, no tuning. Blind gold: 79 findings. Result: **high-danger recall 95%
+(18/19), precision 87%**, total recall 76% (60/79). Domain-appropriate high findings (the comp/same-
+store sales family, `inventory_on_hand ~ inventory_available`, margin on different costs). The lower
+*total* recall is scope, not domain failure: retail's gold has more findings in categories the detector
+does not cover (column value/enum issues, within-fact flaws, warehouse near-synonym columns), and the
+same boundary exists in sales. A detector overfit to sales would fail unpredictably on retail; this one
+fails only in the categories it does not claim, consistently — evidence it is well-defined.
+
+---
+
+## What broke, with the code path
+
+| finding | where | action |
+|---|---|---|
+| `scope_only` needs all 4 meaning facets, incl. `unit` which no real dialect declares | `engine/src/semantic/ambiguity.py:113` | reported, not edited (ground rule 1); fix = compare only co-declared meaning facets |
+| `unit` is redundant with `agg` (0/9 gated pairs distinguished by it; dropping it changes 0 classifications) | `_MEANING` in `ambiguity.py` | drop `unit` from the meaning set |
+| same-measure passed on a single shared facet (`order_count ~ order_date` DUPLICATE) | `detect.py` v1 | fixed in v2: require ≥2 shared facets |
+| cross-layer divergence asserted on any name match | `detect.py` v1 (CROSS_REF) | fixed in v2: assert only with evidence (two prose defs, or doc omits the modelled columns) |
+
+---
+
+## The detector's boundary (consistent across both domains)
+
+It does **not** currently handle, and these are where recall is lost:
+
+1. **Column value / enum issues** — a magic store code, a `char` flag that should be boolean, drifting
+   category strings, a status value that is used but never declared. The detector compares names and
+   facets, not the values inside columns. (A complementary value-level check.)
+2. **Single-fact correctness** — a metric that references a nonexistent column, a segment whose filter
+   contradicts its own description, a rate capped by a data artefact. Not a pair, so not a collision.
+3. **Warehouse near-synonym columns** — `on_hand` vs `qty_on_hand`, `extended_price` vs `line_amount`.
+   The 300+ warehouse columns are checked only for exact-label overload (≥4 tables), not embed-compared
+   to each other. This is the one genuinely closeable gap inside the detector's own remit.
+4. **`entity` recovery from SQL** — sqlglot recovers agg/table/scope from a query but not the entity,
+   so concept-forks are under-counted in the welded-query config. The hard primitive of the original T3.
+5. **Spelling / locale variance** — `recognised` vs `recognized` defeats exact-label matching.
+
+---
+
+## What the next experiment should be (chosen from what actually failed)
+
+1. **Close the warehouse near-synonym gap** — embed-compare warehouse columns (with the plumbing
+   stoplist), the one in-remit recall gap. Cheap; re-score both environments.
+2. **`entity` recovery from emitted SQL** — the hard T3 primitive; would let the welded-query config
+   detect concept-forks and would validate the traversal-weighting idea end to end.
+3. **A complementary value/enum check** — a different tool for the largest out-of-scope category,
+   especially in value-heavy domains like retail.
+4. **The untouched half of T5** — hand-translate the reference case into LookML and Cube and grep public
+   LookML for `filters:` vs inline `CASE WHEN`, to test whether welding scope is idiomatic on a platform
+   where it would silently downgrade the dangerous class.
+5. **The divergence damage-number (T4 proper)** — only if the article needs a priced figure; execute both
+   groundings across slices and report the distribution, not a point estimate.
+
+---
+
+## Methodology and its caveats
+
+- **Circularity discipline held throughout.** Environments were generated blind to the detector; ground
+  truth was labelled by a separate agent, also blind; detectors were frozen before scoring; and the
+  misses were reported, not hidden.
+- **The environments and gold are LLM-generated**, so the messiness is LLM-shaped, not human-shaped. This
+  is the strongest threat to the environment results and should be stated in any write-up. A human-audited
+  environment, or one mined from a real (anonymised) warehouse, would strengthen them.
+- **The scorer matches by name-token overlap** (pairwise/clustered detector vs grouped prose gold), which
+  flatters both precision and recall somewhat. High-danger matches were spot-checked as genuine; the
+  medium/low numbers are softer.
+- **One collision, dressed as many.** The harness's own layer has a single dangerous collision expressed
+  as ~2 pairs, so T1's per-case statistics rest on a small n and lean on the *share of mislabels* rather
+  than case counts.
