@@ -1,0 +1,969 @@
+[
+ {
+  "id": "doc_vs_schema_model_names",
+  "labels": [
+   "active",
+   "active_flag",
+   "active_members",
+   "available",
+   "available_qty",
+   "average_basket_value",
+   "average_order_value",
+   "basket_id",
+   "basket_size",
+   "baskets",
+   "biz_date",
+   "business_date",
+   "categories",
+   "category",
+   "category_id",
+   "category_name",
+   "channel",
+   "comp_flag",
+   "comp_stores",
+   "comparable",
+   "customer_id",
+   "daily_sales",
+   "department",
+   "department_id",
+   "department_name",
+   "departments",
+   "dept",
+   "dept_name",
+   "dim_customer",
+   "dim_date",
+   "dim_department",
+   "dim_employee",
+   "dim_member",
+   "dim_product",
+   "dim_promotion",
+   "dim_store",
+   "dim_supplier",
+   "discount_amount",
+   "discount_total",
+   "division",
+   "email",
+   "employee_id",
+   "employees",
+   "enrolled_flag",
+   "enrolled_members",
+   "extended_price",
+   "fct_coupon_redemptions",
+   "fct_inventory_receipts",
+   "fct_inventory_snapshot",
+   "fct_labor_hours",
+   "fct_loyalty_points",
+   "fct_markdowns",
+   "fct_online_orders",
+   "fct_orders",
+   "fct_po_lines",
+   "fct_purchase_orders",
+   "fct_sales_line",
+   "fct_transaction_lines",
+   "fct_transactions",
+   "fiscal_period",
+   "fiscal_week",
+   "fiscal_year",
+   "fulfillment_store",
+   "funded_by",
+   "gross_margin",
+   "gross_margin_pct",
+   "gross_sales",
+   "hours",
+   "hours_worked",
+   "inventory_available",
+   "inventory_shrink",
+   "inventory_snapshot",
+   "is_comp",
+   "is_comparable",
+   "items_per_basket",
+   "labor_cost",
+   "labor_hours",
+   "landed_cost",
+   "last_cost",
+   "lead_time_days",
+   "line_amount",
+   "line_discount",
+   "location_id",
+   "loyalty_id",
+   "loyalty_members",
+   "loyalty_points_ledger",
+   "margin_standard",
+   "markdown",
+   "markdown_amount",
+   "markdown_flag",
+   "member_count",
+   "member_id",
+   "member_status",
+   "members",
+   "merch_sales",
+   "net_sales",
+   "net_sales_finance",
+   "online_order_lines",
+   "online_orders",
+   "online_sales",
+   "order_date",
+   "order_status",
+   "order_ts",
+   "ordered_qty",
+   "po_lines",
+   "po_receipts",
+   "po_status",
+   "points_balance",
+   "points_earned",
+   "points_redeemed",
+   "pos_line_items",
+   "pos_transactions",
+   "product_id",
+   "product_key",
+   "products",
+   "promo_baskets",
+   "promo_id",
+   "promo_sales",
+   "promo_type",
+   "promotion",
+   "promotions",
+   "purchase_orders",
+   "quantity",
+   "received_qty",
+   "retail_price",
+   "retail_sales",
+   "returns",
+   "revenue",
+   "sales",
+   "sell_through_rate",
+   "site_id",
+   "snapshot_date",
+   "standard_cost",
+   "stg_inventory",
+   "stg_products",
+   "stg_transactions",
+   "store",
+   "store_id",
+   "store_key",
+   "store_sales",
+   "store_sales_daily",
+   "stores",
+   "supplier",
+   "supplier_code",
+   "supplier_name",
+   "suppliers",
+   "tax_amount",
+   "total_cost",
+   "total_revenue",
+   "total_units",
+   "transaction_id",
+   "transactions",
+   "txn_count",
+   "txn_status",
+   "txn_ts",
+   "unit_cost",
+   "unit_price",
+   "units",
+   "units_sold",
+   "v_active_members",
+   "v_net_sales",
+   "v_settled_transactions",
+   "void_flag",
+   "work_date"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "semantic_phantom_measures",
+  "labels": [
+   "available",
+   "available_qty",
+   "department_name",
+   "dept_name",
+   "fct_inventory_daily",
+   "fct_orders",
+   "fct_sales_line",
+   "gross_sales",
+   "in_transit",
+   "inventory",
+   "inventory_available",
+   "inventory_in_transit",
+   "inventory_on_hand",
+   "inventory_snapshot",
+   "markdown_amount",
+   "net sales",
+   "net_sales",
+   "on_hand",
+   "on_order",
+   "qty_on_hand",
+   "quantity",
+   "refund_amount",
+   "region",
+   "returns",
+   "revenue",
+   "sales",
+   "sell",
+   "sell_through_rate",
+   "store_format",
+   "tax_amount",
+   "units",
+   "units_sold"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": "medium",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "member_filter_columns_phantom",
+  "labels": [
+   "active",
+   "active_flag",
+   "active_members",
+   "enroll_date",
+   "enrolled_flag",
+   "enrolled_members",
+   "loyalty_members",
+   "member_count",
+   "member_status",
+   "member_tier",
+   "members",
+   "members / active members / enrolled",
+   "points_balance"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "store_key_sprawl",
+  "labels": [
+   "channel",
+   "dim_store",
+   "fct_online_orders",
+   "fulfillment_store",
+   "location",
+   "location_id",
+   "market",
+   "online_orders",
+   "site",
+   "site_id",
+   "store",
+   "store_code",
+   "store_id",
+   "store_key",
+   "stores"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "many_sales_metrics_collide",
+  "labels": [
+   "daily_sales",
+   "fct_transactions",
+   "gross_sales",
+   "merch_sales",
+   "net_sales",
+   "net_sales_finance",
+   "online_sales",
+   "retail_sales",
+   "revenue",
+   "sales",
+   "store_sales",
+   "store_sales_daily",
+   "total_revenue"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "comp_three_qualification_rules",
+  "labels": [
+   "close_date",
+   "comp_flag",
+   "comp_sales",
+   "comp_stores",
+   "comparable",
+   "comparable_store_sales",
+   "comparable_stores",
+   "dim_store",
+   "net sales",
+   "open_date",
+   "remodel_date",
+   "sales",
+   "same_store_sales",
+   "store",
+   "stores"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "margin_which_cost_which_denominator",
+  "labels": [
+   "dim_product",
+   "extended_price",
+   "fct_inventory_daily",
+   "fct_sales_line",
+   "gross_margin",
+   "gross_margin_pct",
+   "landed_cost",
+   "last_cost",
+   "line_amount",
+   "margin_standard",
+   "markup",
+   "pos_line_items",
+   "quantity",
+   "sales",
+   "standard_cost",
+   "store_sales_daily",
+   "unit_cost"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": "high",
+   "2": "medium",
+   "3": "high"
+  }
+ },
+ {
+  "id": "returns_column_names_and_phantom_return_amt",
+  "labels": [
+   "fct_returns",
+   "line_no",
+   "net sales",
+   "order_id",
+   "original_txn_id",
+   "reason_code",
+   "refund_amount",
+   "return_id",
+   "return_key",
+   "return_qty",
+   "return_rate",
+   "return_status",
+   "returns",
+   "returns_raw",
+   "sales",
+   "transaction_id"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "units_baskets_transactions_denominator",
+  "labels": [
+   "basket_id",
+   "baskets",
+   "fct_transaction_lines",
+   "fct_transactions",
+   "online_orders",
+   "pos_line_items",
+   "pos_transactions",
+   "quantity",
+   "transaction_count",
+   "transaction_id",
+   "transactions",
+   "transactions & baskets",
+   "txn_id",
+   "txn_status",
+   "units",
+   "units_sold",
+   "v_net_sales",
+   "v_settled_transactions"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "channel_column_on_pos_missing",
+  "labels": [
+   "channel",
+   "online_channel",
+   "pos_transactions",
+   "store",
+   "store_channel",
+   "store_sales"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "high",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "stg_used_directly",
+  "labels": [
+   "in_transit",
+   "inventory_available",
+   "inventory_in_transit",
+   "inventory_on_hand",
+   "stg_inventory",
+   "stg_line_items",
+   "stg_orders",
+   "stg_products",
+   "stg_transactions"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": "medium",
+   "3": "medium"
+  }
+ },
+ {
+  "id": "online_status_filter_missing",
+  "labels": [
+   "average_order_value",
+   "channel",
+   "fct_online_orders",
+   "net sales",
+   "online_orders",
+   "online_sales",
+   "order_status",
+   "revenue",
+   "sales",
+   "total_revenue"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": "high",
+   "2": null,
+   "3": "high"
+  }
+ },
+ {
+  "id": "shrink_wrong_base_table",
+  "labels": [
+   "fct_markdowns",
+   "inventory_shrink",
+   "inventory_snapshot",
+   "markdown_flag",
+   "reason_code",
+   "returns",
+   "sales",
+   "shrink",
+   "shrink_rate"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "basket_size_dollars_vs_items",
+  "labels": [
+   "average basket / average transaction value",
+   "average_basket_value",
+   "basket_size",
+   "fct_transactions",
+   "items_per_basket"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "inventory_three_numbers",
+  "labels": [
+   "available",
+   "inventory",
+   "inventory position (on",
+   "inventory_available",
+   "inventory_on_hand"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "high",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "loyalty_penetration_basket_vs_dollar",
+  "labels": [
+   "baskets",
+   "fct_transactions",
+   "loyalty",
+   "loyalty sales penetration",
+   "member_id",
+   "sales"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "medium",
+   "2": "high",
+   "3": "medium"
+  }
+ },
+ {
+  "id": "fiscal_period_vs_calendar_month",
+  "labels": [
+   "calendar_date",
+   "dim_date",
+   "fiscal_period",
+   "fiscal_week",
+   "fiscal_year",
+   "inventory_turns"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "hours_vs_hours_worked",
+  "labels": [
+   "hours",
+   "hours_worked",
+   "labor",
+   "labor_hours",
+   "sales"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "v_net_sales_hidden_comp_filter",
+  "labels": [
+   "is_comp",
+   "net sales",
+   "net_sales",
+   "sales",
+   "v_net_sales"
+  ],
+  "n_high": 3,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "store_ops_sales_tax_in",
+  "labels": [
+   "daily_sales",
+   "retail_sales",
+   "sales",
+   "store_sales_daily",
+   "v_comp_store_sales"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "inventory_value_cost_basis",
+  "labels": [
+   "fct_inventory_daily",
+   "inventory",
+   "inventory_snapshot",
+   "inventory_turns",
+   "inventory_value",
+   "units"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": "low"
+  }
+ },
+ {
+  "id": "store_identifier_codes",
+  "labels": [
+   "banner",
+   "dim_store",
+   "region",
+   "square_feet",
+   "store_code",
+   "store_format",
+   "store_master",
+   "stores"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": "high"
+  }
+ },
+ {
+  "id": "promo_flag_phantom",
+  "labels": [
+   "pos_line_items",
+   "promo_baskets",
+   "promo_id",
+   "promo_sales"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "is_comp_value_Y_vs_true_vs_1",
+  "labels": [
+   "comp_flag",
+   "fct_transactions",
+   "is_comp",
+   "store_sales_daily",
+   "v_comp_store_sales"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": null,
+   "2": "high",
+   "3": "high"
+  }
+ },
+ {
+  "id": "comp_months_vs_periods",
+  "labels": [
+   "comp_flag",
+   "comparable_store_sales",
+   "dim_store"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "po_receipts_name_and_missing_cost",
+  "labels": [
+   "fct_inventory_receipts",
+   "po_receipts",
+   "received_qty"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "v_active_members_flag_based",
+  "labels": [
+   "active_members",
+   "dim_member",
+   "v_active_members"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "high",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "banner_vs_format",
+  "labels": [
+   "banner",
+   "dim_store",
+   "store_format"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "gross_margin_pct_mixes_gross_and_net",
+  "labels": [
+   "gross margin",
+   "gross_margin_pct",
+   "markup",
+   "sales"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": null,
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "product_key_sprawl",
+  "labels": [
+   "dim_product",
+   "product_id",
+   "product_key"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": null,
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "fill_rate_over_100",
+  "labels": [
+   "ordered_qty",
+   "po_lines",
+   "received_qty"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": null,
+   "3": "low"
+  }
+ },
+ {
+  "id": "null_cost_100pct_margin",
+  "labels": [
+   "dim_product",
+   "gross margin"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "markup_vs_margin",
+  "labels": [
+   "gross margin",
+   "markup"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "low",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "comp_views_use_different_flags",
+  "labels": [
+   "v_comp_store_sales",
+   "v_net_sales"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "aov_mislabeled_and_overlapping",
+  "labels": [
+   "average_basket_value",
+   "average_order_value"
+  ],
+  "n_high": 2,
+  "dmax": {
+   "1": "high",
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "v_available_inventory_drops_rows",
+  "labels": [
+   "inventory_available",
+   "v_available_inventory"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "clearance_segment_catches_all_markdowns",
+  "labels": [
+   "clearance",
+   "fct_markdowns"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "sell_through_mixed_base_and_inventory_choice",
+  "labels": [
+   "sell",
+   "sell_through_rate"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": "medium",
+   "3": null
+  }
+ },
+ {
+  "id": "region_five_vs_six",
+  "labels": [
+   "dim_store",
+   "region"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": "medium",
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "category_drift_product_vs_hierarchy",
+  "labels": [
+   "category",
+   "dim_department"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "medium",
+   "2": null,
+   "3": null
+  }
+ },
+ {
+  "id": "member_tier_phantom",
+  "labels": [
+   "loyalty_members",
+   "member_tier"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": "low",
+   "2": "low",
+   "3": null
+  }
+ },
+ {
+  "id": "gross_amt_column_missing_on_base",
+  "labels": [
+   "gross_sales",
+   "pos_transactions"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": null,
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "average_basket_gross_vs_net",
+  "labels": [
+   "average_basket_value",
+   "transactions"
+  ],
+  "n_high": 1,
+  "dmax": {
+   "1": null,
+   "2": "high",
+   "3": null
+  }
+ },
+ {
+  "id": "inventory_snapshot_staleness",
+  "labels": [
+   "fct_inventory_snapshot",
+   "inventory_on_hand"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": "low",
+   "3": null
+  }
+ },
+ {
+  "id": "surrogate_vs_natural_store_key",
+  "labels": [
+   "store_id",
+   "store_key"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": null,
+   "3": "medium"
+  }
+ },
+ {
+  "id": "training_rows_leak",
+  "labels": [
+   "fct_transactions",
+   "stg_transactions"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": null,
+   "3": "medium"
+  }
+ },
+ {
+  "id": "unit_cost_basis_varies",
+  "labels": [
+   "unit_cost"
+  ],
+  "n_high": 0,
+  "dmax": {
+   "1": null,
+   "2": "medium",
+   "3": null
+  }
+ }
+]

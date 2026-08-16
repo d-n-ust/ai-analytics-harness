@@ -144,9 +144,14 @@ def main() -> None:
             md.append(f"    why: {r['why'][:130]}")
     md.append("```")
 
+    import json
+    (RT / "clusters.json").write_text(json.dumps(
+        [{"id": r["id"], "labels": r["labels"], "n_high": r["n_high"], "dmax": r["dmax"]}
+         for r in rows], indent=1))
     OUT.write_text("\n".join(md))
     print("\n".join(md[:6]))
-    print(f"\nconsensus-high {len(consensus_high)}, disputed-high {len(disputed_high)}; wrote {OUT.name}")
+    print(f"\nconsensus-high {len(consensus_high)}, disputed-high {len(disputed_high)}; "
+          f"wrote {OUT.name} + clusters.json")
 
 
 if __name__ == "__main__":
