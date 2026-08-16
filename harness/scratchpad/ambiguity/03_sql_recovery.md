@@ -28,7 +28,7 @@ NAIVE parser (find_all(Table), WHERE-only) — what a first cut reports:
   entity 'recovered' ........... 100%   but FALSE-RECOVERY 34% (a CTE alias reported as a source table)
   scope 'recovered' (WHERE) .... 80%   and misses welded scope
 
-BETTER parser (CTE-aware entity; reads welded CASE scope out of the aggregate):
+BETTER parser (sqlglot scope-resolved entity; reads welded CASE scope out of aggregate):
   entity (real source table) ... 92%   false-recovery now ~0
   scope (WHERE or welded) ...... 81%   (WHERE 80% + welded 20% now extracted, not lost)
   measure ...................... 89%
@@ -37,18 +37,18 @@ BETTER parser (CTE-aware entity; reads welded CASE scope out of the aggregate):
 
 sanity — governed compiler SQL: 4263/4263 parse, entity 100%, scope 98%, measure 100%
 ```
-**Catch B addressed.** Excluding CTE names drops entity false-recovery from 34% to ~0; reading the CASE condition out of the aggregate recovers the 20% of welded scope a WHERE-only parser lost. Both were fixed by *knowing what to look for* — which is why measuring the false-recovery rate first mattered.
+**Catch B addressed, properly.** Entity now uses sqlglot's scope resolver (`sqlglot.optimizer.scope.traverse_scope`), which resolves each table reference per scope like a compiler — dropping entity false-recovery from 34% to ~0. This is strictly more correct than a flat 'drop any name that is a CTE' heuristic, which loses a physical table whose name a CTE happens to reuse (they agree on this data, 261/261, only because no such collision occurs). Reading the CASE condition out of the aggregate recovers the 20% of welded scope a WHERE-only parser lost.
 
 ## Hand-check sample (20 statements + better-parser output)
 ```
 [ 1] RAW  -- Calculate monthly churn rate for premium subscriptions WITH subs AS ( SELECT DATE_TRUNC('month', event_date) AS month, user_id, status FR
-      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=True agg=True welded_scope=["status = 'active'", "status = 'cancelled' and event_date >= month and event_date < month + interval '1' month"]
+      -> tables=['fct_subscriptions'] scope=True grain=True agg=True welded_scope=["status = 'active'", "status = 'cancelled' and event_date >= month and event_date < month + interval '1' month"]
 [ 2] RAW  -- Calculate monthly churn rate for premium subscriptions for the most recent complete month (data complete through 2026-07-12). We need las
-      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=False agg=True
+      -> tables=['fct_subscriptions'] scope=True grain=False agg=True
 [ 3] RAW  -- Calculate trial-to-paid conversion over last quarter (most recent complete quarter ending before 2026-07-16) WITH params AS ( SELECT '202
-      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=True agg=True
+      -> tables=['fct_subscriptions'] scope=True grain=True agg=True
 [ 4] RAW  -- Check churners over a longer recent period to have enough data: last 8 weeks ending 2026-07-12 with churners as ( select user_id, ended_d
-      -> tables=['fct_subscriptions', 'fct_value_moments', 'fct_reminders'] scope=True grain=True agg=True welded_scope=['completions_final_week = 0', "v.completed_date between c.ended_date - interval '7' day and c.ended_date"]
+      -> tables=['fct_reminders', 'fct_subscriptions', 'fct_value_moments'] scope=True grain=True agg=True welded_scope=['completions_final_week = 0', "v.completed_date between c.ended_date - interval '7' day and c.ended_date"]
 [ 5] RAW  -- Check if trial info exists in dim_users or subscriptions via status or started_date pattern SELECT status, COUNT(*) FROM fct_subscription
       -> tables=['fct_subscriptions'] scope=False grain=True agg=True
 [ 6] RAW  -- Compare final week vs prior week activity for churned users WITH churned AS ( SELECT user_id, ended_date FROM fct_subscriptions WHERE sta
