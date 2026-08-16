@@ -1,9 +1,11 @@
 # Static ambiguity / collision detection — investigation summary
 
 Scope of this document: the whole investigation, not only the five viability tests it began with.
-Tests 1 and 2 were run as specified; they validated the core, and the work then pivoted to building
-and evaluating a real cross-layer collision detector on two blind, realistic environments. Numbers are
-reported as they came out, with n, including the nulls.
+Tests 1 and 2 were run first and validated the core, so the work pivoted to building and evaluating a
+real cross-layer collision detector on two blind, realistic environments — then circled back to close
+the remaining original tests. All five are now covered: **T1, T2, T4 fully; T3 closed with a proper
+scope-resolving parser; T5 for MetricFlow + Cube** (LookML, proprietary, is the lone residual). Numbers
+are reported as they came out, with n, including the nulls.
 
 All artifacts and code live under `harness/scratchpad/ambiguity/`. Nothing here touched `engine/`.
 
@@ -38,11 +40,12 @@ For `value_moments` vs `real_value_moments` in the harness's own layer:
 | number | value | source |
 |---|---|---|
 | static classification | `scope_only` / **high** (same measure, differs only in segment + `default_filters`) | `engine/src/semantic/ambiguity.py` |
-| divergence when swapped | **~4–6%** on levels (observed scope swaps: 6.0% and 4.7% off gold); the module docstring cites 12.12% vs 11.88% ≈ 2% on the week-over-week framing | Test 1 mechanism inspection |
+| divergence when swapped | **0.6%–5.9% across 14 slices, ~4.3% overall** (measured by executing both groundings); never exactly zero, sign always the same direction | Test 4 (real warehouse execution) |
 | share of observed mislabels | the four predicted-clarify cases hold **48%** of answerable mislabels (99.5th pct of a per-case shuffle null); the module claims 59% of *all* mislabels are this pair | Test 1 regrade |
 
-The divergence is framing-dependent (level ~4–6%, week-over-week ~2%), which is itself a result: the
-"damage number" is not a single stable figure and must be stated with its framing.
+The divergence is a **range, not a constant** (Test 4): the damage number moves from 0.6% (the most
+dangerous slice — invisible) to 5.9% (comparatively safe — someone notices), so "costs ~4%" is a fair
+headline and a false constant, and must be stated with its slices.
 
 ---
 
@@ -58,8 +61,11 @@ The divergence is framing-dependent (level ~4–6%, week-over-week ~2%), which i
 | **No-SL contrast** | does removing the semantic layer hide it? | welded scope recoverable (agg 41/41, base 41/41, WHERE 34/41); bare config catches 0 metric-level | governance, not detectability |
 | **Retail** | does it generalise to a second domain? | 525 facts; recall 18/19 high (95%), 61/79 (77%); precision 56/67 (84%) | core **generalises** |
 | **Expert review + v3** | does it survive a board critique? | 8 findings from data-modelling / semantic / analytics-engineering addressed; `GRAIN_MISMATCH` validated | **hardened** |
+| **T4** divergence | is the ~4% damage number stable? | binary detection = YES; magnitude **0.6–5.9%** across 14 slices (a range, not a constant); sign consistent | **done** |
+| **T3** SQL recovery | can primitives be read back from emitted SQL? | 97%+ governed calls are declared; raw SQL (rung-dependent, up to 21% at R0): entity **92%** via scope resolver, scope **81%** incl. welded, false-recovery ~0 | **closed** |
+| **T5** dialects | does the meaning/scope split port? | MetricFlow + Cube: scope separable AND idiomatic → kill condition not met; LookML untested | **MetricFlow + Cube** |
 
-(Sales/retail figures are the v3 detector; the v2 figures that first scored the environments — sales 57 findings / 93% precision, retail 61 / 87% — are in the phase notes and git history.)
+(Sales/retail figures are the v3 detector; the v2 figures that first scored the environments — sales 57 findings / 93% precision, retail 61 / 87% — are in the phase notes and git history. The original five viability tests are now all covered: T1/T2/T4 fully, T3 closed with a proper scope-resolving parser, T5 for the open dialects.)
 
 ### T1 — frozen-prediction regrade
 Prediction committed before any run was read (freeze at commit `94e9cac`). Regraded run
@@ -153,6 +159,38 @@ exercise `GRAIN_MISMATCH`), but populations now compare by meaning and forks are
 SQL — the substance the board asked for. The one issue **deferred**: fan/chasm-trap detection, which is
 a join-path analysis and its own detector.
 
+### T4 — divergence calibration (real warehouse execution)
+Built the harness warehouse and executed both candidate groundings (`value_moments` = all;
+`real_value_moments` = `NOT is_internal`) across 14 slices (all rows, each region / platform / channel,
+a recent window). No model, no tokens. **Detection is binary** and came back **AMBIGUOUS** — the two
+differ on 14/14 slices, so they are two definitions, not one. The three numbers: never exactly zero (not
+an alias); sign consistent (`value ≥ real` on every slice, as subsumption requires); magnitude **0.6%–
+5.9%, ~4.3% overall**. So the damage number is a range, and it runs inverse to danger — `platform=unknown`
+at 0.61% is the most dangerous (invisible swap), `paid_search`/`web` at ~5.9% are comparatively loud.
+This confirms the design decision: divergence is one bit for *detection*, and the ~4% is only the *price*.
+
+### T3 — primitive recovery from the agent's actual emitted SQL
+Pooled all four published runs. Raw-SQL usage is **rung-dependent**: at the raw-warehouse rungs the agent
+has no governed metrics and writes SQL constantly (R0 21%, R1 16%, R2 18%, R3 9%); at governed rungs it
+calls named metrics (R4–R9 ~0–2%), where the grounding is **declared** and needs no parse. On the 265
+pooled raw statements (98% parse), a naive parser reads a misleading 100% entity with a **34% false-
+recovery rate** (CTE aliases reported as source tables) and 80% WHERE-only scope. The **proper parser**
+— entity via sqlglot's scope resolver (`sqlglot.optimizer.scope`), scope read from `WHERE` *and* from
+welded `CASE` conditions inside aggregates — recovers **entity 92%** (false-recovery ~0), **scope 81%**
+(incl. the 20% welded that a WHERE reader loses), measure 89%. Governed compiler SQL parses 4263/4263
+clean. The methodological lesson: the naive 100%/80% hid a 34% confident mislabel and a 20% blind spot,
+and measuring the false-recovery rate is what exposed both and pointed at the fix.
+
+### T5 — dialect portability (MetricFlow + Cube; LookML skipped as proprietary)
+Hand-translated the three reference metrics into MetricFlow and Cube. Scope is a first-class, separable
+construct in both — MetricFlow's metric `filter:`, Cube's `segments` + measure `filters:` — and
+separation is **idiomatic** (the T2 corpus uses `filter:` 7× and welds population scope into `CASE`
+essentially never in the modern spec). Even `power_users` needs no `CASE`. So the kill condition —
+welding idiomatic on a platform → the dangerous class downgrades — is **not met** for MetricFlow or Cube,
+and the claim needs no heavy platform conditional there. The residual risk is teams welding **by choice**
+(this repo's `power_users`; the no-SL team; some generated metrics) — a discipline issue the v3 detector
+now handles by parsing SQL. LookML is the one untested conditional (its inline `sql:` makes welding easy).
+
 ---
 
 ## What broke, with the code path
@@ -188,6 +226,9 @@ Partly closed in v3: warehouse near-synonym columns (now embed-compared) and `en
 
 ## What the next experiment should be (chosen from what actually failed)
 
+The original five viability tests are now covered (T4 executed, T3 closed with a scope-resolving parser,
+T5 done for MetricFlow + Cube). What remains, in priority order:
+
 1. **Fan/chasm-trap detection** — the largest uncovered silent-error family; a join-path analysis that
    pairs naturally with this detector (both catch plausible-wrong-number defects).
 2. **A complementary value/enum check** — a different tool for the largest out-of-scope category,
@@ -195,11 +236,9 @@ Partly closed in v3: warehouse near-synonym columns (now embed-compared) and `en
 3. **A human-audited gold** — take the retail environment and have an analytics engineer label collisions
    independently, then re-score; converts "two LLMs agreed" into "a human confirmed" (the cofounder's
    cheapest objection-killer).
-4. **The untouched half of T5** — hand-translate the reference case into LookML and Cube and grep public
-   LookML for `filters:` vs inline `CASE WHEN`, to test whether welding scope is idiomatic on a platform
-   where it would silently downgrade the dangerous class.
-5. **The divergence damage-number (T4 proper)** — only if the article needs a priced figure; execute both
-   groundings across slices and report the distribution, not a point estimate.
+4. **T5's LookML half** — grep public LookML for `filters:` vs inline `CASE WHEN`, the one dialect where
+   welding might be idiomatic enough to silently downgrade the dangerous class (skipped so far as
+   proprietary; the finding would only *narrow* the claim, not overturn it).
 
 ---
 
