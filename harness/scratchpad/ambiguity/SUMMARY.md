@@ -54,9 +54,12 @@ The divergence is framing-dependent (level ~4–6%, week-over-week ~2%), which i
 | **T2** corpus | property of semantic layers, or of *this* one? | scope separable in 3 real dialects; native scope_only 0/3 projects, unit-inferred 12 | **met in principle**, code fix required |
 | **Embeddings** | do embeddings beat the token gate? | reference pair #1 of 136 (MiniLM 0.904, OpenAI 0.816, cross-model ρ=0.71) | gate: **yes**; danger signal: **no** |
 | **Pipeline** | does the combined design work? | 5/5 isolated examples correct; real layer: 1 scope trap (= the collision), 8 recall-win pairs all safe | **works** |
-| **Sales env** | on a realistic blind 3-layer environment? | 454 facts, 57 findings; recall 16/16 high, 55/61 (90%); precision 53/57 (93%) | **strong** |
+| **Sales env** | on a realistic blind 3-layer environment? | 454 facts; recall 16/16 high, 56/61 (92%); precision 61/69 (88%) | **strong** |
 | **No-SL contrast** | does removing the semantic layer hide it? | welded scope recoverable (agg 41/41, base 41/41, WHERE 34/41); bare config catches 0 metric-level | governance, not detectability |
-| **Retail** | does it generalise to a second domain? | 525 facts, 61 findings; recall 18/19 high (95%), 60/79 (76%); precision 53/61 (87%) | core **generalises** |
+| **Retail** | does it generalise to a second domain? | 525 facts; recall 18/19 high (95%), 61/79 (77%); precision 56/67 (84%) | core **generalises** |
+| **Expert review + v3** | does it survive a board critique? | 8 findings from data-modelling / semantic / analytics-engineering addressed; `GRAIN_MISMATCH` validated | **hardened** |
+
+(Sales/retail figures are the v3 detector; the v2 figures that first scored the environments — sales 57 findings / 93% precision, retail 61 / 87% — are in the phase notes and git history.)
 
 ### T1 — frozen-prediction regrade
 Prediction committed before any run was read (freeze at commit `94e9cac`). Regraded run
@@ -99,17 +102,21 @@ mislabel rate — and marked all 8 embedding-recall additions safe.
 ### Sales environment (blind, three layers)
 `Northwind Threads`, a DTC apparel + subscription company. Three generators built the warehouse (25
 tables), docs (52 entries) and semantic layer (39 metrics) blind to the detector; a separate agent
-labelled 61 ground-truth collisions blind; the detector was frozen before scoring. Result (v2,
+labelled 61 ground-truth collisions blind; the detector was frozen before scoring. First scored (v2,
 clustered): **16/16 high-danger recall, 90% total, 93% precision**, 57 findings. The false positives
 exposed a real bug (same-measure passed on a single shared facet) — reported, then fixed by requiring
 ≥2 shared facets. Four gold misses, each an explainable gap (British/US spelling, a within-fact
-filter/description mismatch, a stoplisted `email`, a threshold).
+filter/description mismatch, a stoplisted `email`, a threshold). After the v3 hardening below:
+**16/16 high, 92% total, 88% precision**, 69 findings — the `email` rename is now caught (role-based
+stoplist) and warehouse near-synonyms are added, at a small precision cost from low-danger additions.
 
 ### No-semantic-layer contrast (same company, three configs)
 41 saved BI queries with scope welded into `WHERE` stood in for the governed layer. sqlglot recovered
 agg 41/41, table 41/41, and WHERE-scope 34/41 — **welded scope is recoverable from real query SQL.**
 Detector on three configs: bare warehouse+docs catches **0** metric-level collisions; +semantic layer
-catches 43 (incl. 2 scope traps, 3 concept forks); +welded queries catches 17. Two readings: (1) you
+catches 43 (incl. 2 scope traps, 3 concept forks); +welded queries catches 22 (incl. 4 scope traps,
+4 concept forks — the concept forks appear once v3 derives `entity` from the query's base table).
+Two readings: (1) you
 need *some* definition surface — schema+docs alone is blind to metric-level ambiguity; (2) welding does
 not hide scope from a parser, but it hides it from the **agent**, whose seat is config C — it grounds on
 schema+docs and welds its own unreviewed scope, which is the T1 finding at environment scale. The
@@ -117,13 +124,34 @@ semantic layer's contribution is a single authoritative surface, not detectabili
 
 ### Retail (cross-domain generalisation)
 `Harborstone Market`, an omnichannel grocery + general-merchandise retailer — deliberately far from DTC
-apparel. Same frozen detector, no tuning. Blind gold: 79 findings. Result: **high-danger recall 95%
-(18/19), precision 87%**, total recall 76% (60/79). Domain-appropriate high findings (the comp/same-
+apparel. Same frozen detector, no tuning. Blind gold: 79 findings. v3 result: **high-danger recall 95%
+(18/19), precision 84%**, total recall 77% (61/79). Domain-appropriate high findings (the comp/same-
 store sales family, `inventory_on_hand ~ inventory_available`, margin on different costs). The lower
 *total* recall is scope, not domain failure: retail's gold has more findings in categories the detector
-does not cover (column value/enum issues, within-fact flaws, warehouse near-synonym columns), and the
-same boundary exists in sales. A detector overfit to sales would fail unpredictably on retail; this one
-fails only in the categories it does not claim, consistently — evidence it is well-defined.
+does not cover (column value/enum issues, within-fact flaws), and the same boundary exists in sales. A
+detector overfit to sales would fail unpredictably on retail; this one fails only in the categories it
+does not claim, consistently — evidence it is well-defined.
+
+### Expert review and v3 hardening
+A board pass (data-modelling, semantic-modelling, analytics-engineering) put the algorithm under
+domain critique. All three independently hit the same top defect — **grain was dropped** — and eight
+findings were addressed in `detect.py` / `grounding.py` v3:
+
+| fix | what changed |
+|---|---|
+| **grain** carried into the representation | `DUPLICATE` now requires equal grain; new `GRAIN_MISMATCH`, graded by additivity (semi-/non-additive rollup → high; additive → medium). Validated in `grain_test.py` (the DAU→MAU trap scores high). |
+| **scope compared by meaning, not string** | filters parsed with sqlglot into per-column value-sets; `segment:` resolved to its filter; booleans/3-valued logic normalised (`= false` / `not x` / `is not true` / `= 0` collapse). `status ∈ {completed} ⊆ {completed,fulfilled,delivered}` now recognised. |
+| **`entity` derived from base table** | concept-forks now fire on warehouse views and welded queries (no-SL config: 0 → 4). |
+| **additivity derived from `agg`** | count_distinct/stock → semi, ratio/avg → non — a rule, not a per-metric flag. |
+| **warehouse near-synonym columns** | embed-compared (`discount ~ total_discounts`, `is_test ~ test`, `qty_on_hand ~ qty`). |
+| **stoplist by role, not name** | surrogate keys / timestamps / technical dropped by pattern; `email` re-enabled (its rename is now caught). |
+| **`DUPLICATE` demoted** | a governance smell, below the fold. |
+| **output states its boundary** | flags disagreement, not correctness; no value/enum, single-fact, or join-trap checks. |
+
+The score barely moved (these are correctness fixes; the environments have no grain-only pairs to
+exercise `GRAIN_MISMATCH`), but populations now compare by meaning and forks are catchable in welded
+SQL — the substance the board asked for. The one issue **deferred**: fan/chasm-trap detection, which is
+a join-path analysis and its own detector.
 
 ---
 
@@ -135,35 +163,38 @@ fails only in the categories it does not claim, consistently — evidence it is 
 | `unit` is redundant with `agg` (0/9 gated pairs distinguished by it; dropping it changes 0 classifications) | `_MEANING` in `ambiguity.py` | drop `unit` from the meaning set |
 | same-measure passed on a single shared facet (`order_count ~ order_date` DUPLICATE) | `detect.py` v1 | fixed in v2: require ≥2 shared facets |
 | cross-layer divergence asserted on any name match | `detect.py` v1 (CROSS_REF) | fixed in v2: assert only with evidence (two prose defs, or doc omits the modelled columns) |
+| grain dropped; scope compared as raw SQL string; `entity` not recovered from SQL | `detect.py` / `grounding.py` v2 | fixed in v3 (see the expert-review table above) |
 
 ---
 
 ## The detector's boundary (consistent across both domains)
 
-It does **not** currently handle, and these are where recall is lost:
+It does **not** handle, and these are where recall is lost:
 
 1. **Column value / enum issues** — a magic store code, a `char` flag that should be boolean, drifting
    category strings, a status value that is used but never declared. The detector compares names and
    facets, not the values inside columns. (A complementary value-level check.)
 2. **Single-fact correctness** — a metric that references a nonexistent column, a segment whose filter
    contradicts its own description, a rate capped by a data artefact. Not a pair, so not a collision.
-3. **Warehouse near-synonym columns** — `on_hand` vs `qty_on_hand`, `extended_price` vs `line_amount`.
-   The 300+ warehouse columns are checked only for exact-label overload (≥4 tables), not embed-compared
-   to each other. This is the one genuinely closeable gap inside the detector's own remit.
-4. **`entity` recovery from SQL** — sqlglot recovers agg/table/scope from a query but not the entity,
-   so concept-forks are under-counted in the welded-query config. The hard primitive of the original T3.
-5. **Spelling / locale variance** — `recognised` vs `recognized` defeats exact-label matching.
+3. **Join-path (fan / chasm) traps** — a one-to-many join upstream of an aggregate inflates a plausible
+   number; the detector reads definitions, not join paths. The board's flagged category, and its own
+   detector. **This is now the largest uncovered silent-error family.**
+4. **Spelling / locale variance** — `recognised` vs `recognized` defeats exact-label matching.
+
+Partly closed in v3: warehouse near-synonym columns (now embed-compared) and `entity` recovery
+(derived from the base table).
 
 ---
 
 ## What the next experiment should be (chosen from what actually failed)
 
-1. **Close the warehouse near-synonym gap** — embed-compare warehouse columns (with the plumbing
-   stoplist), the one in-remit recall gap. Cheap; re-score both environments.
-2. **`entity` recovery from emitted SQL** — the hard T3 primitive; would let the welded-query config
-   detect concept-forks and would validate the traversal-weighting idea end to end.
-3. **A complementary value/enum check** — a different tool for the largest out-of-scope category,
+1. **Fan/chasm-trap detection** — the largest uncovered silent-error family; a join-path analysis that
+   pairs naturally with this detector (both catch plausible-wrong-number defects).
+2. **A complementary value/enum check** — a different tool for the largest out-of-scope category,
    especially in value-heavy domains like retail.
+3. **A human-audited gold** — take the retail environment and have an analytics engineer label collisions
+   independently, then re-score; converts "two LLMs agreed" into "a human confirmed" (the cofounder's
+   cheapest objection-killer).
 4. **The untouched half of T5** — hand-translate the reference case into LookML and Cube and grep public
    LookML for `filters:` vs inline `CASE WHEN`, to test whether welding scope is idiomatic on a platform
    where it would silently downgrade the dangerous class.
