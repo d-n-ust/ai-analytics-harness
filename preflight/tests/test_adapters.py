@@ -7,6 +7,7 @@ from preflight.adapters import (
     facts_from_queries,
     facts_from_semantic,
     facts_from_warehouse,
+    load_env,
 )
 
 
@@ -95,3 +96,13 @@ def test_facts_from_queries_recovers_facets_and_flags():
     assert fact.scope == (("status", "set", frozenset({"completed"})),)
     assert fact.entity == "order"
     assert fact.recovered.agg and fact.recovered.base and fact.recovered.scope and fact.recovered.entity
+
+
+# ── environment loading ──────────────────────────────────────────────────────────────────────────
+def test_load_env_skips_missing_artifacts(tmp_path):
+    sem = tmp_path / "semantic"
+    sem.mkdir()
+    (sem / "semantic_layer.yml").write_text(
+        "metrics:\n  - {name: revenue, entity: order, agg: sum, base: orders, measure: amount}\n")
+    facts = load_env(tmp_path)                     # no warehouse/ or docs/ present
+    assert [f.id for f in facts] == ["sl:revenue"]

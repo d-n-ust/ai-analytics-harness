@@ -21,6 +21,9 @@ dependencies = [
     "pyyaml>=6",
 ]
 
+[project.scripts]
+preflight = "preflight.cli:main"
+
 [project.optional-dependencies]
 # The confusability GATE only. Structural detection runs without these on a built-in lexical gate;
 # embeddings sharpen which name-pairs are worth comparing and are the validated path. Kept optional

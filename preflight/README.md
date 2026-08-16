@@ -20,7 +20,19 @@ pip install preflight                 # core: structural detection on a lexical 
 pip install "preflight[embeddings]"   # + sentence-transformers for the sharper, validated gate
 ```
 
-## Use
+## Use — terminal
+
+```bash
+preflight scan path/to/environment                 # human-readable, grouped by danger
+preflight scan path/to/environment --format json   # machine-readable
+preflight scan path/to/environment --min-danger high --fail-on high
+```
+
+`scan` reads whichever of `semantic/semantic_layer.yml`, `warehouse/schema.sql`, and
+`docs/data_dictionary.md` are present. It exits non-zero when a finding at or above `--fail-on`
+(default `high`) exists, so it gates CI. `--gate auto` uses embeddings when installed, else lexical.
+
+## Use — library
 
 ```python
 from preflight import scan

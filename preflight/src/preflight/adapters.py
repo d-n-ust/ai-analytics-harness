@@ -218,8 +218,16 @@ def adapt_queries(path: str | Path) -> list[GroundingFact]:
 
 
 def load_env(env_dir: str | Path) -> list[GroundingFact]:
-    """Load the conventional environment layout: semantic layer + warehouse DDL + docs."""
+    """Load the conventional environment layout: semantic layer + warehouse DDL + docs. Each artifact
+    is optional — a layer that is absent is simply skipped, so the tool runs on a semantic-only repo
+    (cross-layer collisions just need more than one layer present to appear)."""
     env = Path(env_dir)
-    return (adapt_semantic(env / "semantic/semantic_layer.yml")
-            + adapt_warehouse(env / "warehouse/schema.sql")
-            + adapt_docs(env / "docs/data_dictionary.md"))
+    artifacts = ((adapt_semantic, "semantic/semantic_layer.yml"),
+                 (adapt_warehouse, "warehouse/schema.sql"),
+                 (adapt_docs, "docs/data_dictionary.md"))
+    facts: list[GroundingFact] = []
+    for adapt, rel in artifacts:
+        path = env / rel
+        if path.exists():
+            facts += adapt(path)
+    return facts
