@@ -20,8 +20,8 @@ from sentence_transformers import SentenceTransformer
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-from preflight import detect  # noqa: E402
-from preflight import grounding  # noqa: E402
+import preflight as detect  # noqa: E402
+import preflight as grounding  # noqa: E402
 
 
 # ── scoring (identical matcher to score.py) ──────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ def main() -> None:
     facts = grounding.load_env(ENV)
     by = Counter((f.layer, f.kind) for f in facts)
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    findings = detect.detect_collisions(facts, gate=model)
+    findings = detect.as_dicts(detect.detect_collisions(facts, gate=model))
     (ENV / "findings.json").write_text(json.dumps(findings, indent=1))
 
     bt, bd = Counter(f["type"] for f in findings), Counter(f["danger"] for f in findings)

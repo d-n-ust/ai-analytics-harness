@@ -21,7 +21,7 @@ import yaml
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-from preflight import grounding  # noqa: E402
+import preflight as grounding  # noqa: E402
 
 RT = HERE.parent / "env_retail/redteam"
 ENV = HERE.parent / "env_retail"

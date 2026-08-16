@@ -60,7 +60,7 @@ def make_gate(labels, kind="auto", model=None):
                 model = SentenceTransformer(_DEFAULT_MODEL)
             uniq = sorted(set(labels))
             vecs = model.encode([_norm(x) for x in uniq], normalize_embeddings=True)
-            emb = {x: v for x, v in zip(uniq, vecs)}
+            emb = {x: v for x, v in zip(uniq, vecs, strict=True)}
 
             def sim(a: str, b: str) -> float:
                 return float(np.dot(emb[a], emb[b]))

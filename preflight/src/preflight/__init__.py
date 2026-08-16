@@ -6,43 +6,60 @@ would confuse and that resolve to different numbers. The structural detection ne
 embeddings are an optional extra that sharpens which name-pairs are worth comparing.
 
     from preflight import scan
-    findings = scan("path/to/environment")     # collision findings, most dangerous first
+    for f in scan("path/to/environment"):          # Finding objects, most dangerous first
+        print(f.danger, f.type, [it.label for it in f.items], "—", f.note)
 
 `scan` reads the conventional layout (semantic/semantic_layer.yml, warehouse/schema.sql,
 docs/data_dictionary.md). To ground on other artifacts, assemble GroundingFacts with the adapters
-and call detect_collisions directly.
+and call detect_collisions directly. `as_dicts` renders findings as plain JSON-ready dicts.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
-
-from .detect import classify, detect_collisions
-from .grounding import (
-    GroundingFact,
+from .adapters import (
     adapt_docs,
     adapt_queries,
     adapt_semantic,
     adapt_warehouse,
+    facts_from_docs,
+    facts_from_queries,
+    facts_from_semantic,
+    facts_from_warehouse,
     load_env,
+)
+from .detect import classify, detect_collisions, is_plumbing, partition, rank
+from .gate import make_gate
+from .model import (
+    Classification,
+    DetectConfig,
+    Finding,
+    GroundingFact,
+    Item,
+    Recovered,
 )
 
 __all__ = [
-    "scan",
-    "detect_collisions",
-    "classify",
-    "GroundingFact",
-    "load_env",
-    "adapt_semantic",
-    "adapt_warehouse",
-    "adapt_docs",
-    "adapt_queries",
+    # high-level
+    "scan", "as_dicts", "detect_collisions",
+    # value types
+    "GroundingFact", "Finding", "Item", "Classification", "Recovered", "DetectConfig",
+    # adapters (I/O)
+    "load_env", "adapt_semantic", "adapt_warehouse", "adapt_docs", "adapt_queries",
+    # adapters (pure)
+    "facts_from_semantic", "facts_from_warehouse", "facts_from_docs", "facts_from_queries",
+    # detector internals, exposed for composition/testing
+    "classify", "partition", "rank", "is_plumbing", "make_gate",
 ]
 
 __version__ = "0.1.0"
 
 
-def scan(env_dir, *, gate="auto", model=None):
-    """Load the conventional artifact layout under `env_dir` and detect collisions across all
-    layers. `gate`/`model` are passed through to detect_collisions."""
-    return detect_collisions(load_env(Path(env_dir)), gate=gate, model=model)
+def scan(env_dir, *, gate="auto", model=None, config: DetectConfig | None = None) -> list[Finding]:
+    """Load the conventional artifact layout under `env_dir` and detect collisions across all layers.
+    `gate` / `model` / `config` are passed through to detect_collisions."""
+    return detect_collisions(load_env(env_dir), gate=gate, model=model, config=config)
+
+
+def as_dicts(findings) -> list[dict]:
+    """Render findings as plain JSON-ready dicts (the wire format used by the experiment scripts)."""
+    return [f.to_dict() for f in findings]

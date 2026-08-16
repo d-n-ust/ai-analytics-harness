@@ -20,8 +20,8 @@ from sentence_transformers import SentenceTransformer
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-from preflight import detect  # noqa: E402
-from preflight import grounding  # noqa: E402
+import preflight as detect  # noqa: E402
+import preflight as grounding  # noqa: E402
 
 YAML = """
 metrics:
@@ -47,7 +47,7 @@ def main() -> None:
         print(f"  {f.label:22} agg={f.agg:15} grain={str(f.grain):6} additive={f.additive}")
 
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    findings = detect.detect_collisions(facts, gate=model)
+    findings = detect.as_dicts(detect.detect_collisions(facts, gate=model))
 
     print("\ndetector findings:")
     for fnd in findings:

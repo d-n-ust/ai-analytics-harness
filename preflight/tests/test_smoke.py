@@ -1,38 +1,32 @@
-"""Smoke tests: the core runs with no heavy dependency, on the lexical gate.
+"""End-to-end integration on the lexical gate: the whole pipeline runs with no heavy dependency.
 
-These prove the package imports and detects a collision without sentence-transformers/torch, which
-is the whole point of the optional-embeddings split.
+The test environment installs the package WITHOUT the [embeddings] extra, so these passing is the
+proof that the structural detector needs neither torch nor sentence-transformers.
 """
 
-from preflight import GroundingFact, detect_collisions
-from preflight._gate import make_gate
+from preflight import DetectConfig, as_dicts, detect_collisions, facts_from_semantic
 
 
-def test_lexical_gate_needs_no_heavy_deps():
-    sim, name = make_gate(["net revenue", "gross revenue"], kind="lexical")
-    assert name == "lexical"
-    s = sim("net revenue", "gross revenue")
-    assert 0.0 <= s <= 1.0
+def test_pipeline_finds_a_scope_trap_without_embeddings():
+    # the canonical pair: same measure, one population a subset of the other, near-identical names.
+    doc = {
+        "segments": [{"name": "active", "filter": "is_active = true"}],
+        "metrics": [
+            {"name": "value_moments", "entity": "user", "agg": "sum",
+             "base": "agg_active_days", "measure": "moments"},
+            {"name": "real_value_moments", "entity": "user", "agg": "sum",
+             "base": "agg_active_days", "measure": "moments", "segment": "active"},
+        ],
+    }
+    findings = detect_collisions(facts_from_semantic(doc), gate="lexical")
+    assert any(f.type == "SCOPE_TRAP" and f.danger == "high" for f in findings)
 
 
-def test_definition_divergence_detected_without_embeddings():
-    # same documented term, two prose definitions that barely overlap -> a high DEFINITION_DIVERGENCE.
-    # equal labels bypass the confusability gate, so this is deterministic and model-free.
-    a = GroundingFact(id="doc:revenue:1", label="revenue", layer="docs", kind="term",
-                      text="revenue net of refunds, discounts and returned orders")
-    b = GroundingFact(id="doc:revenue:2", label="revenue", layer="docs", kind="term",
-                      text="gross booked contract value recognised at signing before deductions")
-    findings = detect_collisions([a, b], gate="lexical")
-    assert any(f["type"] == "DEFINITION_DIVERGENCE" and f["danger"] == "high" for f in findings)
-
-
-def test_scope_trap_detected_without_embeddings():
-    # the canonical pair: same measure, one population a strict subset of the other -> high SCOPE_TRAP.
-    # the names are near-identical, so any confusability gate clears them.
-    wide = GroundingFact(id="sl:value_moments", label="value_moments", layer="semantic", kind="metric",
-                         entity="user", agg="sum", base="agg_active_days", measure="moments", scope=())
-    narrow = GroundingFact(id="sl:real_value_moments", label="real_value_moments", layer="semantic",
-                           kind="metric", entity="user", agg="sum", base="agg_active_days",
-                           measure="moments", scope=(("is_internal", "set", frozenset({"false"})),))
-    findings = detect_collisions([wide, narrow], gate="lexical")
-    assert any(f["type"] == "SCOPE_TRAP" and f["danger"] == "high" for f in findings)
+def test_findings_render_to_plain_dicts():
+    doc = {"metrics": [
+        {"name": "gross_revenue", "entity": "order", "agg": "sum", "base": "orders", "measure": "gross"},
+        {"name": "net_revenue", "entity": "order", "agg": "sum", "base": "orders", "measure": "net"},
+    ]}
+    findings = detect_collisions(facts_from_semantic(doc), gate="lexical", config=DetectConfig(gate=0.0))
+    dicts = as_dicts(findings)
+    assert dicts and all({"type", "danger", "note", "items"} <= set(d) for d in dicts)

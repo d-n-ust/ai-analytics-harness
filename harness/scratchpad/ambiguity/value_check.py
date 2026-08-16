@@ -18,7 +18,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-from preflight import grounding  # noqa: E402
+import preflight as grounding  # noqa: E402
 
 # a comma-separated run of >=2 backticked tokens in prose is an enum value list
 _ENUM_RUN = re.compile(r"`([a-z0-9_]+)`(?:\s*,\s*`([a-z0-9_]+)`)+", re.I)

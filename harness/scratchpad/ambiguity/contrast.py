@@ -21,8 +21,8 @@ from sentence_transformers import SentenceTransformer
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-from preflight import detect  # noqa: E402
-from preflight import grounding  # noqa: E402
+import preflight as detect  # noqa: E402
+import preflight as grounding  # noqa: E402
 
 ENV = HERE.parent / "env_sales"
 OUT_MD = HERE.parent / "12_contrast.md"
@@ -47,7 +47,7 @@ def main() -> None:
     n = len(q)
     rec = Counter()
     for f in q:
-        for k, ok in (f.recovered or {}).items():
+        for k, ok in (f.recovered.as_dict() if f.recovered else {}).items():
             rec[k] += int(ok)
     with_scope = sum(1 for f in q if f.scope)
     md.append("## Welded-scope recoverability from saved SQL (Test 3, in miniature)\n")
@@ -62,7 +62,7 @@ def main() -> None:
     rows = []
     detail = {}
     for name, facts in configs.items():
-        findings = detect.detect_collisions(facts, gate=model)
+        findings = detect.as_dicts(detect.detect_collisions(facts, gate=model))
         detail[name] = findings
         # findings that involve a metric/query definition (the governed/welded surface)
         metric_findings = [f for f in findings
