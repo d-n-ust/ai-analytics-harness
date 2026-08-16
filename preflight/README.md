@@ -60,6 +60,59 @@ from preflight import DetectConfig, detect_collisions
 detect_collisions(facts, config=DetectConfig(gate=0.6, min_shared_facets=2))
 ```
 
+## Use as a guardrail (CI / pre-commit)
+
+`preflight scan --fail-on high` exits non-zero when a dangerous collision exists, so a change that
+introduces one fails the build.
+
+### GitHub Actions
+
+A composite action ships with the package. Point it at your analytics repo:
+
+```yaml
+# .github/workflows/preflight.yml
+name: preflight
+on: [pull_request]
+jobs:
+  ambiguity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: d-n-ust/ai-analytics-harness/preflight@master   # becomes d-n-ust/preflight@v1 once extracted
+        with:
+          path: .
+          gate: embeddings          # best results; use 'lexical' to skip torch
+          fail-on: high
+```
+
+Until `preflight` is on PyPI, override `spec` with the VCS form:
+`preflight[embeddings] @ git+https://github.com/d-n-ust/ai-analytics-harness@master#subdirectory=preflight`.
+
+### pre-commit
+
+Once `preflight` is its own repo, use the packaged hook:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/d-n-ust/preflight
+    rev: v0.1.0
+    hooks: [{ id: preflight }]
+```
+
+Today, from any environment where `preflight` is installed, use a local hook:
+
+```yaml
+repos:
+  - repo: local
+    hooks:
+      - id: preflight
+        name: preflight ambiguity scan
+        entry: preflight scan . --gate lexical --fail-on high
+        language: system
+        pass_filenames: false
+```
+
 ## The gate
 
 Similarity decides only **which name-pairs are worth examining**, never whether a collision is
