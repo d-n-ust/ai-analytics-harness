@@ -33,6 +33,53 @@ parser. Welded SQL is visible to a parser too; it is the *governed answer* that 
 
 ---
 
+## The real conclusion — two modes, one checker built
+
+Every analytical answer stands on a small set of **primitives** — entity, population/segment, measure,
+grain, additivity, join path, value domain, existence (the harness's own `primitives_matrix.md` lists
+them). A number goes silently wrong in exactly **two modes**, and the whole exercise is about telling
+them apart:
+
+- **Mode 1 · SELECTION (ambiguity).** Two valid groundings existed and the agent picked the wrong one
+  (`gross_margin` vs `margin_standard`; all sales vs comparable-store sales). Nothing is malformed — it
+  is a *choice* problem. **This is the one checker this project built and validated.**
+- **Mode 2 · CONSTRUCTION (primitive-correctness).** One grounding, a primitive used wrong: summed a
+  stock (additivity), mixed baskets and line-items (grain), joined on `upc` (cardinality), filtered a
+  value the column lacks (domain), referenced a missing column (existence), divided gross by net
+  (consistency). A **family** of small checks, one per primitive — not one tool.
+
+They sort by what each needs to run:
+
+| needs | checks | mode |
+|---|---|---|
+| the **definitions only** (offline) | ambiguity; additivity-from-agg; column existence; filter-value-vs-declared-enum | 1 + parts of 2 |
+| the **emitted query** | grain; join-path / fan-trap | 2 |
+| the **actual data** | value drift; filter-value-vs-real-values | 2 |
+
+**The evidence that both modes are real — and that ambiguity is only one of the family — is the
+human-gold audit.** A three-judge red-team panel plus the practitioner labelled the retail environment
+cold: **22** high-danger collisions. Re-tagged by family (data-modelling + semantic-modelling board):
+
+| family | ~count | mode / checker |
+|---|---|---|
+| ambiguity — population/measure fork | ~8 | Mode 1 — the collision detector |
+| grain | ~2 | Mode 2 — grain check |
+| additivity / stock | 1 | Mode 2 — additivity check |
+| keys / fan-trap | ~2 | Mode 2 — cardinality check |
+| value / drift | ~2 | Mode 2 — value check |
+| ratio-denominator / single-metric bug | ~4 | Mode 2 — within-metric check |
+| phantom column | 1 | Mode 2 — compiler validation |
+
+Scored naively, the v3 detector recalls **5 / 22 (23%)** of the human gold and the original single-LLM
+gold **14 / 22 (64%)**; both missed 8. But 23% conflates six checkers' jobs into one denominator. Of
+the **~8 ambiguity-family** items — the detector's actual lane — it caught **5**. So the honest reading
+is **~5/8 in-lane recall, and a map of what the other checkers must own** — not a broken tool. The human
+audit did exactly its job: it converted a flattering "95% vs one model" into an honest per-mode picture,
+and it is the strongest evidence in the whole exercise that **selection and construction are different
+problems that need different guards.**
+
+---
+
 ## The three headline numbers (the reference pair)
 
 For `value_moments` vs `real_value_moments` in the harness's own layer:
@@ -64,6 +111,7 @@ headline and a false constant, and must be stated with its slices.
 | **T4** divergence | is the ~4% damage number stable? | binary detection = YES; magnitude **0.6–5.9%** across 14 slices (a range, not a constant); sign consistent | **done** |
 | **T3** SQL recovery | can primitives be read back from emitted SQL? | 97%+ governed calls are declared; raw SQL (rung-dependent, up to 21% at R0): entity **92%** via scope resolver, scope **81%** incl. welded, false-recovery ~0 | **closed** |
 | **T5** dialects | does the meaning/scope split port? | MetricFlow + Cube: scope separable AND idiomatic → kill condition not met; LookML untested | **MetricFlow + Cube** |
+| **Human-gold audit** | does a practitioner agree with the tool? | 3-judge red-team panel + practitioner → 22 high collisions; detector 5/22 (~5/8 in-lane), LLM gold 14/22 | **reframes it: 2 modes** |
 
 (Sales/retail figures are the v3 detector; the v2 figures that first scored the environments — sales 57 findings / 93% precision, retail 61 / 87% — are in the phase notes and git history. The original five viability tests are now all covered: T1/T2/T4 fully, T3 closed with a proper scope-resolving parser, T5 for the open dialects.)
 
@@ -226,19 +274,25 @@ Partly closed in v3: warehouse near-synonym columns (now embed-compared) and `en
 
 ## What the next experiment should be (chosen from what actually failed)
 
-The original five viability tests are now covered (T4 executed, T3 closed with a scope-resolving parser,
-T5 done for MetricFlow + Cube). What remains, in priority order:
+The five viability tests are covered; the value/enum check and the human-gold audit are done. The audit
+reframed the roadmap: the work now is **the rest of the Mode-2 primitive-correctness family** — the
+checkers the human gold mapped, each small and each owning one primitive.
 
-1. **Fan/chasm-trap detection** — the largest uncovered silent-error family; a join-path analysis that
-   pairs naturally with this detector (both catch plausible-wrong-number defects).
-2. **A complementary value/enum check** — a different tool for the largest out-of-scope category,
-   especially in value-heavy domains like retail.
-3. **A human-audited gold** — take the retail environment and have an analytics engineer label collisions
-   independently, then re-score; converts "two LLMs agreed" into "a human confirmed" (the cofounder's
-   cheapest objection-killer).
+1. **Build out the Mode-2 family**, in rough order of the human-gold counts:
+   - *within-metric consistency* (~4 gold items) — a ratio that mixes bases, a metric whose name ≠ what
+     it computes. Reads a single definition.
+   - *grain* (~2) and *additivity-from-agg* (1) — both derivable from the metric definition; additivity
+     is already computed in the detector and just needs to gate roll-ups.
+   - *cardinality / fan-trap* (~2) — the join-path analysis; needs the emitted query + table keys.
+   - *compiler column-existence validation* (the phantom-column class) — the cheapest, highest-leverage
+     one: fail the build when a metric references a column the schema lacks.
+2. **Extend the value check** — it does filter-value-vs-declared-enum; add magic values (`store 9999`),
+   char-vs-boolean type mismatches, and value-set drift over time (the region 5→6 case).
+3. **A second human panel / more environments** — one retail panel is a start; repeat on sales and a
+   third domain to firm up the family split and the ~5/8 in-lane number.
 4. **T5's LookML half** — grep public LookML for `filters:` vs inline `CASE WHEN`, the one dialect where
-   welding might be idiomatic enough to silently downgrade the dangerous class (skipped so far as
-   proprietary; the finding would only *narrow* the claim, not overturn it).
+   welding might be idiomatic enough to silently downgrade the dangerous class (skipped as proprietary;
+   the finding would only *narrow* the claim, not overturn it).
 
 ---
 
