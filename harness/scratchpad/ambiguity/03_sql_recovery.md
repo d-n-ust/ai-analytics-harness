@@ -1,99 +1,90 @@
-# T3 — primitive recovery from the agent's actual emitted SQL
+# T3 — primitive recovery from the agent's actual emitted SQL (all published runs)
 
-Run `20260726-223032-gpt-5-mini.raw.jsonl.gz`. Governed `query_metric` calls carry the grounding in the metric NAME (no parse needed); `run_sql` is where the agent wrote its own SQL and recovery must parse it.
+Pooled across all four published runs. The grounding RUNG matters: at low rungs the agent has no governed metrics and must write SQL; at high rungs it calls named metrics. Sampling one high-rung run understates raw-SQL usage (an earlier single-run pass read 3%).
 
+## Governed vs raw SQL, by grounding rung
 ```
-governed calls (resolution DECLARED, no parse) .. 1215
-raw agent statements (the parse target) ......... 40  (39 parsed by sqlglot, 98%)
-
-recovery on the RAW agent SQL:
-  entity (real source table) ....   100%  (38% of statements are CTE-based)
-  segment (WHERE) recovered .....    85%   <- the one that matters
-  grain (GROUP BY) recovered ....    54%
-  measure (aggregate) recovered .    95%
-  join path recovered ...........    33%
-  segment WELDED inside aggregate    26%   <- the blind spot
-
-FALSE-RECOVERY RATE (entity): 38%  <- statements where a naive `find_all(Table)` reports a CTE alias AS a source table (confident mislabel). The 100% above already excludes CTE names; without that correction it reads a misleading 100%.
-
-sanity — compiler-emitted (governed) SQL is clean and recoverable:
-  parsed 1215/1215; entity 100%, segment 99%, grain 65%, measure 100%
+rung    run_sql  query_metric   raw %
+R0           83           309     21%
+R1           51           276     16%
+R2           38           178     18%
+R3           17           177      9%
+R4            0           171      0%
+R5            0           194      0%
+R6           23           942      2%
+R7            0           738      0%
+R8            0           777      0%
+R9            0          1099      0%
+R?           82          1839      4%
+ALL         294          6700      4%
 ```
+At the raw-warehouse rungs the agent writes its own SQL far more; the governed rungs push it onto named metrics (grounding declared, no parse). So 'is recovery needed' depends on how governed the deployment is.
 
-## Hand-check sample (20 statements + parser output)
-
-Each shows the SQL and what the parser recovered; the false-recovery rate is the share where the parser confidently returned a WRONG primitive (verified by reading each).
-
+## Recovery on the raw agent SQL (the parse target)
 ```
-[ 1] RAW  -- Calculate monthly churn rate for premium subscriptions for the most recent complete month (data complete through 2026-07-12). We need last full mon
-      -> tables=['fct_subscriptions', 'fct_subscriptions'] where=True group=False agg=True welded=False
-[ 2] RAW  -- Compute monthly churn rate for premium (governed segment 'premium' maps to plan like 'premium'?)
--- Check distinct plan values
-select distinct plan
-      -> tables=['fct_subscriptions'] where=False group=False agg=False welded=False
-[ 3] RAW  -- Compute monthly churn rate for premium subscriptions for June 2026 (last full month) and June 2025? But user asked "right now" -> use most recent f
+raw statements pooled ........ 265  (261 parsed, 98%)
+
+NAIVE parser (find_all(Table), WHERE-only) — what a first cut reports:
+  entity 'recovered' ........... 100%   but FALSE-RECOVERY 34% (a CTE alias reported as a source table)
+  scope 'recovered' (WHERE) .... 80%   and misses welded scope
+
+BETTER parser (CTE-aware entity; reads welded CASE scope out of the aggregate):
+  entity (real source table) ... 92%   false-recovery now ~0
+  scope (WHERE or welded) ...... 81%   (WHERE 80% + welded 20% now extracted, not lost)
+  measure ...................... 89%
+  grain (GROUP BY present) ..... 49%   (absence = a total, not a miss)
+  join path (JOIN present) ..... 35%
+
+sanity — governed compiler SQL: 4263/4263 parse, entity 100%, scope 98%, measure 100%
+```
+**Catch B addressed.** Excluding CTE names drops entity false-recovery from 34% to ~0; reading the CASE condition out of the aggregate recovers the 20% of welded scope a WHERE-only parser lost. Both were fixed by *knowing what to look for* — which is why measuring the false-recovery rate first mattered.
+
+## Hand-check sample (20 statements + better-parser output)
+```
+[ 1] RAW  -- Calculate monthly churn rate for premium subscriptions WITH subs AS ( SELECT DATE_TRUNC('month', event_date) AS month, user_id, status FR
+      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=True agg=True welded_scope=["status = 'active'", "status = 'cancelled' and event_date >= month and event_date < month + interval '1' month"]
+[ 2] RAW  -- Calculate monthly churn rate for premium subscriptions for the most recent complete month (data complete through 2026-07-12). We need las
+      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=False agg=True
+[ 3] RAW  -- Calculate trial-to-paid conversion over last quarter (most recent complete quarter ending before 2026-07-16) WITH params AS ( SELECT '202
+      -> tables=['fct_subscriptions', 'fct_subscriptions'] scope=True grain=True agg=True
+[ 4] RAW  -- Check churners over a longer recent period to have enough data: last 8 weeks ending 2026-07-12 with churners as ( select user_id, ended_d
+      -> tables=['fct_subscriptions', 'fct_value_moments', 'fct_reminders'] scope=True grain=True agg=True welded_scope=['completions_final_week = 0', "v.completed_date between c.ended_date - interval '7' day and c.ended_date"]
+[ 5] RAW  -- Check if trial info exists in dim_users or subscriptions via status or started_date pattern SELECT status, COUNT(*) FROM fct_subscription
+      -> tables=['fct_subscriptions'] scope=False grain=True agg=True
+[ 6] RAW  -- Compare final week vs prior week activity for churned users WITH churned AS ( SELECT user_id, ended_date FROM fct_subscriptions WHERE sta
+      -> tables=['fct_subscriptions', 'fct_value_moments'] scope=True grain=True agg=True welded_scope=['v.completed_date between w.week_start and w.ended_date', 'v.completed_date between w.week_start and w.ended_date']
+[ 7] RAW  -- Compute LTV and CAC for last 4 weeks (2026-06-15 to 2026-07-12) WITH m AS ( SELECT SUM(mrr) AS total_mrr FROM ( SELECT mrr FROM ( SELECT 
+      -> tables=[] scope=False grain=False agg=True
+[ 8] RAW  -- Compute LTV and CAC using governed metrics proxies: LTV = ARPU * gross margin * lifetime (months). Use naive lifetime = 1 / monthly churn
+      -> tables=[] scope=False grain=False agg=False
+[ 9] RAW  -- Compute LTV-to-CAC -- LTV = ARPU * gross_margin_months? We need assumptions. Use CLTV = ARPU * (1 / churn_rate). Need churn. Compute mont
+      -> tables=['subscriptions'] scope=False grain=False agg=False
+[10] RAW  -- Compute behavior in the final week before subscription ended (canceled) WITH cancellations AS ( SELECT user_id, ended_date AS cancel_date
+      -> tables=['fct_subscriptions', 'fct_value_moments'] scope=True grain=True agg=True welded_scope=['completions = 0 or completions is null']
+[11] RAW  -- Compute monthly churn for premium: count of users with active subscription at start of month and who ended (canceled) during that month. 
+      -> tables=['fct_subscriptions'] scope=True grain=True agg=True
+[12] RAW  -- Compute monthly churn rate for premium (governed segment 'premium' maps to plan like 'premium'?) -- Check distinct plan values select dis
+      -> tables=['fct_subscriptions'] scope=False grain=False agg=False
+[13] RAW  -- Compute monthly churn rate for premium (paid) subscriptions for the most recent complete month WITH subs AS ( SELECT user_id, plan, start
+      -> tables=['fct_subscriptions'] scope=True grain=False agg=True
+[14] RAW  -- Compute monthly churn rate for premium plan for June 2026 (last full month). WITH subs AS ( SELECT user_id, plan, started_date AS start_d
+      -> tables=['fct_subscriptions'] scope=True grain=False agg=True
+[15] RAW  -- Compute monthly churn rate for premium subscriptions for June 2026 (last full month before 2026-07-12) WITH subs AS ( SELECT user_id, pla
+      -> tables=['fct_subscriptions'] scope=True grain=False agg=True
+[16] RAW  -- Compute monthly churn rate for premium subscriptions for June 2026 (last full month) and June 2025? But user asked "right now" -> use mos
       -> PARSE FAILED
-[ 4] RAW  -- Compute monthly churn rate for premium: churn = cancellations in month / paying_users at start of month
-WITH subs AS (
-  SELECT subscription_id, us
-      -> tables=['fct_subscriptions', 'fct_subscriptions', 'fct_subscriptions'] where=True group=False agg=True welded=False
-[ 5] RAW  -- Find users who canceled (subscription ended) and their last active week before cancel. Define churned as subscription with ended_date not null and 
-      -> tables=['fct_subscriptions', 'fct_value_moments', 'fct_reminders'] where=True group=True agg=True welded=True
-[ 6] RAW  -- compute MRR before and after March price bump
--- assume price bump rolled out March 1, compare MRR on Feb 28 vs Mar 31? User asked "rolled out in M
-      -> tables=['fct_subscription_snapshots'] where=True group=True agg=True welded=True
-[ 7] RAW  -- compute weekly MRR by taking mrr from subscriptions table snapshot by week
-WITH weeks AS (
-  SELECT date_trunc('week', day)::date AS week_start
-  F
-      -> tables=['subscriptions'] where=False group=True agg=True welded=False
-[ 8] RAW  SELECT
-  DATE_TRUNC('month', started_at) AS month,
-  SUM(CASE WHEN plan = 'annual' THEN billed_amount/12.0 ELSE billed_amount END) AS mrr
-FROM fct_sub
-      -> tables=['fct_subscriptions'] where=True group=True agg=True welded=True
-[ 9] RAW  SELECT
-  DATE_TRUNC('month', started_date) AS month,
-  SUM(CASE WHEN plan = 'annual' THEN billed_amount/12.0 ELSE billed_amount END) AS mrr
-FROM fct_s
-      -> tables=['fct_subscriptions'] where=True group=True agg=True welded=True
-[10] RAW  SELECT  -- compute DAU/MAU for last_week using average daily active / monthly active users (last_month)
-  (SELECT avg(value)::numeric FROM (
-    SELEC
-      -> tables=['agg_active_days', 'agg_active_days'] where=True group=True agg=True welded=False
-[11] RAW  SELECT COUNT(*) AS total_habits FROM dim_habits;
-      -> tables=['dim_habits'] where=False group=False agg=True welded=False
-[12] RAW  SELECT COUNT(*) AS total_signups
-FROM dim_users u
-WHERE u.is_internal = false
-  AND u.signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30';
-      -> tables=['dim_users'] where=True group=False agg=True welded=False
-[13] RAW  SELECT COUNT(DISTINCT u.user_id) AS users_signed_and_activated
-FROM dim_users u
-JOIN fct_value_moments v
-  ON u.user_id = v.user_id
-WHERE u.is_interna
-      -> tables=['dim_users', 'fct_value_moments'] where=True group=False agg=True welded=False
-[14] RAW  SELECT DISTINCT platform FROM agg_active_days ORDER BY platform;
-      -> tables=['agg_active_days'] where=False group=False agg=False welded=False
-[15] RAW  SELECT SUM(ROUND(signups*activation_rate)) AS activated_total FROM (SELECT w.signups, a.activation_rate FROM (SELECT date_trunc('week', signup_date)::
-      -> tables=['dim_users', 'agg_user_activation'] where=True group=True agg=True welded=True
-[16] GOV  SELECT plan, count(*) AS value FROM fct_subscriptions WHERE is_active GROUP BY plan ORDER BY plan
-      -> tables=['fct_subscriptions'] where=True group=True agg=True welded=False
-[17] GOV  SELECT date_trunc('month', signup_date)::date AS period, count(*) AS value FROM dim_users WHERE channel NOT IN ('partnerships') AND signup_date >= DAT
-      -> tables=['dim_users'] where=True group=True agg=True welded=False
-[18] GOV  SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend WHERE channel NOT IN ('partnerships') AND spend_d
-      -> tables=['fct_marketing_spend'] where=True group=True agg=True welded=False
-[19] GOV  SELECT region, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-04-01' AND active_date <= DATE '2026-06-30' GROUP BY region 
-      -> tables=['agg_active_days'] where=True group=True agg=True welded=False
-[20] GOV  SELECT date_trunc('month', signup_date)::date AS period, count(*) AS value FROM dim_users WHERE signup_date >= DATE '2026-06-01' AND signup_date <= DA
-      -> tables=['dim_users'] where=True group=True agg=True welded=False
+[17] GOV  SELECT plan, count(*) AS value FROM fct_subscriptions WHERE is_active GROUP BY plan ORDER BY plan
+      -> tables=['fct_subscriptions'] scope=True grain=True agg=True
+[18] GOV  SELECT date_trunc('month', signup_date)::date AS period, count(*) AS value FROM dim_users WHERE channel NOT IN ('partnerships') AND signup_d
+      -> tables=['dim_users'] scope=True grain=True agg=True
+[19] GOV  SELECT date_trunc('month', spend_date)::date AS period, sum(spend) AS value FROM fct_marketing_spend WHERE channel NOT IN ('partnerships') A
+      -> tables=['fct_marketing_spend'] scope=True grain=True agg=True
+[20] GOV  SELECT region, sum(moments) AS value FROM agg_active_days WHERE active_date >= DATE '2026-04-01' AND active_date <= DATE '2026-06-30' GROUP 
+      -> tables=['agg_active_days'] scope=True grain=True agg=True
 ```
 
 ## Verdict
 
-- **Most groundings never need a parse.** 1215 of 1255 SQL statements come from governed `query_metric` calls where the grounding is the metric name (resolution DECLARED). Traversal weighting works trivially there.
-- **On the agent's own raw SQL, recovery is mostly a parse, with two holes.** Entity and measure recover ~100%/95%, segment (WHERE) 85%, grain 54%, joins 33%.
-- **Kill condition partially met.** 26% of raw statements weld the segment inside an aggregate (`sum(case when …)` / the power_users shape); a WHERE-clause parse cannot see that scope. Material, not routine — but real.
-- **Rate-only reporting would have lied.** Naive entity recovery reads 100%, but the false-recovery rate is 38%: on CTE-based statements (38% of them) a naive `find_all(Table)` reports a CTE alias as the source table. Reporting a false-recovery rate alongside the recovery rate, as the doc demanded, was the load-bearing check.
-- **Three recovery failures, with the reason:** (1) 1/40 statements fail to parse (multiple statements / trailing comment in one `run_sql`); (2) welded-segment statements parse fine but the scope is invisible to a WHERE reader; (3) CTE statements mislabel the entity unless CTE names are excluded first.
+- **Raw-SQL usage is rung-dependent, not ~3%.** Pooled across all runs the agent wrote 294 raw statements; at the raw-warehouse rungs it is the norm and at governed rungs it is rare. Where it calls named metrics the grounding is declared and needs no parse.
+- **The better parser closes both Catch-B holes.** CTE-aware entity kills the false-recovery (34%→~0); reading welded CASE scope lifts scope recovery to 81%. Recovery from real agent SQL is a parse — not an inference — for entity, measure and scope; grain/join are 'absent, not missed'.
+- **The methodological lesson stands.** The naive 100% entity and WHERE-only scope hid a 34% confident mislabel and a 20% blind spot. Measuring the false-recovery rate is what exposed both and pointed at the fix.
