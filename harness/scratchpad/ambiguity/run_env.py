@@ -59,7 +59,10 @@ def main() -> None:
     bt, bd = Counter(f["type"] for f in findings), Counter(f["danger"] for f in findings)
     md = [f"# Detector on {env_name}\n",
           f"{len(facts)} grounding facts {dict(by)}.\n",
-          f"{len(findings)} findings. type={dict(bt)} danger={dict(bd)}.\n"]
+          f"{len(findings)} findings. type={dict(bt)} danger={dict(bd)}.\n",
+          "> Boundary: this flags where grounding facts DISAGREE (name + definition collisions). "
+          "It does not check which definition is correct, values/enums inside a column, single-fact "
+          "flaws, or join-path (fan/chasm) traps — those are complementary checks.\n"]
     for dl in ("high", "medium", "low"):
         rows = [f for f in findings if f["danger"] == dl]
         if not rows:

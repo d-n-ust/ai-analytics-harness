@@ -31,7 +31,9 @@ class GroundingFact:
     agg: str | None = None        # aggregation (meaning)
     base: str | None = None       # source table (meaning)
     measure: str | None = None    # measured column/expr (meaning)
-    scope: tuple = ()             # which-rows clauses (filters, segment) — the scope facet
+    grain: str | None = None      # group-by level (day/week/month) — the 4th canonical slot
+    additive: str | None = None   # additive | semi | non — derived from agg, never per-metric
+    scope: tuple = ()             # parsed predicates (col, kind, payload) — population, segment-resolved
     text: str = ""                # source text for embedding + human review
     derived: bool = False         # a ratio/derived metric that references other metrics, not rows
     recovered: dict | None = None # for query facts: which facets sqlglot recovered from the SQL
@@ -46,21 +48,108 @@ def _norm_table(t: str | None) -> str | None:
     return t.split(".")[-1].strip().lower() if t else None
 
 
-def _scope_clauses(filter_str: str | None, segment: str | None = None) -> tuple:
-    clauses = set()
-    if filter_str:
-        for c in re.split(r"\band\b", str(filter_str), flags=re.I):
-            c = c.strip().strip("()").strip().lower()
-            if c:
-                clauses.add(c)
+def _entity_from_base(base: str | None) -> str | None:
+    """A rough entity from a table name (strip fct_/dim_/stg_ prefixes, de-pluralise). Lets the
+    warehouse and welded-query adapters populate `entity`, so CONCEPT_FORK can fire on them —
+    entity is the primitive sqlglot cannot parse from a query (the AE finding)."""
+    if not base:
+        return None
+    b = re.sub(r"^(fct|dim|stg|raw|f|d)_+", "", base)
+    b = re.sub(r"s$", "", b)
+    return b or base
+
+
+def _additivity(agg: str | None) -> str | None:
+    """Derived from the aggregate, never annotated per metric (the semantic-modelling rule)."""
+    if not agg:
+        return None
+    a = agg.lower()
+    if "distinct" in a:
+        return "semi"            # distinct counts do not sum over time
+    if a in ("average", "avg", "ratio") or "avg(" in a or "/" in a:
+        return "non"             # ratios / averages
+    if a in ("min", "max"):
+        return "semi"
+    return "additive"           # sum, count
+
+
+def _col(node) -> str | None:
+    c = node.find(exp.Column)
+    return c.name.lower() if c else None
+
+
+def _predicate(node) -> tuple:
+    """One WHERE leaf -> a canonical (column, kind, payload). Normalises booleans/3-valued logic
+    (`x` / `x = true` / `x = 1` all -> {'true'}; `not x` / `x = false` / `x is not true` / `x = 0`
+    all -> {'false'}) and equality/IN into per-column value-sets, so populations compare by meaning
+    rather than by raw SQL string."""
+    try:
+        if isinstance(node, exp.Paren):
+            node = node.this
+        if isinstance(node, exp.In):
+            col = _col(node.this) or ""
+            vals = frozenset(v.sql().strip().strip("'\"").lower() for v in node.expressions)
+            return (col, "set", vals)
+        if isinstance(node, exp.EQ):
+            col = _col(node.this) or ""
+            v = node.expression.sql().strip().strip("'\"").lower()
+            v = {"1": "true", "0": "false"}.get(v, v)
+            return (col, "set", frozenset({v}))
+        if isinstance(node, exp.Not):
+            return (_col(node) or "", "set", frozenset({"false"}))
+        if isinstance(node, exp.Is):
+            s = node.sql().lower()
+            if "not true" in s or "false" in s or "not null" not in s and "null" in s:
+                return (_col(node) or "", "set", frozenset({"false"}))
+            return (_col(node) or "", "set", frozenset({"true"}))
+        if isinstance(node, exp.Column):
+            return (node.name.lower(), "set", frozenset({"true"}))
+        if isinstance(node, (exp.GTE, exp.GT, exp.LTE, exp.LT, exp.NEQ)):
+            return (_col(node) or "", "cmp", node.sql().lower())
+    except Exception:
+        pass
+    return ("", "raw", (node.sql() if hasattr(node, "sql") else str(node)).lower())
+
+
+def _predicates(filter_str: str | None) -> list[tuple]:
+    """Parse a filter into canonical predicate leaves, splitting on top-level AND via the parse tree
+    (not a regex, which breaks on BETWEEN and function commas)."""
+    if not filter_str:
+        return []
+    try:
+        tree = sqlglot.parse_one(str(filter_str), read="postgres")
+    except Exception:
+        return [("", "raw", c.strip().lower()) for c in re.split(r"\band\b", str(filter_str), flags=re.I) if c.strip()]
+    leaves = []
+
+    def walk(n):
+        if isinstance(n, exp.And):
+            walk(n.this)
+            walk(n.expression)
+        elif isinstance(n, exp.Paren):
+            walk(n.this)
+        else:
+            leaves.append(_predicate(n))
+    walk(tree)
+    return leaves
+
+
+def _scope(filter_str: str | None, segment: str | None = None, seg_map: dict | None = None) -> tuple:
+    """Population as a set of canonical predicates. A declared `segment:` is RESOLVED to its filter
+    (so a metric using segment `active` compares against the same predicates a view inlines)."""
+    preds = list(_predicates(filter_str))
     if segment and segment != "all":
-        clauses.add(f"segment={segment}")
-    return tuple(sorted(clauses))
+        if seg_map and segment in seg_map and seg_map[segment]:
+            preds += _predicates(seg_map[segment])
+        else:
+            preds.append(("segment", "set", frozenset({segment})))
+    return tuple(sorted(set(preds), key=lambda p: (p[0], p[1], str(p[2]))))
 
 
 # ── semantic layer ───────────────────────────────────────────────────────────────────────────────
 def adapt_semantic(path: pathlib.Path) -> list[GroundingFact]:
     doc = yaml.safe_load(path.read_text())
+    seg_map = {s["name"]: s.get("filter") for s in doc.get("segments", [])}
     out = []
     for m in doc.get("metrics", []):
         name = m["name"]
@@ -69,7 +158,8 @@ def adapt_semantic(path: pathlib.Path) -> list[GroundingFact]:
             entity=m.get("entity"), agg=m.get("agg"),
             base=_norm_table(m.get("base") or m.get("model")),
             measure=(m.get("measure") or m.get("expr")),
-            scope=_scope_clauses(m.get("filter"), m.get("segment")),
+            grain=m.get("grain"), additive=_additivity(m.get("agg")),
+            scope=_scope(m.get("filter"), m.get("segment"), seg_map),
             text=f"{name.replace('_', ' ')}. {m.get('description', '')}".strip(),
             derived=(m.get("agg") == "ratio"),
         ))
@@ -81,7 +171,7 @@ def adapt_semantic(path: pathlib.Path) -> list[GroundingFact]:
     for s in doc.get("segments", []):
         out.append(GroundingFact(
             id=f"sl:seg:{s['name']}", label=s["name"], layer="semantic", kind="segment",
-            entity=s.get("entity"), scope=_scope_clauses(s.get("filter")),
+            entity=s.get("entity"), scope=_scope(s.get("filter")),
             text=f"{s['name'].replace('_', ' ')}. {s.get('description', '')}".strip()))
     return out
 
@@ -113,15 +203,10 @@ def adapt_warehouse(path: pathlib.Path) -> list[GroundingFact]:
             if src:
                 base = _norm_table(src.name)
             where = select.find(exp.Where) if select else None
-            clauses = ()
-            if where:
-                conds = [where.this.sql().lower()]
-                # split top-level AND
-                conds = [c.strip() for c in re.split(r"\band\b", where.this.sql(), flags=re.I)]
-                clauses = tuple(sorted(c.strip().lower() for c in conds if c.strip()))
+            scope = _scope(where.this.sql()) if where else ()
             out.append(GroundingFact(
                 id=f"wh:view:{vname}", label=vname, layer="warehouse", kind="view",
-                base=base, scope=clauses,
+                base=base, entity=_entity_from_base(base), scope=scope,
                 text=f"view {vname}" + (f" over {base}" if base else "")))
     return out
 
@@ -179,9 +264,9 @@ def adapt_queries(path: pathlib.Path) -> list[GroundingFact]:
         nl = blk.find("\n")
         name = blk[:nl].strip() if nl >= 0 else blk.strip()
         sql = blk[nl + 1:] if nl >= 0 else ""
-        agg = measure = base = None
+        agg = measure = base = grain = None
         scope: tuple = ()
-        recovered = {"agg": False, "base": False, "scope": False}
+        recovered = {"agg": False, "base": False, "scope": False, "entity": False}
         try:
             tree = sqlglot.parse_one(sql, read="postgres")
             sel = tree.find(exp.Select) if tree else None
@@ -197,17 +282,20 @@ def adapt_queries(path: pathlib.Path) -> list[GroundingFact]:
                     recovered["base"] = True
                 where = sel.find(exp.Where)
                 if where is not None:
-                    scope = tuple(sorted(c.strip().lower()
-                                         for c in re.split(r"\band\b", where.this.sql(), flags=re.I)
-                                         if c.strip()))
+                    scope = _scope(where.this.sql())
                     recovered["scope"] = True
+                grp = sel.find(exp.Group)
+                if grp is not None and grp.expressions:
+                    grain = ", ".join(g.sql().lower() for g in grp.expressions)
         except Exception:
             pass
         f = GroundingFact(
             id=f"q:{name}", label=name.lower(), layer="queries", kind="query",
-            agg=agg, base=base, measure=measure, scope=scope,
+            agg=agg, base=base, measure=measure, grain=grain,
+            entity=_entity_from_base(base), additive=_additivity(agg), scope=scope,
             text=f"{name}. {sql.strip()[:200]}")
-        f.recovered = recovered            # attach recovery flags for the Test-3 tally
+        recovered["entity"] = base is not None    # entity DERIVED from base (sqlglot can't parse it)
+        f.recovered = recovered
         out.append(f)
     return out
 

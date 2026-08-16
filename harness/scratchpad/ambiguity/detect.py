@@ -33,15 +33,50 @@ ENV = HERE.parent / "env_sales"
 OUT_MD = HERE.parent / "10_env_findings.md"
 OUT_JSON = HERE.parent / "10_env_findings.json"
 GATE = 0.55
-GENERIC = {"id", "created_at", "updated_at", "email", "currency", "phone", "zip", "city",
-           "raw_payload", "tags", "handle", "customer_key", "order_key", "product_key",
-           "revenue_key", "date_key", "session_id", "anonymous_id", "referrer", "landing_page"}
+WH_SYN = 0.82           # cosine floor for warehouse near-synonym columns (higher: 300+ columns)
 _ID = re.compile(r"[a-z_][a-z0-9_]{2,}")
+_TECH = {"id", "raw_payload", "tags", "currency", "zip", "phone", "handle", "referrer",
+         "landing_page", "anonymous_id"}
 
 
-def subsumes(a: tuple, b: tuple) -> bool:
-    sa, sb = set(a), set(b)
-    return sa < sb or sb < sa
+def _is_plumbing(label: str) -> bool:
+    """Drop by ROLE, not by a hand list: surrogate keys, timestamps, and pure technical columns.
+    Keeps business keys (`customer_id` vs `user_id` is a real collision) and `email` (a real rename)."""
+    l = label.lower()
+    return (l in _TECH or l.endswith("_key") or l.endswith("_at")
+            or l in ("created_at", "updated_at"))
+
+
+def _constraints(scope: tuple) -> dict:
+    return {(col, kind): payload for col, kind, payload in scope}
+
+
+def _pop_subset(narrow: tuple, wide: tuple) -> bool:
+    """Is population(narrow) ⊆ population(wide)? Every constraint the wider side imposes must be
+    implied by the narrower one — value-sets widen (status∈{completed} ⊆ {completed,fulfilled}),
+    the narrow side may add columns. Compares MEANING of the population, not raw SQL strings."""
+    cn, cw = _constraints(narrow), _constraints(wide)
+    for (col, kind), pw in cw.items():
+        pn = cn.get((col, kind))
+        if pn is None:
+            return False
+        if kind == "set":
+            if not (pn <= pw):
+                return False
+        elif pn != pw:
+            return False
+    return True
+
+
+def scope_equal(a, b) -> bool:
+    return frozenset(a.scope) == frozenset(b.scope)
+
+
+def subsumes(a, b) -> bool:
+    """One population strictly inside the other (a real scope trap), by parsed predicates."""
+    if scope_equal(a, b):
+        return False
+    return _pop_subset(a.scope, b.scope) or _pop_subset(b.scope, a.scope)
 
 
 def _cols(s: str | None) -> set[str]:
@@ -58,10 +93,18 @@ def classify(a, b, cos: float):
 
     # 1. same measure (>=2 shared meaning facets, all agree)
     if meaning_eq:
-        if a.scope == b.scope:
-            return ("DUPLICATE", "medium", "same measure and scope under two names")
-        if subsumes(a.scope, b.scope):
-            wide, narrow = (a, b) if set(a.scope) < set(b.scope) else (b, a)
+        if scope_equal(a, b):
+            if a.grain == b.grain:
+                return ("DUPLICATE", "low", "same measure, scope and grain under two names")
+            # same population, different grain — a semi-/non-additive measure cannot be rolled up
+            add = a.additive or b.additive
+            danger = "high" if add in ("semi", "non") else "medium"
+            return ("GRAIN_MISMATCH", danger,
+                    f"same measure and population at different grain ('{a.grain}' vs '{b.grain}'); "
+                    f"the measure is {add or 'additive'}"
+                    + (" and cannot be summed across that grain" if add in ("semi", "non") else ""))
+        if subsumes(a, b):
+            narrow, wide = (a, b) if _pop_subset(a.scope, b.scope) else (b, a)
             return ("SCOPE_TRAP", "high",
                     f"same measure; '{narrow.label}' is '{wide.label}' plus a filter — bare "
                     f"question silently scoped, swap invisible")
@@ -137,7 +180,7 @@ def detect_facts(facts, model) -> list[dict]:
     # collect classified pairs
     pairs = []  # (type, danger, note, a_id, b_id)
     for a, b in itertools.combinations(primary, 2):
-        if a.label in GENERIC or b.label in GENERIC:
+        if _is_plumbing(a.label) or _is_plumbing(b.label):
             continue
         c = cos(a, b)
         if a.label != b.label and c < GATE:
@@ -147,13 +190,28 @@ def detect_facts(facts, model) -> list[dict]:
             pairs.append((*v, a.id, b.id))
     wh_by_label = defaultdict(list)
     for f in warehouse:
-        if f.label not in GENERIC:
+        if not _is_plumbing(f.label):
             wh_by_label[f.label].append(f)
     for p in primary:
         for w in wh_by_label.get(p.label, []):
             v = classify(p, w, 1.0)
             if v:
                 pairs.append((*v, p.id, w.id))
+
+    # warehouse near-synonym columns (the AE gap: on_hand ~ qty_on_hand, extended_price ~ line_amount)
+    wh_cols = [f for f in warehouse if f.kind == "column" and not _is_plumbing(f.label)]
+    seen_label = {}
+    uniq = []                                    # one representative per (label) to cut 300->~120
+    for f in wh_cols:
+        if f.label not in seen_label:
+            seen_label[f.label] = f
+            uniq.append(f)
+    for a, b in itertools.combinations(uniq, 2):
+        if a.label == b.label or cos(a, b) < WH_SYN:
+            continue
+        pairs.append(("NAME_COLLISION", "low",
+                      f"warehouse columns '{a.label}' and '{b.label}' read alike — likely the same "
+                      f"thing under two names, or two things under alike names", a.id, b.id))
 
     # cluster per type via union-find (per-concept groups instead of pairwise)
     findings = []
@@ -181,7 +239,7 @@ def detect_facts(facts, model) -> list[dict]:
     # warehouse overloaded column names (>=4 tables) — single-item findings
     col_by_label = defaultdict(list)
     for f in warehouse:
-        if f.kind == "column" and f.label not in GENERIC:
+        if f.kind == "column" and not _is_plumbing(f.label):
             col_by_label[f.label].append(f.base)
     for label, tables in sorted(col_by_label.items()):
         if len(set(tables)) >= 4:
