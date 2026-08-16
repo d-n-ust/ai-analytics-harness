@@ -306,21 +306,3 @@ def load_env(env_dir: pathlib.Path) -> list[GroundingFact]:
     facts += adapt_warehouse(env_dir / "warehouse/schema.sql")
     facts += adapt_docs(env_dir / "docs/data_dictionary.md")
     return facts
-
-
-if __name__ == "__main__":
-    ENV = pathlib.Path(__file__).parent / "env_sales"
-    facts = load_env(ENV)
-    from collections import Counter
-    by = Counter((f.layer, f.kind) for f in facts)
-    print(f"total grounding facts: {len(facts)}")
-    for (layer, kind), n in sorted(by.items()):
-        print(f"  {layer:10} {kind:10} {n}")
-    print("\nsample metric facts (semantic):")
-    for f in facts:
-        if f.layer == "semantic" and f.kind == "metric" and f.label in ("net_revenue", "revenue", "completed_orders"):
-            print(f"  {f.id:24} base={f.base} measure={f.measure} scope={f.scope}")
-    print("\nsample warehouse views (welded scope):")
-    for f in facts:
-        if f.kind == "view":
-            print(f"  {f.id:28} base={f.base} scope={f.scope}")

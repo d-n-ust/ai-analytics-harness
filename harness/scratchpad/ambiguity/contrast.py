@@ -21,8 +21,8 @@ from sentence_transformers import SentenceTransformer
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-import detect                                          # noqa: E402
-import grounding                                       # noqa: E402
+from preflight import detect  # noqa: E402
+from preflight import grounding  # noqa: E402
 
 ENV = HERE.parent / "env_sales"
 OUT_MD = HERE.parent / "12_contrast.md"
@@ -62,7 +62,7 @@ def main() -> None:
     rows = []
     detail = {}
     for name, facts in configs.items():
-        findings = detect.detect_facts(facts, model)
+        findings = detect.detect_collisions(facts, gate=model)
         detail[name] = findings
         # findings that involve a metric/query definition (the governed/welded surface)
         metric_findings = [f for f in findings

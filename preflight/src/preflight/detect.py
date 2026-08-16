@@ -16,24 +16,13 @@ Types: DUPLICATE, SCOPE_TRAP, SIBLING, CONCEPT_FORK, DEFINITION_DIVERGENCE, NAME
 from __future__ import annotations
 
 import itertools
-import json
-import pathlib
 import re
-import sys
-from collections import Counter, defaultdict
+from collections import defaultdict
 
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from ._gate import make_gate
 
-HERE = pathlib.Path(__file__).resolve()
-sys.path.insert(0, str(HERE.parent))
-from grounding import load_env                       # noqa: E402
-
-ENV = HERE.parent / "env_sales"
-OUT_MD = HERE.parent / "10_env_findings.md"
-OUT_JSON = HERE.parent / "10_env_findings.json"
 GATE = 0.55
-WH_SYN = 0.82           # cosine floor for warehouse near-synonym columns (higher: 300+ columns)
+WH_SYN = 0.82           # similarity floor for warehouse near-synonym columns (higher: 300+ columns)
 _ID = re.compile(r"[a-z_][a-z0-9_]{2,}")
 _TECH = {"id", "raw_payload", "tags", "currency", "zip", "phone", "handle", "referrer",
          "landing_page", "anonymous_id"}
@@ -163,9 +152,16 @@ class Union:
         self.p[self.find(x)] = self.find(y)
 
 
-def detect_facts(facts, model) -> list[dict]:
-    """Run the whole detector over an arbitrary set of grounding facts. Reusable across configs
-    (with the semantic layer, with welded queries instead, or warehouse+docs only)."""
+def detect_collisions(facts, gate="auto", model=None) -> list[dict]:
+    """Detect confusable grounding facts across the whole surface, most dangerous first.
+
+    `gate` selects the confusability gate — which name-pairs are alike enough to examine (danger is
+    then decided structurally, never by similarity). "auto" uses embeddings when installed and falls
+    back to a dependency-free lexical gate; "lexical" forces the fallback; "embeddings" requires the
+    optional extra. Any object with `.encode` may be passed as `model` (or positionally as `gate`)
+    to reuse one instance and reproduce a specific model's ranking."""
+    if not isinstance(gate, str):        # a model object passed positionally (back-compat)
+        model, gate = gate, "embeddings"
     by_id = {f.id: f for f in facts}
     # the grounding surface an agent queries on = everything except raw warehouse structure
     primary = [f for f in facts if (f.layer in ("semantic", "queries")
@@ -173,9 +169,8 @@ def detect_facts(facts, model) -> list[dict]:
                or (f.layer == "docs")]
     warehouse = [f for f in facts if f.layer == "warehouse"]
     pool = primary + warehouse
-    vecs = model.encode([f.label.replace("_", " ") for f in pool], normalize_embeddings=True)
-    emb = {f.id: v for f, v in zip(pool, vecs)}
-    cos = lambda x, y: float(np.dot(emb[x.id], emb[y.id]))
+    sim, _gate_name = make_gate([f.label for f in pool], kind=gate, model=model)
+    cos = lambda x, y: sim(x.label, y.label)
 
     # collect classified pairs
     pairs = []  # (type, danger, note, a_id, b_id)
@@ -249,32 +244,3 @@ def detect_facts(facts, model) -> list[dict]:
 
     findings.sort(key=lambda f: (danger_rank[f["danger"]], f["type"], -len(f["items"])))
     return findings
-
-
-def main() -> None:
-    facts = load_env(ENV)
-    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    findings = detect_facts(facts, model)
-    OUT_JSON.write_text(json.dumps(findings, indent=1))
-
-    bt, bd = Counter(f["type"] for f in findings), Counter(f["danger"] for f in findings)
-    md = ["# Collision detector v2 (clustered) over the sales environment\n"]
-    md.append(f"{len(facts)} grounding facts. {len(findings)} collision findings "
-              f"(clustered per concept). By type: {dict(bt)}. By danger: {dict(bd)}.\n")
-    for dl in ("high", "medium", "low"):
-        rows = [f for f in findings if f["danger"] == dl]
-        if not rows:
-            continue
-        md.append(f"## {dl.upper()} ({len(rows)})\n```")
-        for f in rows:
-            items = "  ~  ".join(f"{it['label']}[{it['layer'][:3]}]" for it in f["items"])
-            md.append(f"[{f['type']}] {items}")
-            md.append(f"    {f['note']}")
-        md.append("```\n")
-    OUT_MD.write_text("\n".join(md))
-    print("\n".join(md[:3]))
-    print(f"wrote {OUT_MD.name} and {OUT_JSON.name}  ({len(findings)} findings)")
-
-
-if __name__ == "__main__":
-    sys.exit(main())

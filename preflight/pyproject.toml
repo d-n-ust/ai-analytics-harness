@@ -1,0 +1,40 @@
+# preflight — a standalone, extraction-ready package.
+#
+# Deliberately OUTSIDE the workspace (like troodos/): it carries a different, heavier dependency
+# closure than the engine and harness (sentence-transformers pulls torch), and it is meant to be
+# liftable out of this repository as-is. Kept as its own package with its own lockfile so that
+# closure never lands in the shared engine+harness environment; extraction later is a `git mv`.
+
+[project]
+name = "preflight"
+version = "0.1.0"
+description = "Static, cross-layer ambiguity detection for governed analytics grounding: find confusable metric, column, and term definitions before an agent queries them."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+# The core is intentionally light and pure-Python: parse governed definitions, compare their
+# meaning and scope structurally, report the dangerous confusions. No model is required.
+dependencies = [
+    "sqlglot>=25",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+# The confusability GATE only. Structural detection runs without these on a built-in lexical gate;
+# embeddings sharpen which name-pairs are worth comparing and are the validated path. Kept optional
+# so a base install stays light and torch does not ride along.
+embeddings = ["sentence-transformers>=3", "numpy>=1.26"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# src layout, for distribution correctness: it forces an installed import rather than an accidental
+# relative one, so a missing module fails in the test suite rather than on a stranger's machine.
+[tool.hatch.build.targets.wheel]
+packages = ["src/preflight"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/README.md"]
