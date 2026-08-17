@@ -87,6 +87,24 @@ def test_cross_layer_doc_omits_modelled_columns_is_medium():
     assert v.type == "DEFINITION_DIVERGENCE" and v.danger == "medium"
 
 
+def test_doc_that_documents_a_metric_is_not_flagged():
+    # prose 'value moments' documents the 'value_moments' metric and names its column -> not a collision.
+    # (normalized-exact so it routes through rule 5, which clears because the doc references 'moments')
+    metric = fact("sl:value_moments", "value_moments", entity="value_moments", agg="sum",
+                  base="agg_active_days", measure="moments")
+    doc = fact("doc:value_moments", "value moments", layer="docs", kind="term",
+               text="a completed habit, counted from the moments column")
+    assert classify(metric, doc, 0.95) is None
+
+    # a count-distinct-of-users metric is measured on the KEY user_id; a business doc that omits the
+    # key is not a divergence (a dictionary won't cite the surrogate key)
+    users = fact("sl:active_users", "active_users", entity="users", agg="count_distinct",
+                 base="agg_active_days", measure="user_id")
+    udoc = fact("doc:active_users", "active users", layer="docs", kind="term",
+                text="a user with at least one value moment, counted user-distinct")
+    assert classify(users, udoc, 0.95) is None
+
+
 def test_same_layer_overloaded_name_is_medium():
     a = fact("sl:a", "foo", measure="m1")
     b = fact("sl:b", "foo", measure="m2")

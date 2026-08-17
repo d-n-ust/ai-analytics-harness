@@ -67,12 +67,19 @@ def _meaning_agrees(a: GroundingFact, b: GroundingFact, min_shared: int) -> bool
     return len(shared) >= min_shared and all(a.meaning[f] == b.meaning[f] for f in shared)
 
 
+def _norm_label(label: str) -> str:
+    """Fold a label to its bare identity: lowercase, separators removed. So a prose doc heading
+    ('value moment') and the metric it documents ('value_moments') count as the SAME term — one
+    written in words, one in code — rather than two names that merely read alike."""
+    return re.sub(r"[^a-z0-9]+", "", label.lower())
+
+
 def classify(a: GroundingFact, b: GroundingFact, sim: float,
              config: DetectConfig = DEFAULT_CONFIG) -> Classification | None:
     """Classify one pair into a collision type + danger, or None. Divergence is asserted only with
     evidence. `sim` is the pair's confusability score, used only by the read-alike name rule."""
     cross = a.layer != b.layer
-    exact = a.label == b.label
+    exact = _norm_label(a.label) == _norm_label(b.label)
 
     # 1. same measure (>= min_shared_facets co-declared meaning facets, all agree)
     if _meaning_agrees(a, b, config.min_shared_facets):
@@ -113,10 +120,12 @@ def classify(a: GroundingFact, b: GroundingFact, sim: float,
         return Classification("DEFINITION_DIVERGENCE", "high",
             f"'{a.label}' resolves to a different scope in {a.layer} vs {b.layer}")
 
-    # 5. same term across layers, one side prose — flag only if the doc omits the modelled columns
+    # 5. same term across layers, one side prose — flag only if the doc omits the modelled columns.
+    #    Keys don't count: a business dictionary won't cite `user_id` for a count-distinct-of-users,
+    #    so a metric measured on a key raises no divergence from prose that omits it.
     if exact and cross:
         sl, dc = (a, b) if a.measure else (b, a)
-        cols = _cols(sl.measure)
+        cols = {c for c in _cols(sl.measure) if not _is_key(c)}
         if cols and dc.text and not (cols & _cols(dc.text)):
             return Classification("DEFINITION_DIVERGENCE", "medium",
                 f"'{a.label}' is modelled on {sorted(cols)} but its documentation does not "

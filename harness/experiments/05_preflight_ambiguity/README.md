@@ -49,11 +49,21 @@ business intent, before the fixes, so the answer key cannot drift toward what we
 
 - [x] `high_before` authored across all three layers to exercise every finding type; `small_before`
       = governed layer.
-- [x] `scan.py` + `scan.md` — the dose measurement (embedding gate): **small 1, high 18**, spanning
-      DEFINITION_DIVERGENCE (docs), NAME_COLLISION (warehouse), GRAIN_MISMATCH / SCOPE_TRAP / DUPLICATE
-      / SIBLING (semantic), and **cross-layer doc+sem** collisions — the full range across all three
-      grounding layers. The report groups findings by layer with live progress; `--detail` cites each
-      to `file:line` and prints the offending source line (`scan.md` is the full cited record).
-- [ ] `_after` layers (the fixes) + re-scan to ~0.
+- [x] `scan.py` + `scan.md` — the dose measurement (embedding gate). The report groups findings by
+      layer with live progress; `--detail` cites each to `file:line` and prints the offending source
+      line (`scan.md` is the full cited record). `high_before` spans DEFINITION_DIVERGENCE (docs),
+      NAME_COLLISION (warehouse `moments` overload), GRAIN_MISMATCH / SCOPE_TRAP / DUPLICATE / SIBLING
+      (semantic), and **cross-layer doc+sem** collisions — the full range across all three layers.
+- [x] `_after` layers (the fixes) + re-scan. **Dose-response: small 1 → 0, high 18 → 0.**
+      The fixes converge the pressured layers on the governed layer: the value_moments SCOPE_TRAP is
+      resolved by making scope an argument (one `value_moments`, segment=all|active) rather than a
+      bare metric beside a scoped one; the duplicate/sibling/grain metrics collapse to one governed
+      definition each; the warehouse consolidates `moments` to one canonical fact with one grain
+      column and one internal flag; the docs give one definition per term, matching the governed
+      metric it grounds.
 - [ ] pre-registered question set + gold (3 LLM judges).
 - [ ] agent runs on the four environments; SER / balanced accuracy / coverage.
+
+Note: `small_before` / `small_after` are semantic-only (a governed layer's residual is a semantic
+trap); `high_*` carry all three layers. Matching `small` to three layers is only needed for the agent
+runs, not the scan dose.
