@@ -94,14 +94,20 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
 
 def metrics(rows: list[dict]) -> dict:
     s = selective(rows)
-    # Wrong-metric rate: of answered rows where we observed a pick, the share where the metric the
-    # agent QUERIED differs from the governed-correct one. Higher than SER — a wrong pick that
-    # coincidentally returns the right number is scored correct by the number, but is a wrong pick.
+    # SER is the north star and stays root-cause-agnostic (every wrong number, all causes). The two
+    # rates below DECOMPOSE it, so they explain the SER rather than clean it:
+    #   wrong-selection (Mode 1 — preflight's lane): the agent grounded on the wrong confusable thing.
+    #     In a governed layer that is a wrong METRIC (measured here from the query_metric call); in raw
+    #     SQL (study 02) it is a wrong COLUMN/definition, recovered from the SQL.
+    #   wrong-construction (Mode 2 — the validators' lane): the RIGHT grounding, built wrong (a
+    #     mishandled time filter, grain, fan-trap). preflight does not address this one.
     picked = [r for r in rows if r["outcome"] == "answer" and r.get("picked") and r.get("expected_metric")]
-    wm = sum(1 for r in picked if r["picked"] != r["expected_metric"])
+    ws = sum(1 for r in picked if r["picked"] != r["expected_metric"])
+    wc = sum(1 for r in picked if r["picked"] == r["expected_metric"] and not r.get("correct"))
     return {"n": s.n, "coverage": s.coverage,
             "silent_error": s.silent_error, "balanced_accuracy": s.balanced_accuracy,
-            "wrong_metric_rate": (wm / len(picked)) if picked else float("nan")}
+            "wrong_selection_rate": (ws / len(picked)) if picked else float("nan"),
+            "wrong_construction_rate": (wc / len(picked)) if picked else float("nan")}
 
 
 def _fmt(x) -> str:
@@ -110,10 +116,12 @@ def _fmt(x) -> str:
 
 def _print_scorecard(report: dict) -> None:
     print("\n  EXPERIMENT 05 — before/after benefit  (rung 3, agent selects the metric)")
-    print("  " + "-" * 86)
-    print(f"  {'layer':14} {'set':8} {'n':>2}  {'coverage':>9} {'silent_err':>11} "
-          f"{'bal_acc':>8} {'wrong_metric':>13}")
-    print("  " + "-" * 86)
+    print("  north star: SER / coverage / bal_acc.  SER decomposes into wrong_selection (Mode 1, "
+          "preflight) + wrong_constr (Mode 2).")
+    print("  " + "-" * 98)
+    print(f"  {'layer':14} {'set':8} {'n':>2}  {'coverage':>8} {'SER':>6} {'bal_acc':>8}"
+          f"  |  {'wrong_select':>12} {'wrong_constr':>12}")
+    print("  " + "-" * 98)
     for name in ORDER:
         if name not in report:
             continue
@@ -122,10 +130,10 @@ def _print_scorecard(report: dict) -> None:
             if m["n"] == 0:
                 continue
             tag = name if label == "overall" else ""
-            print(f"  {tag:14} {label:8} {m['n']:>2}  {_fmt(m['coverage']):>9} "
-                  f"{_fmt(m['silent_error']):>11} {_fmt(m['balanced_accuracy']):>8} "
-                  f"{_fmt(m.get('wrong_metric_rate')):>13}")
-        print("  " + "·" * 86)
+            print(f"  {tag:14} {label:8} {m['n']:>2}  {_fmt(m['coverage']):>8} "
+                  f"{_fmt(m['silent_error']):>6} {_fmt(m['balanced_accuracy']):>8}  |  "
+                  f"{_fmt(m.get('wrong_selection_rate')):>12} {_fmt(m.get('wrong_construction_rate')):>12}")
+        print("  " + "·" * 98)
 
 
 def _print_family_table(report: dict) -> None:

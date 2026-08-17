@@ -1,9 +1,5 @@
-# high_before — a pressured team's sprawl on MetricFlow: governed metrics + confusable
-# siblings, descriptions stripped (bare names). MetricFlow has no synonym field, removing
-# that confound from study 01.
-# small_before — the governed layer, ported to dbt MetricFlow. One residual trap by design:
-# value_moments (all accounts) beside real_value_moments (real users only), same measure, one filter.
-# Revenue fix (point 1): ONE governed revenue metric, `mrr`. No net_revenue/mrr overlap.
+# high_before -- sprawl on MetricFlow: governed metrics + confusable siblings, descriptions stripped.
+---
 semantic_model:
   name: user_activity
   description: "One row is one user-day of activity."
@@ -33,23 +29,21 @@ semantic_model:
     - {name: signup_count, agg: count, expr: user_id}
 ---
 semantic_model:
-  name: subscriptions
-  description: "One row is one subscription."
-  node_relation: {schema_name: _star, alias: fct_subscriptions}
-  defaults: {agg_time_dimension: started_date}
-  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  name: sub_snapshot
+  description: "One row is one subscription in one monthly snapshot (a periodic snapshot of the active book)."
+  node_relation: {schema_name: _star, alias: fct_subscription_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities: [{name: sub_month, type: primary, expr: "subscription_id || snapshot_month"}]
   dimensions:
-    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
     - {name: plan, type: categorical}
-    - {name: is_active, type: categorical}
   measures:
-    - {name: mrr_amount, agg: sum, expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"}
-    - {name: paying_user_count, agg: count_distinct, expr: user_id}
-    - {name: billed_amount_raw, agg: sum, expr: billed_amount}
+    - {name: mrr_amount, agg: sum, expr: mrr_amount, non_additive_dimension: {name: snapshot_month, window_choice: max}}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
 ---
 semantic_model:
   name: habits
-  description: "One row is one habit a user created."
+  description: "One row is one habit a user created. Modelled over created_date (no snapshot table exists)."
   node_relation: {schema_name: _star, alias: dim_habits}
   defaults: {agg_time_dimension: created_date}
   entities: [{name: habit, type: primary, expr: habit_id}]
@@ -72,7 +66,19 @@ semantic_model:
   measures:
     - {name: spend_amount, agg: sum, expr: spend}
 ---
-metric: {name: value_moments, description: "Value moments (completed habits) in the period, all accounts.", type: simple, type_params: {measure: moments}}
+semantic_model:
+  name: sub_raw
+  description: "Raw subscription rows (started_date grain) -- the naive, un-snapshotted view a pressured team also left."
+  node_relation: {schema_name: _star, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_active, type: categorical}
+  measures:
+    - {name: billed_amount_raw, agg: sum, expr: billed_amount}
+---
+metric: {name: value_moments, type: simple, type_params: {measure: moments}}
 ---
 metric:
   name: real_value_moments
@@ -86,17 +92,9 @@ metric:
   type_params: {measure: active_user_count}
   filter: "{{ Dimension('user__is_internal') }} = false"
 ---
-metric:
-  name: mrr
-  type: simple
-  type_params: {measure: mrr_amount}
-  filter: "{{ Dimension('subscription__is_active') }} = true"
+metric: {name: mrr, type: simple, type_params: {measure: mrr_amount}}
 ---
-metric:
-  name: paying_users
-  type: simple
-  type_params: {measure: paying_user_count}
-  filter: "{{ Dimension('subscription__is_active') }} = true"
+metric: {name: paying_users, type: simple, type_params: {measure: paying_user_count}}
 ---
 metric:
   name: active_habits
@@ -104,14 +102,13 @@ metric:
   type_params: {measure: habit_count}
   filter: "{{ Dimension('habit__is_archived') }} = false"
 ---
-metric: {name: new_signups, description: "User signups in the period, all accounts.", type: simple, type_params: {measure: signup_count}}
+metric: {name: new_signups, type: simple, type_params: {measure: signup_count}}
 ---
-metric: {name: marketing_spend, description: "Total marketing spend in the period.", type: simple, type_params: {measure: spend_amount}}
-
+metric: {name: marketing_spend, type: simple, type_params: {measure: spend_amount}}
 ---
 metric: {name: recurring_revenue, type: simple, type_params: {measure: billed_amount_raw}, filter: "{{ Dimension('subscription__is_active') }} = true"}
 ---
-metric: {name: monthly_recurring_revenue, type: simple, type_params: {measure: mrr_amount}, filter: "{{ Dimension('subscription__is_active') }} = true"}
+metric: {name: monthly_recurring_revenue, type: simple, type_params: {measure: mrr_amount}}
 ---
 metric: {name: total_habits, type: simple, type_params: {measure: habit_count}}
 ---
@@ -129,4 +126,4 @@ metric: {name: mau, type: simple, type_params: {measure: active_user_count}}
 ---
 metric: {name: engaged_users, type: simple, type_params: {measure: active_user_count}}
 ---
-metric: {name: subscribers, type: simple, type_params: {measure: paying_user_count}, filter: "{{ Dimension('subscription__is_active') }} = true"}
+metric: {name: subscribers, type: simple, type_params: {measure: paying_user_count}}

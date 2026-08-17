@@ -1,6 +1,5 @@
-# small_after / high_after — the fix: real_value_moments is removed; 'real users' is a
-# query-time filter on user__is_internal, MetricFlow's idiomatic scope-as-argument. 0 traps.
-# Revenue fix (point 1): ONE governed revenue metric, `mrr`. No net_revenue/mrr overlap.
+# small_after / high_after -- the fix: real_value_moments removed.
+---
 semantic_model:
   name: user_activity
   description: "One row is one user-day of activity."
@@ -30,22 +29,21 @@ semantic_model:
     - {name: signup_count, agg: count, expr: user_id}
 ---
 semantic_model:
-  name: subscriptions
-  description: "One row is one subscription."
-  node_relation: {schema_name: _star, alias: fct_subscriptions}
-  defaults: {agg_time_dimension: started_date}
-  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  name: sub_snapshot
+  description: "One row is one subscription in one monthly snapshot (a periodic snapshot of the active book)."
+  node_relation: {schema_name: _star, alias: fct_subscription_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities: [{name: sub_month, type: primary, expr: "subscription_id || snapshot_month"}]
   dimensions:
-    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
     - {name: plan, type: categorical}
-    - {name: is_active, type: categorical}
   measures:
-    - {name: mrr_amount, agg: sum, expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"}
-    - {name: paying_user_count, agg: count_distinct, expr: user_id}
+    - {name: mrr_amount, agg: sum, expr: mrr_amount, non_additive_dimension: {name: snapshot_month, window_choice: max}}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
 ---
 semantic_model:
   name: habits
-  description: "One row is one habit a user created."
+  description: "One row is one habit a user created. Modelled over created_date (no snapshot table exists)."
   node_relation: {schema_name: _star, alias: dim_habits}
   defaults: {agg_time_dimension: created_date}
   entities: [{name: habit, type: primary, expr: habit_id}]
@@ -77,19 +75,9 @@ metric:
   type_params: {measure: active_user_count}
   filter: "{{ Dimension('user__is_internal') }} = false"
 ---
-metric:
-  name: mrr
-  description: "Monthly recurring revenue from active subscriptions (annual plans over 12)."
-  type: simple
-  type_params: {measure: mrr_amount}
-  filter: "{{ Dimension('subscription__is_active') }} = true"
+metric: {name: mrr, description: "Monthly recurring revenue (current active book, from the monthly snapshot).", type: simple, type_params: {measure: mrr_amount}}
 ---
-metric:
-  name: paying_users
-  description: "Distinct users with an active subscription."
-  type: simple
-  type_params: {measure: paying_user_count}
-  filter: "{{ Dimension('subscription__is_active') }} = true"
+metric: {name: paying_users, description: "Distinct users with an active subscription (current, from the monthly snapshot).", type: simple, type_params: {measure: paying_user_count}}
 ---
 metric:
   name: active_habits

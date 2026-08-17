@@ -4,7 +4,7 @@
 # layer. The revenue fix (point 1) leaves ONE governed revenue metric, `mrr`; the muddy net_revenue/mrr
 # overlap is gone, so there is no gross_net family here. Gold is a deterministic gold_sql oracle.
 #
-# Verified gold vs sprawl-trap on MetricFlow: mrr 2685 vs recurring_revenue 11448 (4.3x);
+# Verified gold vs sprawl-trap on MetricFlow: mrr 2740.95 (snapshot) vs recurring_revenue 11448 (~4.2x);
 # active_habits 6357 vs total_habits 7467 (17%); new_signups 2500 vs new_users 2414 (excl internal);
 # active_users 2100 vs actives 2180 (incl internal).
 
@@ -14,13 +14,13 @@ cases:
     family: recurring_revenue
     question: "What is our current recurring revenue?"
     expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
-             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
   - id: e05mf_rec_howmuch
     tier: flagged
     family: recurring_revenue
     question: "How much recurring revenue do we have from active subscriptions?"
     expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
-             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
 
   - id: e05mf_habits_keeping
     tier: flagged
@@ -79,4 +79,4 @@ cases:
     family: paying_users
     question: "How many paying users do we have right now?"
     expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
-             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}

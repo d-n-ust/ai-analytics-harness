@@ -34,17 +34,25 @@ which collapses coverage), so the claim lives in all three moving the right way 
 - **Balanced accuracy** ↑ — mean(correct on answerable, refused on unanswerable); one number combining
   "answers right" and "abstains right," immune to the answerable/unanswerable mix.
 
-**Supporting indicators — the cause and the trade (diagnostic, not headline).**
-- **Wrong-metric rate** (study 01) / **wrong-construction rate** (study 02) — the mechanism behind SER.
-  Study 01: of answered questions, the share where the metric the agent *actually queried* ≠ the
-  governed-correct one, read from the trace. It is **higher than SER** — a wrong pick that coincidentally
-  returns the right number is scored correct, so SER undercounts the selection problem. preflight's
-  findings should predict THIS.
+**Supporting indicators — they DECOMPOSE the SER by cause.** The north star stays root-cause-agnostic:
+a wrong number believed is a harm no matter why, so we never drop questions to lower SER (that would
+hide real failures). Instead the two rates below EXPLAIN a silent error, and together roughly sum to
+the flagged SER. This is the project's two-mode split, measured:
+- **Wrong-selection rate — Mode 1 (selection), preflight's lane.** The agent grounded on the WRONG
+  confusable thing. In a governed layer that is a wrong *metric* (read from the `query_metric` call ≠
+  the governed-correct one); in raw SQL (study 02) it is a wrong *column / definition* — e.g. filtering
+  on `is_test` when the answer needs `is_internal` — recovered from the SQL. This is the harm preflight's
+  findings predict; the fix should drive it toward 0. It can differ from SER both ways — a wrong pick
+  that coincidentally returns the right number is a wrong selection SER misses.
+- **Wrong-construction rate — Mode 2 (construction), the OTHER lane.** The *right* grounding, built
+  wrong: a mishandled time filter, a wrong grain, a fan-trap, a semi-additive measure summed over time.
+  preflight does not address this — it is the validators' lane — and on a live layer it can be a large,
+  near-constant background harm. Reporting it keeps SER honest and shows preflight fixes one of two harms.
 - **Correct-refusal rate** and **over-abstention rate** — the abstention behaviour behind coverage:
   of unanswerable questions the share correctly refused, and of answerable questions the share refused
   or clarified unnecessarily (catches an agent that clarifies on a clean layer to look safe).
-- **Per-family SER + wrong-metric rate** — attribution: *which* ambiguities bite, so the triad is never
-  read as a flat average.
+- **Per-family** SER, wrong-selection, and wrong-construction — attribution: *which* ambiguities bite,
+  so the triad is never read as a flat average.
 
 The experiment's claim is stated on the triad (SER down, coverage held, balanced accuracy up),
 explained by the cause (wrong-metric rate, dose-responsive to the static finding count), and made
