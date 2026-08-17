@@ -14,9 +14,11 @@ from collections import Counter
 
 from .adapters import load_env
 from .detect import detect_collisions
+from .metricflow import load_metricflow
 from .model import DANGER_RANK, Finding
 
 _LEVELS = ("high", "medium", "low")
+_LOADERS = {"env": load_env, "metricflow": load_metricflow}
 
 
 def format_json(findings: list[Finding]) -> str:
@@ -51,7 +53,9 @@ def build_parser() -> argparse.ArgumentParser:
                                      description="Static, cross-layer ambiguity detection for governed analytics grounding.")
     sub = parser.add_subparsers(dest="command", required=True)
     scan = sub.add_parser("scan", help="scan an environment directory for grounding collisions")
-    scan.add_argument("env_dir", help="directory holding semantic/, warehouse/, docs/ artifacts")
+    scan.add_argument("env_dir", help="directory (or file) to scan")
+    scan.add_argument("--dialect", choices=tuple(_LOADERS), default="env",
+                      help="artifact layout: 'env' (semantic/warehouse/docs) or 'metricflow' (dbt MetricFlow YAML)")
     scan.add_argument("--gate", choices=("auto", "lexical", "embeddings"), default="auto",
                       help="confusability gate (default: auto — embeddings if installed, else lexical)")
     scan.add_argument("--format", choices=("text", "json"), default="text", dest="fmt",
@@ -65,7 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    findings = detect_collisions(load_env(args.env_dir), gate=args.gate)
+    findings = detect_collisions(_LOADERS[args.dialect](args.env_dir), gate=args.gate)
     threshold = DANGER_RANK[args.min_danger]
     findings = [f for f in findings if DANGER_RANK[f.danger] <= threshold]
     print(format_json(findings) if args.fmt == "json" else format_text(findings))

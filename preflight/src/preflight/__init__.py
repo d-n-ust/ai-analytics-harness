@@ -29,6 +29,7 @@ from .adapters import (
 )
 from .detect import classify, detect_collisions, is_plumbing, partition, rank
 from .gate import make_gate
+from .metricflow import facts_from_metricflow, load_metricflow
 from .model import (
     Classification,
     DetectConfig,
@@ -47,6 +48,8 @@ __all__ = [
     "load_env", "adapt_semantic", "adapt_warehouse", "adapt_docs", "adapt_queries",
     # adapters (pure)
     "facts_from_semantic", "facts_from_warehouse", "facts_from_docs", "facts_from_queries",
+    # dbt MetricFlow dialect
+    "load_metricflow", "facts_from_metricflow",
     # detector internals, exposed for composition/testing
     "classify", "partition", "rank", "is_plumbing", "make_gate",
 ]
