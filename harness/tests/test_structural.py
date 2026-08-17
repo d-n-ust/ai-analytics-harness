@@ -168,12 +168,15 @@ def test_the_engine_never_imports_the_apparatus():
     """
     import ast
 
-    # Discovered, not listed. A hardcoded tuple checks the four packages that existed when it was
-    # written and silently ignores the fifth.
+    # Discovered, not listed. A hardcoded tuple checks the packages that existed when it was written
+    # and silently ignores any added (or, as here, extracted) later.
     root = harness_paths.ROOT / "engine" / "src"
     engine = tuple(sorted(d.name for d in root.iterdir()
                           if d.is_dir() and (d / "__init__.py").exists()))
-    _check(len(engine) >= 4, f"expected the engine's packages under {root}, found {engine}")
+    # Floor was 4 before `warehouse` was extracted to its own top-level package (it is a leaf and
+    # imports nothing in-repo, so the "no apparatus imports" rule is trivially met there). agent /
+    # semantic / evidence remain here; the floor only guards that discovery found the packages.
+    _check(len(engine) >= 3, f"expected the engine's packages under {root}, found {engine}")
     # `harness_paths` is in this set because the engine must not know it lives beside an
     # apparatus, let alone where that apparatus keeps its runs.
     apparatus = {"cli", "evals", "experiments", "scratchpad", "tests", "harness_paths"}

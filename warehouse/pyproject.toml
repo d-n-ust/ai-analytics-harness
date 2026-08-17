@@ -1,0 +1,32 @@
+[project]
+name = "ai-analytics-warehouse"
+version = "0.1.0"
+description = "The synthetic star warehouse: schema, deterministic data generation, and the live DuckDB query interface the agent reads."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+# The read path — the query interface the agent uses — needs only DuckDB. This is the leaf of the
+# engine's dependency graph: it imports nothing else in the repository.
+dependencies = [
+    "duckdb>=1.1",
+]
+
+[project.optional-dependencies]
+# The deterministic data generator (generate.py). Only whoever regenerates the warehouse needs it;
+# an agent that merely reads the DuckDB does not, so it stays optional and out of the read path.
+fixtures = ["pandas>=2.2", "numpy>=1.26", "faker>=30"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# src layout, matching the engine: `src/warehouse` maps to the module `warehouse`, so extracting the
+# package here did not change a single `import warehouse` anywhere in the codebase.
+[tool.hatch.build.targets.wheel]
+packages = ["src/warehouse"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src"]
+exclude = ["*.duckdb", "*.duckdb.wal"]
