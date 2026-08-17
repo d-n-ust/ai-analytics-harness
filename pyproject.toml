@@ -17,6 +17,7 @@ authors = [{ name = "Dmitry Ustimov" }]
 dependencies = [
     "ai-analytics-engine",
     "ai-analytics-harness",
+    "ai-analytics-semantic",
     "ai-analytics-warehouse",
 ]
 
@@ -25,7 +26,7 @@ dependencies = [
 package = false
 
 [tool.uv.workspace]
-members = ["engine", "harness", "warehouse"]
+members = ["engine", "harness", "warehouse", "semantic"]
 # preflight/ is excluded for the same reason as troodos/: it is a standalone, extraction-ready
 # package with a heavier dependency closure (sentence-transformers pulls torch) that must not land
 # in the shared engine+harness environment. It keeps its own lockfile and is consumed as a path
@@ -35,6 +36,7 @@ exclude = ["troodos", "preflight"]
 [tool.uv.sources]
 ai-analytics-engine = { workspace = true }
 ai-analytics-harness = { workspace = true }
+ai-analytics-semantic = { workspace = true }
 ai-analytics-warehouse = { workspace = true }
 
 [dependency-groups]
@@ -60,7 +62,7 @@ extend-exclude = ["harness/experiments", "results", "runs"]
 # one of them as third-party — isort then reshuffles every import block in the repo, and the
 # migration diff disappears into the noise. Set structurally here; the known-first-party list
 # below is the belt to the same braces.
-src = [".", "engine/src", "harness", "preflight/src", "warehouse/src"]
+src = [".", "engine/src", "harness", "preflight/src", "warehouse/src", "semantic/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

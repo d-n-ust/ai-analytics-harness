@@ -17,6 +17,7 @@ resolution-markers = [
 members = [
     "ai-analytics-engine",
     "ai-analytics-harness",
+    "ai-analytics-semantic",
     "ai-analytics-warehouse",
     "ai-analytics-workspace",
 ]
@@ -26,6 +27,7 @@ name = "ai-analytics-engine"
 version = "0.1.0"
 source = { editable = "engine" }
 dependencies = [
+    { name = "ai-analytics-semantic" },
     { name = "ai-analytics-warehouse" },
     { name = "duckdb" },
     { name = "pydantic" },
@@ -65,6 +67,7 @@ openai = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ai-analytics-semantic", editable = "semantic" },
     { name = "ai-analytics-warehouse", editable = "warehouse" },
     { name = "anthropic", marker = "extra == 'all'", specifier = ">=0.40" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.40" },
@@ -118,6 +121,39 @@ dev = [
 metricflow = [{ name = "metricflow", specifier = ">=0.211.0" }]
 
 [[package]]
+name = "ai-analytics-semantic"
+version = "0.1.0"
+source = { editable = "semantic" }
+dependencies = [
+    { name = "ai-analytics-warehouse" },
+    { name = "duckdb" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+embeddings = [
+    { name = "openai" },
+]
+metricflow = [
+    { name = "metricflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ai-analytics-warehouse", editable = "warehouse" },
+    { name = "duckdb", specifier = ">=1.1" },
+    { name = "metricflow", marker = "extra == 'metricflow'", specifier = ">=0.211.0" },
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "openai", marker = "extra == 'embeddings'", specifier = ">=1.40" },
+    { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "pyyaml", specifier = ">=6" },
+]
+provides-extras = ["metricflow", "embeddings"]
+
+[[package]]
 name = "ai-analytics-warehouse"
 version = "0.1.0"
 source = { editable = "warehouse" }
@@ -149,6 +185,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "ai-analytics-engine" },
     { name = "ai-analytics-harness" },
+    { name = "ai-analytics-semantic" },
     { name = "ai-analytics-warehouse" },
 ]
 
@@ -165,6 +202,7 @@ metricflow = [
 requires-dist = [
     { name = "ai-analytics-engine", editable = "engine" },
     { name = "ai-analytics-harness", editable = "harness" },
+    { name = "ai-analytics-semantic", editable = "semantic" },
     { name = "ai-analytics-warehouse", editable = "warehouse" },
 ]
 

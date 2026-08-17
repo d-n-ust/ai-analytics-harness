@@ -105,19 +105,20 @@ from pathlib import Path
 
 import yaml
 
+import harness_paths
 from agent.grounding import build_grounding
 from agent.guardrails import LADDER, parse_cell
 from agent.loop import run_agent
-from agent.protocol import PARTS as PROTOCOL_PARTS, Protocol
-from agent.provenance import Expectation
 from agent.models import DEFAULT_MODEL
+from agent.protocol import PARTS as PROTOCOL_PARTS
+from agent.protocol import Protocol
+from agent.provenance import Expectation
 from agent.providers import get_model, get_verifier
 from agent.rungs import capabilities
 from evals.gold import compute_gold, load_questions
 from evals.grade import grade
 from semantic.semantic import SPEC_PATH, SemanticLayer
 from warehouse.warehouse import cursor as warehouse_cursor
-import harness_paths
 from warehouse.warehouse import open_warehouse, set_star
 
 ROOT = harness_paths.ROOT
@@ -792,9 +793,10 @@ def _resolve_declared(declared: str) -> Path:
     file.
     """
     moved = {
-        # engine packages
-        "semantic/": "engine/src/semantic/",
-        "warehouse/": "engine/src/warehouse/",
+        # extracted to their own top-level packages (agent -> semantic -> warehouse)
+        "semantic/": "semantic/src/semantic/",
+        "warehouse/": "warehouse/src/warehouse/",
+        # still engine packages
         "agent/": "engine/src/agent/",
         "evidence/": "engine/src/evidence/",
         "context/": "engine/src/agent/context/",
