@@ -42,8 +42,8 @@ ORDER = ["small_before", "small_after", "high_before", "high_after"]
 RUNG = 3  # star + governed semantic layer — the rung where metric selection is the agent's job
 
 
-def load_cases() -> list[dict]:
-    cases = yaml.safe_load((HERE / "cases.yml").read_text())["cases"]
+def load_cases(study_dir: pathlib.Path) -> list[dict]:
+    cases = yaml.safe_load((study_dir / "cases.yml").read_text())["cases"]
     for c in cases:
         _validate(c, "cases.yml")  # same validator the frozen set uses, so expected_refuse is set right
     return cases
@@ -139,9 +139,13 @@ def main() -> None:
     ap.add_argument("--model", default="claude-haiku-4-5")
     ap.add_argument("--reps", type=int, default=1, help="repetitions per question (averages stochasticity)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
+    ap.add_argument("--study", default="study_01_governed_layer", help="which study directory to run")
     args = ap.parse_args()
 
-    cases = load_cases()
+    global LAYERS
+    study_dir = HERE / args.study
+    LAYERS = study_dir / "layers"
+    cases = load_cases(study_dir)
     con = open_warehouse(create_star_views=True)
     set_star(con, capabilities(RUNG).star)
     golds = compute_gold(con, cases)
@@ -153,7 +157,7 @@ def main() -> None:
 
     # Persist after EACH layer and merge into any existing result, so a long run (reps x layers) that
     # is interrupted keeps every completed layer, and layers run in separate invocations accumulate.
-    out = HERE / ("benefit_result_mock.json" if args.mock else "benefit_result.json")
+    out = study_dir / ("benefit_result_mock.json" if args.mock else "benefit_result.json")
     report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
     report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps})
     for name in names:

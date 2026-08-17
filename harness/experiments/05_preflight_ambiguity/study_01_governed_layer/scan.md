@@ -1,10 +1,10 @@
 ```
 
-  PREFLIGHT AMBIGUITY MAP          gate: embeddings
+  PREFLIGHT AMBIGUITY MAP          gate: lexical
   ────────────────────────────────────────────────────────────
   small_before     1 confusion    (18 facts · 1 high 0 med 0 low)
   small_after      0 confusions   (17 facts · 0 high 0 med 0 low)
-  high_before     18 confusions   (68 facts · 7 high 2 med 9 low)
+  high_before     11 confusions   (68 facts · 4 high 2 med 5 low)
   high_after       0 confusions   (39 facts · 0 high 0 med 0 low)
   ● high   ● medium   ● low
 
@@ -18,18 +18,14 @@
 ════ high_before ═══════════════════════════════════════════
 
   CROSS-LAYER  · a term grounded two ways, in two places
-    ● L NAME_COLLISION         value moment  ~  real_value_moments  ~  value_moments
+    ● L NAME_COLLISION         value moment  ~  value_moments
         high_before/docs.md:15         ## value moment
         high_before/docs.md:19         ## value moment
-        high_before/semantic.yml:22    real_value_moments:                              # SCOPE_TRAP vs value_moments (NOT is_internal)
         high_before/semantic.yml:15    value_moments:                                   # bare name — the trap
     ● L NAME_COLLISION         active user  ~  active_users
         high_before/docs.md:7          ## active user
         high_before/docs.md:11         ## active user
         high_before/semantic.yml:73    active_users:
-    ● L NAME_COLLISION         revenue  ~  net_revenue
-        high_before/docs.md:23         ## revenue
-        high_before/semantic.yml:151   net_revenue:
 
   DOCUMENTATION  · grounds grain · segments
     ● H DEFINITION_DIVERGENCE  active user
@@ -47,46 +43,26 @@
         high_before/warehouse.sql:55   moments INT                  -- 'moments' a FOURTH time: now overloaded across enough tables to flag
 
   SEMANTIC LAYER  · grounds additive · higher-level metrics
-    ● H GRAIN_MISMATCH         dau  ~  mau
-        high_before/semantic.yml:96    dau:                                             # GRAIN_MISMATCH vs mau: distinct count is semi-additive
-        high_before/semantic.yml:105   mau:
-    ● H SCOPE_TRAP             android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  total_moments  ~  value_moments  +1
+    ● H SCOPE_TRAP             android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  value_moments  ~  weekly_value_moments
         high_before/semantic.yml:45    android_value_moments:
         high_before/semantic.yml:37    ios_value_moments:                               # SIBLING vs android (incomparable scopes)
         high_before/semantic.yml:62    monthly_value_moments:
         high_before/semantic.yml:22    real_value_moments:                              # SCOPE_TRAP vs value_moments (NOT is_internal)
-        high_before/semantic.yml:30    total_moments:                                   # DUPLICATE of value_moments
         high_before/semantic.yml:15    value_moments:                                   # bare name — the trap
         high_before/semantic.yml:53    weekly_value_moments:                            # GRAIN_MISMATCH vs monthly (same measure, diff grain)
-    ● H SCOPE_TRAP             active_users  ~  actives  ~  engaged_users
+    ● H SCOPE_TRAP             active_users  ~  actives
         high_before/semantic.yml:73    active_users:
         high_before/semantic.yml:81    actives:                                         # SCOPE_TRAP vs active_users (drops NOT is_internal)
-        high_before/semantic.yml:114   engaged_users:                                   # NAME_COLLISION / concept vs active_users
-    ● H SCOPE_TRAP             gross_revenue  ~  net_revenue
-        high_before/semantic.yml:145   gross_revenue:                                   # SCOPE_TRAP / concept vs net_revenue
-        high_before/semantic.yml:151   net_revenue:
-    ● H SCOPE_TRAP             new_signups  ~  new_users
-        high_before/semantic.yml:160   new_signups:
-        high_before/semantic.yml:174   new_users:                                       # SCOPE_TRAP vs signups (NOT is_internal)
     ● M GRAIN_MISMATCH         monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
         high_before/semantic.yml:62    monthly_value_moments:
         high_before/semantic.yml:22    real_value_moments:                              # SCOPE_TRAP vs value_moments (NOT is_internal)
         high_before/semantic.yml:53    weekly_value_moments:                            # GRAIN_MISMATCH vs monthly (same measure, diff grain)
-    ● L DUPLICATE              total_moments  ~  value_moments
-        high_before/semantic.yml:30    total_moments:                                   # DUPLICATE of value_moments
-        high_before/semantic.yml:15    value_moments:                                   # bare name — the trap
     ● L DUPLICATE              active_users  ~  monthly_active_users
         high_before/semantic.yml:73    active_users:
         high_before/semantic.yml:88    monthly_active_users:                            # DUPLICATE of active_users
-    ● L DUPLICATE              net_revenue  ~  recurring_revenue
-        high_before/semantic.yml:151   net_revenue:
-        high_before/semantic.yml:131   recurring_revenue:                               # CONCEPT_FORK vs mrr (same base/agg, diff column)
     ● L DUPLICATE              new_signups  ~  signups
         high_before/semantic.yml:160   new_signups:
         high_before/semantic.yml:167   signups:                                         # DUPLICATE of new_signups
-    ● L NAME_COLLISION         monthly_recurring_revenue  ~  recurring_revenue
-        high_before/semantic.yml:138   monthly_recurring_revenue:                       # DUPLICATE of mrr
-        high_before/semantic.yml:131   recurring_revenue:                               # CONCEPT_FORK vs mrr (same base/agg, diff column)
     ● L SIBLING                android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
         high_before/semantic.yml:45    android_value_moments:
         high_before/semantic.yml:37    ios_value_moments:                               # SIBLING vs android (incomparable scopes)

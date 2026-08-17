@@ -252,7 +252,12 @@ def main() -> None:
     ap.add_argument("--no-color", action="store_true", help="plain output even to a terminal")
     ap.add_argument("--detail", action="store_true",
                     help="cite each finding to file:line and show the offending source line")
+    ap.add_argument("--study", default="study_01_governed_layer", help="which study's layers/ to scan")
     args = ap.parse_args()
+
+    global LAYERS
+    study_dir = HERE / args.study
+    LAYERS = study_dir / "layers"
 
     ce = _mk_color(sys.stderr.isatty() and not args.no_color)
 
@@ -299,7 +304,7 @@ def main() -> None:
     on = sys.stdout.isatty() and not args.no_color
     print(_report(results, args.gate, on=on, detail=args.detail))
     # the committed record is always the full, cited version
-    (HERE / "scan.md").write_text("```\n" + _report(results, args.gate, on=False, detail=True) + "\n```\n")
+    (study_dir / "scan.md").write_text("```\n" + _report(results, args.gate, on=False, detail=True) + "\n```\n")
 
 
 if __name__ == "__main__":

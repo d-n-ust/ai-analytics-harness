@@ -28,4 +28,4 @@ __pycache__/
 .DS_Store
 
 # Experiment 05 mock-run output (wiring validation only)
-harness/experiments/05_preflight_ambiguity/benefit_result_mock.json
+harness/experiments/05_preflight_ambiguity/**/benefit_result_mock.json
