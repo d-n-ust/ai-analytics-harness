@@ -192,13 +192,22 @@ def _warehouse_synonym_edges(warehouse: list[GroundingFact], similarity: Similar
     return edges
 
 
+def _is_key(label: str) -> bool:
+    """A join / surrogate key: `id` or a `<entity>_id` foreign key. The same key appearing across a
+    star's fact tables is expected wiring, not an overloaded meaning, so it is excluded from the
+    overload check. It stays visible to the near-synonym check, where `user_id` vs `customer_id` is a
+    real rename collision."""
+    lbl = label.lower()
+    return lbl == "id" or lbl.endswith("_id")
+
+
 def _overloaded_column_findings(warehouse: list[GroundingFact], config: DetectConfig) -> list[Finding]:
-    """A column name that appears in many tables may mean different things in each. Cite one line per
-    table (the column's own line in each) rather than a single synthetic item, so the reader sees
-    exactly where each occurrence is."""
+    """A non-key column name that appears in many tables may mean different things in each. Cite one
+    line per table (the column's own line in each) rather than a single synthetic item, so the reader
+    sees exactly where each occurrence is."""
     occ: dict[str, list[GroundingFact]] = defaultdict(list)
     for f in warehouse:
-        if f.kind == "column" and not is_plumbing(f.label):
+        if f.kind == "column" and not is_plumbing(f.label) and not _is_key(f.label):
             occ[f.label].append(f)
     out: list[Finding] = []
     for label, facts in sorted(occ.items()):

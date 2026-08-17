@@ -47,3 +47,10 @@ CREATE TABLE fct_daily (
     moments INT,                 -- 'moments' a THIRD time, different table
     amount NUMERIC               -- generic 'amount' overloaded (revenue? spend? something else?)
 );
+
+-- A weekly rollup the growth team added later, without deprecating the daily ones.
+CREATE TABLE agg_weekly_days (
+    user_id BIGINT,
+    week DATE,                   -- a FOURTH name for the grain column (week)
+    moments INT                  -- 'moments' a FOURTH time: now overloaded across enough tables to flag
+);

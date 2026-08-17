@@ -3,7 +3,7 @@
   PREFLIGHT AMBIGUITY MAP          gate: embeddings
   ────────────────────────────────────────────────────────────
   small_before     1 confusion    (17 facts · 1 high 0 med 0 low)
-  high_before     18 confusions   (63 facts · 7 high 2 med 9 low)
+  high_before     18 confusions   (67 facts · 7 high 2 med 9 low)
   ● high   ● medium   ● low
 
 ════ small_before ══════════════════════════════════════════
@@ -38,12 +38,11 @@
         high_before/docs.md:19         ## value moment
 
   WAREHOUSE  · grounds entity · measure
-    ● M NAME_COLLISION         user_id
-        high_before/warehouse.sql:7    user_id BIGINT,
-        high_before/warehouse.sql:18   user_id BIGINT,
-        high_before/warehouse.sql:27   user_id BIGINT,
-        high_before/warehouse.sql:36   user_id BIGINT,
-        high_before/warehouse.sql:45   user_id BIGINT,
+    ● M NAME_COLLISION         moments
+        high_before/warehouse.sql:19   moments INT,                  -- value moments ...
+        high_before/warehouse.sql:29   moments INT,                 -- 'moments' overloaded: also in fct_events and fct_daily
+        high_before/warehouse.sql:47   moments INT,                 -- 'moments' a THIRD time, different table
+        high_before/warehouse.sql:55   moments INT                  -- 'moments' a FOURTH time: now overloaded across enough tables to flag
 
   SEMANTIC LAYER  · grounds additive · higher-level metrics
     ● H GRAIN_MISMATCH         dau  ~  mau

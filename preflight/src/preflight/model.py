@@ -136,7 +136,7 @@ class DetectConfig:
     name_collision: float = 0.82       # min similarity for a plain read-alike NAME_COLLISION
     definition_overlap: float = 0.6    # max doc-prose Jaccard before two definitions "diverge"
     min_shared_facets: int = 2         # meaning facets that must agree to call it the same measure
-    overloaded_tables: int = 4         # a column name in >= this many tables is "overloaded"
+    overloaded_tables: int = 4         # a non-key column in >= this many tables is "overloaded" (keys excluded)
 
 
 DEFAULT_CONFIG = DetectConfig()

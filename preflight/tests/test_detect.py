@@ -126,6 +126,21 @@ def test_detect_clusters_concept_fork_and_flags_overloaded_columns():
     assert overloaded.items[0].label == "amount"
 
 
+def test_overloaded_check_excludes_join_keys_but_flags_a_smeared_measure():
+    # a user_id foreign key in five fact tables is expected star-schema wiring, not an overload
+    keys = [fact(f"wh:t{i}.user_id", "user_id", layer="warehouse", kind="column", base=f"t{i}")
+            for i in range(5)]
+    # a bare 'moments' measure smeared across four tables IS the overload pattern (default bar = 4)
+    measures = [fact(f"wh:m{i}.moments", "moments", layer="warehouse", kind="column", base=f"m{i}")
+                for i in range(4)]
+
+    findings = detect_collisions(keys + measures, gate="lexical", config=DetectConfig(gate=0.0))
+    overloaded = [f for f in findings if f.type == "NAME_COLLISION" and f.danger == "medium"]
+    labels = {f.items[0].label for f in overloaded}
+    assert "moments" in labels          # the smeared measure flags
+    assert "user_id" not in labels      # the shared key does not, even across five tables
+
+
 def test_findings_are_json_serialisable_via_as_dicts():
     findings = detect_collisions(
         [fact("sl:a", "gross_revenue", entity="order", agg="sum", base="orders", measure="g"),
