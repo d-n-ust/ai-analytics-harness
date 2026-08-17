@@ -22,11 +22,9 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from semantic.semantic import SemanticError, SemanticLayer
-from semantic.tree import Causality, MetricTree, TreeError
-from warehouse.config import NAMED_PERIODS, TIME_GRAINS
-from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
-from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
+from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeError
+from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
+from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text
 
 from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure

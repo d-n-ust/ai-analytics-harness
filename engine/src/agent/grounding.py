@@ -12,9 +12,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 
-from semantic.engine import check_compatible
-from semantic.semantic import SemanticLayer
-from semantic.tree import MetricTree
+from semantic import MetricTree, SemanticLayer, check_compatible
 
 from .guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
@@ -56,7 +54,7 @@ class Grounding:
         comparing documented tables against undocumented ones hashed the same in both arms — the
         treatment was the schema text, and the fingerprint could not see it. Caught by the guard
         that exists to catch it, one surface later than it should have been."""
-        from warehouse.warehouse import schema_text
+        from warehouse import schema_text
 
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
         if self.semantic is not None:

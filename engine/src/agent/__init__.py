@@ -48,7 +48,7 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     points apparatus -> engine, which is what lets the engine be installed, tested, and one day
     shipped without the harness. The alternative — guarding the import — would leave the name
     unbound at the call site below and raise NameError instead of degrading.""" 
-    from warehouse.warehouse import open_warehouse, set_star
+    from warehouse import open_warehouse, set_star
 
     from .grounding import RUNG_NAMES, build_grounding
     from .loop import run_agent
