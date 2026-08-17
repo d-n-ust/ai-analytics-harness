@@ -201,7 +201,8 @@ def main() -> None:
     # Persist after EACH layer and merge into any existing result, so a long run (reps x layers) that
     # is interrupted keeps every completed layer, and layers run in separate invocations accumulate.
     suffix = "_mf" if mf else ""
-    out = study_dir / (f"benefit_result{suffix}_mock.json" if args.mock else f"benefit_result{suffix}.json")
+    out = study_dir / (f"benefit_result{suffix}_mock.json" if args.mock
+                       else f"benefit_result{suffix}__{args.model}.json")
     report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
     report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps,
                    "engine": args.engine})
