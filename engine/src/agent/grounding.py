@@ -56,6 +56,8 @@ class Grounding:
         that exists to catch it, one surface later than it should have been."""
         from warehouse import schema_text
 
+        from .rungs import capabilities
+
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
         if self.semantic is not None:
             surface += "\n" + self.semantic.list_metrics_text()
@@ -64,7 +66,7 @@ class Grounding:
             # The arm's SCHEMA must be passed, or this reads the shared warehouse and misses the
             # treatment entirely. It did: two arms differing only in their table comments hashed
             # identically, because comments live in the arm's own schema and this asked about none.
-            surface += "\n" + schema_text(con, self.rung, getattr(self.toolbox, "schema", None))
+            surface += "\n" + schema_text(con, capabilities(self.rung).star, getattr(self.toolbox, "schema", None))
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 

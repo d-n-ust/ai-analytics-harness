@@ -191,27 +191,27 @@ def cursor(con):
     return cur
 
 
-def visible_tables(rung: float) -> tuple[str, ...]:
-    """Which tables exist at this rung — ASKED of the rung, never inferred from its number.
+def visible_tables(star: bool) -> tuple[str, ...]:
+    """Which tables exist: the clean star set (star=True) or the raw messy set (star=False).
 
-    This read `rung <= 1` until rung 1.5 was added, at which point a documented-but-messy rung
-    silently showed the clean star tables: the number was larger, so the comparison said star. The
-    ladder is not monotonic and a rung number is not a statement about capability."""
-    from agent.rungs import capabilities
-    return STAR_TABLES if capabilities(rung).star else RAW_TABLES
+    Takes the CAPABILITY, not a rung number — mapping a rung to `capabilities(rung).star` is the
+    caller's job (agent.rungs), so this package does not depend on the ladder. The old `rung <= 1`
+    test silently showed the clean tables at rung 1.5 because the number was larger; the ladder is
+    not monotonic and a rung number is not a statement about capability."""
+    return STAR_TABLES if star else RAW_TABLES
 
 
 # --------------------------------------------------------------------------- #
 # Introspection helpers used by the agent's tools
 # --------------------------------------------------------------------------- #
-def _tables_in_scope(con, rung, schema: str | None):
-    """The tables the agent may see: the arm's own schema when it has one, otherwise the rung's set.
+def _tables_in_scope(con, star, schema: str | None):
+    """The tables the agent may see: the arm's own schema when it has one, otherwise the base set.
 
     Asked of the DATABASE when a schema exists, so an arm that declares a view gets it listed
     without anything restating the table list. The hardcoded tuples remain only for studies that
     share the warehouse."""
     if schema is None:
-        return visible_tables(rung)
+        return visible_tables(star)
     # `agg_*` are the semantic layer's own inputs. star.sql has always said they "are internal to
     # the semantic layer and are not shown to the agent as tables", and before per-arm schemas that
     # held because STAR_TABLES listed the rest. An arm's schema must CONTAIN them — the layer
@@ -241,8 +241,8 @@ def _comments(con, schema: str | None) -> tuple[dict, dict]:
     return tables, cols
 
 
-def schema_text(con, rung: int, schema: str | None = None) -> str:
-    """A compact 'table(col type, ...)' listing of everything visible at this rung.
+def schema_text(con, star: bool, schema: str | None = None) -> str:
+    """A compact 'table(col type, ...)' listing of everything visible (star or raw table set).
 
     At a DOCUMENTED rung each table also carries its one-line description — the whole of the
     matrix's `documented` column, and the only thing that separates rung 1 from 1.5. Nothing is
@@ -250,7 +250,7 @@ def schema_text(con, rung: int, schema: str | None = None) -> str:
     """
     table_docs, column_docs = _comments(con, schema)
     lines = []
-    for t in _tables_in_scope(con, rung, schema):
+    for t in _tables_in_scope(con, star, schema):
         cols = con.execute(f"DESCRIBE {t}").fetchall()  # (name, type, ...)
         coltxt = ", ".join(f"{c[0]} {c[1].lower()}" for c in cols)
         lines.append(f"{t}({coltxt})")
@@ -261,9 +261,9 @@ def schema_text(con, rung: int, schema: str | None = None) -> str:
     return "\n".join(lines)
 
 
-def describe_table(con, name: str, rung: int, schema: str | None = None) -> str:
+def describe_table(con, name: str, star: bool, schema: str | None = None) -> str:
     """Columns + up to 3 sample rows for one visible table."""
-    allowed = _tables_in_scope(con, rung, schema)
+    allowed = _tables_in_scope(con, star, schema)
     if name not in allowed:
         return f"Error: unknown table {name!r}. Available: {', '.join(allowed)}"
     cols = con.execute(f"DESCRIBE {name}").fetchall()

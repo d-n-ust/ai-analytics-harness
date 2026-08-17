@@ -30,6 +30,7 @@ from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
 from .outcomes import REASON_MEANINGS, REFUSAL_REASONS
 from .protocol import Protocol
+from .rungs import capabilities  # rung -> capabilities mapping stays here (the ladder's owner)
 
 _ANSWER = {
     "name": "answer",
@@ -277,11 +278,11 @@ def _verdict(ok: bool, detail: str) -> str:
 
 
 def _get_schema(tb, args) -> ToolResult:
-    return ToolResult(schema_text(tb.con, tb.rung, getattr(tb, "schema", None)))
+    return ToolResult(schema_text(tb.con, capabilities(tb.rung).star, getattr(tb, "schema", None)))
 
 
 def _describe_table(tb, args) -> ToolResult:
-    return ToolResult(describe_table(tb.con, args["table"], tb.rung,
+    return ToolResult(describe_table(tb.con, args["table"], capabilities(tb.rung).star,
                                      getattr(tb, "schema", None)))
 
 
