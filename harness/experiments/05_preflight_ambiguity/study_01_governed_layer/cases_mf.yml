@@ -1,0 +1,82 @@
+# Study 01 on dbt MetricFlow — question set (structural traps, revenue fixed to ONE governed metric).
+#
+# Same design as cases.yml (structural whole-population name-match traps), retargeted to the MetricFlow
+# layer. The revenue fix (point 1) leaves ONE governed revenue metric, `mrr`; the muddy net_revenue/mrr
+# overlap is gone, so there is no gross_net family here. Gold is a deterministic gold_sql oracle.
+#
+# Verified gold vs sprawl-trap on MetricFlow: mrr 2685 vs recurring_revenue 11448 (4.3x);
+# active_habits 6357 vs total_habits 7467 (17%); new_signups 2500 vs new_users 2414 (excl internal);
+# active_users 2100 vs actives 2180 (incl internal).
+
+cases:
+  - id: e05mf_rec_current
+    tier: flagged
+    family: recurring_revenue
+    question: "What is our current recurring revenue?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+  - id: e05mf_rec_howmuch
+    tier: flagged
+    family: recurring_revenue
+    question: "How much recurring revenue do we have from active subscriptions?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+
+  - id: e05mf_habits_keeping
+    tier: flagged
+    family: habits
+    question: "How many habits are our users keeping up with these days?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+  - id: e05mf_habits_active
+    tier: flagged
+    family: habits
+    question: "How many active habits do we have across the app?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+
+  - id: e05mf_newusers_total
+    tier: flagged
+    family: new_users
+    question: "How many people have signed up in total?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users"}
+  - id: e05mf_newusers_apr
+    tier: flagged
+    family: new_users
+    question: "How many new users signed up in April 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-04-01' AND signup_date<DATE '2026-05-01'"}
+
+  - id: e05mf_actives_total
+    tier: flagged
+    family: actives
+    question: "How many active users do we have across the whole product?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal"}
+
+  - id: e05mf_value_moments_jun
+    tier: flagged
+    family: value_moments
+    question: "How many value moments were completed across all accounts in June 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+
+  - id: e05mf_marketing_jun
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in June 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05mf_marketing_may
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in May 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
+  - id: e05mf_paying_users
+    tier: clean
+    family: paying_users
+    question: "How many paying users do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}

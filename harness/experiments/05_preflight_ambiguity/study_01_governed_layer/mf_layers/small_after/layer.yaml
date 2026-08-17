@@ -1,0 +1,103 @@
+# small_after / high_after — the fix: real_value_moments is removed; 'real users' is a
+# query-time filter on user__is_internal, MetricFlow's idiomatic scope-as-argument. 0 traps.
+# Revenue fix (point 1): ONE governed revenue metric, `mrr`. No net_revenue/mrr overlap.
+semantic_model:
+  name: user_activity
+  description: "One row is one user-day of activity."
+  node_relation: {schema_name: _star, alias: agg_active_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: platform, type: categorical}
+    - {name: country, type: categorical}
+  measures:
+    - {name: moments, agg: sum, expr: moments}
+    - {name: active_user_count, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: users
+  description: "The user dimension: one row is one user (a signup)."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities: [{name: user, type: primary, expr: user_id}]
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+  measures:
+    - {name: signup_count, agg: count, expr: user_id}
+---
+semantic_model:
+  name: subscriptions
+  description: "One row is one subscription."
+  node_relation: {schema_name: _star, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: plan, type: categorical}
+    - {name: is_active, type: categorical}
+  measures:
+    - {name: mrr_amount, agg: sum, expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: habits
+  description: "One row is one habit a user created."
+  node_relation: {schema_name: _star, alias: dim_habits}
+  defaults: {agg_time_dimension: created_date}
+  entities: [{name: habit, type: primary, expr: habit_id}]
+  dimensions:
+    - {name: created_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_archived, type: categorical}
+    - {name: category, type: categorical}
+  measures:
+    - {name: habit_count, agg: count, expr: habit_id}
+---
+semantic_model:
+  name: marketing
+  description: "One row is one channel-day of marketing spend."
+  node_relation: {schema_name: _star, alias: fct_marketing_spend}
+  defaults: {agg_time_dimension: spend_date}
+  entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
+  dimensions:
+    - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: spend_amount, agg: sum, expr: spend}
+---
+metric: {name: value_moments, description: "Value moments (completed habits) in the period, all accounts.", type: simple, type_params: {measure: moments}}
+---
+metric:
+  name: active_users
+  description: "Distinct real users active in the period (excludes internal/test)."
+  type: simple
+  type_params: {measure: active_user_count}
+  filter: "{{ Dimension('user__is_internal') }} = false"
+---
+metric:
+  name: mrr
+  description: "Monthly recurring revenue from active subscriptions (annual plans over 12)."
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription__is_active') }} = true"
+---
+metric:
+  name: paying_users
+  description: "Distinct users with an active subscription."
+  type: simple
+  type_params: {measure: paying_user_count}
+  filter: "{{ Dimension('subscription__is_active') }} = true"
+---
+metric:
+  name: active_habits
+  description: "Habits still being tracked (not archived)."
+  type: simple
+  type_params: {measure: habit_count}
+  filter: "{{ Dimension('habit__is_archived') }} = false"
+---
+metric: {name: new_signups, description: "User signups in the period, all accounts.", type: simple, type_params: {measure: signup_count}}
+---
+metric: {name: marketing_spend, description: "Total marketing spend in the period.", type: simple, type_params: {measure: spend_amount}}

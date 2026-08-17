@@ -34,7 +34,7 @@ from agent.rungs import capabilities
 from evals.gold import _validate, compute_gold
 from evals.grade import grade
 from evals.selective import selective
-from warehouse.warehouse import open_warehouse, set_star
+from warehouse.warehouse import STAR_SCHEMA, open_warehouse, set_star
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
@@ -42,11 +42,20 @@ ORDER = ["small_before", "small_after", "high_before", "high_after"]
 RUNG = 3  # star + governed semantic layer — the rung where metric selection is the agent's job
 
 
-def load_cases(study_dir: pathlib.Path) -> list[dict]:
-    cases = yaml.safe_load((study_dir / "cases.yml").read_text())["cases"]
+def load_cases(cases_path: pathlib.Path) -> list[dict]:
+    cases = yaml.safe_load(cases_path.read_text())["cases"]
     for c in cases:
-        _validate(c, "cases.yml")  # same validator the frozen set uses, so expected_refuse is set right
+        _validate(c, cases_path.name)  # same validator the frozen set uses, so expected_refuse is set right
     return cases
+
+
+def ensure_time_spine(con) -> None:
+    """MetricFlow answers time-filtered queries by joining a one-row-per-day time spine. Create it as
+    a VIEW over the warehouse's own range — no rows copied. Harmless (unused) for the harness engine."""
+    con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".mf_time_spine AS
+        SELECT CAST(d AS DATE) AS ds FROM (SELECT UNNEST(generate_series(
+            (SELECT min(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
+            (SELECT max(active_date) FROM "{STAR_SCHEMA}".agg_active_days), INTERVAL 1 DAY)) AS d)''')
 
 
 def _queried_metrics(ans) -> list[str]:
@@ -62,10 +71,11 @@ def _queried_metrics(ans) -> list[str]:
     return out
 
 
-def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> list[dict]:
+def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
+              engine: str = "harness") -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
     graded into the row shape selective() consumes. Reps average out agent stochasticity."""
-    g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine="harness", semantic_layer=True)
+    g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine=engine, semantic_layer=True)
     rows = []
     for rep in range(reps):
         for case in cases:
@@ -84,8 +94,14 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> l
 
 def metrics(rows: list[dict]) -> dict:
     s = selective(rows)
+    # Wrong-metric rate: of answered rows where we observed a pick, the share where the metric the
+    # agent QUERIED differs from the governed-correct one. Higher than SER — a wrong pick that
+    # coincidentally returns the right number is scored correct by the number, but is a wrong pick.
+    picked = [r for r in rows if r["outcome"] == "answer" and r.get("picked") and r.get("expected_metric")]
+    wm = sum(1 for r in picked if r["picked"] != r["expected_metric"])
     return {"n": s.n, "coverage": s.coverage,
-            "silent_error": s.silent_error, "balanced_accuracy": s.balanced_accuracy}
+            "silent_error": s.silent_error, "balanced_accuracy": s.balanced_accuracy,
+            "wrong_metric_rate": (wm / len(picked)) if picked else float("nan")}
 
 
 def _fmt(x) -> str:
@@ -94,9 +110,10 @@ def _fmt(x) -> str:
 
 def _print_scorecard(report: dict) -> None:
     print("\n  EXPERIMENT 05 — before/after benefit  (rung 3, agent selects the metric)")
-    print("  " + "-" * 74)
-    print(f"  {'layer':14} {'set':8} {'n':>2}  {'coverage':>9} {'silent_err':>11} {'bal_acc':>8}")
-    print("  " + "-" * 74)
+    print("  " + "-" * 86)
+    print(f"  {'layer':14} {'set':8} {'n':>2}  {'coverage':>9} {'silent_err':>11} "
+          f"{'bal_acc':>8} {'wrong_metric':>13}")
+    print("  " + "-" * 86)
     for name in ORDER:
         if name not in report:
             continue
@@ -106,8 +123,9 @@ def _print_scorecard(report: dict) -> None:
                 continue
             tag = name if label == "overall" else ""
             print(f"  {tag:14} {label:8} {m['n']:>2}  {_fmt(m['coverage']):>9} "
-                  f"{_fmt(m['silent_error']):>11} {_fmt(m['balanced_accuracy']):>8}")
-        print("  " + "·" * 74)
+                  f"{_fmt(m['silent_error']):>11} {_fmt(m['balanced_accuracy']):>8} "
+                  f"{_fmt(m.get('wrong_metric_rate')):>13}")
+        print("  " + "·" * 86)
 
 
 def _print_family_table(report: dict) -> None:
@@ -140,28 +158,39 @@ def main() -> None:
     ap.add_argument("--reps", type=int, default=1, help="repetitions per question (averages stochasticity)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
     ap.add_argument("--study", default="study_01_governed_layer", help="which study directory to run")
+    ap.add_argument("--engine", default="harness", choices=("harness", "metricflow"),
+                    help="grounding engine: harness (bespoke YAML) or metricflow (dbt MetricFlow dir)")
     args = ap.parse_args()
 
     global LAYERS
     study_dir = HERE / args.study
-    LAYERS = study_dir / "layers"
-    cases = load_cases(study_dir)
+    mf = args.engine == "metricflow"
+    # MetricFlow layers are DIRECTORIES (semantic_model:/metric: docs) under mf_layers/ with their own
+    # case set; the harness engine uses layers/<name>/semantic.yml and cases.yml.
+    LAYERS = study_dir / ("mf_layers" if mf else "layers")
+    cases = load_cases(study_dir / ("cases_mf.yml" if mf else "cases.yml"))
     con = open_warehouse(create_star_views=True)
     set_star(con, capabilities(RUNG).star)
+    if mf:
+        ensure_time_spine(con)
     golds = compute_gold(con, cases)
     model = get_model(args.model, mock=args.mock)
     verifier = get_verifier(args.model, mock=args.mock)
 
-    names = [n for n in ORDER
-             if (not args.only or n in args.only) and (LAYERS / n / "semantic.yml").exists()]
+    def spec_of(name):
+        return LAYERS / name if mf else LAYERS / name / "semantic.yml"
+
+    names = [n for n in ORDER if (not args.only or n in args.only) and spec_of(n).exists()]
 
     # Persist after EACH layer and merge into any existing result, so a long run (reps x layers) that
     # is interrupted keeps every completed layer, and layers run in separate invocations accumulate.
-    out = study_dir / ("benefit_result_mock.json" if args.mock else "benefit_result.json")
+    suffix = "_mf" if mf else ""
+    out = study_dir / (f"benefit_result{suffix}_mock.json" if args.mock else f"benefit_result{suffix}.json")
     report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
-    report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps})
+    report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps,
+                   "engine": args.engine})
     for name in names:
-        rows = run_layer(con, LAYERS / name / "semantic.yml", cases, golds, model, verifier, args.reps)
+        rows = run_layer(con, spec_of(name), cases, golds, model, verifier, args.reps, args.engine)
         report[name] = {"overall": metrics(rows),
                         "flagged": metrics([r for r in rows if r["tier"] == "flagged"]),
                         "clean": metrics([r for r in rows if r["tier"] == "clean"]),
