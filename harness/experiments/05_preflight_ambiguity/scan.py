@@ -19,9 +19,17 @@ dict-keyed format, converted here; warehouse and docs use preflight's own adapte
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import pathlib
 import sys
+import time
 from collections import Counter, defaultdict
+
+# Quiet the ML stack so only the tool's own progress narration reaches the terminal.
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import sqlglot
 import yaml
@@ -33,6 +41,15 @@ from preflight.scope import build_scope
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
+
+
+@contextlib.contextmanager
+def _quiet():
+    """Swallow a library's own stdout/stderr chatter (HF warnings, tqdm bars) for the
+    duration of a call. Real failures still surface — they raise, they do not just print."""
+    with open(os.devnull, "w") as null, \
+            contextlib.redirect_stderr(null), contextlib.redirect_stdout(null):
+        yield
 
 
 def _parse_agg(expr: str | None):
@@ -77,21 +94,6 @@ def facts_from_semantic(doc: dict) -> list[GroundingFact]:
     return out
 
 
-def load_env(env: pathlib.Path) -> list[GroundingFact]:
-    """Every grounding fact across the three layers present in an env directory."""
-    facts: list[GroundingFact] = []
-    sem = env / "semantic.yml"
-    if sem.exists():
-        facts += facts_from_semantic(yaml.safe_load(sem.read_text()))
-    wh = env / "warehouse.sql"
-    if wh.exists():
-        facts += adapt_warehouse(wh)
-    docs = env / "docs.md"
-    if docs.exists():
-        facts += adapt_docs(docs)
-    return facts
-
-
 _RANK = {"high": 0, "medium": 1, "low": 2}
 # The three grounding layers a primitive can live in (the repair-matrix mapping).
 _LAYER = {"doc": ("DOCUMENTATION", "grain · segments"),
@@ -99,6 +101,10 @@ _LAYER = {"doc": ("DOCUMENTATION", "grain · segments"),
           "sem": ("SEMANTIC LAYER", "additive · higher-level metrics")}
 _C = {"high": "\033[38;5;167m", "medium": "\033[38;5;179m", "low": "\033[38;5;101m",
       "b": "\033[1m", "dim": "\033[2m", "accent": "\033[38;5;72m", "reset": "\033[0m"}
+
+
+def _mk_color(on):
+    return (lambda s, k: f"{_C[k]}{s}{_C['reset']}") if on else (lambda s, k: s)
 
 
 def _group(findings):
@@ -113,7 +119,7 @@ def _group(findings):
 
 
 def _line(f, on, max_items=6):
-    c = (lambda s, k: f"{_C[k]}{s}{_C['reset']}") if on else (lambda s, k: s)
+    c = _mk_color(on)
     labels = [it.label for it in f.items]
     more = c(f"  +{len(labels) - max_items}", "dim") if len(labels) > max_items else ""
     return (f"    {c('●', f.danger)} {c(f.danger[0].upper(), f.danger)} "
@@ -121,7 +127,7 @@ def _line(f, on, max_items=6):
 
 
 def _report(results, gate, on):
-    c = (lambda s, k: f"{_C[k]}{s}{_C['reset']}") if on else (lambda s, k: s)
+    c = _mk_color(on)
     out = ["", "  " + c("PREFLIGHT AMBIGUITY MAP", "b") + c(f"          gate: {gate}", "dim"),
            "  " + c("─" * 60, "dim")]
     for name, facts, findings in results:
@@ -152,21 +158,77 @@ def _report(results, gate, on):
     return "\n".join(out)
 
 
+def _load_with_progress(env, step, c):
+    """Load the three grounding layers, narrating each with its fact count."""
+    facts = []
+    sem = env / "semantic.yml"
+    if sem.exists():
+        sf = facts_from_semantic(yaml.safe_load(sem.read_text()))
+        facts += sf
+        step(f"      {c('·', 'dim')} semantic.yml   {c(f'{len(sf):>2}', 'b')} metrics")
+    wh = env / "warehouse.sql"
+    if wh.exists():
+        wf = adapt_warehouse(wh)
+        facts += wf
+        tabs = sum(1 for f in wf if f.kind == "table")
+        step(f"      {c('·', 'dim')} warehouse.sql  {c(f'{tabs:>2}', 'b')} tables · {len(wf) - tabs} columns")
+    docs = env / "docs.md"
+    if docs.exists():
+        df = adapt_docs(docs)
+        facts += df
+        step(f"      {c('·', 'dim')} docs.md        {c(f'{len(df):>2}', 'b')} terms")
+    return facts
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gate", default="auto", choices=("auto", "lexical", "embeddings"))
     ap.add_argument("--no-color", action="store_true", help="plain output even to a terminal")
     args = ap.parse_args()
 
+    ce = _mk_color(sys.stderr.isatty() and not args.no_color)
+
+    def step(msg=""):
+        print(msg, file=sys.stderr, flush=True)
+
+    t0 = time.time()
+    step()
+    step("  " + ce("preflight", "accent") + ce("  ambiguity scan across the grounding stack", "dim"))
+    step("  " + ce("─" * 52, "dim"))
+
+    # the embedding model loads ONCE (it is the slow step) and is reused for every environment
+    model = None
+    if args.gate == "embeddings":
+        step("  " + ce("▸", "accent") + " loading embedding model "
+             + ce("(sentence-transformers · MiniLM)", "dim") + " …")
+        tm = time.time()
+        with _quiet():
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+        step("      " + ce("✓", "low") + " ready " + ce(f"({time.time() - tm:.1f}s)", "dim"))
+
     order = ["small_before", "small_after", "high_before", "high_after"]
     envs = sorted((p for p in LAYERS.iterdir() if p.is_dir()),
                   key=lambda p: order.index(p.name) if p.name in order else 99)
-    results = [(env.name, facts := load_env(env), detect_collisions(facts, gate=args.gate))
-               for env in envs]
 
-    # colour only when writing to a real terminal
+    results = []
+    for env in envs:
+        step("\n  " + ce("▸", "accent") + " " + ce(env.name, "b"))
+        facts = _load_with_progress(env, step, ce)
+        step(f"      {ce('·', 'dim')} scanning {len(facts)} facts for confusions …")
+        findings = detect_collisions(facts, gate=model if model is not None else args.gate)
+        by = Counter(f.danger for f in findings)
+        step(f"      {ce('✓', 'low')} {ce(str(len(findings)), 'b')} found  "
+             + ce(f"{by['high']} high · {by['medium']} med · {by['low']} low", "dim"))
+        results.append((env.name, facts, findings))
+
+    total = sum(len(r[2]) for r in results)
+    step("\n  " + ce("─" * 52, "dim"))
+    step("  " + ce("done", "accent")
+         + ce(f"  {time.time() - t0:.1f}s · {total} confusions · {len(results)} environments", "dim"))
+    step()
+
     print(_report(results, args.gate, on=sys.stdout.isatty() and not args.no_color))
-    # plain record beside the layers
     (HERE / "scan.md").write_text("```\n" + _report(results, args.gate, on=False) + "\n```\n")
 
 
