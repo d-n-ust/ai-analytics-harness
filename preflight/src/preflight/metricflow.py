@@ -82,8 +82,21 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
             index[meas["name"]] = {"agg": meas.get("agg"), "expr": meas.get("expr") or meas["name"],
                                    "base": base, "entity": entity, "model": sm.get("name")}
 
+    # A measure is not a user-selectable grounding in MetricFlow — end users query METRICS. So a
+    # measure referenced by any metric is represented by that metric (its public face), even when the
+    # metric filters it; only a truly orphan measure (no metric wraps it) is emitted, so measure-level
+    # modelling gaps still surface without every filtered metric colliding with its own raw measure.
+    referenced: set[str] = set()
+    for m in metrics:
+        tp = m.get("type_params", {}) or {}
+        mtype = (m.get("type") or "simple").lower()
+        if mtype == "simple":
+            referenced.add(_measure_ref(tp.get("measure")))
+        elif mtype == "ratio":
+            referenced.add(_measure_ref(tp.get("numerator")))
+            referenced.add(_measure_ref(tp.get("denominator")))
+
     facts: list[GroundingFact] = []
-    wrapped: set[str] = set()
     for m in metrics:
         name, mtype = m["name"], (m.get("type") or "simple").lower()
         tp = m.get("type_params", {}) or {}
@@ -91,8 +104,6 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
         text = f"{name.replace('_', ' ')}. {m.get('description', '')}".strip()
         if mtype == "simple":
             mi = index.get(_measure_ref(tp.get("measure")), {})
-            if mi and not scope:
-                wrapped.add(_measure_ref(tp.get("measure")))
             facts.append(GroundingFact(
                 id=f"mf:{name}", label=name, layer="semantic", kind="metric",
                 agg=mi.get("agg"), measure=mi.get("expr"), base=mi.get("base"), entity=mi.get("entity"),
@@ -112,7 +123,7 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
     for sm in semantic_models:
         base, entity = _table(sm.get("model")), _primary_entity(sm)
         for meas in sm.get("measures", []) or []:
-            if meas["name"] in wrapped:
+            if meas["name"] in referenced:
                 continue
             # kind="metric" so measures enter the comparison pool alongside metrics
             facts.append(GroundingFact(
@@ -126,17 +137,28 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
 
 def load_metricflow(path: str | Path) -> list[GroundingFact]:
     """Load a MetricFlow surface from a file or a directory (all *.yml/*.yaml merged — definitions
-    routinely span files, and a metric references a measure defined elsewhere)."""
+    routinely span files, and a metric references a measure defined elsewhere).
+
+    Handles both MetricFlow YAML conventions: the dbt *project* form, where one document carries
+    `semantic_models:` and `metrics:` as lists; and the standalone *multi-document* form the
+    MetricFlow parser itself reads, where each `---`-separated document is a single `semantic_model:`
+    or `metric:`. A directory can mix the two."""
     p = Path(path)
     files = [p] if p.is_file() else sorted(p.rglob("*.yml")) + sorted(p.rglob("*.yaml"))
     semantic_models: list[dict] = []
     metrics: list[dict] = []
     for f in files:
         try:
-            doc = yaml.safe_load(f.read_text())
+            docs = list(yaml.safe_load_all(f.read_text()))
         except Exception:
             continue
-        if isinstance(doc, dict):
+        for doc in docs:
+            if not isinstance(doc, dict):
+                continue
             semantic_models += doc.get("semantic_models") or []
             metrics += doc.get("metrics") or []
+            if "semantic_model" in doc:        # standalone multi-document form (singular)
+                semantic_models.append(doc["semantic_model"])
+            if "metric" in doc:
+                metrics.append(doc["metric"])
     return facts_from_metricflow(semantic_models, metrics)
