@@ -9,7 +9,7 @@ cases:
     family: recurring_revenue
     question: "What is our current recurring revenue?"
     expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
-             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
     wrong_grounding: ["billed_amount"]   # summing raw billed (no /12) instead of a modelled mrr
     right_grounding: ["mrr", "/12", "/ 12"]
   - id: s2_total_revenue
@@ -17,7 +17,7 @@ cases:
     family: gross_net
     question: "What was our total subscription revenue?"
     expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
-             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
     wrong_grounding: []
   - id: s2_active_users
     tier: flagged
@@ -32,7 +32,7 @@ cases:
     family: value_moments
     question: "How many value moments were completed in June 2026?"
     expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
-             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
     wrong_grounding: ["daily_rollup"]    # the overloaded second table
   - id: s2_marketing
     tier: clean

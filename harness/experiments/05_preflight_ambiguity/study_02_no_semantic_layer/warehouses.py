@@ -47,12 +47,14 @@ def build(con) -> None:
     con.execute(f'''CREATE OR REPLACE VIEW {AFTER}.fct_marketing AS
         SELECT spend_date, channel, spend FROM "{S}".fct_marketing_spend''')
     con.execute(f"COMMENT ON COLUMN {AFTER}.dim_subscriptions.mrr IS "
-                "'Monthly recurring revenue: annual plans divided by 12. Filter is_active for the current book.'")
+                "'Monthly recurring revenue: annual plans divided by 12. Filter is_active for the current book, "
+                "and join dim_users to exclude staff/test accounts (NOT is_internal).'")
     con.execute(f"COMMENT ON COLUMN {AFTER}.dim_subscriptions.net_revenue IS "
-                "'Recognised subscription revenue. Filter is_active for the current book.'")
+                "'Recognised subscription revenue. Filter is_active for the current book, and join dim_users to "
+                "exclude staff/test accounts (NOT is_internal).'")
     con.execute(f"COMMENT ON COLUMN {AFTER}.dim_users.is_internal IS "
-                "'True for staff and test accounts. Exclude (NOT is_internal) from every user and activity metric.'")
+                "'True for staff and test accounts. Exclude (NOT is_internal) from every metric, revenue included.'")
     con.execute(f"COMMENT ON COLUMN {AFTER}.fct_activity.is_internal IS "
-                "'True for staff and test accounts. Exclude (NOT is_internal) from activity metrics.'")
+                "'True for staff and test accounts. Exclude (NOT is_internal) from every activity metric.'")
     con.execute(f"COMMENT ON COLUMN {AFTER}.fct_activity.moments IS "
                 "'Value moments (completed habits). Sum for value-moment volume.'")

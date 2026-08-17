@@ -12,35 +12,50 @@ common dbt setup — models, no governed metrics — and it tests whether *dimen
 | revenue | raw `billed_amount` only (no MRR) | modelled `mrr` (annual/12) and `net_revenue` columns |
 | internal accounts | **two** flags `is_internal` **and** `is_test` (different sets) | one `is_internal` |
 | value moments | `moments` in **two** tables (`activity`, `daily_rollup`) | one `fct_activity.moments` |
-| docs | thin | COMMENTs carry the scope rule ("exclude NOT is_internal", "mrr = annual/12") |
+| docs | thin | COMMENTs carry the scope rule ("mrr = annual/12", "exclude NOT is_internal from every metric") |
 
 Same decomposition as study 01: SER = **wrong-SELECTION** (Mode 1 — the agent grounded on the wrong
 COLUMN/table, recovered from its SQL via `wrong_grounding` markers) + **wrong-CONSTRUCTION** (Mode 2 —
 the right column, built wrong). Gold is one `gold_sql` oracle against the clean star.
 
-## Result (gpt-5-mini, reps=3, 4 flagged + 1 clean)
+The internal-account rule is stated **uniformly** in the `after` docs: staff and test accounts
+(`is_internal`) are excluded from *every* metric, revenue included, and the gold matches. An earlier
+draft governed it only for user/activity metrics and left revenue implicit, and one activity gold
+(`value_moments`) failed to apply its own stated rule; both models then excluded internal accounts
+consistently and were scored wrong for a gold inconsistency, not a real error. Making the rule uniform
+removed that confound. Whether internal accounts belong in revenue is a governed choice; the point is
+the layer must state it once and the gold must follow, which is itself the kind of gap preflight exists
+to surface.
 
-| arm | flagged correct | flagged SER | wrong-SELECTION | wrong-CONSTRUCTION | clean SER |
-|---|---|---|---|---|---|
-| before | 0.00 | 1.00 | **0.50** | 0.50 | 0.00 |
-| after | 0.58 | 0.42 | **0.00** | 0.42 | 0.00 |
+## Result (reps=3, 4 flagged + 1 clean, flagged tier)
 
-Modelling the messy columns into clean, documented ones drives **wrong-column selection 0.50 → 0.00**
-— the same shape as study 01's wrong-metric selection, one layer down. SER falls 1.00 → 0.42; the
-residual 0.42 is genuine **construction** (the agent forgets the `is_active` filter or a period even on
-clean columns) — Mode 2, the validators' lane, which better modelling does not fix. Observed picks on
-`before`: `recurring` summed `billed_amount` (not `mrr`); `active_users` filtered `is_test` (not
-`is_internal`) — the exact column confusions preflight flags in the warehouse layer.
+| model | arm | correct | SER | coverage | wrong-SELECTION | wrong-CONSTRUCTION |
+|---|---|---|---|---|---|---|
+| gpt-5-mini | before | 0.25 | 0.67 | 0.92 | **0.55** | 0.18 |
+| gpt-5-mini | after | 1.00 | 0.00 | 1.00 | **0.00** | 0.00 |
+| sonnet-5 | before | 0.08 | 0.42 | 0.50 | **0.67** | 0.17 |
+| sonnet-5 | after | 1.00 | 0.00 | 1.00 | **0.00** | 0.00 |
+
+Modelling the messy columns into clean, documented ones drives **wrong-column selection to 0.00** on
+both models — the same shape as study 01's wrong-metric selection, one layer down — and here it takes
+SER with it (0.67 → 0.00 and 0.42 → 0.00), because a raw-SQL agent given clean columns and a complete,
+consistent scope rule has nothing left to build wrong on this question set. Observed picks on `before`:
+`recurring` summed `billed_amount` (not `mrr`); `active_users` filtered `is_test` (not `is_internal`) —
+the exact column confusions preflight flags in the warehouse layer. Coverage 0.50 on sonnet-5 `before`
+is the agent abstaining on half the ambiguous questions rather than answering them wrong, which is the
+safer failure; after the fix it answers all of them correctly.
 
 ## The two studies together
 
-| | selection harm (Mode 1) | after the fix |
+| | selection harm (Mode 1) before | after the fix |
 |---|---|---|
-| study 01 (semantic layer) | wrong **metric** 0.43 / 0.29 | 0.00 |
-| study 02 (raw SQL) | wrong **column** 0.50 | 0.00 |
+| study 01 (semantic layer) | wrong **metric** 0.43 / 0.29 | 0.00 / 0.00 |
+| study 02 (raw SQL) | wrong **column** 0.55 / 0.67 | 0.00 / 0.00 |
 
 Fixing what preflight flags removes the selection harm at whichever layer it lives — a sprawled
-semantic layer *or* sprawled fact-table columns. The construction residual is the other lane in both.
+semantic layer *or* sprawled fact-table columns — on both models. Study 01 keeps a small construction
+residual (the semantic layer still leaves the agent a query to shape); study 02's residual goes to zero
+because clean, fully-documented columns leave nothing to build wrong on these five questions.
 
 ## Run
 

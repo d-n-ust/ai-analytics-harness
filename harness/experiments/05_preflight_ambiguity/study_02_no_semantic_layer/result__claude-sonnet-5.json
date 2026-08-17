@@ -1,23 +1,23 @@
 {
-  "model": "gpt-5-mini",
+  "model": "claude-sonnet-5",
   "reps": 3,
   "arms": {
     "before": {
       "overall": {
         "n": 15,
-        "coverage": 0.9333333333333333,
-        "silent_error": 0.5333333333333333,
-        "correct": 0.4,
-        "wrong_selection_rate": 0.42857142857142855,
-        "wrong_construction_rate": 0.14285714285714285
+        "coverage": 0.6,
+        "silent_error": 0.3333333333333333,
+        "correct": 0.26666666666666666,
+        "wrong_selection_rate": 0.4444444444444444,
+        "wrong_construction_rate": 0.1111111111111111
       },
       "flagged": {
         "n": 12,
-        "coverage": 0.9166666666666666,
-        "silent_error": 0.6666666666666666,
-        "correct": 0.25,
-        "wrong_selection_rate": 0.5454545454545454,
-        "wrong_construction_rate": 0.18181818181818182
+        "coverage": 0.5,
+        "silent_error": 0.4166666666666667,
+        "correct": 0.08333333333333333,
+        "wrong_selection_rate": 0.6666666666666666,
+        "wrong_construction_rate": 0.16666666666666666
       },
       "clean": {
         "n": 3,
@@ -31,9 +31,9 @@
         {
           "executed": true,
           "correct": false,
-          "bucket": "wrong",
+          "bucket": "other",
           "abstained": false,
-          "confident_wrong": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -44,13 +44,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
+          "score": 0.0,
           "outcome": "answer",
           "id": "s2_recurring",
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": true,
-          "sql": "select\n  count(*) as active_subscriptions,\n  sum(billed_amount) as current_recurring_revenue\nfrom subscriptions\nwhere active = true and status = 'active';"
+          "sql": "select plan, status, active, count(*), sum(billed_amount) from subscriptions group by 1,2,3 order by 1,2,3"
         },
         {
           "executed": false,
@@ -74,58 +74,58 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
+          "sql": "select status, active, count(*), sum(billed_amount) from subscriptions group by status, active select sum(billed_amount) as total_all, \n       sum(case when status='active' then billed_amount else 0 end) as active_only,\n       sum(case when status != 'refunded' then billed_amount else 0 end) as excl_refunds\nfrom subscriptions"
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "s2_active_users",
+          "tier": "flagged",
+          "family": "internal_scope",
+          "wrong_grounding": false,
+          "sql": "select count(distinct user_id) as active_users\nfrom activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'\nand is_internal = false select count(distinct user_id) as active_users_all\nfrom activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'"
+        },
+        {
+          "executed": false,
+          "correct": false,
+          "bucket": "idk",
+          "abstained": true,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 0.0,
+          "outcome": "refuse",
+          "id": "s2_value_moments",
+          "tier": "flagged",
+          "family": "value_moments",
+          "wrong_grounding": false,
           "sql": ""
         },
         {
           "executed": true,
-          "correct": false,
-          "bucket": "wrong",
-          "abstained": false,
-          "confident_wrong": true,
-          "fabricated": false,
-          "off_governance": false,
-          "wrong_scope": false,
-          "wrong_metric": false,
-          "needs_judge": false,
-          "expected_refuse": false,
-          "reason_match": null,
-          "metric_match": null,
-          "driver_ok": null,
-          "cause_ok": null,
-          "score": -4.0,
-          "outcome": "answer",
-          "id": "s2_active_users",
-          "tier": "flagged",
-          "family": "internal_scope",
-          "wrong_grounding": true,
-          "sql": "select count(distinct user_id) as active_users\nfrom activity a\njoin users u using (user_id)\nwhere a.active_date >= date '2026-06-01'\n  and a.active_date < date '2026-07-01'\n  and coalesce(u.is_internal, false) = false\n  and coalesce(u.is_test, false) = false;"
-        },
-        {
-          "executed": true,
-          "correct": true,
-          "bucket": "right",
-          "abstained": false,
-          "confident_wrong": false,
-          "fabricated": false,
-          "off_governance": false,
-          "wrong_scope": false,
-          "wrong_metric": false,
-          "needs_judge": false,
-          "expected_refuse": false,
-          "reason_match": null,
-          "metric_match": null,
-          "driver_ok": null,
-          "cause_ok": null,
-          "score": 1.0,
-          "outcome": "answer",
-          "id": "s2_value_moments",
-          "tier": "flagged",
-          "family": "value_moments",
-          "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom activity\nwhere active_date >= date '2026-06-01'\n  and active_date <= date '2026-06-30'\n  and is_internal = false;"
-        },
-        {
-          "executed": true,
           "correct": true,
           "bucket": "right",
           "abstained": false,
@@ -146,7 +146,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend from marketing where spend_date >= date '2026-06-01' and spend_date <= date '2026-06-30';"
+          "sql": "select sum(spend) from marketing where spend_date >= '2026-06-01' and spend_date <= '2026-06-30'"
         },
         {
           "executed": true,
@@ -170,14 +170,14 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": true,
-          "sql": "select count(*) as active_subscriptions, sum(billed_amount) as mrr\nfrom subscriptions\nwhere active = true and status = 'active'; select plan, count(*) as cnt, sum(billed_amount) as sum_billed\nfrom subscriptions\nwhere active = true and status = 'active'\ngroup by plan;"
+          "sql": "select plan, status, active, count(*), sum(billed_amount) from subscriptions group by 1,2,3 order by 1,2,3 \nselect s.plan,\n       count(*) n,\n       sum(s.billed_amount) total_billed\nfrom subscriptions s\njoin users u on u.user_id = s.user_id\nwhere s.active = true and s.status = 'active'\n  and u.is_internal = false and u.is_test = false\ngroup by 1\n \nselect \n  sum(case when s.plan='monthly' then s.billed_amount \n           when s.plan='annual' then s.billed_amount/12.0 end) as mrr\nfrom subscriptions s\njoin users u on u.user_id = s.user_id\nwhere s.active = true and s.status = 'active'\n  and u.is_internal = false and u.is_test = false\n"
         },
         {
-          "executed": true,
+          "executed": false,
           "correct": false,
-          "bucket": "wrong",
-          "abstained": false,
-          "confident_wrong": true,
+          "bucket": "idk",
+          "abstained": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -188,13 +188,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
-          "outcome": "answer",
+          "score": 0.0,
+          "outcome": "clarify",
           "id": "s2_total_revenue",
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select sum(billed_amount) as total_revenue from subscriptions;"
+          "sql": "select status, active, count(*), sum(billed_amount) from subscriptions group by status, active \nselect sum(s.billed_amount)\nfrom subscriptions s\njoin users u on s.user_id = u.user_id\nwhere s.active = true and s.status='active'\n  and u.is_internal = false and u.is_test = false\n"
         },
         {
           "executed": true,
@@ -218,13 +218,13 @@
           "tier": "flagged",
           "family": "internal_scope",
           "wrong_grounding": true,
-          "sql": "select count(distinct a.user_id) as active_users\nfrom activity a\njoin users u using (user_id)\nwhere a.active_date >= date '2026-06-01'\n  and a.active_date < date '2026-07-01'\n  and coalesce(u.is_internal, false) = false\n  and coalesce(u.is_test, false) = false;"
+          "sql": "\nselect count(distinct a.user_id) as active_users\nfrom activity a\njoin users u on a.user_id = u.user_id\nwhere a.active_date >= '2026-06-01' and a.active_date <= '2026-06-30'\nand a.is_internal = false\nand u.is_test = false\n \nselect count(distinct a.user_id) as active_users_all\nfrom activity a\nwhere a.active_date >= '2026-06-01' and a.active_date <= '2026-06-30'\n"
         },
         {
-          "executed": true,
-          "correct": true,
-          "bucket": "right",
-          "abstained": false,
+          "executed": false,
+          "correct": false,
+          "bucket": "idk",
+          "abstained": true,
           "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
@@ -236,13 +236,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": 1.0,
-          "outcome": "answer",
+          "score": 0.0,
+          "outcome": "refuse",
           "id": "s2_value_moments",
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom activity\nwhere active_date >= date '2026-06-01'\n  and active_date < date '2026-07-01'\n  and is_internal = false;"
+          "sql": ""
         },
         {
           "executed": true,
@@ -266,7 +266,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as june_2026_spend\nfrom marketing\nwhere spend_date >= '2026-06-01' and spend_date < '2026-07-01';"
+          "sql": "select sum(spend) as total_spend, min(spend_date) as min_date, max(spend_date) as max_date from marketing where spend_date >= '2026-06-01' and spend_date <= '2026-06-30'"
         },
         {
           "executed": true,
@@ -290,60 +290,12 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": true,
-          "sql": "select count(*) as active_subscriptions, sum(billed_amount) as mrr_sum\nfrom subscriptions\nwhere active = true and status = 'active'; select count(*) as active_subscriptions_all, sum(billed_amount) as sum_all\nfrom subscriptions\nwhere active = true;"
+          "sql": "select plan, status, active, count(*), avg(billed_amount), sum(billed_amount) from subscriptions group by 1,2,3 order by 1,2,3 \nselect\n  sum(case when plan='monthly' then billed_amount\n           when plan='annual' then billed_amount/12.0\n           else null end) as mrr,\n  count(*) as active_subs\nfrom subscriptions\nwhere active = true and status = 'active'\n \nselect\n  sum(case when s.plan='monthly' then s.billed_amount\n           when s.plan='annual' then s.billed_amount/12.0\n           else null end) as mrr,\n  count(*) as active_subs\nfrom subscriptions s\njoin users u on u.user_id = s.user_id\nwhere s.active = true and s.status='active'\n  and u.is_internal = false and u.is_test = false\n"
         },
         {
           "executed": true,
           "correct": false,
-          "bucket": "wrong",
-          "abstained": false,
-          "confident_wrong": true,
-          "fabricated": false,
-          "off_governance": false,
-          "wrong_scope": false,
-          "wrong_metric": false,
-          "needs_judge": false,
-          "expected_refuse": false,
-          "reason_match": null,
-          "metric_match": null,
-          "driver_ok": null,
-          "cause_ok": null,
-          "score": -4.0,
-          "outcome": "answer",
-          "id": "s2_total_revenue",
-          "tier": "flagged",
-          "family": "gross_net",
-          "wrong_grounding": false,
-          "sql": "select count(*) as subscriptions_count, sum(billed_amount) as total_revenue from subscriptions; select status, count(*) as cnt, sum(billed_amount) as revenue from subscriptions group by 1 order by revenue desc; select plan, count(*) as cnt, sum(billed_amount) as revenue from subscriptions group by 1 order by revenue desc;"
-        },
-        {
-          "executed": true,
-          "correct": false,
-          "bucket": "wrong",
-          "abstained": false,
-          "confident_wrong": true,
-          "fabricated": false,
-          "off_governance": false,
-          "wrong_scope": false,
-          "wrong_metric": false,
-          "needs_judge": false,
-          "expected_refuse": false,
-          "reason_match": null,
-          "metric_match": null,
-          "driver_ok": null,
-          "cause_ok": null,
-          "score": -4.0,
-          "outcome": "answer",
-          "id": "s2_active_users",
-          "tier": "flagged",
-          "family": "internal_scope",
-          "wrong_grounding": true,
-          "sql": "select count(distinct user_id) as active_users\nfrom activity a\njoin users u using (user_id)\nwhere a.active_date >= date '2026-06-01' and a.active_date < date '2026-07-01'\n  and coalesce(u.is_internal, false) = false\n  and coalesce(u.is_test, false) = false;"
-        },
-        {
-          "executed": true,
-          "correct": true,
-          "bucket": "right",
+          "bucket": "other",
           "abstained": false,
           "confident_wrong": false,
           "fabricated": false,
@@ -356,13 +308,61 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": 1.0,
+          "score": 0.0,
           "outcome": "answer",
+          "id": "s2_total_revenue",
+          "tier": "flagged",
+          "family": "gross_net",
+          "wrong_grounding": false,
+          "sql": "select status, active, count(*), sum(billed_amount) from subscriptions group by status, active"
+        },
+        {
+          "executed": false,
+          "correct": false,
+          "bucket": "idk",
+          "abstained": true,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 0.0,
+          "outcome": "clarify",
+          "id": "s2_active_users",
+          "tier": "flagged",
+          "family": "internal_scope",
+          "wrong_grounding": true,
+          "sql": "\nselect \n  (select count(distinct user_id) from activity where active_date >= '2026-06-01' and active_date <= '2026-06-30') as activity_all,\n  (select count(distinct user_id) from activity where active_date >= '2026-06-01' and active_date <= '2026-06-30' and is_internal = false) as activity_noninternal,\n  (select count(distinct user_id) from daily_rollup where day >= '2026-06-01' and day <= '2026-06-30') as rollup_all\n \nselect count(distinct a.user_id)\nfrom activity a\njoin users u on a.user_id = u.user_id\nwhere a.active_date >= '2026-06-01' and a.active_date <= '2026-06-30'\n  and a.is_internal = false\n  and u.is_test = false\n"
+        },
+        {
+          "executed": false,
+          "correct": false,
+          "bucket": "idk",
+          "abstained": true,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 0.0,
+          "outcome": "refuse",
           "id": "s2_value_moments",
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom activity\nwhere active_date >= date '2026-06-01' and active_date < date '2026-07-01' and (is_internal = false or is_internal is null);"
+          "sql": ""
         },
         {
           "executed": true,
@@ -386,7 +386,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend\nfrom marketing\nwhere spend_date >= date '2026-06-01' and spend_date < date '2026-07-01';"
+          "sql": "select sum(spend) as total_spend, min(spend_date), max(spend_date) from marketing where spend_date >= '2026-06-01' and spend_date <= '2026-06-30'"
         }
       ]
     },
@@ -438,7 +438,7 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": false,
-          "sql": "select sum(mrr) as current_mrr\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and u.is_internal = false;"
+          "sql": "\nselect sum(s.mrr) as total_mrr\nfrom dim_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.is_active = true and not u.is_internal\n"
         },
         {
           "executed": true,
@@ -462,7 +462,7 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select sum(net_revenue) as total_subscription_revenue from dim_subscriptions ds join dim_users u using (user_id) where ds.is_active = true and u.is_internal = false; select count(*) as cnt, min(net_revenue) as min_net, max(net_revenue) as max_net from dim_subscriptions ds join dim_users u using (user_id) where ds.is_active = true and u.is_internal = false;"
+          "sql": "\nselect sum(s.net_revenue) as total_net_revenue, count(*) as n_subs\nfrom dim_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.is_active = true and not u.is_internal\n"
         },
         {
           "executed": true,
@@ -486,7 +486,7 @@
           "tier": "flagged",
           "family": "internal_scope",
           "wrong_grounding": false,
-          "sql": "select count(distinct user_id) as active_users\nfrom fct_activity\nwhere active_date >= date '2026-06-01' and active_date <= date '2026-06-30'\n  and is_internal = false;"
+          "sql": "select count(distinct user_id) as active_users\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'\nand not is_internal"
         },
         {
           "executed": true,
@@ -510,7 +510,7 @@
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments from fct_activity where active_date >= '2026-06-01' and active_date < '2026-07-01' and is_internal = false;"
+          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere not is_internal\nand active_date >= '2026-06-01' and active_date <= '2026-06-30'"
         },
         {
           "executed": true,
@@ -534,7 +534,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as june_2026_spend\nfrom fct_marketing\nwhere spend_date >= '2026-06-01' and spend_date < '2026-07-01';"
+          "sql": "select min(spend_date), max(spend_date) from fct_marketing select sum(spend) from fct_marketing where spend_date >= '2026-06-01' and spend_date < '2026-07-01'"
         },
         {
           "executed": true,
@@ -558,7 +558,7 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": false,
-          "sql": "select sum(d.mrr) as current_mrr\nfrom dim_subscriptions d\njoin dim_users u on d.user_id = u.user_id\nwhere d.is_active = true and u.is_internal = false;"
+          "sql": "\nselect sum(s.mrr) as total_mrr\nfrom dim_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.is_active = true and not u.is_internal\n"
         },
         {
           "executed": true,
@@ -582,7 +582,7 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select sum(net_revenue) as total_subscription_revenue\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active and not u.is_internal;"
+          "sql": "\nselect sum(s.net_revenue) as total_net_revenue\nfrom dim_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.is_active = true and not u.is_internal\n"
         },
         {
           "executed": true,
@@ -606,7 +606,7 @@
           "tier": "flagged",
           "family": "internal_scope",
           "wrong_grounding": false,
-          "sql": "-- active users in june 2026 defined as unique non-internal users with any activity in june 2026\nselect count(distinct user_id) as active_users\nfrom fct_activity\nwhere active_date >= date '2026-06-01' and active_date <= date '2026-06-30'\n  and is_internal = false;"
+          "sql": "select count(distinct user_id) as active_users\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'\nand not is_internal"
         },
         {
           "executed": true,
@@ -630,7 +630,7 @@
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date < '2026-07-01'\n  and is_internal = false;"
+          "sql": "select sum(moments) from fct_activity where active_date >= '2026-06-01' and active_date < '2026-07-01' and not is_internal"
         },
         {
           "executed": true,
@@ -654,7 +654,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01' and spend_date <= date '2026-06-30'; select channel, sum(spend) as spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01' and spend_date <= date '2026-06-30'\ngroup by channel\norder by spend desc;"
+          "sql": "select min(spend_date), max(spend_date), sum(spend) from fct_marketing where spend_date between '2026-06-01' and '2026-06-30'"
         },
         {
           "executed": true,
@@ -678,7 +678,7 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": false,
-          "sql": "select sum(mrr) as current_recurring_revenue\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and u.is_internal = false;"
+          "sql": "select sum(s.mrr) as total_mrr\nfrom dim_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.is_active and not u.is_internal"
         },
         {
           "executed": true,
@@ -702,7 +702,7 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select sum(net_revenue) as total_net_revenue\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and (u.is_internal is null or u.is_internal = false); select sum(mrr) as total_mrr\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and (u.is_internal is null or u.is_internal = false);"
+          "sql": "\nselect sum(ds.net_revenue) as total_net_revenue, count(*) as n_subs\nfrom dim_subscriptions ds\njoin dim_users du on ds.user_id = du.user_id\nwhere ds.is_active = true and not du.is_internal\n"
         },
         {
           "executed": true,
@@ -726,7 +726,7 @@
           "tier": "flagged",
           "family": "internal_scope",
           "wrong_grounding": false,
-          "sql": "-- active users = distinct non-internal users with any activity in june 2026\nselect count(distinct user_id) as active_users\nfrom fct_activity\nwhere is_internal = false\n  and active_date >= date('2026-06-01')\n  and active_date < date('2026-07-01');"
+          "sql": "select count(distinct user_id) as active_users\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'\nand not is_internal"
         },
         {
           "executed": true,
@@ -750,7 +750,7 @@
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere active_date >= '2026-06-01'\n  and active_date < '2026-07-01'\n  and is_internal = false;"
+          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date <= '2026-06-30'\nand not is_internal"
         },
         {
           "executed": true,
@@ -774,7 +774,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01'\n  and spend_date < date '2026-07-01';"
+          "sql": "select sum(spend) from fct_marketing where spend_date >= '2026-06-01' and spend_date < '2026-07-01'"
         }
       ]
     }
