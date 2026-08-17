@@ -1,0 +1,397 @@
+# small_before: the governed habit-tracking layer, verbatim, as the LOW-sprawl baseline.
+# Source of truth is semantic/src/semantic/semantic_layer.yml; this is a committed copy for
+# the experiment (the after-fix version lives beside it). Regenerate if the governed layer changes.
+
+# Rung 3: the semantic layer.
+# Each metric is one governed definition. The agent selects a metric; the compiler
+# (harness/semantic.py) turns it into correct SQL over the star.
+#
+# Design note (important): the governed definitions encode the business's real rules,
+# including WHO counts. User-count and per-user metrics (active_users, power_users,
+# frequency, activation, ...) exclude internal/test accounts by default, because that
+# is what those numbers mean to leadership. This is exactly what a competent semantic
+# layer holds — so getting "active users" right is a rung-3 win, not a rung-4 one.
+# Raw activity *volume* (value_moments, new_signups) is segment-neutral: it counts
+# what happened, so it includes everyone. The knowledge base (rung 4) is left for the
+# things a semantic layer genuinely cannot hold: coverage caveats, fuzzy-question
+# mapping, and world facts.
+#
+# entity + segment (R6 semantic check): every metric also declares the governed
+# *entity* it measures (the thing one unit counts — MetricFlow's entity) and the named
+# *segment segment* it restricts to (Cube's segment). These are first-class parts of
+# the definition, not a parallel copy: the measure family is still derived from `agg`,
+# and internal/test exclusion still lives in `default_filters`. The R6 check reads
+# entity + segment + measure back and compares them, slot by slot, to what a question
+# actually asks for — so a valid metric answering a slightly different question (active
+# users reported as the user total, value moments as the habit count) is caught.
+#
+# unit: the kind of number the metric returns (count / currency / ratio / share). Like
+# LookML's value_format or Cube's format, it powers presentation and a deterministic
+# result-sanity check (a share outside 0..100, a negative count, an empty/null result).
+
+metrics:
+
+  # --- volume metrics: segment-neutral (include everyone) ---
+  value_moments:
+    description: "Number of value moments (completed habits) in the period. Raw activity volume — includes all users."
+    entity: value_moments
+    segment: all
+    unit: count
+    synonyms: ["completed habits", "habit completions", "activity", "engagement events"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    additive_over_time: true
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    supports_internal_filter: true
+
+  # The North Star, and the root of the metric tree. It is a SEPARATE definition from
+  # value_moments rather than a filter applied by the tree, because the tree's identity edge
+  # claims an arithmetic fact:
+  #
+  #     real_value_moments = active_users x days_per_user x moments_per_day
+  #
+  # That identity closes exactly — but only within ONE population. The tree used to root on
+  # value_moments, which counts every account, while all three children exclude internal/test.
+  # The parent was therefore 4,307 where its own children multiplied to 4,133, and an agent
+  # asked "why did value moments drop?" was told they fell to 3,642 while the governed metric
+  # said 3,785. Same name, two numbers, no way to tell which was meant.
+  #
+  # value_moments keeps its all-accounts meaning: the independent gold_sql for the lookup
+  # questions counts fct_value_moments unfiltered, so raw activity volume is what those ask for.
+  # A North Star is a different measure and gets its own row here, where every other definition
+  # lives — never a filter smuggled into the tree, which would put a metric's population in a
+  # second place.
+  real_value_moments:
+    description: "Value moments from real users in the period (excludes internal/test accounts).
+      The North Star: this is the metric the tree decomposes into breadth x frequency x depth."
+    entity: value_moments
+    segment: active
+    unit: count
+    synonyms: ["north star", "real value moments", "real habit completions"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    additive_over_time: true
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  new_signups:
+    description: "Number of user signups in the period (raw — includes all accounts)."
+    entity: signups
+    segment: all
+    unit: count
+    synonyms: ["signups", "new users", "registrations", "new accounts"]
+    base: dim_users
+    agg: "count(*)"
+    additive_over_time: true
+    time_column: signup_date
+    dimensions: [region, channel, platform]
+    supports_internal_filter: true
+
+  # --- user-count / per-user metrics: exclude internal/test by definition ---
+  active_users:
+    description: "Distinct real users with at least one value moment in the period (excludes internal/test accounts)."
+    entity: users
+    segment: active
+    unit: count
+    synonyms: ["active users", "actives", "engaged users", "MAU", "WAU"]
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  power_users:
+    description: "Distinct real users who logged 5+ value moments in a single day during the period (excludes internal/test)."
+    entity: users
+    segment: power
+    unit: count
+    synonyms: ["power users", "superusers", "highly engaged users"]
+    base: agg_active_days
+    agg: "count(distinct case when moments >= 5 then user_id end)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  days_per_user:
+    description: "Average active days per active user in the period (frequency; excludes internal/test)."
+    entity: users
+    segment: active
+    unit: ratio
+    synonyms: ["frequency", "how often", "active days per user"]
+    base: agg_active_days
+    agg: "count(*) * 1.0 / nullif(count(distinct user_id), 0)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  moments_per_day:
+    description: "Average value moments per active day (depth; excludes internal/test)."
+    entity: value_moments
+    segment: active
+    unit: ratio
+    synonyms: ["depth", "intensity", "moments per active day"]
+    base: agg_active_days
+    agg: "sum(moments) * 1.0 / nullif(count(*), 0)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  reminder_open_rate:
+    description: "Share of active days on which the user opened a reminder (a retention driver; excludes internal/test)."
+    entity: reminders
+    segment: active
+    unit: share
+    synonyms: ["reminder open rate", "notification open rate"]
+    base: agg_active_days
+    agg: "avg(had_reminder)"
+    time_column: active_date
+    dimensions: [region, platform, channel, country]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  activation_rate:
+    description: "Share of the signup cohort that reached a first value moment within 7 days (excludes internal/test)."
+    entity: users
+    segment: signup_cohort
+    unit: share
+    synonyms: ["activation", "activation rate", "onboarding conversion"]
+    base: agg_user_activation
+    agg: "avg(CASE WHEN activated THEN 1 ELSE 0 END)"
+    time_column: signup_date
+    dimensions: [region, channel, platform]
+    default_filters: ["NOT is_internal"]
+    supports_internal_filter: true
+
+  # --- subscription & spend metrics (internal accounts don't hold subscriptions) ---
+  mrr:
+    description: "Monthly recurring revenue from currently-active subscriptions (annual plans divided by 12)."
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    synonyms: ["MRR", "monthly recurring revenue"]
+    base: fct_subscriptions
+    agg: "sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  active_subscriptions:
+    description: "Count of currently-active subscriptions."
+    entity: subscriptions
+    segment: active_subscription
+    unit: count
+    synonyms: ["active subscriptions", "active subs"]
+    base: fct_subscriptions
+    agg: "count(*)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  paying_users:
+    description: "Distinct users with an active subscription."
+    entity: users
+    segment: paying
+    unit: count
+    synonyms: ["paying users", "paying customers", "subscribers", "paid users"]
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  arpu:
+    description: "Average MRR per paying user (annual plans divided by 12)."
+    entity: revenue
+    segment: paying
+    unit: currency
+    synonyms: ["ARPU", "average revenue per user", "revenue per user"]
+    base: fct_subscriptions
+    agg: "sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) * 1.0 / nullif(count(distinct user_id), 0)"
+    default_filters: ["is_active"]
+    time_column: null
+    dimensions: [plan]
+
+  marketing_spend:
+    description: "Total marketing spend in the period."
+    entity: spend
+    segment: all
+    unit: currency
+    synonyms: ["marketing spend", "ad spend", "marketing cost"]
+    base: fct_marketing_spend
+    agg: "sum(spend)"
+    additive_over_time: true
+    time_column: spend_date
+    dimensions: [channel]
+
+  # Added after study 05 found the layer could not express two ordinary questions — "how many
+  # reminders were shown" and "how many habits are still being tracked". Both are measures a
+  # habit-tracking company would obviously govern, so their absence was a gap in THIS layer rather
+  # than a realistic limit of semantic layers, and testing the governed arms against questions our
+  # own modelling had missed measured our modelling.
+  #
+  # The coverage finding survives the fix and is stronger for it: a question outside the layer can
+  # now be chosen deliberately rather than arriving through a gap nobody decided on.
+  reminders_shown:
+    description: "Number of reminders shown to users in the period."
+    entity: reminders
+    segment: all
+    unit: count
+    synonyms: ["reminders", "reminders shown", "reminders sent", "notifications"]
+    base: fct_reminders
+    agg: "count(*)"
+    additive_over_time: true
+    time_column: reminded_date
+
+  # A STOCK, not an event count: it answers "as of now", so it declares no time column and derives
+  # as semi-additive. Two habits active in January and February are not four active habits.
+  active_habits:
+    description: "Habits that have not been archived — the ones users are still tracking."
+    entity: habits
+    segment: active
+    unit: count
+    synonyms: ["active habits", "habits being tracked", "tracked habits", "unarchived habits"]
+    base: dim_habits
+    agg: "count(*)"
+    default_filters: ["NOT is_archived"]
+    time_column: null
+    dimensions: [category]
+
+  referrals:
+    description: "Number of referrals created in the period."
+    entity: referrals
+    segment: all
+    unit: count
+    synonyms: ["referrals", "invites", "referred users"]
+    base: fct_referrals
+    agg: "count(*)"
+    additive_over_time: true
+    time_column: referred_ts
+    filterable: [status]
+
+# --- Governance metadata: the facts the answerability checks consult. ---
+# Coverage windows and governed segments were previously prose in the knowledge
+# base (or nowhere); here they are data, so a checker can return true/false.
+governance:
+  coverage:
+    data_start: 2025-09-01        # first signups in the warehouse
+    data_end: 2026-07-12          # last complete ISO week
+    # A region's own launch window lives on the region dimension member below
+    # (region.APAC.available_from), so availability is a property of the dimension, not a
+    # separate coverage list. The coverage check reads it from there.
+  # Governed segments: named, reusable segment filters a question maps onto — the
+  # Cube `segments` / LookML `sql_always_where` construct. `exclude_test: <dimension>`
+  # drops every member of that dimension flagged `test: true`. Applied at query time via
+  # query_metric(segment=...), so "real acquisition" is an enforced filter, not prose.
+  # (Distinct from ontology.segments below, the spec-check's abstract segment words.)
+  segments:
+    real_acquisition:
+      description: "Real acquisition only — excludes test-integration channels."
+      synonyms: ["real acquisition", "real channels", "real acquisition channels"]
+      exclude_test: channel
+
+  # Answerability terms: segment words a question might NAME that have a governed
+  # definition, consulted by check_segment_defined / segment_defined() at rung 3.
+  # (Distinct from the R6 ontology.segments below, which are the spec-check segments.)
+  answerable_terms:
+    - all_users
+    - internal
+    - non_internal
+    - premium
+    - power_users
+
+  # R6 spec-check ontology: the vocabulary the isolated question-decomposer may use to
+  # say what a question ASKS FOR. The decomposer is shown THIS block and never the
+  # metrics, so it states what was asked, not what we stock (share the ontology, hide the
+  # inventory). It is deliberately a SUPERSET of the metrics: it names business entities
+  # that have NO governed metric (habits, sessions, teams, ...) so a question about one is
+  # expressible and then provably unanswerable — a superset of one entity would just be
+  # the inventory in disguise, so several un-metriced entities are listed on purpose.
+  # Glosses are purely semantic (which business thing this is) and must NOT reveal whether
+  # a metric exists or name a warehouse table — that would leak the inventory back in.
+  # Every metric's entity/segment must appear here (enforced by tests/test_semantic.py).
+  # Measures and grains are universal query properties, so they live in harness/spec_check.py.
+  ontology:
+    entities:
+      users: "individual user accounts"
+      signups: "user signup events"
+      subscriptions: "subscription records"
+      revenue: "recurring revenue amounts"
+      value_moments: "completed-habit events (a user finishing a habit)"
+      habits: "habit definitions a user creates and tracks"
+      sessions: "app sessions / visits"
+      teams: "teams or workspaces"
+      notifications: "notifications sent to users"
+      devices: "devices a user has registered"
+      spend: "marketing spend amounts"
+      referrals: "referral records"
+      reminders: "reminder interactions"
+      other: "anything not in this list"
+    segments:
+      all: "the entire set of the entity, no restriction"
+      active: "active / engaged users (activity in the period)"
+      paying: "users with an active paid subscription"
+      power: "power users (highly engaged)"
+      active_subscription: "currently-active subscriptions"
+      signup_cohort: "a signup cohort, for a rate"
+      other: "a restriction not in this list"
+
+  # Governed dimension members + their synonyms (Cortex Analyst ships exactly this as a
+  # `synonyms:` field). The value resolver (harness/semantic.py) maps a free-text filter
+  # value in a question onto the canonical member — "iPhone" -> platform=ios — or refuses
+  # a value that matches no governed member, instead of silently returning an empty slice.
+  # The canonical member is the key; matching is case/space/underscore-insensitive.
+  dimensions:
+    platform:
+      ios: ["iphone", "apple", "ios", "apple phone"]
+      android: ["android", "google", "google phone"]
+      web: ["web", "browser", "desktop", "website"]
+      unknown: ["unknown", "unattributed"]
+    region:
+      # Synonyms are true EQUIVALENTS only, never sub-regions. A hyponym (e.g. "north
+      # america" is a proper subset of Americas) must resolve to None -> refuse, not
+      # silently widen to the parent and answer a different question.
+      #
+      # A member is either a synonym list (shorthand) or a dict that also carries
+      # metadata: `available_from` (a query whose period begins before this is refused —
+      # earlier rows are pre-launch test data) and `countries` (a country filter inherits
+      # this region's window, so PH/ID/IN can't sneak past the coverage check).
+      APAC:
+        synonyms: ["apac", "asia pacific"]
+        available_from: 2026-05-01
+        countries: [PH, ID, IN]
+      Americas: ["americas", "america"]
+      EMEA: ["emea"]
+    plan:
+      annual: ["annual", "yearly", "year", "annual plan"]
+      monthly: ["monthly", "month", "monthly plan"]
+    channel:
+      paid_search: ["paid search", "sem", "ppc", "google ads", "paid"]
+      organic: ["organic", "direct"]
+      content_seo: ["content", "seo", "content marketing", "blog"]
+      # `test: true` marks a channel that isn't real acquisition (a test integration).
+      # Governed, so the exclusion is enforced by the real_acquisition segment below —
+      # not a knowledge-base note the model has to remember and choose to apply.
+      partnerships:
+        synonyms: ["partnerships", "partners", "partner"]
+        test: true
+      referral: ["referral", "referrals", "word of mouth", "invites"]
+    country:
+      US: ["us", "usa", "united states"]
+      GB: ["gb", "uk", "united kingdom", "britain"]
+      DE: ["de", "germany"]
+      FR: ["fr", "france"]
+      BR: ["br", "brazil"]
+      ID: ["id", "indonesia"]
+      IN: ["in", "india"]
+      PH: ["ph", "philippines"]
+    status:
+      activated: ["activated", "active"]
+      joined: ["joined"]
+      pending: ["pending"]

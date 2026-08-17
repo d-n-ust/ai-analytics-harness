@@ -1,0 +1,40 @@
+# Experiment 5 — preflight ambiguity: does fixing what the detector finds improve the agent?
+#
+# Experiments 1-3 improve the AGENT; 4 changes the WAREHOUSE. This one measures the BENEFIT of the
+# preflight ambiguity detector end to end: point it at a semantic layer, fix the confusions it flags,
+# and measure the agent BEFORE vs AFTER — at two levels of ambiguity (a governed layer with few, and a
+# pressure-built layer with many) — so the effect reads as a dose-response rather than an anecdote.
+#
+# The detector's own recall/precision (experiment material in scratchpad/ambiguity + the preflight
+# package) answer "does it find the confusions". This experiment answers the harder question a buyer
+# actually asks: "does fixing what it finds make my agent measurably more trustworthy".
+
+title: "Preflight ambiguity — does fixing what the detector finds improve the agent?"
+question: >-
+  When preflight flags ambiguities in a semantic layer and they are fixed, how much do the agent's
+  silent-error rate, balanced accuracy, and coverage improve — and does the effect scale with the
+  amount of ambiguity in the layer?
+status: in_progress
+
+article:
+  slug: null                 # unwritten
+  repo: decisionspine-site
+
+# runs: code — an architecture (the preflight detector + four environments) plus the agent evals that
+# measure the effect. The four semantic layers are the arms; there are no declarative sub-studies.
+runs: code
+
+evidence:
+  - layers/          # small/high x before/after semantic layers — the four environments
+  - scan.md          # preflight ambiguity counts per layer (the dose), before and after fixing
+  # results/         # agent runs (SER / balanced accuracy / coverage) per environment — added when run
+
+# THE FOUR ENVIRONMENTS. Same habit-tracking domain and warehouse; the ambiguity is in the DEFINITIONS.
+#   small_before   the governed layer, as shipped — a well-modelled layer still carries a few traps
+#   small_after    the same, with preflight's findings fixed
+#   high_before    the layer a pressured team left — many overlapping/renamed/undocumented metrics
+#   high_after     the same, with preflight's findings fixed
+# The measurement uses the EMBEDDING gate (the validated path): the lexical fallback misses the
+# synonym-based confusions (mrr ~ recurring_revenue, active_users ~ engaged_users), which are exactly
+# the pressure-built kind.
+notes: []
