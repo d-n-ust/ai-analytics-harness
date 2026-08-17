@@ -1,28 +1,28 @@
-# The habit-tracking semantic layer AS A PRESSURED TEAM LEFT IT.
+# The habit-tracking semantic layer AS A PRESSURED TEAM LEFT IT — the HIGH-sprawl arm.
 #
-# Same domain and same warehouse as the governed layer, but the definitions accreted faster than
-# anyone governed them: three teams each added the metric they needed, nobody reconciled the names,
-# and half the definitions are undocumented. The NUMBERS are fine — the ambiguity is in the layer.
+# Same domain and warehouse as the governed layer; the numbers are fine, the ambiguity is in the
+# definitions. Three teams each added the metric they needed, nobody reconciled the names, half are
+# undocumented. It is authored to exercise EVERY confusion preflight detects, so the high arm shows
+# the tool's full range, not one trap. Clusters are labelled by the finding type they trigger.
 #
-# This is the "high sprawl" arm of the preflight benefit experiment. preflight is run over it, the
-# flagged confusions are fixed, and the agent is measured before vs after. The governed
-# semantic_layer.yml is the "low sprawl" arm.
+# NOTE: the synonym-based clusters (revenue, active-users) fire on the EMBEDDING gate, not the lexical
+# one — they are exactly the pressure-built kind (mrr ~ recurring_revenue reads alike by MEANING, not
+# spelling). Scan with `--gate embeddings`.
 
 metrics:
 
-  # ── value moments: the same activity volume under four names, two scopes ────────────────────────
-  value_moments:
+  # ══ VALUE MOMENTS ══ scope trap + duplicates + siblings + grain
+  value_moments:                                   # bare name — the trap
     description: "Value moments in the period."
     entity: value_moments
     segment: all
     unit: count
-    synonyms: ["value moments", "habit completions", "activity"]
+    synonyms: ["value moments", "activity"]
     base: agg_active_days
     agg: "sum(moments)"
     time_column: active_date
-
-  real_value_moments:
-    description: "Value moments from real users (excludes internal/test)."
+  real_value_moments:                              # SCOPE_TRAP vs value_moments (NOT is_internal)
+    description: "Value moments from real users."
     entity: value_moments
     segment: active
     unit: count
@@ -31,8 +31,7 @@ metrics:
     agg: "sum(moments)"
     default_filters: ["NOT is_internal"]
     time_column: active_date
-
-  total_moments:
+  total_moments:                                   # DUPLICATE of value_moments
     description: "Total moments logged."
     entity: value_moments
     segment: all
@@ -41,21 +40,52 @@ metrics:
     base: agg_active_days
     agg: "sum(moments)"
     time_column: active_date
-
-  completed_moments:
-    description: "Completed value moments for engaged users."
+  ios_value_moments:                               # SIBLING vs android (incomparable scopes)
+    description: "Value moments on iOS."
+    entity: value_moments
+    segment: all
+    unit: count
+    synonyms: ["ios value moments"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["platform = 'ios'"]
+    time_column: active_date
+  android_value_moments:
+    description: "Value moments on Android."
+    entity: value_moments
+    segment: all
+    unit: count
+    synonyms: ["android value moments"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["platform = 'android'"]
+    time_column: active_date
+  weekly_value_moments:                            # GRAIN_MISMATCH vs monthly (same measure, diff grain)
+    description: "Value moments, weekly."
     entity: value_moments
     segment: active
     unit: count
-    synonyms: ["completed moments"]
+    synonyms: ["weekly value moments"]
     base: agg_active_days
     agg: "sum(moments)"
-    default_filters: ["NOT is_internal", "moments > 0"]
+    default_filters: ["NOT is_internal"]
+    grain: week
+    time_column: active_date
+  monthly_value_moments:
+    description: "Value moments, monthly."
+    entity: value_moments
+    segment: active
+    unit: count
+    synonyms: ["monthly value moments"]
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["NOT is_internal"]
+    grain: month
     time_column: active_date
 
-  # ── active users: five overlapping definitions ─────────────────────────────────────────────────
+  # ══ ACTIVE USERS ══ scope trap + duplicate + grain mismatch (semi-additive) + name collision
   active_users:
-    description: "Distinct real users active in the period (excludes internal/test)."
+    description: "Distinct real users active in the period."
     entity: users
     segment: active
     unit: count
@@ -64,8 +94,7 @@ metrics:
     agg: "count(distinct user_id)"
     default_filters: ["NOT is_internal"]
     time_column: active_date
-
-  actives:
+  actives:                                         # SCOPE_TRAP vs active_users (drops NOT is_internal)
     description: "Active users."
     entity: users
     segment: all
@@ -74,19 +103,7 @@ metrics:
     base: agg_active_days
     agg: "count(distinct user_id)"
     time_column: active_date
-
-  engaged_users:
-    description: "Engaged users in the period."
-    entity: users
-    segment: active
-    unit: count
-    synonyms: ["engaged users", "active users"]
-    base: agg_active_days
-    agg: "count(distinct user_id)"
-    default_filters: ["NOT is_internal", "moments >= 1"]
-    time_column: active_date
-
-  monthly_active_users:
+  monthly_active_users:                            # DUPLICATE of active_users
     description: "MAU."
     entity: users
     segment: active
@@ -96,51 +113,40 @@ metrics:
     agg: "count(distinct user_id)"
     default_filters: ["NOT is_internal"]
     time_column: active_date
-
-  power_users:
-    description: "Users with 5+ moments in a day."
+  dau:                                             # GRAIN_MISMATCH vs mau: distinct count is semi-additive
+    description: "Daily active users."
     entity: users
-    segment: power
-    unit: count
-    synonyms: ["power users", "superusers"]
-    base: agg_active_days
-    agg: "count(distinct case when moments >= 5 then user_id end)"
-    default_filters: ["NOT is_internal"]
-    time_column: active_date
-
-  # ── signups: three definitions, two scopes ─────────────────────────────────────────────────────
-  new_signups:
-    description: "Signups in the period (all accounts)."
-    entity: signups
-    segment: all
-    unit: count
-    synonyms: ["signups", "new signups"]
-    base: dim_users
-    agg: "count(*)"
-    time_column: signup_date
-
-  signups:
-    description: "Signups."
-    entity: signups
-    segment: all
-    unit: count
-    synonyms: ["signups", "registrations"]
-    base: dim_users
-    agg: "count(*)"
-    time_column: signup_date
-
-  new_users:
-    description: "New real users (excludes internal/test)."
-    entity: signups
     segment: active
     unit: count
-    synonyms: ["new users", "new accounts"]
-    base: dim_users
-    agg: "count(*)"
+    synonyms: ["DAU", "daily active users"]
+    base: agg_active_days
+    agg: "count(distinct user_id)"
     default_filters: ["NOT is_internal"]
-    time_column: signup_date
+    grain: day
+    time_column: active_date
+  mau:
+    description: "Monthly active users."
+    entity: users
+    segment: active
+    unit: count
+    synonyms: ["MAU"]
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal"]
+    grain: month
+    time_column: active_date
+  engaged_users:                                   # NAME_COLLISION / concept vs active_users
+    description: "Engaged users (any moment)."
+    entity: users
+    segment: active
+    unit: count
+    synonyms: ["engaged users", "active users"]
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal", "moments >= 1"]
+    time_column: active_date
 
-  # ── recurring revenue: mrr computed three ways ─────────────────────────────────────────────────
+  # ══ RECURRING REVENUE ══ concept fork + duplicate + name collision (embedding gate)
   mrr:
     description: "Monthly recurring revenue (annual plans / 12)."
     entity: revenue
@@ -150,28 +156,25 @@ metrics:
     base: fct_subscriptions
     agg: "sum(case when plan = 'annual' then billed_amount / 12.0 else billed_amount end)"
     default_filters: ["is_active"]
-
-  recurring_revenue:
+  recurring_revenue:                               # CONCEPT_FORK vs mrr (same base/agg, diff column)
     description: "Recurring revenue from active subscriptions."
     entity: revenue
     segment: active_subscription
     unit: currency
-    synonyms: ["recurring revenue", "MRR"]
+    synonyms: ["recurring revenue"]
     base: fct_subscriptions
     agg: "sum(billed_amount)"
     default_filters: ["is_active"]
-
-  monthly_recurring_revenue:
+  monthly_recurring_revenue:                       # DUPLICATE of mrr
     description: "MRR."
     entity: revenue
     segment: active_subscription
     unit: currency
-    synonyms: ["monthly recurring revenue", "MRR"]
+    synonyms: ["monthly recurring revenue"]
     base: fct_subscriptions
     agg: "sum(case when plan = 'annual' then billed_amount / 12.0 else billed_amount end)"
     default_filters: ["is_active"]
-
-  gross_revenue:
+  gross_revenue:                                   # SCOPE_TRAP / concept vs net_revenue
     description: "Gross subscription revenue."
     entity: revenue
     segment: all
@@ -179,7 +182,6 @@ metrics:
     synonyms: ["gross revenue", "revenue"]
     base: fct_subscriptions
     agg: "sum(billed_amount)"
-
   net_revenue:
     description: "Net subscription revenue (active only)."
     entity: revenue
@@ -190,7 +192,37 @@ metrics:
     agg: "sum(billed_amount)"
     default_filters: ["is_active"]
 
-  # ── paying users: two names ────────────────────────────────────────────────────────────────────
+  # ══ SIGNUPS ══ duplicate + scope trap
+  new_signups:
+    description: "Signups in the period."
+    entity: signups
+    segment: all
+    unit: count
+    synonyms: ["signups", "new signups"]
+    base: dim_users
+    agg: "count(*)"
+    time_column: signup_date
+  signups:                                         # DUPLICATE of new_signups
+    description: "Signups."
+    entity: signups
+    segment: all
+    unit: count
+    synonyms: ["signups", "registrations"]
+    base: dim_users
+    agg: "count(*)"
+    time_column: signup_date
+  new_users:                                       # SCOPE_TRAP vs signups (NOT is_internal)
+    description: "New real users."
+    entity: signups
+    segment: active
+    unit: count
+    synonyms: ["new users"]
+    base: dim_users
+    agg: "count(*)"
+    default_filters: ["NOT is_internal"]
+    time_column: signup_date
+
+  # ══ PAYING USERS ══ duplicate
   paying_users:
     description: "Distinct users with an active subscription."
     entity: users
@@ -200,8 +232,7 @@ metrics:
     base: fct_subscriptions
     agg: "count(distinct user_id)"
     default_filters: ["is_active"]
-
-  subscribers:
+  subscribers:                                     # DUPLICATE of paying_users
     description: "Subscribers."
     entity: users
     segment: paying
@@ -211,7 +242,7 @@ metrics:
     agg: "count(distinct user_id)"
     default_filters: ["is_active"]
 
-  # ── unambiguous supporting metrics (fine as they are) ──────────────────────────────────────────
+  # ── unambiguous supporting metrics ──
   active_subscriptions:
     description: "Count of active subscriptions."
     entity: subscriptions
@@ -221,9 +252,8 @@ metrics:
     base: fct_subscriptions
     agg: "count(*)"
     default_filters: ["is_active"]
-
   marketing_spend:
-    description: "Total marketing spend in the period."
+    description: "Total marketing spend."
     entity: spend
     segment: all
     unit: currency
@@ -231,13 +261,3 @@ metrics:
     base: fct_marketing_spend
     agg: "sum(spend)"
     time_column: spend_date
-
-  reminders_shown:
-    description: "Reminders shown in the period."
-    entity: reminders
-    segment: all
-    unit: count
-    synonyms: ["reminders shown", "notifications"]
-    base: fct_reminders
-    agg: "count(*)"
-    time_column: reminded_date

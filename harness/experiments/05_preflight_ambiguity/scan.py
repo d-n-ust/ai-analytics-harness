@@ -68,6 +68,7 @@ def facts_from_layer(doc: dict) -> list[GroundingFact]:
             id=f"sl:{name}", label=name, layer="semantic", kind="metric",
             entity=m.get("entity"), agg=agg, measure=measure,
             base=(m.get("base") or "").split(".")[-1].lower() or None,
+            grain=m.get("grain"),  # an explicit reporting grain, so day-vs-month roll-ups can collide
             additive=additivity(agg), scope=scope, derived=derived,
             text=f"{name.replace('_', ' ')}. {m.get('description', '')} {synonyms}".strip()))
     return out

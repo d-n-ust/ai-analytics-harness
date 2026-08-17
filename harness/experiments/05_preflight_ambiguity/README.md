@@ -37,8 +37,10 @@ business intent, before the fixes, so the answer key cannot drift toward what we
 
 ## Status
 
-- [x] `high_before` layer authored; `small_before` = governed layer.
-- [x] `scan.py` — the dose measurement (see `scan.md`).
+- [x] `high_before` authored to exercise every finding type; `small_before` = governed layer.
+- [x] `scan.py` + `scan.md` — the dose measurement (embedding gate): **small 1, high 12**, spanning
+      GRAIN_MISMATCH, SCOPE_TRAP, DUPLICATE, NAME_COLLISION, SIBLING — a 12x dose gap and the tool's
+      full range on one layer.
 - [ ] `_after` layers (the fixes) + re-scan to ~0.
-- [ ] pre-registered question set + gold.
+- [ ] pre-registered question set + gold (3 LLM judges).
 - [ ] agent runs on the four environments; SER / balanced accuracy / coverage.
