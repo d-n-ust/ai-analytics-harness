@@ -305,3 +305,73 @@ fast-follow (via `lkml`). Verified live catches on real public repos across metr
 Demo shortlist by cleanliness: **Cube Stripe (SCOPE_TRAP, one file)** and MetricFlow full-funnel
 (name collision) are the crispest governed-layer demos; Mattermost raw-dbt `total_arr` is the
 "works without governance" demo (noisier — the point being that governance buys precision).
+
+## 10. The benefit experiment (the real scorecard) — design of record
+
+The detector metrics (recall/precision on a *collision gold*) prove the tool *works*; they do not
+prove it *matters*. The benefit lives at the agent's answers. So the scorecard's core becomes a
+before/after on the harness's own metrics, framed as a **dose-response + correlation**, not an
+anecdote.
+
+**Reframe:** preflight is a **static predictor of runtime silent errors.** Validate it by correlating
+its per-metric danger score (predictor) against whether the agent makes a *silent error* on a question
+targeting that metric (label). High correlation = it flags exactly what trips the agent. The
+off-diagonal is the honest error analysis: false alarms (precision cost) and blind spots (usually
+Mode-2 construction defects). This measures the detector against **real harm**, not a proxy gold.
+
+**Environment — run it on a real format (MetricFlow), not the bespoke layer.** The domain stays the
+habit-tracking warehouse we have verified heavily, but the *surface* is dbt MetricFlow, because that
+is what teams actually use and because it makes both halves line up: the harness agent already runs on
+real MetricFlow via `engine: metricflow` (`engine/src/semantic/metricflow_engine.py`, and the whole
+`04_repair_matrix/02_segment__mf` study), and preflight's MetricFlow adapter scans the same YAML. The
+harness author's own rationale is exactly the point: *"an engine thousands of teams use in production
+is the difference between a claim about semantic modelling and a claim about one file format."* So:
+same agent, grounded on a MetricFlow directory; preflight scans that directory; the whole experiment
+is on the production format.
+
+Two sprawl levels (mid, high), same domain: within-level gives the correlation, across-level the
+dose-response. The **well-governed layer is the clean/fixed target**; we synthesise the "before" by
+*sprawling* it (overlapping, renamed, half-documented MetricFlow metrics — the pressure-built
+accretion), then "fix" back toward governed. Warehouse-structural sprawl is dial-able via
+`warehouse/presets/` (`star_schema`→`messy_tables`); `AAH_WAREHOUSE_DB` lets versions coexist.
+
+Note MetricFlow's declared blind spots (from the engine docstring) sharpen the two-mode story: it has
+no additivity and no reusable named segment, so a summed distinct-count or a hidden population cannot
+be prevented *by the layer* — exactly the construction/ambiguity defects preflight (and the Mode-2
+validators) exist to catch. Cube and raw dbt stay as **preflight adapters + public-repo exhibits**
+(detector only; the harness agent grounds on harness/MetricFlow, not Cube), with impact framed as
+hypothetical.
+
+**Metrics** (the harness already computes these; experiments 01–04 are the same shape): **silent error
+rate** (down — the harm metric), **balanced accuracy** (up — refusals beat confident wrongs),
+**coverage** (the trade, reported honestly). Hypotheses: small effect at mid sprawl, large at high
+sprawl (dose-response); correlation between preflight danger and agent silent error is high.
+
+**Discipline:** questions + gold **pre-registered** before any run; gold written by **3 LLM judges,
+escalate to Dmitry on disagreement** (the red-team pattern), from business intent, independent of the
+fixes; uniform obvious fixes (rename/scope), not answer-fitting; questions designed so the wrong
+binding gives a *clearly* wrong number (else the ambiguity never bites). Placebo arm dropped.
+
+**Reality check done:** `scan_harness_layer.py` converts the harness's dict-keyed layer to preflight
+facts (parses the SQL `agg` expression; population from `default_filters`) and runs the detector —
+found the 1 real trap, no false alarms across 17 metrics. Kept as experiment glue in scratchpad, not
+a preflight dialect (it's our internal format).
+
+**Extraction of `warehouse`/`semantic` from engine — NOT now.** They have ~24 importers: the agent's
+core (`grounding`, all `guardrails/`, `tools`, `outcomes`) and ~16 harness modules incl. many tests.
+`engine/src/semantic` is 3,154 lines — a MetricFlow compiler + resolver + tree + health, i.e. the
+agent's grounding engine, not apparatus. What reads as "the semantic-layer module" is two fused
+things: the definitions (YAML, separable) and the engine (code, core). Extraction is a major refactor
+that touches the agent's core and does not block the experiment. If ever done, split the definitions
+from the engine; do not lift the whole subsystem. Run the experiment on these modules as-is.
+
+Strategic framing (Dmitry's steer, and correct): **nobody uses the bespoke semantic format, so we do
+not invest in it as a product.** The investment is the real-format adapters — MetricFlow, Cube, dbt —
+which are built. The bespoke engine is not wasted, though: it *renders to* MetricFlow/Cube
+(`renderers.py`) and provides the `engine: harness` reference baseline. Its job is to be the internal
+source and control, while everything customer-facing — preflight's adapters, the benefit experiment,
+the public demos — operates on the formats teams actually use.
+
+**Public repos = a separate, clearly-labelled exhibit** (Cube/MetricFlow/dbt catches): the
+*recognisability* proof ("real problems in code you know"), framed as *hypothetical* agent impact —
+kept apart from the *measured* causal claim on the controlled warehouse.
