@@ -173,3 +173,52 @@ directly-parseable files):
 adapter and scan the real files above; lead the narrative with GitLab's ARR family. The scored
 recall/precision claim still stays on the blind synthetic envs — there is no ground truth on public
 repos, so a public run is *qualitative/recognizable* evidence, not a scored number.
+
+### 9a. dbt MetricFlow deep-scout (two more scouts) — verified
+
+Adoption read (honest): **real open-source MetricFlow is THIN.** MetricFlow was only open-sourced
+(Apache-2.0) at Coalesce Oct 2025; before that dbt Cloud gated the serving layer, so production metric
+definitions are overwhelmingly *private*. GitHub topics: `metricflow` ≈25 repos (mostly tooling),
+`dbt-semantic-layer` = 0, `dbt-metrics` = 2 tools. The public corpus is individual portfolio / bootcamp
+/ POC repos, not enterprise. The old dbt `calculation_method` metrics spec is dead (deprecated 2023) —
+skip it. So the ecosystem is heavily used, but mostly where we can't see it.
+
+But the format is highly ingestible (consistent `semantic_models:`→`measures:`; `metrics:` with
+`type:`/`type_params:`/`filter:`), and **every preflight type fires on real hand-authored files** —
+several unintentionally. Verified RICH targets (clones under `scratchpad/mf_scout_{a,b}/`):
+
+- **`eduardocornelsen/full-funnel-ai-analytics`** (20★, active) — the best. Marketing MDS + MetricFlow
+  + MCP. Verified: metric `total_clicks` (label "Total Ad Clicks") → measure `total_ad_conversions`
+  (name↔measure mismatch); `total_sessions` bound to two different columns; three near-synonym
+  "conversions" measures with the "canonical" one orphaned; `blended_roas` **description says
+  "paid-channel orders only" but the definition uses all-orders `revenue`** (stated population ≠
+  actual). The author writes warnings in descriptions — a human doing preflight's job by hand.
+- **`ken-nagata/dbt-olist-metrics`** — verified degenerate ratios: `conversion_rate` AND
+  `late_delivery_rate` are both `order_count / order_count` ≡ **always 100%**, while their descriptions
+  promise "% delivered" / "% late". Plus `gmv` silently includes canceled orders.
+- **`dioz95/marketing-analytics-engineering`** (8★) — `marketing_budget_revenue_ratio` = budget
+  (`fct_marketing_campaign`) / revenue (`fct_transactions`): numerator/denominator from unrelated fact
+  tables at different grains. Plus count_distinct measures exposed as additive `simple` metrics.
+- MODERATE: `TechPopsicles/dbt-mesh-platform` (gross vs net revenue CONCEPT_FORK, author's defensive
+  "THE authoritative revenue" wording); `KushPatel29/supply-chain-analytics-dbt` (order_count at line
+  grain). CLEAN-but-thematic: `ro-kannan/dbt-metricflow-pharma-analytics-governance` ("5 teams, 5 net
+  revenue numbers" — the prevention side). Template (confirms the constructs, doesn't count):
+  dbt-labs jaffle-shop-metricflow (the canonical filter-based SCOPE_TRAP).
+
+**Two strong signals for the product thesis:**
+1. Authors repeatedly write **descriptions that contradict their own definitions** (blended_roas, the
+   olist ratios) and hand-warn against confusions — the clearest evidence the problem is real and
+   currently unaddressed. Suggests a distinct high-value check: compare *stated intent* (description)
+   to *actual population* (definition).
+2. The **degenerate ratio** (`numerator == denominator`) fired on a real repo — a trivial, high-value
+   ratio-consistency check (Mode-2, per `PRIMITIVE-VALIDATORS.md`).
+
+**Caveats for the build:** the public corpus is small (portfolio repos, not production scale), so the
+MetricFlow eval corpus is limited; and much real semantic YAML is *not* MetricFlow (SDF at Dagster,
+Cube, LookML) — a MetricFlow-only adapter is a genuine but narrow band, though the ambiguity classes
+generalize across formats.
+
+**Build decision:** build the **dbt-MetricFlow adapter** (cheap, consistent YAML, our ICP's growing
+standard) and demo on `full-funnel` + `olist`; the one wrinkle is parsing MetricFlow's Jinja filter
+syntax (`{{ Dimension('order__status') }} = 'completed'`) into scope predicates. Cube is the natural
+second dialect. LookML remains a fast follow (see §on-proprietary-formats in the LookML discussion).
