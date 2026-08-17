@@ -35,7 +35,13 @@ import sqlglot
 import yaml
 from sqlglot import exp
 
-from preflight import GroundingFact, adapt_docs, adapt_warehouse, detect_collisions
+from preflight import (
+    GroundingFact,
+    adapt_docs,
+    adapt_warehouse,
+    detect_collisions,
+    with_yaml_sources,
+)
 from preflight.adapters import additivity
 from preflight.scope import build_scope
 
@@ -120,14 +126,72 @@ def _group(findings):
 
 def _line(f, on, max_items=6):
     c = _mk_color(on)
-    labels = [it.label for it in f.items]
+    labels = list(dict.fromkeys(it.label for it in f.items))   # overloaded names repeat; show once
     more = c(f"  +{len(labels) - max_items}", "dim") if len(labels) > max_items else ""
     return (f"    {c('●', f.danger)} {c(f.danger[0].upper(), f.danger)} "
             f"{c(f'{f.type:22}', 'dim')} " + "  ~  ".join(labels[:max_items]) + more)
 
 
-def _report(results, gate, on):
+# ── detailed provenance: cite each finding to path:line and show the offending source line ────────
+_SRC: dict[str, list[str]] = {}
+
+
+def _src_line(path: str, line: int) -> str:
+    """Text of `line` (1-based) in `path`, cached across findings; '' if unreadable."""
+    if path not in _SRC:
+        try:
+            _SRC[path] = pathlib.Path(path).read_text().splitlines()
+        except OSError:
+            _SRC[path] = []
+    lines = _SRC[path]
+    return lines[line - 1] if 0 < line <= len(lines) else ""
+
+
+def _disp(path: str) -> str:
+    """A short path for display: relative to the layers/ root when possible."""
+    p = pathlib.Path(path)
+    try:
+        return str(p.relative_to(LAYERS))
+    except ValueError:
+        return p.name
+
+
+def _highlight(text: str, label: str, danger: str, on) -> str:
+    """The source line, indentation stripped, with the offending term coloured and the rest dim."""
     c = _mk_color(on)
+    s = text.strip()
+    i = s.lower().find(label.lower())
+    if i < 0:
+        return c(s, "dim")
+    return c(s[:i], "dim") + c(s[i:i + len(label)], danger) + c(s[i + len(label):], "dim")
+
+
+def _cites(f, on):
+    """One 'path:line  <source line>' row per distinct cited location, offending term highlighted."""
+    c = _mk_color(on)
+    rows, seen = [], set()
+    for it in f.items:
+        if it.source is None or (it.source.path, it.source.line) in seen:
+            continue
+        seen.add((it.source.path, it.source.line))
+        loc = f"{_disp(it.source.path)}:{it.source.line}"
+        rows.append(f"        {c(f'{loc:<30}', 'accent')} "
+                    + _highlight(_src_line(it.source.path, it.source.line), it.label, f.danger, on))
+    return rows
+
+
+def _report(results, gate, on, detail=False):
+    c = _mk_color(on)
+
+    def emit(fs):
+        """A finding's summary line, plus its path:line citations when in detail mode."""
+        rows = []
+        for f in fs:
+            rows.append(_line(f, on))
+            if detail:
+                rows += _cites(f, on)
+        return rows
+
     out = ["", "  " + c("PREFLIGHT AMBIGUITY MAP", "b") + c(f"          gate: {gate}", "dim"),
            "  " + c("─" * 60, "dim")]
     for name, facts, findings in results:
@@ -137,7 +201,8 @@ def _report(results, gate, on):
                    + c(f"({len(facts)} facts · "
                        f"{by['high']} high {by['medium']} med {by['low']} low)", "dim"))
     out.append("  " + c("●", "high") + " high   " + c("●", "medium") + " medium   "
-               + c("●", "low") + " low")
+               + c("●", "low") + " low"
+               + ("" if detail else c("      (--detail for file:line citations)", "dim")))
 
     for name, _facts, findings in results:
         if not findings:
@@ -148,12 +213,12 @@ def _report(results, gate, on):
         if groups["cross"]:
             out.append("\n  " + c("CROSS-LAYER", "accent")
                        + c("  · a term grounded two ways, in two places", "dim"))
-            out += [_line(f, on) for f in groups["cross"]]
+            out += emit(groups["cross"])
         for lk in ("doc", "war", "sem"):
             if groups[lk]:
                 title, grounds = _LAYER[lk]
                 out.append("\n  " + c(title, "b") + c(f"  · grounds {grounds}", "dim"))
-                out += [_line(f, on) for f in groups[lk]]
+                out += emit(groups[lk])
     out.append("")
     return "\n".join(out)
 
@@ -163,7 +228,8 @@ def _load_with_progress(env, step, c):
     facts = []
     sem = env / "semantic.yml"
     if sem.exists():
-        sf = facts_from_semantic(yaml.safe_load(sem.read_text()))
+        sem_text = sem.read_text()
+        sf = with_yaml_sources(facts_from_semantic(yaml.safe_load(sem_text)), sem_text, str(sem))
         facts += sf
         step(f"      {c('·', 'dim')} semantic.yml   {c(f'{len(sf):>2}', 'b')} metrics")
     wh = env / "warehouse.sql"
@@ -184,6 +250,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gate", default="auto", choices=("auto", "lexical", "embeddings"))
     ap.add_argument("--no-color", action="store_true", help="plain output even to a terminal")
+    ap.add_argument("--detail", action="store_true",
+                    help="cite each finding to file:line and show the offending source line")
     args = ap.parse_args()
 
     ce = _mk_color(sys.stderr.isatty() and not args.no_color)
@@ -228,8 +296,10 @@ def main() -> None:
          + ce(f"  {time.time() - t0:.1f}s · {total} confusions · {len(results)} environments", "dim"))
     step()
 
-    print(_report(results, args.gate, on=sys.stdout.isatty() and not args.no_color))
-    (HERE / "scan.md").write_text("```\n" + _report(results, args.gate, on=False) + "\n```\n")
+    on = sys.stdout.isatty() and not args.no_color
+    print(_report(results, args.gate, on=on, detail=args.detail))
+    # the committed record is always the full, cited version
+    (HERE / "scan.md").write_text("```\n" + _report(results, args.gate, on=False, detail=True) + "\n```\n")
 
 
 if __name__ == "__main__":

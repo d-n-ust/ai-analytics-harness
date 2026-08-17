@@ -52,7 +52,8 @@ business intent, before the fixes, so the answer key cannot drift toward what we
 - [x] `scan.py` + `scan.md` — the dose measurement (embedding gate): **small 1, high 18**, spanning
       DEFINITION_DIVERGENCE (docs), NAME_COLLISION (warehouse), GRAIN_MISMATCH / SCOPE_TRAP / DUPLICATE
       / SIBLING (semantic), and **cross-layer doc+sem** collisions — the full range across all three
-      grounding layers.
+      grounding layers. The report groups findings by layer with live progress; `--detail` cites each
+      to `file:line` and prints the offending source line (`scan.md` is the full cited record).
 - [ ] `_after` layers (the fixes) + re-scan to ~0.
 - [ ] pre-registered question set + gold (3 LLM judges).
 - [ ] agent runs on the four environments; SER / balanced accuracy / coverage.
