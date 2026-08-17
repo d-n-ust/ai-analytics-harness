@@ -49,13 +49,21 @@ def load_cases(cases_path: pathlib.Path) -> list[dict]:
     return cases
 
 
-def ensure_time_spine(con) -> None:
-    """MetricFlow answers time-filtered queries by joining a one-row-per-day time spine. Create it as
-    a VIEW over the warehouse's own range — no rows copied. Harmless (unused) for the harness engine."""
+def ensure_mf_views(con) -> None:
+    """Views the MetricFlow layers need, created over the warehouse (no rows copied). Harmless for the
+    harness engine. (1) A one-row-per-day time spine, for any time-filtered query. (2) A monthly HABIT
+    snapshot, so active_habits can be a proper stock (active as of each month-end) instead of a naive
+    count over created_date that a stray period would shrink."""
     con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".mf_time_spine AS
         SELECT CAST(d AS DATE) AS ds FROM (SELECT UNNEST(generate_series(
             (SELECT min(active_date) FROM "{STAR_SCHEMA}".agg_active_days),
             (SELECT max(active_date) FROM "{STAR_SCHEMA}".agg_active_days), INTERVAL 1 DAY)) AS d)''')
+    con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".fct_habit_months AS
+        SELECT m.snapshot_month, h.habit_id, h.category
+        FROM (SELECT DISTINCT date_trunc('month', active_date)::DATE AS snapshot_month
+              FROM "{STAR_SCHEMA}".agg_active_days) m
+        JOIN "{STAR_SCHEMA}".dim_habits h ON h.created_date < m.snapshot_month + INTERVAL 1 MONTH
+            AND (h.archived_date IS NULL OR h.archived_date >= m.snapshot_month + INTERVAL 1 MONTH)''')
 
 
 def _queried_metrics(ans) -> list[str]:
@@ -180,7 +188,7 @@ def main() -> None:
     con = open_warehouse(create_star_views=True)
     set_star(con, capabilities(RUNG).star)
     if mf:
-        ensure_time_spine(con)
+        ensure_mf_views(con)
     golds = compute_gold(con, cases)
     model = get_model(args.model, mock=args.mock)
     verifier = get_verifier(args.model, mock=args.mock)

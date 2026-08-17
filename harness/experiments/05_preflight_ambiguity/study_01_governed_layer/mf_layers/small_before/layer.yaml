@@ -1,6 +1,5 @@
-# small_before — governed layer on MetricFlow. 1 residual trap (value_moments vs real_value_moments).
-# mrr and paying_users are proper STOCKS from the monthly snapshot (semi-additive); active_habits is
-# left naive over created_date (no snapshot table) -- a realistic mixed-quality layer.
+# small_before -- governed on MetricFlow. 1 residual trap (value_moments vs real_value_moments).
+# All stocks (mrr, paying_users, active_habits) modelled properly from monthly snapshots.
 ---
 semantic_model:
   name: user_activity
@@ -44,17 +43,16 @@ semantic_model:
     - {name: paying_user_count, agg: count_distinct, expr: user_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
 ---
 semantic_model:
-  name: habits
-  description: "One row is one habit a user created. Modelled over created_date (no snapshot table exists)."
-  node_relation: {schema_name: _star, alias: dim_habits}
-  defaults: {agg_time_dimension: created_date}
-  entities: [{name: habit, type: primary, expr: habit_id}]
+  name: habit_snapshot
+  description: "One row is one habit in one monthly snapshot (active as of month-end)."
+  node_relation: {schema_name: _star, alias: fct_habit_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities: [{name: habit_month, type: primary, expr: "habit_id || snapshot_month"}]
   dimensions:
-    - {name: created_date, type: time, type_params: {time_granularity: day}}
-    - {name: is_archived, type: categorical}
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
     - {name: category, type: categorical}
   measures:
-    - {name: habit_count, agg: count, expr: habit_id}
+    - {name: active_habit_count, agg: count, expr: habit_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
 ---
 semantic_model:
   name: marketing
@@ -88,12 +86,7 @@ metric: {name: mrr, description: "Monthly recurring revenue (current active book
 ---
 metric: {name: paying_users, description: "Distinct users with an active subscription (current, from the monthly snapshot).", type: simple, type_params: {measure: paying_user_count}}
 ---
-metric:
-  name: active_habits
-  description: "Habits still being tracked (not archived)."
-  type: simple
-  type_params: {measure: habit_count}
-  filter: "{{ Dimension('habit__is_archived') }} = false"
+metric: {name: active_habits, description: "Habits still being tracked (current active book, from the monthly snapshot).", type: simple, type_params: {measure: active_habit_count}}
 ---
 metric: {name: new_signups, description: "User signups in the period, all accounts.", type: simple, type_params: {measure: signup_count}}
 ---

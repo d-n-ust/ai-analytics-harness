@@ -27,13 +27,13 @@ cases:
     family: habits
     question: "How many habits are our users keeping up with these days?"
     expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
-             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
   - id: e05mf_habits_active
     tier: flagged
     family: habits
     question: "How many active habits do we have across the app?"
     expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
-             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
 
   - id: e05mf_newusers_total
     tier: flagged
@@ -80,3 +80,19 @@ cases:
     question: "How many paying users do we have right now?"
     expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
              gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  # value_moments residual trap (governed): bare wording, so the agent must choose value_moments (all)
+  # vs real_value_moments (real users) -- the one finding even the governed layer carries. On small_after
+  # real_value_moments is collapsed away, so this resolves. All-time (no time cue) to isolate SELECTION.
+  - id: e05mf_vm_bare_total
+    tier: flagged
+    family: value_moments
+    question: "How many value moments have our users logged in total?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days"}
+  - id: e05mf_vm_bare_figure
+    tier: flagged
+    family: value_moments
+    question: "What's our overall value-moments figure to date?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days"}
