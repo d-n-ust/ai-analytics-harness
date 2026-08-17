@@ -262,3 +262,28 @@ story — the most common customer reality. Next build if we want the Mattermost
 
 Clones under `scratchpad/{mf_scout_a,mf_scout_b,dbt_raw_scout}/`. Cal-ITP / CalData are untested large
 public projects worth a second pass if more raw-dbt RICH examples are needed.
+
+### 9d. dbt raw-SQL adapter — BUILT, and the honest precision characteristic
+
+Shipped `preflight/src/preflight/dbt_sql.py` (`--dialect dbt`, 5 tests). It de-templates dbt Jinja
+(`ref`/`source`/`config`/macros), parses each model with sqlglot, and recovers one fact per
+aggregated output column via CTE-aware `traverse_scope` — restricted to **measure aggregations
+(sum/count/count_distinct)**; MIN/MAX dimension grabs are excluded (they flooded the output with
+false collisions between date/dimension columns sharing a name-stem).
+
+Recovery on the real Mattermost ARR marts is exact: `sum(opportunity_arr) as arr` on `arr_transactions`
+filtered by `report_mo` (vs `carr` filtered by `closing_mo`); the two `total_arr` definitions
+(`sum(won_arr)` vs a day-prorated `totalprice/term`). **`total_arr` fires as a NAME_COLLISION** — one
+name, two incompatible definitions across models — the sharp, real catch.
+
+Honest precision note: at directory scale (`finance/`, 19 models → 78 measure facts) raw dbt is
+**noisier** than a governed layer — the precise catches are the *exact-name cross-model collisions*
+(`total_arr`, `arr`, `won_arr`, `lost_arr` each defined in several models), but CONCEPT_FORK
+over-fires on families of related ARR columns that share a base and name-stem (arr / arr_delta /
+arr_renewed; the churn/contraction/expansion family). That noise is the honest cost of no governance —
+and is itself the argument for a semantic layer (governed input → precise output). For a demo, lead
+with the exact-name NAME_COLLISION findings (the `total_arr` two-ways case). Tightening CONCEPT_FORK
+on raw dbt (e.g. cross-model only, or a stricter gate) is future tuning, not done here.
+
+Three dialects now ship: `env` (native), `metricflow`, `dbt` — plus Cube/LookML as the remaining
+adapters. The core detector was unchanged throughout; each dialect is just an adapter.

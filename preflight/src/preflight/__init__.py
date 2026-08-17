@@ -27,6 +27,7 @@ from .adapters import (
     facts_from_warehouse,
     load_env,
 )
+from .dbt_sql import facts_from_dbt_model, load_dbt_project
 from .detect import classify, detect_collisions, is_plumbing, partition, rank
 from .gate import make_gate
 from .metricflow import facts_from_metricflow, load_metricflow
@@ -50,6 +51,8 @@ __all__ = [
     "facts_from_semantic", "facts_from_warehouse", "facts_from_docs", "facts_from_queries",
     # dbt MetricFlow dialect
     "load_metricflow", "facts_from_metricflow",
+    # raw dbt-SQL dialect
+    "load_dbt_project", "facts_from_dbt_model",
     # detector internals, exposed for composition/testing
     "classify", "partition", "rank", "is_plumbing", "make_gate",
 ]
