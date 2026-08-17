@@ -285,5 +285,23 @@ and is itself the argument for a semantic layer (governed input → precise outp
 with the exact-name NAME_COLLISION findings (the `total_arr` two-ways case). Tightening CONCEPT_FORK
 on raw dbt (e.g. cross-model only, or a stricter gate) is future tuning, not done here.
 
-Three dialects now ship: `env` (native), `metricflow`, `dbt` — plus Cube/LookML as the remaining
-adapters. The core detector was unchanged throughout; each dialect is just an adapter.
+### 9e. Cube adapter — BUILT (YAML + JavaScript)
+
+Shipped `preflight/src/preflight/cube.py` (`--dialect cube`, 6 tests). Handles both Cube formats:
+YAML (`cubes:`) via pyyaml, and JavaScript (`cube(...)`) via a brace-matching scanner that respects
+backtick template strings and skips nested blocks (rollingWindow/format). Cube measures map cleanly:
+`type`→agg, `sql: ${col}`→measure, `filters: [{sql}]`→scope.
+
+Live on the real `cube-js/stripe-schema` (`StripeCharges.js`) — the cleanest single-file demo yet, 2
+high findings and no noise:
+- **SCOPE_TRAP**: `totalFailedAmount` = `sum(amount) WHERE status='failed'` is `totalGrossAmount` =
+  `sum(amount)` plus a filter — a "total revenue" answer silently includes failed charges.
+- **CONCEPT_FORK**: `totalGrossAmount`(amount) vs `totalRefundedAmount`(amountRefunded).
+
+**Four dialects now ship: `env` / `metricflow` / `dbt` / `cube`.** The core detector was never touched
+— each dialect is just an adapter (the format-agnostic design paying off). LookML is the remaining
+fast-follow (via `lkml`). Verified live catches on real public repos across metricflow, dbt, and cube.
+
+Demo shortlist by cleanliness: **Cube Stripe (SCOPE_TRAP, one file)** and MetricFlow full-funnel
+(name collision) are the crispest governed-layer demos; Mattermost raw-dbt `total_arr` is the
+"works without governance" demo (noisier — the point being that governance buys precision).

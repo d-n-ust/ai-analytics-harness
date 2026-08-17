@@ -27,6 +27,7 @@ from .adapters import (
     facts_from_warehouse,
     load_env,
 )
+from .cube import facts_from_cube_js, facts_from_cube_yaml, load_cube
 from .dbt_sql import facts_from_dbt_model, load_dbt_project
 from .detect import classify, detect_collisions, is_plumbing, partition, rank
 from .gate import make_gate
@@ -53,6 +54,8 @@ __all__ = [
     "load_metricflow", "facts_from_metricflow",
     # raw dbt-SQL dialect
     "load_dbt_project", "facts_from_dbt_model",
+    # Cube dialect
+    "load_cube", "facts_from_cube_yaml", "facts_from_cube_js",
     # detector internals, exposed for composition/testing
     "classify", "partition", "rank", "is_plumbing", "make_gate",
 ]
