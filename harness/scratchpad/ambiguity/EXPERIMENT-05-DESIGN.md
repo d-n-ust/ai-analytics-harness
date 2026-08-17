@@ -128,3 +128,48 @@ Add / assemble:
 4. **Scope of the guardrail demo.** A real PR on a sample repo, or a scripted before/after in the doc?
 5. **Where the scorecard lives** — inside `FINDINGS.md`, or a separate one-pager the article and the
    site can both reuse?
+
+## 9. Scouting results (Aug 2026) — public repos DO have flaggable ambiguity
+
+Three parallel scouts (GitLab dbt; the dbt directory; Cube + LookML). Verdict: the premise "public
+repos are all done right" holds **only for tutorial / vendor-skeleton demos** (jaffle-shop, bq_thelook,
+GA4 demo). Real hand-written business/finance semantic models are messy in exactly the ways preflight
+targets. The scarce ingredient is a *machine-readable definition surface* — where it exists (Cube,
+LookML), ambiguity is easy to find and directly ingestible.
+
+Ranked by how well each demonstrates the **tool running end-to-end** (structural detection on
+directly-parseable files):
+
+1. **Cube + LookML — best live-tool demo.** Measures are structured (agg + sql-column + filters),
+   mapping ~1:1 onto preflight facets, so the *structural* detection (SCOPE_TRAP / CONCEPT_FORK /
+   GRAIN_MISMATCH) fires directly. Verified real files:
+   - Cube `cube-js/stripe-schema`: `StripeCharges.js` (`totalGrossAmount` vs `totalFailedAmount` =
+     sum(amount) filtered to a subset; gross vs `totalNetRevenue`), `StripeSaaSMetrics.js` (`mrr` vs
+     `mrrChange` vs `mrr30daysAgo` — identical `sql: mrr, type: sum`, differ only by `rollingWindow`).
+   - LookML `rittmananalytics/ra_data_warehouse_lookml`: P&L (`amount` vs category-subset `revenue`),
+     timesheets (hours vs billable subset), forecast (raw vs probability-weighted).
+   - LookML `mozilla/looker-spoke-default`: DAU (`sum(dau)` vs `sum(ma_28_dau)`; summed distinct-count
+     grain hazard).
+   Adapter effort: **LookML is cheapest via the `lkml` PyPI parser**; Cube-YAML is easy, Cube-JS harder
+   (JS objects). Building these doubles as dialect support (Q3) and closes T5's LookML residual.
+
+2. **GitLab `gitlab-data/analytics` — best narrative, NOT live-ingestible.** Verified from GitLab's
+   public handbook (the repo itself is now Cloudflare-gated; no MetricFlow YAML): three colliding "ARR"
+   fields — **Net ARR / ARR Basis / Booked ARR**, where the field literally named `ARR__c` is the
+   *deal total*, not run-rate ARR — plus ARR = MRR×12, the MQL family (MQL vs first-order subset;
+   FO-initial vs FO-latest as-of divergence), and "Inquiry" defined several ways. Use as the "this
+   happens even at a top-tier, well-governed shop" story + screenshot, not a live scan.
+
+3. **SOMA (`Levers-Labs/SOMA-B2B-SaaS`)** — a governed 407-metric catalog: churned-customers two ways,
+   active-users three grains, bookings subset + a unit bug, "Net" meaning four operations, a dangling
+   reference. RICH *problem* proof, but a prose/formula catalog (no entity/agg/base/measure) → needs a
+   naming/prose adapter and exercises the naming side more than the structural.
+
+4. **Mattermost** (real production warehouse; DAU/MAU source+window collisions; weak surface = column
+   docs) and **Dagster Open Platform** (a real MetricFlow-style semantic YAML with AI synonyms; thin) —
+   supporting breadth.
+
+**Resolves open decision #1: yes — run on a public repo.** Build a LookML (via `lkml`) and/or Cube
+adapter and scan the real files above; lead the narrative with GitLab's ARR family. The scored
+recall/precision claim still stays on the blind synthetic envs — there is no ground truth on public
+repos, so a public run is *qualitative/recognizable* evidence, not a scored number.
