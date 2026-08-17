@@ -11,6 +11,8 @@ import argparse
 import json
 import sys
 from collections import Counter
+from collections.abc import Callable
+from pathlib import Path
 
 from .adapters import load_env
 from .cube import load_cube
@@ -27,7 +29,12 @@ def format_json(findings: list[Finding]) -> str:
     return json.dumps([f.to_dict() for f in findings], indent=2)
 
 
-def format_text(findings: list[Finding]) -> str:
+def format_text(findings: list[Finding], detail: bool = False,
+                read_line: Callable[[str, int], str] | None = None) -> str:
+    """Human-readable findings. Each finding is anchored to its first source as `path:line:`
+    (the linter convention). In `detail`, every colliding site is listed; when `read_line` is
+    supplied it prints the offending source line too. Kept pure — the file reader is injected, so
+    the formatter tests without touching the filesystem."""
     by = Counter(f.danger for f in findings)
     lines = [f"{len(findings)} findings — high {by['high']}, medium {by['medium']}, low {by['low']}"]
     for level in _LEVELS:
@@ -36,10 +43,27 @@ def format_text(findings: list[Finding]) -> str:
             continue
         lines.append(f"\n{level.upper()} ({len(rows)})")
         for f in rows:
+            anchor = next((it.source for it in f.items if it.source is not None), None)
+            loc = f"{anchor.path}:{anchor.line}: " if anchor else ""
             items = "  ~  ".join(f"{it.label}[{it.layer[:3]}]" for it in f.items)
-            lines.append(f"  [{f.type}] {items}")
+            lines.append(f"  {loc}[{f.type}] {items}")
             lines.append(f"      {f.note}")
+            if detail:
+                for it in f.items:
+                    if it.source is None:
+                        continue
+                    site = f"{it.source.path}:{it.source.line}"
+                    src = read_line(it.source.path, it.source.line).strip() if read_line else it.label
+                    lines.append(f"      {site:<32} {src}")
     return "\n".join(lines)
+
+
+def _read_line(path: str, line: int) -> str:
+    """The text of a 1-based line in a file; '' if unreadable. The I/O the pure formatter delegates."""
+    try:
+        return Path(path).read_text().splitlines()[line - 1]
+    except (OSError, IndexError):
+        return ""
 
 
 def exit_code(findings: list[Finding], fail_on: str) -> int:
@@ -63,6 +87,8 @@ def build_parser() -> argparse.ArgumentParser:
                       help="confusability gate (default: auto — embeddings if installed, else lexical)")
     scan.add_argument("--format", choices=("text", "json"), default="text", dest="fmt",
                       help="output format (default: text)")
+    scan.add_argument("--detail", action="store_true",
+                      help="list every colliding site (path:line) and its source line, not just a summary")
     scan.add_argument("--min-danger", choices=_LEVELS, default="low", dest="min_danger",
                       help="only report findings at least this dangerous (default: low = all)")
     scan.add_argument("--fail-on", choices=(*_LEVELS, "none"), default="high", dest="fail_on",
@@ -75,7 +101,10 @@ def main(argv: list[str] | None = None) -> int:
     findings = detect_collisions(_LOADERS[args.dialect](args.env_dir), gate=args.gate)
     threshold = DANGER_RANK[args.min_danger]
     findings = [f for f in findings if DANGER_RANK[f.danger] <= threshold]
-    print(format_json(findings) if args.fmt == "json" else format_text(findings))
+    if args.fmt == "json":
+        print(format_json(findings))
+    else:
+        print(format_text(findings, detail=args.detail, read_line=_read_line))
     return exit_code(findings, args.fail_on)
 
 

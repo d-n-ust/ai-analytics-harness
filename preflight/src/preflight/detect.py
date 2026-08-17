@@ -193,17 +193,22 @@ def _warehouse_synonym_edges(warehouse: list[GroundingFact], similarity: Similar
 
 
 def _overloaded_column_findings(warehouse: list[GroundingFact], config: DetectConfig) -> list[Finding]:
-    """A column name that appears in many tables may mean different things in each."""
-    col_tables: dict[str, set[str | None]] = defaultdict(set)
+    """A column name that appears in many tables may mean different things in each. Cite one line per
+    table (the column's own line in each) rather than a single synthetic item, so the reader sees
+    exactly where each occurrence is."""
+    occ: dict[str, list[GroundingFact]] = defaultdict(list)
     for f in warehouse:
         if f.kind == "column" and not is_plumbing(f.label):
-            col_tables[f.label].add(f.base)
+            occ[f.label].append(f)
     out: list[Finding] = []
-    for label, tables in sorted(col_tables.items()):
-        if len(tables) >= config.overloaded_tables:
+    for label, facts in sorted(occ.items()):
+        by_table: dict[str | None, GroundingFact] = {}
+        for f in facts:
+            by_table.setdefault(f.base, f)       # first occurrence in each table
+        if len(by_table) >= config.overloaded_tables:
+            items = tuple(Item(f.id, f.label, f.layer, f.source) for f in by_table.values())
             out.append(Finding("NAME_COLLISION", "medium",
-                f"column '{label}' in {len(tables)} tables — meaning may differ",
-                (Item(f"wh:*.{label}", label, "warehouse"),)))
+                f"column '{label}' in {len(by_table)} tables — meaning may differ", items))
     return out
 
 
@@ -246,7 +251,8 @@ def _cluster(edges: list[Edge], by_id: dict[str, GroundingFact]) -> list[Finding
             if cur is None or DANGER_RANK[e.cls.danger] < DANGER_RANK[cur.danger]:
                 worst[root] = e.cls
         for root, ids in members.items():
-            items = tuple(Item(i, by_id[i].label, by_id[i].layer) for i in sorted(ids))
+            items = tuple(
+                Item(i, by_id[i].label, by_id[i].layer, by_id[i].source) for i in sorted(ids))
             c = worst[root]
             findings.append(Finding(ctype, c.danger, c.note, items))
     return findings

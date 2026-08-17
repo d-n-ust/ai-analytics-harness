@@ -23,9 +23,21 @@ pip install "preflight[embeddings]"   # + sentence-transformers for the sharper,
 ## Use — terminal
 
 ```bash
-preflight scan path/to/environment                 # human-readable, grouped by danger
-preflight scan path/to/environment --format json   # machine-readable
+preflight scan path/to/environment                 # summary, grouped by danger, each finding cited
+preflight scan path/to/environment --detail        # + every colliding site and its source line
+preflight scan path/to/environment --format json   # machine-readable (each item carries its source)
 preflight scan path/to/environment --min-danger high --fail-on high
+```
+
+Every finding is anchored to `path:line` (the linter convention), so it points straight at the file
+and row to open. `--detail` lists every colliding site and prints the offending source line:
+
+```text
+HIGH (2)
+  docs/data_dictionary.md:1: [DEFINITION_DIVERGENCE] active user[doc]  ~  active user[doc]
+      'active user' documented two different ways
+      docs/data_dictionary.md:1        ## active user
+      docs/data_dictionary.md:4        ## active user
 ```
 
 `scan` reads whichever of `semantic/semantic_layer.yml`, `warehouse/schema.sql`, and

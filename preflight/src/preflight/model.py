@@ -43,6 +43,19 @@ class Recovered:
 
 
 @dataclass(frozen=True)
+class Source:
+    """Where a grounding fact was found, so a finding can be cited back as `path:line` and the
+    offending line shown to the reader. No column offset is stored: the highlighter locates the term
+    within the line by the fact's own label, which survives reformatting that an offset would not."""
+
+    path: str
+    line: int
+
+    def to_dict(self) -> dict:
+        return {"path": self.path, "line": self.line}
+
+
+@dataclass(frozen=True)
 class GroundingFact:
     """One thing an agent could read to ground a query on, normalised across artifact types.
 
@@ -65,6 +78,7 @@ class GroundingFact:
     text: str = ""                 # source text for the confusability gate + human review
     derived: bool = False          # a ratio/derived metric that references other metrics, not rows
     recovered: Recovered | None = None
+    source: Source | None = None   # file + line it was defined at, for citing findings back
 
     @property
     def meaning(self) -> dict[str, str | None]:
@@ -87,9 +101,13 @@ class Item:
     id: str
     label: str
     layer: str
+    source: Source | None = None   # carried from the fact, so a Finding can be cited to path:line
 
-    def to_dict(self) -> dict[str, str]:
-        return {"id": self.id, "label": self.label, "layer": self.layer}
+    def to_dict(self) -> dict:
+        d: dict = {"id": self.id, "label": self.label, "layer": self.layer}
+        if self.source is not None:
+            d["source"] = self.source.to_dict()
+        return d
 
 
 @dataclass(frozen=True)

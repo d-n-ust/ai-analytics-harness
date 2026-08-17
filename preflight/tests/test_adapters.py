@@ -7,6 +7,7 @@ from preflight.adapters import (
     facts_from_queries,
     facts_from_semantic,
     facts_from_warehouse,
+    line_of_definition,
     load_env,
 )
 
@@ -106,3 +107,42 @@ def test_load_env_skips_missing_artifacts(tmp_path):
         "metrics:\n  - {name: revenue, entity: order, agg: sum, base: orders, measure: amount}\n")
     facts = load_env(tmp_path)                     # no warehouse/ or docs/ present
     assert [f.id for f in facts] == ["sl:revenue"]
+
+
+# ── source provenance (path:line, for citing a finding back) ─────────────────────────────────────
+def test_facts_from_docs_records_heading_line():
+    md = "# Title\n\nintro\n\n## active user\nA user with a moment.\n\n## revenue\nBilled amount.\n"
+    facts = {f.label: f for f in facts_from_docs(md, "docs.md")}
+    assert facts["active user"].source.path == "docs.md"
+    assert facts["active user"].source.line == 5      # the '## active user' line
+    assert facts["revenue"].source.line == 8
+
+
+def test_facts_from_warehouse_cites_each_overloaded_column_line_distinctly():
+    sql = (
+        "CREATE TABLE fct_events (\n"
+        "    user_id BIGINT,\n"
+        "    moments INT\n"
+        ");\n"
+        "CREATE TABLE fct_daily (\n"
+        "    day DATE,\n"
+        "    moments INT\n"
+        ");\n"
+    )
+    facts = _by_id(facts_from_warehouse(sql, "wh.sql"))
+    # the same column name in two tables must cite two different lines, not one
+    assert facts["wh:fct_events.moments"].source.line == 3
+    assert facts["wh:fct_daily.moments"].source.line == 7
+    assert facts["wh:fct_events"].source.line == 1    # the CREATE TABLE line
+
+
+def test_line_of_definition_handles_list_and_dict_yaml_shapes():
+    list_form = "metrics:\n  - name: net_revenue\n    agg: sum\n  - name: gross_revenue\n"
+    assert line_of_definition(list_form, "net_revenue") == 2
+    assert line_of_definition(list_form, "gross_revenue") == 4
+    dict_form = "metrics:\n  net_revenue:\n    agg: sum\n  gross_revenue:\n    agg: sum\n"
+    assert line_of_definition(dict_form, "gross_revenue") == 4
+    flow_form = "metrics:\n  - {name: value_moments, agg: sum}\n  - {name: real_value_moments, agg: sum}\n"
+    assert line_of_definition(flow_form, "value_moments") == 2      # flow style, name: not at line-end
+    assert line_of_definition(flow_form, "real_value_moments") == 3  # suffix overlap must not mis-match
+    assert line_of_definition(list_form, "missing_metric") is None

@@ -25,7 +25,9 @@ from .adapters import (
     facts_from_queries,
     facts_from_semantic,
     facts_from_warehouse,
+    line_of_definition,
     load_env,
+    with_yaml_sources,
 )
 from .cube import facts_from_cube_js, facts_from_cube_yaml, load_cube
 from .dbt_sql import facts_from_dbt_model, load_dbt_project
@@ -39,17 +41,20 @@ from .model import (
     GroundingFact,
     Item,
     Recovered,
+    Source,
 )
 
 __all__ = [
     # high-level
     "scan", "as_dicts", "detect_collisions",
     # value types
-    "GroundingFact", "Finding", "Item", "Classification", "Recovered", "DetectConfig",
+    "GroundingFact", "Finding", "Item", "Classification", "Recovered", "DetectConfig", "Source",
     # adapters (I/O)
     "load_env", "adapt_semantic", "adapt_warehouse", "adapt_docs", "adapt_queries",
     # adapters (pure)
     "facts_from_semantic", "facts_from_warehouse", "facts_from_docs", "facts_from_queries",
+    # source provenance (for citing findings back to path:line)
+    "line_of_definition", "with_yaml_sources",
     # dbt MetricFlow dialect
     "load_metricflow", "facts_from_metricflow",
     # raw dbt-SQL dialect

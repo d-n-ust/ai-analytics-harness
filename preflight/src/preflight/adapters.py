@@ -9,14 +9,37 @@ temp files.
 from __future__ import annotations
 
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import sqlglot
 import yaml
 from sqlglot import exp
 
-from .model import GroundingFact, Recovered
+from .model import GroundingFact, Recovered, Source
 from .scope import build_scope
+
+
+# ── source provenance ────────────────────────────────────────────────────────────────────────────
+def _line_of(text: str, pattern: str) -> int | None:
+    """1-based line of the first `pattern` match in `text`, or None. The building block for citing a
+    fact whose parser abstracts position away (YAML, or a table/view name in SQL)."""
+    m = re.search(pattern, text)
+    return text.count("\n", 0, m.start()) + 1 if m else None
+
+
+def line_of_definition(text: str, label: str) -> int | None:
+    """The line where `label` is defined in a YAML semantic file. Matches the list form
+    (`name: label`) and the dict-keyed form (`label:`); definitions are unique by label, so the
+    first match is the definition. Exposed so callers with their own YAML shape can cite the source
+    the same way the built-in adapter does."""
+    esc = re.escape(label)
+    # 1) `name: label` in block OR flow style ({name: label, ...}); 2) `label:` as a dict key.
+    for pat in (rf'(?im)\bname:\s*["\']?{esc}["\']?(?=[\s,}}]|$)',
+                rf'(?im)^\s*["\']?{esc}["\']?\s*:'):
+        if (ln := _line_of(text, pat)) is not None:
+            return ln
+    return None
 
 
 # ── shared derivations ─────────────────────────────────────────────────────────────────────────--
@@ -80,12 +103,26 @@ def facts_from_semantic(doc: dict) -> list[GroundingFact]:
     return out
 
 
+def with_yaml_sources(facts: list[GroundingFact], text: str, path: str) -> list[GroundingFact]:
+    """Attach a Source to each fact by locating its `name:`/`label:` line in the raw YAML. Kept
+    separate from the parser so the pure `facts_from_semantic(dict)` stays position-free, and so a
+    caller with a differently-shaped YAML can reuse it."""
+    return [replace(f, source=Source(path, ln)) if (ln := line_of_definition(text, f.label)) else f
+            for f in facts]
+
+
 def adapt_semantic(path: str | Path) -> list[GroundingFact]:
-    return facts_from_semantic(yaml.safe_load(Path(path).read_text()))
+    text = Path(path).read_text()
+    return with_yaml_sources(facts_from_semantic(yaml.safe_load(text)), text, str(path))
 
 
 # ── warehouse (SQL DDL) ────────────────────────────────────────────────────────────────────────--
-def facts_from_warehouse(sql: str) -> list[GroundingFact]:
+def _create_line(sql: str, kind: str, name: str) -> int | None:
+    """Line of `CREATE TABLE|VIEW ... <name>`, tolerating a schema qualifier before the name."""
+    return _line_of(sql, rf'(?i)create\s+{kind}\b[^\n(]*\b{re.escape(name)}\b')
+
+
+def facts_from_warehouse(sql: str, path: str = "") -> list[GroundingFact]:
     out: list[GroundingFact] = []
     for stmt in sqlglot.parse(sql, read="postgres"):
         if not isinstance(stmt, exp.Create):
@@ -93,16 +130,19 @@ def facts_from_warehouse(sql: str) -> list[GroundingFact]:
         if stmt.kind == "TABLE":
             schema = stmt.this
             table = _norm_table(schema.this.name)
+            tsrc = Source(path, ln) if (ln := _create_line(sql, "table", table)) else None
             out.append(GroundingFact(id=f"wh:{table}", label=table, layer="warehouse", kind="table",
-                                     base=table, text=f"table {table}"))
+                                     base=table, text=f"table {table}", source=tsrc))
             for col in schema.expressions:
                 if isinstance(col, exp.ColumnDef):
                     cname = col.name.lower()
                     ctype = col.args.get("kind")
+                    cln = col.this.meta.get("line")  # exact per-column line, so overloaded names cite right
                     out.append(GroundingFact(
                         id=f"wh:{table}.{cname}", label=cname, layer="warehouse", kind="column",
                         base=table, measure=cname,
-                        text=f"{table}.{cname} {ctype.sql() if ctype else ''}".strip()))
+                        text=f"{table}.{cname} {ctype.sql() if ctype else ''}".strip(),
+                        source=Source(path, cln) if cln else None))
         elif stmt.kind == "VIEW":
             vname = _norm_table(stmt.this.name)
             select = stmt.expression
@@ -110,15 +150,16 @@ def facts_from_warehouse(sql: str) -> list[GroundingFact]:
             base = _norm_table(src.name) if src else None
             where = select.find(exp.Where) if select else None
             scope = build_scope(where.this.sql()) if where else ()
+            vsrc = Source(path, ln) if (ln := _create_line(sql, "view", vname)) else None
             out.append(GroundingFact(
                 id=f"wh:view:{vname}", label=vname, layer="warehouse", kind="view",
                 base=base, entity=entity_from_base(base), scope=scope,
-                text=f"view {vname}" + (f" over {base}" if base else "")))
+                text=f"view {vname}" + (f" over {base}" if base else ""), source=vsrc))
     return out
 
 
 def adapt_warehouse(path: str | Path) -> list[GroundingFact]:
-    return facts_from_warehouse(Path(path).read_text())
+    return facts_from_warehouse(Path(path).read_text(), str(path))
 
 
 # ── docs (markdown data dictionary) ──────────────────────────────────────────────────────────────
@@ -136,9 +177,10 @@ def _clean_heading(h: str) -> tuple[str, str | None]:
     return h.strip().lower(), base
 
 
-def facts_from_docs(markdown: str) -> list[GroundingFact]:
+def facts_from_docs(markdown: str, path: str = "") -> list[GroundingFact]:
     out: list[GroundingFact] = []
     cur: str | None = None
+    cur_line = 0
     buf: list[str] = []
 
     def flush() -> None:
@@ -151,13 +193,14 @@ def facts_from_docs(markdown: str) -> list[GroundingFact]:
         out.append(GroundingFact(
             id=f"doc:{slug}:{len(out)}", label=label, layer="docs",
             kind="column" if base else "term", base=base, measure=label if base else None,
-            text=(cur + " — " + " ".join(buf)).strip()[:400]))
+            text=(cur + " — " + " ".join(buf)).strip()[:400],
+            source=Source(path, cur_line) if cur_line else None))
 
-    for ln in markdown.splitlines():
+    for i, ln in enumerate(markdown.splitlines(), start=1):
         m = _HEAD.match(ln)
         if m:
             flush()
-            cur, buf = m.group(1), []
+            cur, cur_line, buf = m.group(1), i, []
         elif cur is not None:
             buf.append(ln.strip())
     flush()
@@ -165,7 +208,7 @@ def facts_from_docs(markdown: str) -> list[GroundingFact]:
 
 
 def adapt_docs(path: str | Path) -> list[GroundingFact]:
-    return facts_from_docs(Path(path).read_text())
+    return facts_from_docs(Path(path).read_text(), str(path))
 
 
 # ── no-semantic-layer team: saved BI queries with scope WELDED into WHERE ─────────────────────────

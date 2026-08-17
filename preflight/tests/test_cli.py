@@ -50,3 +50,15 @@ def test_main_scans_a_semantic_only_env(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert any(f["type"] == "SCOPE_TRAP" for f in payload)
     assert code == 1                              # a high-danger finding -> non-zero exit
+
+
+def test_format_text_cites_source_location_and_detail():
+    from preflight.model import Source
+    f = Finding("SCOPE_TRAP", "high", "silently scoped",
+                (Item("sl:a", "a", "semantic", Source("layer.yml", 12)),
+                 Item("sl:b", "b", "semantic", Source("layer.yml", 20))))
+    summary = format_text([f])
+    assert "layer.yml:12: [SCOPE_TRAP]" in summary        # anchored to the first source
+    detailed = format_text([f], detail=True, read_line=lambda p, n: f"  metric_{n}:")
+    assert "layer.yml:12" in detailed and "layer.yml:20" in detailed   # every site listed
+    assert "metric_12:" in detailed                        # the injected source line, stripped
