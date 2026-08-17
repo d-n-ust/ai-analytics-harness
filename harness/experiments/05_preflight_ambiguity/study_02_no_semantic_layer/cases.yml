@@ -1,30 +1,43 @@
-# Study 02 — the governance ladder. The SAME plain questions asked at three levels of governance:
-#   rung 1  messy raw tables (u, hab, evt, subs -- cryptic names, evt.etype an int, u.internal 3-valued)
-#   rung 2  clean star (dim_users, agg_active_days -- conformed, clear names) -- still raw SQL, no metrics
-#   rung 3  governed semantic layer (the agent queries metrics, not SQL)
-# Gold is one deterministic gold_sql oracle against the clean star (rung-independent truth).
+# Study 02 — before/after on the WAREHOUSE (no semantic layer; the agent answers by raw SQL).
+# The trap families are study 01's, rendered as columns: recurring (raw billed vs a modelled mrr),
+# scope (is_internal vs is_test), gross/net revenue, overloaded moments. Gold is one gold_sql oracle
+# against the clean star. `wrong_grounding` lists SQL substrings that mark a wrong COLUMN/table choice
+# (Mode-1 selection at the column level), recovered from the agent's run_sql.
 cases:
-  - id: s2_value_moments_jun
-    question: "How many value moments were completed in June 2026?"
-    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
-             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
-  - id: s2_active_users_jun
+  - id: s2_recurring
+    tier: flagged
+    family: recurring_revenue
+    question: "What is our current recurring revenue?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+    wrong_grounding: ["billed_amount"]   # summing raw billed (no /12) instead of a modelled mrr
+    right_grounding: ["mrr", "/12", "/ 12"]
+  - id: s2_total_revenue
+    tier: flagged
+    family: gross_net
+    question: "What was our total subscription revenue?"
+    expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+    wrong_grounding: []
+  - id: s2_active_users
+    tier: flagged
+    family: internal_scope
     question: "How many active users did we have in June 2026?"
     expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
              gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
-  - id: s2_marketing_jun
+    wrong_grounding: ["is_test"]         # filtering the wrong internal flag
+    right_grounding: ["is_internal"]
+  - id: s2_value_moments
+    tier: flagged
+    family: value_moments
+    question: "How many value moments were completed in June 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+    wrong_grounding: ["daily_rollup"]    # the overloaded second table
+  - id: s2_marketing
+    tier: clean
+    family: marketing_spend
     question: "How much did we spend on marketing in June 2026?"
     expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
              gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
-  - id: s2_new_signups_jun
-    question: "How many new users signed up in June 2026?"
-    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
-             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
-  - id: s2_paying_users
-    question: "How many paying users do we have right now?"
-    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
-             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}
-  - id: s2_mrr
-    question: "What is our current monthly recurring revenue?"
-    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
-             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+    wrong_grounding: []

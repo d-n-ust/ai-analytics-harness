@@ -1,49 +1,47 @@
-# Study 02 — no semantic layer (the governance ladder)
+# Study 02 — before/after on the warehouse (no semantic layer)
 
-Study 01 shows that *within* a governed semantic layer, metric sprawl makes the agent pick the wrong
-metric, and fixing what preflight flags removes it. Study 02 asks the prior question: **is a governed
-layer worth having at all?** — the common setup is dbt models with no semantic layer, where the agent
-writes its own SQL.
+Study 01's before/after, moved down a layer: the ambiguity lives in the **fact-table columns**, not a
+semantic layer, and the agent answers by **raw SQL** (`run_sql`), never `query_metric`. This is the
+common dbt setup — models, no governed metrics — and it tests whether *dimensional modelling* alone
+(clean columns + docs) removes the harm, or whether governance is still needed.
 
-## The ladder
+## The two warehouses (`warehouses.py`, views over the live star)
 
-The SAME six plain questions, asked of the same agent at three levels of governance:
-
-| rung | what the agent has | how it answers |
+| | before (`s2_before`) | after (`s2_after`) |
 |---|---|---|
-| 1 · messy raw | the raw application-extract tables (`u`, `hab`, `evt`, `subs`): cryptic names, `evt.etype` an integer, `u.internal` 0/1/NULL | raw SQL |
-| 2 · clean star | a conformed star (`dim_users`, `agg_active_days`): clear names, but still no metric definitions | raw SQL |
-| 3 · semantic layer | governed metrics | `query_metric` |
+| revenue | raw `billed_amount` only (no MRR) | modelled `mrr` (annual/12) and `net_revenue` columns |
+| internal accounts | **two** flags `is_internal` **and** `is_test` (different sets) | one `is_internal` |
+| value moments | `moments` in **two** tables (`activity`, `daily_rollup`) | one `fct_activity.moments` |
+| docs | thin | COMMENTs carry the scope rule ("exclude NOT is_internal", "mrr = annual/12") |
 
-Gold is one deterministic `gold_sql` oracle against the clean star, computed once, so it is the same
-truth at every rung. `set_star(False)` drops the star for rung 1, so the messy baseline is genuinely
-raw-only — the agent cannot quietly query the clean tables.
+Same decomposition as study 01: SER = **wrong-SELECTION** (Mode 1 — the agent grounded on the wrong
+COLUMN/table, recovered from its SQL via `wrong_grounding` markers) + **wrong-CONSTRUCTION** (Mode 2 —
+the right column, built wrong). Gold is one `gold_sql` oracle against the clean star.
 
-## Result (gpt-5-mini, reps=3, 6 questions)
+## Result (gpt-5-mini, reps=3, 4 flagged + 1 clean)
 
-| rung | correct | silent-error | refused |
-|---|---|---|---|
-| 1 · messy raw | 0.61 | **0.33** | 0.06 |
-| 2 · clean star | 0.72 | **0.28** | 0.00 |
-| 3 · semantic layer | **1.00** | **0.00** | 0.00 |
+| arm | flagged correct | flagged SER | wrong-SELECTION | wrong-CONSTRUCTION | clean SER |
+|---|---|---|---|---|---|
+| before | 0.00 | 1.00 | **0.50** | 0.50 | 0.00 |
+| after | 0.58 | 0.42 | **0.00** | 0.42 | 0.00 |
 
-As governance is added, the silent-error rate falls (0.33 → 0.28 → 0.00) and correctness rises
-(0.61 → 0.72 → 1.00). **Without a governed layer the agent silently errs ~a third of the time on plain
-questions; the semantic layer drives it to zero.** The harm is Mode-2 construction — on raw data the
-agent welds its own scope (which event type is a value moment, which `internal` value to exclude), and
-either refuses (it can't tell) or guesses (a silent number). This is why the semantic layer's value is
-governance: it makes the ambiguity resolvable rather than leaving it to the agent to weld invisibly.
+Modelling the messy columns into clean, documented ones drives **wrong-column selection 0.50 → 0.00**
+— the same shape as study 01's wrong-metric selection, one layer down. SER falls 1.00 → 0.42; the
+residual 0.42 is genuine **construction** (the agent forgets the `is_active` filter or a period even on
+clean columns) — Mode 2, the validators' lane, which better modelling does not fix. Observed picks on
+`before`: `recurring` summed `billed_amount` (not `mrr`); `active_users` filtered `is_test` (not
+`is_internal`) — the exact column confusions preflight flags in the warehouse layer.
 
-Together with study 01: **a semantic layer removes the raw-data harm entirely (study 02), and keeping
-that layer un-sprawled removes the residual selection harm (study 01).**
+## The two studies together
+
+| | selection harm (Mode 1) | after the fix |
+|---|---|---|
+| study 01 (semantic layer) | wrong **metric** 0.43 / 0.29 | 0.00 |
+| study 02 (raw SQL) | wrong **column** 0.50 | 0.00 |
+
+Fixing what preflight flags removes the selection harm at whichever layer it lives — a sprawled
+semantic layer *or* sprawled fact-table columns. The construction residual is the other lane in both.
 
 ## Run
 
-    python ladder.py --model gpt-5-mini --reps 3     # or --model claude-sonnet-5
-
-## Next
-- A column-level **wrong-grounding** rate (parse the agent's `run_sql` to see which column/table it
-  bound to — e.g. `is_internal` vs `is_test`), so rung-1/2 harm splits into selection vs construction
-  the way study 01 does.
-- A before/after *within* rung 1 (fix the confusable columns preflight flags) to attribute the ladder
-  gain to specific findings.
+    python run.py --model gpt-5-mini --reps 3     # or --model claude-sonnet-5
