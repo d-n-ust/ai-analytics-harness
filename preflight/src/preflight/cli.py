@@ -16,13 +16,15 @@ from pathlib import Path
 
 from .adapters import load_env
 from .cube import load_cube
+from .dbt_manifest import load_dbt_manifest
 from .dbt_sql import load_dbt_project
 from .detect import detect_collisions
 from .metricflow import load_metricflow
 from .model import DANGER_RANK, Finding
 
 _LEVELS = ("high", "medium", "low")
-_LOADERS = {"env": load_env, "metricflow": load_metricflow, "dbt": load_dbt_project, "cube": load_cube}
+_LOADERS = {"env": load_env, "metricflow": load_metricflow, "dbt-manifest": load_dbt_manifest,
+            "dbt": load_dbt_project, "cube": load_cube}
 
 
 def format_json(findings: list[Finding]) -> str:
@@ -81,7 +83,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan = sub.add_parser("scan", help="scan an environment directory for grounding collisions")
     scan.add_argument("env_dir", help="directory (or file) to scan")
     scan.add_argument("--dialect", choices=tuple(_LOADERS), default="env",
-                      help="artifact layout: 'env' (semantic/warehouse/docs), 'metricflow' (dbt MetricFlow YAML), "
+                      help="artifact layout: 'env' (semantic/warehouse/docs), 'dbt-manifest' (a whole dbt "
+                           "project via target/manifest.json), 'metricflow' (dbt MetricFlow YAML), "
                            "'dbt' (raw dbt model SQL), or 'cube' (Cube YAML/JS)")
     scan.add_argument("--gate", choices=("auto", "lexical", "embeddings"), default="auto",
                       help="confusability gate (default: auto — embeddings if installed, else lexical)")

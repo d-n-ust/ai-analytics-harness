@@ -30,6 +30,7 @@ from .adapters import (
     with_yaml_sources,
 )
 from .cube import facts_from_cube_js, facts_from_cube_yaml, load_cube
+from .dbt_manifest import load_dbt_manifest
 from .dbt_sql import facts_from_dbt_model, load_dbt_project
 from .detect import classify, detect_collisions, is_plumbing, partition, rank
 from .gate import make_gate
@@ -57,6 +58,8 @@ __all__ = [
     "line_of_definition", "with_yaml_sources",
     # dbt MetricFlow dialect
     "load_metricflow", "facts_from_metricflow",
+    # native dbt project (compiled manifest.json — all three layers)
+    "load_dbt_manifest",
     # raw dbt-SQL dialect
     "load_dbt_project", "facts_from_dbt_model",
     # Cube dialect
