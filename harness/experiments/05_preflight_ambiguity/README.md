@@ -22,37 +22,30 @@ its four environments (`{small,high}_{before,after}` — low vs high ambiguity, 
 
 ## Metrics hierarchy (what we report, and why)
 
-Designed from the customer's question — *"can I trust this number?"* A number is untrustworthy when it
-is **wrong and presented as right**. Everything below serves, guards, or explains that one harm.
+Designed from the customer's question — *"can I trust this number?"* — and kept consistent with the
+prior articles, which report the same three-metric triad.
 
-**North star — the harm.**
-- **Silent-Error Rate (SER)** — of all scored answers, the share that served a wrong number believed
-  as right. A refusal (right or wrong) is never a silent error; it is visible. This is the number a
-  buyer cares about. Minimise.
-
-**Guardrails — so the north star cannot be gamed by refusing.**
-- **Coverage** — of answerable questions, the share attempted. SER goes to 0 if the agent refuses
-  everything; coverage is the cost side, and the two must be read together.
-- **Balanced accuracy** — mean(correct on answerable, refused on unanswerable). One number combining
+**North stars — the trustworthiness triad (as in experiments 01–04).** Read together, not singly:
+an agent can flatter any one of them by sacrificing another (drive SER to 0 by refusing everything,
+which collapses coverage), so the claim lives in all three moving the right way at once.
+- **Silent-Error Rate (SER)** ↓ — the harm: of all scored answers, the share that served a wrong
+  number believed as right. A refusal (right or wrong) is never a silent error; it is visible.
+- **Coverage** (held) — of answerable questions, the share attempted. The honest cost side of SER.
+- **Balanced accuracy** ↑ — mean(correct on answerable, refused on unanswerable); one number combining
   "answers right" and "abstains right," immune to the answerable/unanswerable mix.
 
-**Diagnostic — the cause (what preflight targets).**
-- **Wrong-metric rate** (study 01) — of answered questions, the share where the metric the agent
-  *actually queried* ≠ the governed-correct one, read from the trace. This is the mechanism, and it is
-  **higher than SER**: a wrong pick that coincidentally returns the right number is scored correct, so
-  SER undercounts the selection problem. preflight's findings should predict THIS.
-- **Wrong-construction rate** (study 02) — the analog when there is no metric to pick: the agent
-  welded the wrong scope, grain, or join in raw SQL.
+**Supporting indicators — the cause and the trade (diagnostic, not headline).**
+- **Wrong-metric rate** (study 01) / **wrong-construction rate** (study 02) — the mechanism behind SER.
+  Study 01: of answered questions, the share where the metric the agent *actually queried* ≠ the
+  governed-correct one, read from the trace. It is **higher than SER** — a wrong pick that coincidentally
+  returns the right number is scored correct, so SER undercounts the selection problem. preflight's
+  findings should predict THIS.
+- **Correct-refusal rate** and **over-abstention rate** — the abstention behaviour behind coverage:
+  of unanswerable questions the share correctly refused, and of answerable questions the share refused
+  or clarified unnecessarily (catches an agent that clarifies on a clean layer to look safe).
+- **Per-family SER + wrong-metric rate** — attribution: *which* ambiguities bite, so the triad is never
+  read as a flat average.
 
-**Diagnostic — the abstention trade.**
-- **Correct-refusal rate** — of unanswerable questions, the share correctly refused with a valid reason.
-- **Over-abstention rate** — of answerable questions, the share refused or clarified unnecessarily (the
-  coverage cost; catches an agent that clarifies on a clean layer to look safe).
-
-**Attribution — transparency, never a headline.**
-- Per-family SER and wrong-metric rate, so a reader sees *which* ambiguities bite rather than a flat
-  average.
-
-The experiment's claim is stated on the north star (SER down) with its guardrails (coverage held,
-balanced accuracy up), explained by the cause (wrong-metric rate, dose-responsive to the static finding
-count), and made honest by the per-family attribution.
+The experiment's claim is stated on the triad (SER down, coverage held, balanced accuracy up),
+explained by the cause (wrong-metric rate, dose-responsive to the static finding count), and made
+honest by the per-family attribution.
