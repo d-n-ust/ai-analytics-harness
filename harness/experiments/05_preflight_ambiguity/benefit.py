@@ -49,6 +49,19 @@ def load_cases() -> list[dict]:
     return cases
 
 
+def _queried_metrics(ans) -> list[str]:
+    """The governed metrics the agent actually queried, read from its query_metric tool calls in the
+    trace. source_metric is only DECLARED at rung 7; at rung 3 we OBSERVE the pick from what the agent
+    did, so a wrong number can be attributed to a wrong metric selection rather than merely inferred."""
+    out = []
+    for s in getattr(ans, "steps", []) or []:
+        if s.get("tool") == "query_metric" and isinstance(s.get("args"), dict):
+            m = s["args"].get("metric")
+            if m:
+                out.append(m)
+    return out
+
+
 def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
     graded into the row shape selective() consumes. Reps average out agent stochasticity."""
@@ -57,10 +70,14 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> l
     for rep in range(reps):
         for case in cases:
             ans = run_agent(case["question"], g, model, verifier_model=verifier)
+            queried = _queried_metrics(ans)
             rows.append({**grade(ans, case, golds.get(case["id"])),
                          "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
                          "family": case.get("family"), "rep": rep,
-                         "picked": getattr(ans, "source_metric", None),
+                         # observed pick: the last metric queried (the one the answer came from),
+                         # plus the full sequence, so a wrong number is attributable to a metric
+                         "picked": queried[-1] if queried else None, "queried": queried,
+                         "expected_metric": case["expect"].get("metric"),
                          "declared": getattr(ans, "declared_value", None)})
     return rows
 
