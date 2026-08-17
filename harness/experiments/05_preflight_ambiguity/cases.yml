@@ -1,62 +1,56 @@
-# Experiment 05 — pre-registered question set (v3: five trap families).
+# Experiment 05 — pre-registered question set (v5: red-team authored, structural traps only).
 #
-# Each flagged question is a name-match trap: its natural wording matches a WRONG metric that exists
-# only on the sprawled ("before") layer and returns a clearly different number; the governed layer
-# has only the right metric, so the agent falls back to it and answers correctly. Gold is an
-# independent gold_sql oracle against the clean star (compute_gold), written from business intent.
+# Questions came from three INDEPENDENT red teams (revenue / users / activity-habits), each blind to
+# the others. A v4 run over the full red-team pool revealed that SLICED traps (a country, category, or
+# plan cut) conflate two failures: metric SELECTION (what this experiment measures) and filter
+# APPLICATION (mapping "UK"->GB, filtering category=fitness) — the agent botches the latter even on the
+# governed layer, so those items scored high on every layer and muddied the before/after. This v5 keeps
+# only STRUCTURAL, whole-population traps, where the only variable is which metric the agent picks.
+# (The sliced items are recorded in the red-team notes as a separate, honest finding.)
 #
-# `family` groups correlated items so results can be read per-trap, not just pooled (3 questions x 3
-# reps overstated independence in v2). `tier`: flagged (a trap exists on the sprawled layer) vs clean
-# (no trap on any layer).
-#
-# The five families and their verified numbers (governed gold vs sprawl trap):
-#   recurring_revenue : mrr 2685            vs recurring_revenue 11448   (~4.3x, CLEAR)
-#   subscription_rev  : net_revenue 11448   vs gross_revenue 14422       (~26%,  CLEAR)
-#   habits            : active_habits 6357  vs total_habits 7467         (~17%,  CLEAR)
-#   monthly_active    : active_users 1620   vs mau 1683 (incl internal)  (~3.9%, over 2% tol)
-#   value_moments     : value_moments 16041 (robust — the right one is obvious even amid siblings)
+# Gold is a deterministic gold_sql oracle (compute_gold), verified against the star. `family` groups
+# correlated items so results read per-trap. Verified gold vs sprawl-trap:
+#   recurring_revenue : mrr 2685 vs recurring_revenue 11448 (4.3x)
+#   gross_net         : net_revenue 11448 vs gross_revenue 14422 (26%)
+#   habits            : active_habits 6357 vs total_habits 7467 (17%)
+#   new_users         : new_signups vs new_users (excludes internal, ~3-9%)
+#   value_moments/arpu: robust families the agent should get right even amid siblings (within-tier controls)
 
 cases:
 
-  # ── family: recurring_revenue (governed mrr; trap recurring_revenue = raw billed sum) ──
-  - id: e05_recurring_now
+  # ══ recurring revenue (governed mrr; trap recurring_revenue = raw billed, no annual/12) ══
+  - id: e05_rec_current
     tier: flagged
     family: recurring_revenue
     question: "What is our current recurring revenue?"
     expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
              gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
-  - id: e05_recurring_runrate
-    tier: flagged
-    family: recurring_revenue
-    question: "What is our recurring revenue run rate right now?"
-    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
-             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
-  - id: e05_recurring_howmuch
+  - id: e05_rec_howmuch
     tier: flagged
     family: recurring_revenue
     question: "How much recurring revenue do we have from active subscriptions?"
     expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
              gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
 
-  # ── family: subscription revenue (governed net_revenue = active/recognised; trap gross_revenue = all billed) ──
-  - id: e05_subrev_total
+  # ══ gross vs net revenue (governed net_revenue = active/recognised; trap gross_revenue = all billed) ══
+  - id: e05_gn_recognizing
     tier: flagged
-    family: subscription_rev
-    question: "What was our total subscription revenue?"
+    family: gross_net
+    question: "How much subscription revenue are we actually recognizing?"
     expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
              gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
-  - id: e05_subrev_plain
+  - id: e05_gn_keep
     tier: flagged
-    family: subscription_rev
-    question: "How much subscription revenue do we have?"
+    family: gross_net
+    question: "Out of what our subscriptions bill, how much do we actually get to keep?"
     expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
              gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
 
-  # ── family: habits (governed active_habits = unarchived; trap total_habits = all, incl archived) ──
-  - id: e05_habits_tracking
+  # ══ habits (governed active_habits = unarchived; trap total_habits = all, incl archived) ══
+  - id: e05_habits_keeping
     tier: flagged
     family: habits
-    question: "How many habits are our users currently tracking?"
+    question: "How many habits are our users keeping up with these days?"
     expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
   - id: e05_habits_active
@@ -66,42 +60,48 @@ cases:
     expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
 
-  # ── family: monthly active users (governed active_users = excl internal; trap mau = incl internal) ──
-  - id: e05_mau_jun
+  # ══ new users (governed new_signups = all accounts; trap new_users = excludes internal) ══
+  - id: e05_newusers_total
     tier: flagged
-    family: monthly_active
-    question: "How many monthly active users did we have in June 2026?"
-    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
-             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
-  - id: e05_mau_may
+    family: new_users
+    question: "How many people have signed up in total?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users"}
+  - id: e05_newusers_apr
     tier: flagged
-    family: monthly_active
-    question: "What was our MAU in May 2026?"
-    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
-             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31' AND NOT is_internal"}
+    family: new_users
+    question: "How many new users signed up in April 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-04-01' AND signup_date<DATE '2026-05-01'"}
 
-  # ── family: value_moments (robust — the sprawl has 6 siblings but the right one is obvious) ──
-  - id: e05_value_moments_jun
+  # ══ within-tier controls: robust families the agent should get right even amid siblings ══
+  - id: e05_vm_jun
     tier: flagged
     family: value_moments
     question: "How many value moments were completed across all accounts in June 2026?"
     expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
              gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05_arpu
+    tier: flagged
+    family: arpu
+    question: "What's the average monthly revenue per paying customer?"
+    expect: {type: metric_answer, metric: arpu, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END)*1.0/nullif(count(DISTINCT user_id),0) FROM fct_subscriptions WHERE is_active"}
 
-  # ── clean controls: no trap on any layer ──
-  - id: e05_marketing_spend_jun
+  # ══ clean controls: no sprawl variant exists (red team A confirmed) ══
+  - id: e05_marketing_jun
     tier: clean
     family: marketing_spend
     question: "How much did we spend on marketing in June 2026?"
     expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
              gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
-  - id: e05_marketing_spend_may
+  - id: e05_marketing_may
     tier: clean
     family: marketing_spend
     question: "How much did we spend on marketing in May 2026?"
     expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
              gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
-  - id: e05_paying_users_now
+  - id: e05_paying_users
     tier: clean
     family: paying_users
     question: "How many paying users do we have right now?"
