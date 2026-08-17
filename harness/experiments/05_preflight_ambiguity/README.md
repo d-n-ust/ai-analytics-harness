@@ -4,20 +4,30 @@ Does fixing what the preflight ambiguity detector finds make the agent measurabl
 and does the effect scale with how ambiguous the layer is? Full rationale and the honest boundary are
 in `scratchpad/ambiguity/EXPERIMENT-05-DESIGN.md`; this directory is the implementation.
 
-## The four environments
+## The four environments — three grounding layers each
 
-Same habit-tracking domain and warehouse; the ambiguity lives in the semantic-layer definitions.
+Each env is a directory with all three layers a primitive can ground in (the repair-matrix mapping):
 
-| env | layer | ambiguity |
+| layer | file | primitives it grounds |
 |---|---|---|
-| small_before | the governed layer, as shipped | few (a well-modelled layer still carries a trap or two) |
-| small_after | + preflight's findings fixed | none |
-| high_before | the layer a pressured team left — overlapping/renamed/undocumented metrics | many |
-| high_after | + preflight's findings fixed | none |
+| documentation | `docs.md` | grain, segments |
+| dim/fact tables | `warehouse.sql` | entity, measure |
+| semantic layer | `semantic.yml` | additive + higher-level metrics |
 
-`layers/` holds the four. `small_before` is the governed layer verbatim; `high_before` is authored to
-look like real accretion (three teams' `mrr`/`recurring_revenue`/`monthly_recurring_revenue`, five
-overlapping active-user definitions, gross vs net revenue, `signups` vs `new_signups`, ...).
+preflight reads all three and reports confusions **within** a layer and **across** them (a term the
+docs define two ways that also names a metric and a column). The four environments:
+
+| env | ambiguity |
+|---|---|
+| small_before | the governed layer, as shipped — few (a well-modelled layer still carries a trap) |
+| small_after | + preflight's findings fixed — none |
+| high_before | a pressured team's accretion, across all three layers — many |
+| high_after | + preflight's findings fixed — none |
+
+`high_before` is authored to look real: three teams' `mrr`/`recurring_revenue`, five active-user
+definitions, gross vs net revenue (semantic); `moments` overloaded across three tables, two internal
+flags, `active_date`/`event_date`/`day` grain drift (warehouse); `active user` and `value moment`
+each documented two ways (docs).
 
 ## Method (dose-response + before/after)
 
@@ -37,10 +47,12 @@ business intent, before the fixes, so the answer key cannot drift toward what we
 
 ## Status
 
-- [x] `high_before` authored to exercise every finding type; `small_before` = governed layer.
-- [x] `scan.py` + `scan.md` — the dose measurement (embedding gate): **small 1, high 12**, spanning
-      GRAIN_MISMATCH, SCOPE_TRAP, DUPLICATE, NAME_COLLISION, SIBLING — a 12x dose gap and the tool's
-      full range on one layer.
+- [x] `high_before` authored across all three layers to exercise every finding type; `small_before`
+      = governed layer.
+- [x] `scan.py` + `scan.md` — the dose measurement (embedding gate): **small 1, high 18**, spanning
+      DEFINITION_DIVERGENCE (docs), NAME_COLLISION (warehouse), GRAIN_MISMATCH / SCOPE_TRAP / DUPLICATE
+      / SIBLING (semantic), and **cross-layer doc+sem** collisions — the full range across all three
+      grounding layers.
 - [ ] `_after` layers (the fixes) + re-scan to ~0.
 - [ ] pre-registered question set + gold (3 LLM judges).
 - [ ] agent runs on the four environments; SER / balanced accuracy / coverage.

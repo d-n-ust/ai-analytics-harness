@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Run preflight over each semantic layer in `layers/` and tabulate the ambiguities it finds.
+"""Run preflight over each environment in `layers/` — across all three grounding layers — and
+tabulate the ambiguities it finds.
 
-This is the "dose" measurement of the experiment: how many confusions preflight flags in each of the
-four environments (small/high x before/after). It converts the harness's dict-keyed layer format into
-preflight GroundingFacts (parsing the SQL `agg` expression; population from `default_filters`) and runs
-the detector.
+Each `layers/<env>/` is a full environment in the layers a primitive grounds in (per the repair
+matrix):
+    semantic.yml    higher-level metrics + additivity  (the semantic layer)
+    warehouse.sql   entity + measure                   (dim/fact tables)
+    docs.md         grain + segments                   (documentation)
 
-    python scan.py                 # scan all layers/*.yml, write scan.md
+preflight reads all three and reports confusions WITHIN a layer and ACROSS layers (a term the docs
+define two ways that also names a metric and a column). The semantic layer is in the harness's
+dict-keyed format, converted here; warehouse and docs use preflight's own adapters.
+
+    python scan.py                 # scan every env, write scan.md
     python scan.py --gate lexical  # force the dependency-free gate (default: embeddings if installed)
-
-Needs preflight installed (`pip install "preflight[embeddings]"`). The embedding gate is the validated
-path and the one the experiment reports; the lexical fallback misses synonym-based confusions.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ import sqlglot
 import yaml
 from sqlglot import exp
 
-from preflight import GroundingFact, detect_collisions
+from preflight import GroundingFact, adapt_docs, adapt_warehouse, detect_collisions
 from preflight.adapters import additivity
 from preflight.scope import build_scope
 
@@ -56,7 +59,7 @@ def _parse_agg(expr: str | None):
     return (None, expr[:40].lower(), False)
 
 
-def facts_from_layer(doc: dict) -> list[GroundingFact]:
+def facts_from_semantic(doc: dict) -> list[GroundingFact]:
     metrics = doc.get("metrics") or {}
     items = metrics.items() if isinstance(metrics, dict) else ((m["name"], m) for m in metrics)
     out = []
@@ -68,17 +71,28 @@ def facts_from_layer(doc: dict) -> list[GroundingFact]:
             id=f"sl:{name}", label=name, layer="semantic", kind="metric",
             entity=m.get("entity"), agg=agg, measure=measure,
             base=(m.get("base") or "").split(".")[-1].lower() or None,
-            grain=m.get("grain"),  # an explicit reporting grain, so day-vs-month roll-ups can collide
-            additive=additivity(agg), scope=scope, derived=derived,
+            grain=m.get("grain"), additive=additivity(agg), scope=scope, derived=derived,
             text=f"{name.replace('_', ' ')}. {m.get('description', '')} {synonyms}".strip()))
     return out
 
 
-def scan_layer(path: pathlib.Path, gate: str):
-    facts = facts_from_layer(yaml.safe_load(path.read_text()))
-    findings = detect_collisions(facts, gate=gate)
-    by = Counter(f.danger for f in findings)
-    return facts, findings, by
+def load_env(env: pathlib.Path) -> list[GroundingFact]:
+    """Every grounding fact across the three layers present in an env directory."""
+    facts: list[GroundingFact] = []
+    sem = env / "semantic.yml"
+    if sem.exists():
+        facts += facts_from_semantic(yaml.safe_load(sem.read_text()))
+    wh = env / "warehouse.sql"
+    if wh.exists():
+        facts += adapt_warehouse(wh)
+    docs = env / "docs.md"
+    if docs.exists():
+        facts += adapt_docs(docs)
+    return facts
+
+
+def _layers_of(finding) -> str:
+    return "+".join(sorted({it.layer[:3] for it in finding.items}))
 
 
 def main() -> None:
@@ -87,20 +101,25 @@ def main() -> None:
     args = ap.parse_args()
 
     order = ["small_before", "small_after", "high_before", "high_after"]
-    layers = sorted(LAYERS.glob("*.yml"), key=lambda p: order.index(p.stem) if p.stem in order else 99)
+    envs = sorted((p for p in LAYERS.iterdir() if p.is_dir()),
+                  key=lambda p: order.index(p.name) if p.name in order else 99)
 
-    rows = ["# Preflight ambiguity counts per environment\n",
-            f"Gate: **{args.gate}**. Findings are confusable metric pairs/clusters preflight flags.\n",
-            "| environment | metrics | high | medium | low | total |",
+    rows = ["# Preflight ambiguity counts per environment (all three grounding layers)\n",
+            f"Gate: **{args.gate}**. Each env is scanned across semantic + warehouse + docs; the "
+            "`layers` column of a finding shows which grounding layers it spans (sem/war/doc).\n",
+            "| environment | facts | high | medium | low | total |",
             "|---|---|---|---|---|---|"]
     detail = ["\n## Findings\n"]
-    for path in layers:
-        facts, findings, by = scan_layer(path, args.gate)
-        rows.append(f"| {path.stem} | {len(facts)} | {by['high']} | {by['medium']} | {by['low']} "
+    for env in envs:
+        facts = load_env(env)
+        findings = detect_collisions(facts, gate=args.gate)
+        by = Counter(f.danger for f in findings)
+        rows.append(f"| {env.name} | {len(facts)} | {by['high']} | {by['medium']} | {by['low']} "
                     f"| {len(findings)} |")
-        detail.append(f"\n### {path.stem} ({len(findings)} findings)\n```")
+        detail.append(f"\n### {env.name} ({len(findings)} findings)\n```")
         for f in findings:
-            detail.append(f"[{f.danger:6} {f.type}] " + "  ~  ".join(it.label for it in f.items))
+            detail.append(f"[{f.danger:6} {f.type:22} {_layers_of(f):11}] "
+                          + "  ~  ".join(it.label for it in f.items))
         detail.append("```")
 
     out = "\n".join(rows) + "\n" + "\n".join(detail) + "\n"
