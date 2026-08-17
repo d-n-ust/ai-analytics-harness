@@ -20,7 +20,8 @@ from __future__ import annotations
 
 import argparse
 import pathlib
-from collections import Counter
+import sys
+from collections import Counter, defaultdict
 
 import sqlglot
 import yaml
@@ -91,40 +92,82 @@ def load_env(env: pathlib.Path) -> list[GroundingFact]:
     return facts
 
 
-def _layers_of(finding) -> str:
-    return "+".join(sorted({it.layer[:3] for it in finding.items}))
+_RANK = {"high": 0, "medium": 1, "low": 2}
+# The three grounding layers a primitive can live in (the repair-matrix mapping).
+_LAYER = {"doc": ("DOCUMENTATION", "grain · segments"),
+          "war": ("WAREHOUSE", "entity · measure"),
+          "sem": ("SEMANTIC LAYER", "additive · higher-level metrics")}
+_C = {"high": "\033[38;5;167m", "medium": "\033[38;5;179m", "low": "\033[38;5;101m",
+      "b": "\033[1m", "dim": "\033[2m", "accent": "\033[38;5;72m", "reset": "\033[0m"}
+
+
+def _group(findings):
+    """findings -> {layer_key: [findings]}; 'cross' when a finding spans more than one layer."""
+    groups = defaultdict(list)
+    for f in findings:
+        spans = sorted({it.layer[:3] for it in f.items})
+        groups["cross" if len(spans) > 1 else spans[0]].append(f)
+    for v in groups.values():
+        v.sort(key=lambda f: (_RANK[f.danger], f.type))
+    return groups
+
+
+def _line(f, on, max_items=6):
+    c = (lambda s, k: f"{_C[k]}{s}{_C['reset']}") if on else (lambda s, k: s)
+    labels = [it.label for it in f.items]
+    more = c(f"  +{len(labels) - max_items}", "dim") if len(labels) > max_items else ""
+    return (f"    {c('●', f.danger)} {c(f.danger[0].upper(), f.danger)} "
+            f"{c(f'{f.type:22}', 'dim')} " + "  ~  ".join(labels[:max_items]) + more)
+
+
+def _report(results, gate, on):
+    c = (lambda s, k: f"{_C[k]}{s}{_C['reset']}") if on else (lambda s, k: s)
+    out = ["", "  " + c("PREFLIGHT AMBIGUITY MAP", "b") + c(f"          gate: {gate}", "dim"),
+           "  " + c("─" * 60, "dim")]
+    for name, facts, findings in results:
+        by = Counter(f.danger for f in findings)
+        n = len(findings)
+        out.append(f"  {name:15} {c(f'{n:>2}', 'b')} confusion{' ' if n == 1 else 's'}   "
+                   + c(f"({len(facts)} facts · "
+                       f"{by['high']} high {by['medium']} med {by['low']} low)", "dim"))
+    out.append("  " + c("●", "high") + " high   " + c("●", "medium") + " medium   "
+               + c("●", "low") + " low")
+
+    for name, _facts, findings in results:
+        if not findings:
+            continue
+        out.append("\n" + c("════ ", "accent") + c(name, "b")
+                   + c(" " + "═" * (54 - len(name)), "accent"))
+        groups = _group(findings)
+        if groups["cross"]:
+            out.append("\n  " + c("CROSS-LAYER", "accent")
+                       + c("  · a term grounded two ways, in two places", "dim"))
+            out += [_line(f, on) for f in groups["cross"]]
+        for lk in ("doc", "war", "sem"):
+            if groups[lk]:
+                title, grounds = _LAYER[lk]
+                out.append("\n  " + c(title, "b") + c(f"  · grounds {grounds}", "dim"))
+                out += [_line(f, on) for f in groups[lk]]
+    out.append("")
+    return "\n".join(out)
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--gate", default="auto", choices=("auto", "lexical", "embeddings"))
+    ap.add_argument("--no-color", action="store_true", help="plain output even to a terminal")
     args = ap.parse_args()
 
     order = ["small_before", "small_after", "high_before", "high_after"]
     envs = sorted((p for p in LAYERS.iterdir() if p.is_dir()),
                   key=lambda p: order.index(p.name) if p.name in order else 99)
+    results = [(env.name, facts := load_env(env), detect_collisions(facts, gate=args.gate))
+               for env in envs]
 
-    rows = ["# Preflight ambiguity counts per environment (all three grounding layers)\n",
-            f"Gate: **{args.gate}**. Each env is scanned across semantic + warehouse + docs; the "
-            "`layers` column of a finding shows which grounding layers it spans (sem/war/doc).\n",
-            "| environment | facts | high | medium | low | total |",
-            "|---|---|---|---|---|---|"]
-    detail = ["\n## Findings\n"]
-    for env in envs:
-        facts = load_env(env)
-        findings = detect_collisions(facts, gate=args.gate)
-        by = Counter(f.danger for f in findings)
-        rows.append(f"| {env.name} | {len(facts)} | {by['high']} | {by['medium']} | {by['low']} "
-                    f"| {len(findings)} |")
-        detail.append(f"\n### {env.name} ({len(findings)} findings)\n```")
-        for f in findings:
-            detail.append(f"[{f.danger:6} {f.type:22} {_layers_of(f):11}] "
-                          + "  ~  ".join(it.label for it in f.items))
-        detail.append("```")
-
-    out = "\n".join(rows) + "\n" + "\n".join(detail) + "\n"
-    (HERE / "scan.md").write_text(out)
-    print(out)
+    # colour only when writing to a real terminal
+    print(_report(results, args.gate, on=sys.stdout.isatty() and not args.no_color))
+    # plain record beside the layers
+    (HERE / "scan.md").write_text("```\n" + _report(results, args.gate, on=False) + "\n```\n")
 
 
 if __name__ == "__main__":

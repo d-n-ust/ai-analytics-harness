@@ -1,38 +1,42 @@
-# Preflight ambiguity counts per environment (all three grounding layers)
-
-Gate: **embeddings**. Each env is scanned across semantic + warehouse + docs; the `layers` column of a finding shows which grounding layers it spans (sem/war/doc).
-
-| environment | facts | high | medium | low | total |
-|---|---|---|---|---|---|
-| small_before | 17 | 1 | 0 | 0 | 1 |
-| high_before | 63 | 7 | 2 | 9 | 18 |
-
-## Findings
-
-
-### small_before (1 findings)
-```
-[high   SCOPE_TRAP             sem        ] real_value_moments  ~  value_moments
 ```
 
-### high_before (18 findings)
-```
-[high   DEFINITION_DIVERGENCE  doc        ] active user  ~  active user
-[high   DEFINITION_DIVERGENCE  doc        ] value moment  ~  value moment
-[high   GRAIN_MISMATCH         sem        ] dau  ~  mau
-[high   SCOPE_TRAP             sem        ] android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  total_moments  ~  value_moments  ~  weekly_value_moments
-[high   SCOPE_TRAP             sem        ] active_users  ~  actives  ~  engaged_users
-[high   SCOPE_TRAP             sem        ] gross_revenue  ~  net_revenue
-[high   SCOPE_TRAP             sem        ] new_signups  ~  new_users
-[medium GRAIN_MISMATCH         sem        ] monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
-[medium NAME_COLLISION         war        ] user_id
-[low    DUPLICATE              sem        ] total_moments  ~  value_moments
-[low    DUPLICATE              sem        ] active_users  ~  monthly_active_users
-[low    DUPLICATE              sem        ] net_revenue  ~  recurring_revenue
-[low    DUPLICATE              sem        ] new_signups  ~  signups
-[low    NAME_COLLISION         doc+sem    ] value moment  ~  value moment  ~  real_value_moments  ~  value_moments
-[low    NAME_COLLISION         doc+sem    ] active user  ~  active user  ~  active_users
-[low    NAME_COLLISION         sem        ] monthly_recurring_revenue  ~  recurring_revenue
-[low    NAME_COLLISION         doc+sem    ] revenue  ~  net_revenue
-[low    SIBLING                sem        ] android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
+  PREFLIGHT AMBIGUITY MAP          gate: embeddings
+  ────────────────────────────────────────────────────────────
+  small_before     1 confusion    (17 facts · 1 high 0 med 0 low)
+  high_before     18 confusions   (63 facts · 7 high 2 med 9 low)
+  ● high   ● medium   ● low
+
+════ small_before ══════════════════════════════════════════
+
+  SEMANTIC LAYER  · grounds additive · higher-level metrics
+    ● H SCOPE_TRAP             real_value_moments  ~  value_moments
+
+════ high_before ═══════════════════════════════════════════
+
+  CROSS-LAYER  · a term grounded two ways, in two places
+    ● L NAME_COLLISION         value moment  ~  value moment  ~  real_value_moments  ~  value_moments
+    ● L NAME_COLLISION         active user  ~  active user  ~  active_users
+    ● L NAME_COLLISION         revenue  ~  net_revenue
+
+  DOCUMENTATION  · grounds grain · segments
+    ● H DEFINITION_DIVERGENCE  active user  ~  active user
+    ● H DEFINITION_DIVERGENCE  value moment  ~  value moment
+
+  WAREHOUSE  · grounds entity · measure
+    ● M NAME_COLLISION         user_id
+
+  SEMANTIC LAYER  · grounds additive · higher-level metrics
+    ● H GRAIN_MISMATCH         dau  ~  mau
+    ● H SCOPE_TRAP             android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  total_moments  ~  value_moments  +1
+    ● H SCOPE_TRAP             active_users  ~  actives  ~  engaged_users
+    ● H SCOPE_TRAP             gross_revenue  ~  net_revenue
+    ● H SCOPE_TRAP             new_signups  ~  new_users
+    ● M GRAIN_MISMATCH         monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
+    ● L DUPLICATE              total_moments  ~  value_moments
+    ● L DUPLICATE              active_users  ~  monthly_active_users
+    ● L DUPLICATE              net_revenue  ~  recurring_revenue
+    ● L DUPLICATE              new_signups  ~  signups
+    ● L NAME_COLLISION         monthly_recurring_revenue  ~  recurring_revenue
+    ● L SIBLING                android_value_moments  ~  ios_value_moments  ~  monthly_value_moments  ~  real_value_moments  ~  weekly_value_moments
+
 ```
