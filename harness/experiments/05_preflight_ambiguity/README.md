@@ -8,13 +8,18 @@ wrong number in front of a decision-maker as if it were right.
 
 | study | the agent's grounding | the ambiguity it exposes | status |
 |---|---|---|---|
-| **01 — governed semantic layer** | picks a governed metric (`query_metric`) | **wrong-metric selection** — which of N confusable metrics (Mode 1) | done (bespoke layer); MetricFlow port next |
-| **02 — no semantic layer** | writes raw SQL over dbt models | **wrong construction** — the agent welds its own scope/grain/join (Mode 2) | planned |
+| **01 — governed semantic layer** | picks a governed metric (`query_metric`) | **wrong-metric selection** — which of N confusable metrics (Mode 1) | done (dbt MetricFlow, two models) |
+| **02 — no semantic layer** | writes raw SQL over dbt models | **wrong-column selection** — which of N confusable columns/tables (Mode 1, one layer down) | done (two models) |
 
 Study 01 is the metric-selection case a governed layer is meant to protect. Study 02 is the more
 common setup (dbt models, no governed metrics), and it tests the thesis the practice rests on: **the
 semantic layer's value is governance — it makes ambiguity resolvable**, where a raw-SQL agent welds
-the wrong scope invisibly.
+the wrong scope invisibly. Both studies land the same finding: fixing what preflight flags drives
+wrong-SELECTION to 0.00 on both models, whether the ambiguity lives in a semantic layer or in raw
+fact-table columns.
+
+A single-page, customer-facing summary of both studies is in **`scorecard.html`** (self-contained,
+Decision Spine design tokens, light + dark).
 
 Each study runs the SAME agent on the SAME warehouse; only the grounding it is shown changes across
 its four environments (`{small,high}_{before,after}` — low vs high ambiguity, before vs after the fix).

@@ -44,6 +44,21 @@ HIGH (2)
 `docs/data_dictionary.md` are present. It exits non-zero when a finding at or above `--fail-on`
 (default `high`) exists, so it gates CI. `--gate auto` uses embeddings when installed, else lexical.
 
+### Native dbt
+
+Point `--dialect dbt-manifest` at a dbt project (or its compiled `target/manifest.json`) to scan all
+three layers of a real project at once. One `dbt parse` (no warehouse connection) compiles the
+semantic models, metrics, model columns, and descriptions into the manifest; preflight reads them and
+cites each finding back to the source `.yml`/`.sql` file and line.
+
+```
+dbt parse                                          # writes target/manifest.json
+preflight scan . --dialect dbt-manifest --detail
+```
+
+Other dialects: `--dialect metricflow` (raw MetricFlow YAML), `--dialect dbt` (raw dbt model SQL),
+`--dialect cube` (Cube), `--dialect env` (the default `semantic/warehouse/docs` layout above).
+
 ## Use — library
 
 ```python
