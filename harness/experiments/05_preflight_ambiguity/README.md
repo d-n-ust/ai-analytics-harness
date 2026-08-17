@@ -61,9 +61,21 @@ business intent, before the fixes, so the answer key cannot drift toward what we
       definition each; the warehouse consolidates `moments` to one canonical fact with one grain
       column and one internal flag; the docs give one definition per term, matching the governed
       metric it grounds.
-- [ ] pre-registered question set + gold (3 LLM judges).
-- [ ] agent runs on the four environments; SER / balanced accuracy / coverage.
+- [x] pre-registered question set + gold — `cases.yml` (7 questions: 3 flagged, 2 clean controls, 2
+      unanswerable). Gold is a deterministic independent `gold_sql` oracle run against the clean star
+      (`compute_gold`), NOT an LLM judgement — so no judge panel is needed. Flagged questions are
+      designed so a sprawl sibling gives a clearly-wrong number (value_moments 16041 vs ios 5648;
+      mrr 2685 vs recurring_revenue 11448; active_users 1620 vs dau ~289). Validated offline.
+- [x] benefit runner — `benefit.py` (Option B: a bespoke runner, since the declarative engine's
+      same-numbers guard would fight a before/after design). Runs the agent on each layer over the
+      question set, grades, and reports coverage / silent-error / balanced-accuracy via `selective()`,
+      split flagged vs clean. `--mock` validates the whole pipeline with no key; all four layers run.
+- [ ] **agent runs (needs `ANTHROPIC_API_KEY`)** — the only key-gated step. `python benefit.py`
+      with a real model produces the before/after numbers. Hypotheses: silent-error rate down and
+      balanced accuracy up, concentrated on the flagged tier, with a larger effect on `high` than
+      `small` (the dose-response).
 
-Note: `small_before` / `small_after` are semantic-only (a governed layer's residual is a semantic
-trap); `high_*` carry all three layers. Matching `small` to three layers is only needed for the agent
-runs, not the scan dose.
+Notes: the agent runs on the SAME materialized star for all four layers (rung 3); only the semantic
+layer it is shown changes. `small_before`/`small_after` are semantic-only for the scan; `high_before`
+loads and queries fine as a metrics-only layer (SemanticLayer tolerates it), so no extra wiring was
+needed to make it runnable.
