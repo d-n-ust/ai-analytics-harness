@@ -211,3 +211,9 @@ metrics:
     base: fct_marketing_spend
     agg: "sum(spend)"
     time_column: spend_date
+  total_habits:
+    entity: habits
+    segment: all
+    unit: count
+    base: dim_habits
+    agg: "count(*)"

@@ -58,7 +58,8 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> l
         for case in cases:
             ans = run_agent(case["question"], g, model, verifier_model=verifier)
             rows.append({**grade(ans, case, golds.get(case["id"])),
-                         "outcome": ans.outcome, "id": case["id"], "tier": case["tier"], "rep": rep,
+                         "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
+                         "family": case.get("family"), "rep": rep,
                          "picked": getattr(ans, "source_metric", None),
                          "declared": getattr(ans, "declared_value", None)})
     return rows
@@ -90,6 +91,29 @@ def _print_scorecard(report: dict) -> None:
             print(f"  {tag:14} {label:8} {m['n']:>2}  {_fmt(m['coverage']):>9} "
                   f"{_fmt(m['silent_error']):>11} {_fmt(m['balanced_accuracy']):>8}")
         print("  " + "·" * 74)
+
+
+def _print_family_table(report: dict) -> None:
+    """Per-trap transparency: the flagged silent-error rate for each family on each layer, so the
+    reader sees WHICH traps bite rather than a single pooled number."""
+    layers = [n for n in ORDER if n in report]
+    fams: list[str] = []
+    for name in layers:
+        for r in report[name]["rows"]:
+            if r["tier"] == "flagged" and r.get("family") and r["family"] not in fams:
+                fams.append(r["family"])
+    if not fams:
+        return
+    print("\n  per-family flagged silent-error rate")
+    print("  " + "-" * 74)
+    print(f"  {'family':20}" + "".join(f"{n.replace('_',' '):>14}" for n in layers))
+    print("  " + "-" * 74)
+    for fam in fams:
+        cells = []
+        for name in layers:
+            rows = [r for r in report[name]["rows"] if r.get("family") == fam]
+            cells.append(_fmt(selective(rows).silent_error) if rows else " n/a ")
+        print(f"  {fam:20}" + "".join(f"{c:>14}" for c in cells))
 
 
 def main() -> None:
@@ -124,6 +148,7 @@ def main() -> None:
         out.write_text(json.dumps(report, indent=2, default=str))
 
     _print_scorecard(report)
+    _print_family_table(report)
     print(f"\n  wrote {out.relative_to(HERE.parent.parent)}")
 
 

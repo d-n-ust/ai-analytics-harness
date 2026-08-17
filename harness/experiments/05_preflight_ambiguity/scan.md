@@ -2,10 +2,10 @@
 
   PREFLIGHT AMBIGUITY MAP          gate: embeddings
   ────────────────────────────────────────────────────────────
-  small_before     1 confusion    (17 facts · 1 high 0 med 0 low)
-  small_after      0 confusions   (16 facts · 0 high 0 med 0 low)
-  high_before     18 confusions   (67 facts · 7 high 2 med 9 low)
-  high_after       0 confusions   (38 facts · 0 high 0 med 0 low)
+  small_before     1 confusion    (18 facts · 1 high 0 med 0 low)
+  small_after      0 confusions   (17 facts · 0 high 0 med 0 low)
+  high_before     18 confusions   (68 facts · 7 high 2 med 9 low)
+  high_after       0 confusions   (39 facts · 0 high 0 med 0 low)
   ● high   ● medium   ● low
 
 ════ small_before ══════════════════════════════════════════

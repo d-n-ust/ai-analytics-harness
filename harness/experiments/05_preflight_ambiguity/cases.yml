@@ -1,74 +1,109 @@
-# Experiment 05 — pre-registered question set (v2: name-match traps).
+# Experiment 05 — pre-registered question set (v3: five trap families).
 #
-# v1 found the ambiguity did not bite: with explicit intent and self-describing metric names, the
-# agent picked the right metric on every layer. The honest mechanism that DOES bite is a name-match
-# trap — a question whose natural wording matches a WRONG metric that exists only on the sprawled
-# ("before") layer, and whose number is clearly different from the governed answer. Remove that
-# metric (the fix) and the agent falls back to the one governed metric and answers correctly.
+# Each flagged question is a name-match trap: its natural wording matches a WRONG metric that exists
+# only on the sprawled ("before") layer and returns a clearly different number; the governed layer
+# has only the right metric, so the agent falls back to it and answers correctly. Gold is an
+# independent gold_sql oracle against the clean star (compute_gold), written from business intent.
 #
-# The gold is the honest business answer (an independent gold_sql oracle), written from intent, not
-# fitted to a layer. Only `high_before` carries the trap metrics, so the effect is high_before (traps
-# present) vs the governed layers (traps absent). tiers: flagged (a trap exists on the sprawled
-# layer) vs clean (no trap on any layer — a control that should stay correct everywhere).
+# `family` groups correlated items so results can be read per-trap, not just pooled (3 questions x 3
+# reps overstated independence in v2). `tier`: flagged (a trap exists on the sprawled layer) vs clean
+# (no trap on any layer).
 #
-# Verified (June 2026 / current): recurring revenue — governed mrr 2685 vs trap recurring_revenue
-# 11448 (~4.3x, CLEAR); monthly active users — governed active_users 1620 vs trap mau 1683 (~3.9%,
-# over the 2% tolerance); value_moments 16041 (robust — the agent gets this right, a within-flagged
-# control); marketing_spend 21013 and paying_users 371 (clean, no trap).
+# The five families and their verified numbers (governed gold vs sprawl trap):
+#   recurring_revenue : mrr 2685            vs recurring_revenue 11448   (~4.3x, CLEAR)
+#   subscription_rev  : net_revenue 11448   vs gross_revenue 14422       (~26%,  CLEAR)
+#   habits            : active_habits 6357  vs total_habits 7467         (~17%,  CLEAR)
+#   monthly_active    : active_users 1620   vs mau 1683 (incl internal)  (~3.9%, over 2% tol)
+#   value_moments     : value_moments 16041 (robust — the right one is obvious even amid siblings)
 
 cases:
 
-  # ── flagged: "recurring revenue" name-matches recurring_revenue (raw billed sum), gold is mrr ──
-  - id: e05_recurring_revenue_now
+  # ── family: recurring_revenue (governed mrr; trap recurring_revenue = raw billed sum) ──
+  - id: e05_recurring_now
     tier: flagged
+    family: recurring_revenue
     question: "What is our current recurring revenue?"
-    expect:
-      type: metric_answer
-      metric: mrr
-      gold_sql: "SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"
-      tolerance: 0.02
-    note: "Recurring revenue is MRR (annual plans over 12). The sprawled layer also has recurring_revenue = raw sum(billed_amount) = ~4.3x, whose NAME matches the question; the governed layer has only mrr."
-
-  # ── flagged: "monthly active users" name-matches mau (includes internal), gold is active_users ──
-  - id: e05_monthly_active_users_jun
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+  - id: e05_recurring_runrate
     tier: flagged
-    question: "How many monthly active users did we have in June 2026?"
-    expect:
-      type: metric_answer
-      metric: active_users
-      gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"
-      tolerance: 0.02
-    note: "Governed active_users excludes internal/test. The sprawled layer has mau / monthly_active_users (no internal filter, ~1683) whose name matches 'monthly active users'; the governed layer has only active_users."
+    family: recurring_revenue
+    question: "What is our recurring revenue run rate right now?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+  - id: e05_recurring_howmuch
+    tier: flagged
+    family: recurring_revenue
+    question: "How much recurring revenue do we have from active subscriptions?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
 
-  # ── flagged (robust control): value_moments has near-name siblings but the right one is obvious ──
+  # ── family: subscription revenue (governed net_revenue = active/recognised; trap gross_revenue = all billed) ──
+  - id: e05_subrev_total
+    tier: flagged
+    family: subscription_rev
+    question: "What was our total subscription revenue?"
+    expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+  - id: e05_subrev_plain
+    tier: flagged
+    family: subscription_rev
+    question: "How much subscription revenue do we have?"
+    expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+
+  # ── family: habits (governed active_habits = unarchived; trap total_habits = all, incl archived) ──
+  - id: e05_habits_tracking
+    tier: flagged
+    family: habits
+    question: "How many habits are our users currently tracking?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+  - id: e05_habits_active
+    tier: flagged
+    family: habits
+    question: "How many active habits do we have across the app?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+
+  # ── family: monthly active users (governed active_users = excl internal; trap mau = incl internal) ──
+  - id: e05_mau_jun
+    tier: flagged
+    family: monthly_active
+    question: "How many monthly active users did we have in June 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
+  - id: e05_mau_may
+    tier: flagged
+    family: monthly_active
+    question: "What was our MAU in May 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31' AND NOT is_internal"}
+
+  # ── family: value_moments (robust — the sprawl has 6 siblings but the right one is obvious) ──
   - id: e05_value_moments_jun
     tier: flagged
+    family: value_moments
     question: "How many value moments were completed across all accounts in June 2026?"
-    expect:
-      type: metric_answer
-      metric: value_moments
-      gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
-      tolerance: 0.02
-    note: "The sprawled layer has 6 other *_value_moments, but 'value moments across all accounts' points cleanly at value_moments — a flagged item the agent should still get right (a within-tier control)."
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
 
-  # ── clean control: marketing_spend has no sibling on any layer ──
+  # ── clean controls: no trap on any layer ──
   - id: e05_marketing_spend_jun
     tier: clean
+    family: marketing_spend
     question: "How much did we spend on marketing in June 2026?"
-    expect:
-      type: metric_answer
-      metric: marketing_spend
-      gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
-      tolerance: 0.02
-    note: "One governed metric, no alike sibling — the agent should answer this correctly on every layer."
-
-  # ── clean control: paying users; the sprawl duplicates it (subscribers) but at the SAME number ──
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05_marketing_spend_may
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in May 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
   - id: e05_paying_users_now
     tier: clean
+    family: paying_users
     question: "How many paying users do we have right now?"
-    expect:
-      type: metric_answer
-      metric: paying_users
-      gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"
-      tolerance: 0.02
-    note: "The sprawled layer has subscribers / active_subscriptions, but they return the same number, so a wrong pick is not a wrong number — a clean control even under sprawl."
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}

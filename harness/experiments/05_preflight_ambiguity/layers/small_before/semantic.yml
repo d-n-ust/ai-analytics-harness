@@ -179,6 +179,15 @@ metrics:
     base: fct_subscriptions
     agg: "sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END)"
     default_filters: ["is_active"]
+  net_revenue:
+    description: "Recognised subscription revenue from currently-active subscriptions (excludes refunded and canceled)."
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    synonyms: ["net revenue", "recognised revenue", "subscription revenue"]
+    base: fct_subscriptions
+    agg: "sum(billed_amount)"
+    default_filters: ["is_active"]
     time_column: null
     dimensions: [plan]
 

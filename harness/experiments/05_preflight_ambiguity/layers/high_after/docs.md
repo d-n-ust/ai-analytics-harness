@@ -14,9 +14,10 @@ A completed habit — the canonical activity event, counted from the `moments` c
 completion. Raw volume counts every account; the governed `value_moments` metric exposes WHO counts
 as an argument (segment=all or segment=active), so scope is a query choice, not a second definition.
 
-## revenue
-Subscription revenue, taken as billed amount from `fct_subscriptions.billed_amount`. Figures net of
-refunds are a derived metric computed from this column, not a competing definition of the word.
+## net revenue
+Recognised subscription revenue: `billed_amount` from currently-active subscriptions, excluding
+refunded and canceled ones. This is the governed `net_revenue` metric. Gross billed amount, before
+those exclusions, is a separate figure and not this one.
 
 ## grain
 Daily metrics are reported per `active_date` — the single grain column across the warehouse. Older
