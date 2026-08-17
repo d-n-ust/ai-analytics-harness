@@ -222,3 +222,43 @@ generalize across formats.
 standard) and demo on `full-funnel` + `olist`; the one wrinkle is parsing MetricFlow's Jinja filter
 syntax (`{{ Dimension('order__status') }} = 'completed'`) into scope predicates. Cube is the natural
 second dialect. LookML remains a fast follow (see §on-proprietary-formats in the LookML discussion).
+
+### 9b. MetricFlow adapter — BUILT, and the honest live result
+
+The MetricFlow adapter shipped (`preflight/src/preflight/metricflow.py`, `--dialect metricflow`, 62
+tests). Live results on the two real repos:
+- **`full-funnel-ai-analytics`** — real catch: the **`total_sessions` NAME_COLLISION** (one name bound
+  to two different measures — the exact trap the author hand-warned about) + conversions/sessions
+  concept forks. One lexical-gate false positive (`channel_orders ~ channel_spend`) the embedding gate
+  would likely filter.
+- **`olist`** — **0 findings, and that is correct.** The adapter resolves `conversion_rate` and
+  `late_delivery_rate` to *identical* definitions (`order_count/order_count`), but their names are
+  dissimilar (sim 0.36), so the confusability gate rightly skips them — they are not an ambiguity/
+  selection problem. Their real defect (a degenerate ratio, always 100%) is a **construction** defect
+  (Mode 2, ratio-consistency), outside preflight's Mode-1 scope. A clean live demonstration of the
+  two-mode boundary on real public data.
+
+### 9c. Big real *raw-dbt* (no MetricFlow) scout — Mattermost is the showcase
+
+Honest generalization first: big public raw-dbt projects that are *both* real-company-scale *and*
+metric-mart-heavy are **rare**. Most large ones are staging+intermediate+docs (preflight's weak case)
+or crypto/open-data (Dune Spellbook, Flipside); curated metric repos (SOMA's `generate_metrics_cube`)
+are documented and non-ambiguous by design (a useful CLEAN contrast). The standout is:
+
+- **`mattermost/mattermost-data-warehouse`** — RICH. 489 models, real SaaS, cloneable, no semantic
+  layer; genuine ambiguity across sibling `SUM(...)+WHERE` marts (verified, verbatim):
+  - `arr_reporting` vs `contracted_arr_reporting`: same base (`arr_transactions`), same
+    `sum(opportunity_arr)`, different date anchor (`report_mo` vs `closing_mo`) → DEFINITION_DIVERGENCE
+    /SCOPE_TRAP. The maintainers' own schema.yml documents the difference.
+  - `total_arr` computed two ways: `account_daily_arr` (`sum(won_arr)`) vs `account_arr_and_seats`
+    (day-prorated `totalprice/term`, active-today only) — same name, account grain, won't reconcile.
+  - DAU/MAU client-telemetry vs server-reported, 30- vs 31-day windows → CONCEPT_FORK.
+
+**Ingestion cost:** these are dbt model `.sql` files (Jinja `{{ ref() }}`, CTEs), not our welded-query
+`-- name:` format — so demoing on Mattermost needs a **dbt raw-SQL adapter**: de-Jinja + reuse the T3
+sqlglot scope-recovery (agg/base/scope from the SELECT), filename as the metric name. More involved
+than MetricFlow (CTE-aware recovery), but it's the "works even without a governed semantic layer"
+story — the most common customer reality. Next build if we want the Mattermost ARR demo live.
+
+Clones under `scratchpad/{mf_scout_a,mf_scout_b,dbt_raw_scout}/`. Cal-ITP / CalData are untested large
+public projects worth a second pass if more raw-dbt RICH examples are needed.
