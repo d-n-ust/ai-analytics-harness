@@ -49,17 +49,18 @@ def load_cases() -> list[dict]:
     return cases
 
 
-def run_layer(con, spec_path, cases, golds, model, verifier) -> list[dict]:
-    """The agent answers every question grounded on ONE semantic layer; each answer is graded into
-    the row shape selective() consumes."""
+def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1) -> list[dict]:
+    """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
+    graded into the row shape selective() consumes. Reps average out agent stochasticity."""
     g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine="harness", semantic_layer=True)
     rows = []
-    for case in cases:
-        ans = run_agent(case["question"], g, model, verifier_model=verifier)
-        rows.append({**grade(ans, case, golds.get(case["id"])),
-                     "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
-                     "picked": getattr(ans, "source_metric", None),
-                     "declared": getattr(ans, "declared_value", None)})
+    for rep in range(reps):
+        for case in cases:
+            ans = run_agent(case["question"], g, model, verifier_model=verifier)
+            rows.append({**grade(ans, case, golds.get(case["id"])),
+                         "outcome": ans.outcome, "id": case["id"], "tier": case["tier"], "rep": rep,
+                         "picked": getattr(ans, "source_metric", None),
+                         "declared": getattr(ans, "declared_value", None)})
     return rows
 
 
@@ -95,6 +96,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--mock", action="store_true", help="use the mock model (validate wiring, no key)")
     ap.add_argument("--model", default="claude-haiku-4-5")
+    ap.add_argument("--reps", type=int, default=1, help="repetitions per question (averages stochasticity)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
     args = ap.parse_args()
 
@@ -107,17 +109,21 @@ def main() -> None:
 
     names = [n for n in ORDER
              if (not args.only or n in args.only) and (LAYERS / n / "semantic.yml").exists()]
-    report: dict = {"model": ("mock" if args.mock else args.model), "rung": RUNG}
+
+    # Persist after EACH layer and merge into any existing result, so a long run (reps x layers) that
+    # is interrupted keeps every completed layer, and layers run in separate invocations accumulate.
+    out = HERE / ("benefit_result_mock.json" if args.mock else "benefit_result.json")
+    report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
+    report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps})
     for name in names:
-        rows = run_layer(con, LAYERS / name / "semantic.yml", cases, golds, model, verifier)
+        rows = run_layer(con, LAYERS / name / "semantic.yml", cases, golds, model, verifier, args.reps)
         report[name] = {"overall": metrics(rows),
                         "flagged": metrics([r for r in rows if r["tier"] == "flagged"]),
                         "clean": metrics([r for r in rows if r["tier"] == "clean"]),
                         "rows": rows}
+        out.write_text(json.dumps(report, indent=2, default=str))
 
     _print_scorecard(report)
-    out = HERE / ("benefit_result_mock.json" if args.mock else "benefit_result.json")
-    out.write_text(json.dumps(report, indent=2, default=str))
     print(f"\n  wrote {out.relative_to(HERE.parent.parent)}")
 
 

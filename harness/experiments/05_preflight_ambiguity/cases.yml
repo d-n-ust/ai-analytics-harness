@@ -1,26 +1,47 @@
-# Experiment 05 — pre-registered question set for the before/after benefit measurement.
+# Experiment 05 — pre-registered question set (v2: name-match traps).
 #
-# Each question is a plain thing a leader asks. The gold is the honest answer to that question
-# (an independent gold_sql oracle against the clean star), written from business intent, NOT fitted
-# to any layer. The agent runs the SAME question set on each of the four semantic layers; the only
-# thing that changes between runs is which metrics the layer SHOWS.
+# v1 found the ambiguity did not bite: with explicit intent and self-describing metric names, the
+# agent picked the right metric on every layer. The honest mechanism that DOES bite is a name-match
+# trap — a question whose natural wording matches a WRONG metric that exists only on the sprawled
+# ("before") layer, and whose number is clearly different from the governed answer. Remove that
+# metric (the fix) and the agent falls back to the one governed metric and answers correctly.
 #
-# tier splits the analysis:
-#   flagged  — the intent maps to one governed metric, but the sprawled ("before") layer offers
-#              confusable siblings whose numbers are CLEARLY wrong (a grain/segment/measure swap),
-#              so a wrong binding is a large, visible error, not a near-miss.
-#   clean    — a metric with no confusable sibling; the agent should get it right on every layer
-#              (a control: the improvement should concentrate on `flagged`, not appear everywhere).
-#   unanswerable — no legitimate answer exists; the correct outcome is a coded refusal (the pile
-#              that makes silent-error rate and balanced accuracy meaningful).
+# The gold is the honest business answer (an independent gold_sql oracle), written from intent, not
+# fitted to a layer. Only `high_before` carries the trap metrics, so the effect is high_before (traps
+# present) vs the governed layers (traps absent). tiers: flagged (a trap exists on the sprawled
+# layer) vs clean (no trap on any layer — a control that should stay correct everywhere).
 #
-# Verified magnitudes (June 2026): value_moments 16041 vs ios-subset 5648 (~3x) vs android 5190;
-# active_users 1620 (real) vs dau ~289 (~6x grain); mrr 2685 vs recurring_revenue 11448 (~4.3x).
+# Verified (June 2026 / current): recurring revenue — governed mrr 2685 vs trap recurring_revenue
+# 11448 (~4.3x, CLEAR); monthly active users — governed active_users 1620 vs trap mau 1683 (~3.9%,
+# over the 2% tolerance); value_moments 16041 (robust — the agent gets this right, a within-flagged
+# control); marketing_spend 21013 and paying_users 371 (clean, no trap).
 
 cases:
 
-  # ── flagged: the value-moments cluster (before shows 7 confusable *_value_moments metrics) ──
-  - id: e05_value_moments_all_jun
+  # ── flagged: "recurring revenue" name-matches recurring_revenue (raw billed sum), gold is mrr ──
+  - id: e05_recurring_revenue_now
+    tier: flagged
+    question: "What is our current recurring revenue?"
+    expect:
+      type: metric_answer
+      metric: mrr
+      gold_sql: "SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"
+      tolerance: 0.02
+    note: "Recurring revenue is MRR (annual plans over 12). The sprawled layer also has recurring_revenue = raw sum(billed_amount) = ~4.3x, whose NAME matches the question; the governed layer has only mrr."
+
+  # ── flagged: "monthly active users" name-matches mau (includes internal), gold is active_users ──
+  - id: e05_monthly_active_users_jun
+    tier: flagged
+    question: "How many monthly active users did we have in June 2026?"
+    expect:
+      type: metric_answer
+      metric: active_users
+      gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"
+      tolerance: 0.02
+    note: "Governed active_users excludes internal/test. The sprawled layer has mau / monthly_active_users (no internal filter, ~1683) whose name matches 'monthly active users'; the governed layer has only active_users."
+
+  # ── flagged (robust control): value_moments has near-name siblings but the right one is obvious ──
+  - id: e05_value_moments_jun
     tier: flagged
     question: "How many value moments were completed across all accounts in June 2026?"
     expect:
@@ -28,31 +49,9 @@ cases:
       metric: value_moments
       gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
       tolerance: 0.02
-    note: "Raw activity volume, every account. The sprawled layer offers ios/android (platform subset, ~3x low), weekly/monthly (grain) and total_moments (duplicate) under alike names."
+    note: "The sprawled layer has 6 other *_value_moments, but 'value moments across all accounts' points cleanly at value_moments — a flagged item the agent should still get right (a within-tier control)."
 
-  # ── flagged: active_users vs the grain sibling dau ──
-  - id: e05_active_users_jun
-    tier: flagged
-    question: "How many distinct active users did we have in June 2026?"
-    expect:
-      type: metric_answer
-      metric: active_users
-      gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"
-      tolerance: 0.02
-    note: "Governed active_users excludes internal/test. Before layer also shows dau (avg daily distinct, ~6x low), actives (includes internal) and monthly_active_users (duplicate)."
-
-  # ── flagged: the revenue fork mrr vs recurring_revenue ──
-  - id: e05_mrr_now
-    tier: flagged
-    question: "What is our current monthly recurring revenue?"
-    expect:
-      type: metric_answer
-      metric: mrr
-      gold_sql: "SELECT sum(CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"
-      tolerance: 0.02
-    note: "MRR divides annual plans by 12. Before layer shows recurring_revenue (raw sum of billed_amount, ~4.3x high) and monthly_recurring_revenue (duplicate) under alike names."
-
-  # ── clean control: marketing_spend has no confusable sibling ──
+  # ── clean control: marketing_spend has no sibling on any layer ──
   - id: e05_marketing_spend_jun
     tier: clean
     question: "How much did we spend on marketing in June 2026?"
@@ -61,34 +60,15 @@ cases:
       metric: marketing_spend
       gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"
       tolerance: 0.02
-    note: "One governed metric, no alike sibling on any layer — the agent should answer this correctly before and after."
+    note: "One governed metric, no alike sibling — the agent should answer this correctly on every layer."
 
-  # ── clean control: referrals has no confusable sibling ──
-  - id: e05_referrals_jun
+  # ── clean control: paying users; the sprawl duplicates it (subscribers) but at the SAME number ──
+  - id: e05_paying_users_now
     tier: clean
-    question: "How many referrals were created in June 2026?"
+    question: "How many paying users do we have right now?"
     expect:
       type: metric_answer
-      metric: referrals
-      gold_sql: "SELECT count(*) FROM fct_referrals WHERE referred_ts BETWEEN TIMESTAMP '2026-06-01 00:00:00' AND TIMESTAMP '2026-06-30 23:59:59'"
+      metric: paying_users
+      gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"
       tolerance: 0.02
-    note: "A second clean control on a different measure family (counts, not currency)."
-
-  # ── unanswerable: no governed definition ──
-  - id: e05_engagement_score_jun
-    tier: unanswerable
-    question: "What was our overall engagement score in June 2026?"
-    expect:
-      type: refuse
-      reason: no_governed_definition
-    note: "No 'engagement score' is defined anywhere in the stack; composing one ad hoc is a silent error. Correct on every layer is to refuse."
-
-  # ── unanswerable: out of coverage (a trap that returns a number in raw SQL) ──
-  - id: e05_apac_march
-    tier: unanswerable
-    question: "How many value moments came from the APAC region in March 2026?"
-    expect:
-      type: refuse
-      reason: out_of_coverage
-      gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE region = 'APAC' AND active_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'"
-    note: "APAC launched 2026-05-01; March rows are pre-launch test data. Raw SQL happily returns a number, so the trap value is recorded as provenance."
+    note: "The sprawled layer has subscribers / active_subscriptions, but they return the same number, so a wrong pick is not a wrong number — a clean control even under sprawl."

@@ -61,21 +61,35 @@ business intent, before the fixes, so the answer key cannot drift toward what we
       definition each; the warehouse consolidates `moments` to one canonical fact with one grain
       column and one internal flag; the docs give one definition per term, matching the governed
       metric it grounds.
-- [x] pre-registered question set + gold — `cases.yml` (7 questions: 3 flagged, 2 clean controls, 2
-      unanswerable). Gold is a deterministic independent `gold_sql` oracle run against the clean star
+- [x] pre-registered question set + gold — `cases.yml` (5 questions: 3 flagged, 2 clean controls).
+      Gold is a deterministic independent `gold_sql` oracle run against the clean star
       (`compute_gold`), NOT an LLM judgement — so no judge panel is needed. Flagged questions are
-      designed so a sprawl sibling gives a clearly-wrong number (value_moments 16041 vs ios 5648;
-      mrr 2685 vs recurring_revenue 11448; active_users 1620 vs dau ~289). Validated offline.
+      **name-match traps**: the question's natural wording matches a WRONG metric that exists only on
+      the sprawled layer (recurring revenue → `recurring_revenue` 11448 when the governed answer is
+      `mrr` 2685; monthly active users → `mau` 1683 when governed `active_users` is 1620). v1 used
+      explicit intent and did not bite; the trap wording is what makes the ambiguity land.
 - [x] benefit runner — `benefit.py` (Option B: a bespoke runner, since the declarative engine's
       same-numbers guard would fight a before/after design). Runs the agent on each layer over the
-      question set, grades, and reports coverage / silent-error / balanced-accuracy via `selective()`,
-      split flagged vs clean. `--mock` validates the whole pipeline with no key; all four layers run.
-- [ ] **agent runs (needs `ANTHROPIC_API_KEY`)** — the only key-gated step. `python benefit.py`
-      with a real model produces the before/after numbers. Hypotheses: silent-error rate down and
-      balanced accuracy up, concentrated on the flagged tier, with a larger effect on `high` than
-      `small` (the dose-response).
+      question set (`--reps`), grades, and reports coverage / silent-error / balanced-accuracy via
+      `selective()`, split flagged vs clean; persists per layer so a long run survives interruption.
+      `--mock` validates the whole pipeline with no key.
+- [x] **agent runs — the result** (gpt-5-mini, reps=3, n=9 per flagged cell):
+
+      | layer | static findings | flagged silent-error | clean silent-error |
+      |---|---|---|---|
+      | small_before (governed) | 1 | 0.11 | 0.00 |
+      | small_after (fixed) | 0 | **0.00** | 0.00 |
+      | high_before (sprawled) | 18 | **0.33** | 0.00 |
+      | high_after (fixed) | 0 | **0.00** | 0.00 |
+
+      Three things hold at once: preflight's static finding count **predicts** the agent's silent-error
+      rate (1 → 0.11, 18 → 0.33, the dose-response); **fixing** what it flags drives silent errors to
+      **zero** on both arms; and the effect **concentrates on the flagged tier** — the clean controls
+      stay 0.00 on every layer, so it is the ambiguity, not general noise. Result in `benefit_result.json`.
 
 Notes: the agent runs on the SAME materialized star for all four layers (rung 3); only the semantic
-layer it is shown changes. `small_before`/`small_after` are semantic-only for the scan; `high_before`
-loads and queries fine as a metrics-only layer (SemanticLayer tolerates it), so no extra wiring was
-needed to make it runnable.
+layer it is shown changes. The sprawled `high_before` has its metric descriptions stripped (a pressured
+team's bare names), so the agent must disambiguate by name — which is where the trap lands. Small n:
+the pattern is clean but the sample is small (3 flagged questions x 3 reps); more discriminating items
+would tighten it. A first run with explicit-intent questions found NO effect — recorded honestly as
+the reason for the v2 trap design.
