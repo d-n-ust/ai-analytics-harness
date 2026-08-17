@@ -1,0 +1,30 @@
+# Study 02 — the governance ladder. The SAME plain questions asked at three levels of governance:
+#   rung 1  messy raw tables (u, hab, evt, subs -- cryptic names, evt.etype an int, u.internal 3-valued)
+#   rung 2  clean star (dim_users, agg_active_days -- conformed, clear names) -- still raw SQL, no metrics
+#   rung 3  governed semantic layer (the agent queries metrics, not SQL)
+# Gold is one deterministic gold_sql oracle against the clean star (rung-independent truth).
+cases:
+  - id: s2_value_moments_jun
+    question: "How many value moments were completed in June 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: s2_active_users_jun
+    question: "How many active users did we have in June 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
+  - id: s2_marketing_jun
+    question: "How much did we spend on marketing in June 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: s2_new_signups_jun
+    question: "How many new users signed up in June 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: s2_paying_users
+    question: "How many paying users do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}
+  - id: s2_mrr
+    question: "What is our current monthly recurring revenue?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
