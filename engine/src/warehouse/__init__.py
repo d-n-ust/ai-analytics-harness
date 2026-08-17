@@ -3,7 +3,7 @@
 This is the package's public API. Depend on these names, not on the internal module layout.
 """
 
-from .config import NAMED_PERIODS, TIME_GRAINS
+from .config import NAMED_PERIODS, TIME_GRAINS, NotConfigured
 from .warehouse import (
     DEFAULT_MAX_ROWS,
     QueryError,
@@ -16,5 +16,5 @@ from .warehouse import (
 
 __all__ = [
     "run_query", "describe_table", "schema_text", "open_warehouse", "set_star",
-    "QueryError", "DEFAULT_MAX_ROWS", "NAMED_PERIODS", "TIME_GRAINS",
+    "QueryError", "DEFAULT_MAX_ROWS", "NAMED_PERIODS", "TIME_GRAINS", "NotConfigured",
 ]

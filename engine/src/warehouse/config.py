@@ -10,7 +10,19 @@ import datetime as dt
 import os
 from pathlib import Path
 
-from agent import NotConfigured
+
+class NotConfigured(RuntimeError):
+    """Something the run needs is absent from the environment — an API key, a generated
+    warehouse, a checkout.
+
+    A distinct type because it is not a bug: nothing is broken, the caller simply has not set
+    something up yet, and every message of this class already names the fix. The CLI catches it
+    and prints that message alone. A traceback here says "this program crashed" when the truth is
+    "add your key to .env", and the fifteen lines above the useful sentence are pure noise.
+
+    It lives here, in the leaf warehouse package, and `agent` re-exports it — so the packages stay
+    acyclic while `from agent import NotConfigured` keeps working everywhere.
+    """
 
 ANALYSIS_DATE = dt.date(2026, 7, 16)   # "today" for the agent
 DATA_END = dt.date(2026, 7, 12)        # last day with data (a complete ISO week)

@@ -98,8 +98,8 @@ def _embed(texts: list[str], model: str) -> np.ndarray:
     keys = [hashlib.sha256(f"{model}\x00{t}".encode()).hexdigest()[:16] for t in texts]
     missing = [t for t, k in zip(texts, keys, strict=True) if k not in cache]
     if missing:
-        from agent.providers import load_env
-        load_env()
+        from dotenv import load_dotenv
+        load_dotenv()  # load .env so OPENAI_API_KEY is available; no dependency on agent
     if missing and not os.environ.get("OPENAI_API_KEY"):
         raise SystemExit(
             f"{len(missing)} text(s) are not in {CACHE_PATH.name} and OPENAI_API_KEY is unset.\n"
