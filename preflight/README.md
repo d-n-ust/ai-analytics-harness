@@ -187,6 +187,9 @@ the `items` (`Item` with `id` / `label` / `layer`) that collide. `Finding.to_dic
 top-level `as_dicts()` render them for JSON. Types: `SCOPE_TRAP`, `CONCEPT_FORK`,
 `DEFINITION_DIVERGENCE`, `GRAIN_MISMATCH`, `NAME_COLLISION`, `SIBLING`, `DUPLICATE`.
 
+**[FINDINGS.md](FINDINGS.md)** is the field guide — a real example, why it bites, and the recommended
+fix for each type.
+
 ## Layout
 
 Pure transforms, I/O at the edges — so every stage tests in isolation and the pairwise work is

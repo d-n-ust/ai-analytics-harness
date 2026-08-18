@@ -148,15 +148,16 @@ edge preflight has over a single-layer linter is that it compares **across** tho
 
 | type | what it means | typical fix |
 |---|---|---|
-| **SCOPE_TRAP** | metric B is metric A plus a hidden filter; a bare question grabs the wrong scope | encode scope in the name, or make it a dimension/argument |
-| **CONCEPT_FORK** | same table, same aggregation, different columns, so one word yields several numbers | pick a canonical metric; name the variants unambiguously |
+| **SCOPE_TRAP** | metric B is metric A plus a hidden filter; a bare question grabs the wrong scope | move the scope to a dimension (one metric, sliced), or an explicit governed `filter` |
+| **CONCEPT_FORK** | same table, same aggregation, different columns, so one word yields several numbers | one measure + a category dimension; drop the scoped measures |
 | **DEFINITION_DIVERGENCE** | a metric is built on a column its own documentation never mentions | describe the metric in terms of what it actually measures |
-| **NAME_COLLISION** | two names read alike but mean different things | disambiguate one of the names |
-| **DUPLICATE** | one meaning under two names (often a measure and the column it wraps) | usually harmless; collapse if it is real redundancy |
-| **GRAIN_MISMATCH / SIBLING** | metrics at different grains, or near-siblings, presented as peers | reconcile to one governed definition |
+| **NAME_COLLISION** | two names read alike but mean different things | make the unit explicit in both names; avoid one being a prefix of the other |
+| **DUPLICATE** | one meaning under two names (often a measure and the column it wraps) | usually harmless; collapse two identical *metrics* to one canonical name |
+| **GRAIN_MISMATCH / SIBLING** | a semi-additive measure at a rollable grain, or cuts modelled as peer metrics | snapshot + declare additivity; make cuts dimensions |
 
 Severity is preflight's estimate of how likely the confusion is to bite at query time. Start with HIGH.
 `--detail` prints every colliding site with its `file:line` and the offending source line under it.
+For a worked example and the recommended fix for each type, see **[FINDINGS.md](FINDINGS.md)**.
 
 ## Gate it in CI
 
