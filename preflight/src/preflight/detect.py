@@ -144,7 +144,9 @@ def classify(a: GroundingFact, b: GroundingFact, sim: float,
     if exact:
         return Classification("NAME_COLLISION", "medium", f"two different '{a.label}' in the {a.layer} layer")
 
-    # 7. near-identical names, different things
+    # 7. near-identical names, different things. NAME_COLLISION is also produced outside classify:
+    # _warehouse_synonym_edges (read-alike warehouse columns) and _overloaded_column_findings (one
+    # column name spread across many tables) — the three are the places to look for this type.
     if sim >= config.name_collision:
         return Classification("NAME_COLLISION", "low", f"'{a.label}' and '{b.label}' read alike, different things")
     return None

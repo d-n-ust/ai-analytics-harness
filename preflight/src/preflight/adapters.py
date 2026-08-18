@@ -60,6 +60,12 @@ def entity_from_base(base: str | None) -> str | None:
     return b or base
 
 
+def gate_text(name: str, description: str = "") -> str:
+    """The text the confusability gate reads for a fact: the name in words, then its description. One
+    definition so the gate sees the same shape for a metric, a measure, a dimension, or a segment."""
+    return f"{name.replace('_', ' ')}. {description}".strip()
+
+
 def additivity(agg: str | None) -> str | None:
     """Derived from the aggregate, never annotated per metric (the semantic-modelling rule):
     distinct counts and min/max are semi-additive, ratios/averages non-additive, sum/count additive."""
@@ -88,19 +94,19 @@ def facts_from_semantic(doc: dict) -> list[GroundingFact]:
             measure=(m.get("measure") or m.get("expr")),
             grain=m.get("grain"), additive=additivity(m.get("agg")),
             scope=build_scope(m.get("filter"), m.get("segment"), seg_map),
-            text=f"{name.replace('_', ' ')}. {m.get('description', '')}".strip(),
+            text=gate_text(name, m.get("description", "")),
             derived=(m.get("agg") == "ratio"),
         ))
     for d in doc.get("dimensions", []):
         out.append(GroundingFact(
             id=f"sl:dim:{d['name']}", label=d["name"], layer="semantic", kind="dimension",
             base=_norm_table(d.get("source")), measure=d.get("column"),
-            text=f"{d['name'].replace('_', ' ')}. {d.get('description', '')}".strip()))
+            text=gate_text(d["name"], d.get("description", ""))))
     for s in doc.get("segments", []):
         out.append(GroundingFact(
             id=f"sl:seg:{s['name']}", label=s["name"], layer="semantic", kind="segment",
             entity=s.get("entity"), scope=build_scope(s.get("filter")),
-            text=f"{s['name'].replace('_', ' ')}. {s.get('description', '')}".strip()))
+            text=gate_text(s["name"], s.get("description", ""))))
     return out
 
 

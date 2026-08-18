@@ -18,7 +18,7 @@ from pathlib import Path
 
 import yaml
 
-from .adapters import additivity
+from .adapters import additivity, gate_text
 from .model import GroundingFact
 from .scope import build_scope
 
@@ -101,7 +101,7 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
         name, mtype = m["name"], (m.get("type") or "simple").lower()
         tp = m.get("type_params", {}) or {}
         scope = _parse_filter(m.get("filter"))
-        text = f"{name.replace('_', ' ')}. {m.get('description', '')}".strip()
+        text = gate_text(name, m.get("description", ""))
         if mtype == "simple":
             mi = index.get(_measure_ref(tp.get("measure")) or "", {})
             facts.append(GroundingFact(
@@ -131,7 +131,7 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
                 layer="semantic", kind="metric", agg=meas.get("agg"),
                 measure=meas.get("expr") or meas["name"], base=base, entity=entity,
                 additive=additivity(meas.get("agg")),
-                text=f"{meas['name'].replace('_', ' ')}. {meas.get('description', '')}".strip()))
+                text=gate_text(meas["name"], meas.get("description", ""))))
     return facts
 
 

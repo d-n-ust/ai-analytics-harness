@@ -22,8 +22,10 @@ Layer = str            # semantic | warehouse | docs | queries
 Additivity = Literal["additive", "semi", "non"]
 
 # A parsed WHERE leaf: (column, kind, payload). kind ∈ {"set","cmp","raw"}; payload is a frozenset of
-# values for "set", or a normalised SQL string otherwise. A Scope is a sorted tuple of these.
-Predicate = tuple[str, str, object]
+# values for "set", or a normalised SQL string for "cmp"/"raw". A Scope is a sorted tuple of these.
+# Kept a typed tuple (not a dataclass) because the value is a tested contract — tests assert on the
+# literal `(("col","set",frozenset({...})),)` shape — and the union already restores type-checking.
+Predicate = tuple[str, str, frozenset[str] | str]
 Scope = tuple[Predicate, ...]
 
 DANGER_RANK: dict[str, int] = {"high": 0, "medium": 1, "low": 2}

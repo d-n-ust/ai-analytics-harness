@@ -123,10 +123,10 @@ def is_subset(narrow: Scope, wide: Scope) -> bool:
         pn = cn.get((col, kind))
         if pn is None:
             return False
-        if kind == "set":
-            if not (pn <= pw):          # type: ignore[operator]
+        if kind == "set" and isinstance(pn, frozenset) and isinstance(pw, frozenset):
+            if not pn <= pw:            # value-sets widen: {completed} ⊆ {completed, fulfilled}
                 return False
-        elif pn != pw:
+        elif pn != pw:                  # cmp/raw payloads compare by exact string
             return False
     return True
 
