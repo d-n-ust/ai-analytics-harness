@@ -15,7 +15,7 @@ query time. Fix HIGH first. The examples below use dbt MetricFlow YAML; the same
 | [CONCEPT_FORK](#concept_fork) | one concept, several metrics over different columns | high |
 | [GRAIN_MISMATCH](#grain_mismatch) | the same measure at two grains, and it cannot be rolled up | high / medium |
 | [DEFINITION_DIVERGENCE](#definition_divergence) | one term defined two ways, or a metric its docs do not describe | high / medium |
-| [NAME_COLLISION](#name_collision) | two names read alike but mean different things | medium / low |
+| [NAME_COLLISION](#name_collision) | two names read alike, or one column name reused across tables, meaning different things | medium / low |
 | [DUPLICATE](#duplicate) | the same thing under two names | low |
 | [SIBLING](#sibling) | the same measure under incomparable scopes | low |
 
@@ -207,6 +207,16 @@ metrics:
 ```
 
 Neither name is now a prefix of the other, and each states its unit.
+
+**The other way this fires: one column name in many tables.** A non-key column like `status`, `amount`,
+or `type` that appears on several tables may mean something different in each — `orders.status` is a
+fulfilment state, `subscriptions.status` is a billing state. An agent that has learned "status" from one
+table will read it wrong on another.
+
+**Fix — qualify the meaning, or confirm it is genuinely one concept.** If the columns mean different
+things, give them distinct names (`order_status`, `subscription_status`) or document each in its table.
+If they really are one shared concept, make that explicit (a conformed dimension, or a note that the
+meaning is the same everywhere) so the shared name is a decision, not a coincidence.
 
 ---
 
