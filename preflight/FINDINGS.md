@@ -42,7 +42,8 @@ metrics:
 **Why it bites.** "How many orders did we do?" can land on `food_orders` and under-count, and the
 number looks completely plausible. The scope (food only) is invisible in the answer.
 
-**Fix — make the scope a dimension, not a second metric.** Keep one `orders`, and slice it by category:
+**Fix — expose the flag as a dimension and drop the scoped metric.** Keep one `orders`; make the thing
+it was filtering on a dimension, so "food orders" is `orders` filtered to it, not a second metric:
 
 ```yaml
 # one metric …
@@ -50,16 +51,21 @@ metrics:
   - name: orders
     type: simple
     type_params: { measure: order_count }
-# … sliced by a dimension that already describes the category
+# … and the flag it filtered on becomes a dimension
 dimensions:
-  - name: order_category             # food | drink | mixed
+  - name: is_food_order              # an order can contain BOTH food and drink, so these
+    type: categorical                # flags overlap — keep them as separate booleans, not one
+    expr: is_food_order              # food|drink partition (which would lose the both-orders)
+  - name: is_drink_order
     type: categorical
-    expr: ...
+    expr: is_drink_order
 ```
 
-"Food orders" is then `orders` grouped by / filtered to `order_category = 'food'`. If `food_orders`
-must stay a named KPI, keep the `filter:` form above (it is at least legible and governed) rather than
-baking the filter into a separate measure — but prefer the dimension.
+"Food orders" is then `orders` filtered to `is_food_order`, and the bare `food_orders` metric is
+removed. (jaffle already scopes `food_orders` with an explicit `filter:` rather than a baked-in CASE,
+which is the legible half; the trap is only that it still coexists with `orders` as a peer metric.)
+Where a scope is genuinely a clean partition — one value per row, like `region` or `plan` — use a
+single categorical dimension with a `case` expr instead, as in [CONCEPT_FORK](#concept_fork) below.
 
 ---
 
