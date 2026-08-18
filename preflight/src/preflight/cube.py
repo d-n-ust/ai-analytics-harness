@@ -126,10 +126,11 @@ def _block_after(text: str, key: str) -> str:
     return _match_block(text, m.end() - 1)[0] if m else ""
 
 
-def _entries(block: str):
-    """Top-level `name: { ... }` entries only — nested blocks (rollingWindow, format, ...) are skipped
-    because each matched block advances the cursor past it."""
-    out, i = [], 0
+def _entries(block: str) -> list[tuple[str, str]]:
+    """Top-level `name: { ... }` entries as (name, body) — nested blocks (rollingWindow, format, ...)
+    are skipped because each matched block advances the cursor past it."""
+    out: list[tuple[str, str]] = []
+    i = 0
     pat = re.compile(r"([A-Za-z_$][\w]*)\s*:\s*\{")
     while True:
         m = pat.search(block, i)

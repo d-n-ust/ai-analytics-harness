@@ -86,7 +86,7 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
     # measure referenced by any metric is represented by that metric (its public face), even when the
     # metric filters it; only a truly orphan measure (no metric wraps it) is emitted, so measure-level
     # modelling gaps still surface without every filtered metric colliding with its own raw measure.
-    referenced: set[str] = set()
+    referenced: set[str | None] = set()   # a metric may reference no measure; None is harmless here
     for m in metrics:
         tp = m.get("type_params", {}) or {}
         mtype = (m.get("type") or "simple").lower()
@@ -103,14 +103,14 @@ def facts_from_metricflow(semantic_models: list[dict], metrics: list[dict]) -> l
         scope = _parse_filter(m.get("filter"))
         text = f"{name.replace('_', ' ')}. {m.get('description', '')}".strip()
         if mtype == "simple":
-            mi = index.get(_measure_ref(tp.get("measure")), {})
+            mi = index.get(_measure_ref(tp.get("measure")) or "", {})
             facts.append(GroundingFact(
                 id=f"mf:{name}", label=name, layer="semantic", kind="metric",
                 agg=mi.get("agg"), measure=mi.get("expr"), base=mi.get("base"), entity=mi.get("entity"),
                 additive=additivity(mi.get("agg")), scope=scope, text=text))
         elif mtype == "ratio":
             num, den = _measure_ref(tp.get("numerator")), _measure_ref(tp.get("denominator"))
-            mi = index.get(num, {})
+            mi = index.get(num or "", {})
             facts.append(GroundingFact(
                 id=f"mf:{name}", label=name, layer="semantic", kind="metric",
                 agg="ratio", measure=f"{num}/{den}", base=mi.get("base"), entity=mi.get("entity"),

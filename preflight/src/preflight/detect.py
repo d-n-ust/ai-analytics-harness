@@ -18,7 +18,7 @@ from __future__ import annotations
 import itertools
 import re
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import NamedTuple
 
 from .gate import make_gate
@@ -26,6 +26,8 @@ from .model import (
     DANGER_RANK,
     DEFAULT_CONFIG,
     Classification,
+    CollisionType,
+    Danger,
     DetectConfig,
     Finding,
     GroundingFact,
@@ -88,7 +90,7 @@ def classify(a: GroundingFact, b: GroundingFact, sim: float,
                 return Classification("DUPLICATE", "low", "same measure, scope and grain under two names")
             # same population, different grain — a semi-/non-additive measure cannot be rolled up
             add = a.additive or b.additive
-            danger = "high" if add in ("semi", "non") else "medium"
+            danger: Danger = "high" if add in ("semi", "non") else "medium"
             return Classification("GRAIN_MISMATCH", danger,
                 f"same measure and population at different grain ('{a.grain}' vs '{b.grain}'); "
                 f"the measure is {add or 'additive'}"
@@ -257,7 +259,7 @@ class _UnionFind:
 def _cluster(edges: list[Edge], by_id: dict[str, GroundingFact]) -> list[Finding]:
     """Group edges into per-concept findings: within each collision type, connected components become
     one finding, carrying the most dangerous edge's danger and note."""
-    by_type: dict[str, list[Edge]] = defaultdict(list)
+    by_type: dict[CollisionType, list[Edge]] = defaultdict(list)
     for e in edges:
         by_type[e.cls.type].append(e)
 
@@ -287,16 +289,23 @@ def rank(findings: list[Finding]) -> list[Finding]:
     return sorted(findings, key=lambda f: (DANGER_RANK[f.danger], f.type, -len(f.items)))
 
 
-def detect_collisions(facts, gate="auto", model=None, config: DetectConfig | None = None) -> list[Finding]:
+def detect_collisions(facts: Iterable[GroundingFact], *, gate: str = "auto", model=None,
+                      config: DetectConfig | None = None) -> list[Finding]:
     """Detect confusable grounding facts across the whole surface, most dangerous first.
 
     `gate` selects the confusability gate: "auto" uses embeddings when installed and falls back to a
     dependency-free lexical gate; "lexical" forces the fallback; "embeddings" requires the optional
-    extra. Any object with `.encode` may be passed as `model` (or positionally as `gate`) to reuse
-    one instance. `config` overrides detector thresholds."""
+    extra. Pass any object with `.encode` as `model` to reuse one instance. `config` overrides
+    detector thresholds.
+
+    Complexity: the primary-vs-primary pass is O(n^2) in the number of semantic facts (every pair is
+    scored by the gate). This is comfortable into the low thousands of metrics; it is not pruned by a
+    blocking prefilter on purpose, because a lexical prefilter would defeat the embedding gate's whole
+    value — catching non-lexical synonyms (revenue ~ sales) that share no characters. The warehouse
+    passes are indexed and near-linear. If you point this at a layer with many thousands of metrics
+    and it is slow, that is the place to add an approximate-nearest-neighbour index over the label
+    embeddings, not a character prefilter."""
     config = config or DEFAULT_CONFIG
-    if not isinstance(gate, str):            # a model object passed positionally (back-compat)
-        model, gate = gate, "embeddings"
     facts = list(facts)
     by_id = {f.id: f for f in facts}
     primary, warehouse = partition(facts)

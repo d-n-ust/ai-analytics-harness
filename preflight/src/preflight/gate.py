@@ -16,6 +16,7 @@ from __future__ import annotations
 import importlib.util
 import math
 from collections import Counter
+from collections.abc import Callable, Iterable
 
 _DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -44,7 +45,8 @@ def _embeddings_available() -> bool:
     return importlib.util.find_spec("sentence_transformers") is not None
 
 
-def make_gate(labels, kind="auto", model=None):
+def make_gate(labels: Iterable[str], kind: str = "auto",
+              model=None) -> tuple[Callable[[str, str], float], str]:
     """Build a similarity function over a fixed pool of labels.
 
     Returns (sim, gate_name) where sim(label_a, label_b) -> float in [0, 1]. `labels` is the whole

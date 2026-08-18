@@ -32,7 +32,7 @@ embeddings = ["sentence-transformers>=3", "numpy>=1.26"]
 
 [dependency-groups]
 # The suite runs core-only (no embeddings), which is the proof that detection needs no heavy deps.
-dev = ["pytest>=8", "hypothesis>=6.100"]
+dev = ["pytest>=8", "hypothesis>=6.100", "mypy>=1.13", "ruff>=0.16", "types-PyYAML"]
 
 [build-system]
 requires = ["hatchling"]
@@ -48,3 +48,17 @@ include = ["/src", "/tests", "/README.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W", "SIM"]
+ignore = ["E501"]   # long lines are almost all aligned comments; format handles code width
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src/preflight"]
+ignore_missing_imports = true   # sqlglot / sentence_transformers ship partial or no stubs

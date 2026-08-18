@@ -16,6 +16,9 @@ and call detect_collisions directly. `as_dicts` renders findings as plain JSON-r
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from pathlib import Path
+
 from .adapters import (
     adapt_docs,
     adapt_queries,
@@ -71,12 +74,13 @@ __all__ = [
 __version__ = "0.1.0"
 
 
-def scan(env_dir, *, gate="auto", model=None, config: DetectConfig | None = None) -> list[Finding]:
+def scan(env_dir: str | Path, *, gate: str = "auto", model=None,
+         config: DetectConfig | None = None) -> list[Finding]:
     """Load the conventional artifact layout under `env_dir` and detect collisions across all layers.
     `gate` / `model` / `config` are passed through to detect_collisions."""
     return detect_collisions(load_env(env_dir), gate=gate, model=model, config=config)
 
 
-def as_dicts(findings) -> list[dict]:
+def as_dicts(findings: Iterable[Finding]) -> list[dict]:
     """Render findings as plain JSON-ready dicts (the wire format used by the experiment scripts)."""
     return [f.to_dict() for f in findings]

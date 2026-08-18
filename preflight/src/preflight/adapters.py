@@ -130,6 +130,8 @@ def facts_from_warehouse(sql: str, path: str = "") -> list[GroundingFact]:
         if stmt.kind == "TABLE":
             schema = stmt.this
             table = _norm_table(schema.this.name)
+            if table is None:                          # a CREATE TABLE with no parseable name
+                continue
             tsrc = Source(path, ln) if (ln := _create_line(sql, "table", table)) else None
             out.append(GroundingFact(id=f"wh:{table}", label=table, layer="warehouse", kind="table",
                                      base=table, text=f"table {table}", source=tsrc))
@@ -145,6 +147,8 @@ def facts_from_warehouse(sql: str, path: str = "") -> list[GroundingFact]:
                         source=Source(path, cln) if cln else None))
         elif stmt.kind == "VIEW":
             vname = _norm_table(stmt.this.name)
+            if vname is None:                          # a CREATE VIEW with no parseable name
+                continue
             select = stmt.expression
             src = select.find(exp.Table) if select else None
             base = _norm_table(src.name) if src else None
