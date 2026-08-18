@@ -157,7 +157,7 @@ edge preflight has over a single-layer linter is that it compares **across** tho
 
 Severity is preflight's estimate of how likely the confusion is to bite at query time. Start with HIGH.
 `--detail` prints every colliding site with its `file:line` and the offending source line under it.
-For a worked example and the recommended fix for each type, see **[findings.md](findings.md)**.
+For a worked example and the recommended fix for each type, see **[catalog.md](catalog.md)**.
 
 ## Gate it in CI
 

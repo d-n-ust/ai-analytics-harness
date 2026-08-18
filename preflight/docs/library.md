@@ -43,7 +43,7 @@ detect_collisions(facts, config=DetectConfig(gate=0.6, min_shared_facets=2))
 Each finding is a frozen `Finding`: a `type`, a `danger` (`high` / `medium` / `low`), a `note`, and the
 `items` (`Item` with `id` / `label` / `layer`) that collide. `Finding.to_dict()` and the top-level
 `as_dicts()` render them for JSON. The seven types, with a worked example and fix for each, are in
-[findings.md](findings.md).
+[catalog.md](catalog.md).
 
 ## Package layout
 

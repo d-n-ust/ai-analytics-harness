@@ -1,4 +1,4 @@
-# Findings: what each one means, and how to fix it
+# Finding catalog — what each one means, and how to fix it
 
 preflight reports seven kinds of grounding collision. This is the field guide: for each, a real
 example, why it puts a wrong number in front of someone, and the recommended fix. Most fixes share one
