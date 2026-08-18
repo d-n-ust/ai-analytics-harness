@@ -27,29 +27,24 @@ uv tool install ".[embeddings]"
 
 ## How it works
 
-preflight reads a compiled dbt manifest (`target/manifest.json`), so the loop is always the same:
+preflight reads your project's compiled manifest, `target/manifest.json`, and nothing else:
 
 ```
-dbt parse   ->   preflight scan . --dialect dbt-manifest
+preflight scan . --dialect dbt-manifest
 ```
 
-`dbt parse` needs no database. Two ready-made demos follow; both need only `uv` and `git`.
+**If you already use dbt, that manifest already exists** — your dev runs and CI produce it as a normal
+build artifact. Point preflight at the project directory (it finds `target/manifest.json`) or at the
+file directly. No profile, no warehouse connection, no dbt invocation from preflight; the manifest is
+your dbt project's concern, and preflight only reads it.
 
-### Shortcut: `preflight dbt`
+### Generating the manifest, if you need to
 
-If `dbt` is on your PATH (your project's environment is active), one command refreshes the manifest and
-scans:
-
-```bash
-preflight dbt path/to/project            # summary
-preflight dbt path/to/project --detail   # flags pass through to the scan
-preflight dbt . --fail-on high           # CI gate (forwards the exit code)
-```
-
-It runs your own `dbt parse` (your real profile, no toolchain magic) and scans the fresh manifest, so
-you never scan a stale one. The step-by-step demos below use `dbt` from a uv-managed venv (via `uv run`,
-not on PATH), so they call `dbt parse` and `preflight scan` separately — and they cover the
-bare-machine case where you also need to install dbt.
+Produce it however you normally run dbt. The one-liner is `dbt parse`, which writes the manifest
+**without connecting to the warehouse**. dbt still needs a profile to load an adapter — that is a dbt
+requirement, not preflight's — and because parse never connects, a throwaway DuckDB profile satisfies it
+whatever your real warehouse is (Snowflake, BigQuery, Redshift, …). The two demos below show that end to
+end; both need only `uv` and `git`.
 
 ---
 

@@ -56,17 +56,14 @@ semantic models, metrics, model columns, and descriptions into the manifest; pre
 cites each finding back to the source `.yml`/`.sql` file and line.
 
 ```
-dbt parse                                          # writes target/manifest.json
+dbt parse                                          # writes target/manifest.json (your dbt, your profile)
 preflight scan . --dialect dbt-manifest --detail
 ```
 
-Or, when `dbt` is on your PATH, do both in one step — `preflight dbt` runs your own `dbt parse` (your
-real profile) and scans the fresh manifest, so you never scan a stale one:
-
-```
-preflight dbt .            --detail                 # parse + scan
-preflight dbt path/to/proj --fail-on high           # as a CI gate
-```
+Generating the manifest is your dbt project's job, not preflight's — if you already use dbt, CI has
+already produced it. `dbt parse` writes it without connecting to the warehouse (dbt still needs a
+profile to load an adapter; a throwaway DuckDB one works since parse never connects). See
+[QUICKSTART.md](QUICKSTART.md) for the full walkthrough.
 
 Other dialects: `--dialect metricflow` (raw MetricFlow YAML), `--dialect dbt` (raw dbt model SQL),
 `--dialect cube` (Cube), `--dialect env` (the default `semantic/warehouse/docs` layout above).

@@ -34,21 +34,6 @@ def test_parser_defaults():
     assert (args.gate, args.fmt, args.min_danger, args.fail_on) == ("auto", "text", "low", "high")
 
 
-def test_dbt_subcommand_defaults():
-    args = build_parser().parse_args(["dbt"])
-    assert args.command == "dbt"
-    assert args.project == "." and args.profiles_dir is None
-    assert (args.gate, args.fmt, args.fail_on) == ("auto", "text", "high")   # shares the report knobs
-
-
-def test_dbt_subcommand_errors_cleanly_without_dbt(monkeypatch, capsys):
-    import preflight.cli as cli
-    monkeypatch.setattr(cli.shutil, "which", lambda _: None)   # simulate dbt missing from PATH
-    code = main(["dbt", "some/project"])
-    assert code == 2
-    assert "dbt" in capsys.readouterr().err.lower()            # a message, not a traceback
-
-
 def test_main_scans_a_semantic_only_env(tmp_path, capsys):
     sem = tmp_path / "semantic"
     sem.mkdir()
