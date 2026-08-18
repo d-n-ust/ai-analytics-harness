@@ -15,10 +15,14 @@ validators, not ambiguity.
 
 ## Install
 
+Not yet on PyPI (that name belongs to an unrelated project), so install from source:
+
 ```bash
-pip install preflight                 # core: structural detection on a lexical gate
-pip install "preflight[embeddings]"   # + sentence-transformers for the sharper, validated gate
+uv tool install .                 # from this repo root; core: structural detection on a lexical gate
+uv tool install ".[embeddings]"   # + sentence-transformers for the sharper, validated gate
 ```
+
+New here? **[QUICKSTART.md](QUICKSTART.md)** walks a dbt project (jaffle shop) end to end in a few commands.
 
 ## Use — terminal
 
