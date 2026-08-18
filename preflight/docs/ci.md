@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: d-n-ust/ai-analytics-harness/preflight@master   # becomes d-n-ust/preflight@v1 once extracted
+      - uses: d-n-ust/ai-analytics-harness/preflight@master   # becomes d-n-ust/preflight-analytics@v1 once extracted
         with:
           path: .
           gate: embeddings          # best results; use 'lexical' to skip torch
@@ -25,7 +25,7 @@ jobs:
 ```
 
 Until `preflight` is on PyPI, install it with the VCS form:
-`preflight[embeddings] @ git+https://github.com/d-n-ust/ai-analytics-harness@master#subdirectory=preflight`.
+`preflight-analytics[embeddings] @ git+https://github.com/d-n-ust/ai-analytics-harness@master#subdirectory=preflight`.
 
 ## pre-commit
 
@@ -34,7 +34,7 @@ Once `preflight` is its own repo, use the packaged hook:
 ```yaml
 # .pre-commit-config.yaml
 repos:
-  - repo: https://github.com/d-n-ust/preflight
+  - repo: https://github.com/d-n-ust/preflight-analytics
     rev: v0.1.0
     hooks: [{ id: preflight }]
 ```

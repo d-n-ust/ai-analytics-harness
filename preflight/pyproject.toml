@@ -6,7 +6,9 @@
 # closure never lands in the shared engine+harness environment; extraction later is a `git mv`.
 
 [project]
-name = "preflight"
+# Distribution name (the bare `preflight` is taken on PyPI by an unrelated project). The import
+# package and the CLI command both stay `preflight` — only what you `pip install` differs.
+name = "preflight-analytics"
 version = "0.1.0"
 description = "Static, cross-layer ambiguity detection for governed analytics grounding: find confusable metric, column, and term definitions before an agent queries them."
 readme = "README.md"

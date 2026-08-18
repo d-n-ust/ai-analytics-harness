@@ -15,7 +15,9 @@ definition is internally correct is a separate job.)
 
 ## Install
 
-Not on PyPI yet (the name is taken), so install from source with [uv](https://docs.astral.sh/uv/):
+Not on PyPI yet — it publishes as `preflight-analytics` (the bare `preflight` name is taken); the
+import and the CLI command both stay `preflight`. For now, install from source with
+[uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv tool install .                 # core: structural detection on a lexical gate (no torch)

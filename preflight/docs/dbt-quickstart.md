@@ -10,7 +10,8 @@ Think of it as a linter for *meaning*, next to `dbt test` (values) and `sqlfluff
 
 ## Install
 
-preflight is not yet on PyPI (that name belongs to an unrelated project), so install from source:
+preflight publishes as `preflight-analytics` (the bare `preflight` name belongs to an unrelated
+project); the import and CLI command stay `preflight`. Until it is on PyPI, install from source:
 
 ```bash
 # from the preflight repo root

@@ -15,7 +15,7 @@ guarantees the tool always installs and runs, and upgrades to the sharper gate w
 
 | gate | scores similarity by | role |
 |---|---|---|
-| **embeddings** (`preflight[embeddings]`) | spelling *and* meaning (`revenue` ~ `sales`, `churn` ~ `attrition`) | the **validated** path — the published recall numbers use this |
+| **embeddings** (`preflight-analytics[embeddings]`) | spelling *and* meaning (`revenue` ~ `sales`, `churn` ~ `attrition`) | the **validated** path — the published recall numbers use this |
 | **lexical** (core, stdlib only) | spelling only (`revenue` ~ `revenues`) | graceful fallback when torch is unavailable |
 
 ## Getting the best results

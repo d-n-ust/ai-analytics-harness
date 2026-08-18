@@ -1,6 +1,6 @@
 # Composite GitHub Action: run preflight as a build gate on an analytics repo.
 # Referenced today as a subdirectory action (uses: d-n-ust/ai-analytics-harness/preflight@<ref>);
-# once preflight is extracted to its own repo it becomes uses: d-n-ust/preflight@v1 unchanged.
+# once preflight is extracted to its own repo it becomes uses: d-n-ust/preflight-analytics@v1 unchanged.
 name: preflight ambiguity scan
 description: Fail the build when governed analytics definitions collide (cross-layer ambiguity).
 branding:
@@ -28,9 +28,9 @@ inputs:
     description: >-
       pip install spec for preflight, extras included. Defaults to the PyPI name with the embeddings
       extra. Until published, pass a VCS spec, e.g.
-      'preflight[embeddings] @ git+https://github.com/d-n-ust/ai-analytics-harness@master#subdirectory=preflight'.
+      'preflight-analytics[embeddings] @ git+https://github.com/d-n-ust/ai-analytics-harness@master#subdirectory=preflight'.
     required: false
-    default: "preflight[embeddings]"
+    default: "preflight-analytics[embeddings]"
   python-version:
     required: false
     default: "3.12"
