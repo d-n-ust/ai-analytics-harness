@@ -101,7 +101,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    findings = detect_collisions(_LOADERS[args.dialect](args.env_dir), gate=args.gate)
+    try:
+        facts = _LOADERS[args.dialect](args.env_dir)
+    except (FileNotFoundError, NotADirectoryError) as e:
+        print(f"preflight: {e}", file=sys.stderr)     # a clean message, not a traceback, when the
+        return 2                                       # artifact is missing (e.g. scanned before dbt parse)
+    findings = detect_collisions(facts, gate=args.gate)
     threshold = DANGER_RANK[args.min_danger]
     findings = [f for f in findings if DANGER_RANK[f.danger] <= threshold]
     if args.fmt == "json":

@@ -34,13 +34,25 @@ from .model import GroundingFact, Source
 def _resolve(path: str | Path) -> tuple[Path, Path]:
     """(manifest.json, project_root). Accepts the manifest file, a `target/` dir, or a project dir.
     The root is where dbt's relative `original_file_path`/`patch_path` are anchored: the parent of
-    `target/` for a compiled manifest, else the given directory."""
+    `target/` for a compiled manifest, else the given directory.
+
+    Raises FileNotFoundError with an actionable message when no manifest is present. The common cause
+    is scanning a project before `dbt parse` has produced `target/manifest.json`; a bare directory read
+    would otherwise fail deep inside with an opaque IsADirectoryError."""
     p = Path(path)
     if p.is_dir():
         for cand in (p / "target" / "manifest.json", p / "manifest.json"):
-            if cand.exists():
+            if cand.is_file():
                 p = cand
                 break
+        else:
+            raise FileNotFoundError(
+                f"no dbt manifest under '{Path(path)}' (looked for target/manifest.json). "
+                f"Run `dbt parse` in the project first to generate it.")
+    elif not p.is_file():
+        raise FileNotFoundError(
+            f"no such manifest: '{p}'. Point --dialect dbt-manifest at a dbt project directory "
+            f"or a target/manifest.json file.")
     root = p.parent.parent if p.parent.name == "target" else p.parent
     return p, root
 
