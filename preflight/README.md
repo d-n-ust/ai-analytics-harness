@@ -29,7 +29,7 @@ preflight scan . --dialect dbt-manifest            # scan a dbt project
 preflight scan . --dialect dbt-manifest --detail   # + the offending source line
 ```
 
-Every finding is cited to `path:line`. New here? **[QUICKSTART.md](QUICKSTART.md)** walks a real dbt
+Every finding is cited to `path:line`. New here? **[docs/quickstart.md](docs/quickstart.md)** walks a real dbt
 project (jaffle shop) end to end in a few commands.
 
 ## What it finds
@@ -45,7 +45,7 @@ project (jaffle shop) end to end in a few commands.
 | **SIBLING** | the same measure under two incomparable scopes |
 
 Each is a real confusion that returns a wrong number. A worked example and the recommended fix for every
-one: **[FINDINGS.md](FINDINGS.md)**.
+one: **[docs/findings.md](docs/findings.md)**.
 
 ## dbt
 
@@ -56,7 +56,7 @@ preflight scan . --dialect dbt-manifest
 
 Generating the manifest is your dbt project's job; preflight only reads it (if you already use dbt, CI
 has produced it). Full walkthrough, both jaffle projects, and the manifest details:
-**[QUICKSTART.md](QUICKSTART.md)**.
+**[docs/quickstart.md](docs/quickstart.md)**.
 
 ## Library
 
