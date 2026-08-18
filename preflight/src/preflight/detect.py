@@ -100,9 +100,15 @@ def classify(a: GroundingFact, b: GroundingFact, sim: float,
                 f"silently scoped, swap invisible")
         return Classification("SIBLING", "low", "same measure, incomparable scopes — a question must name one")
 
-    # 2. concept fork: same entity+agg+table, DIFFERENT measured column/expr (the revenue family)
+    # 2. concept fork: same entity+agg+table, DIFFERENT measured column/expr (the revenue family).
+    # Exception: a distinct count of an entity KEY counts that entity, so two different keys
+    # (count_distinct(customer_id) vs count_distinct(location_id)) are two named entities, not one
+    # forked concept — the differing name is the disambiguator, not a hidden qualifier of a shared
+    # concept. Those two measures also read alike enough to pass the gate ("*_with_orders"), so
+    # without this the pair reads as a fork it is not.
     if (a.entity and a.entity == b.entity and a.agg == b.agg and a.base and a.base == b.base
-            and a.measure and b.measure and a.measure != b.measure):
+            and a.measure and b.measure and a.measure != b.measure
+            and not (a.agg == "count_distinct" and _is_key(str(a.measure)) and _is_key(str(b.measure)))):
         return Classification("CONCEPT_FORK", "high",
             "same entity/table aggregated the same way over different columns — a bare concept "
             "resolves to different numbers")

@@ -147,7 +147,7 @@ fully-documented columns leave nothing to build wrong on these five questions.
 
 The `dbt-manifest` dialect was pointed at the unmodified `dbt-labs/jaffle-sl-template` (dbt 1.12, its
 compiled `manifest.json`, 5 semantic models, 18 metrics, 10 model nodes). preflight read all three
-layers (67 grounding facts) and reported **12 findings**, each cited back to the source `.yml` or `.sql`
+layers (67 grounding facts) and reported **11 findings**, each cited back to the source `.yml` or `.sql`
 line an analytics engineer edits:
 
 | finding | what | citation |

@@ -65,6 +65,21 @@ def test_concept_fork_same_agg_different_column():
     assert v.type == "CONCEPT_FORK" and v.danger == "high"
 
 
+def test_distinct_count_of_two_keys_is_not_a_concept_fork():
+    # count_distinct(customer_id) vs count_distinct(location_id) on the same fact counts two named
+    # entities, not one forked concept — the differing name IS the disambiguator (jaffle-sl-template
+    # customers_with_orders ~ locations_with_orders was a false CONCEPT_FORK before this).
+    a = fact("sl:cust", "customers_with_orders", entity="order", agg="count_distinct",
+             base="orders", measure="customer_id")
+    b = fact("sl:loc", "locations_with_orders", entity="order", agg="count_distinct",
+             base="orders", measure="location_id")
+    assert classify(a, b, 0.0) is None
+    # a distinct count over NON-key columns still forks (the difference is a hidden qualifier, not an entity)
+    c = fact("sl:c", "engaged", entity="order", agg="count_distinct", base="orders", measure="engaged_flag")
+    d = fact("sl:d", "churned", entity="order", agg="count_distinct", base="orders", measure="churned_flag")
+    assert classify(c, d, 0.0).type == "CONCEPT_FORK"
+
+
 def test_definition_divergence_between_two_docs():
     a = fact("doc:r:0", "revenue", layer="docs", kind="term", text="money recognised net of refunds and returns")
     b = fact("doc:r:1", "revenue", layer="docs", kind="term", text="gross booked value at signing before deductions")

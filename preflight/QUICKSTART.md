@@ -128,7 +128,7 @@ preflight scan . --dialect dbt-manifest
 preflight scan . --dialect dbt-manifest --detail
 ```
 
-What it finds (12, five HIGH), led by the trap worth remembering:
+What it finds (11, four HIGH), led by the trap worth remembering:
 
 ```
 [SCOPE_TRAP] food_orders[sem] ~ orders[sem]
