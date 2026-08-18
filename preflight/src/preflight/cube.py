@@ -15,6 +15,7 @@ from pathlib import Path
 import sqlglot
 import yaml
 from sqlglot import exp
+from sqlglot.errors import SqlglotError
 
 from .adapters import additivity, entity_from_base
 from .model import GroundingFact
@@ -63,7 +64,7 @@ def _base(cube_sql: str | None, sql_table: str | None) -> str | None:
             tbl = tree.find(exp.Table) if tree else None
             if tbl:
                 return tbl.name.lower()
-        except Exception:
+        except SqlglotError:                      # unparseable sql: expr -> regex the FROM out
             m = re.search(r"from\s+([A-Za-z_][\w.]*)", s, re.I)
             if m:
                 return m.group(1).split(".")[-1].lower()
@@ -187,12 +188,12 @@ def load_cube(path: str | Path) -> list[GroundingFact]:
     for f in files:
         try:
             text = f.read_text()
-        except Exception:
+        except OSError:
             continue
         if f.suffix in (".yml", ".yaml"):
             try:
                 doc = yaml.safe_load(text)
-            except Exception:
+            except yaml.YAMLError:
                 continue
             if isinstance(doc, dict):
                 facts += facts_from_cube_yaml(doc)

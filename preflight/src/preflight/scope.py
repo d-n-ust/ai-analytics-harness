@@ -10,12 +10,16 @@ into a Scope; `scope_equal` / `is_subset` / `subsumes` compare two Scopes.
 
 from __future__ import annotations
 
+import logging
 import re
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.errors import SqlglotError
 
 from .model import Predicate, Scope
+
+log = logging.getLogger(__name__)
 
 # booleans and three-valued logic collapse to the same value-set, so `x` / `x = true` / `x = 1` all
 # mean {'true'} and their negations all mean {'false'}.
@@ -58,8 +62,8 @@ def _leaf_predicate(node) -> Predicate:
             return (node.name.lower(), "set", frozenset({_TRUTHY}))
         if isinstance(node, (exp.GTE, exp.GT, exp.LTE, exp.LT, exp.NEQ)):
             return (_column_name(node) or "", "cmp", node.sql().lower())
-    except Exception:
-        pass
+    except (AttributeError, KeyError, TypeError, ValueError) as e:
+        log.debug("predicate leaf fell back to raw on %r: %s", node, e)   # unexpected node shape
     return ("", "raw", (node.sql() if hasattr(node, "sql") else str(node)).lower())
 
 
@@ -70,7 +74,7 @@ def parse_predicates(filter_str: str | None) -> list[Predicate]:
         return []
     try:
         tree = sqlglot.parse_one(str(filter_str), read="postgres")
-    except Exception:
+    except SqlglotError:                          # unparseable filter -> split on AND textually
         return [("", "raw", c.strip().lower())
                 for c in re.split(r"\band\b", str(filter_str), flags=re.I) if c.strip()]
     leaves: list[Predicate] = []

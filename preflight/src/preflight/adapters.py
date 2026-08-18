@@ -15,6 +15,7 @@ from pathlib import Path
 import sqlglot
 import yaml
 from sqlglot import exp
+from sqlglot.errors import SqlglotError
 
 from .model import GroundingFact, Recovered, Source
 from .scope import build_scope
@@ -248,8 +249,8 @@ def facts_from_queries(text: str) -> list[GroundingFact]:
                 grp = sel.find(exp.Group)
                 if grp is not None and grp.expressions:
                     grain = ", ".join(g.sql().lower() for g in grp.expressions)
-        except Exception:
-            pass
+        except (SqlglotError, AttributeError, TypeError, ValueError):
+            pass                                  # unrecoverable query -> emit the fact with what we got
         out.append(GroundingFact(
             id=f"q:{name}", label=name.lower(), layer="queries", kind="query",
             agg=agg, base=base, measure=measure, grain=grain,

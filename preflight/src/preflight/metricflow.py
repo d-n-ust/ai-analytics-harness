@@ -150,7 +150,7 @@ def load_metricflow(path: str | Path) -> list[GroundingFact]:
     for f in files:
         try:
             docs = list(yaml.safe_load_all(f.read_text()))
-        except Exception:
+        except (OSError, yaml.YAMLError):
             continue
         for doc in docs:
             if not isinstance(doc, dict):

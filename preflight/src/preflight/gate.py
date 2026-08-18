@@ -14,9 +14,12 @@ otherwise, so the tool always runs.
 from __future__ import annotations
 
 import importlib.util
+import logging
 import math
 from collections import Counter
 from collections.abc import Callable, Iterable
+
+log = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
@@ -68,8 +71,8 @@ def make_gate(labels: Iterable[str], kind: str = "auto",
                 return float(np.dot(emb[a], emb[b]))
 
             return sim, "embeddings"
-        except Exception:
+        except Exception as e:              # backend is open-ended: import, model download, CUDA, encode
             if kind == "embeddings" or model is not None:
                 raise                       # the caller asked for embeddings explicitly
-            # "auto": the extra is not usable — fall through to lexical
+            log.debug("embedding gate unavailable, falling back to lexical: %s", e)   # "auto"
     return _lexical_sim, "lexical"

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.errors import SqlglotError
 from sqlglot.optimizer.scope import traverse_scope
 
 from .adapters import additivity, entity_from_base
@@ -91,7 +92,7 @@ def facts_from_dbt_model(sql: str, model: str) -> list[GroundingFact]:
     try:
         tree = sqlglot.parse_one(_dejinja(sql), read="snowflake")
         scopes = traverse_scope(tree) if tree is not None else []
-    except Exception:
+    except SqlglotError:                          # unparseable model SQL -> no facts from it
         return []
     facts: list[GroundingFact] = []
     seen: set[str] = set()
