@@ -60,6 +60,14 @@ dbt parse                                          # writes target/manifest.json
 preflight scan . --dialect dbt-manifest --detail
 ```
 
+Or, when `dbt` is on your PATH, do both in one step — `preflight dbt` runs your own `dbt parse` (your
+real profile) and scans the fresh manifest, so you never scan a stale one:
+
+```
+preflight dbt .            --detail                 # parse + scan
+preflight dbt path/to/proj --fail-on high           # as a CI gate
+```
+
 Other dialects: `--dialect metricflow` (raw MetricFlow YAML), `--dialect dbt` (raw dbt model SQL),
 `--dialect cube` (Cube), `--dialect env` (the default `semantic/warehouse/docs` layout above).
 

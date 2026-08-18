@@ -35,20 +35,21 @@ dbt parse   ->   preflight scan . --dialect dbt-manifest
 
 `dbt parse` needs no database. Two ready-made demos follow; both need only `uv` and `git`.
 
-### Shortcut: one command
+### Shortcut: `preflight dbt`
 
-`scripts/preflight-dbt.sh` automates the whole manifest dance below. It reads the project's own
-`profile:` name, compiles the manifest with a throwaway DuckDB profile (nothing touches your `~/.dbt`
-or the project's `profiles.yml`, and `dbt parse` never connects, so it works whatever the real
-warehouse is), then scans:
+If `dbt` is on your PATH (your project's environment is active), one command refreshes the manifest and
+scans:
 
 ```bash
-scripts/preflight-dbt.sh path/to/dbt/project            # summary
-scripts/preflight-dbt.sh path/to/dbt/project --detail   # flags pass through to `preflight scan`
-scripts/preflight-dbt.sh . --fail-on high               # as a CI gate (forwards the exit code)
+preflight dbt path/to/project            # summary
+preflight dbt path/to/project --detail   # flags pass through to the scan
+preflight dbt . --fail-on high           # CI gate (forwards the exit code)
 ```
 
-The step-by-step demos below show exactly what it does.
+It runs your own `dbt parse` (your real profile, no toolchain magic) and scans the fresh manifest, so
+you never scan a stale one. The step-by-step demos below use `dbt` from a uv-managed venv (via `uv run`,
+not on PATH), so they call `dbt parse` and `preflight scan` separately — and they cover the
+bare-machine case where you also need to install dbt.
 
 ---
 
