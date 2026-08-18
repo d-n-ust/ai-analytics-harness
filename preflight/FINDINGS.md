@@ -119,25 +119,25 @@ a `filter` on the dimension, which converts the fork into a legible subset.)
 
 ## GRAIN_MISMATCH
 
-**What.** The same measure and population are exposed at two grains, and the measure is semi-additive or
-non-additive, so rolling it up across that grain is invalid.
+**What.** A number that should not be added up over time is offered per day, so someone adds the days up
+and gets a number that is far too big.
 
-**Example** (realistic — a stock exposed daily and monthly):
+**Example.** `active_subscriptions` is a running count: how many are active *right now*. If it is
+available per day, a monthly dashboard will sum the 30 daily numbers.
 
 ```yaml
 measures:
-  - name: active_subscriptions       # a STOCK: how many are active right now
+  - name: active_subscriptions       # how many are active right now
     agg: sum
     expr: is_active
-# exposed both per-day and per-month, summed over time on a dashboard
 ```
 
-**Why it bites.** A stock (a balance, a distinct count) is not additive over time: summing daily active
-subscriptions across a month counts the same subscription many times. The rolled-up number is large,
-plausible, and wrong.
+**Why it bites.** It works like a bank balance. You do not add up your balance from each day to get a
+monthly balance. A subscription that stayed active all month is counted on all 30 days, so the monthly
+total comes out about 30 times too high. The number looks normal, and it is wrong.
 
-**Fix — model the stock as a snapshot and declare its additivity.** Take a periodic snapshot and mark
-the measure semi-additive so the layer refuses the illegal roll-up:
+**Fix.** Take a snapshot per period, and tell the layer to use the period's ending value instead of
+adding the days together:
 
 ```yaml
 measures:
@@ -146,11 +146,12 @@ measures:
     expr: is_active
     non_additive_dimension:
       name: metric_time
-      window_choice: max            # take the end-of-period balance, never the sum over time
+      window_choice: max            # use the end-of-period value, don't add the days up
 ```
 
-For a distinct count (`count_distinct`), the same rule holds: it does not sum across periods; expose it
-only at the grain it is counted, or recompute it per grain.
+The same is true for any "count of distinct things" (distinct users, distinct accounts): it does not add
+up across days. Show it only for the exact period you counted (a day, a week, a month), or count it again
+for each period.
 
 ---
 
