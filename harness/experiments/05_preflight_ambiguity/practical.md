@@ -114,9 +114,10 @@ never enforces:
   names in code and docs, never short aliases.
 - **Scope the agent to a warehouse variant** with `con.execute("SET search_path = '<schema>'")` before
   `build_grounding(con, rung=..., schema=...)`; an unqualified `DESCRIBE` fails without the search path.
-- **preflight lives outside the uv workspace** (like `troodos/`), so its heavier closure never lands in
-  the shared engine+harness environment. Scan it from its own venv (`uv pip install -e preflight`, add
-  `[embeddings]` for the validated gate); harness code runs under `uv run`.
+- **preflight is now its own package** at `github.com/d-n-ust/preflight-analytics` (extracted from this
+  repo). Scan from a separate venv: `uv pip install "preflight-analytics @ git+https://github.com/d-n-ust/preflight-analytics"`
+  (add `[embeddings]` for the validated gate). The import stays `preflight`, so `scan.py` is unchanged;
+  only the install source moved out of the workspace.
 - **Persist per arm/layer.** A long agent run should write its result file after each arm so an
   interruption does not lose the completed work. `--mock` validates the whole pipeline with no API key.
 
