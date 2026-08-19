@@ -50,6 +50,19 @@ def _sql_of(ans) -> str:
                     if s.get("tool") == "run_sql").lower()
 
 
+def _wrong_grounding(case: dict, sql: str) -> bool:
+    """A wrong-selection marker counts only when the RIGHT grounding is absent from the trace.
+
+    `sql` concatenates every run_sql step, exploration included, so a wrong marker alone
+    over-counts: an agent that peeks at `users_v2` and answers from `users`, or writes a
+    belt-and-braces `is_active AND status='active'`, grounded correctly. When the case declares
+    `right_grounding`, its presence vetoes the wrong markers; a case without it keeps the plain
+    any-marker rule (its wrong markers are columns no correct query would touch)."""
+    wrong = any(w.lower() in sql for w in (case.get("wrong_grounding") or []))
+    right = any(r.lower() in sql for r in (case.get("right_grounding") or []))
+    return wrong and not right
+
+
 def run_arm(con, schema, cases, golds, model, verifier, reps) -> list[dict]:
     con.execute(f"SET search_path = '{schema}'")               # scope the agent's raw SQL to this warehouse
     g = build_grounding(con, rung=2, engine="harness", semantic_layer=False, schema=schema)
@@ -58,7 +71,7 @@ def run_arm(con, schema, cases, golds, model, verifier, reps) -> list[dict]:
         for case in cases:
             ans = run_agent(case["question"], g, model, verifier_model=verifier)
             sql = _sql_of(ans)
-            wrong_ground = any(w.lower() in sql for w in (case.get("wrong_grounding") or []))
+            wrong_ground = _wrong_grounding(case, sql)
             rows.append({**grade(ans, case, golds.get(case["id"])),
                          "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
                          "family": case.get("family"), "wrong_grounding": wrong_ground, "sql": sql})

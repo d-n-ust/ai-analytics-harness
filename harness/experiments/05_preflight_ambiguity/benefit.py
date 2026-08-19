@@ -38,7 +38,10 @@ from warehouse.warehouse import STAR_SCHEMA, open_warehouse, set_star
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
-ORDER = ["small_before", "small_after", "high_before", "high_after"]
+ORDER = ["small_before", "small_after", "high_before", "high_after", "high_after2"]
+# high_after2 = high_after plus exactly three stated-default sentences on the metrics whose
+# after-arm answers still failed (new_signups scope, active_users default window, active_habits
+# stock semantics). It tests whether the construction residual is agent skill or missing spec.
 RUNG = 3  # star + governed semantic layer — the rung where metric selection is the agent's job
 
 

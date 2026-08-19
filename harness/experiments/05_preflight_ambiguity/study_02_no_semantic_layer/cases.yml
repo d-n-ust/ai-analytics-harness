@@ -45,6 +45,7 @@ cases:
     expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30' AND NOT is_internal"}
     wrong_grounding: ["users_v2"]        # the 80%-finished migration table (silently excludes ~7%)
+    right_grounding: ["from users ", "from users\n", "join users ", "users u", "users as"]
   - id: s2_users_v2_total
     tier: flagged
     family: migration_leftover
@@ -52,6 +53,7 @@ cases:
     expect: {type: metric_answer, metric: total_users, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_users WHERE NOT is_internal"}
     wrong_grounding: ["users_v2"]
+    right_grounding: ["from users ", "from users\n", "join users ", "users u", "users as"]
   - id: s2_active_subs
     tier: flagged
     family: stale_status
@@ -59,6 +61,7 @@ cases:
     expect: {type: metric_answer, metric: active_subscriptions, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
     wrong_grounding: ["status = 'active'", "status='active'", "status in ("]   # the stale batch column
+    right_grounding: ["is_active", "active = true", "active=true", "where active", "and active", "(active"]
   - id: s2_subs_book
     tier: flagged
     family: stale_status
@@ -66,6 +69,7 @@ cases:
     expect: {type: metric_answer, metric: active_subscriptions, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
     wrong_grounding: ["status = 'active'", "status='active'", "status in ("]
+    right_grounding: ["is_active", "active = true", "active=true", "where active", "and active", "(active"]
   - id: s2_march_joins
     tier: flagged
     family: date_columns
@@ -73,6 +77,7 @@ cases:
     expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
     wrong_grounding: ["created_at"]      # row creation, not joining (a bulk import created rows late)
+    right_grounding: ["signup_date"]
   - id: s2_march_new
     tier: flagged
     family: date_columns
@@ -80,6 +85,7 @@ cases:
     expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
     wrong_grounding: ["created_at"]
+    right_grounding: ["signup_date"]
   - id: s2_marketing
     tier: clean
     family: marketing_spend
