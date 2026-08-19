@@ -38,7 +38,7 @@ from warehouse.warehouse import STAR_SCHEMA, open_warehouse, set_star
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
-ORDER = ["small_before", "small_after", "high_before", "high_after", "high_after2"]
+ORDER = ["small_before", "small_after", "high_before", "high_after", "high_after2", "high_after3"]
 # high_after2 = high_after plus exactly three stated-default sentences on the metrics whose
 # after-arm answers still failed (new_signups scope, active_users default window, active_habits
 # stock semantics). It tests whether the construction residual is agent skill or missing spec.
@@ -67,6 +67,15 @@ def ensure_mf_views(con) -> None:
               FROM "{STAR_SCHEMA}".agg_active_days) m
         JOIN "{STAR_SCHEMA}".dim_habits h ON h.created_date < m.snapshot_month + INTERVAL 1 MONTH
             AND (h.archived_date IS NULL OR h.archived_date >= m.snapshot_month + INTERVAL 1 MONTH)''')
+    # Kimball-named aliases for the high_after3 arm: the grain word is the loudest part of the name
+    # (periodic snapshot vs accumulating-snapshot term table). Aliases, not renames — gold_sql and
+    # every other arm keep the original names.
+    con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".fct_subscription_month_snapshot AS
+        SELECT * FROM "{STAR_SCHEMA}".fct_subscription_months''')
+    con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".fct_habit_month_snapshot AS
+        SELECT * FROM "{STAR_SCHEMA}".fct_habit_months''')
+    con.execute(f'''CREATE OR REPLACE VIEW "{STAR_SCHEMA}".fct_subscription_term AS
+        SELECT * FROM "{STAR_SCHEMA}".fct_subscriptions''')
 
 
 def _queried_metrics(ans) -> list[str]:
@@ -83,10 +92,11 @@ def _queried_metrics(ans) -> list[str]:
 
 
 def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
-              engine: str = "harness") -> list[dict]:
+              engine: str = "harness", guardrails=None) -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
     graded into the row shape selective() consumes. Reps average out agent stochasticity."""
-    g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine=engine, semantic_layer=True)
+    g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine=engine, semantic_layer=True,
+                        guardrails=guardrails)
     rows = []
     for rep in range(reps):
         for case in cases:
@@ -177,6 +187,9 @@ def main() -> None:
     ap.add_argument("--reps", type=int, default=1, help="repetitions per question (averages stochasticity)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
     ap.add_argument("--study", default="study_01_governed_layer", help="which study directory to run")
+    ap.add_argument("--guardrails", default=None,
+                    help="guardrail cell (e.g. R7); default None = the loop's R1 (abstain only). "
+                         "A non-default cell writes to its own result file, so the R1 record stays intact.")
     ap.add_argument("--engine", default="harness", choices=("harness", "metricflow"),
                     help="grounding engine: harness (bespoke YAML) or metricflow (dbt MetricFlow dir)")
     args = ap.parse_args()
@@ -201,16 +214,23 @@ def main() -> None:
 
     names = [n for n in ORDER if (not args.only or n in args.only) and spec_of(n).exists()]
 
+    from agent.guardrails import parse_cell
+    gset = parse_cell(args.guardrails) if args.guardrails else None
+
     # Persist after EACH layer and merge into any existing result, so a long run (reps x layers) that
     # is interrupted keeps every completed layer, and layers run in separate invocations accumulate.
+    # A non-default guardrail cell gets its own file: the R1 record is a published artifact and a
+    # heavier cell merged over it would silently replace what the study measured.
     suffix = "_mf" if mf else ""
+    cell_tag = f"_{args.guardrails.lower()}" if args.guardrails else ""
     out = study_dir / (f"benefit_result{suffix}_mock.json" if args.mock
-                       else f"benefit_result{suffix}__{args.model}.json")
+                       else f"benefit_result{suffix}{cell_tag}__{args.model}.json")
     report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
     report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps,
-                   "engine": args.engine})
+                   "engine": args.engine, "guardrails": args.guardrails or "R1 (loop default)"})
     for name in names:
-        rows = run_layer(con, spec_of(name), cases, golds, model, verifier, args.reps, args.engine)
+        rows = run_layer(con, spec_of(name), cases, golds, model, verifier, args.reps, args.engine,
+                         guardrails=gset)
         report[name] = {"overall": metrics(rows),
                         "flagged": metrics([r for r in rows if r["tier"] == "flagged"]),
                         "clean": metrics([r for r in rows if r["tier"] == "clean"]),

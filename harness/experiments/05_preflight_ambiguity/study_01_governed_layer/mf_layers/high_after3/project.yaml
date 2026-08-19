@@ -1,0 +1,7 @@
+# MetricFlow needs a one-row-per-day time spine to answer time-filtered questions.
+# benefit.py creates it as a VIEW over the warehouse (see ensure_time_spine); nothing is copied.
+project_configuration:
+  time_spine_table_configurations:
+    - location: _star.mf_time_spine
+      column_name: ds
+      grain: day
