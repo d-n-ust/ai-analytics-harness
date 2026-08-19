@@ -34,10 +34,63 @@ cases:
     expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
              gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30' AND NOT is_internal"}
     wrong_grounding: ["daily_rollup"]    # the overloaded second table
+  # ---- typical-sprawl species, added 2026-08-19 (pre-registered before any scan or run) ----
+  # Authored from the industry-recognisable sprawl list, not from the scanner's strengths. The
+  # migration-leftover trap is table-level, which static definition analysis is weak on by design;
+  # whatever the scan and the agents do with these is reported as measured.
+  - id: s2_users_v2_april
+    tier: flagged
+    family: migration_leftover
+    question: "How many users signed up in April 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30' AND NOT is_internal"}
+    wrong_grounding: ["users_v2"]        # the 80%-finished migration table (silently excludes ~7%)
+  - id: s2_users_v2_total
+    tier: flagged
+    family: migration_leftover
+    question: "How many users do we have in total?"
+    expect: {type: metric_answer, metric: total_users, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE NOT is_internal"}
+    wrong_grounding: ["users_v2"]
+  - id: s2_active_subs
+    tier: flagged
+    family: stale_status
+    question: "How many active subscriptions do we have right now?"
+    expect: {type: metric_answer, metric: active_subscriptions, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
+    wrong_grounding: ["status = 'active'", "status='active'", "status in ("]   # the stale batch column
+  - id: s2_subs_book
+    tier: flagged
+    family: stale_status
+    question: "How many paying subscriptions do we have at the moment?"
+    expect: {type: metric_answer, metric: active_subscriptions, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.is_active AND NOT u.is_internal"}
+    wrong_grounding: ["status = 'active'", "status='active'", "status in ("]
+  - id: s2_march_joins
+    tier: flagged
+    family: date_columns
+    question: "How many users joined us in March 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
+    wrong_grounding: ["created_at"]      # row creation, not joining (a bulk import created rows late)
+  - id: s2_march_new
+    tier: flagged
+    family: date_columns
+    question: "How many new users did we add in March 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
+    wrong_grounding: ["created_at"]
   - id: s2_marketing
     tier: clean
     family: marketing_spend
     question: "How much did we spend on marketing in June 2026?"
     expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
              gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+    wrong_grounding: []
+  - id: s2_plan_mix
+    tier: clean
+    family: plan_mix
+    question: "How many annual subscriptions have we sold in total?"
+    expect: {type: metric_answer, metric: annual_subscriptions, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.plan = 'annual' AND NOT u.is_internal"}
     wrong_grounding: []

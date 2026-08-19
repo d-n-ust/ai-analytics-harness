@@ -59,28 +59,43 @@ def _quiet():
 
 
 def _parse_agg(expr: str | None):
+    """(agg, measure, derived) from a bespoke `agg:` expression.
+
+    Two rules matter for correctness, both learned from false DUPLICATEs:
+    - `measure` is a bare column name only when the aggregated operand IS a bare column; any richer
+      expression keeps its FULL normalised SQL. Extracting "the first column" from a CASE collapses
+      `count(distinct case when moments >= 5 then user_id end)` into `user_id`, erasing exactly the
+      predicate that distinguishes the metric; truncating to a prefix lets two different expressions
+      that share an opening collide. Measure equality is evidence of same-computation, so the value
+      must carry the whole computation.
+    - "ratio" means arithmetic ACROSS aggregates (a division at the top, or more than one agg
+      function). A division inside one aggregate's operand (`sum(case ... billed / 12.0 ...)`) is a
+      unit conversion, not a ratio metric."""
     if not expr:
         return (None, None, False)
     try:
         tree = sqlglot.parse_one(expr, read="postgres")
     except Exception:
-        return (None, expr[:40].lower(), False)
+        return (None, expr.lower(), False)
     aggs = list(tree.find_all(exp.AggFunc))
-    if tree.find(exp.Div) or len(aggs) > 1:
-        return ("ratio", expr[:40].lower(), True)
+    if len(aggs) > 1 or isinstance(tree, (exp.Div, exp.Mul, exp.Add, exp.Sub)):
+        return ("ratio", tree.sql().lower(), True)
     if aggs:
         af = aggs[0]
         key = af.key.lower()
-        if isinstance(af, exp.Count) and af.this is not None and af.this.find(exp.Distinct):
-            key = "count_distinct"
         inner = af.this
+        if isinstance(af, exp.Count) and inner is not None and inner.find(exp.Distinct):
+            key = "count_distinct"
+            if isinstance(inner, exp.Distinct) and len(inner.expressions) == 1:
+                inner = inner.expressions[0]
         if inner is None or isinstance(inner, exp.Star):
             measure = None
+        elif isinstance(inner, exp.Column):
+            measure = inner.name.lower()
         else:
-            col = inner.find(exp.Column)
-            measure = col.name.lower() if col else inner.sql().lower()[:30]
+            measure = inner.sql().lower()
         return (key, measure, False)
-    return (None, expr[:40].lower(), False)
+    return (None, tree.sql().lower(), False)
 
 
 def facts_from_semantic(doc: dict) -> list[GroundingFact]:

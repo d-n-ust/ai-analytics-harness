@@ -41,8 +41,15 @@ overestimates runtime harm there).
 `high_before` is authored to look like a pressured team's accretion: three teams' `mrr` /
 `recurring_revenue`, five active-user definitions, gross versus net revenue, `moments` overloaded across
 tables, `active user` and `value moment` each documented two ways. The metric descriptions are stripped
-to bare names, so the agent disambiguates by name. `high_after` resolves exactly what preflight flags
-(rename to encode scope, drop a decoy, reconcile a definition), and preflight re-scans it to ~0.
+to bare names, so the agent disambiguates by name. `high_after` is the governed remodel of the same
+business (one metric per concept, scope as a stated rule), and preflight re-scans it to 0. An earlier
+draft of this file said the fix "resolves exactly what preflight flags"; the diff shows a full remodel,
+so the causal claim is stated at the environment level: replacing the sprawled layer with a governed one
+removes the selection harm, and the re-scan verifies the governed layer is ambiguity-free.
+
+Static scans are persisted for both representations, re-run with the published `preflight-analytics
+0.2.0`, lexical gate: the bespoke three-layer environments (`scan.md`: small 1 → 0, high **19 → 0**)
+and the MetricFlow layers the agent actually queried (`scan_mf.md`: small 1 → 0, high **7 → 0**).
 
 The traps are **structural whole-population** name-match traps across five families: `recurring_revenue`
 (question says "recurring revenue", the sprawled layer offers `recurring_revenue` beside the governed
@@ -66,10 +73,31 @@ Three things hold:
    0.00 in both arms.
 3. **SER falls** (0.30 → 0.17, 0.33 → 0.07) as the fix removes the selection half.
 
-Per-family wrong-selection on `high_before` (gpt-5-mini) shows an honest, uneven shape rather than a
-flat average: `recurring_revenue` 1.00 and `new_users` 1.00 always mis-pick; `value_moments` ~0.22
-bites on the sprawled layer but not the governed one; `habits` and `actives` ~0. The same finding has a
-different outcome depending on how confusable the specific trap is.
+Per-family wrong-selection on `high_before` shows an honest, uneven shape rather than a flat average
+(wrong picks / answers given; abstentions excluded — an agent that refuses has picked nothing):
+
+| family | the trap | gpt-5-mini | claude-sonnet-5 | static (0.2.0, `scan_mf.md`) |
+|---|---|---|---|---|
+| recurring_revenue | picked `recurring_revenue` / `monthly_recurring_revenue`, wanted `mrr` | 6/6 | 5/6 | LOW DUPLICATE `mrr ~ monthly_recurring_revenue`; `recurring_revenue` joins via the embeddings gate, and the bespoke rep flags the family HIGH |
+| new_users | picked `new_users`, wanted `new_signups` | 4/4 | 1/5 | HIGH SCOPE_TRAP, exactly this pair |
+| value_moments | picked `real_value_moments` / `total_moments`, wanted `value_moments` | 2/9 | 1/7 | HIGH SCOPE_TRAP cluster |
+| actives | never mis-picked; claude-sonnet-5 abstained 3/3 | 0/3 | 0/0 | HIGH SCOPE_TRAP cluster |
+| habits | never mis-picked | 0/6 | 0/6 | none (the all-vs-active split lives in table contents, not YAML) |
+
+The bite mechanism is name-match: harm concentrates where a decoy's name matches the question wording
+and the governed metric's does not. Findings mark risk, not destiny — the most-flagged family
+(`actives`) never bit, and the same `value_moments` finding sits on the low-sprawl layer at 0.00.
+
+Two of claude-sonnet-5's five wrong revenue picks used `monthly_recurring_revenue`, which is `mrr`
+under a second name: the returned figure was numerically right and the grounding still ungoverned, the
+mildest form of the failure.
+
+Building this per-family join surfaced a detector blind spot: `mrr ~ recurring_revenue` was expected
+to flag as a CONCEPT_FORK (the fixture's own comment says so) but the confusability gate cannot pair
+an acronym with a spelled-out name when descriptions are stripped. Fixed in `preflight-analytics
+0.2.0` (structural pairing: meaning-agreement bypasses the name gate), validated as a no-op on
+`jaffle-shop`, `jaffle-sl-template`, and a public Cube model. All static counts in this file are
+0.2.0 numbers.
 
 The `high_after` construction residual (gpt-5-mini 0.17, sonnet-5 0.04) is genuine Mode-2 query-building
 that the semantic layer still leaves to the agent, not a fixture artifact: the stock metrics are
@@ -146,9 +174,9 @@ fully-documented columns leave nothing to build wrong on these five questions.
 ## Validation on a real, public dbt project
 
 The `dbt-manifest` dialect was pointed at the unmodified `dbt-labs/jaffle-sl-template` (dbt 1.12, its
-compiled `manifest.json`, 5 semantic models, 18 metrics, 10 model nodes). preflight read all three
-layers (67 grounding facts) and reported **11 findings**, each cited back to the source `.yml` or `.sql`
-line an analytics engineer edits:
+compiled `manifest.json`, 5 semantic models, 18 metrics, 10 model nodes). preflight 0.2.0 (lexical
+gate, the default install) read all three layers and reported **14 findings (5 high)**, each cited
+back to the source `.yml` or `.sql` line an analytics engineer edits:
 
 | finding | what | citation |
 |---|---|---|
@@ -161,6 +189,10 @@ dbt template that nobody built as a trap.
 
 ## Honest boundaries
 
+- **Static prediction is study 01's claim only.** A preflight scan of the bare study-02 DDL reports no
+  findings (`study_02_no_semantic_layer/scan.md`): its ambiguity lives in definitions that are not
+  written down (two undocumented account flags, a missing `mrr` column), and a static scanner of
+  definitions cannot read what was never written. Study 02 measures the repair, not the prediction.
 - **Sample is modest by design**: 10 flagged questions (study 01), 5 (study 02), three repetitions each,
   two models. These are directions with a clear, repeated signal, not large-n estimates.
 - **preflight owns selection, not construction.** The construction residual is reported, not hidden. On

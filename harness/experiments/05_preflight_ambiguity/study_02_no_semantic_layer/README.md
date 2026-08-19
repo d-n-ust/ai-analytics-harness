@@ -40,10 +40,22 @@ Modelling the messy columns into clean, documented ones drives **wrong-column se
 both models — the same shape as study 01's wrong-metric selection, one layer down — and here it takes
 SER with it (0.67 → 0.00 and 0.42 → 0.00), because a raw-SQL agent given clean columns and a complete,
 consistent scope rule has nothing left to build wrong on this question set. Observed picks on `before`:
-`recurring` summed `billed_amount` (not `mrr`); `active_users` filtered `is_test` (not `is_internal`) —
-the exact column confusions preflight flags in the warehouse layer. Coverage 0.50 on sonnet-5 `before`
-is the agent abstaining on half the ambiguous questions rather than answering them wrong, which is the
-safer failure; after the fix it answers all of them correctly.
+`recurring` summed `billed_amount` (not `mrr`); `active_users` filtered `is_test` (not `is_internal`).
+Coverage 0.50 on sonnet-5 `before` is the agent abstaining on half the ambiguous questions rather than
+answering them wrong, which is the safer failure; after the fix it answers all of them correctly.
+
+## Static scan (`scan_s2.py` → `scan.md`): a boundary, verified
+
+A preflight scan of the bare `s2_before` DDL reports **no findings** (`scan.md`, published 0.1.0,
+lexical gate). This is not a bug in the scan; it is the boundary of static definition analysis. The
+before-warehouse's ambiguity lives in definitions that are **not written down**: `is_internal` vs
+`is_test` share no name similarity and no documentation states what either excludes; `mrr` does not
+exist as a column at all, so nothing collides with `billed_amount`; `moments` appears in only two
+tables, below the overload threshold calibrated for real stars. Study 02 therefore measures the
+**repair** (modelling + stated scope rules drive wrong-selection 0.55/0.67 → 0.00), not static
+prediction. Static prediction is study 01's claim, where the sprawl is written down and preflight
+reads it. An earlier draft of this README said preflight flags these column confusions; that was
+never backed by a persisted scan and is corrected here.
 
 ## The two studies together
 
