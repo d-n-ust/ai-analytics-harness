@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import re
 from pathlib import Path
 
 
@@ -65,7 +66,20 @@ def resolve_period(name: str | None) -> tuple[dt.date | None, dt.date | None]:
         return last_prev_q.replace(month=(last_prev_q.month - 2), day=1), last_prev_q
     if name == "ytd":
         return dt.date(today.year, 1, 1), DATA_END
-    raise ValueError(f"unknown period {name!r}; use one of {NAMED_PERIODS} or explicit dates")
+    # A specific calendar month, "YYYY-MM". Making the natural way to ask for a month LEGAL is the
+    # fix for a measured failure: with only relative presets on the menu, a model asked for "April
+    # 2026" reached for the nearest legal item (last_month) and silently got June — the tool
+    # substituted where it should have served. Typed and validated, so this is not the free-string
+    # period that the enum was introduced to kill.
+    m = re.fullmatch(r"(\d{4})-(\d{2})", name)
+    if m:
+        year, month = int(m.group(1)), int(m.group(2))
+        if 1 <= month <= 12:
+            first = dt.date(year, month, 1)
+            last = (dt.date(year + 1, 1, 1) if month == 12 else dt.date(year, month + 1, 1)) - dt.timedelta(days=1)
+            return first, last
+    raise ValueError(f"unknown period {name!r}; use one of {NAMED_PERIODS}, a month as YYYY-MM, "
+                     f"or explicit start/end dates")
 
 
 # --------------------------------------------------------------------------- #

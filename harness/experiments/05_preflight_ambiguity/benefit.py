@@ -91,6 +91,20 @@ def _queried_metrics(ans) -> list[str]:
     return out
 
 
+def _queried_calls(ans) -> list[dict]:
+    """Every query_metric call with its time arguments, verbatim. Added after a failure whose
+    period argument could only be RECONSTRUCTED by matching the declared value against candidate
+    windows (553 = last_month = June, asked for April): the row must carry what was actually
+    passed, so a wrong window is read from the trace, never inferred."""
+    calls = []
+    for s in getattr(ans, "steps", []) or []:
+        if s.get("tool") == "query_metric" and isinstance(s.get("args"), dict):
+            a = s["args"]
+            calls.append({k: a[k] for k in ("metric", "period", "start", "end", "time_grain")
+                          if a.get(k) is not None})
+    return calls
+
+
 def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
               engine: str = "harness", guardrails=None) -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
@@ -108,6 +122,7 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
                          # observed pick: the last metric queried (the one the answer came from),
                          # plus the full sequence, so a wrong number is attributable to a metric
                          "picked": queried[-1] if queried else None, "queried": queried,
+                         "calls": _queried_calls(ans),
                          "expected_metric": case["expect"].get("metric"),
                          "declared": getattr(ans, "declared_value", None)})
     return rows
