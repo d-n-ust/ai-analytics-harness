@@ -17,11 +17,10 @@ import sys
 
 import sqlglot
 import yaml
-from sqlglot import exp
-
 from preflight import GroundingFact, detect_collisions
 from preflight.adapters import additivity
 from preflight.scope import build_scope
+from sqlglot import exp
 
 DEFAULT = pathlib.Path(__file__).resolve().parents[3] / "engine/src/semantic/semantic_layer.yml"
 

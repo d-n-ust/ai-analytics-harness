@@ -70,7 +70,7 @@ md.append(f"Detector findings: {len(DET)}. Gold findings: {len(GOLD)}. "
 md.append("## Recall — gold findings the detector caught\n")
 md.append("```")
 by_d = defaultdict(lambda: [0, 0])
-for f, hit in zip(GOLD, gold_hit):
+for f, hit in zip(GOLD, gold_hit, strict=False):
     by_d[f["danger"]][0] += 1
     by_d[f["danger"]][1] += int(hit)
 for dl in ("high", "medium", "low"):
@@ -84,7 +84,7 @@ md.append("```\n")
 md.append("## Precision — detector findings that hit a real gold finding\n")
 md.append("```")
 by_t = defaultdict(lambda: [0, 0])
-for d, hit in zip(DET, det_hit):
+for d, hit in zip(DET, det_hit, strict=False):
     by_t[d["type"]][0] += 1
     by_t[d["type"]][1] += int(hit)
 for t, (tot, hit) in sorted(by_t.items(), key=lambda x: -x[1][0]):
@@ -96,7 +96,7 @@ md.append("```\n")
 # the misses — the headline
 md.append("## MISSED gold findings (the headline)\n")
 for dl in ("high", "medium", "low"):
-    missed = [f for f, hit in zip(GOLD, gold_hit) if not hit and f["danger"] == dl]
+    missed = [f for f, hit in zip(GOLD, gold_hit, strict=False) if not hit and f["danger"] == dl]
     if missed:
         md.append(f"### {dl} ({len(missed)})")
         for f in missed:
@@ -105,7 +105,7 @@ for dl in ("high", "medium", "low"):
 
 # false positives — detector findings with no gold match, by danger
 md.append("## Detector findings with NO gold match (possible false positives)\n")
-fp = [d for d, hit in zip(DET, det_hit) if not hit]
+fp = [d for d, hit in zip(DET, det_hit, strict=False) if not hit]
 md.append(f"{len(fp)} of {len(DET)}. By danger: {dict(Counter(d['danger'] for d in fp))}, "
           f"by type: {dict(Counter(d['type'] for d in fp))}.\n")
 md.append("```")
@@ -115,7 +115,7 @@ for d in fp[:25]:
 md.append("```")
 
 # distinct-collision view: the detector is pairwise, so many findings collapse to one collision
-distinct_hi = len({frozenset(l for forms in det_labels(d) for l in [d["items"][0]["label"]])
+distinct_hi = len({frozenset(line for forms in det_labels(d) for line in [d["items"][0]["label"]])
                    for d in DET})
 
 md.append("\n## Honest read (the fuzzy matcher flatters both numbers)\n")
@@ -123,20 +123,20 @@ md.append(f"- **Recall is genuinely high** ({hit}/{tot} overall, 16/16 high). Th
           f"wide net across all three layers, so it surfaces nearly everything the blind judge found. "
           f"High-danger matches were spot-checked as real (the revenue CONCEPT_FORKs, the "
           f"completed_orders and active_customers cross-layer divergences), not token-overlap flukes.")
-md.append(f"- **Precision (90%) overstates usefulness.** Two reasons: (a) the detector is PAIRWISE, so "
-          f"the revenue family alone is 14 CONCEPT_FORK findings that collapse to ~3 gold findings — "
-          f"123 raw findings are perhaps ~45 distinct collisions; (b) 46 of them are CROSS_REF, a weak "
-          f"'this term is modelled and documented, check it' pointer, not a diagnosis. Counting those "
-          f"as precision hits is generous.")
-md.append(f"- **The false positives exposed a real bug.** `order_count ~ order_date`, "
-          f"`order_count ~ order_status` were called DUPLICATE because two facts sharing ONLY `base` "
-          f"pass the same-measure test. Fix: require agreement on >=2 declared meaning facets, not one. "
-          f"Reported, not silently patched (the detector was frozen before scoring).")
-md.append(f"- **The 4 misses are all explainable, and each names a real gap:** "
-          f"recognised/recognized (British vs US spelling defeats exact-label match); the `new` segment "
-          f"whose filter contradicts its own description (a within-fact check the detector doesn't do); "
-          f"email (killed by our own plumbing stoplist); cost columns (below the >=4-table overload "
-          f"threshold). None is a silent hole — each points at a specific next feature.")
+md.append("- **Precision (90%) overstates usefulness.** Two reasons: (a) the detector is PAIRWISE, so "
+          "the revenue family alone is 14 CONCEPT_FORK findings that collapse to ~3 gold findings — "
+          "123 raw findings are perhaps ~45 distinct collisions; (b) 46 of them are CROSS_REF, a weak "
+          "'this term is modelled and documented, check it' pointer, not a diagnosis. Counting those "
+          "as precision hits is generous.")
+md.append("- **The false positives exposed a real bug.** `order_count ~ order_date`, "
+          "`order_count ~ order_status` were called DUPLICATE because two facts sharing ONLY `base` "
+          "pass the same-measure test. Fix: require agreement on >=2 declared meaning facets, not one. "
+          "Reported, not silently patched (the detector was frozen before scoring).")
+md.append("- **The 4 misses are all explainable, and each names a real gap:** "
+          "recognised/recognized (British vs US spelling defeats exact-label match); the `new` segment "
+          "whose filter contradicts its own description (a within-fact check the detector doesn't do); "
+          "email (killed by our own plumbing stoplist); cost columns (below the >=4-table overload "
+          "threshold). None is a silent hole — each points at a specific next feature.")
 md.append(f"- **Bottom line:** on a realistic, blind-generated, three-layer messy environment the "
           f"detector caught **16/16 high-danger** collisions and **{hit}/{tot}** overall. The design "
           f"(embedding gate + structural danger + cross-layer name match) generalises well for RECALL; "

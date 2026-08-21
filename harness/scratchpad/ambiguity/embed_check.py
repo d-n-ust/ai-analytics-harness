@@ -85,7 +85,7 @@ def main() -> None:
 
     def embed(texts: dict) -> dict:
         vecs = model.encode([texts[n] for n in names], normalize_embeddings=True)
-        return {n: v for n, v in zip(names, vecs)}
+        return {n: v for n, v in zip(names, vecs, strict=False)}
 
     emb_name = embed(name_text)
     emb_rich = embed(rich_text)
@@ -188,15 +188,15 @@ def main() -> None:
               f"`value_moments ~ real_value_moments` is the **#{r_name}** closest pair of "
               f"{len(all_pairs)} (cos {cos(emb_name,'value_moments','real_value_moments'):.3f}), far "
               f"above the next pair ({max(dm_name):.3f}). Embeddings clearly capture the one collision.")
-    md.append(f"- **Better recall than the token gate.** Embeddings surface related pairs the gate "
-              f"cannot see because they share no token: `reminder_open_rate ~ reminders_shown` "
-              f"(plural defeats the gate), `arpu ~ mrr`, `active_subscriptions ~ paying_users`. This "
-              f"is a real upgrade for the confusability GATE.")
-    md.append(f"- **But cosine is not danger.** The pairs embeddings newly surface are mostly "
-              f"different_measure (safe): a share vs a count, a per-user average vs a total. High "
-              f"cosine means 'similar', not 'silently swappable'. The single scope_only pair tops the "
-              f"list, but with n=1 that is one data point, not class separation (the AUC=1.0 is "
-              f"vacuous at n=1). The structural same-measure/different-scope test stays necessary.")
+    md.append("- **Better recall than the token gate.** Embeddings surface related pairs the gate "
+              "cannot see because they share no token: `reminder_open_rate ~ reminders_shown` "
+              "(plural defeats the gate), `arpu ~ mrr`, `active_subscriptions ~ paying_users`. This "
+              "is a real upgrade for the confusability GATE.")
+    md.append("- **But cosine is not danger.** The pairs embeddings newly surface are mostly "
+              "different_measure (safe): a share vs a count, a per-user average vs a total. High "
+              "cosine means 'similar', not 'silently swappable'. The single scope_only pair tops the "
+              "list, but with n=1 that is one data point, not class separation (the AUC=1.0 is "
+              "vacuous at n=1). The structural same-measure/different-scope test stays necessary.")
     md.append(f"- **Cosine does NOT predict observed confusion.** Nearest-neighbour cosine vs "
               f"mislabel rate: Spearman {rho_by_rep.get('NAME only', float('nan')):.2f} (name, n.s.) "
               f"and {rho_by_rep.get('NAME+desc+synonyms', float('nan')):.2f} (with descriptions, "
@@ -206,16 +206,16 @@ def main() -> None:
               f"cosine with ~0% mislabels (similar names, plainly different things the agent does not "
               f"confuse). So the 'LLMs are embeddings, so name-cosine predicts confusion' intuition "
               f"is not supported at this n.")
-    md.append(f"- **Descriptions hurt.** Adding description+synonyms pulled unrelated revenue/user "
-              f"concepts together and demoted the true pair from #1 to #3. Name-only is the better "
-              f"representation here.")
-    md.append(f"\n**Net:** adopt embeddings to REPLACE the token-overlap gate (they fix the "
-              f"plural/synonym misses and rank the real collision top), keep the structural test for "
-              f"DANGER, and do not use cosine to predict which cases get mislabelled. Caveats: one "
-              f"scope_only pair and n=10 metrics make this suggestive, not settled; and a local model "
-              f"predicting an OpenAI agent means the strong check-1 result is trustworthy while the "
-              f"check-3 null is partly inconclusive — though its cause here is structural, not model "
-              f"weakness.")
+    md.append("- **Descriptions hurt.** Adding description+synonyms pulled unrelated revenue/user "
+              "concepts together and demoted the true pair from #1 to #3. Name-only is the better "
+              "representation here.")
+    md.append("\n**Net:** adopt embeddings to REPLACE the token-overlap gate (they fix the "
+              "plural/synonym misses and rank the real collision top), keep the structural test for "
+              "DANGER, and do not use cosine to predict which cases get mislabelled. Caveats: one "
+              "scope_only pair and n=10 metrics make this suggestive, not settled; and a local model "
+              "predicting an OpenAI agent means the strong check-1 result is trustworthy while the "
+              "check-3 null is partly inconclusive — though its cause here is structural, not model "
+              "weakness.")
 
     OUT_MD.write_text("\n".join(md))
     print("\n".join(md))

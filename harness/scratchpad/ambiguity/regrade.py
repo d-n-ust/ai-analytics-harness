@@ -241,8 +241,8 @@ def main() -> None:
         pc = per_case[cid]
         wr = 100 * pc["mislabel"] / pc["answered"] if pc["answered"] else 0.0
         s = "C" if cid in struct_clarify else "."
-        l = "C" if cid in lex_clarify else "."
-        md.append(f"{cid:34} {s:>1} {l:>1} {pc['answered']:>8} {pc['mislabel']:>8}  {wr:5.1f}%")
+        lex = "C" if cid in lex_clarify else "."
+        md.append(f"{cid:34} {s:>1} {lex:>1} {pc['answered']:>8} {pc['mislabel']:>8}  {wr:5.1f}%")
     md.append("```")
     md.append("`S`/`L` = predicted clarify by the Structural / Lexical rule.\n")
 
@@ -327,12 +327,12 @@ def main() -> None:
               f"mislabel share the structural rule reaches with {len(struct_clarify_a)}. The 5 cases "
               f"lexical adds and structural excludes are near-clean, so the structural stage adds "
               f"real precision rather than restating the name match.")
-    md.append(f"- **Mechanism confirmed on 2 of the 4, refuted on 1 (see Mechanism above).** "
-              f"`t2_web` (6% off) and `t2_americas` (4.7% off) are genuine scope swaps — the agent "
-              f"applied the non-internal filter / declared `real_value_moments` on an all-users "
-              f"question, exactly the near-neighbour the thesis predicts. `t4_apac` (+13%, correct "
-              f"metric) is the coverage-window trap, not a scope swap, so ~22 of the 51 clarify-cell "
-              f"mislabels are a confound: the clean scope signal rests mainly on `t2_americas`.")
+    md.append("- **Mechanism confirmed on 2 of the 4, refuted on 1 (see Mechanism above).** "
+              "`t2_web` (6% off) and `t2_americas` (4.7% off) are genuine scope swaps — the agent "
+              "applied the non-internal filter / declared `real_value_moments` on an all-users "
+              "question, exactly the near-neighbour the thesis predicts. `t4_apac` (+13%, correct "
+              "metric) is the coverage-window trap, not a scope swap, so ~22 of the 51 clarify-cell "
+              "mislabels are a confound: the clean scope signal rests mainly on `t2_americas`.")
     if unflagged:
         md.append(f"- **A comparable, genuinely-scope mislabel source is unflagged.** `{unflagged}` "
                   f"is wrong {ur_rate:.1f}% of the time and is itself a scope swap (the agent welds "

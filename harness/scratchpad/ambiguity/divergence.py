@@ -19,8 +19,8 @@ import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "engine/src"))
-from warehouse.warehouse import default_db, open_warehouse   # noqa: E402
-from warehouse.generate import generate                       # noqa: E402
+from warehouse.generate import generate  # noqa: E402
+from warehouse.warehouse import default_db, open_warehouse  # noqa: E402
 
 OUT = pathlib.Path(__file__).parent / "04_divergence.md"
 BASE = "agg_active_days"

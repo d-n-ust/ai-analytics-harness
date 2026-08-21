@@ -88,7 +88,7 @@ def main() -> None:
 
     smd = [f"# Score — {env_name}\n", f"Detector {len(findings)} vs gold {len(GOLD)}.\n", "## Recall\n```"]
     rec = defaultdict(lambda: [0, 0])
-    for f, hit in zip(GOLD, gold_hit):
+    for f, hit in zip(GOLD, gold_hit, strict=False):
         rec[f["danger"]][0] += 1
         rec[f["danger"]][1] += int(hit)
     for dl in ("high", "medium", "low"):
@@ -101,7 +101,7 @@ def main() -> None:
     smd.append(f"{sum(det_hit)}/{len(findings)} ({100*sum(det_hit)/len(findings):.0f}%)")
     smd.append("```\n## Missed gold\n")
     for dl in ("high", "medium", "low"):
-        miss = [f for f, hit in zip(GOLD, gold_hit) if not hit and f["danger"] == dl]
+        miss = [f for f, hit in zip(GOLD, gold_hit, strict=False) if not hit and f["danger"] == dl]
         if miss:
             smd.append(f"**{dl}:** " + "; ".join(f["id"] for f in miss))
     (ENV / "score.md").write_text("\n".join(smd))

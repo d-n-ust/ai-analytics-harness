@@ -15,7 +15,6 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
-from collections import defaultdict
 
 import yaml
 

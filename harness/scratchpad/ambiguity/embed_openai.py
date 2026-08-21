@@ -41,18 +41,19 @@ def main() -> None:
 
     # local MiniLM
     st = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-    mini = {n: v for n, v in zip(names, st.encode([text[n] for n in names], normalize_embeddings=True))}
+    mini = {n: v for n, v in zip(names, st.encode([text[n] for n in names], normalize_embeddings=True), strict=False)}
 
     # OpenAI text-embedding-3-small (one batch call)
     client = OpenAI()
     resp = client.embeddings.create(model="text-embedding-3-small", input=[text[n] for n in names])
     oai = {}
-    for n, d in zip(names, resp.data):
+    for n, d in zip(names, resp.data, strict=False):
         v = np.array(d.embedding)
         oai[n] = v / np.linalg.norm(v)
 
     kind = {frozenset((p.a, p.b)): p.kind for p in amb.confusable_pairs(metrics) if "(tree node" not in p.a}
-    verdict = lambda a, b: kind.get(frozenset((a, b)), "not_gated")
+    def verdict(a, b):
+        return kind.get(frozenset((a, b)), "not_gated")
     pairs = list(itertools.combinations(names, 2))
 
     def cos(emb, a, b):
@@ -91,8 +92,8 @@ def main() -> None:
               f"{'#1' if r_oai==1 else f'#{r_oai}'} closest pair by name.")
     md.append(f"- The two models rank pairs the same way (Spearman {rho:.2f}), so Check 1 is not an "
               f"artifact of the small local model — the strong signal survives the model swap.")
-    md.append(f"- This validates embeddings as the confusability GATE. It says nothing new about the "
-              f"danger axis or mislabel prediction (Checks 2 and 3), whose conclusions stand.")
+    md.append("- This validates embeddings as the confusability GATE. It says nothing new about the "
+              "danger axis or mislabel prediction (Checks 2 and 3), whose conclusions stand.")
 
     OUT_MD.write_text("\n".join(md))
     print("\n".join(md))

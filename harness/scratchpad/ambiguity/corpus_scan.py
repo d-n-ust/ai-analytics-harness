@@ -254,7 +254,7 @@ def main() -> None:
                 "modifier is prominent, so a reader would not swap them.")
     if inspected:
         md.append("```")
-        for proj, a, b, shared, same, diff in inspected:
+        for _proj, a, b, shared, _same, diff in inspected:
             md.append(f"{a}  ~  {b}")
             md.append(f"    shares: {', '.join(shared)} | differs: {', '.join(diff)}")
             md.append(f"    verdict: {verdict(a, b)}")
@@ -271,12 +271,12 @@ def main() -> None:
         md.append("No scope_only findings even with inferred unit — see verdict.\n")
 
     md.append("## Verdict against the kill condition\n")
-    any_native_scope = any(r["scope_only_native"] for r in rows)
-    any_inferred_scope = any(r["scope_only_inferred"] for r in rows)
-    md.append(f"- **Scope IS separable in real layers.** Every dialect declares the restriction as a "
-              f"first-class field (`filter:` or `filters:`), never only welded into the aggregate. So "
-              f"the pessimistic version of the kill condition — scope is not declared separately — is "
-              f"**not** met.")
+    any(r["scope_only_native"] for r in rows)
+    any(r["scope_only_inferred"] for r in rows)
+    md.append("- **Scope IS separable in real layers.** Every dialect declares the restriction as a "
+              "first-class field (`filter:` or `filters:`), never only welded into the aggregate. So "
+              "the pessimistic version of the kill condition — scope is not declared separately — is "
+              "**not** met.")
     md.append(f"- **But the classifier collapses on real layers as written.** scope_only pairs found "
               f"natively across all projects: **{sum(r['scope_only_native'] for r in rows)}**. With "
               f"`unit` inferred: **{sum(r['scope_only_inferred'] for r in rows)}**. The rule "
@@ -284,15 +284,15 @@ def main() -> None:
               f"present, including `unit`, which no MetricFlow/dbt-metrics dialect declares. So every "
               f"genuine scope pair is demoted to different_measure/low unless the adapter invents a "
               f"`unit`.")
-    md.append(f"- **Reported, not edited (ground rule 1).** ambiguity.py needs one change to run on "
-              f"real layers: scope_only should require agreement on all meaning facets *both metrics "
-              f"declare*, not on a hardcoded four. As written, `unit` being ecosystem-absent silently "
-              f"turns the dangerous class off. This is the Test-1 welded-scope limitation's sibling: "
-              f"there the danger hid because scope was welded; here it hides because a required "
-              f"meaning facet is never declared.")
-    md.append(f"- **Net:** facets exist and scope is separable (part b passes in principle), but the "
-              f"classifier's meaning-facet rule must be generalised before the claim 'detectable in "
-              f"semantic layers' holds for layers other than this repo's.")
+    md.append("- **Reported, not edited (ground rule 1).** ambiguity.py needs one change to run on "
+              "real layers: scope_only should require agreement on all meaning facets *both metrics "
+              "declare*, not on a hardcoded four. As written, `unit` being ecosystem-absent silently "
+              "turns the dangerous class off. This is the Test-1 welded-scope limitation's sibling: "
+              "there the danger hid because scope was welded; here it hides because a required "
+              "meaning facet is never declared.")
+    md.append("- **Net:** facets exist and scope is separable (part b passes in principle), but the "
+              "classifier's meaning-facet rule must be generalised before the claim 'detectable in "
+              "semantic layers' holds for layers other than this repo's.")
 
     OUT_MD.write_text("\n".join(md))
     print("\n".join(md))

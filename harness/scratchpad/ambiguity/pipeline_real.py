@@ -24,7 +24,7 @@ from sentence_transformers import SentenceTransformer
 
 HERE = pathlib.Path(__file__).resolve()
 sys.path.insert(0, str(HERE.parent))
-import pipeline                                   # assess(), GATE, considers  (reuses the prototype)
+import pipeline  # noqa: E402 — sys.path is extended just above so this module resolves
 
 REPO = HERE.parents[3]
 LAYER = REPO / "engine/src/semantic/semantic_layer.yml"
@@ -80,8 +80,9 @@ def main() -> None:
 
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     vecs = model.encode([n.replace("_", " ") for n in names], normalize_embeddings=True)
-    emb = {n: v for n, v in zip(names, vecs)}
-    cos = lambda a, b: float(np.dot(emb[a], emb[b]))
+    emb = {n: v for n, v in zip(names, vecs, strict=False)}
+    def cos(a, b):
+        return float(np.dot(emb[a], emb[b]))
 
     # pipeline verdict for every pair that passes the embedding gate
     findings = []
@@ -108,7 +109,7 @@ def main() -> None:
     md.append("## Pipeline SCOPE TRAPs (the danger class)\n")
     md.append("```")
     for r in traps:
-        mr = mis.get(r["a"], mis.get(r["b"]))
+        mis.get(r["a"], mis.get(r["b"]))
         md.append(f"{r['a']} ~ {r['b']}   cos {r['cos']:.3f}  -> clarify")
         md.append(f"    {r['reason']}")
     md.append("```")

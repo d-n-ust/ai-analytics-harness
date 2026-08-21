@@ -117,8 +117,9 @@ def main() -> None:
     # embed every name once
     names = sorted({n for *_, cat in EXAMPLES for n in cat})
     vecs = model.encode([n.replace("_", " ") for n in names], normalize_embeddings=True)
-    emb = {n: v for n, v in zip(names, vecs)}
-    cos = lambda a, b: float(np.dot(emb[a], emb[b]))
+    emb = {n: v for n, v in zip(names, vecs, strict=False)}
+    def cos(a, b):
+        return float(np.dot(emb[a], emb[b]))
 
     md = ["# The combined pipeline on 5 isolated examples\n"]
     md.append(f"GATE = embedding cosine ≥ {GATE} (all-MiniLM-L6-v2, name-only). MEANING = "
