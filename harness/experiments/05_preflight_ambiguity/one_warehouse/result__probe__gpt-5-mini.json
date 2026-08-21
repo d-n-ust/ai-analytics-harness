@@ -1,0 +1,416 @@
+{
+  "model": "gpt-5-mini",
+  "reps": 1,
+  "arms": {
+    "before": {
+      "overall": {
+        "n": 5,
+        "coverage": 1.0,
+        "silent_error": 0.4,
+        "correct": 0.6,
+        "wrong_selection_rate": 0.8,
+        "wrong_construction_rate": 0.0
+      },
+      "flagged": {
+        "n": 4,
+        "coverage": 1.0,
+        "silent_error": 0.5,
+        "correct": 0.5,
+        "wrong_selection_rate": 1.0,
+        "wrong_construction_rate": 0.0
+      },
+      "clean": {
+        "n": 1,
+        "coverage": 1.0,
+        "silent_error": 0.0,
+        "correct": 1.0,
+        "wrong_selection_rate": 0.0,
+        "wrong_construction_rate": 0.0
+      },
+      "rows": [
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "e05_sql_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "rep": 0,
+          "picked": "subscribers",
+          "calls": [
+            {
+              "metric": "recurring_revenue",
+              "period": "2026-03",
+              "time_grain": "month"
+            },
+            {
+              "metric": "subscribers",
+              "period": "2026-03",
+              "time_grain": "month"
+            },
+            {
+              "metric": "recurring_revenue",
+              "period": "2026-03",
+              "time_grain": "month"
+            },
+            {
+              "metric": "subscribers",
+              "period": "2026-03",
+              "time_grain": "month"
+            }
+          ],
+          "sql": "",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 62.0
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "e05_sql_active_subs",
+          "tier": "flagged",
+          "family": "stale_status",
+          "rep": 0,
+          "picked": "subscribers",
+          "calls": [
+            {
+              "metric": "subscribers"
+            }
+          ],
+          "sql": "",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 413.0
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_annual_billed",
+          "tier": "flagged",
+          "family": "stale_status",
+          "rep": 0,
+          "picked": "recurring_revenue",
+          "calls": [
+            {
+              "metric": "recurring_revenue",
+              "period": "all"
+            }
+          ],
+          "sql": "",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 11448.08
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_annual_signups_july",
+          "tier": "flagged",
+          "family": "migration_leftover",
+          "rep": 0,
+          "picked": "paying_users",
+          "calls": [
+            {
+              "metric": "paying_users",
+              "period": "last_month",
+              "time_grain": "month"
+            }
+          ],
+          "sql": "select count(distinct s.user_id) as annual_users\nfrom fct_subscriptions s\njoin dim_users u on s.user_id = u.user_id\nwhere s.plan = 'annual'\n  and u.signup_date >= '2026-07-01' and u.signup_date < '2026-08-01'\n  and u.is_internal = false\n;",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 0.0
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_habit_categories",
+          "tier": "clean",
+          "family": "habit_catalog",
+          "rep": 0,
+          "picked": null,
+          "calls": [],
+          "sql": "select count(*) as fitness_habit_count from dim_habits where lower(category) = 'fitness';",
+          "wrong_grounding": false,
+          "expected_metric": null,
+          "declared": 1235.0
+        }
+      ]
+    },
+    "after": {
+      "overall": {
+        "n": 5,
+        "coverage": 1.0,
+        "silent_error": 0.4,
+        "correct": 0.6,
+        "wrong_selection_rate": 0.4,
+        "wrong_construction_rate": 0.0
+      },
+      "flagged": {
+        "n": 4,
+        "coverage": 1.0,
+        "silent_error": 0.25,
+        "correct": 0.75,
+        "wrong_selection_rate": 0.25,
+        "wrong_construction_rate": 0.0
+      },
+      "clean": {
+        "n": 1,
+        "coverage": 1.0,
+        "silent_error": 1.0,
+        "correct": 0.0,
+        "wrong_selection_rate": 1.0,
+        "wrong_construction_rate": 0.0
+      },
+      "rows": [
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "rep": 0,
+          "picked": null,
+          "calls": [],
+          "sql": "select count(*) as subscriptions_started\nfrom fct_subscription_term t\njoin dim_users u on t.user_id = u.user_id\nwhere t.started_date between '2026-03-01' and '2026-03-31'\n  and not u.is_internal;",
+          "wrong_grounding": false,
+          "expected_metric": null,
+          "declared": 59.0
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "e05_sql_active_subs",
+          "tier": "flagged",
+          "family": "stale_status",
+          "rep": 0,
+          "picked": "paying_users",
+          "calls": [
+            {
+              "metric": "paying_users"
+            }
+          ],
+          "sql": "",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 378.0
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_annual_billed",
+          "tier": "flagged",
+          "family": "stale_status",
+          "rep": 0,
+          "picked": "mrr",
+          "calls": [
+            {
+              "metric": "mrr"
+            }
+          ],
+          "sql": "select plan, sum(billed_amount) as total_billed\nfrom fct_subscription_term t\njoin dim_users u using (user_id)\nwhere not u.is_internal\n  and plan ilike '%annual%'\n-- include all time\ngroup by plan;",
+          "wrong_grounding": false,
+          "expected_metric": null,
+          "declared": 11479.05
+        },
+        {
+          "executed": true,
+          "correct": true,
+          "bucket": "right",
+          "abstained": false,
+          "confident_wrong": false,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": 1.0,
+          "outcome": "answer",
+          "id": "e05_sql_annual_signups_july",
+          "tier": "flagged",
+          "family": "migration_leftover",
+          "rep": 0,
+          "picked": "new_signups",
+          "calls": [
+            {
+              "metric": "new_signups",
+              "start": "2026-07-01",
+              "end": "2026-07-31"
+            }
+          ],
+          "sql": "select count(distinct s.user_id) as annual_signups\nfrom fct_subscription_term s\njoin dim_users u on s.user_id = u.user_id\nwhere u.is_internal = false\n  and u.signup_date >= date '2026-07-01' and u.signup_date <= date '2026-07-31'\n  and s.plan ilike '%annual%';",
+          "wrong_grounding": false,
+          "expected_metric": null,
+          "declared": 0.0
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "e05_sql_habit_categories",
+          "tier": "clean",
+          "family": "habit_catalog",
+          "rep": 0,
+          "picked": "active_habits",
+          "calls": [
+            {
+              "metric": "habits.count",
+              "filters": {
+                "category": "fitness"
+              }
+            },
+            {
+              "metric": "active_habits",
+              "period": "all",
+              "filters": {
+                "habit_month__category": "fitness"
+              }
+            }
+          ],
+          "sql": "",
+          "wrong_grounding": true,
+          "expected_metric": null,
+          "declared": 1139.0
+        }
+      ]
+    }
+  }
+}
