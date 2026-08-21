@@ -2,21 +2,21 @@
   "model": "gpt-5-mini",
   "reps": 1,
   "arms": {
-    "before": {
+    "after": {
       "overall": {
         "n": 2,
         "coverage": 1.0,
-        "silent_error": 1.0,
-        "correct": 0.0,
-        "wrong_selection_rate": 1.0,
+        "silent_error": 0.0,
+        "correct": 1.0,
+        "wrong_selection_rate": 0.0,
         "wrong_construction_rate": 0.0
       },
       "flagged": {
         "n": 2,
         "coverage": 1.0,
-        "silent_error": 1.0,
-        "correct": 0.0,
-        "wrong_selection_rate": 1.0,
+        "silent_error": 0.0,
+        "correct": 1.0,
+        "wrong_selection_rate": 0.0,
         "wrong_construction_rate": 0.0
       },
       "clean": {
@@ -30,10 +30,10 @@
       "rows": [
         {
           "executed": true,
-          "correct": false,
-          "bucket": "wrong",
+          "correct": true,
+          "bucket": "right",
           "abstained": false,
-          "confident_wrong": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -44,20 +44,20 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
+          "score": 1.0,
           "outcome": "answer",
           "id": "s2_users_v2_july",
           "tier": "flagged",
           "family": "migration_leftover",
-          "wrong_grounding": true,
-          "sql": "select count(*) as cnt\nfrom users\nwhere signup_date >= date '2026-07-01' and signup_date <= date '2026-07-31'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false;"
+          "wrong_grounding": false,
+          "sql": "select count(*) as users_signed_up\nfrom dim_users\nwhere not is_internal\n  and signup_date >= date '2026-07-01'\n  and signup_date <= date '2026-07-31';"
         },
         {
           "executed": true,
-          "correct": false,
-          "bucket": "wrong",
+          "correct": true,
+          "bucket": "right",
           "abstained": false,
-          "confident_wrong": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -68,13 +68,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
+          "score": 1.0,
           "outcome": "answer",
           "id": "s2_users_v2_total",
           "tier": "flagged",
           "family": "migration_leftover",
-          "wrong_grounding": true,
-          "sql": "select count(*) as total_users from users;"
+          "wrong_grounding": false,
+          "sql": "select count(*) as total_users\nfrom dim_users\nwhere not is_internal;"
         }
       ]
     }

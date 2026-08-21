@@ -50,7 +50,7 @@ CREATE TABLE users_v2 (
     signup_date DATE
 );
 
-CREATE TABLE subscriptions_backup_2026_03 (
+CREATE TABLE subscriptions_2026_03 (
     subscription_id INT,
     user_id INT,
     billed_amount DOUBLE,

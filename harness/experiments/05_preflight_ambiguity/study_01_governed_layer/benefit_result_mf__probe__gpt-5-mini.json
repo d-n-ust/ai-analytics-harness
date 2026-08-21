@@ -1,7 +1,7 @@
 {
   "model": "gpt-5-mini",
   "rung": 3,
-  "reps": 3,
+  "reps": 1,
   "engine": "metricflow",
   "guardrails": "R1 (loop default)",
   "high_before": {
@@ -151,6 +151,68 @@
         ],
         "expected_metric": "paying_users",
         "declared": 413.0
+      }
+    ]
+  },
+  "high_after_final": {
+    "overall": {
+      "n": 1,
+      "coverage": 1.0,
+      "silent_error": 0.0,
+      "balanced_accuracy": NaN,
+      "wrong_selection_rate": 0.0,
+      "wrong_construction_rate": 0.0
+    },
+    "flagged": {
+      "n": 1,
+      "coverage": 1.0,
+      "silent_error": 0.0,
+      "balanced_accuracy": NaN,
+      "wrong_selection_rate": 0.0,
+      "wrong_construction_rate": 0.0
+    },
+    "clean": {
+      "n": 0,
+      "coverage": NaN,
+      "silent_error": NaN,
+      "balanced_accuracy": NaN,
+      "wrong_selection_rate": NaN,
+      "wrong_construction_rate": NaN
+    },
+    "rows": [
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_subs_now",
+        "tier": "flagged",
+        "family": "paying_users",
+        "rep": 0,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
       }
     ]
   }
