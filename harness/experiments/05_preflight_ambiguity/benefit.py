@@ -24,6 +24,7 @@ import argparse
 import json
 import math
 import pathlib
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -115,6 +116,27 @@ def _queried_calls(ans) -> list[dict]:
     return calls
 
 
+def _attribute_pick(ans) -> str | None:
+    """The metric of the LATEST query_metric call whose returned value matches the declared
+    answer (relative 1e-6). None when no call matches — e.g. the declared value was computed or
+    fabricated — so the caller can fall back to the last metric queried."""
+    declared = getattr(ans, "declared_value", None)
+    if declared is None:
+        return None
+    for s in reversed(getattr(ans, "steps", []) or []):
+        if s.get("tool") != "query_metric" or not isinstance(s.get("args"), dict):
+            continue
+        metric = s["args"].get("metric")
+        for tok in re.findall(r"-?\d+(?:\.\d+)?", str(s.get("result", ""))):
+            try:
+                v = float(tok)
+            except ValueError:
+                continue
+            if abs(v - float(declared)) <= 1e-6 * max(1.0, abs(float(declared))):
+                return metric
+    return None
+
+
 def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
               engine: str = "harness", guardrails=None, concurrency: int = 1) -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
@@ -147,9 +169,13 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
         row = {**grade(ans, case, golds.get(case["id"])),
                "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
                "family": case.get("family"), "rep": rep,
-               # observed pick: the last metric queried (the one the answer came from),
-               # plus the full sequence, so a wrong number is attributable to a metric
-               "picked": queried[-1] if queried else None, "queried": queried,
+               # observed pick: the metric the answer CAME FROM — the latest query whose returned
+               # value matches the declared one, falling back to the last metric queried. The
+               # last-call fallback alone mis-attributed a correct answer: the agent answered from
+               # mrr, then made one more paying_users query for context, and the row blamed
+               # paying_users.
+               "picked": _attribute_pick(ans) or (queried[-1] if queried else None),
+               "queried": queried,
                "calls": _queried_calls(ans),
                "expected_metric": case["expect"].get("metric"),
                "declared": getattr(ans, "declared_value", None)}
