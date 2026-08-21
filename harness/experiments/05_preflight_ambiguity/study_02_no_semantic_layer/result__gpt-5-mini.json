@@ -5,19 +5,19 @@
     "before": {
       "overall": {
         "n": 12,
-        "coverage": 1.0,
-        "silent_error": 0.75,
+        "coverage": 0.9166666666666666,
+        "silent_error": 0.6666666666666666,
         "correct": 0.25,
-        "wrong_selection_rate": 0.25,
-        "wrong_construction_rate": 0.5
+        "wrong_selection_rate": 0.18181818181818182,
+        "wrong_construction_rate": 0.5454545454545454
       },
       "flagged": {
         "n": 10,
-        "coverage": 1.0,
-        "silent_error": 0.8,
+        "coverage": 0.9,
+        "silent_error": 0.7,
         "correct": 0.2,
-        "wrong_selection_rate": 0.3,
-        "wrong_construction_rate": 0.5
+        "wrong_selection_rate": 0.2222222222222222,
+        "wrong_construction_rate": 0.5555555555555556
       },
       "clean": {
         "n": 2,
@@ -49,8 +49,8 @@
           "id": "s2_recurring",
           "tier": "flagged",
           "family": "recurring_revenue",
-          "wrong_grounding": true,
-          "sql": "-- current recurring revenue = mrr? use active subscriptions with status 'active' and active=true; sum billed_amount normalized to monthly. assume billed_amount is per billing period given plan.\nwith s as (\n select subscription_id, billed_amount, plan\n from subscriptions\n where active = true and status = 'active'\n)\nselect\n count(*) as active_subscriptions,\n sum(case when plan ilike '%annual%' then billed_amount/12 else billed_amount end) as mrr\nfrom s;"
+          "wrong_grounding": false,
+          "sql": "select count(*) as active_subscriptions, sum(billed_amount) as total_mrr\nfrom subscriptions\nwhere active = true and status = 'active'; select plan, count(*) as cnt, sum(billed_amount) as mrr\nfrom subscriptions\nwhere active = true and status = 'active'\ngroup by plan;"
         },
         {
           "executed": true,
@@ -74,14 +74,14 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select count(*) as rows, sum(billed_amount) as total_revenue from subscriptions;"
+          "sql": "select sum(billed_amount) as total_revenue from subscriptions;"
         },
         {
           "executed": true,
-          "correct": false,
-          "bucket": "wrong",
+          "correct": true,
+          "bucket": "right",
           "abstained": false,
-          "confident_wrong": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -92,13 +92,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
+          "score": 1.0,
           "outcome": "answer",
           "id": "s2_active_users",
           "tier": "flagged",
           "family": "internal_scope",
-          "wrong_grounding": true,
-          "sql": "-- active users in june 2026: count distinct user_id from activity where active_date between 2026-06-01 and 2026-06-30 and exclude internal/test users via users table\nselect count(distinct a.user_id) as active_users\nfrom activity a\nleft join users u on a.user_id = u.user_id\nwhere a.active_date between date '2026-06-01' and date '2026-06-30'\n  and coalesce(u.is_internal,false) = false\n  and coalesce(u.is_test,false) = false;"
+          "wrong_grounding": false,
+          "sql": "select count(distinct user_id) as active_users\nfrom activity\nwhere active_date >= date '2026-06-01'\n  and active_date < date '2026-07-01'\n  and is_internal = false;"
         },
         {
           "executed": true,
@@ -122,14 +122,14 @@
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": true,
-          "sql": "select sum(moments) as total_moments\nfrom daily_rollup\nwhere day >= date '2026-06-01' and day <= date '2026-06-30'; select sum(moments) as total_moments\nfrom daily_rollup dr\njoin users u on dr.user_id = u.user_id\nwhere day >= date '2026-06-01' and day <= date '2026-06-30'\n  and (u.is_internal is null or u.is_internal = false)\n  and (u.is_test is null or u.is_test = false);"
+          "sql": "select sum(moments) as total_moments\nfrom daily_rollup\nwhere day >= date '2026-06-01' and day <= date '2026-06-30'; select count(*) as days_count\nfrom (\n  select distinct day\n  from daily_rollup\n  where day >= date '2026-06-01' and day <= date '2026-06-30'\n) t; select sum(moments) as june_total, count(distinct day) as days_present\nfrom daily_rollup\nwhere day between date '2026-06-01' and date '2026-06-30' and user_id is not null;"
         },
         {
-          "executed": true,
+          "executed": false,
           "correct": false,
-          "bucket": "wrong",
-          "abstained": false,
-          "confident_wrong": true,
+          "bucket": "idk",
+          "abstained": true,
+          "confident_wrong": false,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -140,13 +140,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": -4.0,
-          "outcome": "answer",
-          "id": "s2_users_v2_april",
+          "score": 0.0,
+          "outcome": "refuse",
+          "id": "s2_users_v2_july",
           "tier": "flagged",
           "family": "migration_leftover",
-          "wrong_grounding": false,
-          "sql": "select count(*) as april_signups\nfrom users\nwhere signup_date >= date '2026-04-01'\n  and signup_date < date '2026-05-01'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false;"
+          "wrong_grounding": true,
+          "sql": "select count(*) as signups_july_2026\nfrom users\nwhere signup_date >= date '2026-07-01'\n  and signup_date < date '2026-08-01'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false; select min(signup_date) as min_signup, max(signup_date) as max_signup from users;"
         },
         {
           "executed": true,
@@ -169,8 +169,8 @@
           "id": "s2_users_v2_total",
           "tier": "flagged",
           "family": "migration_leftover",
-          "wrong_grounding": false,
-          "sql": "select count(*) as total_users from users;"
+          "wrong_grounding": true,
+          "sql": "select count(*) as total_users from users; select count(*) as total_non_internal_non_test_users from users where is_internal = false and (is_test = false or is_test is null);"
         },
         {
           "executed": true,
@@ -218,7 +218,7 @@
           "tier": "flagged",
           "family": "stale_status",
           "wrong_grounding": false,
-          "sql": "select count(*) as paying_subscriptions from subscriptions where active = true and billed_amount > 0;"
+          "sql": "select count(*) as paying_subscriptions\nfrom subscriptions\nwhere active = true and status = 'active'; select count(*) as active_true\nfrom subscriptions\nwhere active = true; select count(*) as status_active\nfrom subscriptions\nwhere status = 'active';"
         },
         {
           "executed": true,
@@ -242,14 +242,14 @@
           "tier": "flagged",
           "family": "date_columns",
           "wrong_grounding": false,
-          "sql": "select count(*) as new_users\nfrom users\nwhere signup_date >= date '2026-03-01'\n  and signup_date < date '2026-04-01'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false;"
+          "sql": "select count(*) as new_users_march_2026\nfrom users\nwhere signup_date >= date '2026-03-01'\n  and signup_date < date '2026-04-01'\n  and (is_internal is false or is_internal is null)\n  and (is_test is false or is_test is null);"
         },
         {
           "executed": true,
-          "correct": true,
-          "bucket": "right",
+          "correct": false,
+          "bucket": "wrong",
           "abstained": false,
-          "confident_wrong": false,
+          "confident_wrong": true,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -260,13 +260,13 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": 1.0,
+          "score": -4.0,
           "outcome": "answer",
-          "id": "s2_march_new",
+          "id": "s2_subs_march",
           "tier": "flagged",
-          "family": "date_columns",
+          "family": "partition_lookalike",
           "wrong_grounding": false,
-          "sql": "select signup_date, count(*) as new_users\nfrom users\nwhere signup_date >= '2026-03-01' and signup_date < '2026-04-01'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false\ngroup by signup_date\norder by signup_date; select count(*) as total_new_users\nfrom users\nwhere signup_date >= '2026-03-01' and signup_date < '2026-04-01'\n  and coalesce(is_internal, false) = false\n  and coalesce(is_test, false) = false;"
+          "sql": "select count(*) as count\nfrom subscriptions\nwhere started_date >= date '2026-03-01' and started_date <= date '2026-03-31'; select count(*) as total, status, plan\nfrom subscriptions\nwhere started_date between date '2026-03-01' and date '2026-03-31'\ngroup by status, plan\norder by total desc; select min(started_date) as min_date, max(started_date) as max_date\nfrom subscriptions; select count(*) from subscriptions_2026_03;"
         },
         {
           "executed": true,
@@ -290,7 +290,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend\nfrom marketing\nwhere spend_date >= date '2026-06-01'\n  and spend_date < date '2026-07-01';"
+          "sql": "select sum(spend) as total_spend\nfrom marketing\nwhere spend_date >= '2026-06-01' and spend_date < '2026-07-01'; select channel, sum(spend) as spend_by_channel\nfrom marketing\nwhere spend_date >= '2026-06-01' and spend_date < '2026-07-01'\ngroup by channel\norder by spend_by_channel desc;"
         },
         {
           "executed": true,
@@ -314,7 +314,7 @@
           "tier": "clean",
           "family": "plan_mix",
           "wrong_grounding": false,
-          "sql": "select count(*) as annual_count from subscriptions where lower(plan) = 'annual'; select count(*) as annual_count from subscriptions where lower(plan) = 'annual' and (status is null or lower(status) not in ('cancelled','canceled','failed')) ;"
+          "sql": "select count(*) as annual_subscriptions_sold\nfrom subscriptions\nwhere lower(plan) = 'annual'; select count(*) as annual_subscriptions_sold\nfrom subscriptions\nwhere lower(plan) = 'annual'\nand status != 'cancelled';"
         }
       ]
     },
@@ -324,7 +324,7 @@
         "coverage": 1.0,
         "silent_error": 0.0,
         "correct": 1.0,
-        "wrong_selection_rate": 0.08333333333333333,
+        "wrong_selection_rate": 0.0,
         "wrong_construction_rate": 0.0
       },
       "flagged": {
@@ -332,7 +332,7 @@
         "coverage": 1.0,
         "silent_error": 0.0,
         "correct": 1.0,
-        "wrong_selection_rate": 0.1,
+        "wrong_selection_rate": 0.0,
         "wrong_construction_rate": 0.0
       },
       "clean": {
@@ -366,7 +366,7 @@
           "tier": "flagged",
           "family": "recurring_revenue",
           "wrong_grounding": false,
-          "sql": "select sum(mrr) as current_mrr\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and (u.is_internal is false or u.is_internal is null);"
+          "sql": "select sum(ds.mrr) as current_mrr\nfrom dim_subscriptions ds\njoin dim_users u using (user_id)\nwhere ds.is_active = true\n  and not u.is_internal;"
         },
         {
           "executed": true,
@@ -390,7 +390,7 @@
           "tier": "flagged",
           "family": "gross_net",
           "wrong_grounding": false,
-          "sql": "select sum(net_revenue) as total_net_revenue from dim_subscriptions ds join dim_users u using (user_id) where ds.is_active = true and (u.is_internal is false or u.is_internal is null); select sum(mrr) as total_mrr from dim_subscriptions ds join dim_users u using (user_id) where ds.is_active = true and (u.is_internal is false or u.is_internal is null);"
+          "sql": "select sum(net_revenue) as total_subscription_revenue\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and (u.is_internal is false or u.is_internal is null);"
         },
         {
           "executed": true,
@@ -414,7 +414,7 @@
           "tier": "flagged",
           "family": "internal_scope",
           "wrong_grounding": false,
-          "sql": "-- active users in june 2026: count distinct non-internal users with any activity date in june 2026\nselect count(distinct user_id) as active_users\nfrom fct_activity a\njoin dim_users u using (user_id)\nwhere a.is_internal = false\n  and u.is_internal = false\n  and active_date between date '2026-06-01' and date '2026-06-30';"
+          "sql": "select count(distinct user_id) as active_users_june_2026\nfrom fct_activity\nwhere active_date between date '2026-06-01' and date '2026-06-30'\n  and not is_internal;"
         },
         {
           "executed": true,
@@ -438,7 +438,7 @@
           "tier": "flagged",
           "family": "value_moments",
           "wrong_grounding": false,
-          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere active_date >= '2026-06-01' and active_date < '2026-07-01' and is_internal = false;"
+          "sql": "select sum(moments) as total_moments\nfrom fct_activity\nwhere active_date >= date '2026-06-01'\n  and active_date <= date '2026-06-30'\n  and not is_internal;"
         },
         {
           "executed": true,
@@ -458,11 +458,11 @@
           "cause_ok": null,
           "score": 1.0,
           "outcome": "answer",
-          "id": "s2_users_v2_april",
+          "id": "s2_users_v2_july",
           "tier": "flagged",
           "family": "migration_leftover",
           "wrong_grounding": false,
-          "sql": "select count(*) as users_signed_up\nfrom dim_users\nwhere signup_date >= date '2026-04-01'\n  and signup_date < date '2026-05-01'\n  and not is_internal;"
+          "sql": "select count(*) as signups_july_2026\nfrom dim_users\nwhere signup_date >= date '2026-07-01'\n  and signup_date < date '2026-08-01'\n  and not is_internal;"
         },
         {
           "executed": true,
@@ -486,7 +486,7 @@
           "tier": "flagged",
           "family": "migration_leftover",
           "wrong_grounding": false,
-          "sql": "select count(*) as total_users\nfrom dim_users\nwhere not is_internal;"
+          "sql": "select count(*) as total_users from dim_users where not is_internal;"
         },
         {
           "executed": true,
@@ -510,7 +510,7 @@
           "tier": "flagged",
           "family": "stale_status",
           "wrong_grounding": false,
-          "sql": "select count(*) as active_subscriptions\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and not u.is_internal;"
+          "sql": "select count(*) as active_subscriptions\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and (u.is_internal is not true);"
         },
         {
           "executed": true,
@@ -533,8 +533,8 @@
           "id": "s2_subs_book",
           "tier": "flagged",
           "family": "stale_status",
-          "wrong_grounding": true,
-          "sql": "select count(*) as paying_subscriptions\nfrom dim_subscriptions ds\njoin dim_users u using (user_id)\nwhere ds.is_active = true\n  and ds.status = 'active'\n  and (u.is_internal is distinct from true);"
+          "wrong_grounding": false,
+          "sql": "select count(*) as paying_subscriptions\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.is_active = true\n  and u.is_internal = false;"
         },
         {
           "executed": true,
@@ -558,7 +558,7 @@
           "tier": "flagged",
           "family": "date_columns",
           "wrong_grounding": false,
-          "sql": "select count(*) as users_joined_march_2026\nfrom dim_users\nwhere not is_internal\n  and signup_date >= date '2026-03-01'\n  and signup_date <= date '2026-03-31';"
+          "sql": "select count(*) as new_users_march_2026\nfrom dim_users\nwhere not is_internal\n  and signup_date >= date '2026-03-01'\n  and signup_date < date '2026-04-01';"
         },
         {
           "executed": true,
@@ -578,11 +578,11 @@
           "cause_ok": null,
           "score": 1.0,
           "outcome": "answer",
-          "id": "s2_march_new",
+          "id": "s2_subs_march",
           "tier": "flagged",
-          "family": "date_columns",
+          "family": "partition_lookalike",
           "wrong_grounding": false,
-          "sql": "select\n  count(*) as new_users_march_2026\nfrom dim_users\nwhere not is_internal\n  and signup_date >= date '2026-03-01'\n  and signup_date < date '2026-04-01';"
+          "sql": "select count(*) as subscriptions_started_march_2026\nfrom dim_subscriptions ds\njoin dim_users u using (user_id)\nwhere ds.started_date >= date '2026-03-01'\n  and ds.started_date < date '2026-04-01'\n  and not u.is_internal;"
         },
         {
           "executed": true,
@@ -606,7 +606,7 @@
           "tier": "clean",
           "family": "marketing_spend",
           "wrong_grounding": false,
-          "sql": "select sum(spend) as total_spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01'\n  and spend_date < date '2026-07-01';"
+          "sql": "select sum(spend) as total_spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01'\n  and spend_date < date '2026-07-01'; select channel, sum(spend) as spend\nfrom fct_marketing\nwhere spend_date >= date '2026-06-01'\n  and spend_date < date '2026-07-01'\ngroup by channel\norder by spend desc;"
         },
         {
           "executed": true,
@@ -630,7 +630,7 @@
           "tier": "clean",
           "family": "plan_mix",
           "wrong_grounding": false,
-          "sql": "select count(*) as annual_subscriptions_sold\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.plan = 'annual'\n  and u.is_internal = false;"
+          "sql": "select count(*) as annual_subscriptions_sold\nfrom dim_subscriptions s\njoin dim_users u using (user_id)\nwhere s.plan = 'annual'\n  and not u.is_internal;"
         }
       ]
     }
