@@ -6,23 +6,23 @@
   "guardrails": "R1 (loop default)",
   "high_before": {
     "overall": {
-      "n": 39,
+      "n": 90,
       "coverage": 1.0,
-      "silent_error": 0.15384615384615385,
+      "silent_error": 0.24444444444444444,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.15384615384615385,
+      "wrong_selection_rate": 0.2777777777777778,
       "wrong_construction_rate": 0.0
     },
     "flagged": {
-      "n": 30,
+      "n": 72,
       "coverage": 1.0,
-      "silent_error": 0.2,
+      "silent_error": 0.3055555555555556,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.2,
+      "wrong_selection_rate": 0.3472222222222222,
       "wrong_construction_rate": 0.0
     },
     "clean": {
-      "n": 9,
+      "n": 18,
       "coverage": 1.0,
       "silent_error": 0.0,
       "balanced_accuracy": NaN,
@@ -59,12 +59,12 @@
         "calls": [
           {
             "metric": "recurring_revenue",
-            "start": "2026-07-12",
+            "start": "2026-07-01",
             "end": "2026-07-12"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 172.75
+        "declared": 1218.12
       },
       {
         "executed": true,
@@ -95,12 +95,14 @@
         "calls": [
           {
             "metric": "recurring_revenue",
-            "start": "2026-07-12",
-            "end": "2026-07-12"
+            "period": "all",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
-        "declared": 172.75
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -237,7 +239,8 @@
         "calls": [
           {
             "metric": "new_signups",
-            "period": "2026-04"
+            "period": "2026-04",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
@@ -342,8 +345,7 @@
         "calls": [
           {
             "metric": "marketing_spend",
-            "period": "2026-06",
-            "time_grain": "month"
+            "period": "2026-06"
           }
         ],
         "expected_metric": "marketing_spend",
@@ -378,8 +380,7 @@
         "calls": [
           {
             "metric": "marketing_spend",
-            "period": "2026-05",
-            "time_grain": "month"
+            "period": "2026-05"
           }
         ],
         "expected_metric": "marketing_spend",
@@ -414,7 +415,7 @@
         "calls": [
           {
             "metric": "paying_users",
-            "period": "2026-07"
+            "period": "all"
           }
         ],
         "expected_metric": "paying_users",
@@ -492,6 +493,614 @@
       },
       {
         "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "recurring_revenue",
+        "queried": [
+          "recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "recurring_revenue",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 3489.5
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-06",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1683.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "engaged_users",
+        "queried": [
+          "engaged_users"
+        ],
+        "calls": [
+          {
+            "metric": "engaged_users",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 983.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "actives",
+        "queried": [
+          "actives"
+        ],
+        "calls": [
+          {
+            "metric": "actives",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1256.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": false
+            }
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 240.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 403.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 0,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 0,
+        "picked": "total_habits",
+        "queried": [
+          "active_habits",
+          "total_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "start": "2026-07-01",
+            "end": "2026-07-12"
+          },
+          {
+            "metric": "total_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6357.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 0,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 0,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
+      },
+      {
+        "executed": true,
         "correct": false,
         "bucket": "wrong",
         "abstained": false,
@@ -519,7 +1128,7 @@
         "calls": [
           {
             "metric": "recurring_revenue",
-            "end": "2026-07-12"
+            "period": "all"
           }
         ],
         "expected_metric": "mrr",
@@ -554,7 +1163,10 @@
         "calls": [
           {
             "metric": "recurring_revenue",
-            "period": "all"
+            "period": "all",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
@@ -624,7 +1236,8 @@
         "calls": [
           {
             "metric": "active_habits",
-            "period": "all"
+            "start": "2026-07-01",
+            "end": "2026-07-31"
           }
         ],
         "expected_metric": "active_habits",
@@ -765,8 +1378,7 @@
         "calls": [
           {
             "metric": "value_moments",
-            "period": "2026-06",
-            "time_grain": "month"
+            "period": "2026-06"
           }
         ],
         "expected_metric": "value_moments",
@@ -801,8 +1413,7 @@
         "calls": [
           {
             "metric": "marketing_spend",
-            "period": "2026-06",
-            "time_grain": "month"
+            "period": "2026-06"
           }
         ],
         "expected_metric": "marketing_spend",
@@ -872,7 +1483,7 @@
         "calls": [
           {
             "metric": "paying_users",
-            "period": "all"
+            "period": "2026-07"
           }
         ],
         "expected_metric": "paying_users",
@@ -950,6 +1561,617 @@
       },
       {
         "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "all",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "recurring_revenue",
+        "queried": [
+          "recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "recurring_revenue",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 3489.5
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-06",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1683.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "engaged_users",
+        "queried": [
+          "engaged_users"
+        ],
+        "calls": [
+          {
+            "metric": "engaged_users",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 983.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "actives",
+        "queried": [
+          "actives"
+        ],
+        "calls": [
+          {
+            "metric": "actives",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1256.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": false
+            }
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_users",
+        "queried": [
+          "new_users"
+        ],
+        "calls": [
+          {
+            "metric": "new_users",
+            "period": "2026-03",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 232.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_users",
+        "queried": [
+          "new_users"
+        ],
+        "calls": [
+          {
+            "metric": "new_users",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 387.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 1,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 1,
+        "picked": "total_habits",
+        "queried": [
+          "active_habits",
+          "total_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "all"
+          },
+          {
+            "metric": "total_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 1,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 1,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 1,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 1,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
+      },
+      {
+        "executed": true,
         "correct": false,
         "bucket": "wrong",
         "abstained": false,
@@ -1012,7 +2234,10 @@
         "calls": [
           {
             "metric": "recurring_revenue",
-            "period": "all"
+            "period": "all",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
@@ -1047,7 +2272,8 @@
         "calls": [
           {
             "metric": "active_habits",
-            "period": "all"
+            "start": "2026-07-01",
+            "end": "2026-07-12"
           }
         ],
         "expected_metric": "active_habits",
@@ -1152,7 +2378,8 @@
         "calls": [
           {
             "metric": "new_signups",
-            "period": "2026-04"
+            "period": "2026-04",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
@@ -1257,8 +2484,7 @@
         "calls": [
           {
             "metric": "marketing_spend",
-            "period": "2026-06",
-            "time_grain": "month"
+            "period": "2026-06"
           }
         ],
         "expected_metric": "marketing_spend",
@@ -1293,8 +2519,7 @@
         "calls": [
           {
             "metric": "marketing_spend",
-            "period": "2026-05",
-            "time_grain": "month"
+            "period": "2026-05"
           }
         ],
         "expected_metric": "marketing_spend",
@@ -1329,7 +2554,7 @@
         "calls": [
           {
             "metric": "paying_users",
-            "period": "all"
+            "period": "2026-07"
           }
         ],
         "expected_metric": "paying_users",
@@ -1404,12 +2629,616 @@
         ],
         "expected_metric": "value_moments",
         "declared": 67132.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "monthly_recurring_revenue",
+        "queried": [
+          "monthly_recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-07"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "recurring_revenue",
+        "queried": [
+          "recurring_revenue"
+        ],
+        "calls": [
+          {
+            "metric": "recurring_revenue",
+            "period": "2026-06",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 3489.5
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "all",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-06",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1683.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "engaged_users",
+        "queried": [
+          "engaged_users"
+        ],
+        "calls": [
+          {
+            "metric": "engaged_users",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 983.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "actives",
+        "queried": [
+          "actives"
+        ],
+        "calls": [
+          {
+            "metric": "actives",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1256.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1256.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "start": "2026-03-01",
+            "end": "2026-03-31",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 240.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 403.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 2,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 2,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 2,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 2,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 2,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 2,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
       }
     ]
   },
   "high_after3": {
     "overall": {
-      "n": 39,
+      "n": 90,
       "coverage": 1.0,
       "silent_error": 0.0,
       "balanced_accuracy": NaN,
@@ -1417,7 +3246,7 @@
       "wrong_construction_rate": 0.0
     },
     "flagged": {
-      "n": 30,
+      "n": 72,
       "coverage": 1.0,
       "silent_error": 0.0,
       "balanced_accuracy": NaN,
@@ -1425,7 +3254,7 @@
       "wrong_construction_rate": 0.0
     },
     "clean": {
-      "n": 9,
+      "n": 18,
       "coverage": 1.0,
       "silent_error": 0.0,
       "balanced_accuracy": NaN,
@@ -1461,7 +3290,8 @@
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "mrr",
+            "period": "all"
           }
         ],
         "expected_metric": "mrr",
@@ -1489,456 +3319,6 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
-        "queried": [
-          "mrr"
-        ],
-        "calls": [
-          {
-            "metric": "mrr"
-          }
-        ],
-        "expected_metric": "mrr",
-        "declared": 2740.95
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_habits_keeping",
-        "tier": "flagged",
-        "family": "habits",
-        "rep": 0,
-        "picked": "active_habits",
-        "queried": [
-          "active_habits"
-        ],
-        "calls": [
-          {
-            "metric": "active_habits"
-          }
-        ],
-        "expected_metric": "active_habits",
-        "declared": 6946.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_habits_active",
-        "tier": "flagged",
-        "family": "habits",
-        "rep": 0,
-        "picked": "active_habits",
-        "queried": [
-          "active_habits"
-        ],
-        "calls": [
-          {
-            "metric": "active_habits"
-          }
-        ],
-        "expected_metric": "active_habits",
-        "declared": 6946.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_newusers_total",
-        "tier": "flagged",
-        "family": "new_users",
-        "rep": 0,
-        "picked": "new_signups",
-        "queried": [
-          "new_signups"
-        ],
-        "calls": [
-          {
-            "metric": "new_signups",
-            "period": "all"
-          }
-        ],
-        "expected_metric": "new_signups",
-        "declared": 2500.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_newusers_apr",
-        "tier": "flagged",
-        "family": "new_users",
-        "rep": 0,
-        "picked": "new_signups",
-        "queried": [
-          "new_signups"
-        ],
-        "calls": [
-          {
-            "metric": "new_signups",
-            "period": "2026-04"
-          }
-        ],
-        "expected_metric": "new_signups",
-        "declared": 258.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_actives_total",
-        "tier": "flagged",
-        "family": "actives",
-        "rep": 0,
-        "picked": "active_users",
-        "queried": [
-          "active_users"
-        ],
-        "calls": [
-          {
-            "metric": "active_users",
-            "period": "all"
-          }
-        ],
-        "expected_metric": "active_users",
-        "declared": 2100.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_value_moments_jun",
-        "tier": "flagged",
-        "family": "value_moments",
-        "rep": 0,
-        "picked": "value_moments",
-        "queried": [
-          "value_moments"
-        ],
-        "calls": [
-          {
-            "metric": "value_moments",
-            "period": "2026-06"
-          }
-        ],
-        "expected_metric": "value_moments",
-        "declared": 16041.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_marketing_jun",
-        "tier": "clean",
-        "family": "marketing_spend",
-        "rep": 0,
-        "picked": "marketing_spend",
-        "queried": [
-          "marketing_spend"
-        ],
-        "calls": [
-          {
-            "metric": "marketing_spend",
-            "period": "2026-06"
-          }
-        ],
-        "expected_metric": "marketing_spend",
-        "declared": 21013.2
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_marketing_may",
-        "tier": "clean",
-        "family": "marketing_spend",
-        "rep": 0,
-        "picked": "marketing_spend",
-        "queried": [
-          "marketing_spend"
-        ],
-        "calls": [
-          {
-            "metric": "marketing_spend",
-            "period": "2026-05"
-          }
-        ],
-        "expected_metric": "marketing_spend",
-        "declared": 20242.28
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_paying_users",
-        "tier": "clean",
-        "family": "paying_users",
-        "rep": 0,
-        "picked": "paying_users",
-        "queried": [
-          "paying_users"
-        ],
-        "calls": [
-          {
-            "metric": "paying_users"
-          }
-        ],
-        "expected_metric": "paying_users",
-        "declared": 378.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_vm_bare_total",
-        "tier": "flagged",
-        "family": "value_moments",
-        "rep": 0,
-        "picked": "value_moments",
-        "queried": [
-          "value_moments"
-        ],
-        "calls": [
-          {
-            "metric": "value_moments",
-            "period": "all"
-          }
-        ],
-        "expected_metric": "value_moments",
-        "declared": 67132.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_vm_bare_figure",
-        "tier": "flagged",
-        "family": "value_moments",
-        "rep": 0,
-        "picked": "value_moments",
-        "queried": [
-          "value_moments"
-        ],
-        "calls": [
-          {
-            "metric": "value_moments",
-            "period": "all"
-          }
-        ],
-        "expected_metric": "value_moments",
-        "declared": 67132.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_rec_current",
-        "tier": "flagged",
-        "family": "recurring_revenue",
-        "rep": 1,
-        "picked": "mrr",
-        "queried": [
-          "mrr"
-        ],
-        "calls": [
-          {
-            "metric": "mrr"
-          }
-        ],
-        "expected_metric": "mrr",
-        "declared": 2740.95
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_rec_howmuch",
-        "tier": "flagged",
-        "family": "recurring_revenue",
-        "rep": 1,
         "picked": "mrr",
         "queried": [
           "mrr"
@@ -1973,6 +3353,1049 @@
         "id": "e05mf_habits_keeping",
         "tier": "flagged",
         "family": "habits",
+        "rep": 0,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_active",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 0,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_total",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 2500.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_apr",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 258.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_total",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 2100.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_value_moments_jun",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 0,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 16041.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_jun",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 21013.2
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_may",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20242.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_users",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 0,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_bare_total",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 0,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 67132.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_bare_figure",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 0,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 67132.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2582.54
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 0,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1620.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 938.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 240.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 403.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 0,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 0,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 0,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 0,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 0,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 0,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_current",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_howmuch",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_keeping",
+        "tier": "flagged",
+        "family": "habits",
         "rep": 1,
         "picked": "active_habits",
         "queried": [
@@ -2258,7 +4681,8 @@
         ],
         "calls": [
           {
-            "metric": "paying_users"
+            "metric": "paying_users",
+            "period": "all"
           }
         ],
         "expected_metric": "paying_users",
@@ -2333,6 +4757,596 @@
         ],
         "expected_metric": "value_moments",
         "declared": 67132.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2582.54
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 1,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1620.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 938.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 1,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 240.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 403.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 1,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 1,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 1,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 1,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 1,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 1,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
       },
       {
         "executed": true,
@@ -2783,6 +5797,597 @@
         ],
         "expected_metric": "value_moments",
         "declared": 67132.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_runrate",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_permonth",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_jun",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2582.54
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_rec_anchor_mrr",
+        "tier": "flagged",
+        "family": "recurring_revenue",
+        "rep": 2,
+        "picked": "mrr",
+        "queried": [
+          "mrr"
+        ],
+        "calls": [
+          {
+            "metric": "mrr",
+            "period": "all"
+          }
+        ],
+        "expected_metric": "mrr",
+        "declared": 2740.95
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_mau_jun",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-06"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1620.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_engaged_apr",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 938.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_actives_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 2,
+        "picked": "active_users",
+        "queried": [
+          "active_users"
+        ],
+        "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1200.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_mar",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 240.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 403.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 2,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_total_trap",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 2,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_habits_ever_remaining",
+        "tier": "flagged",
+        "family": "habits",
+        "rep": 2,
+        "picked": "active_habits",
+        "queried": [
+          "active_habits"
+        ],
+        "calls": [
+          {
+            "metric": "active_habits"
+          }
+        ],
+        "expected_metric": "active_habits",
+        "declared": 6946.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_vm_apr",
+        "tier": "flagged",
+        "family": "value_moments",
+        "rep": 2,
+        "picked": "value_moments",
+        "queried": [
+          "value_moments"
+        ],
+        "calls": [
+          {
+            "metric": "value_moments",
+            "period": "2026-04",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "value_moments",
+        "declared": 9081.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_apr",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 2,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-04"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 19977.84
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_marketing_mar",
+        "tier": "clean",
+        "family": "marketing_spend",
+        "rep": 2,
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03"
+          }
+        ],
+        "expected_metric": "marketing_spend",
+        "declared": 20568.28
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_paying_customers",
+        "tier": "clean",
+        "family": "paying_users",
+        "rep": 2,
+        "picked": "paying_users",
+        "queried": [
+          "paying_users"
+        ],
+        "calls": [
+          {
+            "metric": "paying_users"
+          }
+        ],
+        "expected_metric": "paying_users",
+        "declared": 378.0
       }
     ]
   }
