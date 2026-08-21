@@ -83,29 +83,31 @@ semantic_model:
   dimensions: [{name: started_date, type: time, type_params: {time_granularity: day}}, {name: is_active, type: categorical}]
   measures: [{name: billed_amount_raw, agg: sum, expr: billed_amount}]
 ---
-metric: {name: value_moments, type: simple, type_params: {measure: moments}}
+metric: {name: value_moments, description: "Value moments (completed habits) in the period, all accounts.", type: simple, type_params: {measure: moments}}
 ---
 metric:
   name: real_value_moments
+  description: "Value moments from real users (excludes internal/test). The North Star."
   type: simple
   type_params: {measure: moments}
   filter: "{{ Dimension('user__is_internal') }} = false"
 ---
 metric:
   name: active_users
+  description: "Distinct real users active in the period (excludes internal/test)."
   type: simple
   type_params: {measure: active_user_count}
   filter: "{{ Dimension('user__is_internal') }} = false"
 ---
-metric: {name: mrr, type: simple, type_params: {measure: mrr_amount}}
+metric: {name: mrr, description: "Monthly recurring revenue (current active book, from the monthly snapshot).", type: simple, type_params: {measure: mrr_amount}}
 ---
-metric: {name: paying_users, type: simple, type_params: {measure: paying_user_count}}
+metric: {name: paying_users, description: "Distinct users with an active subscription (current, from the monthly snapshot).", type: simple, type_params: {measure: paying_user_count}}
 ---
-metric: {name: active_habits, type: simple, type_params: {measure: active_habit_count}}
+metric: {name: active_habits, description: "Habits still being tracked (current active book, from the monthly snapshot).", type: simple, type_params: {measure: active_habit_count}}
 ---
-metric: {name: new_signups, type: simple, type_params: {measure: signup_count}}
+metric: {name: new_signups, description: "User signups in the period, all accounts.", type: simple, type_params: {measure: signup_count}}
 ---
-metric: {name: marketing_spend, type: simple, type_params: {measure: spend_amount}}
+metric: {name: marketing_spend, description: "Total marketing spend in the period.", type: simple, type_params: {measure: spend_amount}}
 ---
 metric: {name: recurring_revenue, type: simple, type_params: {measure: billed_amount_raw}, filter: "{{ Dimension('subscription__is_active') }} = true"}
 ---
