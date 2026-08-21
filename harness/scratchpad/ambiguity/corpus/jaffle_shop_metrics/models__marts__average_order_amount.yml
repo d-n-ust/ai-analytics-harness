@@ -1,0 +1,19 @@
+version: 2
+metrics:
+  - name: average_order_amount
+    label: Average Order Amount
+    model: ref('orders')
+    description: "The average size of a jaffle order"
+
+    calculation_method: average
+    expression: amount
+
+    timestamp: order_date
+    time_grains: [day, week, month]
+
+    dimensions:
+      - had_credit_card_payment
+      - had_coupon_payment
+      - had_bank_transfer_payment
+      - had_gift_card_payment
+      - customer_status

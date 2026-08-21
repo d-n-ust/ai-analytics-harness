@@ -22,16 +22,15 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-from semantic.semantic import SemanticError, SemanticLayer
-from semantic.tree import Causality, MetricTree, TreeError
-from warehouse.config import NAMED_PERIODS, TIME_GRAINS
-from warehouse.warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
-from warehouse.warehouse import QueryError, describe_table, run_query, schema_text
+from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeError
+from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # the cap _fmt_rows reports
+from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text
 
 from .conversation import ToolResult
 from .guardrails import LADDER, GuardrailSet, action_space, before, disclosure
 from .outcomes import REASON_MEANINGS, REFUSAL_REASONS
 from .protocol import Protocol
+from .rungs import capabilities  # rung -> capabilities mapping stays here (the ladder's owner)
 
 _ANSWER = {
     "name": "answer",
@@ -132,11 +131,27 @@ _QUERY_METRIC = {
                         "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}"},
             "time_grain": {"type": "string", "enum": list(TIME_GRAINS),
                            "description": "Bucket the time column (for trends)."},
-            # The enum is read from the vocabulary itself rather than restated. It was a copy, and
-            # the copy is exactly how `decompose_change` came to accept any string at all.
-            "period": {"type": "string", "enum": list(NAMED_PERIODS),
-                       "description": "A named period."},
-            "start": {"type": "string", "description": "Explicit start date YYYY-MM-DD."},
+            # The contract, stated where the model reads it: named values are RELATIVE and always
+            # complete periods; a specific calendar month is YYYY-MM; anything else is start/end;
+            # OMISSION means the current value. The enum alone taught a measured failure: asked for
+            # "April 2026" with only relative presets on the menu, a model took the nearest legal
+            # item (last_month) and silently got June. The pattern makes the natural utterance
+            # legal instead. The omission sentence closed a second measured failure of the same
+            # shape: nothing at decision time said what leaving period out means, so a model asked
+            # for "MRR right now" reached for last_month and served June's snapshot as current.
+            # The response echoed the omission rule, but only after an unscoped call the model
+            # never risked making.
+            "period": {"type": "string",
+                       "anyOf": [{"enum": list(NAMED_PERIODS)},
+                                 {"pattern": r"^\d{4}-\d{2}$"}],
+                       "description": "Either a RELATIVE preset (always a complete period: "
+                                      f"{', '.join(NAMED_PERIODS)}) or a specific calendar month "
+                                      "as YYYY-MM. For any other exact range use start/end. "
+                                      "Omit period entirely for the current value: a snapshot "
+                                      "(stock) metric then returns its latest snapshot, which is "
+                                      "the 'right now' number; a flow metric totals all time."},
+            "start": {"type": "string", "description": "Explicit start date YYYY-MM-DD "
+                                                       "(for exact calendar ranges)."},
             "end": {"type": "string", "description": "Explicit end date YYYY-MM-DD."},
         },
         "required": ["metric"],
@@ -279,11 +294,11 @@ def _verdict(ok: bool, detail: str) -> str:
 
 
 def _get_schema(tb, args) -> ToolResult:
-    return ToolResult(schema_text(tb.con, tb.rung, getattr(tb, "schema", None)))
+    return ToolResult(schema_text(tb.con, capabilities(tb.rung).star, getattr(tb, "schema", None)))
 
 
 def _describe_table(tb, args) -> ToolResult:
-    return ToolResult(describe_table(tb.con, args["table"], tb.rung,
+    return ToolResult(describe_table(tb.con, args["table"], capabilities(tb.rung).star,
                                      getattr(tb, "schema", None)))
 
 
@@ -304,7 +319,28 @@ def _query_metric(tb, args) -> ToolResult:
         args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
         time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),
         period=args.get("period"), resolve=tb.g.resolve, segment=args.get("segment"))
-    return ToolResult(_fmt_rows(cols, rows), sql=sql, **_labelled(_measure_values(cols, rows)))
+    return ToolResult(_time_scope_line(args) + _fmt_rows(cols, rows),
+                      sql=sql, **_labelled(_measure_values(cols, rows)))
+
+
+def _time_scope_line(args) -> str:
+    """One line naming the date range the query actually covered, on every result unconditionally.
+
+    A tool that resolves an argument must say what it resolved to: `period=last_month` quietly
+    meaning June is invisible in a bare row of numbers, and a model that mis-picked the period has
+    no signal to catch itself on. This is contract-level disclosure (what did MY arguments mean),
+    distinct from the transparency guardrail (what SQL ran, what scope the layer covered)."""
+    from warehouse.config import resolve_period
+    period, start, end = args.get("period"), args.get("start"), args.get("end")
+    if period:
+        try:
+            s, e = resolve_period(period)
+        except ValueError:
+            return ""                          # the layer will raise the real error
+        return f"time scope: period={period} -> {s}..{e}\n" if s else "time scope: all data\n"
+    if start or end:
+        return f"time scope: {start or 'open'}..{end or 'open'}\n"
+    return "time scope: none given (a stock metric reads its latest snapshot)\n"
 
 
 def _check_metric_exists(tb, args) -> ToolResult:

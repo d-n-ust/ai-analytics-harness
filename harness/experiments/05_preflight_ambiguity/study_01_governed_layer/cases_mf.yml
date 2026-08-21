@@ -1,0 +1,249 @@
+# Study 01 on dbt MetricFlow — question set (structural traps, revenue fixed to ONE governed metric).
+#
+# Same design as cases.yml (structural whole-population name-match traps), retargeted to the MetricFlow
+# layer. The revenue fix (point 1) leaves ONE governed revenue metric, `mrr`; the muddy net_revenue/mrr
+# overlap is gone, so there is no gross_net family here. Gold is a deterministic gold_sql oracle.
+#
+# Verified gold vs sprawl-trap on MetricFlow: mrr 2740.95 (snapshot) vs recurring_revenue 11448 (~4.2x);
+# active_habits 6357 vs total_habits 7467 (17%); new_signups 2500 vs new_users 2414 (excl internal);
+# active_users 2100 vs actives 2180 (incl internal).
+
+# 2026-08-20 amendment (pre-registered before any re-run): four questions previously left the
+# time period implicit ("how much recurring revenue do we have?"), which conflates metric SELECTION
+# (this study's lane) with window construction (the refusal study's lane: the ideal agent behavior
+# for an unspecified window is to ask). The period is now explicit ("right now", "ever"). Results
+# produced before this date used the v1 wording and are labelled as such where reported.
+cases:
+  - id: e05mf_rec_current
+    tier: flagged
+    family: recurring_revenue
+    question: "What is our current recurring revenue?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+  - id: e05mf_rec_howmuch
+    tier: flagged
+    family: recurring_revenue
+    question: "How much recurring revenue do we have from active subscriptions right now?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  - id: e05mf_habits_keeping
+    tier: flagged
+    family: habits
+    question: "How many habits are our users keeping up with right now?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
+  - id: e05mf_habits_active
+    tier: flagged
+    family: habits
+    question: "How many active habits do we have across the app right now?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
+
+  - id: e05mf_newusers_total
+    tier: flagged
+    family: new_users
+    question: "How many people have signed up in total?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users"}
+  - id: e05mf_newusers_apr
+    tier: flagged
+    family: new_users
+    question: "How many new users signed up in April 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-04-01' AND signup_date<DATE '2026-05-01'"}
+
+  - id: e05mf_actives_total
+    tier: flagged
+    family: actives
+    question: "How many users have ever been active, across the whole product?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal"}
+
+  - id: e05mf_value_moments_jun
+    tier: flagged
+    family: value_moments
+    question: "How many value moments were completed across all accounts in June 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+
+  - id: e05mf_marketing_jun
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in June 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05mf_marketing_may
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in May 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
+  - id: e05mf_paying_users
+    tier: clean
+    family: paying_users
+    question: "How many paying users do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  # value_moments residual trap (governed): bare wording, so the agent must choose value_moments (all)
+  # vs real_value_moments (real users) -- the one finding even the governed layer carries. On small_after
+  # real_value_moments is collapsed away, so this resolves. All-time (no time cue) to isolate SELECTION.
+  - id: e05mf_vm_bare_total
+    tier: flagged
+    family: value_moments
+    question: "How many value moments have our users logged in total?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days"}
+  - id: e05mf_vm_bare_figure
+    tier: flagged
+    family: value_moments
+    question: "What's our overall value-moments figure to date?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days"}
+  # ------------------------------------------------------------------------------------------------
+  # 2026-08-21 expansion (wave 2, pre-registered before any wave-2 run): 17 new questions raising the
+  # set from 13 to 30. Generated by four red-team lenses (stakeholder voice, adversarial trap,
+  # eval design, linguistic diversity) and filtered by a three-angle adversarial panel (ambiguity,
+  # protocol/window validity, leakage/overfit). Windows verified against the warehouse: every trap
+  # window separates gold from decoy by more than the 2% grading tolerance (new_users June and
+  # July, at 1.8% and 0.9%, are dead windows and are not used). Wave-1 results (13 questions) stay labelled as such.
+  #
+  # Selection-equivalence rule (pre-registered with this wave): a pick of a same-valued governed
+  # duplicate (monthly_recurring_revenue for mrr, subscribers for paying_users, total_moments for
+  # value_moments) counts as CORRECT selection. The duplicate returns the same number by
+  # construction, so it is sprawl noise, not a wrong number. No published wave-1 row contained such
+  # a pick (verified), so this rule changes nothing retroactively.
+
+  - id: e05mf_rec_runrate
+    tier: flagged
+    family: recurring_revenue
+    question: "Updating the investor deck: what is our monthly run rate on subscriptions right now?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+  - id: e05mf_rec_permonth
+    tier: flagged
+    family: recurring_revenue
+    question: "How much recurring revenue is the business generating per month right now?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+  - id: e05mf_rec_jun
+    tier: flagged
+    family: recurring_revenue
+    question: "I am refreshing the investor one-pager. What was our recurring revenue in June 2026?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=DATE '2026-06-01'"}
+  # Anchor: names the governed metric verbatim; every arm should pass. Tier stays flagged because the
+  # wording still lands inside the revenue cluster (the honest-classification rule); it doubles as an
+  # easy-trap calibration point, and the equivalence rule above keeps its selection rate interpretable.
+  - id: e05mf_rec_anchor_mrr
+    tier: flagged
+    family: recurring_revenue
+    question: "Quick one before the board call: what is our MRR right now?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(mrr_amount) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  # actives: one hard trap per decoy identifier (monthly_active_users/mau, engaged_users, actives)
+  # plus one neutral wording, months spread Apr-Jun. Expected metric is the FILTERED one, so these
+  # pair against the signup items (unfiltered expected) to defeat blanket include/exclude strategies.
+  - id: e05mf_actives_mau_jun
+    tier: flagged
+    family: actives
+    question: "Board deck due tonight: how many monthly active users did we have in June 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal AND active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05mf_actives_engaged_apr
+    tier: flagged
+    family: actives
+    question: "Prepping the ops review: how many engaged users did we have in April 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal AND active_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30'"}
+  - id: e05mf_actives_actives_may
+    tier: flagged
+    family: actives
+    question: "Quick one: how many actives did we have in May 2026?"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
+  - id: e05mf_actives_neutral_may
+    tier: flagged
+    family: actives
+    question: "how many people were actually using us in May 2026? putting numbers in the all-hands deck"
+    expect: {type: metric_answer, metric: active_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM agg_active_days WHERE NOT is_internal AND active_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
+
+  # new_users: windows restricted to live months (Feb 3.0%, Mar 3.3%, May 4.0%; June/July are dead).
+  - id: e05mf_newusers_mar
+    tier: flagged
+    family: new_users
+    question: "How many new user accounts were created in March 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-03-01' AND signup_date<DATE '2026-04-01'"}
+  - id: e05mf_newusers_joined_may
+    tier: flagged
+    family: new_users
+    question: "For the growth recap, how many users joined in May 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-05-01' AND signup_date<DATE '2026-06-01'"}
+  # Thinnest live margin in the set (3.0%); noted so its per-item rate is read with that in mind.
+  - id: e05mf_newusers_feb
+    tier: flagged
+    family: new_users
+    question: "How many people created an account with us in February 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-02-01' AND signup_date<DATE '2026-03-01'"}
+
+  # habits: both new items are hard traps toward total_habits; the two existing habits questions are
+  # easy/medium, so the family now spans the difficulty range.
+  - id: e05mf_habits_total_trap
+    tier: flagged
+    family: habits
+    question: "For the investor deck, what is the total number of habits our users are working on right now?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
+  - id: e05mf_habits_ever_remaining
+    tier: flagged
+    family: habits
+    question: "Of everything users have ever set up as a habit, how many remain in use today?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_habit_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_habit_months)"}
+
+  - id: e05mf_vm_apr
+    tier: flagged
+    family: value_moments
+    question: "Product review question: how many value moments did the app record in April 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30'"}
+
+  # Controls: one holds the existing wording template and varies only the month (April), one varies
+  # the wording on a fresh month (March), plus a second paying_users control.
+  - id: e05mf_marketing_apr
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in April 2026? I need it for the board pack."
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30'"}
+  - id: e05mf_marketing_mar
+    tier: clean
+    family: marketing_spend
+    question: "Budget review question: how much money went to marketing in March 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'"}
+  - id: e05mf_paying_customers
+    tier: clean
+    family: paying_users
+    question: "How many customers are currently paying for a subscription?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  # ------------------------------------------------------------------------------------------------
+  # 2026-08-21, wave 3 (design pilot; the published run is the frozen set below this block).
+  # `subscribers` was remodelled from an exact duplicate of `paying_users` into the loose lifetime
+  # count a second team would build: every user who has ever held a subscription, staff and churned
+  # included (413) beside the current billed book (378). The question below names the decoy, the
+  # way "recurring revenue" names `recurring_revenue`.
+  - id: e05mf_subs_now
+    tier: flagged
+    family: paying_users
+    question: "How many subscribers do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}

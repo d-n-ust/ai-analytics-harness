@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -17,6 +17,8 @@ resolution-markers = [
 members = [
     "ai-analytics-engine",
     "ai-analytics-harness",
+    "ai-analytics-semantic",
+    "ai-analytics-warehouse",
     "ai-analytics-workspace",
 ]
 
@@ -25,6 +27,8 @@ name = "ai-analytics-engine"
 version = "0.1.0"
 source = { editable = "engine" }
 dependencies = [
+    { name = "ai-analytics-semantic" },
+    { name = "ai-analytics-warehouse" },
     { name = "duckdb" },
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -63,6 +67,8 @@ openai = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ai-analytics-semantic", editable = "semantic" },
+    { name = "ai-analytics-warehouse", editable = "warehouse" },
     { name = "anthropic", marker = "extra == 'all'", specifier = ">=0.40" },
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.40" },
     { name = "anthropic", marker = "extra == 'models'", specifier = ">=0.40" },
@@ -115,12 +121,72 @@ dev = [
 metricflow = [{ name = "metricflow", specifier = ">=0.211.0" }]
 
 [[package]]
+name = "ai-analytics-semantic"
+version = "0.1.0"
+source = { editable = "semantic" }
+dependencies = [
+    { name = "ai-analytics-warehouse" },
+    { name = "duckdb" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+embeddings = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "openai" },
+]
+metricflow = [
+    { name = "metricflow" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ai-analytics-warehouse", editable = "warehouse" },
+    { name = "duckdb", specifier = ">=1.1" },
+    { name = "metricflow", marker = "extra == 'metricflow'", specifier = ">=0.211.0" },
+    { name = "numpy", marker = "extra == 'embeddings'", specifier = ">=1.26" },
+    { name = "openai", marker = "extra == 'embeddings'", specifier = ">=1.40" },
+    { name = "python-dotenv", specifier = ">=1.0" },
+    { name = "pyyaml", specifier = ">=6" },
+]
+provides-extras = ["metricflow", "embeddings"]
+
+[[package]]
+name = "ai-analytics-warehouse"
+version = "0.1.0"
+source = { editable = "warehouse" }
+dependencies = [
+    { name = "duckdb" },
+]
+
+[package.optional-dependencies]
+fixtures = [
+    { name = "faker" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pandas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "duckdb", specifier = ">=1.1" },
+    { name = "faker", marker = "extra == 'fixtures'", specifier = ">=30" },
+    { name = "numpy", marker = "extra == 'fixtures'", specifier = ">=1.26" },
+    { name = "pandas", marker = "extra == 'fixtures'", specifier = ">=2.2" },
+]
+provides-extras = ["fixtures"]
+
+[[package]]
 name = "ai-analytics-workspace"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
     { name = "ai-analytics-engine" },
     { name = "ai-analytics-harness" },
+    { name = "ai-analytics-semantic" },
+    { name = "ai-analytics-warehouse" },
 ]
 
 [package.dev-dependencies]
@@ -136,6 +202,8 @@ metricflow = [
 requires-dist = [
     { name = "ai-analytics-engine", editable = "engine" },
     { name = "ai-analytics-harness", editable = "harness" },
+    { name = "ai-analytics-semantic", editable = "semantic" },
+    { name = "ai-analytics-warehouse", editable = "warehouse" },
 ]
 
 [package.metadata.requires-dev]
@@ -306,8 +374,8 @@ name = "httpcore2"
 version = "2.10.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "h11", marker = "sys_platform != 'emscripten'" },
-    { name = "truststore", marker = "sys_platform != 'emscripten'" },
+    { name = "h11" },
+    { name = "truststore" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a9/83/a896fc59940fc5a6e2aff3a4be1d92fa890112936803b331cae75a993c34/httpcore2-2.10.0.tar.gz", hash = "sha256:13c0cc3d1919d4f28457f60cd2c2abe04113a8af184ccf1142811beba936f9dc", size = 67427, upload-time = "2026-08-09T09:11:32.123Z" }
 wheels = [

@@ -1,0 +1,234 @@
+<title>Where the Ambiguity Lives</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ground: #F4F0E6; --surface: #FBF8F1; --surface-2: #EFEADD;
+    --ink: #211E18; --muted: #7A7364; --line: #DED7C7; --line-strong:#CBC2AE;
+    --high: #A83226; --high-bg: #F4E1DC;
+    --med:  #9A6E17; --med-bg:  #F2E7CF;
+    --low:  #7C7768; --low-bg:  #E9E4D6;
+    --accent: #2F5D53; --accent-bg: #E0E9E4; --accent-ink:#274b43;
+    --shadow: 0 1px 2px rgba(33,30,24,.06), 0 6px 20px rgba(33,30,24,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#17140F; --surface:#211D17; --surface-2:#282219;
+      --ink:#ECE4D5; --muted:#9C9484; --line:#372F26; --line-strong:#463C30;
+      --high:#E08A7C; --high-bg:#3A241F;
+      --med:#D8AE5A; --med-bg:#352A16;
+      --low:#B4AD9A; --low-bg:#2A241B;
+      --accent:#7FB6A6; --accent-bg:#1E2E29; --accent-ink:#9ECBBD;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#17140F; --surface:#211D17; --surface-2:#282219;
+    --ink:#ECE4D5; --muted:#9C9484; --line:#372F26; --line-strong:#463C30;
+    --high:#E08A7C; --high-bg:#3A241F;
+    --med:#D8AE5A; --med-bg:#352A16;
+    --low:#B4AD9A; --low-bg:#2A241B;
+    --accent:#7FB6A6; --accent-bg:#1E2E29; --accent-ink:#9ECbBd;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.28);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 4vw, 2.5rem) 4rem; }
+
+  .serif { font-family: Georgia, "Iowan Old Style", Palatino, serif; }
+  .mono { font-family: "SF Mono", "JetBrains Mono", ui-monospace, "Cascadia Code", monospace; }
+
+  header .eyebrow {
+    font-size: .74rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent-ink); font-weight: 600; margin: 0 0 .6rem;
+  }
+  h1 { font-family: Georgia,"Iowan Old Style",Palatino,serif; font-weight: 600;
+       font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.06; margin: 0; text-wrap: balance; letter-spacing:-.01em; }
+  .lede { color: var(--muted); font-size: 1.05rem; max-width: 62ch; margin: .9rem 0 0; }
+
+  /* dose */
+  .dose { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 2.4rem 0 1rem; }
+  @media (max-width: 620px){ .dose{ grid-template-columns:1fr; } }
+  .env {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 1.15rem 1.3rem; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .env::before{ content:""; position:absolute; inset:0 auto 0 0; width:4px; }
+  .env.small::before{ background: var(--low); }
+  .env.high::before{ background: var(--high); }
+  .env .name { font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .env .n { font-family:Georgia,serif; font-size:2.7rem; line-height:1; margin:.25rem 0 .1rem; font-variant-numeric: tabular-nums; }
+  .env .n small { font-size:1rem; color:var(--muted); font-family:system-ui,sans-serif; }
+  .env .cap { color: var(--muted); font-size: .92rem; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:1.1rem; align-items:center; margin: 1.4rem 0 2rem; font-size:.83rem; color:var(--muted); }
+  .legend b { color: var(--ink); font-weight:600; }
+  .sev { display:inline-flex; align-items:center; gap:.42rem; }
+  .dot { width:.62rem; height:.62rem; border-radius:50%; flex:none; }
+  .dot.high{ background:var(--high);} .dot.med{ background:var(--med);} .dot.low{ background:var(--low);}
+
+  .section-label { font-size:.74rem; letter-spacing:.15em; text-transform:uppercase; color:var(--muted); font-weight:600;
+                   display:flex; align-items:center; gap:.7rem; margin:0 0 .85rem; }
+  .section-label::after{ content:""; height:1px; background:var(--line); flex:1; }
+
+  /* cross-layer band */
+  .cross { background: var(--accent-bg); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+           border-radius:16px; padding:1.2rem 1.3rem 1.35rem; box-shadow:var(--shadow); }
+  .cross .hd { display:flex; align-items:baseline; gap:.7rem; flex-wrap:wrap; margin-bottom:.9rem; }
+  .cross .hd h2 { font-family:Georgia,serif; font-weight:600; font-size:1.28rem; margin:0; color:var(--accent-ink); }
+  .cross .hd p { margin:0; color:var(--muted); font-size:.92rem; }
+  .cross .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:.8rem; }
+
+  /* three layer columns */
+  .layers { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-top:1.8rem; }
+  @media (max-width: 860px){ .layers{ grid-template-columns:1fr; } }
+  .layer { background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:1.15rem 1.15rem 1.3rem;
+           box-shadow:var(--shadow); display:flex; flex-direction:column; }
+  .layer .top { display:flex; align-items:baseline; justify-content:space-between; gap:.5rem; margin-bottom:.2rem; }
+  .layer h3 { font-family:Georgia,serif; font-weight:600; font-size:1.16rem; margin:0; }
+  .layer .count { font-variant-numeric:tabular-nums; color:var(--muted); font-weight:600; font-size:.95rem; }
+  .layer .grounds { font-size:.8rem; color:var(--muted); margin:0 0 1rem; }
+  .layer .grounds b { color: var(--accent-ink); font-weight:600; }
+  .layer .cards { display:flex; flex-direction:column; gap:.65rem; }
+
+  .card { background:var(--surface-2); border:1px solid var(--line); border-left:4px solid var(--low);
+          border-radius:10px; padding:.72rem .8rem .78rem; }
+  .card.high { border-left-color:var(--high); }
+  .card.med  { border-left-color:var(--med); }
+  .card.low  { border-left-color:var(--low); }
+  .card .meta { display:flex; align-items:center; gap:.5rem; margin-bottom:.5rem; flex-wrap:wrap; }
+  .tag { font-size:.66rem; letter-spacing:.06em; font-weight:700; text-transform:uppercase; padding:.16rem .44rem; border-radius:5px; }
+  .tag.high{ background:var(--high-bg); color:var(--high); }
+  .tag.med { background:var(--med-bg);  color:var(--med); }
+  .tag.low { background:var(--low-bg);  color:var(--low); }
+  .card .type { font-size:.76rem; color:var(--muted); font-weight:600; letter-spacing:.02em; }
+  .items { display:flex; flex-wrap:wrap; gap:.3rem .32rem; align-items:center; }
+  .chip { font-family:"SF Mono",ui-monospace,monospace; font-size:.79rem; background:var(--surface);
+          border:1px solid var(--line-strong); border-radius:6px; padding:.09rem .4rem; color:var(--ink); }
+  .chip.doc { border-style:dashed; }
+  .tilde { color:var(--muted); font-size:.8rem; }
+  .more { color:var(--muted); font-size:.78rem; }
+
+  footer { margin-top:3rem; padding-top:1.3rem; border-top:1px solid var(--line); color:var(--muted); font-size:.85rem; }
+  footer code { font-family:"SF Mono",ui-monospace,monospace; font-size:.82em; background:var(--surface-2);
+                padding:.08rem .34rem; border-radius:5px; border:1px solid var(--line); }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Preflight · habit-tracking analytics setup</p>
+    <h1>Where the ambiguity lives</h1>
+    <p class="lede">Preflight reads the whole stack an answer grounds on — the documentation, the
+      warehouse tables, and the semantic layer — and reports the confusions that would make an agent
+      return a different number than a human means. This is that map for a governed layer and the
+      same domain after a pressured team let the definitions sprawl.</p>
+  </header>
+
+  <div class="dose">
+    <div class="env small">
+      <div class="name">small · governed layer</div>
+      <div class="n">1<small> confusion</small></div>
+      <div class="cap">A well-modelled layer still carries one silent trap.</div>
+    </div>
+    <div class="env high">
+      <div class="name">high · pressure-built</div>
+      <div class="n">18<small> confusions</small></div>
+      <div class="cap">Across all three grounding layers — and between them.</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><b>Severity</b></span>
+    <span class="sev"><span class="dot high"></span>high — a swap returns a wrong number silently</span>
+    <span class="sev"><span class="dot med"></span>medium</span>
+    <span class="sev"><span class="dot low"></span>low — worth reconciling</span>
+    <span style="margin-left:auto">Gate: embedding · 63 grounding facts scanned</span>
+  </div>
+
+  <main id="map"></main>
+
+  <footer>
+    Generated from <code>scan.py --gate embeddings</code> over
+    <code>experiments/05_preflight_ambiguity/layers/high_before/</code>. Each finding is a confusable
+    pair or cluster the detector flags; the column is where its grounding lives, the cross-layer band
+    is where a single term is grounded two ways in two places.
+  </footer>
+</div>
+
+<script>
+  const F = [
+    // cross-layer (a term grounded in two layers at once)
+    {t:"NAME_COLLISION", d:"low", L:["doc","sem"], items:[["value moment","doc"],["value moment","doc"],["value_moments","sem"],["real_value_moments","sem"]],
+     why:"“value moment” is documented two ways — and both name a metric."},
+    {t:"NAME_COLLISION", d:"low", L:["doc","sem"], items:[["active user","doc"],["active user","doc"],["active_users","sem"]],
+     why:"“active user” in the docs also names the governed metric."},
+    {t:"NAME_COLLISION", d:"low", L:["doc","sem"], items:[["revenue","doc"],["net_revenue","sem"]],
+     why:"“revenue” in the docs quietly resolves to net revenue."},
+    // documentation
+    {t:"DEFINITION_DIVERGENCE", d:"high", L:["doc"], items:[["active user","doc"],["active user","doc"]]},
+    {t:"DEFINITION_DIVERGENCE", d:"high", L:["doc"], items:[["value moment","doc"],["value moment","doc"]]},
+    // warehouse
+    {t:"NAME_COLLISION", d:"med", L:["war"], items:[["user_id","war"]], why:"one column name across several tables."},
+    // semantic
+    {t:"GRAIN_MISMATCH", d:"high", L:["sem"], items:[["dau","sem"],["mau","sem"]], why:"a distinct-count summed across grains."},
+    {t:"SCOPE_TRAP", d:"high", L:["sem"], items:[["value_moments","sem"],["real_value_moments","sem"],["total_moments","sem"],["ios_value_moments","sem"],["android_value_moments","sem"],["weekly_value_moments","sem"],["monthly_value_moments","sem"]]},
+    {t:"SCOPE_TRAP", d:"high", L:["sem"], items:[["active_users","sem"],["actives","sem"],["engaged_users","sem"]]},
+    {t:"SCOPE_TRAP", d:"high", L:["sem"], items:[["gross_revenue","sem"],["net_revenue","sem"]]},
+    {t:"SCOPE_TRAP", d:"high", L:["sem"], items:[["new_signups","sem"],["new_users","sem"]]},
+    {t:"GRAIN_MISMATCH", d:"med", L:["sem"], items:[["weekly_value_moments","sem"],["monthly_value_moments","sem"],["real_value_moments","sem"]]},
+    {t:"DUPLICATE", d:"low", L:["sem"], items:[["total_moments","sem"],["value_moments","sem"]]},
+    {t:"DUPLICATE", d:"low", L:["sem"], items:[["active_users","sem"],["monthly_active_users","sem"]]},
+    {t:"DUPLICATE", d:"low", L:["sem"], items:[["net_revenue","sem"],["recurring_revenue","sem"]]},
+    {t:"DUPLICATE", d:"low", L:["sem"], items:[["new_signups","sem"],["signups","sem"]]},
+    {t:"NAME_COLLISION", d:"low", L:["sem"], items:[["monthly_recurring_revenue","sem"],["recurring_revenue","sem"]]},
+    {t:"SIBLING", d:"low", L:["sem"], items:[["ios_value_moments","sem"],["android_value_moments","sem"],["weekly_value_moments","sem"],["monthly_value_moments","sem"],["real_value_moments","sem"]]},
+  ];
+  const dcls = {high:"high", med:"med", low:"low"};
+  const dname = {high:"HIGH", med:"MED", low:"LOW"};
+  const MAX = 6;
+
+  function itemsHTML(items){
+    const shown = items.slice(0, MAX);
+    let h = shown.map(([name,l]) => `<span class="chip ${l==="doc"?"doc":""}">${name}</span>`).join('<span class="tilde">~</span>');
+    if (items.length > MAX) h += ` <span class="more">+${items.length-MAX} more</span>`;
+    return `<div class="items">${h}</div>`;
+  }
+  function card(f){
+    const cls = dcls[f.d];
+    return `<div class="card ${cls}">
+      <div class="meta"><span class="tag ${cls}">${dname[f.d]}</span><span class="type">${f.t.replace(/_/g,' ')}</span></div>
+      ${itemsHTML(f.items)}
+      ${f.why ? `<div class="more" style="margin-top:.5rem">${f.why}</div>` : ""}
+    </div>`;
+  }
+
+  const cross = F.filter(f => f.L.length > 1);
+  const cols = {
+    doc: {title:"Documentation", grounds:"grain · segments", items: F.filter(f=>f.L.length===1 && f.L[0]==="doc")},
+    war: {title:"Warehouse", grounds:"entity · measure", items: F.filter(f=>f.L.length===1 && f.L[0]==="war")},
+    sem: {title:"Semantic layer", grounds:"additive · higher-level metrics", items: F.filter(f=>f.L.length===1 && f.L[0]==="sem")},
+  };
+
+  const crossHTML = `
+    <section class="cross">
+      <div class="hd"><h2>Across layers</h2><p>a single term grounded two ways, in two places at once</p></div>
+      <div class="cards">${cross.map(card).join("")}</div>
+    </section>`;
+
+  const colHTML = `
+    <p class="section-label" style="margin-top:2rem">Within a layer — grouped by where the grounding lives</p>
+    <div class="layers">
+      ${Object.values(cols).map(c => `
+        <div class="layer">
+          <div class="top"><h3>${c.title}</h3><span class="count">${c.items.length}</span></div>
+          <p class="grounds">grounds <b>${c.grounds}</b></p>
+          <div class="cards">${c.items.map(card).join("") || '<div class="more">— clean —</div>'}</div>
+        </div>`).join("")}
+    </div>`;
+
+  document.getElementById("map").innerHTML = crossHTML + colHTML;
+</script>

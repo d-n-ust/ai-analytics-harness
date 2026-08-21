@@ -1,0 +1,109 @@
+# Experiment 05 — pre-registered question set (v5: red-team authored, structural traps only).
+#
+# Questions came from three INDEPENDENT red teams (revenue / users / activity-habits), each blind to
+# the others. A v4 run over the full red-team pool revealed that SLICED traps (a country, category, or
+# plan cut) conflate two failures: metric SELECTION (what this experiment measures) and filter
+# APPLICATION (mapping "UK"->GB, filtering category=fitness) — the agent botches the latter even on the
+# governed layer, so those items scored high on every layer and muddied the before/after. This v5 keeps
+# only STRUCTURAL, whole-population traps, where the only variable is which metric the agent picks.
+# (The sliced items are recorded in the red-team notes as a separate, honest finding.)
+#
+# Gold is a deterministic gold_sql oracle (compute_gold), verified against the star. `family` groups
+# correlated items so results read per-trap. Verified gold vs sprawl-trap:
+#   recurring_revenue : mrr 2685 vs recurring_revenue 11448 (4.3x)
+#   gross_net         : net_revenue 11448 vs gross_revenue 14422 (26%)
+#   habits            : active_habits 6357 vs total_habits 7467 (17%)
+#   new_users         : new_signups vs new_users (excludes internal, ~3-9%)
+#   value_moments/arpu: robust families the agent should get right even amid siblings (within-tier controls)
+
+cases:
+
+  # ══ recurring revenue (governed mrr; trap recurring_revenue = raw billed, no annual/12) ══
+  - id: e05_rec_current
+    tier: flagged
+    family: recurring_revenue
+    question: "What is our current recurring revenue?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+  - id: e05_rec_howmuch
+    tier: flagged
+    family: recurring_revenue
+    question: "How much recurring revenue do we have from active subscriptions?"
+    expect: {type: metric_answer, metric: mrr, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END) FROM fct_subscriptions WHERE is_active"}
+
+  # ══ gross vs net revenue (governed net_revenue = active/recognised; trap gross_revenue = all billed) ══
+  - id: e05_gn_recognizing
+    tier: flagged
+    family: gross_net
+    question: "How much subscription revenue are we actually recognizing?"
+    expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+  - id: e05_gn_keep
+    tier: flagged
+    family: gross_net
+    question: "Out of what our subscriptions bill, how much do we actually get to keep?"
+    expect: {type: metric_answer, metric: net_revenue, tolerance: 0.02,
+             gold_sql: "SELECT sum(billed_amount) FROM fct_subscriptions WHERE is_active"}
+
+  # ══ habits (governed active_habits = unarchived; trap total_habits = all, incl archived) ══
+  - id: e05_habits_keeping
+    tier: flagged
+    family: habits
+    question: "How many habits are our users keeping up with these days?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+  - id: e05_habits_active
+    tier: flagged
+    family: habits
+    question: "How many active habits do we have across the app?"
+    expect: {type: metric_answer, metric: active_habits, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_habits WHERE NOT is_archived"}
+
+  # ══ new users (governed new_signups = all accounts; trap new_users = excludes internal) ══
+  - id: e05_newusers_total
+    tier: flagged
+    family: new_users
+    question: "How many people have signed up in total?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users"}
+  - id: e05_newusers_apr
+    tier: flagged
+    family: new_users
+    question: "How many new users signed up in April 2026?"
+    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date>=DATE '2026-04-01' AND signup_date<DATE '2026-05-01'"}
+
+  # ══ within-tier controls: robust families the agent should get right even amid siblings ══
+  - id: e05_vm_jun
+    tier: flagged
+    family: value_moments
+    question: "How many value moments were completed across all accounts in June 2026?"
+    expect: {type: metric_answer, metric: value_moments, tolerance: 0.02,
+             gold_sql: "SELECT sum(moments) FROM agg_active_days WHERE active_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05_arpu
+    tier: flagged
+    family: arpu
+    question: "What's the average monthly revenue per paying customer?"
+    expect: {type: metric_answer, metric: arpu, tolerance: 0.02,
+             gold_sql: "SELECT sum(CASE WHEN plan='annual' THEN billed_amount/12.0 ELSE billed_amount END)*1.0/nullif(count(DISTINCT user_id),0) FROM fct_subscriptions WHERE is_active"}
+
+  # ══ clean controls: no sprawl variant exists (red team A confirmed) ══
+  - id: e05_marketing_jun
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in June 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'"}
+  - id: e05_marketing_may
+    tier: clean
+    family: marketing_spend
+    question: "How much did we spend on marketing in May 2026?"
+    expect: {type: metric_answer, metric: marketing_spend, tolerance: 0.02,
+             gold_sql: "SELECT sum(spend) FROM fct_marketing_spend WHERE spend_date BETWEEN DATE '2026-05-01' AND DATE '2026-05-31'"}
+  - id: e05_paying_users
+    tier: clean
+    family: paying_users
+    question: "How many paying users do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscriptions WHERE is_active"}

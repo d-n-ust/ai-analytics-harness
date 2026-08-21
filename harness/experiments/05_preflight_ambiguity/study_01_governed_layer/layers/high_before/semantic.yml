@@ -1,0 +1,219 @@
+# The habit-tracking semantic layer AS A PRESSURED TEAM LEFT IT — the HIGH-sprawl arm.
+#
+# Same domain and warehouse as the governed layer; the numbers are fine, the ambiguity is in the
+# definitions. Three teams each added the metric they needed, nobody reconciled the names, half are
+# undocumented. It is authored to exercise EVERY confusion preflight detects, so the high arm shows
+# the tool's full range, not one trap. Clusters are labelled by the finding type they trigger.
+#
+# NOTE: the synonym-based clusters (revenue, active-users) fire on the EMBEDDING gate, not the lexical
+# one — they are exactly the pressure-built kind (mrr ~ recurring_revenue reads alike by MEANING, not
+# spelling). Scan with `--gate embeddings`.
+
+metrics:
+
+  # ══ VALUE MOMENTS ══ scope trap + duplicates + siblings + grain
+  value_moments:                                   # bare name — the trap
+    entity: value_moments
+    segment: all
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    time_column: active_date
+  real_value_moments:                              # SCOPE_TRAP vs value_moments (NOT is_internal)
+    entity: value_moments
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["NOT is_internal"]
+    time_column: active_date
+  total_moments:                                   # DUPLICATE of value_moments
+    entity: value_moments
+    segment: all
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    time_column: active_date
+  ios_value_moments:                               # SIBLING vs android (incomparable scopes)
+    entity: value_moments
+    segment: all
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["platform = 'ios'"]
+    time_column: active_date
+  android_value_moments:
+    entity: value_moments
+    segment: all
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["platform = 'android'"]
+    time_column: active_date
+  weekly_value_moments:                            # GRAIN_MISMATCH vs monthly (same measure, diff grain)
+    entity: value_moments
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["NOT is_internal"]
+    grain: week
+    time_column: active_date
+  monthly_value_moments:
+    entity: value_moments
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "sum(moments)"
+    default_filters: ["NOT is_internal"]
+    grain: month
+    time_column: active_date
+
+  # ══ ACTIVE USERS ══ scope trap + duplicate + grain mismatch (semi-additive) + name collision
+  active_users:
+    entity: users
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal"]
+    time_column: active_date
+  actives:                                         # SCOPE_TRAP vs active_users (drops NOT is_internal)
+    entity: users
+    segment: all
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    time_column: active_date
+  monthly_active_users:                            # DUPLICATE of active_users
+    entity: users
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal"]
+    time_column: active_date
+  dau:                                             # GRAIN_MISMATCH vs mau: distinct count is semi-additive
+    entity: users
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal"]
+    grain: day
+    time_column: active_date
+  mau:
+    entity: users
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal"]
+    grain: month
+    time_column: active_date
+  engaged_users:                                   # NAME_COLLISION / concept vs active_users
+    entity: users
+    segment: active
+    unit: count
+    base: agg_active_days
+    agg: "count(distinct user_id)"
+    default_filters: ["NOT is_internal", "moments >= 1"]
+    time_column: active_date
+
+  # ══ RECURRING REVENUE ══ concept fork + duplicate + name collision (embedding gate)
+  mrr:
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    base: fct_subscriptions
+    agg: "sum(case when plan = 'annual' then billed_amount / 12.0 else billed_amount end)"
+    default_filters: ["is_active"]
+  recurring_revenue:                               # CONCEPT_FORK vs mrr (same base/agg, diff column)
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    base: fct_subscriptions
+    agg: "sum(billed_amount)"
+    default_filters: ["is_active"]
+  monthly_recurring_revenue:                       # DUPLICATE of mrr
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    base: fct_subscriptions
+    agg: "sum(case when plan = 'annual' then billed_amount / 12.0 else billed_amount end)"
+    default_filters: ["is_active"]
+  gross_revenue:                                   # SCOPE_TRAP / concept vs net_revenue
+    entity: revenue
+    segment: all
+    unit: currency
+    base: fct_subscriptions
+    agg: "sum(billed_amount)"
+  net_revenue:
+    entity: revenue
+    segment: active_subscription
+    unit: currency
+    base: fct_subscriptions
+    agg: "sum(billed_amount)"
+    default_filters: ["is_active"]
+
+  # ══ SIGNUPS ══ duplicate + scope trap
+  new_signups:
+    entity: signups
+    segment: all
+    unit: count
+    base: dim_users
+    agg: "count(*)"
+    time_column: signup_date
+  signups:                                         # DUPLICATE of new_signups
+    entity: signups
+    segment: all
+    unit: count
+    base: dim_users
+    agg: "count(*)"
+    time_column: signup_date
+  new_users:                                       # SCOPE_TRAP vs signups (NOT is_internal)
+    entity: signups
+    segment: active
+    unit: count
+    base: dim_users
+    agg: "count(*)"
+    default_filters: ["NOT is_internal"]
+    time_column: signup_date
+
+  # ══ PAYING USERS ══ duplicate
+  paying_users:
+    entity: users
+    segment: paying
+    unit: count
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    default_filters: ["is_active"]
+  subscribers:                                     # DUPLICATE of paying_users
+    entity: users
+    segment: paying
+    unit: count
+    base: fct_subscriptions
+    agg: "count(distinct user_id)"
+    default_filters: ["is_active"]
+
+  # ── unambiguous supporting metrics ──
+  active_subscriptions:
+    entity: subscriptions
+    segment: active_subscription
+    unit: count
+    base: fct_subscriptions
+    agg: "count(*)"
+    default_filters: ["is_active"]
+  marketing_spend:
+    entity: spend
+    segment: all
+    unit: currency
+    base: fct_marketing_spend
+    agg: "sum(spend)"
+    time_column: spend_date
+  total_habits:
+    entity: habits
+    segment: all
+    unit: count
+    base: dim_habits
+    agg: "count(*)"

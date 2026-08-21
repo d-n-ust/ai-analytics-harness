@@ -1,0 +1,760 @@
+# Ground-truth audit — Northwind Threads
+# Confusable / colliding groundings across the three artifacts + brief.
+# Layers: warehouse = warehouse/schema.sql, docs = docs/data_dictionary.md, semantic = semantic/semantic_layer.yml
+# Each finding names the colliding items, why an agent picks the wrong one,
+# whether a swap is a loud/obvious wrong number or an invisible near-miss, and danger.
+
+findings:
+
+  # ============================ HIGH ============================
+
+  - id: gross_vs_net_revenue_default
+    items:
+      - {ref: "Revenue (gross / GMV) — Growth default (sum(fct_orders.order_total), tax+shipping incl, before returns)", layer: docs, where: "Business metrics"}
+      - {ref: "Revenue (net) — Finance default (sum(fct_orders.net_revenue) minus settled refunds, ex tax/shipping)", layer: docs, where: "Business metrics"}
+      - {ref: "gross_revenue", layer: semantic, where: "metrics"}
+      - {ref: "net_revenue", layer: semantic, where: "metrics"}
+      - {ref: "revenue (measure net_amount)", layer: semantic, where: "metrics"}
+    category: "One word, two house definitions"
+    confusable_because: "A bare 'what was revenue this month' has no owner. Docs say 'when someone says revenue it's usually gross'; Finance means net. Semantic offers gross_revenue, net_revenue and a bare `revenue` (=net) side by side with no default. The agent has to pick a basis nobody stated."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: gross_meaning_tax_inclusive_flip
+    items:
+      - {ref: "fct_orders.order_total (Includes tax and shipping, after discount)", layer: docs, where: "Orders"}
+      - {ref: "Revenue (gross / GMV) — 'Includes tax, shipping'", layer: docs, where: "Business metrics"}
+      - {ref: "gross_revenue (description: 'before discounts, returns, tax')", layer: semantic, where: "metrics"}
+      - {ref: "gross_amount", layer: warehouse, where: "orders / stg_orders"}
+    category: "Same word 'gross', opposite tax treatment"
+    confusable_because: "Docs define gross/GMV as tax-and-shipping INCLUSIVE (the Stripe-tie number). The semantic gross_revenue metric describes gross as BEFORE tax. So 'gross revenue' from the semantic layer is tax-exclusive while 'gross revenue' in the docs is tax-inclusive; both look authoritative."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: net_revenue_multiple_formulas
+    items:
+      - {ref: "fct_orders.net_revenue = subtotal - discount_amount (ex tax/shipping, BEFORE returns)", layer: docs, where: "Orders"}
+      - {ref: "net_revenue (expr: gross_amount - discount_amount - return_amount, filter is_test=false)", layer: semantic, where: "metrics"}
+      - {ref: "net_sales (measure: net_amount)", layer: semantic, where: "metrics"}
+      - {ref: "fct_orders.net_revenue column", layer: warehouse, where: "fct_orders"}
+      - {ref: "orders.net_amount column", layer: warehouse, where: "orders"}
+    category: "One metric, three formulas + a precomputed column"
+    confusable_because: "Docs net = subtotal - discount (starts from merchandise, tax/shipping OUT, returns OUT). Semantic net_revenue = gross_amount - discount - return_amount (starts from gross, subtracts returns INLINE). Semantic net_sales just reads the net_amount column. If gross_amount is tax-inclusive these differ by tax+shipping+returns; the agent cannot tell which 'net revenue' it computed."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: fct_orders_amount_columns_renamed
+    items:
+      - {ref: "fct_orders: gross_revenue / net_revenue / revenue", layer: warehouse, where: "fct_orders"}
+      - {ref: "orders / stg_orders: gross_amount / net_amount", layer: warehouse, where: "orders, stg_orders"}
+      - {ref: "metrics referencing gross_amount / net_amount on analytics.fct_orders (gross_revenue, net_revenue, net_sales, aov, revenue, ...)", layer: semantic, where: "metrics"}
+    category: "Same logical table, columns named differently per layer"
+    confusable_because: "The semantic layer's base is analytics.fct_orders but it references gross_amount/net_amount — those column names exist on `orders`/`stg_orders`, while warehouse fct_orders exposes gross_revenue/net_revenue/revenue. An agent resolving the metric against physical fct_orders either errors or silently grabs a different column (e.g. the unlabeled `revenue`)."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: fct_orders_three_revenue_columns
+    items:
+      - {ref: "fct_orders.gross_revenue", layer: warehouse, where: "fct_orders"}
+      - {ref: "fct_orders.net_revenue", layer: warehouse, where: "fct_orders"}
+      - {ref: "fct_orders.revenue (unlabeled)", layer: warehouse, where: "fct_orders"}
+    category: "Three revenue columns, one unexplained"
+    confusable_because: "fct_orders carries gross_revenue, net_revenue AND a bare `revenue` with no definition anywhere. An agent asked for 'revenue' may pick the column literally named revenue, which could be gross, net, or something else. fct_revenue table repeats the pattern (order_revenue, subscription_revenue, gross_revenue, net_revenue, booked_revenue, recognized_revenue)."
+    detectability: invisible
+    danger: high
+    cross_layer: false
+    uncertain: false
+
+  - id: order_status_value_vocab_mismatch
+    items:
+      - {ref: "completed_orders view: WHERE status = 'completed'", layer: warehouse, where: "views"}
+      - {ref: "net_revenue_daily view: status IN ('completed','fulfilled')", layer: warehouse, where: "views"}
+      - {ref: "fct_orders.status enum: pending/paid/fulfilled/cancelled/refunded/partially_refunded; revenue filter status in ('paid','fulfilled','partially_refunded')", layer: docs, where: "Orders"}
+      - {ref: "completed_orders metric: status in ('completed','fulfilled','delivered')", layer: semantic, where: "metrics"}
+      - {ref: "gmv metric: status not in ('cancelled')", layer: semantic, where: "metrics"}
+    category: "Same status column, three incompatible value sets"
+    confusable_because: "The order-status enum differs by artifact: warehouse views use 'completed'; docs never list 'completed' and use 'paid'/'partially_refunded'; semantic adds 'delivered'. A filter written from one vocabulary matches zero rows (or a wrong subset) in a table using another — silently dropping revenue or dropping the paid/partially_refunded population."
+    detectability: loud
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: completed_orders_three_definitions
+    items:
+      - {ref: "completed_orders VIEW (status='completed' AND is_test=false)", layer: warehouse, where: "views"}
+      - {ref: "completed_orders METRIC (status in completed/fulfilled/delivered, no test filter)", layer: semantic, where: "metrics"}
+      - {ref: "'revenue reporting filters to status in (paid,fulfilled,partially_refunded)'", layer: docs, where: "Orders"}
+    category: "Identically named object, different scope"
+    confusable_because: "A view and a metric both named completed_orders resolve to different row sets (different status values, and the view excludes test while the metric does not). An agent may treat 'completed orders' as one settled concept."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: active_customer_multi_definition
+    items:
+      - {ref: "dim_customers.is_active = purchased in last 90 days (Growth exec)", layer: docs, where: "Customers & leads"}
+      - {ref: "dim_customers.status='active' = order in trailing 12 months (Finance/metrics)", layer: docs, where: "Customers & leads"}
+      - {ref: "Lifecycle/CRM active = email open or session in last 30 days", layer: docs, where: "Active customer"}
+      - {ref: "active_customers view (customers.is_active = TRUE)", layer: warehouse, where: "views"}
+      - {ref: "active_customers metric (segment active = last_order_date >= -90d)", layer: semantic, where: "metrics / segments"}
+    category: "'Active' has three live windows"
+    confusable_because: "90-day, 12-month and 30-day definitions all exist and differ by roughly 2x. The semantic active_customers metric bakes in the 90-day segment; a report that says 'active customers' without a window inherits whichever the agent stumbled on."
+    detectability: loud
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: test_vs_internal_scope_exclusion
+    items:
+      - {ref: "orders.is_test AND orders.is_internal (two separate flags)", layer: warehouse, where: "orders"}
+      - {ref: "completed_orders view filters is_test=false only", layer: warehouse, where: "views"}
+      - {ref: "paid_orders view filters is_internal=false only", layer: warehouse, where: "views"}
+      - {ref: "net_revenue_daily view filters is_test=false AND is_internal=false", layer: warehouse, where: "views"}
+      - {ref: "net_revenue metric filters is_test=false only", layer: semantic, where: "metrics"}
+      - {ref: "dim_customers excludes internal AND test (@northwindthreads.com or +test)", layer: docs, where: "dim_customers"}
+    category: "Two exclusion flags, applied inconsistently"
+    confusable_because: "is_test and is_internal are different populations, and the artifacts each strip a different subset: one view excludes test only, another internal only, another both, the net_revenue metric test only. 'Revenue excluding test' computed one way quietly leaves internal orders in (or vice versa)."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: aov_net_vs_gross
+    items:
+      - {ref: "aov (agg average of net_amount, is_test=false)", layer: semantic, where: "metrics"}
+      - {ref: "average_order_value (ratio gross_revenue / order_count)", layer: semantic, where: "metrics"}
+      - {ref: "AOV = sum(order_total)/count(distinct order_id), gross tax-inclusive; some dashboards use net_revenue and get lower", layer: docs, where: "Business metrics"}
+    category: "Two AOV metrics, net vs gross"
+    confusable_because: "aov and average_order_value are near-synonyms but one is net-per-order and the other gross-revenue-over-order-count. They also differ in denominator (average over rows vs order_count that includes test/cancelled). Both plausibly answer 'what is our AOV'."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: customer_type_value_sets
+    items:
+      - {ref: "dim_customers.customer_type = lead / buyer / subscriber (subscriber takes precedence)", layer: docs, where: "dim_customers"}
+      - {ref: "customer_type dimension description: 'new / returning / vip'", layer: semantic, where: "dimensions"}
+      - {ref: "dim_customers has no customer_type column", layer: warehouse, where: "dim_customers"}
+    category: "Same dimension, contradictory category values"
+    confusable_because: "Docs define customer_type values as lead/buyer/subscriber; the semantic dimension of the same name says new/returning/vip. Any segmentation 'by customer_type' or filter on a specific value assumes one vocabulary and silently misclassifies under the other. The physical dim_customers doesn't even have the column."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: channel_sales_vs_marketing
+    items:
+      - {ref: "fct_orders.channel = sales channel (web/ios/retail_popup/wholesale), renamed from source", layer: docs, where: "Orders"}
+      - {ref: "channel dimension -> fct_marketing_spend.channel (paid_search/paid_social/email/organic)", layer: semantic, where: "dimensions"}
+      - {ref: "source dimension -> fct_sessions.utm_source", layer: semantic, where: "dimensions"}
+      - {ref: "orders.source / orders_old.channel / sessions.channel / marketing_spend.channel", layer: warehouse, where: "multiple tables"}
+    category: "'Channel' means sales channel in one place, marketing channel in another"
+    confusable_because: "'Revenue by channel' is ambiguous: fct_orders.channel is web/ios/wholesale (a sales surface) while the semantic `channel` dimension is paid_search/paid_social (an acquisition source). Grouping revenue by the wrong 'channel' gives a plausible but meaningless breakdown, and wholesale (usually excluded from DTC) may leak in or out."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: ltv_column_vs_board
+    items:
+      - {ref: "dim_customers.lifetime_value = order-only net minus refunds, EXCLUDES subscription", layer: docs, where: "dim_customers"}
+      - {ref: "LTV (board) = cumulative net revenue per acquired cohort INCLUDING subscription", layer: docs, where: "Business metrics"}
+      - {ref: "dim_customers.ltv AND dim_customers.lifetime_revenue (two columns)", layer: warehouse, where: "dim_customers"}
+      - {ref: "customers.lifetime_value", layer: warehouse, where: "customers"}
+    category: "Precomputed LTV column understates the board LTV"
+    confusable_because: "The convenient lifetime_value/ltv column is order-only and net; the board LTV:CAC number includes subscription revenue by cohort. dim_customers also has both ltv and lifetime_revenue with no stated difference. An agent asked for 'LTV' grabs the column and silently omits Threads Club revenue."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: subscription_revenue_source_mismatch
+    items:
+      - {ref: "subscription_revenue metric -> analytics.fct_subscription_invoices, measure amount, status='paid'", layer: semantic, where: "metrics"}
+      - {ref: "Subscription revenue = sum(fct_subscription_charges.charge_amount) for renewals PLUS month-one order in fct_orders", layer: docs, where: "Threads Club / Business metrics"}
+      - {ref: "warehouse has subscriptions / subscription_events / invoices, but no fct_subscription_charges or fct_subscription_invoices", layer: warehouse, where: "subscriptions area"}
+    category: "Subscription revenue points at three different (some nonexistent) sources"
+    confusable_because: "Semantic reads fct_subscription_invoices; docs read fct_subscription_charges plus a month-one order that lives in fct_orders; the physical warehouse has neither table, only `invoices` (which also holds wholesale). The agent either uses the wrong table (double counting month one, or including wholesale invoices) or fabricates a source."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: total_revenue_two_builds
+    items:
+      - {ref: "Total revenue exec dashboard = gross order revenue (tax-incl) + subscription charges (tax-incl)", layer: docs, where: "Business metrics"}
+      - {ref: "Total revenue finance = net order revenue + recognised subscription revenue", layer: docs, where: "Business metrics"}
+      - {ref: "total_revenue metric -> analytics.fct_revenue_all, expr net_amount, time recognised_at", layer: semantic, where: "metrics"}
+      - {ref: "fct_revenue (order_revenue, subscription_revenue, gross_revenue, net_revenue, booked_revenue, recognized_revenue)", layer: warehouse, where: "fct_revenue"}
+    category: "Same 'total revenue' label, two mutually-inconsistent builds"
+    confusable_because: "Docs explicitly say the exec total (gross+charges) and the finance total (net+recognised) are the same label on two builds and will not tie. The semantic total_revenue is a third build on a table (fct_revenue_all) that isn't in the warehouse. Whichever the agent reports looks authoritative."
+    detectability: invisible
+    danger: high
+    cross_layer: true
+    uncertain: false
+
+  - id: orders_old_stale_duplicate
+    items:
+      - {ref: "orders_old (order_id, cust_id, order_status, amount, discount, shipping, tax, channel, is_test SMALLINT)", layer: warehouse, where: "orders_old"}
+      - {ref: "orders (current)", layer: warehouse, where: "orders"}
+      - {ref: "raw_shopify_orders / stg_orders / fct_orders", layer: warehouse, where: "order tables"}
+    category: "Five order tables, one stale"
+    confusable_because: "orders_old looks like a first-class orders table with its own money columns (amount/discount/tax) and its own status vocabulary (order_status). An agent may query it for a historical window and get stale or pre-migration numbers, or double count against orders/fct_orders."
+    detectability: invisible
+    danger: high
+    cross_layer: false
+    uncertain: false
+
+  # ============================ MEDIUM ============================
+
+  - id: bare_revenue_metric_includes_test
+    items:
+      - {ref: "revenue metric (measure net_amount, NO filter)", layer: semantic, where: "metrics"}
+      - {ref: "net_revenue metric (filter is_test = false)", layer: semantic, where: "metrics"}
+      - {ref: "net_sales metric (measure net_amount, NO filter)", layer: semantic, where: "metrics"}
+    category: "Near-identical metrics, one silently includes test orders"
+    confusable_because: "revenue, net_revenue and net_sales are all net-of-discount order revenue, but revenue and net_sales omit the is_test=false filter while net_revenue applies it. Picking the bare `revenue` metric quietly includes test/internal orders."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: net_revenue_expr_missing_columns
+    items:
+      - {ref: "net_revenue expr uses return_amount; base fct_orders", layer: semantic, where: "metrics"}
+      - {ref: "fct_orders.refund_amount (no return_amount column)", layer: warehouse, where: "fct_orders"}
+      - {ref: "Refunds subtracted at reporting layer, not in net_revenue", layer: docs, where: "fct_orders.net_revenue"}
+    category: "Metric references a column that does not exist and disagrees on return handling"
+    confusable_because: "The semantic net_revenue subtracts return_amount inline, but fct_orders has refund_amount (returns are the goods movement, refunds the money, and per docs they don't match 1:1). Docs also say net_revenue is BEFORE returns, handled at reporting. The metric either errors or double-subtracts refunds relative to the documented number."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: gross_revenue_vs_gmv_vs_gross_sales
+    items:
+      - {ref: "gross_revenue (fct_orders.gross_amount, no filter)", layer: semantic, where: "metrics"}
+      - {ref: "gmv (analytics.orders.gross_amount, filter status not in cancelled)", layer: semantic, where: "metrics"}
+      - {ref: "gross_sales (fct_order_items, sum(quantity*unit_price))", layer: semantic, where: "metrics"}
+    category: "Three 'gross' metrics on different tables/grains/filters"
+    confusable_because: "gross_revenue reads the order header on fct_orders with no filter (includes cancelled and test); gmv reads the `orders` table and excludes cancelled; gross_sales rolls up line items (and bundles explode, per docs, so it overstates). All three answer 'gross sales' with materially different numbers."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: orders_status_vs_state
+    items:
+      - {ref: "orders.status VARCHAR(30)", layer: warehouse, where: "orders"}
+      - {ref: "orders.state VARCHAR(30)", layer: warehouse, where: "orders"}
+      - {ref: "completed_orders view filters on status", layer: warehouse, where: "views"}
+    category: "Two lifecycle columns on the same table"
+    confusable_because: "orders has both status and state (as does subscriptions). Docs never mention `state`. It is unclear which governs order lifecycle; a filter on the wrong one yields a different population. The completed_orders view commits to status, but nothing documents state."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: subscription_status_vs_state
+    items:
+      - {ref: "subscriptions.status AND subscriptions.state", layer: warehouse, where: "subscriptions"}
+      - {ref: "active_subscriptions view: WHERE state = 'active'", layer: warehouse, where: "views"}
+      - {ref: "active_subscriptions metric / mrr / churn_rate: filter status = 'active'", layer: semantic, where: "metrics"}
+      - {ref: "dim_subscriptions.status = active/paused/cancelled/trialing", layer: docs, where: "Threads Club"}
+    category: "Active subscription keyed off status here, state there"
+    confusable_because: "The warehouse active_subscriptions view filters state='active'; the semantic MRR/active/churn metrics filter status='active'; subscriptions has both columns. If state and status ever disagree (paused vs active), the active-subscriber count and MRR differ depending on which artifact the agent follows."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: active_segment_vs_active_customers_segment
+    items:
+      - {ref: "segment active (entity customer, last_order_date >= -90d)", layer: semantic, where: "segments"}
+      - {ref: "segment active_customers (entity subscription, status='active')", layer: semantic, where: "segments"}
+      - {ref: "active_subscriptions metric declares segment: active", layer: semantic, where: "metrics"}
+    category: "Two similarly named segments, one wired to the wrong entity"
+    confusable_because: "There are two segments: `active` (customers, 90-day purchase) and `active_customers` (subscriptions, status='active'). The active_subscriptions metric references segment `active` — the customer 90-day one — not the subscription segment. A subscription count filtered by a customer-purchase window is quietly wrong."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: true
+
+  - id: active_customer_vs_active_subscriber
+    items:
+      - {ref: "dim_customers.is_active / status (recent one-off purchase)", layer: docs, where: "dim_customers"}
+      - {ref: "dim_subscriptions.status='active' = currently billing", layer: docs, where: "Threads Club"}
+      - {ref: "active_customers metric (customer) vs active_subscriptions metric (subscription)", layer: semantic, where: "metrics"}
+    category: "'Active' customers and 'active' subscribers are different tests"
+    confusable_because: "Active customer = recent purchase; active subscriber = currently billing; trialing members count as active for growth but not finance MRR. 'How many active users/members' can land on either count, and they are documented not to reconcile."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: test_accounts_segment_misses_internal_flag
+    items:
+      - {ref: "segment test_accounts: is_test=true OR email like '%@northwindthreads.com'", layer: semantic, where: "segments"}
+      - {ref: "orders.is_internal / users.is_internal / stg_customers.is_internal", layer: warehouse, where: "multiple tables"}
+      - {ref: "docs exclude internal AND test (email OR +test)", layer: docs, where: "dim_customers"}
+    category: "Exclusion segment doesn't cover the is_internal flag or +test emails"
+    confusable_because: "The test_accounts segment catches @northwindthreads.com and is_test but ignores the separate is_internal boolean and the '+test' email convention docs describe. Excluding 'test accounts' via this segment leaves some internal/QA rows in."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: customer_id_vs_user_id_join
+    items:
+      - {ref: "orders.user_id AND orders.customer_id (both)", layer: warehouse, where: "orders"}
+      - {ref: "orders_old.cust_id", layer: warehouse, where: "orders_old"}
+      - {ref: "customers.id vs users.user_id (two person tables)", layer: warehouse, where: "customers, users"}
+      - {ref: "dim_customers.customer_key / customer_id / user_id", layer: warehouse, where: "dim_customers"}
+      - {ref: "'join on customer_id, never on email'", layer: docs, where: "dim_customers.customer_email"}
+    category: "Multiple customer keys; unclear which links orders to customers"
+    confusable_because: "orders carries both user_id and customer_id, subscriptions carries both, and there are separate customers and users tables. Joining orders to the wrong key (user_id vs customer_id) attaches metrics to the wrong person entity or fans out / drops rows."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: customers_vs_users_master
+    items:
+      - {ref: "customers (is_active BOOLEAN, lifetime_value, orders_count)", layer: warehouse, where: "customers"}
+      - {ref: "users (active SMALLINT, is_internal, signup_source, marketing_opt_in)", layer: warehouse, where: "users"}
+      - {ref: "dim_customers (merges both, has customer_id and user_id)", layer: warehouse, where: "dim_customers"}
+    category: "Two overlapping person tables"
+    confusable_because: "customers and users both look like the person master with different flags (customers.is_active BOOLEAN vs users.active SMALLINT; accepts_marketing vs marketing_opt_in). An agent counting 'customers' or reading 'active'/marketing consent can pick the wrong table and get a different population."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: booked_revenue_source_mismatch
+    items:
+      - {ref: "booked_revenue metric -> analytics.fct_orders, measure booked_amount", layer: semantic, where: "metrics"}
+      - {ref: "Booked revenue = sum of invoiced amounts in issue period; annual sub books full year (fct_invoices)", layer: docs, where: "fct_invoices / Business metrics"}
+      - {ref: "fct_revenue.booked_revenue ; invoices table", layer: warehouse, where: "fct_revenue, invoices"}
+    category: "Bookings computed from orders here, from invoices there"
+    confusable_because: "The semantic booked_revenue reads booked_amount off fct_orders, but docs say bookings live on invoices (annual subs and wholesale book the full amount up front). Booked revenue from orders misses the invoice-side bookings that drive the board deck's bookings number."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: recognised_revenue_source_and_spelling
+    items:
+      - {ref: "recognised_revenue metric -> finance.fct_invoices, measure recognised_amount, filter recognised=true", layer: semantic, where: "metrics"}
+      - {ref: "fct_revenue.recognized_revenue (US spelling)", layer: warehouse, where: "fct_revenue"}
+      - {ref: "invoices table has no recognised/recognized column", layer: warehouse, where: "invoices"}
+      - {ref: "Recognised = spread over delivery period (annual sub 1/12 per month)", layer: docs, where: "Booked vs recognised"}
+    category: "Recognised revenue: different table, missing column, spelling variance"
+    confusable_because: "The metric expects finance.fct_invoices.recognised_amount with a recognised flag; the warehouse has recognized_revenue on fct_revenue (US spelling) and an invoices table without any such column. A grep on one spelling misses the other, and the source table it names does not exist."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: mrr_column_ambiguity
+    items:
+      - {ref: "subscriptions.mrr / subscriptions.monthly_amount / subscriptions.price (three amounts)", layer: warehouse, where: "subscriptions"}
+      - {ref: "dim_subscriptions.mrr_amount = plan price, or annual/12", layer: docs, where: "Threads Club"}
+      - {ref: "mrr metric measure mrr_amount ; arr expr mrr_amount*12", layer: semantic, where: "metrics"}
+    category: "Three subscription amount columns for one MRR concept"
+    confusable_because: "subscriptions has mrr, monthly_amount and price. Docs normalise MRR as annual/12 for annual plans. If an agent sums monthly_amount or price (which may be the annual charge for annual plans) instead of the normalised mrr/mrr_amount, MRR is inflated for annual subscribers."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: return_rate_denominator
+    items:
+      - {ref: "return_rate metric = returns / order_count", layer: semantic, where: "metrics"}
+      - {ref: "Return rate = units returned / units shipped (Ops, on returned_at)", layer: docs, where: "Returns & refunds"}
+      - {ref: "Refund rate = refund_amount / net_revenue ($-weighted, Finance)", layer: docs, where: "Returns & refunds"}
+    category: "'Return rate' with three different denominators"
+    confusable_because: "The semantic return_rate divides returns by order_count; docs Ops return rate is units returned / units shipped; Finance's refund rate is a dollar ratio and is called something else. Three numbers, all plausibly 'return rate'."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: returns_count_vs_units
+    items:
+      - {ref: "returns metric = count on fct_returns", layer: semantic, where: "metrics"}
+      - {ref: "fct_returns: one row per RMA line; returned_qty is units", layer: docs, where: "fct_returns"}
+      - {ref: "returns.quantity", layer: warehouse, where: "returns"}
+    category: "Counting return rows vs summing returned units"
+    confusable_because: "The returns metric counts rows (RMA lines), but the documented return rate wants units returned (returned_qty / quantity). count(*) understates units when a line returns multiple pieces, and return_rate inherits the error."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: refund_amount_column
+    items:
+      - {ref: "refunds.amount AND refunds.refund_amount (two columns)", layer: warehouse, where: "refunds"}
+      - {ref: "refund_amount metric: measure amount, filter status='processed'", layer: semantic, where: "metrics"}
+      - {ref: "fct_refunds.refund_amount; null = pending, treat as 0", layer: docs, where: "fct_refunds"}
+    category: "Two refund-amount columns; metric and docs pick different ones"
+    confusable_because: "refunds has both amount and refund_amount. The semantic refund_amount metric sums `amount`; docs describe refund_amount as the field. There are also tax_refunded and shipping_refunded that may or may not be inside amount, so 'total refunded' can differ by tax+shipping."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: refund_status_filter_mismatch
+    items:
+      - {ref: "refund_amount metric filter status='processed'", layer: semantic, where: "metrics"}
+      - {ref: "refunds.status values (from schema, unspecified)", layer: warehouse, where: "refunds"}
+      - {ref: "docs: null refund_amount = pending/authorising, treat as 0 until settled", layer: docs, where: "fct_refunds"}
+    category: "Refund status filter may not match stored values"
+    confusable_because: "The metric filters status='processed', but the refunds table's status vocabulary is not defined and docs speak of pending/settled by null amount and refunded_at. If stored values are 'succeeded'/'settled' rather than 'processed', the metric returns near-zero and looks like almost no refunds."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: order_count_vs_orders_metric
+    items:
+      - {ref: "order_count (agg count on analytics.fct_orders)", layer: semantic, where: "metrics"}
+      - {ref: "orders (agg count_distinct order_id on analytics.orders)", layer: semantic, where: "metrics"}
+      - {ref: "completed_orders / paid_orders metrics (subsets)", layer: semantic, where: "metrics"}
+    category: "Two order-count metrics on different tables and aggregations"
+    confusable_because: "order_count is a plain count on fct_orders (includes test/cancelled); orders is a count_distinct on the raw orders table. They feed AOV, conversion_rate and CAC denominators, so the choice silently changes those ratios."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: new_segment_no_period_restriction
+    items:
+      - {ref: "segment new: filter first_order_date is not null", layer: semantic, where: "segments"}
+      - {ref: "segment new description: 'First order within the period'", layer: semantic, where: "segments"}
+      - {ref: "new_customers metric filter first_order_date is not null, time first_order_date", layer: semantic, where: "metrics"}
+    category: "Segment named 'new' actually selects all buyers ever"
+    confusable_because: "The `new` segment's filter is only 'first_order_date is not null' — that is every buyer, not first-order-in-period. The description promises a period restriction the filter does not implement. Using segment `new` for 'new customers' over-counts massively (the metric works only because it also sets the time_column)."
+    detectability: invisible
+    danger: medium
+    cross_layer: false
+    uncertain: false
+
+  - id: total_customers_scope
+    items:
+      - {ref: "total_customers metric = count_distinct customer_id on fct_orders ('at least one order')", layer: semantic, where: "metrics"}
+      - {ref: "Customer (count) = distinct customer_id in dim_customers (includes leads), but people mean buyers", layer: docs, where: "Business metrics"}
+      - {ref: "customers.orders_count / dim_customers row-per-account", layer: warehouse, where: "customers, dim_customers"}
+    category: "'Customers' = buyers vs all accounts (incl leads)"
+    confusable_because: "total_customers counts distinct customers appearing in fct_orders (buyers only); the docs customer count is distinct accounts in dim_customers, which includes leads that never bought. 'How many customers' lands on either, and the two are documented to differ by the lead population plus test-account handling."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: churn_rate_reactivation_window
+    items:
+      - {ref: "churn_rate metric = churned_subscriptions / active_subscriptions", layer: semantic, where: "metrics"}
+      - {ref: "churned_mrr = case event_type='cancelled' then -mrr_amount (no reactivation logic)", layer: semantic, where: "metrics"}
+      - {ref: "Subscription churn: metrics layer counts churned only if cancelled AND not reactivated within 30 days", layer: docs, where: "Threads Club"}
+    category: "Churn with vs without the 30-day reactivation carve-out"
+    confusable_because: "Docs say the mart churn excludes members who reactivate within 30 days, so it runs lower than the raw cancelled count. The semantic churned_mrr counts every 'cancelled' event with no reactivation check, and churn_rate's churned_subscriptions is undefined. The reported churn depends on which rule the agent applies."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: unit_price_vs_price_line_items
+    items:
+      - {ref: "order_items.unit_price / price / line_amount / line_discount", layer: warehouse, where: "order_items"}
+      - {ref: "fct_order_items.unit_price (list before discount) / line_total (qty*unit_price)", layer: docs, where: "fct_order_items"}
+      - {ref: "gross_sales expr quantity * unit_price", layer: semantic, where: "metrics"}
+    category: "Line item has both unit_price and price"
+    confusable_because: "order_items carries unit_price and price (and line_amount). Docs say unit_price is list-before-discount and line_total is before line discounts. Whether `price` is the discounted actual paid or a duplicate of unit_price is undocumented; gross_sales uses unit_price and therefore ignores line discounts."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: cost_columns_margin
+    items:
+      - {ref: "products.cost", layer: warehouse, where: "products"}
+      - {ref: "product_variants.unit_cost / compare_at_price", layer: warehouse, where: "product_variants"}
+      - {ref: "dim_products.unit_cost", layer: warehouse, where: "dim_products"}
+      - {ref: "dim_product_variants.cost (landed unit cost, null coalesced to 0 inflates margin)", layer: docs, where: "dim_product_variants"}
+    category: "Multiple cost columns for margin"
+    confusable_because: "Cost lives as products.cost, product_variants.unit_cost, dim_products.unit_cost and docs' dim_product_variants.cost. Choosing product-level vs variant-level cost, and the documented null-to-0 coalescing, both silently change margin."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: booked_vs_recognized_revenue
+    items:
+      - {ref: "fct_revenue.booked_revenue / recognized_revenue", layer: warehouse, where: "fct_revenue"}
+      - {ref: "Booked (full amount up front) vs Recognised (spread); will not tie", layer: docs, where: "Booked vs recognised"}
+      - {ref: "booked_revenue vs recognised_revenue metrics", layer: semantic, where: "metrics"}
+    category: "Booked and recognised both called 'revenue'"
+    confusable_because: "An annual Threads Club plan books the full year in month one but recognises 1/12 per month. A bare 'revenue in period' can grab either; they are documented not to tie, so the swap is a large but each-internally-plausible number."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: order_type_column_for_subscription_split
+    items:
+      - {ref: "order_revenue expr: case when order_type <> 'subscription'", layer: semantic, where: "metrics"}
+      - {ref: "orders.is_subscription BOOLEAN", layer: warehouse, where: "orders"}
+      - {ref: "fct_orders has no order_type / is_subscription column", layer: warehouse, where: "fct_orders"}
+      - {ref: "first box of a new sign-up lands in fct_orders as a normal order", layer: docs, where: "fct_orders"}
+    category: "Subscription-order flag named/located inconsistently"
+    confusable_because: "order_revenue splits out subscription via order_type, but the warehouse flag is is_subscription on the `orders` table and fct_orders has neither column. Add the documented rule that a member's first box is a normal order in fct_orders, and 'one-off order revenue' can wrongly include or exclude subscription first boxes."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: docs_tables_vs_physical_tables
+    items:
+      - {ref: "docs reference fct_subscription_charges / stg_leads / fct_order_items / dim_subscriptions / dim_product_variants / fct_returns / fct_refunds / fct_payments / fct_invoices / fct_marketing_spend / fct_sessions", layer: docs, where: "throughout"}
+      - {ref: "warehouse has returns / refunds / order_items / product_variants / subscriptions / marketing_spend / sessions / invoices (no fct_/dim_ prefix, different columns)", layer: warehouse, where: "throughout"}
+      - {ref: "semantic bases analytics.fct_subscriptions / fct_subscription_invoices / fct_revenue_all / fct_order_items / finance.fct_invoices", layer: semantic, where: "metrics"}
+    category: "Three overlapping namespaces for the same entities"
+    confusable_because: "Docs and semantic describe a modelled fct_*/dim_* layer whose table names and columns often don't match the physical warehouse (e.g. returns.return_status/quantity vs docs return_reason/returned_qty). An agent trusting doc/semantic names queries a table that isn't there, or maps to a physical table with different columns, and the mismatch is easy to paper over with a plausible substitute."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: dimension_columns_not_in_schema
+    items:
+      - {ref: "region -> dim_customers.region ; market -> dim_customers.market ; country -> dim_customers.country_code", layer: semantic, where: "dimensions"}
+      - {ref: "plan -> fct_subscriptions.plan_name ; campaign -> fct_marketing_spend.campaign_name ; product_category -> dim_products.category", layer: semantic, where: "dimensions"}
+      - {ref: "dim_customers has only country (no region/market/country_code); subscriptions.plan; marketing_spend.campaign; dim_products.product_type (no category)", layer: warehouse, where: "multiple tables"}
+    category: "Dimensions point at columns the warehouse lacks"
+    confusable_because: "region, market, country_code, plan_name, campaign_name and category do not exist on the named physical tables (which have country, plan, campaign, product_type). 'Revenue by region/market' has no backing column; an agent may substitute country or product_type and silently change the grouping, or the query errors."
+    detectability: loud
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: spend_vs_cost_marketing
+    items:
+      - {ref: "marketing_spend.spend AND marketing_spend.cost", layer: warehouse, where: "marketing_spend"}
+      - {ref: "marketing_spend metric measure spend ; fct_marketing_spend.spend gross of fees", layer: semantic + docs, where: "metrics / fct_marketing_spend"}
+    category: "Two spend columns feeding CAC/ROAS"
+    confusable_because: "marketing_spend has both spend and cost. Semantic uses spend (gross of platform fees per docs); cost is an undocumented near-duplicate. CAC and ROAS both divide by this, so choosing cost vs spend shifts them."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: true
+
+  - id: placed_at_vs_created_at_vs_order_date
+    items:
+      - {ref: "orders.placed_at / created_at / updated_at ; orders_old.ordered_at ; raw_shopify_orders.processed_at", layer: warehouse, where: "order tables"}
+      - {ref: "fct_orders.placed_at = checkout time (use this); created_at differs by seconds", layer: docs, where: "fct_orders.placed_at"}
+      - {ref: "order_date dimension (fct_orders.order_date DATE) AND created_at dimension both defined; gross_sales uses created_at", layer: semantic, where: "dimensions / metrics"}
+    category: "Several order timestamps; daily numbers shift by which one"
+    confusable_because: "Docs say use placed_at, but fct_orders exposes order_date (a DATE) and the semantic layer offers both order_date and created_at as time dimensions, with gross_sales keyed on created_at. Timezone truncation and the placed_at/created_at gap move day-level revenue and cohort boundaries."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: first_order_paid_definition
+    items:
+      - {ref: "dim_customers.first_order_at = first PAID order (cancelled/refunded first order excluded)", layer: docs, where: "dim_customers.first_order_at"}
+      - {ref: "dim_customers.first_order_date ; stg_customers.first_order_at ; fct_orders.is_first_order", layer: warehouse, where: "customer/order tables"}
+      - {ref: "new_customers / CAC use first_order_date in period", layer: semantic + docs, where: "metrics"}
+    category: "Acquisition date = first paid order, not first order/account"
+    confusable_because: "first_order_at counts only paid orders, so it can lag account creation and excludes cancelled/refunded first orders. is_first_order on fct_orders may flag the chronological first order regardless of payment. New-customer counts and CAC cohorts differ depending on which 'first order' notion is used."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: acquisition_channel_vs_channel_vs_source
+    items:
+      - {ref: "dim_customers.acquisition_channel = first-touch (paid_search/...); null treated as direct", layer: docs, where: "dim_customers.acquisition_channel"}
+      - {ref: "channel dimension (marketing_spend.channel) ; source dimension (sessions.utm_source)", layer: semantic, where: "dimensions"}
+      - {ref: "sessions.utm_source / channel ; marketing_spend.channel / utm_campaign", layer: warehouse, where: "sessions, marketing_spend"}
+    category: "Attribution 'channel' lives in several columns with a null convention"
+    confusable_because: "acquisition_channel (customer first-touch), the marketing channel dimension, and the session utm_source all describe 'where they came from' but from different tables and models. The documented null->direct (customers) and null->unattributed (spend) conventions also differ, so channel breakdowns don't reconcile."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: roas_numerator_internal_vs_platform
+    items:
+      - {ref: "roas metric = gross_revenue / marketing_spend", layer: semantic, where: "metrics"}
+      - {ref: "ROAS numerator = platform-attributed revenue (tax-incl, last-click); disagrees with internal first-touch", layer: docs, where: "Business metrics"}
+    category: "ROAS numerator: internal gross vs platform-attributed"
+    confusable_because: "The semantic ROAS uses internal gross_revenue over all spend; the platform ROAS people quote uses ad-attributed revenue. Docs say these never match. Reporting the warehouse ROAS as 'the ROAS' contradicts the Ads-Manager number leadership sees."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: paid_orders_two_definitions
+    items:
+      - {ref: "paid_orders VIEW: JOIN payments status='captured' AND is_internal=false", layer: warehouse, where: "views"}
+      - {ref: "paid_orders METRIC: case when payment_status='paid'", layer: semantic, where: "metrics"}
+      - {ref: "docs revenue filter status in ('paid','fulfilled','partially_refunded')", layer: docs, where: "fct_orders.status"}
+    category: "'Paid orders' defined three ways, on different columns"
+    confusable_because: "The view defines paid via a payments join (status='captured'); the metric via a payment_status='paid' column that isn't in the schema; docs via order status='paid'. Same phrase, three populations, and payments.status uses 'captured'/'succeeded' rather than 'paid'."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  - id: orders_total_column_ambiguity
+    items:
+      - {ref: "orders.total / gross_amount / net_amount / discount_amount / tax_amount / shipping_amount", layer: warehouse, where: "orders"}
+      - {ref: "fct_orders.order_total = gross, tax+shipping incl, after discount (ties to Stripe)", layer: docs, where: "fct_orders.order_total"}
+      - {ref: "payments.amount / gross_amount / net_amount", layer: warehouse, where: "payments"}
+    category: "'total' vs the many amount columns"
+    confusable_because: "orders.total sits alongside gross_amount and net_amount with no stated relationship; docs' order_total is the tax-inclusive charged amount. An agent reading 'total' may get charged-amount, gross-merchandise, or a payments amount and mislabel any of them as revenue."
+    detectability: invisible
+    danger: medium
+    cross_layer: true
+    uncertain: false
+
+  # ============================ LOW ============================
+
+  - id: status_column_overloaded_across_tables
+    items:
+      - {ref: "status on orders / products / shipments / subscriptions / payments / invoices", layer: warehouse, where: "many tables"}
+      - {ref: "return_status / financial_status / fulfillment_status / order_status / from_status / to_status", layer: warehouse, where: "returns, raw_shopify_orders, orders_old, subscription_events"}
+      - {ref: "order_status dimension (fct_orders.status) vs status dimension (fct_subscriptions.status)", layer: semantic, where: "dimensions"}
+    category: "'status' is overloaded; same value means different things per table"
+    confusable_because: "Almost every table has a status column with its own vocabulary (order 'fulfilled' vs subscription 'active' vs payment 'captured' vs product publish state). The semantic layer even has two dimensions, order_status and status, on different entities. A cross-table filter on 'status' is meaningless without the table context."
+    detectability: loud
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: products_status_vs_active
+    items:
+      - {ref: "products.status AND products.active", layer: warehouse, where: "products"}
+      - {ref: "product_variants.is_active ; dim_products.is_active", layer: warehouse, where: "product_variants, dim_products"}
+      - {ref: "dim_products.is_active = currently sold", layer: docs, where: "dim_products"}
+    category: "Product has both a status column and an active flag"
+    confusable_because: "products carries status (publish state) and a separate active boolean; variants and dim have is_active. 'Active products' can filter status or active/is_active and get different counts, though the numbers are small enough to notice."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: discount_amount_sources
+    items:
+      - {ref: "orders.discount_amount ; orders_old.discount ; raw_shopify_orders.total_discounts ; order_items.line_discount", layer: warehouse, where: "order tables"}
+      - {ref: "discounts.value / value_type (per code, not per order)", layer: warehouse, where: "discounts"}
+      - {ref: "discount_amount metric measure discount_amount ; free-shipping shows in discount_amount inconsistently", layer: semantic + docs, where: "metrics / fct_orders"}
+    category: "Discount lives at order, line, and code level"
+    confusable_because: "Order-level discount_amount, line_discount, total_discounts and the per-code discounts.value are different grains. Summing the code table or line discounts as 'total discount given' double counts or misses free-shipping promos that docs say land in discount_amount only sometimes."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: plan_interval_billing_cycle
+    items:
+      - {ref: "dim_subscriptions.plan_interval (monthly/annual), defaults monthly", layer: docs, where: "dim_subscriptions.plan_interval"}
+      - {ref: "older records use billing_cycle with values month/year", layer: docs, where: "dim_subscriptions.plan_interval"}
+      - {ref: "subscriptions.plan_interval ; subscriptions.plan", layer: warehouse, where: "subscriptions"}
+    category: "Billing interval column renamed with different values"
+    confusable_because: "plan_interval (monthly/annual) supersedes billing_cycle (month/year); both appear in dashboards. A join or filter on the old name/values misses records, and the monthly-default hides missing intervals."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: email_vs_customer_email_rename
+    items:
+      - {ref: "customers.email / users.email / dim_customers.email", layer: warehouse, where: "customer tables"}
+      - {ref: "dim_customers.customer_email (old name, still aliased in some staging)", layer: docs, where: "dim_customers.customer_email"}
+    category: "Email column renamed; both names circulate"
+    confusable_because: "The physical column is email after the Q1 cleanup but customer_email is still aliased in staging models. Duplicate emails from guest checkout mean an email join fans out; docs warn to join on customer_id, but the two names invite an email join anyway."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: base_vs_model_key_inconsistency
+    items:
+      - {ref: "some metrics use `base:`, others `model:` for the source table (gross_revenue base vs gross_sales model, net_revenue base vs net_sales model)", layer: semantic, where: "metrics"}
+      - {ref: "some metrics use `measure:` (column), others `expr:`", layer: semantic, where: "metrics"}
+    category: "Inconsistent keys for the same concept"
+    confusable_because: "The semantic layer mixes base/model for the source relation and measure/expr for the value. An agent parsing only one key (e.g. base) misses the source of model-keyed metrics, and may not realise expr-based metrics reference columns that must exist on that relation."
+    detectability: loud
+    danger: low
+    cross_layer: false
+    uncertain: true
+
+  - id: conversion_rate_denominator_bots
+    items:
+      - {ref: "conversion_rate = order_count / sessions", layer: semantic, where: "metrics"}
+      - {ref: "sessions metric = count on fct_sessions (bot traffic filtered imperfectly)", layer: semantic + docs, where: "metrics / fct_sessions"}
+      - {ref: "sessions.is_bot", layer: warehouse, where: "sessions"}
+    category: "Conversion denominator includes bot sessions"
+    confusable_because: "conversion_rate divides all orders by all sessions; sessions counts fct_sessions where bots are only partly filtered (is_bot exists but staging is imperfect). The denominator is inflated by bots, understating conversion, and the numerator order_count includes test/cancelled orders."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: repeat_purchase_rate_window
+    items:
+      - {ref: "repeat_purchase_rate metric = repeat_customers / total_customers on dim_customers", layer: semantic, where: "metrics"}
+      - {ref: "Repeat purchase rate: retention dash within first 90 days vs metrics layer trailing 12 months", layer: docs, where: "Business metrics"}
+    category: "'Repeat rate' with two windows/denominators"
+    confusable_because: "One repeat rate is measured within 90 days of first order, another over trailing 12 months across all buyers; docs say the two tiles won't match. The semantic metric doesn't state which window, so the reported figure is ambiguous."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: shipment_status_and_delivery_cap
+    items:
+      - {ref: "shipments.status ; delivered_at", layer: warehouse, where: "shipments"}
+      - {ref: "fct_shipments.status label_created/in_transit/delivered/returned_to_sender; delivery webhook ~3% never fires (rate caps ~97%)", layer: docs, where: "fct_shipments"}
+    category: "Delivery rate capped by data, not reality"
+    confusable_because: "delivered_at is null until a webhook fires and ~3% never do, so any delivery/SLA rate tops out near 97% for data reasons. An agent may report this as a real fulfilment ceiling."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: invoices_amount_columns
+    items:
+      - {ref: "invoices.total / amount_due / amount_paid / tax", layer: warehouse, where: "invoices"}
+      - {ref: "fct_invoices.invoice_total inclusive of tax; booked = issued-period invoiced amount", layer: docs, where: "fct_invoices"}
+      - {ref: "payments captured amount vs invoice amounts", layer: warehouse, where: "payments, invoices"}
+    category: "Invoice total vs due vs paid"
+    confusable_because: "invoices has total, amount_due and amount_paid; 'invoice revenue' could be any of them, and mixing amount_paid (cash) with total (billed) changes bookings. Docs' invoice_total is tax-inclusive, so combining it with tax-exclusive order net double-handles tax."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false
+
+  - id: payments_amount_is_money_not_revenue
+    items:
+      - {ref: "payments.amount / gross_amount / net_amount / fee (tax-inclusive money movement)", layer: warehouse, where: "payments"}
+      - {ref: "fct_payments.amount = captured, tax-inclusive, 'money movement not accounting revenue'", layer: docs, where: "fct_payments"}
+      - {ref: "order/subscription revenue metrics", layer: semantic, where: "metrics"}
+    category: "Payments (cash captured) mistaken for revenue"
+    confusable_because: "payments amounts are gross cash movements (tax-inclusive, across orders and subs, including failed/refunded attempts). Summing payments as 'revenue' conflates cash with accounting revenue and can double count refunded/disputed charges."
+    detectability: invisible
+    danger: low
+    cross_layer: true
+    uncertain: false

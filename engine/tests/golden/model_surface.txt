@@ -197,7 +197,7 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint 1897e509c7b7 ===
+=== rung 3 · R0 · fingerprint d80571c29dc5 ===
 system: sha256=b3932ec88871 chars=951
 [
   {
@@ -271,15 +271,22 @@ system: sha256=b3932ec88871 chars=951
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -290,7 +297,7 @@ system: sha256=b3932ec88871 chars=951
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -349,7 +356,7 @@ system: sha256=b3932ec88871 chars=951
   }
 ]
 
-=== rung 3 · R2 · fingerprint 1587fa0cbddb ===
+=== rung 3 · R2 · fingerprint d74382808e27 ===
 system: sha256=541a80869276 chars=1546
 [
   {
@@ -423,15 +430,22 @@ system: sha256=541a80869276 chars=1546
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -442,7 +456,7 @@ system: sha256=541a80869276 chars=1546
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -616,7 +630,7 @@ system: sha256=541a80869276 chars=1546
   }
 ]
 
-=== rung 3 · R4 · fingerprint ad51a33b3e03 ===
+=== rung 3 · R4 · fingerprint ef3e3430255a ===
 system: sha256=bcd41ca8653e chars=1861
 [
   {
@@ -694,15 +708,22 @@ system: sha256=bcd41ca8653e chars=1861
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -713,7 +734,7 @@ system: sha256=bcd41ca8653e chars=1861
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -887,7 +908,7 @@ system: sha256=bcd41ca8653e chars=1861
   }
 ]
 
-=== rung 3 · R6 · fingerprint 49a2b85d46a9 ===
+=== rung 3 · R6 · fingerprint 3df28841a6e2 ===
 system: sha256=6a06892ba048 chars=2372
 [
   {
@@ -965,15 +986,22 @@ system: sha256=6a06892ba048 chars=2372
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -984,7 +1012,7 @@ system: sha256=6a06892ba048 chars=2372
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -1158,7 +1186,7 @@ system: sha256=6a06892ba048 chars=2372
   }
 ]
 
-=== rung 3 · R9 · fingerprint 18733ad36159 ===
+=== rung 3 · R9 · fingerprint 0f39fdbc8f9c ===
 system: sha256=78da06e54edc chars=3834
 [
   {
@@ -1236,15 +1264,22 @@ system: sha256=78da06e54edc chars=3834
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1255,7 +1290,7 @@ system: sha256=78da06e54edc chars=3834
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -1463,7 +1498,7 @@ system: sha256=78da06e54edc chars=3834
   }
 ]
 
-=== rung 6 · R0 · fingerprint 60e24814d267 ===
+=== rung 6 · R0 · fingerprint ab8754f010ec ===
 system: sha256=10ce3dd5f275 chars=5862
 [
   {
@@ -1537,15 +1572,22 @@ system: sha256=10ce3dd5f275 chars=5862
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1556,7 +1598,7 @@ system: sha256=10ce3dd5f275 chars=5862
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -1665,7 +1707,7 @@ system: sha256=10ce3dd5f275 chars=5862
   }
 ]
 
-=== rung 6 · R2 · fingerprint 2977ea1e9175 ===
+=== rung 6 · R2 · fingerprint 949a8325ec53 ===
 system: sha256=dd3f8d612279 chars=6457
 [
   {
@@ -1739,15 +1781,22 @@ system: sha256=dd3f8d612279 chars=6457
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1758,7 +1807,7 @@ system: sha256=dd3f8d612279 chars=6457
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -1982,7 +2031,7 @@ system: sha256=dd3f8d612279 chars=6457
   }
 ]
 
-=== rung 6 · R4 · fingerprint f2fdd165721b ===
+=== rung 6 · R4 · fingerprint c15fbe1ed879 ===
 system: sha256=f5657c94f5ee chars=6772
 [
   {
@@ -2060,15 +2109,22 @@ system: sha256=f5657c94f5ee chars=6772
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2079,7 +2135,7 @@ system: sha256=f5657c94f5ee chars=6772
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -2312,7 +2368,7 @@ system: sha256=f5657c94f5ee chars=6772
   }
 ]
 
-=== rung 6 · R6 · fingerprint 5f158abebe30 ===
+=== rung 6 · R6 · fingerprint 0077eb626da9 ===
 system: sha256=0661873056fe chars=7283
 [
   {
@@ -2390,15 +2446,22 @@ system: sha256=0661873056fe chars=7283
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2409,7 +2472,7 @@ system: sha256=0661873056fe chars=7283
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -2642,7 +2705,7 @@ system: sha256=0661873056fe chars=7283
   }
 ]
 
-=== rung 6 · R9 · fingerprint 94901560c698 ===
+=== rung 6 · R9 · fingerprint 25fd7351bc58 ===
 system: sha256=2b63dd316caf chars=8745
 [
   {
@@ -2720,15 +2783,22 @@ system: sha256=2b63dd316caf chars=8745
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2739,7 +2809,7 @@ system: sha256=2b63dd316caf chars=8745
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -3006,7 +3076,7 @@ system: sha256=2b63dd316caf chars=8745
   }
 ]
 
-=== rung 7 · R0 · fingerprint b2ad47d5919f ===
+=== rung 7 · R0 · fingerprint ec50a789f8d4 ===
 system: sha256=4ccdadfd4322 chars=1329
 [
   {
@@ -3080,15 +3150,22 @@ system: sha256=4ccdadfd4322 chars=1329
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3099,7 +3176,7 @@ system: sha256=4ccdadfd4322 chars=1329
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -3208,7 +3285,7 @@ system: sha256=4ccdadfd4322 chars=1329
   }
 ]
 
-=== rung 7 · R2 · fingerprint a537b6931fa3 ===
+=== rung 7 · R2 · fingerprint ac0489765815 ===
 system: sha256=21c611aa1778 chars=1924
 [
   {
@@ -3282,15 +3359,22 @@ system: sha256=21c611aa1778 chars=1924
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3301,7 +3385,7 @@ system: sha256=21c611aa1778 chars=1924
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -3525,7 +3609,7 @@ system: sha256=21c611aa1778 chars=1924
   }
 ]
 
-=== rung 7 · R4 · fingerprint cf7f9911f801 ===
+=== rung 7 · R4 · fingerprint 988c3e6a17f6 ===
 system: sha256=f6fa332612c3 chars=2239
 [
   {
@@ -3603,15 +3687,22 @@ system: sha256=f6fa332612c3 chars=2239
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3622,7 +3713,7 @@ system: sha256=f6fa332612c3 chars=2239
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -3855,7 +3946,7 @@ system: sha256=f6fa332612c3 chars=2239
   }
 ]
 
-=== rung 7 · R6 · fingerprint 2c2a4f9edad5 ===
+=== rung 7 · R6 · fingerprint c50d4cb6c445 ===
 system: sha256=4fcfa635ca94 chars=2750
 [
   {
@@ -3933,15 +4024,22 @@ system: sha256=4fcfa635ca94 chars=2750
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3952,7 +4050,7 @@ system: sha256=4fcfa635ca94 chars=2750
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -4185,7 +4283,7 @@ system: sha256=4fcfa635ca94 chars=2750
   }
 ]
 
-=== rung 7 · R9 · fingerprint da376d4cd3ee ===
+=== rung 7 · R9 · fingerprint e887b47c7fa3 ===
 system: sha256=bc9a5349fe29 chars=4212
 [
   {
@@ -4263,15 +4361,22 @@ system: sha256=bc9a5349fe29 chars=4212
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4282,7 +4387,7 @@ system: sha256=bc9a5349fe29 chars=4212
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -4549,7 +4654,7 @@ system: sha256=bc9a5349fe29 chars=4212
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint a8297403fe2a ===
+=== rung 7 · R9/purpose · fingerprint d458c557b66c ===
 system: sha256=f58f8e6082be chars=4586
 [
   {
@@ -4631,15 +4736,22 @@ system: sha256=f58f8e6082be chars=4586
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4650,7 +4762,7 @@ system: sha256=f58f8e6082be chars=4586
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -4921,7 +5033,7 @@ system: sha256=f58f8e6082be chars=4586
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint 4750d571564c ===
+=== rung 7 · R9/claims · fingerprint 62a9aea928f6 ===
 system: sha256=68cafd4271e5 chars=4916
 [
   {
@@ -4999,15 +5111,22 @@ system: sha256=68cafd4271e5 chars=4916
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5018,7 +5137,7 @@ system: sha256=68cafd4271e5 chars=4916
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -5320,7 +5439,7 @@ system: sha256=68cafd4271e5 chars=4916
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint 6812d434ab24 ===
+=== rung 7 · R9/claims+repair · fingerprint b372dd84e152 ===
 system: sha256=eea8b0e9a393 chars=5122
 [
   {
@@ -5398,15 +5517,22 @@ system: sha256=eea8b0e9a393 chars=5122
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5417,7 +5543,7 @@ system: sha256=eea8b0e9a393 chars=5122
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -5719,7 +5845,7 @@ system: sha256=eea8b0e9a393 chars=5122
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint 8728b6e9d13a ===
+=== rung 7 · R9/purpose+claims+repair · fingerprint 92ec6ef66505 ===
 system: sha256=8c766050a8fe chars=5496
 [
   {
@@ -5801,15 +5927,22 @@ system: sha256=8c766050a8fe chars=5496
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5820,7 +5953,7 @@ system: sha256=8c766050a8fe chars=5496
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -6126,7 +6259,7 @@ system: sha256=8c766050a8fe chars=5496
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint c5ae9aaad177 ===
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint ca2375544fe4 ===
 system: sha256=47984fc1fb8e chars=6315
 [
   {
@@ -6208,15 +6341,22 @@ system: sha256=47984fc1fb8e chars=6315
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6227,7 +6367,7 @@ system: sha256=47984fc1fb8e chars=6315
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -6533,7 +6673,7 @@ system: sha256=47984fc1fb8e chars=6315
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint ded460108f78 ===
+=== rung 5 · R5/claims · fingerprint 3ad3da628744 ===
 system: sha256=1e342c97f77d chars=7337
 [
   {
@@ -6611,15 +6751,22 @@ system: sha256=1e342c97f77d chars=7337
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6630,7 +6777,7 @@ system: sha256=1e342c97f77d chars=7337
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {
@@ -6839,7 +6986,7 @@ system: sha256=1e342c97f77d chars=7337
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint 7704c693c25b ===
+=== rung 5 · R5/claims+role · fingerprint f789107b05be ===
 system: sha256=e8e9c0005054 chars=8158
 [
   {
@@ -6917,15 +7064,22 @@ system: sha256=e8e9c0005054 chars=8158
           "type": "string"
         },
         "period": {
-          "description": "A named period.",
-          "enum": [
-            "last_week",
-            "prev_week",
-            "last_month",
-            "last_quarter",
-            "ytd",
-            "all"
+          "anyOf": [
+            {
+              "enum": [
+                "last_week",
+                "prev_week",
+                "last_month",
+                "last_quarter",
+                "ytd",
+                "all"
+              ]
+            },
+            {
+              "pattern": "^\\d{4}-\\d{2}$"
+            }
           ],
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6936,7 +7090,7 @@ system: sha256=e8e9c0005054 chars=8158
           "type": "string"
         },
         "start": {
-          "description": "Explicit start date YYYY-MM-DD.",
+          "description": "Explicit start date YYYY-MM-DD (for exact calendar ranges).",
           "type": "string"
         },
         "time_grain": {

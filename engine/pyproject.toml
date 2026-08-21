@@ -23,6 +23,8 @@ authors = [{ name = "Dmitry Ustimov" }]
 # never touches how a run row is serialised to disk. A fast Rust core, and already in the resolved
 # lockfile transitively — so this makes a real dependency explicit rather than adding a new one.
 dependencies = [
+    "ai-analytics-semantic",    # the governed layer + compiler, extracted to its own package
+    "ai-analytics-warehouse",   # the star warehouse, extracted to its own leaf package
     "duckdb>=1.1",
     "pydantic>=2.11",
     "pyyaml>=6",
@@ -57,7 +59,7 @@ build-backend = "hatchling.build"
 # Hatchling maps `src/agent` to the module `agent`, so nothing that imports these packages had to
 # change when they moved here.
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent", "src/semantic", "src/warehouse", "src/evidence"]
+packages = ["src/agent", "src/evidence"]
 
 [tool.hatch.build.targets.sdist]
 include = ["/src", "/tests"]

@@ -1,0 +1,40 @@
+[project]
+name = "ai-analytics-semantic"
+version = "0.1.0"
+description = "The governed semantic layer: metric definitions, the metric tree, and the compiler that turns a metric selection into correct SQL over the warehouse."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Dmitry Ustimov" }]
+
+# Depends on the warehouse (the compiler executes governed metrics against it) and nothing else in
+# the repo — a clean edge in the acyclic engine graph (agent -> semantic -> warehouse).
+dependencies = [
+    "ai-analytics-warehouse",
+    "pyyaml>=6",
+    "duckdb>=1.1",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# The MetricFlow engine (this layer behind real dbt MetricFlow). Imported lazily at its call sites,
+# so nothing pays for it unless a study names `engine: metricflow`.
+metricflow = ["metricflow>=0.211.0"]
+# Recomputing embedding similarity (the confusability gate) when the cache misses. numpy lives
+# here rather than in the base dependencies because `semantic.similarity` is imported lazily at
+# every call site, so a product install that never audits similarity must not carry it — and the
+# packaging job asserts exactly that.
+embeddings = ["openai>=1.40", "numpy>=1.26"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# src layout, matching the engine: `src/semantic` maps to the module `semantic`, so extracting the
+# package here did not change a single `import semantic` anywhere in the codebase. The layer YAML,
+# metric tree, and embedding cache travel with the package as data files.
+[tool.hatch.build.targets.wheel]
+packages = ["src/semantic"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src"]

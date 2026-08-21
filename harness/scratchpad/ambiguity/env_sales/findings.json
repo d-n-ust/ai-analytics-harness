@@ -1,0 +1,1275 @@
+[
+ {
+  "type": "CONCEPT_FORK",
+  "danger": "high",
+  "note": "same entity/table aggregated the same way over different columns \u2014 a bare concept resolves to different numbers",
+  "items": [
+   {
+    "id": "sl:booked_revenue",
+    "label": "booked_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:gross_revenue",
+    "label": "gross_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:net_revenue",
+    "label": "net_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:net_sales",
+    "label": "net_sales",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:order_revenue",
+    "label": "order_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:revenue",
+    "label": "revenue",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "CONCEPT_FORK",
+  "danger": "high",
+  "note": "same entity/table aggregated the same way over different columns \u2014 a bare concept resolves to different numbers",
+  "items": [
+   {
+    "id": "sl:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:paying_customers",
+    "label": "paying_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:total_customers",
+    "label": "total_customers",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "CONCEPT_FORK",
+  "danger": "high",
+  "note": "same entity/table aggregated the same way over different columns \u2014 a bare concept resolves to different numbers",
+  "items": [
+   {
+    "id": "sl:churned_mrr",
+    "label": "churned_mrr",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:new_mrr",
+    "label": "new_mrr",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "high",
+  "note": "'revenue' documented two different ways",
+  "items": [
+   {
+    "id": "doc:revenue:45",
+    "label": "revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:revenue:46",
+    "label": "revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:revenue",
+    "label": "revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.revenue",
+    "label": "revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "high",
+  "note": "'active_customers' resolves to a different scope in semantic vs warehouse",
+  "items": [
+   {
+    "id": "sl:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:seg:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:view:active_customers",
+    "label": "active_customers",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "high",
+  "note": "'status' documented two different ways",
+  "items": [
+   {
+    "id": "doc:status:12",
+    "label": "status",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:status:3",
+    "label": "status",
+    "layer": "docs"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "high",
+  "note": "'completed_orders' resolves to a different scope in semantic vs warehouse",
+  "items": [
+   {
+    "id": "sl:completed_orders",
+    "label": "completed_orders",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:view:completed_orders",
+    "label": "completed_orders",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "high",
+  "note": "'active_subscriptions' resolves to a different scope in semantic vs warehouse",
+  "items": [
+   {
+    "id": "sl:active_subscriptions",
+    "label": "active_subscriptions",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:view:active_subscriptions",
+    "label": "active_subscriptions",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "SCOPE_TRAP",
+  "danger": "high",
+  "note": "same measure; 'completed_orders' is 'order_count' plus a filter \u2014 bare question silently scoped, swap invisible",
+  "items": [
+   {
+    "id": "sl:completed_orders",
+    "label": "completed_orders",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:order_count",
+    "label": "order_count",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "SCOPE_TRAP",
+  "danger": "high",
+  "note": "same measure; 'active_customers' is 'total_customers' plus a filter \u2014 bare question silently scoped, swap invisible",
+  "items": [
+   {
+    "id": "sl:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:total_customers",
+    "label": "total_customers",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'country' is modelled on ['country_code'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:country",
+    "label": "country",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:customers.country",
+    "label": "country",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:dim_customers.country",
+    "label": "country",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:stg_customers.country",
+    "label": "country",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'orders' is modelled on ['order_id'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "doc:orders:10",
+    "label": "orders",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:orders",
+    "label": "orders",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:orders",
+    "label": "orders",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'gross_revenue' is modelled on ['gross_amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:gross_revenue",
+    "label": "gross_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.gross_revenue",
+    "label": "gross_revenue",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:fct_revenue.gross_revenue",
+    "label": "gross_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'net_revenue' is modelled on ['discount_amount', 'gross_amount', 'return_amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:net_revenue",
+    "label": "net_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.net_revenue",
+    "label": "net_revenue",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:fct_revenue.net_revenue",
+    "label": "net_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'mrr' is modelled on ['mrr_amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:mrr",
+    "label": "mrr",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:stg_subscriptions.mrr",
+    "label": "mrr",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:subscriptions.mrr",
+    "label": "mrr",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'refund_amount' is modelled on ['amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:refund_amount",
+    "label": "refund_amount",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.refund_amount",
+    "label": "refund_amount",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:refunds.refund_amount",
+    "label": "refund_amount",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'source' is modelled on ['utm_source'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:source",
+    "label": "source",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_revenue.source",
+    "label": "source",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:orders.source",
+    "label": "source",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'plan' is modelled on ['plan_name'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:plan",
+    "label": "plan",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:stg_subscriptions.plan",
+    "label": "plan",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:subscriptions.plan",
+    "label": "plan",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'order_status' is modelled on ['status'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:order_status",
+    "label": "order_status",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:orders_old.order_status",
+    "label": "order_status",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:stg_orders.order_status",
+    "label": "order_status",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'aov' is modelled on ['net_amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "doc:aov:50",
+    "label": "aov",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:aov",
+    "label": "aov",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'cac' is modelled on ['marketing_spend', 'new_customers'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "doc:cac:55",
+    "label": "cac",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:cac",
+    "label": "cac",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'roas' is modelled on ['gross_revenue', 'marketing_spend'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "doc:roas:59",
+    "label": "roas",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:roas",
+    "label": "roas",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'order_revenue' is modelled on ['case', 'else', 'end', 'net_amount', 'order_type', 'subscription', 'then', 'when'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:order_revenue",
+    "label": "order_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_revenue.order_revenue",
+    "label": "order_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'subscription_revenue' is modelled on ['amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:subscription_revenue",
+    "label": "subscription_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_revenue.subscription_revenue",
+    "label": "subscription_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'booked_revenue' is modelled on ['booked_amount'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:booked_revenue",
+    "label": "booked_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_revenue.booked_revenue",
+    "label": "booked_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'paid_orders' is modelled on ['case', 'end', 'order_id', 'paid', 'payment_status', 'then', 'when'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:paid_orders",
+    "label": "paid_orders",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:view:paid_orders",
+    "label": "paid_orders",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'marketing_spend' is modelled on ['spend'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:marketing_spend",
+    "label": "marketing_spend",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:marketing_spend",
+    "label": "marketing_spend",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'order_date' is modelled on ['order_date'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:order_date",
+    "label": "order_date",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.order_date",
+    "label": "order_date",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'campaign' is modelled on ['campaign_name'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:campaign",
+    "label": "campaign",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:marketing_spend.campaign",
+    "label": "campaign",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DEFINITION_DIVERGENCE",
+  "danger": "medium",
+  "note": "'device' is modelled on ['device_type'] but its documentation does not reference those columns",
+  "items": [
+   {
+    "id": "sl:dim:device",
+    "label": "device",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:sessions.device",
+    "label": "device",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "two different 'active_customers' in the semantic layer",
+  "items": [
+   {
+    "id": "doc:active_customer:53",
+    "label": "active customer",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:seg:active_customers",
+    "label": "active_customers",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'amount' in 4 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.amount",
+    "label": "amount",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'customer_id' in 13 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.customer_id",
+    "label": "customer_id",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'email' in 5 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.email",
+    "label": "email",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'is_active' in 6 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.is_active",
+    "label": "is_active",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'is_test' in 7 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.is_test",
+    "label": "is_test",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'order_id' in 8 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.order_id",
+    "label": "order_id",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'price' in 4 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.price",
+    "label": "price",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'status' in 9 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.status",
+    "label": "status",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'subscription_id' in 4 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.subscription_id",
+    "label": "subscription_id",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "medium",
+  "note": "column 'user_id' in 5 tables \u2014 meaning may differ",
+  "items": [
+   {
+    "id": "wh:*.user_id",
+    "label": "user_id",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DUPLICATE",
+  "danger": "low",
+  "note": "same measure, scope and grain under two names",
+  "items": [
+   {
+    "id": "doc:discount_amount:15",
+    "label": "discount_amount",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:discount_amount",
+    "label": "discount_amount",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.discount_amount",
+    "label": "discount_amount",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DUPLICATE",
+  "danger": "low",
+  "note": "same measure, scope and grain under two names",
+  "items": [
+   {
+    "id": "doc:status:12",
+    "label": "status",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:dim:order_status",
+    "label": "order_status",
+    "layer": "semantic"
+   },
+   {
+    "id": "wh:fct_orders.status",
+    "label": "status",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DUPLICATE",
+  "danger": "low",
+  "note": "same measure, scope and grain under two names",
+  "items": [
+   {
+    "id": "doc:customer_type:5",
+    "label": "customer_type",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:dim:customer_type",
+    "label": "customer_type",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "DUPLICATE",
+  "danger": "low",
+  "note": "same measure, scope and grain under two names",
+  "items": [
+   {
+    "id": "doc:is_active:4",
+    "label": "is_active",
+    "layer": "docs"
+   },
+   {
+    "id": "wh:dim_customers.is_active",
+    "label": "is_active",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "DUPLICATE",
+  "danger": "low",
+  "note": "same measure, scope and grain under two names",
+  "items": [
+   {
+    "id": "doc:net_revenue:17",
+    "label": "net_revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "wh:fct_orders.net_revenue",
+    "label": "net_revenue",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'net_revenue' and 'total_revenue' read alike, different things",
+  "items": [
+   {
+    "id": "doc:net_revenue:17",
+    "label": "net_revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:revenue:45",
+    "label": "revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:revenue:46",
+    "label": "revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:total_revenue:49",
+    "label": "total revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:net_revenue",
+    "label": "net_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:revenue",
+    "label": "revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:total_revenue",
+    "label": "total_revenue",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'discount_amount' and 'discount_rate' read alike, different things",
+  "items": [
+   {
+    "id": "doc:discount_amount:15",
+    "label": "discount_amount",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:discount_amount",
+    "label": "discount_amount",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:discount_rate",
+    "label": "discount_rate",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'total_discounts' and 'discount' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:orders.discount_amount",
+    "label": "discount_amount",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:orders_old.discount",
+    "label": "discount",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:raw_shopify_orders.total_discounts",
+    "label": "total_discounts",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'shipping' and 'shipping_amount' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:orders.shipping_amount",
+    "label": "shipping_amount",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:orders_old.shipping",
+    "label": "shipping",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:shipments.shipping_cost",
+    "label": "shipping_cost",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'status' and 'to_status' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:orders.status",
+    "label": "status",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:subscription_events.from_status",
+    "label": "from_status",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:subscription_events.to_status",
+    "label": "to_status",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'gross_revenue' and 'gross_sales' read alike, different things",
+  "items": [
+   {
+    "id": "sl:gross_revenue",
+    "label": "gross_revenue",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:gross_sales",
+    "label": "gross_sales",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'subscription_revenue' and 'subscription revenue' read alike, different things",
+  "items": [
+   {
+    "id": "doc:subscription_revenue:48",
+    "label": "subscription revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:subscription_revenue",
+    "label": "subscription_revenue",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'booked_revenue' and 'booked vs recognised revenue' read alike, different things",
+  "items": [
+   {
+    "id": "doc:booked_vs_recognised_revenue:47",
+    "label": "booked vs recognised revenue",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:booked_revenue",
+    "label": "booked_revenue",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'mrr' and 'new_mrr' read alike, different things",
+  "items": [
+   {
+    "id": "sl:mrr",
+    "label": "mrr",
+    "layer": "semantic"
+   },
+   {
+    "id": "sl:new_mrr",
+    "label": "new_mrr",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'active_subscriptions' and 'active subscriber' read alike, different things",
+  "items": [
+   {
+    "id": "doc:active_subscriber:35",
+    "label": "active subscriber",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:active_subscriptions",
+    "label": "active_subscriptions",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'return_rate' and 'return rate' read alike, different things",
+  "items": [
+   {
+    "id": "doc:return_rate:25",
+    "label": "return rate",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:return_rate",
+    "label": "return_rate",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'repeat_purchase_rate' and 'repeat purchase rate' read alike, different things",
+  "items": [
+   {
+    "id": "doc:repeat_purchase_rate:56",
+    "label": "repeat purchase rate",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:repeat_purchase_rate",
+    "label": "repeat_purchase_rate",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'churn_rate' and 'churn rate' read alike, different things",
+  "items": [
+   {
+    "id": "doc:churn_rate:57",
+    "label": "churn rate",
+    "layer": "docs"
+   },
+   {
+    "id": "sl:churn_rate",
+    "label": "churn_rate",
+    "layer": "semantic"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'fct_orders' and 'fct_order_items' read alike, different things",
+  "items": [
+   {
+    "id": "doc:fct_order_items:20",
+    "label": "fct_order_items",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:fct_orders:11",
+    "label": "fct_orders",
+    "layer": "docs"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "'dim_products' and 'dim_product_variants' read alike, different things",
+  "items": [
+   {
+    "id": "doc:dim_product_variants:28",
+    "label": "dim_product_variants",
+    "layer": "docs"
+   },
+   {
+    "id": "doc:dim_products:27",
+    "label": "dim_products",
+    "layer": "docs"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'test' and 'is_test' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:orders_old.is_test",
+    "label": "is_test",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:raw_shopify_orders.test",
+    "label": "test",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'order_id' and 'order_item_id' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:orders_old.order_id",
+    "label": "order_id",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:returns.order_item_id",
+    "label": "order_item_id",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'unit_price' and 'unit_cost' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:order_items.unit_price",
+    "label": "unit_price",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:product_variants.unit_cost",
+    "label": "unit_cost",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'orders_count' and 'total_orders' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:customers.orders_count",
+    "label": "orders_count",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:dim_customers.total_orders",
+    "label": "total_orders",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'option1' and 'option2' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:product_variants.option1",
+    "label": "option1",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:product_variants.option2",
+    "label": "option2",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'current_period_start' and 'current_period_end' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:subscriptions.current_period_end",
+    "label": "current_period_end",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:subscriptions.current_period_start",
+    "label": "current_period_start",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'last_order_date' and 'order_date' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:dim_customers.last_order_date",
+    "label": "last_order_date",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:fct_orders.order_date",
+    "label": "order_date",
+    "layer": "warehouse"
+   }
+  ]
+ },
+ {
+  "type": "NAME_COLLISION",
+  "danger": "low",
+  "note": "warehouse columns 'net_revenue' and 'revenue' read alike \u2014 likely the same thing under two names, or two things under alike names",
+  "items": [
+   {
+    "id": "wh:fct_orders.net_revenue",
+    "label": "net_revenue",
+    "layer": "warehouse"
+   },
+   {
+    "id": "wh:fct_orders.revenue",
+    "label": "revenue",
+    "layer": "warehouse"
+   }
+  ]
+ }
+]

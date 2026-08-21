@@ -1,0 +1,85 @@
+# small_after / high_after -- the fix: real_value_moments removed.
+---
+semantic_model:
+  name: user_activity
+  description: "One row is one user-day of activity."
+  node_relation: {schema_name: _star, alias: agg_active_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: platform, type: categorical}
+    - {name: country, type: categorical}
+  measures:
+    - {name: moments, agg: sum, expr: moments}
+    - {name: active_user_count, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: users
+  description: "The user dimension: one row is one user (a signup)."
+  node_relation: {schema_name: _star, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities: [{name: user, type: primary, expr: user_id}]
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+  measures:
+    - {name: signup_count, agg: count, expr: user_id}
+---
+semantic_model:
+  name: sub_snapshot
+  description: "One row is one subscription in one monthly snapshot (a periodic snapshot of the active book)."
+  node_relation: {schema_name: _star, alias: fct_subscription_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities: [{name: sub_month, type: primary, expr: "subscription_id || snapshot_month"}]
+  dimensions:
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
+    - {name: plan, type: categorical}
+  measures:
+    - {name: mrr_amount, agg: sum, expr: mrr_amount, non_additive_dimension: {name: snapshot_month, window_choice: max}}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
+---
+semantic_model:
+  name: habit_snapshot
+  description: "One row is one habit in one monthly snapshot (active as of month-end)."
+  node_relation: {schema_name: _star, alias: fct_habit_months}
+  defaults: {agg_time_dimension: snapshot_month}
+  entities: [{name: habit_month, type: primary, expr: "habit_id || snapshot_month"}]
+  dimensions:
+    - {name: snapshot_month, type: time, type_params: {time_granularity: month}}
+    - {name: category, type: categorical}
+  measures:
+    - {name: active_habit_count, agg: count, expr: habit_id, non_additive_dimension: {name: snapshot_month, window_choice: max}}
+---
+semantic_model:
+  name: marketing
+  description: "One row is one channel-day of marketing spend."
+  node_relation: {schema_name: _star, alias: fct_marketing_spend}
+  defaults: {agg_time_dimension: spend_date}
+  entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
+  dimensions:
+    - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: spend_amount, agg: sum, expr: spend}
+---
+metric: {name: value_moments, description: "Value moments (completed habits) in the period, all accounts.", type: simple, type_params: {measure: moments}}
+---
+metric:
+  name: active_users
+  description: "Distinct real users active in the period (excludes internal/test)."
+  type: simple
+  type_params: {measure: active_user_count}
+  filter: "{{ Dimension('user__is_internal') }} = false"
+---
+metric: {name: mrr, description: "Monthly recurring revenue (current active book, from the monthly snapshot).", type: simple, type_params: {measure: mrr_amount}}
+---
+metric: {name: paying_users, description: "Distinct users with an active subscription (current, from the monthly snapshot).", type: simple, type_params: {measure: paying_user_count}}
+---
+metric: {name: active_habits, description: "Habits still being tracked (current active book, from the monthly snapshot).", type: simple, type_params: {measure: active_habit_count}}
+---
+metric: {name: new_signups, description: "User signups in the period, all accounts.", type: simple, type_params: {measure: signup_count}}
+---
+metric: {name: marketing_spend, description: "Total marketing spend in the period.", type: simple, type_params: {measure: spend_amount}}

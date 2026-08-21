@@ -1,0 +1,416 @@
+# Harborstone Market — semantic layer
+# owner: analytics-eng   status: shipping, will tidy after Q3 close
+version: 2
+
+metrics:
+
+  - name: gross_sales
+    description: Gross sales rung at the register (Merchandising view)
+    entity: sale
+    agg: sum
+    measure: gross_amt
+    base: pos_transactions
+    time_column: business_date
+    unit: USD
+
+  - name: net_sales
+    description: Net sales, gross less returns and markdowns
+    entity: sale
+    agg: sum
+    expr: gross_amt - return_amt - markdown_amt
+    base: pos_transactions
+    time_column: business_date
+    unit: USD
+
+  - name: net_sales_finance
+    description: Net sales as Finance reports it (net of returns, markdowns and sales tax)
+    entity: sale
+    agg: sum
+    measure: net_sales_amt
+    model: finance.fct_net_sales
+    grain: day
+    unit: USD
+
+  - name: total_revenue
+    description: Total revenue across channels
+    entity: order
+    agg: sum
+    measure: revenue
+    base: fct_sales
+    filter: order_status = 'completed'
+    unit: USD
+
+  - name: retail_sales
+    description: Store sales from the daily store-ops feed
+    entity: sale
+    agg: sum
+    measure: sales_amount
+    base: store_ops_daily
+    time_column: sale_date
+    unit: USD
+
+  - name: merch_sales
+    description: Merchandise sales rung at the register, line level
+    entity: line_item
+    agg: sum
+    measure: ext_ring_amt
+    base: pos_line_items
+    unit: USD
+
+  - name: store_sales
+    entity: sale
+    agg: sum
+    measure: gross_amt
+    base: pos_transactions
+    filter: channel = 'store'
+    unit: USD
+
+  - name: online_sales
+    description: E-commerce sales (click-and-collect + delivery)
+    entity: order
+    agg: sum
+    measure: order_total
+    base: fct_online_orders
+    filter: channel = 'online'
+    time_column: order_date
+    unit: USD
+
+  - name: comparable_store_sales
+    description: Comp sales — stores open at least 13 months
+    entity: sale
+    agg: sum
+    measure: gross_amt
+    base: pos_transactions
+    filter: store.months_open >= 13
+    unit: USD
+
+  - name: same_store_sales
+    description: Same-store sales for comparable locations
+    entity: sale
+    agg: sum
+    expr: gross_amt - return_amt - markdown_amt
+    base: pos_transactions
+    segment: comp_stores
+    unit: USD
+
+  - name: comp_sales
+    description: Comparable sales
+    entity: sale
+    agg: sum
+    expr: sum(case when store.comp_flag = 1 and store.months_open >= 12 then gross_amt else 0 end)
+    base: pos_transactions
+    unit: USD
+
+  - name: transactions
+    description: Count of POS transactions
+    entity: transaction
+    agg: count_distinct
+    measure: transaction_id
+    base: pos_transactions
+    time_column: business_date
+
+  - name: transaction_count
+    entity: transaction
+    agg: count
+    measure: txn_id
+    base: pos_transactions
+
+  - name: baskets
+    description: Distinct baskets from basket lines
+    entity: basket
+    agg: count_distinct
+    measure: basket_id
+    base: pos_line_items
+
+  - name: online_orders
+    description: Number of online orders placed
+    entity: order
+    agg: count_distinct
+    measure: order_id
+    base: fct_online_orders
+    filter: channel = 'online'
+
+  - name: units_sold
+    description: Units sold across all channels
+    entity: unit
+    agg: sum
+    measure: quantity
+    base: pos_line_items
+
+  - name: units
+    entity: unit
+    agg: sum
+    measure: qty
+    model: fct_sales
+    filter: line_type = 'sale'
+
+  - name: items_per_basket
+    description: Average units per basket
+    entity: unit
+    expr: sum(quantity) / count(distinct basket_id)
+    base: pos_line_items
+
+  - name: aov
+    description: Average order value
+    entity: order
+    expr: sum(net_sales_amt) / count(distinct transaction_id)
+    base: pos_transactions
+    unit: USD
+
+  - name: average_basket_value
+    description: Average basket value
+    entity: basket
+    agg: average
+    measure: basket_total
+    base: pos_transactions
+    unit: USD
+
+  - name: average_order_value
+    description: Average value of an online order
+    entity: order
+    agg: average
+    measure: order_total
+    base: fct_online_orders
+    filter: channel = 'online'
+    unit: USD
+
+  - name: gross_margin
+    description: Gross margin dollars
+    entity: line_item
+    agg: sum
+    expr: ext_ring_amt - ext_cost
+    base: pos_line_items
+    unit: USD
+
+  - name: gross_margin_pct
+    description: Gross margin as a percent of net sales
+    entity: line_item
+    expr: (sum(ext_ring_amt) - sum(landed_cost * quantity)) / nullif(sum(net_sales_amt), 0)
+    base: pos_line_items
+    unit: percent
+
+  - name: margin_standard
+    description: Margin on standard cost
+    entity: line_item
+    agg: sum
+    expr: ext_ring_amt - (std_cost * quantity)
+    base: pos_line_items
+    unit: USD
+
+  - name: inventory_on_hand
+    description: Units on hand (latest snapshot)
+    entity: inventory
+    agg: sum
+    measure: on_hand_qty
+    base: inventory_snapshot
+    grain: day
+
+  - name: inventory_available
+    description: Available to sell
+    entity: inventory
+    agg: sum
+    expr: on_hand_qty - reserved_qty
+    base: inventory_snapshot
+
+  - name: inventory_in_transit
+    entity: inventory
+    agg: sum
+    measure: in_transit_qty
+    base: stg_inventory_daily
+
+  - name: inventory_turns
+    description: Inventory turns (annualized COGS over average inventory value)
+    entity: inventory
+    expr: sum(cogs) / avg(inv_value)
+    base: inventory_snapshot
+    grain: month
+
+  - name: shrink
+    description: Shrink at cost
+    entity: inventory
+    agg: sum
+    measure: shrink_amt
+    base: inventory_snapshot
+    unit: USD
+
+  - name: shrink_rate
+    description: Shrink as a percent of sales
+    entity: inventory
+    expr: sum(shrink_amt) / nullif(sum(gross_amt), 0)
+    base: inventory_snapshot
+    unit: percent
+
+  - name: loyalty_members
+    description: Enrolled Harborstone Rewards members
+    entity: member
+    agg: count_distinct
+    measure: member_id
+    base: loyalty_members
+
+  - name: active_members
+    description: Members with a purchase in the last 90 days
+    entity: member
+    agg: count_distinct
+    measure: member_id
+    base: loyalty_members
+    filter: last_purchase_date >= dateadd('day', -90, current_date)
+
+  - name: enrolled_members
+    description: Members enrolled in the program
+    entity: member
+    agg: count
+    measure: member_id
+    model: dim_member
+    filter: enrolled = true
+
+  - name: member_count
+    entity: member
+    agg: count_distinct
+    measure: customer_id
+    base: dim_member
+    segment: members
+
+  - name: returns
+    description: Returns at retail value
+    entity: return
+    agg: sum
+    measure: return_amt
+    base: fct_returns
+    unit: USD
+
+  - name: return_rate
+    description: Return rate against gross sales
+    entity: return
+    expr: sum(return_amt) / nullif(sum(gross_amt), 0)
+    base: fct_returns
+    unit: percent
+
+  - name: markdown
+    description: Markdown dollars taken
+    entity: markdown
+    agg: sum
+    measure: markdown_amt
+    base: pos_line_items
+    unit: USD
+
+  - name: promo_sales
+    description: Sales on promotion
+    entity: sale
+    agg: sum
+    expr: sum(case when promo_flag = 1 then ext_ring_amt else 0 end)
+    base: pos_line_items
+    unit: USD
+
+  - name: sell_through_rate
+    description: Sell-through — units sold over units available
+    entity: unit
+    expr: sum(units_sold) / nullif(sum(units_sold) + sum(on_hand_qty), 0)
+    base: inventory_snapshot
+    unit: percent
+
+
+dimensions:
+
+  - name: store
+    expr: store_id
+    source: dim_store
+    type: categorical
+
+  - name: location
+    description: Selling location
+    expr: store_id
+    source: dim_location
+    type: categorical
+
+  - name: site
+    description: Online fulfillment site
+    expr: site_id
+    source: fct_online_orders
+
+  - name: region
+    expr: region_name
+    source: dim_store
+
+  - name: banner
+    description: Store banner
+    expr: banner
+    source: dim_store
+
+  - name: market
+    expr: market_name
+    source: dim_location
+
+  - name: store_format
+    expr: format
+    source: dim_store
+
+  - name: department
+    expr: dept_name
+    source: dim_product
+
+  - name: category
+    description: Merchandise category
+    expr: category
+    source: dim_product
+
+  - name: product
+    expr: sku
+    source: dim_product
+
+  - name: channel
+    expr: channel
+    type: categorical
+
+  - name: business_date
+    expr: business_date
+    type: time
+    grain: day
+
+  - name: order_date
+    expr: order_date
+    type: time
+    grain: day
+
+  - name: member_tier
+    expr: tier
+    source: loyalty_members
+
+  - name: supplier
+    expr: supplier_name
+    source: dim_supplier
+
+  - name: promotion
+    expr: promo_type
+    source: pos_line_items
+
+
+segments:
+
+  - name: comparable_stores
+    description: Stores open at least 13 months
+    filter: store.months_open >= 13
+
+  - name: comp_stores
+    description: Comparable stores flagged by Merchandising
+    filter: store.comp_flag = 1
+
+  - name: online_channel
+    filter: channel = 'online'
+
+  - name: store_channel
+    filter: channel = 'store'
+
+  - name: members
+    description: Loyalty members
+    filter: is_member = true
+
+  - name: active_members
+    description: Purchased in the last 90 days
+    filter: last_purchase_date >= dateadd('day', -90, current_date)
+
+  - name: promo_baskets
+    filter: promo_flag = 1
+
+  - name: clearance
+    description: Marked-down clearance lines
+    filter: markdown_amt > 0

@@ -12,9 +12,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 
-from semantic.engine import check_compatible
-from semantic.semantic import SemanticLayer
-from semantic.tree import MetricTree
+from semantic import MetricTree, SemanticLayer, check_compatible
 
 from .guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
@@ -56,7 +54,9 @@ class Grounding:
         comparing documented tables against undocumented ones hashed the same in both arms — the
         treatment was the schema text, and the fingerprint could not see it. Caught by the guard
         that exists to catch it, one surface later than it should have been."""
-        from warehouse.warehouse import schema_text
+        from warehouse import schema_text
+
+        from .rungs import capabilities
 
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
         if self.semantic is not None:
@@ -66,7 +66,7 @@ class Grounding:
             # The arm's SCHEMA must be passed, or this reads the shared warehouse and misses the
             # treatment entirely. It did: two arms differing only in their table comments hashed
             # identically, because comments live in the arm's own schema and this asked about none.
-            surface += "\n" + schema_text(con, self.rung, getattr(self.toolbox, "schema", None))
+            surface += "\n" + schema_text(con, capabilities(self.rung).star, getattr(self.toolbox, "schema", None))
         return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 

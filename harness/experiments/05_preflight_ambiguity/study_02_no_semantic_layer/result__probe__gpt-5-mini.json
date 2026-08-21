@@ -1,0 +1,106 @@
+{
+  "model": "gpt-5-mini",
+  "reps": 3,
+  "arms": {
+    "before": {
+      "overall": {
+        "n": 3,
+        "coverage": 1.0,
+        "silent_error": 1.0,
+        "correct": 0.0,
+        "wrong_selection_rate": 0.0,
+        "wrong_construction_rate": 1.0
+      },
+      "flagged": {
+        "n": 3,
+        "coverage": 1.0,
+        "silent_error": 1.0,
+        "correct": 0.0,
+        "wrong_selection_rate": 0.0,
+        "wrong_construction_rate": 1.0
+      },
+      "clean": {
+        "n": 0,
+        "coverage": NaN,
+        "silent_error": NaN,
+        "correct": NaN,
+        "wrong_selection_rate": NaN,
+        "wrong_construction_rate": NaN
+      },
+      "rows": [
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "s2_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "wrong_grounding": false,
+          "sql": "select count(*) as count\nfrom subscriptions\nwhere started_date >= date '2026-03-01'\n  and started_date < date '2026-04-01';"
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "s2_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "wrong_grounding": false,
+          "sql": "select count(*) as march_started\nfrom subscriptions\nwhere started_date >= date '2026-03-01' and started_date < date '2026-04-01'; select count(*) as march_started\nfrom subscriptions_2026_03;"
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "s2_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "wrong_grounding": false,
+          "sql": "select count(*) as march_2026_starts\nfrom subscriptions\nwhere started_date >= date '2026-03-01' and started_date < date '2026-04-01'; select count(*) as march_2026_starts\nfrom subscriptions_2026_03;"
+        }
+      ]
+    }
+  }
+}

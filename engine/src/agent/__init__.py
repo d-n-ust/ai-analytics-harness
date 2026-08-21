@@ -18,19 +18,11 @@ from __future__ import annotations
 
 __all__ = ["NotConfigured", "ask_one"]
 
+# Defined in `warehouse` (the leaf that raises it for a missing/uncheckout-ed warehouse) and
+# re-exported here, so `from agent import NotConfigured` keeps working and the packages stay acyclic.
+from warehouse import NotConfigured
+
 from .models import DEFAULT_MODEL
-
-
-class NotConfigured(RuntimeError):
-    """Something the run needs is absent from the environment — an API key, a generated
-    warehouse, a checkout.
-
-    A distinct type because it is not a bug: nothing is broken, the caller simply has not set
-    something up yet, and every message of this class already names the fix. The CLI catches it
-    and prints that message alone. A traceback here says "this program crashed" when the truth is
-    "add your key to .env", and the fifteen lines above the useful sentence are pure noise.
-    """
-
 
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
@@ -48,7 +40,7 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     points apparatus -> engine, which is what lets the engine be installed, tested, and one day
     shipped without the harness. The alternative — guarding the import — would leave the name
     unbound at the call site below and raise NameError instead of degrading.""" 
-    from warehouse.warehouse import open_warehouse, set_star
+    from warehouse import open_warehouse, set_star
 
     from .grounding import RUNG_NAMES, build_grounding
     from .loop import run_agent

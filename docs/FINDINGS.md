@@ -226,7 +226,41 @@ killed by our own judge. That is a handicap we imposed, not a property we measur
 
 ---
 
-## 7. Errata and self-inflicted findings
+## 7. Written ambiguity is findable before the agent runs; unwritten ambiguity is not
+
+Experiment 05, one dbt-shaped warehouse with models and a metrics layer over them, 36 questions,
+3 repetitions, 108 graded answers per arm per model. The agent holds both `query_metric` and raw
+SQL, so it uses a governed metric where one exists and writes SQL where none does.
+
+**The static scan predicts where the agent fails.** 11 findings before the repair, 0 after. Where
+the metrics layer governs the concept, wrong-metric selection falls **24% → 0.00** (`gpt-5-mini`)
+and **11% → 0.00** (`gpt-5.6-terra`), 93 answers each. Overall correctness 62% → 91% and 80% → 94%.
+
+**Severity is a useful prior, not a verdict.** The worst cluster and the quietest were both ranked
+HIGH (active-user aliases at 67% wrong grounding; value moments at 8%), with the LOW name collision
+between them at 28%.
+
+**Scale does not substitute for governed definitions.** The larger model made zero construction
+errors on the sprawled warehouse and still grounded on a decoy metric one time in nine, and it was
+*worse* than the small model on the active-user cluster.
+
+**The boundary is what nobody wrote down.** Two undocumented staff flags covering different accounts
+and a `status` column stale for ~8% of ended terms produced no findings, because no definition
+disagrees with another — there is nothing to compare. On the five questions the layer does not
+govern, wrong grounding was 69% before and 33% after: the repair helped and did not finish.
+
+**A residue nothing predicted: coverage gaps invite improvisation.** Asked for a count of
+subscription contracts, the agent never wrote SQL. It substituted the nearest governed metric every
+time (`subscribers` before, `paying_users` after) across six runs and two models. No definition was
+wrong; the layer governs no contract count. Cleaning existing definitions cannot remove this class.
+
+**The detector was wrong three times, and each was found by a trace rather than by review.** An
+acronym defeats name matching (fixed in preflight 0.2.0); a table beside its own `_v2` was invisible
+though the name is the whole signal (0.3.0); and the same count over one process at two grains was
+unreachable, because the dangerous pair scores *lower* on name similarity than a pair that must
+never be flagged, so the rule had to be structural and ignore names entirely (0.4.0).
+
+## 8. Errata and self-inflicted findings
 
 **Three artifacts caught in my own analysis on one day**, all the same shape, all nearly reported
 as findings:
@@ -246,7 +280,7 @@ declared `0` had matched any rate below 50%.
 
 ---
 
-## 8. Open, ranked by what it would take
+## 9. Open, ranked by what it would take
 
 | # | open question | cost | why it matters |
 |---|---|---|---|
@@ -259,7 +293,7 @@ declared `0` had matched any rate below 50%.
 
 ---
 
-## 9. What is publishable today
+## 10. What is publishable today
 
 **Yes, with the numbers we have:** the evidence-graph mechanism and the deterministic-verification
 advantage; repair moves traceability 88% → 94% and nothing else; the `n/a` argument (an

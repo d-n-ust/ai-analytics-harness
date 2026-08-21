@@ -1,0 +1,366 @@
+<title>Preflight Benefit Study</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ---- Decision Spine tokens (mission-control / technical schematic) ---- */
+  :root{
+    --paper:#faf8f5; --paper-warm:#f4efe8; --panel:#f6f2ef; --fog:#e6e8eb; --white:#ffffff;
+    --midnight:#0f1720; --slate:#334155; --muted:#64748b; --line:#d3d2ce;
+    --copper:#d08a5b; --gold:#d7a638; --gold-ink:#9a7a1f;
+    --risk:#d1685f; --risk-ink:#b0453a; --verified:#6f9475; --verified-ink:#47694f;
+    --serif:Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --track:#e8e2d9;
+  }
+  :root:not([data-theme="light"]){ }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#14110c; --paper-warm:#1c1710; --panel:#211a12; --fog:#191713; --white:#1b1610;
+      --midnight:#ece4d2; --slate:#bfb5a1; --muted:#8a8171; --line:#322c22;
+      --copper:#dda06a; --gold:#dcae52; --gold-ink:#e8c56a;
+      --risk:#e0857a; --risk-ink:#f0a99f; --verified:#8fb896; --verified-ink:#a9cbb0;
+      --track:#2a2318;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14110c; --paper-warm:#1c1710; --panel:#211a12; --fog:#191713; --white:#1b1610;
+    --midnight:#ece4d2; --slate:#bfb5a1; --muted:#8a8171; --line:#322c22;
+    --copper:#dda06a; --gold:#dcae52; --gold-ink:#e8c56a;
+    --risk:#e0857a; --risk-ink:#f0a99f; --verified:#8fb896; --verified-ink:#a9cbb0;
+    --track:#2a2318;
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--paper); color:var(--midnight);
+    font-family:var(--sans); line-height:1.55;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:clamp(28px,5vw,72px) clamp(20px,5vw,40px)}
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--copper); margin:0 0 14px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:600; letter-spacing:-.01em;
+    font-size:clamp(30px,5.2vw,50px); line-height:1.06; margin:0 0 18px; text-wrap:balance;
+  }
+  h1 em{font-style:normal; color:var(--copper)}
+  .lede{font-size:clamp(17px,2.3vw,20px); color:var(--slate); max-width:70ch; margin:0 0 10px}
+  .byline{font-family:var(--mono); font-size:12px; color:var(--muted); letter-spacing:.03em; margin-top:18px}
+
+  section{margin-top:clamp(40px,6vw,66px)}
+  h2{
+    font-family:var(--serif); font-weight:600; font-size:clamp(21px,3vw,27px);
+    letter-spacing:-.01em; margin:0 0 6px;
+  }
+  .kicker{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 20px}
+  p{max-width:72ch}
+  .rule{height:1px; background:var(--line); border:0; margin:0}
+
+  /* ---- definition panel ---- */
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:clamp(20px,3vw,30px);
+  }
+  .panel .tag{font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--risk-ink)}
+  .panel.good .tag{color:var(--verified-ink)}
+  .panel h3{margin:8px 0 8px; font-family:var(--serif); font-weight:600; font-size:19px}
+  .panel p{margin:0; color:var(--slate)}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:620px){.two{grid-template-columns:1fr}}
+
+  /* ---- headline stat row ---- */
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line);
+    border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  @media (max-width:620px){.stats{grid-template-columns:1fr}}
+  .stat{background:var(--paper); padding:22px 20px}
+  .stat .n{font-family:var(--serif); font-weight:600; font-size:clamp(34px,6vw,46px); line-height:1; letter-spacing:-.02em}
+  .stat .n.good{color:var(--verified-ink)}
+  .stat .n .arrow{color:var(--muted); font-size:.5em; vertical-align:middle; margin:0 .18em; font-family:var(--sans)}
+  .stat .lab{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--muted); margin-top:12px; text-transform:uppercase}
+
+  /* ---- dumbbell chart ---- */
+  .chart{margin-top:8px}
+  .studygroup{margin-top:26px}
+  .studygroup h4{
+    font-family:var(--mono); font-size:12px; letter-spacing:.06em; color:var(--midnight);
+    margin:0 0 2px; font-weight:600;
+  }
+  .studygroup .sub{font-family:var(--sans); font-size:13.5px; color:var(--muted); margin:0 0 14px}
+  .row{display:grid; grid-template-columns:96px 1fr; align-items:center; gap:14px; margin:9px 0}
+  .row .model{font-family:var(--mono); font-size:13px; color:var(--slate); text-align:right}
+  .track{position:relative; height:30px}
+  .axislabels{display:grid; grid-template-columns:96px 1fr; gap:14px; margin-top:6px}
+  .axislabels .scale{position:relative; height:16px; font-family:var(--mono); font-size:10.5px; color:var(--muted)}
+  .axislabels .scale span{position:absolute; transform:translateX(-50%)}
+  .legend{display:flex; gap:22px; flex-wrap:wrap; margin:2px 0 0; font-family:var(--mono); font-size:12px; color:var(--slate)}
+  .legend .k{display:inline-flex; align-items:center; gap:8px}
+  .sw{width:14px; height:14px; display:inline-block; border-radius:50%; position:relative}
+
+  /* ---- data table ---- */
+  .tablewrap{overflow-x:auto; border:1px solid var(--line); border-radius:10px}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:640px}
+  caption{caption-side:bottom; text-align:left; font-size:12px; color:var(--muted); padding:12px 4px 0; font-family:var(--sans)}
+  th,td{padding:11px 14px; text-align:right; border-bottom:1px solid var(--line)}
+  thead th{font-family:var(--mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; text-align:right}
+  tbody th{text-align:left; font-family:var(--mono); font-size:12.5px; font-weight:400; color:var(--slate)}
+  td.metric{font-family:var(--mono)}
+  tr.after td, tr.after th{background:var(--paper-warm)}
+  .val-risk{color:var(--risk-ink); font-family:var(--mono)}
+  .val-good{color:var(--verified-ink); font-family:var(--mono)}
+  .studyhdr th{background:var(--panel); font-family:var(--serif); font-weight:600; font-size:14px; text-transform:none; letter-spacing:0; color:var(--midnight); text-align:left}
+
+  /* ---- findings list (real dbt) ---- */
+  .finds{display:grid; gap:10px; margin-top:6px}
+  .find{display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start;
+    border:1px solid var(--line); border-left:3px solid var(--copper); border-radius:8px; padding:14px 16px; background:var(--panel)}
+  .find .type{font-family:var(--mono); font-size:11px; letter-spacing:.05em; color:var(--copper); text-transform:uppercase; white-space:nowrap; padding-top:2px}
+  .find .body{min-width:0}
+  .find .names{font-family:var(--mono); font-size:13.5px; color:var(--midnight)}
+  .find .why{font-size:13px; color:var(--slate); margin-top:3px}
+  .find .cite{font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:6px}
+
+  .method{font-size:14px; color:var(--slate)}
+  .method b{color:var(--midnight); font-weight:600}
+  .foot{margin-top:60px; padding-top:22px; border-top:1px solid var(--line); display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:baseline}
+  .foot .brand{font-family:var(--serif); font-weight:600; font-size:16px}
+  .foot .brand .spine{color:var(--copper)}
+  .foot .tag{font-family:var(--mono); font-size:12px; color:var(--muted)}
+  a{color:var(--copper)}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Preflight &middot; Benefit Study</p>
+  <h1>An AI analyst that stops guessing which number you meant, once the layer no longer lets it.</h1>
+  <p class="lede">
+    On ambiguous questions, an AI analytics agent silently grounds on the wrong metric or column and
+    answers with confidence. We measured how often that happens, fixed exactly what our static checker
+    flags, and measured again. The wrong grounding falls to zero, on two independent models, whether the
+    data has a governed semantic layer or is raw SQL.
+  </p>
+  <p class="byline">Decision Spine &middot; two models (gpt-5-mini, claude-sonnet-5) &middot; deterministic gold oracle &middot; before / after</p>
+
+  <hr class="rule" style="margin-top:34px">
+
+  <!-- HEADLINE STATS -->
+  <section aria-label="Headline result" style="margin-top:34px">
+    <div class="stats">
+      <div class="stat">
+        <div class="n"><span class="val-risk" style="color:var(--risk-ink)">0.67</span><span class="arrow">&rarr;</span><span class="good">0.00</span></div>
+        <div class="lab">Worst-case wrong-selection<br>on ambiguous questions</div>
+      </div>
+      <div class="stat">
+        <div class="n good">4 / 4</div>
+        <div class="lab">Study &times; model cells<br>where wrong-selection hit 0.00</div>
+      </div>
+      <div class="stat">
+        <div class="n">2</div>
+        <div class="lab">Grounding styles proven<br>semantic layer + raw warehouse</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT A SILENT ERROR IS -->
+  <section>
+    <p class="kicker">The failure we target</p>
+    <h2>A silent error is a confident wrong number.</h2>
+    <p style="color:var(--slate); margin-bottom:22px">
+      The dangerous case is not a crash and not a refusal. The agent runs, returns a clean figure, and
+      the figure is wrong because it was built on the wrong grounding. Leadership cannot tell it apart
+      from a right answer. Two ways that happens:
+    </p>
+    <div class="two">
+      <div class="panel">
+        <span class="tag">&#10005; Wrong selection &mdash; preflight's lane</span>
+        <h3>It picked the wrong thing to measure.</h3>
+        <p>
+          Two columns named <span style="font-family:var(--mono)">is_internal</span> and
+          <span style="font-family:var(--mono)">is_test</span> mark different sets; a raw
+          <span style="font-family:var(--mono)">billed_amount</span> sits beside a modelled
+          <span style="font-family:var(--mono)">mrr</span>. The agent chooses one and never signals the choice.
+        </p>
+      </div>
+      <div class="panel">
+        <span class="tag" style="color:var(--muted)">&#177; Wrong construction &mdash; a different problem</span>
+        <h3>It picked the right thing, built the query wrong.</h3>
+        <p>
+          A stray period filter, a missing exclusion, the wrong grain. This is the validators' lane, not
+          preflight's. We report it separately so the two are never confused.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HEADLINE CHART -->
+  <section>
+    <p class="kicker">The result &middot; flagged questions</p>
+    <h2>Wrong-selection rate, before the fix and after.</h2>
+    <p style="color:var(--slate); margin-bottom:8px">
+      Each marker is the share of ambiguous questions the agent answered on the wrong grounding. Lower is
+      better; the fix moves every case to the baseline.
+    </p>
+
+    <div class="legend" aria-hidden="true">
+      <span class="k"><span class="sw" style="background:var(--risk); border:2px solid var(--risk-ink)"></span> Before &nbsp;&#10005;</span>
+      <span class="k"><span class="sw" style="background:var(--verified); border:2px dashed var(--verified-ink)"></span> After &nbsp;&#10003;</span>
+    </div>
+
+    <div class="chart" id="chart"><!-- dumbbells injected --></div>
+
+    <div class="axislabels" aria-hidden="true">
+      <div></div>
+      <div class="scale">
+        <span style="left:0%">0.00</span><span style="left:25%">0.25</span>
+        <span style="left:50%">0.50</span><span style="left:75%">0.75</span><span style="left:100%">1.00</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRIC HIERARCHY -->
+  <section>
+    <p class="kicker">How to read it</p>
+    <h2>One north star, split into the part we own.</h2>
+    <p style="color:var(--slate)">
+      <b style="color:var(--midnight)">Silent-error rate (SER)</b> is the headline: how often the agent
+      served a wrong number. It decomposes into <span class="val-risk" style="font-family:inherit">wrong-selection</span>
+      (the wrong grounding, which preflight removes) and <span style="color:var(--muted)">wrong-construction</span>
+      (the query built wrong, which it does not). Preflight targets selection, and the study holds it to
+      account only for selection. The full table below shows all of it, including the construction the fix
+      does not touch.
+    </p>
+  </section>
+
+  <!-- FULL TABLE -->
+  <section>
+    <p class="kicker">Every number &middot; flagged tier, 3 repetitions</p>
+    <h2>The two studies, in full.</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left">arm</th>
+            <th>SER</th><th>coverage</th>
+            <th>wrong-selection</th><th>wrong-construction</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="studyhdr"><th colspan="5">Study 01 &mdash; governed semantic layer (dbt MetricFlow)</th></tr>
+          <tr><th>gpt-5-mini &middot; before</th><td class="metric">0.30</td><td class="metric">1.00</td><td class="val-risk">0.43</td><td class="metric">0.00</td></tr>
+          <tr class="after"><th>gpt-5-mini &middot; after</th><td class="metric">0.17</td><td class="metric">1.00</td><td class="val-good">0.00</td><td class="metric">0.17</td></tr>
+          <tr><th>sonnet-5 &middot; before</th><td class="metric">0.33</td><td class="metric">0.83</td><td class="val-risk">0.29</td><td class="metric">0.21</td></tr>
+          <tr class="after"><th>sonnet-5 &middot; after</th><td class="metric">0.07</td><td class="metric">0.90</td><td class="val-good">0.00</td><td class="metric">0.04</td></tr>
+
+          <tr class="studyhdr"><th colspan="5">Study 02 &mdash; raw warehouse, no semantic layer (agent writes SQL)</th></tr>
+          <tr><th>gpt-5-mini &middot; before</th><td class="metric">0.67</td><td class="metric">0.92</td><td class="val-risk">0.55</td><td class="metric">0.18</td></tr>
+          <tr class="after"><th>gpt-5-mini &middot; after</th><td class="metric">0.00</td><td class="metric">1.00</td><td class="val-good">0.00</td><td class="metric">0.00</td></tr>
+          <tr><th>sonnet-5 &middot; before</th><td class="metric">0.42</td><td class="metric">0.50</td><td class="val-risk">0.67</td><td class="metric">0.17</td></tr>
+          <tr class="after"><th>sonnet-5 &middot; after</th><td class="metric">0.00</td><td class="metric">1.00</td><td class="val-good">0.00</td><td class="metric">0.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12.5px; color:var(--muted); margin-top:12px; max-width:76ch">
+      Clean control questions (not shown) stay at wrong-selection 0.00 in both arms on every cell: the
+      effect is on the ambiguous tier, not everywhere. Coverage below 1.00 in a before arm means the agent
+      abstained rather than answered; on the confusable warehouse sonnet-5 declined half the ambiguous
+      questions, which is the safer failure. Where wrong-selection is already high in a before arm, a
+      construction slip beneath it is masked, so before-arm construction can read low. Sample is modest by
+      design: 10 flagged questions (study 01) and 5 (study 02), three repetitions each, on two models.
+    </p>
+  </section>
+
+  <!-- REAL DBT VALIDATION -->
+  <section>
+    <p class="kicker">Not just our fixtures</p>
+    <h2>The checker runs on a real, public dbt project.</h2>
+    <p style="color:var(--slate)">
+      Pointed at the unmodified <a href="https://github.com/dbt-labs/jaffle-sl-template">dbt-labs/jaffle-sl-template</a>
+      (dbt 1.12, its compiled <span style="font-family:var(--mono)">manifest.json</span>), preflight reads
+      all three layers and reports 11 confusions, each cited back to the source line an analytics engineer
+      edits. A sample:
+    </p>
+    <div class="finds">
+      <div class="find">
+        <span class="type">Scope trap</span>
+        <div class="body">
+          <div class="names">food_orders &nbsp;&asymp;&nbsp; orders</div>
+          <div class="why">Same measure; <span style="font-family:var(--mono)">food_orders</span> is <span style="font-family:var(--mono)">orders</span> plus a hidden filter. A bare "how many orders" is silently scoped.</div>
+          <div class="cite">models/marts/customer360/orders.yml:139</div>
+        </div>
+      </div>
+      <div class="find">
+        <span class="type">Concept fork</span>
+        <div class="body">
+          <div class="names">food_revenue &nbsp;&asymp;&nbsp; drink_revenue &nbsp;&asymp;&nbsp; revenue</div>
+          <div class="why">The same aggregation over different columns, so a bare "revenue" resolves to three different numbers.</div>
+          <div class="cite">models/marts/customer360/order_items.yml:30</div>
+        </div>
+      </div>
+      <div class="find">
+        <span class="type">Duplicate &middot; cross-layer</span>
+        <div class="body">
+          <div class="names">order_total <span style="color:var(--muted)">[metric]</span> &nbsp;&asymp;&nbsp; order_total <span style="color:var(--muted)">[column]</span></div>
+          <div class="why">The semantic measure and the warehouse column carry one meaning under two names, reachable by two paths.</div>
+          <div class="cite">models/marts/customer360/orders.yml:18</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- METHOD -->
+  <section>
+    <p class="kicker">Method</p>
+    <h2>Why the number is trustworthy.</h2>
+    <p class="method">
+      <b>Deterministic gold.</b> Every answer is graded against a fixed SQL oracle, not an LLM judge, so the
+      answer key cannot drift toward what we changed. &nbsp;<b>Blind authoring.</b> Questions were written by
+      independent red teams before the fixes, and the correct grounding is fixed by the governed definition.
+      &nbsp;<b>Grounding recovered from the trace.</b> Which column or metric the agent used is read from its
+      own SQL and tool calls, so wrong-selection is observed, not inferred. &nbsp;<b>Two models, three
+      repetitions.</b> The effect holds across gpt-5-mini and claude-sonnet-5. &nbsp;<b>Honest boundary.</b>
+      Preflight removes the selection error; the residual construction error is reported, not hidden, and it
+      is the argument for the semantic layer that study 01 uses and study 02 does without.
+    </p>
+  </section>
+
+  <div class="foot">
+    <div class="brand">Decision<span class="spine"> Spine</span></div>
+    <div class="tag">Analytics your leadership trusts, human or agent.</div>
+  </div>
+
+</div>
+
+<script>
+  // Dumbbell chart: before (risk) pulled to after (0.00, verified). Injected so the four rows share
+  // one geometry and the SVG stays legible in both themes (marks read var() at paint time).
+  const DATA = [
+    { study:"Study 01 &mdash; governed semantic layer", sub:"dbt MetricFlow. The agent selects a governed metric.",
+      rows:[ {m:"gpt-5-mini", before:0.43}, {m:"sonnet-5", before:0.29} ] },
+    { study:"Study 02 &mdash; raw warehouse, no semantic layer", sub:"The agent answers by writing SQL over the tables.",
+      rows:[ {m:"gpt-5-mini", before:0.55}, {m:"sonnet-5", before:0.67} ] },
+  ];
+  const pct = v => (v*100).toFixed(0) + "%";
+  const fmt = v => v.toFixed(2);
+  function track(before){
+    const x = before*100;
+    return `
+      <div class="track">
+        <svg width="100%" height="30" viewBox="0 0 100 30" preserveAspectRatio="none" style="position:absolute;inset:0" aria-hidden="true">
+          <line x1="0.6" y1="15" x2="99.4" y2="15" stroke="var(--track)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+          <line x1="1" y1="15" x2="${x}" y2="15" stroke="var(--risk)" stroke-width="2" vector-effect="non-scaling-stroke" opacity="0.5"/>
+        </svg>
+        <span style="position:absolute;left:1%;top:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:var(--verified);border:2px dashed var(--verified-ink)" title="after 0.00"></span>
+        <span style="position:absolute;left:${x}%;top:50%;transform:translate(-50%,-50%);width:15px;height:15px;border-radius:50%;background:var(--risk);border:2px solid var(--risk-ink)" title="before ${fmt(before)}"></span>
+        <span style="position:absolute;left:${x}%;top:50%;transform:translate(calc(-50% ${x>85?'- 42px':'+ 16px'}),-50%);font-family:var(--mono);font-size:12px;color:var(--risk-ink)">${fmt(before)}</span>
+        <span style="position:absolute;left:1%;top:50%;transform:translate(18px,-50%);font-family:var(--mono);font-size:12px;color:var(--verified-ink)">0.00</span>
+      </div>`;
+  }
+  document.getElementById("chart").innerHTML = DATA.map(g => `
+    <div class="studygroup">
+      <h4>${g.study}</h4>
+      <p class="sub">${g.sub}</p>
+      ${g.rows.map(r => `<div class="row"><div class="model">${r.m}</div>${track(r.before)}</div>`).join("")}
+    </div>`).join("");
+</script>

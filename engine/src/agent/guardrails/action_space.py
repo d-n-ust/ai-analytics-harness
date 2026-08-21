@@ -85,7 +85,7 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
         if guardrails.check_tools and semantic is not None:
             # An engine declares what it cannot answer, and those lookups are withdrawn rather
             # than offered and left to fail. See semantic/engine.py: TOOL_NEEDS.
-            from semantic.engine import tools_unavailable
+            from semantic import tools_unavailable
             gone = tools_unavailable(semantic.capabilities)
             names = [n for n in _CHECK_TOOLS if n not in gone]
             offered += [schema(name) for name in names]

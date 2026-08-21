@@ -1,0 +1,767 @@
+generated_from: engine/src/semantic/ambiguity.py @ 1650de3f56b93ddfa82e2c09b150b016b4dee2d3
+repo_head: bb2d0a4d4dcb775ed612bb67e3d28904977722bd
+runs_read: none
+scope_only_pairs:
+- a: real_value_moments
+  b: value_moments
+  class: scope_only
+  severity: high
+  shared_tokens:
+  - moments
+  - value
+- a: weekly_value_moments (tree node -> real_value_moments)
+  b: value_moments
+  class: scope_only
+  severity: high
+  shared_tokens:
+  - moments
+  - value
+all_confusable_pairs:
+- a: real_value_moments
+  b: value_moments
+  class: scope_only
+  severity: high
+- a: weekly_value_moments (tree node -> real_value_moments)
+  b: value_moments
+  class: scope_only
+  severity: high
+- a: active_habits
+  b: active_subscriptions
+  class: different_measure
+  severity: low
+- a: active_habits
+  b: active_users
+  class: different_measure
+  severity: low
+- a: active_subscriptions
+  b: active_users
+  class: different_measure
+  severity: low
+- a: active_users
+  b: paying_users
+  class: different_measure
+  severity: low
+- a: active_users
+  b: power_users
+  class: different_measure
+  severity: low
+- a: active_users (tree node -> active_users)
+  b: active_habits
+  class: different_measure
+  severity: low
+- a: active_users (tree node -> active_users)
+  b: active_subscriptions
+  class: different_measure
+  severity: low
+- a: active_users (tree node -> active_users)
+  b: paying_users
+  class: different_measure
+  severity: low
+- a: active_users (tree node -> active_users)
+  b: power_users
+  class: different_measure
+  severity: low
+- a: moments_per_day
+  b: real_value_moments
+  class: different_measure
+  severity: low
+- a: moments_per_day
+  b: value_moments
+  class: different_measure
+  severity: low
+- a: moments_per_day (tree node -> moments_per_day)
+  b: real_value_moments
+  class: different_measure
+  severity: low
+- a: moments_per_day (tree node -> moments_per_day)
+  b: value_moments
+  class: different_measure
+  severity: low
+- a: paying_users
+  b: power_users
+  class: different_measure
+  severity: low
+- a: weekly_value_moments (tree node -> real_value_moments)
+  b: moments_per_day
+  class: different_measure
+  severity: low
+metrics_with_scope_sibling:
+- real_value_moments
+- value_moments
+cases:
+  t2_web_value_moments_june:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: value_moments
+    k_structural: 2
+    traverses_scope_only:
+    - real_value_moments
+    predict_structural: clarify
+    k_lexical: 3
+    name_siblings:
+    - moments_per_day
+    - real_value_moments
+    predict_lexical: clarify
+  t2_referral_signups_q2:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: new_signups
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t2_paid_search_spend_q2:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: marketing_spend
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t2_americas_value_moments_june:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: value_moments
+    k_structural: 2
+    traverses_scope_only:
+    - real_value_moments
+    predict_structural: clarify
+    k_lexical: 3
+    name_siblings:
+    - moments_per_day
+    - real_value_moments
+    predict_lexical: clarify
+  t2_active_annual_subs:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: active_subscriptions
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 3
+    name_siblings:
+    - active_habits
+    - active_users
+    predict_lexical: clarify
+  t2_only_region_improving_frequency:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: days_per_user
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t2_only_platform_improving_frequency:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: days_per_user
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t2_biggest_absolute_user_growth:
+    file: coverage/filtered.yml
+    expect: metric_answer
+    gold_metric: active_users
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 5
+    name_siblings:
+    - active_habits
+    - active_subscriptions
+    - paying_users
+    - power_users
+    predict_lexical: clarify
+  t4_apac_value_moments_q2:
+    file: coverage/knowledge.yml
+    expect: metric_answer
+    gold_metric: value_moments
+    k_structural: 2
+    traverses_scope_only:
+    - real_value_moments
+    predict_structural: clarify
+    k_lexical: 3
+    name_siblings:
+    - moments_per_day
+    - real_value_moments
+    predict_lexical: clarify
+  t4_real_signups_june:
+    file: coverage/knowledge.yml
+    expect: metric_answer
+    gold_metric: new_signups
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t4_real_acquisition_spend_june:
+    file: coverage/knowledge.yml
+    expect: metric_answer
+    gold_metric: marketing_spend
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t4_retention_trend:
+    file: coverage/knowledge.yml
+    expect: keywords
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t4_business_health:
+    file: coverage/knowledge.yml
+    expect: keywords
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t1_signups_june:
+    file: coverage/lookup.yml
+    expect: metric_answer
+    gold_metric: new_signups
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t1_spend_june:
+    file: coverage/lookup.yml
+    expect: metric_answer
+    gold_metric: marketing_spend
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t1_ios_value_moments_june:
+    file: coverage/lookup.yml
+    expect: metric_answer
+    gold_metric: value_moments
+    k_structural: 2
+    traverses_scope_only:
+    - real_value_moments
+    predict_structural: clarify
+    k_lexical: 3
+    name_siblings:
+    - moments_per_day
+    - real_value_moments
+    predict_lexical: clarify
+  t3_mrr:
+    file: coverage/metric.yml
+    expect: metric_answer
+    gold_metric: mrr
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t3_arpu:
+    file: coverage/metric.yml
+    expect: metric_answer
+    gold_metric: arpu
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t3_active_users_last_week:
+    file: coverage/metric.yml
+    expect: metric_answer
+    gold_metric: active_users
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 5
+    name_siblings:
+    - active_habits
+    - active_subscriptions
+    - paying_users
+    - power_users
+    predict_lexical: clarify
+  t3_power_users:
+    file: coverage/metric.yml
+    expect: metric_answer
+    gold_metric: power_users
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 3
+    name_siblings:
+    - active_users
+    - paying_users
+    predict_lexical: clarify
+  t3_activation_rate_june:
+    file: coverage/metric.yml
+    expect: metric_answer
+    gold_metric: activation_rate
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 1
+    name_siblings: []
+    predict_lexical: answer
+  t5_why_drop:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_engagement_drop:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_not_breadth:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_masked_by_growth:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_which_lever:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_region_or_broader:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_reminder_caused_it:
+    file: reasoning/diagnostic.yml
+    expect: keywords
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_offsetting_mid_may:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  t5_apac_growth_breadth:
+    file: reasoning/diagnostic.yml
+    expect: diagnostic
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: answer
+  adv_churn_premium:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_ltv_cac:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_trial_to_paid:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_dau_mau:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_last_week_oob:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_yoy_june:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_free_vs_paying:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_churned_behavior:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_whales:
+    file: reliability/adversarial.yml
+    expect: ambiguous
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_reminder_roi:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_price_lift:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_onboarding_activation:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  adv_channel_roi:
+    file: reliability/adversarial.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  fp_mrr_tripled:
+    file: reliability/false_premise.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  fp_apac_collapse:
+    file: reliability/false_premise.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_ipados_open_rate:
+    file: reliability/phantom_dimension.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_north_america_actives:
+    file: reliability/phantom_dimension.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_paid_social_activation:
+    file: reliability/phantom_dimension.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_mexico_signups:
+    file: reliability/phantom_dimension.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_churn_risk:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_engagement_score:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_apac_march:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_prelaunch_trend:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_enterprise_users:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_pricing_cause:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  u_july_partial_month:
+    file: reliability/unanswerable.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  amb_healthiest_region:
+    file: reliability/unanswerable.yml
+    expect: ambiguous
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  amb_best_channel:
+    file: reliability/unanswerable.yml
+    expect: ambiguous
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  vw_paying_users:
+    file: reliability/wrong_metric.yml
+    expect: metric_answer
+    gold_metric: paying_users
+    k_structural: 1
+    traverses_scope_only: []
+    predict_structural: answer
+    k_lexical: 3
+    name_siblings:
+    - active_users
+    - power_users
+    predict_lexical: clarify
+  t1_total_habits:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  vw_arr:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  vw_total_users:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  vw_total_subscriptions:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_activation_count_june:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
+  rt_arpu_annual:
+    file: reliability/wrong_metric.yml
+    expect: refuse
+    gold_metric: null
+    k_structural: 0
+    traverses_scope_only: []
+    predict_structural: refuse
+    k_lexical: 0
+    name_siblings: []
+    predict_lexical: refuse
