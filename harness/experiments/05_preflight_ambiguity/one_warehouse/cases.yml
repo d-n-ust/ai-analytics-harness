@@ -263,8 +263,8 @@ cases:
     question: "How many subscriptions started in March 2026?"
     expect: {type: metric_answer, no_governed_metric: true, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.started_date >= DATE '2026-03-01' AND f.started_date < DATE '2026-04-01' AND NOT u.is_internal"}
-    wrong_grounding: ["subscriptions_2026_03"]
-    right_grounding: ["started_date"]
+    wrong_grounding: ["fct_subscriptions_2026_03"]
+    right_grounding: ['re:fct_subscriptions\b']
   - id: e05_sql_active_subs
     tier: flagged
     family: stale_status
@@ -284,8 +284,8 @@ cases:
     question: "How many annual subscriptions have we sold in total?"
     expect: {type: metric_answer, no_governed_metric: true, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.plan = 'annual' AND NOT u.is_internal"}
-    wrong_grounding: ["subscriptions_2026_03"]
-    right_grounding: ["fct_subscriptions"]
+    wrong_grounding: ["fct_subscriptions_2026_03"]
+    right_grounding: ['re:fct_subscriptions\b']
   - id: e05_sql_annual_signups_may
     tier: flagged
     family: migration_leftover

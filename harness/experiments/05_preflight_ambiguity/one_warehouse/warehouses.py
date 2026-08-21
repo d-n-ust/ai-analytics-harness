@@ -46,8 +46,11 @@ def build(con) -> None:
         FROM "{S}".fct_subscriptions""")
 
     # 3. a table that reads as a March partition and is a stale copy of every term ever: 10% of
-    #    rows missing, no dates to filter by, and only the stale status column.
-    con.execute(f"""CREATE VIEW {BEFORE}.subscriptions_2026_03 AS
+    #    rows missing, no dates to filter by, and only the stale status column. It keeps the fact
+    #    table's prefix because it was made from it (CREATE TABLE ... AS SELECT * FROM
+    #    fct_subscriptions), which is also what lets the twin rule see it: strip the date stamp and
+    #    the base name is left.
+    con.execute(f"""CREATE VIEW {BEFORE}.fct_subscriptions_2026_03 AS
         SELECT subscription_id, user_id, plan, billed_amount, status
         FROM "{S}".fct_subscriptions WHERE subscription_id % 10 <> 0""")
 
