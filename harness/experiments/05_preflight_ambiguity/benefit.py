@@ -24,17 +24,20 @@ import argparse
 import json
 import math
 import pathlib
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import yaml
 
 from agent.grounding import build_grounding
-from agent.loop import run_agent
+from agent.loop import Answer, run_agent
 from agent.providers import get_model, get_verifier
 from agent.rungs import capabilities
 from evals.gold import _validate, compute_gold
 from evals.grade import grade
 from evals.selective import selective
 from warehouse.warehouse import STAR_SCHEMA, open_warehouse, set_star
+from warehouse.warehouse import cursor as scoped_cursor
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
@@ -95,37 +98,69 @@ def _queried_calls(ans) -> list[dict]:
     """Every query_metric call with its time arguments, verbatim. Added after a failure whose
     period argument could only be RECONSTRUCTED by matching the declared value against candidate
     windows (553 = last_month = June, asked for April): the row must carry what was actually
-    passed, so a wrong window is read from the trace, never inferred."""
+    passed, so a wrong window is read from the trace, never inferred. `filters` joined the list
+    after a wave-2 failure that was invisible without it: the agent queried the right metric,
+    then re-queried with filters={'user__is_internal': 'False'} and served the narrowed number —
+    a self-applied scope change no other recorded argument shows."""
     calls = []
     for s in getattr(ans, "steps", []) or []:
         if s.get("tool") == "query_metric" and isinstance(s.get("args"), dict):
             a = s["args"]
-            calls.append({k: a[k] for k in ("metric", "period", "start", "end", "time_grain")
+            calls.append({k: a[k] for k in ("metric", "period", "start", "end", "time_grain", "filters")
                           if a.get(k) is not None})
     return calls
 
 
 def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
-              engine: str = "harness", guardrails=None) -> list[dict]:
+              engine: str = "harness", guardrails=None, concurrency: int = 1) -> list[dict]:
     """The agent answers every question grounded on ONE semantic layer, `reps` times; each answer is
-    graded into the row shape selective() consumes. Reps average out agent stochasticity."""
-    g = build_grounding(con, rung=RUNG, spec_path=spec_path, engine=engine, semantic_layer=True,
-                        guardrails=guardrails)
-    rows = []
-    for rep in range(reps):
-        for case in cases:
-            ans = run_agent(case["question"], g, model, verifier_model=verifier)
-            queried = _queried_metrics(ans)
-            rows.append({**grade(ans, case, golds.get(case["id"])),
-                         "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
-                         "family": case.get("family"), "rep": rep,
-                         # observed pick: the last metric queried (the one the answer came from),
-                         # plus the full sequence, so a wrong number is attributable to a metric
-                         "picked": queried[-1] if queried else None, "queried": queried,
-                         "calls": _queried_calls(ans),
-                         "expected_metric": case["expect"].get("metric"),
-                         "declared": getattr(ans, "declared_value", None)})
-    return rows
+    graded into the row shape selective() consumes. Reps average out agent stochasticity. With
+    concurrency > 1 the (rep, case) tasks run on a thread pool, following the evals runner's
+    pattern: each worker grounds on its OWN DuckDB cursor (a shared connection object is not
+    thread-safe; warehouse.cursor keeps the star search_path), and the model objects are shared
+    because the provider SDK clients are thread-safe. Rows come back in (rep, case) order either
+    way, so the stored result does not depend on scheduling."""
+    cursor_lock = threading.Lock()   # DuckDB: create each thread's cursor under a lock
+    print_lock = threading.Lock()
+
+    def one(task):
+        rep, idx, case = task
+        with cursor_lock:
+            cur = scoped_cursor(con)
+        try:
+            g = build_grounding(cur, rung=RUNG, spec_path=spec_path, engine=engine,
+                                semantic_layer=True, guardrails=guardrails)
+            try:
+                ans = run_agent(case["question"], g, model, verifier_model=verifier)
+            except Exception as exc:  # noqa: BLE001 — one failed call shouldn't kill the layer
+                # Record the exception TYPE, so a persistent API failure stays distinguishable
+                # from a code bug when analysing error rows.
+                ans = Answer(case["question"], RUNG, model.spec.name, None,
+                             outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+        finally:
+            cur.close()
+        queried = _queried_metrics(ans)
+        row = {**grade(ans, case, golds.get(case["id"])),
+               "outcome": ans.outcome, "id": case["id"], "tier": case["tier"],
+               "family": case.get("family"), "rep": rep,
+               # observed pick: the last metric queried (the one the answer came from),
+               # plus the full sequence, so a wrong number is attributable to a metric
+               "picked": queried[-1] if queried else None, "queried": queried,
+               "calls": _queried_calls(ans),
+               "expected_metric": case["expect"].get("metric"),
+               "declared": getattr(ans, "declared_value", None)}
+        with print_lock:
+            mark = "✓" if row.get("correct") else ("~" if ans.outcome != "answer" else "✗")
+            print(f"  [{spec_path.name} rep{rep}] {mark} {case['id']}", flush=True)
+        return rep, idx, row
+
+    tasks = [(rep, i, c) for rep in range(reps) for i, c in enumerate(cases)]
+    if concurrency <= 1:
+        results = [one(t) for t in tasks]
+    else:
+        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+            results = list(pool.map(one, tasks))
+    return [row for _, _, row in sorted(results, key=lambda t: (t[0], t[1]))]
 
 
 # Selection equivalence (pre-registered 2026-08-21, with the wave-2 question expansion): picking a
@@ -214,6 +249,8 @@ def main() -> None:
     ap.add_argument("--mock", action="store_true", help="use the mock model (validate wiring, no key)")
     ap.add_argument("--model", default="claude-haiku-4-5")
     ap.add_argument("--reps", type=int, default=1, help="repetitions per question (averages stochasticity)")
+    ap.add_argument("--concurrency", type=int, default=1,
+                    help="parallel agent runs within a layer (per-thread DuckDB cursors; 1 = sequential)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
     ap.add_argument("--study", default="study_01_governed_layer", help="which study directory to run")
     ap.add_argument("--guardrails", default=None,
@@ -259,7 +296,7 @@ def main() -> None:
                    "engine": args.engine, "guardrails": args.guardrails or "R1 (loop default)"})
     for name in names:
         rows = run_layer(con, spec_of(name), cases, golds, model, verifier, args.reps, args.engine,
-                         guardrails=gset)
+                         guardrails=gset, concurrency=args.concurrency)
         report[name] = {"overall": metrics(rows),
                         "flagged": metrics([r for r in rows if r["tier"] == "flagged"]),
                         "clean": metrics([r for r in rows if r["tier"] == "clean"]),
