@@ -6723,16 +6723,16 @@
       "coverage": 1.0,
       "silent_error": 0.4666666666666667,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.38636363636363635,
-      "wrong_construction_rate": 0.09090909090909091
+      "wrong_selection_rate": 0.4044943820224719,
+      "wrong_construction_rate": 0.10112359550561797
     },
     "flagged": {
       "n": 72,
       "coverage": 1.0,
       "silent_error": 0.5833333333333334,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.4722222222222222,
-      "wrong_construction_rate": 0.1111111111111111
+      "wrong_selection_rate": 0.5,
+      "wrong_construction_rate": 0.125
     },
     "clean": {
       "n": 18,
@@ -6765,31 +6765,23 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "recurring_revenue",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "recurring_revenue",
           "recurring_revenue",
           "monthly_recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "day"
-          },
-          {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "week"
+            "metric": "recurring_revenue"
           },
           {
             "metric": "monthly_recurring_revenue",
-            "period": "last_week",
-            "time_grain": "week"
+            "period": "last_month",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 717.16
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -6819,11 +6811,13 @@
         ],
         "calls": [
           {
-            "metric": "recurring_revenue"
+            "metric": "recurring_revenue",
+            "period": "last_week",
+            "time_grain": "day"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 11448.08
+        "declared": 717.16
       },
       {
         "executed": true,
@@ -6849,19 +6843,11 @@
         "rep": 0,
         "picked": "active_habits",
         "queried": [
-          "active_habits",
-          "total_habits"
+          "active_habits"
         ],
         "calls": [
           {
-            "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
-          },
-          {
-            "metric": "total_habits",
-            "period": "last_week",
-            "time_grain": "week"
+            "metric": "active_habits"
           }
         ],
         "expected_metric": "active_habits",
@@ -6925,12 +6911,20 @@
         "rep": 0,
         "picked": "new_users",
         "queried": [
+          "new_users",
           "new_users"
         ],
         "calls": [
           {
             "metric": "new_users",
             "period": "all"
+          },
+          {
+            "metric": "new_users",
+            "period": "all",
+            "filters": {
+              "user__is_internal": "False"
+            }
           }
         ],
         "expected_metric": "new_signups",
@@ -7171,17 +7165,13 @@
         "tier": "flagged",
         "family": "value_moments",
         "rep": 0,
-        "picked": "total_moments",
+        "picked": "value_moments",
         "queried": [
-          "value_moments",
-          "total_moments"
+          "value_moments"
         ],
         "calls": [
           {
             "metric": "value_moments"
-          },
-          {
-            "metric": "total_moments"
           }
         ],
         "expected_metric": "value_moments",
@@ -7244,19 +7234,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "monthly_recurring_revenue",
-          "mrr"
+          "monthly_recurring_revenue"
         ],
         "calls": [
           {
             "metric": "monthly_recurring_revenue",
-            "period": "last_month",
-            "time_grain": "month"
-          },
-          {
-            "metric": "mrr",
             "period": "last_month",
             "time_grain": "month"
           }
@@ -7308,10 +7292,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -7322,25 +7306,31 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_jun",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "monthly_recurring_revenue",
+        "picked": "recurring_revenue",
         "queried": [
-          "monthly_recurring_revenue"
+          "monthly_recurring_revenue",
+          "recurring_revenue"
         ],
         "calls": [
           {
             "metric": "monthly_recurring_revenue",
             "period": "2026-06",
             "time_grain": "month"
+          },
+          {
+            "metric": "recurring_revenue",
+            "period": "2026-06",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2582.543333333333
+        "declared": 3489.5
       },
       {
         "executed": true,
@@ -7398,26 +7388,14 @@
         "tier": "flagged",
         "family": "actives",
         "rep": 0,
-        "picked": "mau",
+        "picked": "monthly_active_users",
         "queried": [
           "monthly_active_users",
-          "monthly_active_users",
-          "mau",
           "monthly_active_users"
         ],
         "calls": [
           {
             "metric": "monthly_active_users",
-            "period": "2026-06",
-            "time_grain": "month"
-          },
-          {
-            "metric": "monthly_active_users",
-            "period": "2026-06",
-            "time_grain": "month"
-          },
-          {
-            "metric": "mau",
             "period": "2026-06",
             "time_grain": "month"
           },
@@ -7465,8 +7443,7 @@
           },
           {
             "metric": "engaged_users",
-            "start": "2026-04-01",
-            "end": "2026-04-30",
+            "period": "2026-04",
             "time_grain": "month"
           }
         ],
@@ -7567,7 +7544,7 @@
         "tier": "flagged",
         "family": "new_users",
         "rep": 0,
-        "picked": "new_users",
+        "picked": "new_signups",
         "queried": [
           "new_users",
           "new_signups"
@@ -7611,15 +7588,9 @@
         "rep": 0,
         "picked": "new_users",
         "queried": [
-          "new_users",
           "new_users"
         ],
         "calls": [
-          {
-            "metric": "new_users",
-            "period": "2026-05",
-            "time_grain": "month"
-          },
           {
             "metric": "new_users",
             "period": "2026-05",
@@ -7653,15 +7624,9 @@
         "rep": 0,
         "picked": "new_users",
         "queried": [
-          "new_users",
           "new_users"
         ],
         "calls": [
-          {
-            "metric": "new_users",
-            "period": "2026-02",
-            "time_grain": "month"
-          },
           {
             "metric": "new_users",
             "period": "2026-02",
@@ -7695,17 +7660,11 @@
         "rep": 0,
         "picked": "active_habits",
         "queried": [
-          "active_habits",
-          "total_habits"
+          "active_habits"
         ],
         "calls": [
           {
             "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
-          },
-          {
-            "metric": "total_habits",
             "period": "last_week",
             "time_grain": "week"
           }
@@ -7715,10 +7674,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -7729,31 +7688,24 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_habits_ever_remaining",
         "tier": "flagged",
         "family": "habits",
         "rep": 0,
-        "picked": "active_habits",
+        "picked": "total_habits",
         "queried": [
-          "total_habits",
-          "active_habits"
+          "total_habits"
         ],
         "calls": [
           {
             "metric": "total_habits",
-            "period": "all",
-            "time_grain": "month"
-          },
-          {
-            "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "month"
+            "period": "all"
           }
         ],
         "expected_metric": "active_habits",
-        "declared": 6946.0
+        "declared": 7467.0
       },
       {
         "executed": true,
@@ -7849,9 +7801,17 @@
         "tier": "clean",
         "family": "marketing_spend",
         "rep": 0,
-        "picked": null,
-        "queried": [],
-        "calls": [],
+        "picked": "marketing_spend",
+        "queried": [
+          "marketing_spend"
+        ],
+        "calls": [
+          {
+            "metric": "marketing_spend",
+            "period": "2026-03",
+            "time_grain": "month"
+          }
+        ],
         "expected_metric": "marketing_spend",
         "declared": 20568.28
       },
@@ -7884,10 +7844,14 @@
         ],
         "calls": [
           {
-            "metric": "paying_users"
+            "metric": "paying_users",
+            "period": "last_week",
+            "time_grain": "week"
           },
           {
-            "metric": "subscribers"
+            "metric": "subscribers",
+            "period": "last_week",
+            "time_grain": "week"
           }
         ],
         "expected_metric": "paying_users",
@@ -7917,23 +7881,15 @@
         "rep": 1,
         "picked": "recurring_revenue",
         "queried": [
-          "recurring_revenue",
           "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "week"
-          },
-          {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "day"
+            "metric": "recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 717.16
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -7959,18 +7915,11 @@
         "rep": 1,
         "picked": "recurring_revenue",
         "queried": [
-          "recurring_revenue",
           "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "recurring_revenue",
-            "period": "all"
-          },
-          {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "week"
+            "metric": "recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
@@ -8005,8 +7954,8 @@
         "calls": [
           {
             "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
+            "period": "all",
+            "time_grain": "day"
           }
         ],
         "expected_metric": "active_habits",
@@ -8070,14 +8019,9 @@
         "rep": 1,
         "picked": "new_signups",
         "queried": [
-          "total_users",
           "new_signups"
         ],
         "calls": [
-          {
-            "metric": "total_users",
-            "period": "all"
-          },
           {
             "metric": "new_signups",
             "period": "all"
@@ -8327,7 +8271,8 @@
         ],
         "calls": [
           {
-            "metric": "value_moments"
+            "metric": "value_moments",
+            "period": "all"
           }
         ],
         "expected_metric": "value_moments",
@@ -8355,13 +8300,18 @@
         "tier": "flagged",
         "family": "value_moments",
         "rep": 1,
-        "picked": "value_moments",
+        "picked": "real_value_moments",
         "queried": [
-          "value_moments"
+          "value_moments",
+          "real_value_moments"
         ],
         "calls": [
           {
             "metric": "value_moments",
+            "period": "all"
+          },
+          {
+            "metric": "real_value_moments",
             "period": "all"
           }
         ],
@@ -8547,6 +8497,7 @@
         "picked": "monthly_active_users",
         "queried": [
           "monthly_active_users",
+          "monthly_active_users",
           "monthly_active_users"
         ],
         "calls": [
@@ -8558,10 +8509,12 @@
           {
             "metric": "monthly_active_users",
             "period": "2026-06",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "time_grain": "month"
+          },
+          {
+            "metric": "monthly_active_users",
+            "period": "2026-06",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "active_users",
@@ -8633,15 +8586,9 @@
         "rep": 1,
         "picked": "actives",
         "queried": [
-          "actives",
           "actives"
         ],
         "calls": [
-          {
-            "metric": "actives",
-            "period": "2026-05",
-            "time_grain": "month"
-          },
           {
             "metric": "actives",
             "period": "2026-05",
@@ -8712,6 +8659,7 @@
         "picked": "new_users",
         "queried": [
           "new_users",
+          "new_users",
           "new_users"
         ],
         "calls": [
@@ -8724,6 +8672,11 @@
             "metric": "new_users",
             "period": "2026-03",
             "time_grain": "month"
+          },
+          {
+            "metric": "new_users",
+            "period": "2026-03",
+            "time_grain": "day"
           }
         ],
         "expected_metric": "new_signups",
@@ -8795,12 +8748,12 @@
         "rep": 1,
         "picked": "new_users",
         "queried": [
-          "new_signups",
+          "new_users",
           "new_users"
         ],
         "calls": [
           {
-            "metric": "new_signups",
+            "metric": "new_users",
             "period": "2026-02",
             "time_grain": "month"
           },
@@ -8842,7 +8795,8 @@
         "calls": [
           {
             "metric": "active_habits",
-            "period": "last_week"
+            "period": "last_week",
+            "time_grain": "week"
           }
         ],
         "expected_metric": "active_habits",
@@ -8870,23 +8824,18 @@
         "tier": "flagged",
         "family": "habits",
         "rep": 1,
-        "picked": "active_habits",
+        "picked": "total_habits",
         "queried": [
-          "total_habits",
-          "active_habits"
+          "total_habits"
         ],
         "calls": [
           {
             "metric": "total_habits",
             "period": "all"
-          },
-          {
-            "metric": "active_habits",
-            "period": "all"
           }
         ],
         "expected_metric": "active_habits",
-        "declared": 93.1
+        "declared": 7467.0
       },
       {
         "executed": true,
@@ -9018,17 +8967,20 @@
         "tier": "clean",
         "family": "paying_users",
         "rep": 1,
-        "picked": "subscribers",
+        "picked": "paying_users",
         "queried": [
           "paying_users",
-          "subscribers"
+          "paying_users"
         ],
         "calls": [
           {
-            "metric": "paying_users"
+            "metric": "paying_users",
+            "period": "last_week",
+            "time_grain": "day"
           },
           {
-            "metric": "subscribers"
+            "metric": "paying_users",
+            "period": "all"
           }
         ],
         "expected_metric": "paying_users",
@@ -9059,16 +9011,17 @@
         "picked": "recurring_revenue",
         "queried": [
           "recurring_revenue",
-          "monthly_recurring_revenue"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "recurring_revenue"
+            "metric": "recurring_revenue",
+            "period": ""
           },
           {
-            "metric": "monthly_recurring_revenue",
-            "period": "last_month",
-            "time_grain": "month"
+            "metric": "recurring_revenue",
+            "period": "last_week",
+            "time_grain": "week"
           }
         ],
         "expected_metric": "mrr",
@@ -9098,18 +9051,12 @@
         "rep": 2,
         "picked": "recurring_revenue",
         "queried": [
-          "recurring_revenue",
           "recurring_revenue"
         ],
         "calls": [
           {
             "metric": "recurring_revenue",
-            "period": "all"
-          },
-          {
-            "metric": "recurring_revenue",
-            "period": "last_week",
-            "time_grain": "week"
+            "period": ""
           }
         ],
         "expected_metric": "mrr",
@@ -9139,13 +9086,19 @@
         "rep": 2,
         "picked": "active_habits",
         "queried": [
+          "active_habits",
           "active_habits"
         ],
         "calls": [
           {
             "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
+            "period": "all",
+            "time_grain": "day"
+          },
+          {
+            "metric": "active_habits",
+            "period": "all",
+            "time_grain": "day"
           }
         ],
         "expected_metric": "active_habits",
@@ -9179,8 +9132,7 @@
         ],
         "calls": [
           {
-            "metric": "active_habits",
-            "period": "all"
+            "metric": "active_habits"
           }
         ],
         "expected_metric": "active_habits",
@@ -9210,12 +9162,18 @@
         "rep": 2,
         "picked": "new_users",
         "queried": [
+          "new_users",
           "new_users"
         ],
         "calls": [
           {
             "metric": "new_users",
             "period": "all"
+          },
+          {
+            "metric": "new_users",
+            "period": "last_week",
+            "time_grain": "week"
           }
         ],
         "expected_metric": "new_signups",
@@ -9243,13 +9201,19 @@
         "tier": "flagged",
         "family": "new_users",
         "rep": 2,
-        "picked": "new_users",
+        "picked": "new_signups",
         "queried": [
-          "new_users"
+          "new_users",
+          "new_signups"
         ],
         "calls": [
           {
             "metric": "new_users",
+            "period": "2026-04",
+            "time_grain": "month"
+          },
+          {
+            "metric": "new_signups",
             "period": "2026-04",
             "time_grain": "month"
           }
@@ -9426,16 +9390,12 @@
         "queried": [
           "paying_users",
           "paying_users",
-          "paying_users",
           "paying_users"
         ],
         "calls": [
           {
-            "metric": "paying_users"
-          },
-          {
             "metric": "paying_users",
-            "period": "all"
+            "time_grain": "day"
           },
           {
             "metric": "paying_users",
@@ -9444,7 +9404,7 @@
           },
           {
             "metric": "paying_users",
-            "period": "last_week",
+            "period": "all",
             "time_grain": "day"
           }
         ],
@@ -9508,18 +9468,23 @@
         "tier": "flagged",
         "family": "value_moments",
         "rep": 2,
-        "picked": "value_moments",
+        "picked": "real_value_moments",
         "queried": [
-          "value_moments"
+          "value_moments",
+          "real_value_moments"
         ],
         "calls": [
           {
             "metric": "value_moments",
             "period": "all"
+          },
+          {
+            "metric": "real_value_moments",
+            "period": "all"
           }
         ],
         "expected_metric": "value_moments",
-        "declared": 67132.0
+        "declared": null
       },
       {
         "executed": true,
@@ -9617,9 +9582,15 @@
         "rep": 2,
         "picked": "recurring_revenue",
         "queried": [
+          "monthly_recurring_revenue",
           "recurring_revenue"
         ],
         "calls": [
+          {
+            "metric": "monthly_recurring_revenue",
+            "period": "2026-06",
+            "time_grain": "month"
+          },
           {
             "metric": "recurring_revenue",
             "period": "2026-06",
@@ -9651,13 +9622,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 2,
-        "picked": "monthly_recurring_revenue",
+        "picked": "mrr",
         "queried": [
-          "monthly_recurring_revenue"
+          "mrr"
         ],
         "calls": [
           {
-            "metric": "monthly_recurring_revenue"
+            "metric": "mrr"
           }
         ],
         "expected_metric": "mrr",
@@ -9771,9 +9742,15 @@
         "rep": 2,
         "picked": "actives",
         "queried": [
+          "actives",
           "actives"
         ],
         "calls": [
+          {
+            "metric": "actives",
+            "period": "2026-05",
+            "time_grain": "month"
+          },
           {
             "metric": "actives",
             "period": "2026-05",
@@ -9821,10 +9798,10 @@
       },
       {
         "executed": true,
-        "correct": false,
-        "bucket": "wrong",
+        "correct": true,
+        "bucket": "right",
         "abstained": false,
-        "confident_wrong": true,
+        "confident_wrong": false,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -9835,7 +9812,7 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": -4.0,
+        "score": 1.0,
         "outcome": "answer",
         "id": "e05mf_newusers_mar",
         "tier": "flagged",
@@ -9843,23 +9820,23 @@
         "rep": 2,
         "picked": "new_users",
         "queried": [
-          "new_users",
-          "new_signups"
+          "new_signups",
+          "new_users"
         ],
         "calls": [
           {
-            "metric": "new_users",
+            "metric": "new_signups",
             "period": "2026-03",
             "time_grain": "month"
           },
           {
-            "metric": "new_signups",
+            "metric": "new_users",
             "period": "2026-03",
             "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 232.0
+        "declared": 240.0
       },
       {
         "executed": true,
@@ -9957,19 +9934,12 @@
         "rep": 2,
         "picked": "active_habits",
         "queried": [
-          "active_habits",
-          "total_habits"
+          "active_habits"
         ],
         "calls": [
           {
             "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
-          },
-          {
-            "metric": "total_habits",
-            "period": "last_week",
-            "time_grain": "week"
+            "period": "last_week"
           }
         ],
         "expected_metric": "active_habits",
@@ -9977,10 +9947,10 @@
       },
       {
         "executed": true,
-        "correct": false,
-        "bucket": "wrong",
+        "correct": true,
+        "bucket": "right",
         "abstained": false,
-        "confident_wrong": true,
+        "confident_wrong": false,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -9991,7 +9961,7 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": -4.0,
+        "score": 1.0,
         "outcome": "answer",
         "id": "e05mf_habits_ever_remaining",
         "tier": "flagged",
@@ -10000,7 +9970,6 @@
         "picked": "active_habits",
         "queried": [
           "total_habits",
-          "active_habits",
           "active_habits"
         ],
         "calls": [
@@ -10010,16 +9979,11 @@
           },
           {
             "metric": "active_habits",
-            "period": "last_week",
-            "time_grain": "week"
-          },
-          {
-            "metric": "active_habits",
             "period": "all"
           }
         ],
         "expected_metric": "active_habits",
-        "declared": 93.1
+        "declared": 6946.0
       },
       {
         "executed": true,
@@ -10145,11 +10109,17 @@
         "rep": 2,
         "picked": "paying_users",
         "queried": [
+          "paying_users",
           "paying_users"
         ],
         "calls": [
           {
-            "metric": "paying_users"
+            "metric": "paying_users",
+            "period": "last_week"
+          },
+          {
+            "metric": "paying_users",
+            "period": "all"
           }
         ],
         "expected_metric": "paying_users",
@@ -20163,7 +20133,7 @@
       "silent_error": 0.022222222222222223,
       "balanced_accuracy": NaN,
       "wrong_selection_rate": 0.0,
-      "wrong_construction_rate": 0.02247191011235955
+      "wrong_construction_rate": 0.022727272727272728
     },
     "flagged": {
       "n": 72,
@@ -20240,11 +20210,15 @@
         "rep": 0,
         "picked": "mrr",
         "queried": [
-          "mrr"
+          "mrr",
+          "paying_users"
         ],
         "calls": [
           {
             "metric": "mrr"
+          },
+          {
+            "metric": "paying_users"
           }
         ],
         "expected_metric": "mrr",
@@ -20342,9 +20316,13 @@
         "rep": 0,
         "picked": "new_signups",
         "queried": [
+          "new_signups",
           "new_signups"
         ],
         "calls": [
+          {
+            "metric": "new_signups"
+          },
           {
             "metric": "new_signups",
             "period": "all"
@@ -20389,10 +20367,7 @@
           {
             "metric": "new_signups",
             "period": "2026-04",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
@@ -20602,7 +20577,8 @@
         ],
         "calls": [
           {
-            "metric": "value_moments"
+            "metric": "value_moments",
+            "period": "all"
           }
         ],
         "expected_metric": "value_moments",
@@ -20636,8 +20612,7 @@
         ],
         "calls": [
           {
-            "metric": "value_moments",
-            "period": "all"
+            "metric": "value_moments"
           }
         ],
         "expected_metric": "value_moments",
@@ -20735,15 +20710,9 @@
         "rep": 0,
         "picked": "mrr",
         "queried": [
-          "mrr",
           "mrr"
         ],
         "calls": [
-          {
-            "metric": "mrr",
-            "period": "2026-06",
-            "time_grain": "month"
-          },
           {
             "metric": "mrr",
             "period": "2026-06"
@@ -20817,10 +20786,7 @@
           {
             "metric": "active_users",
             "period": "2026-06",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "time_grain": "month"
           },
           {
             "metric": "active_users",
@@ -20855,6 +20821,7 @@
         "rep": 0,
         "picked": "active_users",
         "queried": [
+          "active_users",
           "active_users"
         ],
         "calls": [
@@ -20862,6 +20829,11 @@
             "metric": "active_users",
             "period": "2026-04",
             "time_grain": "month"
+          },
+          {
+            "metric": "active_users",
+            "period": "2026-04",
+            "time_grain": "day"
           }
         ],
         "expected_metric": "active_users",
@@ -20927,30 +20899,16 @@
         "rep": 0,
         "picked": "active_users",
         "queried": [
-          "active_users",
-          "active_users",
-          "active_users",
           "active_users"
         ],
         "calls": [
           {
             "metric": "active_users",
             "period": "2026-05",
-            "time_grain": "month"
-          },
-          {
-            "metric": "active_users",
-            "period": "2026-05",
-            "time_grain": "month"
-          },
-          {
-            "metric": "active_users",
-            "period": "2026-05",
-            "time_grain": "month"
-          },
-          {
-            "metric": "active_users",
-            "period": "2026-05"
+            "time_grain": "month",
+            "filters": {
+              "user__is_internal": "False"
+            }
           }
         ],
         "expected_metric": "active_users",
@@ -20980,15 +20938,9 @@
         "rep": 0,
         "picked": "new_signups",
         "queried": [
-          "new_signups",
           "new_signups"
         ],
         "calls": [
-          {
-            "metric": "new_signups",
-            "period": "2026-03",
-            "time_grain": "month"
-          },
           {
             "metric": "new_signups",
             "period": "2026-03",
@@ -21472,9 +21424,15 @@
         "rep": 1,
         "picked": "new_signups",
         "queried": [
+          "new_signups",
           "new_signups"
         ],
         "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-04",
+            "time_grain": "month"
+          },
           {
             "metric": "new_signups",
             "period": "2026-04",
@@ -21719,13 +21677,9 @@
         "rep": 1,
         "picked": "value_moments",
         "queried": [
-          "value_moments",
           "value_moments"
         ],
         "calls": [
-          {
-            "metric": "value_moments"
-          },
           {
             "metric": "value_moments",
             "period": "all"
@@ -21792,15 +21746,11 @@
         "rep": 1,
         "picked": "mrr",
         "queried": [
-          "mrr",
-          "paying_users"
+          "mrr"
         ],
         "calls": [
           {
             "metric": "mrr"
-          },
-          {
-            "metric": "paying_users"
           }
         ],
         "expected_metric": "mrr",
@@ -21912,10 +21862,7 @@
           {
             "metric": "active_users",
             "period": "2026-06",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "time_grain": "month"
           }
         ],
         "expected_metric": "active_users",
@@ -21945,22 +21892,12 @@
         "rep": 1,
         "picked": "active_users",
         "queried": [
-          "active_users",
           "active_users"
         ],
         "calls": [
           {
             "metric": "active_users",
-            "period": "2026-04",
-            "time_grain": "month"
-          },
-          {
-            "metric": "active_users",
-            "period": "2026-04",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "period": "2026-04"
           }
         ],
         "expected_metric": "active_users",
@@ -21990,6 +21927,7 @@
         "rep": 1,
         "picked": "active_users",
         "queried": [
+          "active_users",
           "active_users"
         ],
         "calls": [
@@ -21997,6 +21935,14 @@
             "metric": "active_users",
             "period": "2026-05",
             "time_grain": "month"
+          },
+          {
+            "metric": "active_users",
+            "period": "2026-05",
+            "time_grain": "month",
+            "filters": {
+              "user__is_internal": "False"
+            }
           }
         ],
         "expected_metric": "active_users",
@@ -22026,9 +21972,23 @@
         "rep": 1,
         "picked": "active_users",
         "queried": [
+          "active_users",
+          "active_users",
+          "active_users",
           "active_users"
         ],
         "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-05"
+          },
+          {
+            "metric": "active_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": "False"
+            }
+          },
           {
             "metric": "active_users",
             "period": "2026-05",
@@ -22036,94 +21996,17 @@
             "filters": {
               "user__is_internal": "False"
             }
+          },
+          {
+            "metric": "active_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": "False"
+            }
           }
         ],
         "expected_metric": "active_users",
         "declared": 1200.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_newusers_mar",
-        "tier": "flagged",
-        "family": "new_users",
-        "rep": 1,
-        "picked": "new_signups",
-        "queried": [
-          "new_signups",
-          "new_signups",
-          "new_signups"
-        ],
-        "calls": [
-          {
-            "metric": "new_signups",
-            "period": "2026-03",
-            "time_grain": "month"
-          },
-          {
-            "metric": "new_signups",
-            "period": "2026-03",
-            "time_grain": "month"
-          },
-          {
-            "metric": "new_signups",
-            "period": "2026-03",
-            "time_grain": "month"
-          }
-        ],
-        "expected_metric": "new_signups",
-        "declared": 240.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_newusers_joined_may",
-        "tier": "flagged",
-        "family": "new_users",
-        "rep": 1,
-        "picked": "new_signups",
-        "queried": [
-          "new_signups"
-        ],
-        "calls": [
-          {
-            "metric": "new_signups",
-            "period": "2026-05",
-            "time_grain": "month"
-          }
-        ],
-        "expected_metric": "new_signups",
-        "declared": 403.0
       },
       {
         "executed": true,
@@ -22143,7 +22026,7 @@
         "cause_ok": null,
         "score": -4.0,
         "outcome": "answer",
-        "id": "e05mf_newusers_feb",
+        "id": "e05mf_newusers_mar",
         "tier": "flagged",
         "family": "new_users",
         "rep": 1,
@@ -22155,12 +22038,55 @@
         "calls": [
           {
             "metric": "new_signups",
-            "period": "2026-02",
+            "period": "2026-03",
             "time_grain": "month"
           },
           {
             "metric": "new_signups",
-            "period": "2026-02",
+            "start": "2026-03-01",
+            "end": "2026-03-31",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 72401.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_joined_may",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups",
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05",
+            "time_grain": "month"
+          },
+          {
+            "metric": "new_signups",
+            "period": "2026-05",
             "time_grain": "month",
             "filters": {
               "user__is_internal": "False"
@@ -22168,7 +22094,42 @@
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 196.0
+        "declared": 387.0
+      },
+      {
+        "executed": true,
+        "correct": true,
+        "bucket": "right",
+        "abstained": false,
+        "confident_wrong": false,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": 1.0,
+        "outcome": "answer",
+        "id": "e05mf_newusers_feb",
+        "tier": "flagged",
+        "family": "new_users",
+        "rep": 1,
+        "picked": "new_signups",
+        "queried": [
+          "new_signups"
+        ],
+        "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-02"
+          }
+        ],
+        "expected_metric": "new_signups",
+        "declared": 202.0
       },
       {
         "executed": true,
@@ -22228,11 +22189,16 @@
         "rep": 1,
         "picked": "active_habits",
         "queried": [
+          "active_habits",
           "active_habits"
         ],
         "calls": [
           {
             "metric": "active_habits"
+          },
+          {
+            "metric": "active_habits",
+            "period": "all"
           }
         ],
         "expected_metric": "active_habits",
@@ -22267,7 +22233,8 @@
         "calls": [
           {
             "metric": "value_moments",
-            "period": "2026-04"
+            "period": "2026-04",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "value_moments",
@@ -22331,17 +22298,9 @@
         "tier": "clean",
         "family": "marketing_spend",
         "rep": 1,
-        "picked": "marketing_spend",
-        "queried": [
-          "marketing_spend"
-        ],
-        "calls": [
-          {
-            "metric": "marketing_spend",
-            "period": "2026-03",
-            "time_grain": "month"
-          }
-        ],
+        "picked": null,
+        "queried": [],
+        "calls": [],
         "expected_metric": "marketing_spend",
         "declared": 20568.28
       },
@@ -22543,13 +22502,12 @@
         "rep": 2,
         "picked": "new_signups",
         "queried": [
-          "total_users",
+          "active_users",
           "new_signups"
         ],
         "calls": [
           {
-            "metric": "total_users",
-            "period": "all"
+            "metric": "active_users"
           },
           {
             "metric": "new_signups",
@@ -22583,7 +22541,6 @@
         "rep": 2,
         "picked": "new_signups",
         "queried": [
-          "new_signups",
           "new_signups"
         ],
         "calls": [
@@ -22591,14 +22548,6 @@
             "metric": "new_signups",
             "period": "2026-04",
             "time_grain": "month"
-          },
-          {
-            "metric": "new_signups",
-            "period": "2026-04",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
           }
         ],
         "expected_metric": "new_signups",
@@ -22808,7 +22757,8 @@
         ],
         "calls": [
           {
-            "metric": "value_moments"
+            "metric": "value_moments",
+            "period": "all"
           }
         ],
         "expected_metric": "value_moments",
@@ -22838,9 +22788,13 @@
         "rep": 2,
         "picked": "value_moments",
         "queried": [
+          "value_moments",
           "value_moments"
         ],
         "calls": [
+          {
+            "metric": "value_moments"
+          },
           {
             "metric": "value_moments",
             "period": "all"
@@ -22908,13 +22862,9 @@
         "picked": "mrr",
         "queried": [
           "mrr",
-          "mrr",
           "paying_users"
         ],
         "calls": [
-          {
-            "metric": "mrr"
-          },
           {
             "metric": "mrr"
           },
@@ -22949,9 +22899,15 @@
         "rep": 2,
         "picked": "mrr",
         "queried": [
+          "mrr",
           "mrr"
         ],
         "calls": [
+          {
+            "metric": "mrr",
+            "period": "2026-06",
+            "time_grain": "month"
+          },
           {
             "metric": "mrr",
             "period": "2026-06",
@@ -23025,10 +22981,7 @@
           {
             "metric": "active_users",
             "period": "2026-06",
-            "time_grain": "month",
-            "filters": {
-              "user__is_internal": "False"
-            }
+            "time_grain": "month"
           }
         ],
         "expected_metric": "active_users",
@@ -23058,9 +23011,15 @@
         "rep": 2,
         "picked": "active_users",
         "queried": [
+          "active_users",
           "active_users"
         ],
         "calls": [
+          {
+            "metric": "active_users",
+            "period": "2026-04",
+            "time_grain": "month"
+          },
           {
             "metric": "active_users",
             "period": "2026-04",
@@ -23147,10 +23106,10 @@
       },
       {
         "executed": true,
-        "correct": false,
-        "bucket": "wrong",
+        "correct": true,
+        "bucket": "right",
         "abstained": false,
-        "confident_wrong": true,
+        "confident_wrong": false,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -23161,7 +23120,7 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": -4.0,
+        "score": 1.0,
         "outcome": "answer",
         "id": "e05mf_newusers_mar",
         "tier": "flagged",
@@ -23169,7 +23128,6 @@
         "rep": 2,
         "picked": "new_signups",
         "queried": [
-          "new_signups",
           "new_signups",
           "new_signups"
         ],
@@ -23183,15 +23141,10 @@
             "metric": "new_signups",
             "period": "2026-03",
             "time_grain": "month"
-          },
-          {
-            "metric": "new_signups",
-            "period": "2026-03",
-            "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 18742.0
+        "declared": 240.0
       },
       {
         "executed": true,
@@ -23217,9 +23170,15 @@
         "rep": 2,
         "picked": "new_signups",
         "queried": [
+          "new_signups",
           "new_signups"
         ],
         "calls": [
+          {
+            "metric": "new_signups",
+            "period": "2026-05",
+            "time_grain": "month"
+          },
           {
             "metric": "new_signups",
             "period": "2026-05",
@@ -23323,11 +23282,16 @@
         "rep": 2,
         "picked": "active_habits",
         "queried": [
+          "active_habits",
           "active_habits"
         ],
         "calls": [
           {
             "metric": "active_habits"
+          },
+          {
+            "metric": "active_habits",
+            "period": "all"
           }
         ],
         "expected_metric": "active_habits",
