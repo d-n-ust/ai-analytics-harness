@@ -4,26 +4,65 @@ preflight detects cross-layer analytics ambiguity **statically**. This experimen
 static signal predicts, and whether fixing it removes, **runtime** harm: an analytics agent putting a
 wrong number in front of a decision-maker as if it were right.
 
-## Two studies
+## The experiment
 
-| study | the agent's grounding | the ambiguity it exposes | status |
-|---|---|---|---|
-| **01 — governed semantic layer** | picks a governed metric (`query_metric`) | **wrong-metric selection** — which of N confusable metrics (Mode 1) | done (dbt MetricFlow, two models) |
-| **02 — no semantic layer** | writes raw SQL over dbt models | **wrong-column selection** — which of N confusable columns/tables (Mode 1, one layer down) | done (two models) |
+**One warehouse, two arms** (`one_warehouse/`). A dbt-shaped project: dimension and fact models
+carrying table-level sprawl, and a metrics layer defined **over those same models** carrying
+metric-level sprawl. The agent runs at rung 3 holding both `query_metric` and `run_sql`, so it
+reaches for a governed metric when one fits the question and writes SQL when none does. That is
+what a real agent does, and it is the only way the model floor's problems become reachable.
 
-Study 01 is the metric-selection case a governed layer is meant to protect. Study 02 is the more
-common setup (dbt models, no governed metrics), and it tests the thesis the practice rests on: **the
-semantic layer's value is governance — it makes ambiguity resolvable**, where a raw-SQL agent welds
-the wrong scope invisibly. Both studies land the same finding: fixing what preflight flags drives
-wrong-SELECTION to 0.00 on both models, whether the ambiguity lives in a semantic layer or in raw
-fact-table columns.
+| | before | after |
+|---|---|---|
+| static scan | **11 findings** (4 high, 3 medium, 4 low) | **0** |
+| gpt-5-mini, wrong metric where the layer governs | **24%** | **0.00** |
+| gpt-5.6-terra, same | **11%** | **0.00** |
+| gpt-5-mini, wrong grounding where it does not govern | 69% | 33% |
+| gpt-5-mini, answers correct overall | 62% | 91% |
+| gpt-5.6-terra, answers correct overall | 80% | 94% |
 
-A single-page, customer-facing summary of both studies is in **`scorecard.html`** (self-contained,
-Decision Spine design tokens, light + dark).
+36 questions, 3 repetitions, 108 graded answers per arm per model. 31 questions ask for a concept
+the metrics layer governs; 5 ask for something it does not.
 
-Each study runs the SAME agent on the SAME warehouse; only the grounding it is shown changes across
-its four environments (`{small,high}_{before,after}` — low vs high ambiguity, before vs after the fix).
-`scan.py` measures the static dose; `benefit.py` measures the runtime effect. Both take `--study`.
+    python one_warehouse/scan.py --gate embeddings     # the static dose, both floors
+    python one_warehouse/run.py --model gpt-5-mini --reps 3 --concurrency 8
+    python one_warehouse/run.py --model gpt-5-mini --reps 1 --case <id>   # probe one question
+
+**Ten problems, and what the scan could say about each.** Eight are written down and flagged: three
+revenue names, six active-user aliases, a signup pair with a hidden staff filter, a value-moments
+scope trap, a lifetime subscriber count beside the current book, a stock beside a running total, a
+legacy `dim_users` beside the current `dim_users_v2`, and a stale copy wearing a partition name.
+Two are not written down and are not flagged: two undocumented staff flags covering different
+accounts, and a `status` column stale for ~8% of ended terms. Those two are where the repair helped
+least, and they are the honest boundary of a static tool.
+
+**A third residue was not predicted by anything.** Asked how many subscription *contracts* were
+active, the agent never wrote SQL. It substituted the nearest governed metric every time,
+`subscribers` before the repair and `paying_users` after, across six runs and two models. No
+definition was wrong; the layer simply governs no contract count. A coverage gap reads to an agent
+as an invitation to improvise.
+
+## Superseded studies, kept as the record
+
+| study | what it measured | why it is superseded |
+|---|---|---|
+| `study_01_governed_layer/` | wrong-metric selection over a governed layer alone | the agent had no reachable table sprawl, so half the warehouse was untested |
+| `study_02_no_semantic_layer/` | wrong-column selection over raw tables with no layer | no real project is layer-free; the split made one warehouse look like two experiments |
+
+Both landed the same direction as the merged experiment. They are kept because the published
+numbers moved several times as the fixture got more realistic, and the trail matters more than the
+tidiness. Notable corrections along the way: the sprawled arm had been stripped of the governed
+layer's documentation (restored, which softened the revenue and signup traps); the versioned twin
+was built so the naive strategy always won (inverted); and `subscribers` was an exact duplicate of
+`paying_users`, so it could not change a number (remodelled, which then exposed a detector gap).
+
+## Three finding types shipped because this experiment exposed blind spots
+
+| version | type | the blind spot |
+|---|---|---|
+| 0.2.0 | structural pairing | an acronym defeats name matching, so `mrr` was never compared with `monthly_recurring_revenue` |
+| 0.3.0 | `VERSIONED_TWIN` | a table beside its own `_v2` was invisible, though the name is the whole signal |
+| 0.4.0 | `FACT_TWIN` | the same count over one process at two grains, where the dangerous pair scores *lower* on name similarity than a pair that must never be flagged |
 
 ## Metrics hierarchy (what we report, and why)
 

@@ -16,10 +16,10 @@ make install && make data && make smoke     # end to end, no API key
 > · [The Evidence Graph](https://decisionspine.com/blog/the-evidence-graph-teaching-an-ai-analyst-to-show-its-work)
 > · [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026), the argument underneath all three.
 
-## The four experiments
+## The five experiments
 
 The first three vary one axis of the agent — what it *knows*, what it may *do*, what it must
-*declare* — over the same **65 questions**. The fourth freezes the agent and varies the warehouse
+*declare* — over the same **65 questions**. The last two freeze the agent and vary the warehouse
 underneath it. Every delta is attributable to one change, not to prompt luck or question drift.
 
 The first three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
@@ -52,6 +52,19 @@ the graph captures the evidence and loses the argument.*
 is the cheapest place to fix its grounding: implicit, documented, modelled, declared, or enforced?
 62 questions against eight versions of one warehouse.
 → [`docs/REPAIR-MATRIX.md`](docs/REPAIR-MATRIX.md)
+
+**5 · Ambiguity** — a static scan reads the definitions before any agent runs and predicts which
+ones an agent could confuse. Does fixing what it flags remove the harm? One dbt-shaped warehouse
+with models *and* a metrics layer over them, 36 questions, an agent holding both `query_metric`
+and raw SQL, before and after the repair.
+*The scan reports **11 findings before, 0 after**. Where the metrics layer governs the concept,
+wrong-metric selection goes **24% → 0.00** for `gpt-5-mini` and **11% → 0.00** for `gpt-5.6-terra`,
+in 93 answers each. Scale does not substitute for governed definitions: the larger model made no
+construction errors and still picked a decoy metric one time in nine. Two problems the scan cannot
+see — two undocumented staff flags and a stale `status` column — did the damage the repair could
+not remove, and a third residue is new: asked for a count the layer governs no metric for, the
+agent substitutes the nearest governed metric rather than writing SQL.*
+→ [`harness/experiments/05_preflight_ambiguity/`](harness/experiments/05_preflight_ambiguity/)
 
 [`docs/FINDINGS.md`](docs/FINDINGS.md) is the standing ledger — what is established, what is a
 measured null, and what was tried and rejected. Every number is labelled with its n.

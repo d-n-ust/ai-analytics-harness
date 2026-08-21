@@ -1,4 +1,15 @@
-# Experiment 05 — findings
+# Experiment 05 — findings from the two superseded studies
+
+> **Superseded on 2026-08-21.** The published measurement is the merged experiment in
+> `one_warehouse/`: one dbt-shaped warehouse with models *and* a metrics layer over them, and one
+> agent holding both `query_metric` and raw SQL. Splitting the two floors into separate studies made
+> one warehouse look like two experiments and left half of each untested. Headline from the merged
+> run: 11 static findings before and 0 after; wrong-metric selection 24% → 0.00 (`gpt-5-mini`) and
+> 11% → 0.00 (`gpt-5.6-terra`) where the layer governs the concept.
+>
+> This file is kept as the record of how the design got there, including the fixture defects the
+> studies had and the corrections that followed. The numbers below are those studies' numbers and
+> are not the ones to quote.
 
 What the two before/after studies measured, and what they show. Every number here is the flagged tier
 (the ambiguous questions), reps=3, two models (`gpt-5-mini`, `claude-sonnet-5`), graded by a

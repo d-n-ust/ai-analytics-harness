@@ -1,40 +1,48 @@
 # Experiment 5 — preflight ambiguity: does fixing what the detector finds improve the agent?
 #
-# Experiments 1-3 improve the AGENT; 4 changes the WAREHOUSE. This one measures the BENEFIT of the
-# preflight ambiguity detector end to end: point it at a semantic layer, fix the confusions it flags,
-# and measure the agent BEFORE vs AFTER — at two levels of ambiguity (a governed layer with few, and a
-# pressure-built layer with many) — so the effect reads as a dose-response rather than an anecdote.
+# Experiments 1-3 improve the AGENT; 4 and 5 change the WAREHOUSE. This one measures the BENEFIT of
+# static ambiguity detection end to end: scan the definitions, fix what is flagged, and measure the
+# agent BEFORE vs AFTER on the same questions.
 #
-# The detector's own recall/precision (experiment material in scratchpad/ambiguity + the preflight
-# package) answer "does it find the confusions". This experiment answers the harder question a buyer
-# actually asks: "does fixing what it finds make my agent measurably more trustworthy".
+# The detector's own recall/precision (scratchpad/ambiguity + the extracted preflight package)
+# answers "does it find the confusions". This experiment answers the question a buyer actually
+# asks: "does fixing what it finds make my agent measurably more trustworthy".
 
 title: "Preflight ambiguity — does fixing what the detector finds improve the agent?"
 question: >-
-  When preflight flags ambiguities in a semantic layer and they are fixed, how much do the agent's
-  silent-error rate, balanced accuracy, and coverage improve — and does the effect scale with the
-  amount of ambiguity in the layer?
-status: in_progress
+  When a static scan flags confusable definitions in a warehouse and they are fixed, how much does
+  the agent's wrong-grounding rate fall, and what share of the harm is left in problems the scan
+  cannot read?
+status: done
 
 article:
-  slug: null                 # unwritten
+  slug: why-ai-analysts-pick-the-wrong-metric
   repo: decisionspine-site
 
-# runs: code — an architecture (the preflight detector + four environments) plus the agent evals that
-# measure the effect. The four semantic layers are the arms; there are no declarative sub-studies.
 runs: code
 
 evidence:
-  - layers/          # small/high x before/after semantic layers — the four environments
-  - scan.md          # preflight ambiguity counts per layer (the dose), before and after fixing
-  # results/         # agent runs (SER / balanced accuracy / coverage) per environment — added when run
+  - one_warehouse/            # THE experiment: one warehouse, both floors, one agent
+  - one_warehouse/scan.md     # the static dose: 11 findings before, 0 after
+  - one_warehouse/result__gpt-5-mini.json
+  - one_warehouse/result__gpt-5.6-terra.json
+  - study_01_governed_layer/  # superseded: metric selection over a governed layer alone
+  - study_02_no_semantic_layer/  # superseded: column selection over raw tables alone
 
-# THE FOUR ENVIRONMENTS. Same habit-tracking domain and warehouse; the ambiguity is in the DEFINITIONS.
-#   small_before   the governed layer, as shipped — a well-modelled layer still carries a few traps
-#   small_after    the same, with preflight's findings fixed
-#   high_before    the layer a pressured team left — many overlapping/renamed/undocumented metrics
-#   high_after     the same, with preflight's findings fixed
-# The measurement uses the EMBEDDING gate (the validated path): the lexical fallback misses the
-# synonym-based confusions (mrr ~ recurring_revenue, active_users ~ engaged_users), which are exactly
-# the pressure-built kind.
-notes: []
+# THE DESIGN, as of the 2026-08-21 rebuild. One dbt-shaped warehouse per arm: dimension and fact
+# models carrying table-level sprawl, with a metrics layer defined OVER those models carrying
+# metric-level sprawl. The agent runs at rung 3 with both query_metric and run_sql, so it uses a
+# governed metric where one exists and writes SQL where none does — which is how the model floor's
+# problems become reachable at all.
+#
+#   before   all ten problems present
+#   after    the same warehouse with the ten repaired
+#
+# Studies 01 and 02 split those two floors into separate experiments and are kept as the record of
+# how the design got here. They are not the published measurement.
+notes:
+  - "The measurement uses the EMBEDDINGS gate, pre-registered: the lexical fallback misses
+     meaning-alike names (monthly_recurring_revenue ~ recurring_revenue), which are exactly the
+     pressure-built kind."
+  - "Three finding types were added to preflight because this experiment exposed blind spots:
+     structural pairing (0.2.0), VERSIONED_TWIN (0.3.0), FACT_TWIN (0.4.0)."
