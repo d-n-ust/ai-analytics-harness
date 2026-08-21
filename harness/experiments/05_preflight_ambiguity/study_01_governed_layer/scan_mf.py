@@ -6,10 +6,13 @@ layers; the benefit runs, however, execute against the MetricFlow port in `mf_la
 static side of the static-vs-runtime join must come from these files. This script scans all four
 `mf_layers/<env>` with preflight's own MetricFlow adapter and persists `scan_mf.md`.
 
-Gate is lexical: it is the gate a plain `pip install preflight-analytics` runs, and the finding
-set here is what the per-family join in the article quotes.
+The gate is selectable. The experiment design pre-registers the EMBEDDINGS gate as the
+measurement path (the lexical fallback misses meaning-alike names such as
+monthly_recurring_revenue ~ recurring_revenue, exactly the pressure-built kind), so the article
+quotes the embeddings scan; the lexical run is kept for the reader on a base install.
 
-    python scan_mf.py          # writes scan_mf.md next to this file
+    python scan_mf.py                     # lexical (a plain install's gate)
+    python scan_mf.py --gate embeddings   # the measurement gate (needs preflight-analytics[embeddings])
 """
 from __future__ import annotations
 
@@ -21,7 +24,7 @@ import yaml
 from preflight import detect_collisions
 from preflight.metricflow import facts_from_metricflow
 
-ENVS = ("small_before", "small_after", "high_before", "high_after")
+ENVS = ("small_before", "small_after", "high_before", "high_after", "high_after_final")
 
 
 def facts_for(env_dir: pathlib.Path):
@@ -37,12 +40,16 @@ def facts_for(env_dir: pathlib.Path):
 
 
 def main() -> None:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gate", default="lexical", choices=("lexical", "embeddings"))
+    gate = ap.parse_args().gate
     base = pathlib.Path(__file__).parent / "mf_layers"
-    lines = ["```", "", "  METRICFLOW LAYER SCAN            gate: lexical", "  " + "-" * 60]
+    lines = ["```", "", f"  METRICFLOW LAYER SCAN            gate: {gate}", "  " + "-" * 60]
     details: list[str] = []
     for env in ENVS:
         facts = facts_for(base / env)
-        findings = detect_collisions(facts, gate="lexical")
+        findings = detect_collisions(facts, gate=gate)
         c = Counter(f.danger for f in findings)
         lines.append(f"  {env:<14} {len(findings):>2} findings   ({len(facts)} facts · "
                      f"{c.get('high', 0)} high {c.get('medium', 0)} med {c.get('low', 0)} low)")

@@ -1,11 +1,12 @@
 ```
 
-  METRICFLOW LAYER SCAN            gate: lexical
+  METRICFLOW LAYER SCAN            gate: embeddings
   ------------------------------------------------------------
   small_before    1 findings   (8 facts · 1 high 0 med 0 low)
   small_after     0 findings   (7 facts · 0 high 0 med 0 low)
-  high_before     7 findings   (19 facts · 3 high 0 med 4 low)
+  high_before     8 findings   (19 facts · 3 high 0 med 5 low)
   high_after      0 findings   (7 facts · 0 high 0 med 0 low)
+  high_after_final  0 findings   (7 facts · 0 high 0 med 0 low)
 
 ==== small_before ==============================================
   H SCOPE_TRAP             real_value_moments  ~  value_moments
@@ -21,8 +22,12 @@
   L DUPLICATE              total_moments  ~  value_moments
   L DUPLICATE              monthly_recurring_revenue  ~  mrr
   L DUPLICATE              paying_users  ~  subscribers
+  L NAME_COLLISION         monthly_recurring_revenue  ~  recurring_revenue
 
 ==== high_after ==============================================
+  (no findings)
+
+==== high_after_final ==============================================
   (no findings)
 
 ```
