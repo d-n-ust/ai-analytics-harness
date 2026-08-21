@@ -1,23 +1,23 @@
 {
   "model": "gpt-5-mini",
-  "reps": 1,
+  "reps": 3,
   "arms": {
-    "after": {
+    "before": {
       "overall": {
-        "n": 2,
+        "n": 3,
         "coverage": 1.0,
-        "silent_error": 0.0,
-        "correct": 1.0,
+        "silent_error": 1.0,
+        "correct": 0.0,
         "wrong_selection_rate": 0.0,
-        "wrong_construction_rate": 0.0
+        "wrong_construction_rate": 1.0
       },
       "flagged": {
-        "n": 2,
+        "n": 3,
         "coverage": 1.0,
-        "silent_error": 0.0,
-        "correct": 1.0,
+        "silent_error": 1.0,
+        "correct": 0.0,
         "wrong_selection_rate": 0.0,
-        "wrong_construction_rate": 0.0
+        "wrong_construction_rate": 1.0
       },
       "clean": {
         "n": 0,
@@ -30,10 +30,10 @@
       "rows": [
         {
           "executed": true,
-          "correct": true,
-          "bucket": "right",
+          "correct": false,
+          "bucket": "wrong",
           "abstained": false,
-          "confident_wrong": false,
+          "confident_wrong": true,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -44,20 +44,20 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": 1.0,
+          "score": -4.0,
           "outcome": "answer",
-          "id": "s2_users_v2_july",
+          "id": "s2_subs_march",
           "tier": "flagged",
-          "family": "migration_leftover",
+          "family": "partition_lookalike",
           "wrong_grounding": false,
-          "sql": "select count(*) as users_signed_up\nfrom dim_users\nwhere not is_internal\n  and signup_date >= date '2026-07-01'\n  and signup_date <= date '2026-07-31';"
+          "sql": "select count(*) as count\nfrom subscriptions\nwhere started_date >= date '2026-03-01'\n  and started_date < date '2026-04-01';"
         },
         {
           "executed": true,
-          "correct": true,
-          "bucket": "right",
+          "correct": false,
+          "bucket": "wrong",
           "abstained": false,
-          "confident_wrong": false,
+          "confident_wrong": true,
           "fabricated": false,
           "off_governance": false,
           "wrong_scope": false,
@@ -68,13 +68,37 @@
           "metric_match": null,
           "driver_ok": null,
           "cause_ok": null,
-          "score": 1.0,
+          "score": -4.0,
           "outcome": "answer",
-          "id": "s2_users_v2_total",
+          "id": "s2_subs_march",
           "tier": "flagged",
-          "family": "migration_leftover",
+          "family": "partition_lookalike",
           "wrong_grounding": false,
-          "sql": "select count(*) as total_users\nfrom dim_users\nwhere not is_internal;"
+          "sql": "select count(*) as march_started\nfrom subscriptions\nwhere started_date >= date '2026-03-01' and started_date < date '2026-04-01'; select count(*) as march_started\nfrom subscriptions_2026_03;"
+        },
+        {
+          "executed": true,
+          "correct": false,
+          "bucket": "wrong",
+          "abstained": false,
+          "confident_wrong": true,
+          "fabricated": false,
+          "off_governance": false,
+          "wrong_scope": false,
+          "wrong_metric": false,
+          "needs_judge": false,
+          "expected_refuse": false,
+          "reason_match": null,
+          "metric_match": null,
+          "driver_ok": null,
+          "cause_ok": null,
+          "score": -4.0,
+          "outcome": "answer",
+          "id": "s2_subs_march",
+          "tier": "flagged",
+          "family": "partition_lookalike",
+          "wrong_grounding": false,
+          "sql": "select count(*) as march_2026_starts\nfrom subscriptions\nwhere started_date >= date '2026-03-01' and started_date < date '2026-04-01'; select count(*) as march_2026_starts\nfrom subscriptions_2026_03;"
         }
       ]
     }

@@ -40,7 +40,7 @@ def build(con) -> None:
     #     all. A dated backup nobody would touch is weak bait; a table that looks like the month
     #     someone asked about is the version that gets used by mistake.
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.subscriptions AS
-        SELECT subscription_id, user_id, billed_amount, plan, is_active AS active,
+        SELECT subscription_id, user_id, billed_amount, plan, started_date, is_active AS active,
                CASE WHEN NOT is_active AND subscription_id % 3 = 0 THEN 'active' ELSE status END AS status
         FROM "{S}".fct_subscriptions''')
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.users AS
@@ -67,7 +67,7 @@ def build(con) -> None:
     con.execute(f'''CREATE OR REPLACE VIEW {AFTER}.dim_subscriptions AS
         SELECT subscription_id, user_id,
                CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END AS mrr,
-               billed_amount AS net_revenue, plan, status, is_active
+               billed_amount AS net_revenue, plan, started_date, status, is_active
         FROM "{S}".fct_subscriptions''')
     con.execute(f'''CREATE OR REPLACE VIEW {AFTER}.dim_users AS
         SELECT user_id, is_internal, signup_date,

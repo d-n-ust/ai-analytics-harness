@@ -81,14 +81,18 @@ cases:
              gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
     wrong_grounding: ["created_at"]      # row creation, not joining (a bulk import created rows late)
     right_grounding: ["signup_date"]
-  - id: s2_march_new
+  # 2026-08-21: replaced the second date-column paraphrase (s2_march_new asked what
+  # s2_march_joins already asks) with the only species in this warehouse no question reached.
+  # `subscriptions_2026_03` reads as a March partition and is a stale copy of every term ever:
+  # counting it wholesale returns 412 against a true 59.
+  - id: s2_subs_march
     tier: flagged
-    family: date_columns
-    question: "How many new users did we add in March 2026?"
-    expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
-             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31' AND NOT is_internal"}
-    wrong_grounding: ["created_at"]
-    right_grounding: ["signup_date"]
+    family: partition_lookalike
+    question: "How many subscriptions started in March 2026?"
+    expect: {type: metric_answer, metric: new_subscriptions, tolerance: 0.02,
+             gold_sql: "SELECT count(*) FROM fct_subscriptions f JOIN dim_users u USING(user_id) WHERE f.started_date >= DATE '2026-03-01' AND f.started_date < DATE '2026-04-01' AND NOT u.is_internal"}
+    wrong_grounding: ["subscriptions_2026_03"]
+    right_grounding: ["started_date"]
   - id: s2_marketing
     tier: clean
     family: marketing_spend
