@@ -128,6 +128,20 @@ def run_layer(con, spec_path, cases, golds, model, verifier, reps: int = 1,
     return rows
 
 
+# Selection equivalence (pre-registered 2026-08-21, with the wave-2 question expansion): picking a
+# same-valued governed duplicate is a CORRECT selection. The duplicate is the same measure with no
+# filter difference, so it returns the same number by construction — sprawl noise, not a wrong
+# number. Verified before the rule was added: no wave-1 row in any published arm contained such a
+# pick, so the rule changes nothing retroactively.
+SELECTION_EQUIVALENT = {"mrr": {"monthly_recurring_revenue"},
+                        "paying_users": {"subscribers"},
+                        "value_moments": {"total_moments"}}
+
+
+def _selected_ok(r: dict) -> bool:
+    return r["picked"] == r["expected_metric"] or r["picked"] in SELECTION_EQUIVALENT.get(r["expected_metric"], ())
+
+
 def metrics(rows: list[dict]) -> dict:
     s = selective(rows)
     # SER is the north star and stays root-cause-agnostic (every wrong number, all causes). The two
@@ -138,8 +152,8 @@ def metrics(rows: list[dict]) -> dict:
     #   wrong-construction (Mode 2 — the validators' lane): the RIGHT grounding, built wrong (a
     #     mishandled time filter, grain, fan-trap). preflight does not address this one.
     picked = [r for r in rows if r["outcome"] == "answer" and r.get("picked") and r.get("expected_metric")]
-    ws = sum(1 for r in picked if r["picked"] != r["expected_metric"])
-    wc = sum(1 for r in picked if r["picked"] == r["expected_metric"] and not r.get("correct"))
+    ws = sum(1 for r in picked if not _selected_ok(r))
+    wc = sum(1 for r in picked if _selected_ok(r) and not r.get("correct"))
     return {"n": s.n, "coverage": s.coverage,
             "silent_error": s.silent_error, "balanced_accuracy": s.balanced_accuracy,
             "wrong_selection_rate": (ws / len(picked)) if picked else float("nan"),
