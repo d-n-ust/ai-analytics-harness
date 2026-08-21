@@ -132,16 +132,24 @@ _QUERY_METRIC = {
             "time_grain": {"type": "string", "enum": list(TIME_GRAINS),
                            "description": "Bucket the time column (for trends)."},
             # The contract, stated where the model reads it: named values are RELATIVE and always
-            # complete periods; a specific calendar month is YYYY-MM; anything else is start/end.
-            # The enum alone taught a measured failure: asked for "April 2026" with only relative
-            # presets on the menu, a model took the nearest legal item (last_month) and silently
-            # got June. The pattern makes the natural utterance legal instead.
+            # complete periods; a specific calendar month is YYYY-MM; anything else is start/end;
+            # OMISSION means the current value. The enum alone taught a measured failure: asked for
+            # "April 2026" with only relative presets on the menu, a model took the nearest legal
+            # item (last_month) and silently got June. The pattern makes the natural utterance
+            # legal instead. The omission sentence closed a second measured failure of the same
+            # shape: nothing at decision time said what leaving period out means, so a model asked
+            # for "MRR right now" reached for last_month and served June's snapshot as current.
+            # The response echoed the omission rule, but only after an unscoped call the model
+            # never risked making.
             "period": {"type": "string",
                        "anyOf": [{"enum": list(NAMED_PERIODS)},
                                  {"pattern": r"^\d{4}-\d{2}$"}],
                        "description": "Either a RELATIVE preset (always a complete period: "
                                       f"{', '.join(NAMED_PERIODS)}) or a specific calendar month "
-                                      "as YYYY-MM. For any other exact range use start/end."},
+                                      "as YYYY-MM. For any other exact range use start/end. "
+                                      "Omit period entirely for the current value: a snapshot "
+                                      "(stock) metric then returns its latest snapshot, which is "
+                                      "the 'right now' number; a flow metric totals all time."},
             "start": {"type": "string", "description": "Explicit start date YYYY-MM-DD "
                                                        "(for exact calendar ranges)."},
             "end": {"type": "string", "description": "Explicit end date YYYY-MM-DD."},
