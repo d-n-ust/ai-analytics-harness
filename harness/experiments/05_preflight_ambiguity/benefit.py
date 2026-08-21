@@ -282,6 +282,9 @@ def main() -> None:
     ap.add_argument("--concurrency", type=int, default=1,
                     help="parallel agent runs within a layer (per-thread DuckDB cursors; 1 = sequential)")
     ap.add_argument("--only", nargs="*", help="run only these layers")
+    # Probe mode: iterate on ONE question while a fixture is being designed, without touching the
+    # published result file. When a single case is in question the trace is the output, not a rate.
+    ap.add_argument("--case", nargs="*", help="run only these case ids (probe mode)")
     ap.add_argument("--study", default="study_01_governed_layer", help="which study directory to run")
     ap.add_argument("--guardrails", default=None,
                     help="guardrail cell (e.g. R7); default None = the loop's R1 (abstain only). "
@@ -297,6 +300,13 @@ def main() -> None:
     # case set; the harness engine uses layers/<name>/semantic.yml and cases.yml.
     LAYERS = study_dir / ("mf_layers" if mf else "layers")
     cases = load_cases(study_dir / ("cases_mf.yml" if mf else "cases.yml"))
+    probe = bool(args.case)
+    if probe:
+        known = {c["id"] for c in cases}
+        unknown = set(args.case) - known
+        if unknown:
+            raise SystemExit(f"unknown case id(s): {sorted(unknown)}")
+        cases = [c for c in cases if c["id"] in args.case]
     con = open_warehouse(create_star_views=True)
     set_star(con, capabilities(RUNG).star)
     if mf:
@@ -320,6 +330,7 @@ def main() -> None:
     suffix = "_mf" if mf else ""
     cell_tag = f"_{args.guardrails.lower()}" if args.guardrails else ""
     out = study_dir / (f"benefit_result{suffix}_mock.json" if args.mock
+                       else f"benefit_result{suffix}{cell_tag}__probe__{args.model}.json" if probe
                        else f"benefit_result{suffix}{cell_tag}__{args.model}.json")
     report: dict = json.loads(out.read_text()) if (out.exists() and not args.mock) else {}
     report.update({"model": ("mock" if args.mock else args.model), "rung": RUNG, "reps": args.reps,
@@ -327,6 +338,13 @@ def main() -> None:
     for name in names:
         rows = run_layer(con, spec_of(name), cases, golds, model, verifier, args.reps, args.engine,
                          guardrails=gset, concurrency=args.concurrency)
+        if probe:
+            for r in rows:
+                calls = "; ".join(f"{c.get('metric')}({c.get('period') or 'no period'})"
+                                  for c in r.get("calls", []))
+                print(f"    [{name}] {r['id']} rep{r['rep']}  correct={r.get('correct')}  "
+                      f"picked={r.get('picked')}  declared={r.get('declared')}  gold={golds.get(r['id'])}")
+                print(f"      calls: [{calls}]")
         report[name] = {"overall": metrics(rows),
                         "flagged": metrics([r for r in rows if r["tier"] == "flagged"]),
                         "clean": metrics([r for r in rows if r["tier"] == "clean"]),

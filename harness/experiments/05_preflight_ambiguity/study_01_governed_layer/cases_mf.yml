@@ -234,3 +234,16 @@ cases:
     question: "How many customers are currently paying for a subscription?"
     expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
              gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}
+
+  # ------------------------------------------------------------------------------------------------
+  # 2026-08-21, wave 3 (design pilot; the published run is the frozen set below this block).
+  # `subscribers` was remodelled from an exact duplicate of `paying_users` into the loose lifetime
+  # count a second team would build: every user who has ever held a subscription, staff and churned
+  # included (413) beside the current billed book (378). The question below names the decoy, the
+  # way "recurring revenue" names `recurring_revenue`.
+  - id: e05mf_subs_now
+    tier: flagged
+    family: paying_users
+    question: "How many subscribers do we have right now?"
+    expect: {type: metric_answer, metric: paying_users, tolerance: 0.02,
+             gold_sql: "SELECT count(DISTINCT user_id) FROM fct_subscription_months WHERE snapshot_month=(SELECT max(snapshot_month) FROM fct_subscription_months)"}

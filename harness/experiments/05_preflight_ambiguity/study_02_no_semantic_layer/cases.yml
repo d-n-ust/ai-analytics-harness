@@ -38,22 +38,25 @@ cases:
   # Authored from the industry-recognisable sprawl list, not from the scanner's strengths. The
   # migration-leftover trap is table-level, which static definition analysis is weak on by design;
   # whatever the scan and the agents do with these is reported as measured.
-  - id: s2_users_v2_april
+  - id: s2_users_v2_july
     tier: flagged
     family: migration_leftover
-    question: "How many users signed up in April 2026?"
+    question: "How many users signed up in July 2026?"
     expect: {type: metric_answer, metric: new_signups, tolerance: 0.02,
-             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date BETWEEN DATE '2026-04-01' AND DATE '2026-04-30' AND NOT is_internal"}
-    wrong_grounding: ["users_v2"]        # the 80%-finished migration table (silently excludes ~7%)
-    right_grounding: ["from users ", "from users\n", "join users ", "users u", "users as"]
+             gold_sql: "SELECT count(*) FROM dim_users WHERE signup_date >= DATE '2026-07-01' AND NOT is_internal"}
+    # The twin inverted 2026-08-21: users_v2 is the current table and the bare `users` is the
+    # legacy one, whose loader stopped on 2026-07-01. July is the cohort only users_v2 has, so the
+    # bare-name habit returns zero for a month that had 233 signups.
+    wrong_grounding: ['re:\busers\b']   # the legacy table; \b never matches inside users_v2
+    right_grounding: ["users_v2"]
   - id: s2_users_v2_total
     tier: flagged
     family: migration_leftover
     question: "How many users do we have in total?"
     expect: {type: metric_answer, metric: total_users, tolerance: 0.02,
              gold_sql: "SELECT count(*) FROM dim_users WHERE NOT is_internal"}
-    wrong_grounding: ["users_v2"]
-    right_grounding: ["from users ", "from users\n", "join users ", "users u", "users as"]
+    wrong_grounding: ['re:\busers\b']   # the legacy table; \b never matches inside users_v2
+    right_grounding: ["users_v2"]
   - id: s2_active_subs
     tier: flagged
     family: stale_status

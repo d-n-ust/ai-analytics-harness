@@ -16,8 +16,13 @@ BEFORE, AFTER = "s2_before", "s2_after"
 
 
 def build(con) -> None:
-    con.execute(f"CREATE SCHEMA IF NOT EXISTS {BEFORE}")
-    con.execute(f"CREATE SCHEMA IF NOT EXISTS {AFTER}")
+    # Rebuilt from empty, not patched in place: CREATE OR REPLACE cannot remove a view that a later
+    # revision renamed, so a stale object outlives the edit that renamed it and the arm quietly
+    # carries a table the fixture no longer describes. (An apt bug for this study to have had.)
+    con.execute(f"DROP SCHEMA IF EXISTS {BEFORE} CASCADE")
+    con.execute(f"DROP SCHEMA IF EXISTS {AFTER} CASCADE")
+    con.execute(f"CREATE SCHEMA {BEFORE}")
+    con.execute(f"CREATE SCHEMA {AFTER}")
 
     # ---- before: raw, confusable columns, thin docs ----
     # The three original traps (raw billed vs modelled mrr; two internal flags; overloaded moments)
@@ -25,10 +30,15 @@ def build(con) -> None:
     # from what the scanner is good at:
     #   - a stale denormalised `status` (a batch column that still says 'active' for ~8% of ended
     #     terms; the `active` flag is transactionally correct) — the status/flag mismatch
-    #   - `users_v2`, the migration that finished 80% (excludes ~7% of rows; neither table marked)
+    #   - `users` beside `users_v2`, a migration nobody finished: `users_v2` is the new, complete
+    #     table and `users` is the legacy one, whose loader stopped picking up signups on
+    #     2026-07-01. Neither is marked as current, and the bare name is the stale one — so the
+    #     habit of reaching for the unsuffixed table silently drops the most recent cohort.
     #   - `created_at` vs `signup_date` (a 2026-05-15 bulk import created rows months late)
-    #   - `subscriptions_backup_2026_03`, a stale copy nobody deleted (pure clutter; no question
-    #     targets it — it exists to make the schema look like a real one)
+    #   - `subscriptions_2026_03`, which reads like a March partition and is actually a stale
+    #     partial copy: 10% of rows missing, the stale `status` column, and no `active` flag at
+    #     all. A dated backup nobody would touch is weak bait; a table that looks like the month
+    #     someone asked about is the version that gets used by mistake.
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.subscriptions AS
         SELECT subscription_id, user_id, billed_amount, plan, is_active AS active,
                CASE WHEN NOT is_active AND subscription_id % 3 = 0 THEN 'active' ELSE status END AS status
@@ -36,15 +46,14 @@ def build(con) -> None:
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.users AS
         SELECT user_id, is_internal, (user_id % 25 = 0) AS is_test, signup_date,
                CASE WHEN user_id % 21 = 0 THEN TIMESTAMP '2026-05-15 03:14:00' ELSE signup_ts END AS created_at
-        FROM "{S}".dim_users''')
+        FROM "{S}".dim_users WHERE signup_date < DATE '2026-07-01' ''')
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.users_v2 AS
-        SELECT user_id, is_internal, signup_date
-        FROM "{S}".dim_users WHERE user_id % 15 <> 0''')
+        SELECT user_id, is_internal, signup_date FROM "{S}".dim_users''')
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.activity AS
         SELECT user_id, active_date, moments, is_internal FROM "{S}".agg_active_days''')
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.daily_rollup AS
         SELECT user_id, active_date AS day, moments FROM "{S}".agg_active_days''')  # moments overloaded
-    con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.subscriptions_backup_2026_03 AS
+    con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.subscriptions_2026_03 AS
         SELECT subscription_id, user_id, billed_amount, plan, status
         FROM "{S}".fct_subscriptions WHERE subscription_id % 10 <> 0''')
     con.execute(f'''CREATE OR REPLACE VIEW {BEFORE}.marketing AS

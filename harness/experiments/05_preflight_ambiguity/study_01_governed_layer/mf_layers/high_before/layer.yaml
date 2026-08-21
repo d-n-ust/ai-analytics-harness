@@ -81,7 +81,8 @@ semantic_model:
   defaults: {agg_time_dimension: started_date}
   entities: [{name: subscription, type: primary, expr: subscription_id}]
   dimensions: [{name: started_date, type: time, type_params: {time_granularity: day}}, {name: is_active, type: categorical}]
-  measures: [{name: billed_amount_raw, agg: sum, expr: billed_amount}]
+  measures: [{name: billed_amount_raw, agg: sum, expr: billed_amount},
+             {name: subscriber_count, agg: count_distinct, expr: user_id}]
 ---
 metric: {name: value_moments, description: "Value moments (completed habits) in the period, all accounts.", type: simple, type_params: {measure: moments}}
 ---
@@ -129,4 +130,4 @@ metric: {name: mau, type: simple, type_params: {measure: active_user_count}}
 ---
 metric: {name: engaged_users, type: simple, type_params: {measure: active_user_count}}
 ---
-metric: {name: subscribers, type: simple, type_params: {measure: paying_user_count}}
+metric: {name: subscribers, type: simple, type_params: {measure: subscriber_count}}
