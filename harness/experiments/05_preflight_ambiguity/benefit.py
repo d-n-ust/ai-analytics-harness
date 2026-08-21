@@ -41,10 +41,14 @@ from warehouse.warehouse import cursor as scoped_cursor
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYERS = HERE / "layers"
-ORDER = ["small_before", "small_after", "high_before", "high_after", "high_after2", "high_after3"]
+ORDER = ["small_before", "small_after", "high_before", "high_after", "high_after2", "high_after3",
+         "high_after_final"]
 # high_after2 = high_after plus exactly three stated-default sentences on the metrics whose
 # after-arm answers still failed (new_signups scope, active_users default window, active_habits
 # stock semantics). It tests whether the construction residual is agent skill or missing spec.
+# high_after_final = high_after3 plus the same stated default on mrr and paying_users, the two
+# stock metrics wave-2 exposed (served last_month as "right now"). The consolidated arm: every
+# fix, one layer — the "after" of the published two-arm comparison.
 RUNG = 3  # star + governed semantic layer — the rung where metric selection is the agent's job
 
 
