@@ -8,18 +8,18 @@
     "overall": {
       "n": 90,
       "coverage": 1.0,
-      "silent_error": 0.1,
+      "silent_error": 0.25555555555555554,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.1,
-      "wrong_construction_rate": 0.0
+      "wrong_selection_rate": 0.26666666666666666,
+      "wrong_construction_rate": 0.011111111111111112
     },
     "flagged": {
       "n": 72,
       "coverage": 1.0,
-      "silent_error": 0.125,
+      "silent_error": 0.3194444444444444,
       "balanced_accuracy": NaN,
-      "wrong_selection_rate": 0.125,
-      "wrong_construction_rate": 0.0
+      "wrong_selection_rate": 0.3333333333333333,
+      "wrong_construction_rate": 0.013888888888888888
     },
     "clean": {
       "n": 18,
@@ -32,10 +32,10 @@
     "rows": [
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -46,30 +46,30 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_current",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -80,23 +80,26 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_howmuch",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -502,13 +505,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "mrr"
+          "monthly_recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "monthly_recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
@@ -536,13 +539,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "mrr",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "mrr"
+          "monthly_recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "monthly_recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
@@ -550,10 +553,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -564,24 +567,24 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_jun",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 0,
-        "picked": "monthly_recurring_revenue",
+        "picked": "recurring_revenue",
         "queried": [
-          "monthly_recurring_revenue"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "monthly_recurring_revenue",
+            "metric": "recurring_revenue",
             "period": "2026-06"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2582.543333333333
+        "declared": 3489.5
       },
       {
         "executed": true,
@@ -646,7 +649,8 @@
         "calls": [
           {
             "metric": "monthly_active_users",
-            "period": "2026-06"
+            "period": "2026-06",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "active_users",
@@ -716,6 +720,42 @@
         "calls": [
           {
             "metric": "actives",
+            "period": "2026-05",
+            "time_grain": "month"
+          }
+        ],
+        "expected_metric": "active_users",
+        "declared": 1256.0
+      },
+      {
+        "executed": true,
+        "correct": false,
+        "bucket": "wrong",
+        "abstained": false,
+        "confident_wrong": true,
+        "fabricated": false,
+        "off_governance": false,
+        "wrong_scope": false,
+        "wrong_metric": false,
+        "needs_judge": false,
+        "expected_refuse": false,
+        "reason_match": null,
+        "metric_match": null,
+        "driver_ok": null,
+        "cause_ok": null,
+        "score": -4.0,
+        "outcome": "answer",
+        "id": "e05mf_actives_neutral_may",
+        "tier": "flagged",
+        "family": "actives",
+        "rep": 0,
+        "picked": "monthly_active_users",
+        "queried": [
+          "monthly_active_users"
+        ],
+        "calls": [
+          {
+            "metric": "monthly_active_users",
             "period": "2026-05"
           }
         ],
@@ -724,10 +764,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -738,66 +778,34 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
-        "outcome": "answer",
-        "id": "e05mf_actives_neutral_may",
-        "tier": "flagged",
-        "family": "actives",
-        "rep": 0,
-        "picked": "active_users",
-        "queried": [
-          "active_users"
-        ],
-        "calls": [
-          {
-            "metric": "active_users",
-            "period": "2026-05"
-          }
-        ],
-        "expected_metric": "active_users",
-        "declared": 1200.0
-      },
-      {
-        "executed": true,
-        "correct": true,
-        "bucket": "right",
-        "abstained": false,
-        "confident_wrong": false,
-        "fabricated": false,
-        "off_governance": false,
-        "wrong_scope": false,
-        "wrong_metric": false,
-        "needs_judge": false,
-        "expected_refuse": false,
-        "reason_match": null,
-        "metric_match": null,
-        "driver_ok": null,
-        "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_newusers_mar",
         "tier": "flagged",
         "family": "new_users",
         "rep": 0,
-        "picked": "new_signups",
+        "picked": "new_users",
         "queried": [
-          "new_signups"
+          "new_users"
         ],
         "calls": [
           {
-            "metric": "new_signups",
-            "period": "2026-03"
+            "metric": "new_users",
+            "period": "2026-03",
+            "filters": {
+              "user__is_internal": false
+            }
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 240.0
+        "declared": 232.0
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -808,24 +816,25 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_newusers_joined_may",
         "tier": "flagged",
         "family": "new_users",
         "rep": 0,
-        "picked": "new_signups",
+        "picked": "new_users",
         "queried": [
-          "new_signups"
+          "new_users"
         ],
         "calls": [
           {
-            "metric": "new_signups",
-            "period": "2026-05"
+            "metric": "new_users",
+            "period": "2026-05",
+            "time_grain": "month"
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 403.0
+        "declared": 387.0
       },
       {
         "executed": true,
@@ -1071,10 +1080,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -1085,30 +1094,30 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_current",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 1,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -1119,23 +1128,26 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_howmuch",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 1,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -1575,13 +1587,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 1,
-        "picked": "mrr",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "mrr"
+          "monthly_recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "monthly_recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
@@ -1728,10 +1740,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -1742,24 +1754,24 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_actives_actives_may",
         "tier": "flagged",
         "family": "actives",
         "rep": 1,
-        "picked": "active_users",
+        "picked": "actives",
         "queried": [
-          "active_users"
+          "actives"
         ],
         "calls": [
           {
-            "metric": "active_users",
+            "metric": "actives",
             "period": "2026-05"
           }
         ],
         "expected_metric": "active_users",
-        "declared": 1200.0
+        "declared": 1256.0
       },
       {
         "executed": true,
@@ -1783,14 +1795,17 @@
         "tier": "flagged",
         "family": "actives",
         "rep": 1,
-        "picked": "active_users",
+        "picked": "monthly_active_users",
         "queried": [
-          "active_users"
+          "monthly_active_users"
         ],
         "calls": [
           {
-            "metric": "active_users",
-            "period": "2026-05"
+            "metric": "monthly_active_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": false
+            }
           }
         ],
         "expected_metric": "active_users",
@@ -1833,10 +1848,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -1847,7 +1862,7 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_newusers_joined_may",
         "tier": "flagged",
@@ -1860,11 +1875,14 @@
         "calls": [
           {
             "metric": "new_signups",
-            "period": "2026-05"
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": false
+            }
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 403.0
+        "declared": 387.0
       },
       {
         "executed": true,
@@ -2110,10 +2128,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2124,30 +2142,30 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_current",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 2,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2158,23 +2176,26 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_howmuch",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 2,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "recurring_revenue",
+            "filters": {
+              "subscription__is_active": true
+            }
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2740.95
+        "declared": 11448.08
       },
       {
         "executed": true,
@@ -2614,13 +2635,13 @@
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 2,
-        "picked": "mrr",
+        "picked": "monthly_recurring_revenue",
         "queried": [
-          "mrr"
+          "monthly_recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr"
+            "metric": "monthly_recurring_revenue"
           }
         ],
         "expected_metric": "mrr",
@@ -2628,10 +2649,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2642,24 +2663,24 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_rec_jun",
         "tier": "flagged",
         "family": "recurring_revenue",
         "rep": 2,
-        "picked": "mrr",
+        "picked": "recurring_revenue",
         "queried": [
-          "mrr"
+          "recurring_revenue"
         ],
         "calls": [
           {
-            "metric": "mrr",
+            "metric": "recurring_revenue",
             "period": "2026-06"
           }
         ],
         "expected_metric": "mrr",
-        "declared": 2582.543333333333
+        "declared": 3489.5
       },
       {
         "executed": true,
@@ -2697,10 +2718,10 @@
       },
       {
         "executed": true,
-        "correct": false,
-        "bucket": "wrong",
+        "correct": true,
+        "bucket": "right",
         "abstained": false,
-        "confident_wrong": true,
+        "confident_wrong": false,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2711,7 +2732,7 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": -4.0,
+        "score": 1.0,
         "outcome": "answer",
         "id": "e05mf_actives_mau_jun",
         "tier": "flagged",
@@ -2724,11 +2745,14 @@
         "calls": [
           {
             "metric": "monthly_active_users",
-            "period": "2026-06"
+            "period": "2026-06",
+            "filters": {
+              "user__is_internal": false
+            }
           }
         ],
         "expected_metric": "active_users",
-        "declared": 1683.0
+        "declared": 1620.0
       },
       {
         "executed": true,
@@ -2802,10 +2826,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2816,24 +2840,24 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_actives_neutral_may",
         "tier": "flagged",
         "family": "actives",
         "rep": 2,
-        "picked": "active_users",
+        "picked": "monthly_active_users",
         "queried": [
-          "active_users"
+          "monthly_active_users"
         ],
         "calls": [
           {
-            "metric": "active_users",
+            "metric": "monthly_active_users",
             "period": "2026-05"
           }
         ],
         "expected_metric": "active_users",
-        "declared": 1200.0
+        "declared": 1256.0
       },
       {
         "executed": true,
@@ -2872,10 +2896,10 @@
       },
       {
         "executed": true,
-        "correct": true,
-        "bucket": "right",
+        "correct": false,
+        "bucket": "wrong",
         "abstained": false,
-        "confident_wrong": false,
+        "confident_wrong": true,
         "fabricated": false,
         "off_governance": false,
         "wrong_scope": false,
@@ -2886,24 +2910,27 @@
         "metric_match": null,
         "driver_ok": null,
         "cause_ok": null,
-        "score": 1.0,
+        "score": -4.0,
         "outcome": "answer",
         "id": "e05mf_newusers_joined_may",
         "tier": "flagged",
         "family": "new_users",
         "rep": 2,
-        "picked": "new_signups",
+        "picked": "new_users",
         "queried": [
-          "new_signups"
+          "new_users"
         ],
         "calls": [
           {
-            "metric": "new_signups",
-            "period": "2026-05"
+            "metric": "new_users",
+            "period": "2026-05",
+            "filters": {
+              "user__is_internal": false
+            }
           }
         ],
         "expected_metric": "new_signups",
-        "declared": 403.0
+        "declared": 387.0
       },
       {
         "executed": true,
