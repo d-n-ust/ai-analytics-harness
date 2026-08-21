@@ -73,8 +73,14 @@ jobs:
       # `--package`, because the root is a workspace shell with no build backend: `uv build` there
       # falls back to setuptools' legacy path, which refuses a flat layout holding five top-level
       # directories, and the job died at step one.
-      - name: Build the engine wheel
-        run: uv build --wheel --package ai-analytics-engine --out-dir dist/
+      # The engine depends on the semantic and warehouse packages by NAME, and they live in this
+      # repo rather than in a registry, so installing the engine wheel alone cannot resolve. Build
+      # all three and install all three.
+      - name: Build the engine wheel and the packages it depends on
+        run: |
+          uv build --wheel --package ai-analytics-warehouse --out-dir dist/
+          uv build --wheel --package ai-analytics-semantic --out-dir dist/
+          uv build --wheel --package ai-analytics-engine --out-dir dist/
 
       # Run from OUTSIDE the checkout. Python puts the working directory on sys.path, so from the
       # repo root every import resolves to the source tree and the wheel is never exercised —
@@ -83,7 +89,11 @@ jobs:
       - name: Import it with nothing else on the path
         working-directory: /tmp
         run: |
-          uv run --isolated --no-project --with "$GITHUB_WORKSPACE"/dist/*.whl python - <<'PY'
+          uv run --isolated --no-project \
+            --with "$GITHUB_WORKSPACE"/dist/ai_analytics_warehouse-*.whl \
+            --with "$GITHUB_WORKSPACE"/dist/ai_analytics_semantic-*.whl \
+            --with "$GITHUB_WORKSPACE"/dist/ai_analytics_engine-*.whl \
+            python - <<'PY'
           import pathlib
           import agent.loop, agent.guardrails, agent.prompts as prompts
           import semantic.semantic, semantic.tree

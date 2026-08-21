@@ -127,14 +127,14 @@ source = { editable = "semantic" }
 dependencies = [
     { name = "ai-analytics-warehouse" },
     { name = "duckdb" },
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
 embeddings = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "openai" },
 ]
 metricflow = [
@@ -146,7 +146,7 @@ requires-dist = [
     { name = "ai-analytics-warehouse", editable = "warehouse" },
     { name = "duckdb", specifier = ">=1.1" },
     { name = "metricflow", marker = "extra == 'metricflow'", specifier = ">=0.211.0" },
-    { name = "numpy", specifier = ">=1.26" },
+    { name = "numpy", marker = "extra == 'embeddings'", specifier = ">=1.26" },
     { name = "openai", marker = "extra == 'embeddings'", specifier = ">=1.40" },
     { name = "python-dotenv", specifier = ">=1.0" },
     { name = "pyyaml", specifier = ">=6" },

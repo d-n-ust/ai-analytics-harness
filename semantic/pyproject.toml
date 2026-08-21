@@ -13,7 +13,6 @@ dependencies = [
     "ai-analytics-warehouse",
     "pyyaml>=6",
     "duckdb>=1.1",
-    "numpy>=1.26",
     "python-dotenv>=1.0",
 ]
 
@@ -21,8 +20,11 @@ dependencies = [
 # The MetricFlow engine (this layer behind real dbt MetricFlow). Imported lazily at its call sites,
 # so nothing pays for it unless a study names `engine: metricflow`.
 metricflow = ["metricflow>=0.211.0"]
-# Recomputing embedding similarity (the confusability gate) when the cache misses.
-embeddings = ["openai>=1.40"]
+# Recomputing embedding similarity (the confusability gate) when the cache misses. numpy lives
+# here rather than in the base dependencies because `semantic.similarity` is imported lazily at
+# every call site, so a product install that never audits similarity must not carry it — and the
+# packaging job asserts exactly that.
+embeddings = ["openai>=1.40", "numpy>=1.26"]
 
 [build-system]
 requires = ["hatchling"]
