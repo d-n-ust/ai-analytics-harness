@@ -44,6 +44,48 @@ _RRUNG_TERMINAL = {
         "`false_premise`, and put the correction in `missing` (e.g. \"it didn't fall — it rose to 227\").\n"
         "- A truthful refusal beats a confident wrong answer."),
 }
+
+# The same two lines with every mention of `clarify` removed, for the arm where the tool is not
+# offered. Written out rather than assembled from parts: the strings above are the exact prompt
+# every published cell was run under, they are pinned by tests/test_surface.py across 24 cells, and
+# rebuilding them from fragments risks moving a space and re-fingerprinting the archive to prove a
+# tidiness point. Two literals, and the diff between each pair is one clause.
+_RRUNG_TERMINAL_NO_CLARIFY = {
+    0: "- End with the `answer` tool: the value plus a one-line explanation.",
+    1: ("- End with exactly one terminal tool: `answer` when the data supports a reliable answer; "
+        "`refuse` when it does not — give the coded reason and name what is missing.\n"
+        "- If a question assumes something untrue — a change that didn't happen, an event that never "
+        "occurred — do not accept the premise and answer around it: `refuse` with reason "
+        "`false_premise`, and put the correction in `missing` (e.g. \"it didn't fall — it rose to 227\").\n"
+        "- A truthful refusal beats a confident wrong answer."),
+}
+
+# WHAT THE OTHER LINES NEVER SAID. Both of the originals describe clarification as what to do when
+# the agent is stuck — "too ambiguous to attempt", "too ambiguous to answer either way". That is a
+# fact about the agent's state. The rule is a fact about the data model, and an agent that can read
+# a catalogue does not have to feel stuck to apply it: refuse when NOTHING answers the question,
+# clarify when MORE THAN ONE thing does.
+#
+# This is a prompt-only rung, and this repository already knows what those tend to be worth: R6
+# enforced nothing and contributed nothing. It is worth running for the same reason — a null here
+# is a result about whether telling a model the rule is enough.
+_RRUNG_TYPED_CLARIFY = (
+    "\n- `clarify` is not a last resort. Refuse when NOTHING in the governed layer answers the "
+    "question; clarify when MORE THAN ONE definition answers it and they would give different "
+    "numbers.\n"
+    "- When you clarify, name the governed metrics in `candidates` and ask about what DIFFERS "
+    "between them, in the user's own words — not about which metric name to pick. Someone outside "
+    "the data team has to be able to answer your question.")
+
+# `ambiguity_check` is structural, like the coverage check and the tool restriction: this line only
+# DESCRIBES the enforced environment so the agent does not spend a turn discovering it. Removing the
+# sentence would not let a contested metric through — the block is in guardrails/before.py.
+_RRUNG_AMBIGUITY = (
+    "\n- Governance is enforced on AMBIGUITY too: a governed metric that shares its concept with "
+    "another governed definition is blocked, and the block names the competing definition and what "
+    "separates them. When that happens, do not pick one and do not average them — end with "
+    "`clarify` and ask about the difference the block named.")
+
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
@@ -214,7 +256,12 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
     raw SQL is gone will waste turns discovering it. The set that writes the prompt is the SAME
     set the runtime enforces, so a cell can never describe a guardrail that is not running."""
     protocol = protocol or Protocol()
-    system = _BASE + _RRUNG_TERMINAL[1 if g.abstain else 0]
+    terminal = _RRUNG_TERMINAL if g.clarify else _RRUNG_TERMINAL_NO_CLARIFY
+    system = _BASE + terminal[1 if g.abstain else 0]
+    if g.typed_clarify:
+        system += _RRUNG_TYPED_CLARIFY
+    if g.ambiguity_check:
+        system += _RRUNG_AMBIGUITY
     if g.check_tools:
         system += _RRUNG_CHECKS
     if g.coverage_check:

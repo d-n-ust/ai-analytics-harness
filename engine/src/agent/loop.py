@@ -291,10 +291,15 @@ class _Run:
         # because the two differ in the one way that will matter next: a refusal is terminal,
         # and a clarification is resumable. Collapsing them would erase the distinction a
         # multi-turn flow is built on.
+        # `reason` holds the model's own code from CLARIFY_REASONS when the typed tool offered one.
+        # Where it did not, the field stays None rather than carrying the literal string "clarify",
+        # which is what it held for a year: a non-member of the only vocabulary the field claimed.
+        # None now means "this configuration did not ask", which is a fact worth being able to see
+        # in a stored row, and it is what tells the bare arm from the typed one after the fact.
         a = ClarifyArgs.of(args)
         return self._record(answer=None, explanation=a.question,
-                            outcome="clarify", reason="clarify", abstained=True,
-                            iterations=iterations)
+                            outcome="clarify", reason=a.reason, candidates=a.candidates,
+                            abstained=True, iterations=iterations)
 
     def _served(self, args: dict, iterations: int) -> Answer:
         """An answer, put through the output guardrails before it is served. A failed check does

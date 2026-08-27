@@ -119,6 +119,25 @@ class MetricFlowLayer:
             semantic_manifest_lookup=SemanticManifestLookup(self._manifest),
             sql_client=_DuckDbClient(con))
         self.metrics = {m.name: {"description": m.description} for m in self._manifest.metrics}
+        # HOW THE CATALOGUE IS LAID OUT. Read at render time, so a study selects an arm by setting
+        # it on the layer rather than by threading a parameter through build_grounding.
+        #
+        #   "full"     every metric followed by its own dimensions, grains and time note. Five
+        #              lines of machinery between one description and the next.
+        #   "compact"  the same facts, reordered: every name and description contiguous first,
+        #              the per-metric machinery in a second block below.
+        #
+        # This exists because two metrics that answer one question are five lines apart in "full",
+        # and an agent that picks by name rather than by description might simply never be holding
+        # the two descriptions at once. Same tokens, same facts, different adjacency — so a
+        # difference between the arms is layout and nothing else.
+        self.catalogue = "full"
+        # The ambiguity index, when one sits beside the definitions. Loaded here rather than by the
+        # guardrail so the index travels with the layer it describes and the engine never learns
+        # which tool produced it. None means no file — which a guardrail that needs one must treat
+        # as an error, not as "nothing competes".
+        from .clusters import load as _load_clusters
+        self.clusters = _load_clusters(directory)
         self._windows: dict[str, tuple] = {}   # semantic model -> (first date, last date), lazily read
 
     def _ensure_time_spine(self) -> None:
@@ -193,10 +212,24 @@ class MetricFlowLayer:
         ordered = [by_name[m.name] for m in self._manifest.metrics if m.name in by_name]
         lines = ["Governed metrics (call query_metric with these names):"]
         dims_seen: set = set()
+        # In "compact" the headline lines are emitted together first and the machinery is
+        # accumulated for a second block; in "full" both go out interleaved, as they always have.
+        compact = self.catalogue == "compact"
+        detail: list = []
+        if compact:
+            for m in ordered:
+                lines.append(f"- {m.name}: {m.description or ''}".rstrip())
+                if getattr(m, "label", None):
+                    lines.append(f"    also called: {m.label}")
+            detail.append("\nWhat each metric can be broken down by:")
         for m in ordered:
-            lines.append(f"- {m.name}: {m.description or ''}".rstrip())
-            if getattr(m, "label", None):
-                lines.append(f"    also called: {m.label}")
+            block = detail if compact else lines
+            if compact:
+                block.append(f"- {m.name}")
+            else:
+                lines.append(f"- {m.name}: {m.description or ''}".rstrip())
+                if getattr(m, "label", None):
+                    lines.append(f"    also called: {m.label}")
             dims = sorted(d.granularity_free_dunder_name
                           for d in self._engine.simple_dimensions_for_metrics([m.name]))
             if dims:
@@ -225,10 +258,11 @@ class MetricFlowLayer:
                         label = f"by {prefix} (what this metric counts)"
                     else:
                         label = f"by {prefix} (joined)"
-                    lines.append(f"    {label}: {', '.join(group)}")
+                    block.append(f"    {label}: {', '.join(group)}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
-            lines.append("    time-filterable (period=…) and grainable "
+            block.append("    time-filterable (period=…) and grainable "
                          f"(time_grain={'|'.join(TIME_GRAINS)})")
+        lines += detail
 
         from warehouse.config import NAMED_PERIODS
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} "

@@ -93,11 +93,31 @@ class RefuseArgs(_ExitArgs):
 
 
 class ClarifyArgs(_ExitArgs):
-    """The `clarify` tool: one cleaned question."""
+    """The `clarify` tool: a cleaned question, and — under `typed_clarify` — what it is about.
+
+    `reason` is kept RAW for the same reason `RefuseArgs.reason` is: a hallucinated code must be
+    stored and graded as a mismatch, not coerced into a valid one or raised on. Under the bare tool
+    the field is simply absent and stays None, which is what tells the two configurations apart in
+    a stored row.
+
+    `candidates` accepts a bare string as well as a list, because a model asked for an array will
+    sometimes send `"active_users"` or `"active_users, active_accounts"`, and dropping a
+    well-formed clarification over its punctuation would measure the schema rather than the
+    judgement. This is the same recovery `outcomes.declared_handles` performs on `sources`.
+    """
 
     question: str = ""
+    reason: Any = None
+    candidates: Any = ()
 
     @field_validator("question", mode="before")
     @classmethod
     def _clean(cls, value: Any) -> str:
         return _line(value)
+
+    @field_validator("candidates", mode="before")
+    @classmethod
+    def _names(cls, value: Any) -> tuple:
+        if isinstance(value, str):
+            value = value.replace(",", " ").split()
+        return tuple(n for n in (str(v).strip() for v in (value or ())) if n)

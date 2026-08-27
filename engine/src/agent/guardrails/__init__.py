@@ -28,7 +28,8 @@ from enum import StrEnum
 # records on the hot path, where a validator would be cost without a contract to enforce.
 from pydantic.dataclasses import dataclass as validated_dataclass
 
-__all__ = ["DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER", "LADDER_ORDER",
+__all__ = ["ALL_GUARDRAILS", "DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER",
+           "LADDER_ORDER",
            "GuardrailSet", "Position", "Verdict", "incoherent", "parse_cell"]
 
 # The tree-decomposition tool, current name first. `explain_change` was renamed because "explain"
@@ -147,6 +148,13 @@ class Guardrail:
     position: Position
     mechanism: str                    # what actually happens, in one line
     implemented_in: tuple[str, ...]   # every file under agent/ that acts on this flag
+    # Is this one of the guardrails the R0..R9 ladder switches on, in order? Two are not, and both
+    # for the same reason: the ladder is a story about ADDING guardrails one at a time, and a
+    # guardrail that was always present (`clarify`) or that arrived after the ladder was published
+    # (`typed_clarify`) does not belong in that sequence. Keeping them out is what lets both exist
+    # without renumbering a rung or moving a published number — LADDER[n] names only the first n
+    # of the sequence, and these two keep their declared defaults in every preset.
+    in_ladder: bool = True
 
 
 # The order the ladder switches them on; LADDER[n] enables the first n.
@@ -188,9 +196,42 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
               "the added filters, and rejects an answer to a different question",
               ("guardrails/after.py", "prompts.py")),
+    # ── the ambiguity channel: how a run reports that the question has more than one answer ──
+    #
+    # ON BY DEFAULT, which is what every stored row already assumes: the clarify tool has been
+    # offered at every rung since the loop was written, including R0, where there is no `refuse`
+    # tool and clarification is therefore the only way to decline at all. Making it a flag does
+    # not change that; it makes the OFF state reachable, so "what does having the channel buy?"
+    # becomes a question with an answer instead of an assumption nothing can test.
+    Guardrail("clarify", Position.ACTION_SPACE,
+              "adds the `clarify` tool to the list, giving the run a typed way to report that the "
+              "question has more than one defensible answer",
+              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+    # The same move `governed_numbers` makes on the answer tool: the exit stays, its schema widens.
+    # Without this a clarification is one line of prose, which can be counted and nothing else.
+    Guardrail("typed_clarify", Position.ACTION_SPACE,
+              "adds a coded `reason` and named `candidates` to the clarify tool, so a "
+              "clarification can be checked against the catalogue and the warehouse rather than "
+              "read",
+              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+    # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
+    # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
+    # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
+    # a declaration and is provable without a model. This one consults an artifact a detector
+    # produced, and folding the two together would make the provable one inherit the detector's
+    # uncertainty for a reason unrelated to coverage.
+    Guardrail("ambiguity_check", Position.BEFORE,
+              "runs before a governed query; refuses one whose metric shares its concept with "
+              "another governed definition, and names what separates them",
+              ("guardrails/before.py", "prompts.py"), in_ladder=False),
 )
 
-LADDER_ORDER = [g.name for g in GUARDRAILS]
+# The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
+# declared defaults in every preset, so adding one can neither renumber a rung nor move a number.
+LADDER_ORDER = [g.name for g in GUARDRAILS if g.in_ladder]
+# Every guardrail that exists, ladder or not. `parse_cell` validates names against this; only the
+# ladder's own presets are built from LADDER_ORDER.
+ALL_GUARDRAILS = [g.name for g in GUARDRAILS]
 
 
 @validated_dataclass(frozen=True)
@@ -217,6 +258,14 @@ class GuardrailSet:
     governed_numbers: bool = False
     output_validation: bool = False
     trajectory_verify: bool = False
+    # OUTSIDE the ladder, and the defaults are the point. `clarify` defaults ON because it has been
+    # offered on every run ever stored, so every preset and every archived cell keeps exactly the
+    # behaviour it had. `typed_clarify` defaults OFF because it did not exist. Together they give
+    # the three arms an experiment on ambiguity needs — no channel, a prose channel, a typed one —
+    # without a rung changing meaning.
+    clarify: bool = True
+    typed_clarify: bool = False
+    ambiguity_check: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -225,13 +274,19 @@ class GuardrailSet:
         for n, preset in LADDER.items():
             if preset == self:
                 return f"R{n}"
-        for n, preset in LADDER.items():                   # a preset with one guardrail removed
+        for n, preset in LADDER.items():                   # a preset with one guardrail moved
             missing = [f.name for f in fields(self)
                        if getattr(preset, f.name) and not getattr(self, f.name)]
             added = [f.name for f in fields(self)
                      if getattr(self, f.name) and not getattr(preset, f.name)]
             if len(missing) == 1 and not added:
                 return f"R{n}-{missing[0]}"
+            # The mirror, and it arrived with the guardrails outside the ladder: a preset PLUS one.
+            # Without it `R3+typed_clarify` labelled itself by listing all five of its flags, which
+            # is a cell name that has to be decoded rather than read, and which no longer says
+            # which base it is a variation of.
+            if len(added) == 1 and not missing:
+                return f"R{n}+{added[0]}"
         return "+".join(on) if on else "none"
 
     def without(self, *names: str) -> GuardrailSet:
@@ -248,31 +303,55 @@ LADDER: dict[int, GuardrailSet] = {
 # them has to keep working — the coverage audit reads every row ever written.
 _LEGACY_NAMES = {"gate": "coverage_check", "single_metric": "governed_numbers"}
 
+# Guardrails that do NOT act on the semantic layer, so a rung without one can still run them. All
+# three add or shape a terminal tool, and a terminal tool needs no catalogue: an agent with no
+# governed layer can still decline, and can still say the question has more than one answer.
+# Stated as a set rather than as a growing chain of `!=` comparisons, which is how `abstain` came
+# to be the only exception for as long as it was the only one.
+_LAYER_INDEPENDENT = frozenset({"abstain", "clarify", "typed_clarify"})
+# `ambiguity_check` is NOT in that set: it reads the layer's index, so a rung with no
+# semantic layer genuinely cannot run it.
+
 
 def parse_cell(spec: str) -> GuardrailSet:
     """Parse an ablation-cell name into a GuardrailSet:
       'R9'                      -> the full preset;
       'R9-resolve'              -> R9 minus member resolution ('R9-resolve-coverage_check' minus both);
+      'R3+typed_clarify'        -> R3 plus one guardrail the ladder does not switch on;
       'coverage_check+governed_numbers+...'  -> exactly those on (an explicit set, for Shapley cells).
-    Used by the runner's --cells."""
+    Used by the runner's --cells.
+
+    The `+` form on a PRESET is the mirror of the `-` form and arrived with the guardrails that sit
+    outside the ladder (`clarify`, `typed_clarify`). Without it those two would be reachable only
+    by spelling out every flag of the base preset, which puts the base's definition in the cell
+    name and guarantees the two drift apart. `R3-clarify` and `R3+typed_clarify` are the arms of
+    the ambiguity experiment, and both read as what they are.
+    """
     def canonical(name: str) -> str:
         return _LEGACY_NAMES.get(name, name)
 
-    if "+" in spec or canonical(spec) in LADDER_ORDER:    # explicit set of ON guardrails
-        names = [canonical(n) for n in spec.split("+")]
-        for name in names:
-            if name not in LADDER_ORDER:
-                raise ValueError(f"cell {spec!r}: unknown guardrail {name!r}; valid: {LADDER_ORDER}")
+    def known(name: str) -> str:
+        name = canonical(name)
+        if name not in ALL_GUARDRAILS:
+            raise ValueError(f"cell {spec!r}: unknown guardrail {name!r}; valid: {ALL_GUARDRAILS}")
+        return name
+
+    head = spec.split("+")[0].split("-")[0]
+    is_preset = head.startswith("R") and head[1:].isdigit() and int(head[1:]) in LADDER
+    if not is_preset:                                    # explicit set of ON guardrails
+        names = [known(n) for n in spec.split("+")]
+        if any(n not in LADDER_ORDER for n in names):
+            # An explicit set states the WHOLE configuration, so a guardrail outside the ladder
+            # must be nameable here too — including the one that defaults ON, which an explicit set
+            # would otherwise silently keep.
+            base = GuardrailSet(**{f.name: False for f in fields(GuardrailSet)})
+            return replace(base, **{name: True for name in names})
         return GuardrailSet(**{name: True for name in names})
-    parts = spec.split("-")
-    base = parts[0]
-    if not (base.startswith("R") and base[1:].isdigit()) or int(base[1:]) not in LADDER:
-        raise ValueError(f"cell {spec!r}: base must be a ladder preset R0..R{len(LADDER_ORDER)}")
-    removed = [canonical(n) for n in parts[1:]]
-    for name in removed:
-        if name not in LADDER_ORDER:
-            raise ValueError(f"cell {spec!r}: unknown guardrail {name!r}; valid: {LADDER_ORDER}")
-    return LADDER[int(base[1:])].without(*removed)
+    added = [known(n) for n in spec.split("+")[1:]]
+    parts = spec.split("+")[0].split("-")
+    removed = [known(n) for n in parts[1:]]
+    preset = LADDER[int(head[1:])].without(*removed)
+    return replace(preset, **{name: True for name in added}) if added else preset
 
 
 def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
@@ -285,6 +364,13 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
     from ..rungs import capabilities
+    if g.ambiguity_check and not g.clarify:
+        return ("ambiguity_check without clarify: the gate refuses a call for having more than one "
+                "right answer, and the run then has no way to say so — every block becomes a "
+                "refusal, which measures the missing channel rather than the gate")
+    if g.typed_clarify and not g.clarify:
+        return ("typed_clarify without clarify: the fields widen a tool that is not offered, so "
+                "the cell measures the bare configuration under a name that claims otherwise")
     if g.governed_numbers and not g.tool_restriction:
         return ("governed_numbers without tool_restriction: the check reads result_values, which "
                 "only governed queries record, so every raw-SQL answer auto-refuses")
@@ -299,7 +385,8 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
         return ("trajectory_verify without governed_numbers: the verifier judges a metric+SQL "
                 "trajectory, which a hand-composed number does not have")
     if rung is not None and not capabilities(rung).semantic:
-        beyond = [f.name for f in fields(g) if f.name != "abstain" and getattr(g, f.name)]
+        beyond = [f.name for f in fields(g)
+                  if f.name not in _LAYER_INDEPENDENT and getattr(g, f.name)]
         if beyond:
             return (f"rung {rung} has no semantic layer, so {', '.join(beyond)} cannot act: the "
                     "check_* tools are not offered, the coverage check has no governed call to "

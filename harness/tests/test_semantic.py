@@ -156,11 +156,25 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     answered by grepping. The registry answers it, and this keeps the answer true: every flag is
     described, in ladder order, and every file it claims to be implemented in exists and mentions
     it."""
-    from agent.guardrails import GUARDRAILS, LADDER_ORDER, GuardrailSet, Position
+    from agent.guardrails import GUARDRAILS, LADDER, LADDER_ORDER, GuardrailSet, Position
 
     declared = [f.name for f in dataclasses.fields(GuardrailSet)]
-    assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
-        "the registry, the flag set and the ladder order must be the same set, in one order"
+    assert [g.name for g in GUARDRAILS] == declared, \
+        "the registry and the flag set must be the same guardrails, in one order"
+    # LADDER_ORDER is the registry's `in_ladder` SUBSET, not the whole of it. Two guardrails sit
+    # outside the published ladder — `clarify`, which every run ever stored already had, and
+    # `typed_clarify`, which arrived after R0..R9 were published — and keeping them out is what
+    # lets both exist without renumbering a rung. The subset relation is asserted rather than the
+    # equality, so the registry and the ladder still cannot drift apart in either direction.
+    assert LADDER_ORDER == [g.name for g in GUARDRAILS if g.in_ladder], \
+        "the ladder must be exactly the registry's in_ladder entries, in registry order"
+    for g in GUARDRAILS:
+        if not g.in_ladder:
+            preset_values = {getattr(LADDER[n], g.name) for n in LADDER}
+            assert len(preset_values) == 1, (
+                f"{g.name} is outside the ladder but varies across presets — an out-of-ladder "
+                f"guardrail must hold its declared default in every rung, or R0..R9 no longer "
+                f"mean what the published runs meant")
 
     root = harness_paths.ROOT / "engine" / "src" / "agent"
     for g in GUARDRAILS:

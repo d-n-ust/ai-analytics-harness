@@ -16,6 +16,7 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
+from ..outcomes import CLARIFY_MEANINGS, CLARIFY_REASONS
 from ..protocol import Protocol
 from ..rungs import capabilities
 from . import GOVERNED_TOOLS, Position, note
@@ -99,7 +100,11 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
     if guardrails.abstain:
         offered.append(schema("refuse"))
         note(record, "abstain", Position.ACTION_SPACE, "applied", "offered the refuse tool")
-    offered.append(schema("clarify"))
+    if guardrails.clarify:
+        offered.append(clarify_schema(schema("clarify"), guardrails, record))
+    else:
+        note(record, "clarify", Position.ACTION_SPACE, "withdrew",
+             "no way to report ambiguity — the run must answer or refuse")
     # Applied once over the assembled list rather than at each governed tool: the set of calls
     # that carry a purpose is one fact about the configuration, and stating it once means adding
     # a third governed tool later cannot leave `because` off it by omission.
@@ -153,6 +158,56 @@ def decompose_schema(base: dict, guardrails, tree, record=None) -> dict:
     note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",
          f"node closed to the {len(tree.nodes)} tree nodes")
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
+def clarify_schema(base: dict, guardrails, record=None) -> dict:
+    """Add a coded reason and named candidates to the clarify tool when `typed_clarify` is on.
+
+    An enrichment rather than a second tool, the same shape `answer_schema` uses for provenance:
+    one exit, one handler, a schema that widens under a guardrail. Two competing dicts for one
+    tool name is how the check_coverage handler came to read an argument its schema never offered.
+
+    WHAT THE FIELDS BUY, and why this is not decoration. A refusal can only be checked against a
+    reason code somebody wrote down in advance. A clarification that NAMES the definitions it is
+    choosing between can be checked against the layer and the warehouse — do these exist, and do
+    they actually return different numbers for this slice — with no gold answer and no second
+    model. That is the only measurement in this harness a reader could run on their own data,
+    where nobody has an answer key. It exists only if the model names things rather than
+    describing them, which is why `candidates` asks for catalogue names and `question` does not.
+
+    `question` is asked for in the USER's words on purpose. "Did you mean active_users or
+    active_accounts" cannot be answered outside the data team; "should staff and test accounts be
+    counted" can be answered by anyone, and they are the same clarification. The second names what
+    DIFFERS between the candidates, and that difference is a fact the layer already declares.
+
+    `candidates` is not required. An underspecified period has no competing definitions to name,
+    and demanding two would teach the model to invent a pair rather than report the ambiguity it
+    actually found.
+    """
+    if not guardrails.typed_clarify:
+        return base
+    props = dict(base["input_schema"]["properties"])
+    props["reason"] = {
+        "type": "string", "enum": CLARIFY_REASONS,
+        "description": ("What kind of ambiguity this is. Name the ROOT CAUSE:\n"
+                        + "\n".join(f"- {k}: {v}" for k, v in CLARIFY_MEANINGS.items()))}
+    props["candidates"] = {
+        "type": "array", "items": {"type": "string"},
+        "description": ("The governed metric names that could EACH answer the question, spelled "
+                        "as the catalogue spells them. Two or more when the ambiguity is about "
+                        "which definition to use; empty when it is not.")}
+    props["question"] = {
+        "type": "string",
+        "description": ("The one question to ask, in the USER's words, about what DIFFERS between "
+                        "the candidates — not about which metric name to pick. Someone outside "
+                        "the data team has to be able to answer it.")}
+    note(record, "typed_clarify", Position.ACTION_SPACE, "applied",
+         "clarify gained a coded reason and named candidates")
+    return {**base,
+            "description": ("End by asking one clarifying question, because more than one reading "
+                            "of the question is defensible and they give different numbers."),
+            "input_schema": {**base["input_schema"], "properties": props,
+                             "required": ["reason", "question"]}}
 
 
 def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:
