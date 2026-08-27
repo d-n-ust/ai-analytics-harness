@@ -224,6 +224,29 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "runs before a governed query; refuses one whose metric shares its concept with "
               "another governed definition, and names what separates them",
               ("guardrails/before.py", "prompts.py"), in_ladder=False),
+    # Lets a BLOCKED call come back declaring which reading the request asked for, and stands the
+    # gate down when that declaration matches what the index says separates the pair. The point is
+    # that the gate's side stays mechanical — a comparison against a declared fact, not a judgement
+    # about the question — which is what keeps it provable. The model can still declare wrongly, and
+    # unlike a similarity score a wrong declaration is COUNTABLE, which is the measurement.
+    Guardrail("scope_declaration", Position.BEFORE,
+              "adds `resolved_scope` to a governed query; a declaration matching the index's own "
+              "discriminator stands the ambiguity gate down for that call",
+              ("guardrails/action_space.py", "guardrails/before.py", "prompts.py"), in_ladder=False),
+    # Never blocks. Attaches the competing definition's figure to the result, so the agent answers
+    # holding both numbers and can disclose instead of asking. The third of the three responses the
+    # disambiguation literature names — answer every interpretation — at the position that fits it.
+    Guardrail("ambiguity_disclosure", Position.DISCLOSURE,
+              "appends the competing definition's value to a governed result, so an answer can name "
+              "both readings without a round trip",
+              ("guardrails/disclosure.py", "prompts.py"), in_ladder=False),
+    # Makes the line above ENFORCED instead of advisory. An answer that served one of two divergent
+    # governed readings and named only that one is handed back, once, with both figures. The ladder
+    # has shown twice that a disclosure the model may ignore is a disclosure the model does ignore.
+    Guardrail("disclosure_check", Position.REPAIR,
+              "hands back an answer that served one contested reading without naming the other, so "
+              "the disclosure has to be acted on rather than merely read",
+              ("loop.py", "prompts.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -266,6 +289,9 @@ class GuardrailSet:
     clarify: bool = True
     typed_clarify: bool = False
     ambiguity_check: bool = False
+    scope_declaration: bool = False
+    ambiguity_disclosure: bool = False
+    disclosure_check: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -364,6 +390,12 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
     from ..rungs import capabilities
+    if g.disclosure_check and not g.ambiguity_disclosure:
+        return ("disclosure_check without ambiguity_disclosure: the answer would be handed back for "
+                "omitting a figure the model was never shown. Enforce a disclosure, not a guess.")
+    if g.scope_declaration and not g.ambiguity_check:
+        return ("scope_declaration without ambiguity_check: the field stands down a gate that is "
+                "not running, so the cell measures the plain configuration under another name")
     if g.ambiguity_check and not g.clarify:
         return ("ambiguity_check without clarify: the gate refuses a call for having more than one "
                 "right answer, and the run then has no way to say so — every block becomes a "

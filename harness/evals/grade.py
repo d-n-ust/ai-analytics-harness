@@ -135,6 +135,21 @@ def _candidate_served(answer, expect: dict, tol: float) -> dict | None:
     return None
 
 
+def _disclosed_both(answer, expect: dict, tol: float) -> bool:
+    """Does the answer put EVERY candidate's figure in front of the reader?
+
+    Read from the served text rather than from a declaration, because what matters is what the
+    reader receives. A number is disclosed when it appears in the prose within tolerance; an answer
+    that names one and alludes to the other in words has still handed over one number.
+    """
+    values = [c.get("value") for c in expect.get("candidates") or ()]
+    if len(values) < 2 or any(v is None for v in values):
+        return False
+    text = f"{getattr(answer, 'answer', '') or ''} {getattr(answer, 'explanation', '') or ''}"
+    found = _numbers(text)
+    return all(any(_close(n, v, tol) for n in found) for v in values)
+
+
 def _divergence(served: dict, expect: dict) -> float | None:
     """How far the served reading sits from the others it was chosen over, relative to itself.
 
@@ -260,6 +275,13 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         # but an ordinary one rather than the invisible kind, and worth telling apart.
         if not has_number:
             bucket = "other"                         # abstention prose through the answer channel
+        elif _disclosed_both(answer, expect, tol):
+            # THE FOURTH ACTION. An answer naming every reading and its figure has not made a
+            # silent choice — the reader is holding both numbers and can pick. It costs one
+            # sentence where a clarification costs a round trip, so it is scored correct rather
+            # than counted as the failure the pile exists to catch.
+            correct = True
+            bucket = "right"
         else:
             served = _candidate_served(answer, expect, tol)
             if served is not None:

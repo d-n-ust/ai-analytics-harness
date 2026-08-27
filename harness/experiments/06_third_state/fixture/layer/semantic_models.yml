@@ -61,10 +61,13 @@ semantic_model:
     - {name: started_date, type: time, type_params: {time_granularity: day}}
     - {name: plan, type: categorical}
     - {name: is_active, type: categorical}
+    - {name: status, type: categorical}
   measures:
     - name: mrr_amount
       agg: sum
       expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"
+    - {name: subscription_count, agg: count, expr: subscription_id}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id}
 ---
 semantic_model:
   name: marketing
@@ -103,13 +106,24 @@ metric:
   type_params: {measure: active_account_count}
 
 # ── everything else, so the layer is not a two-metric toy ─────────────────────────────────────
+# ── contested · engagement volume ─────────────────────────────────────────────────────────────
 ---
 metric:
   name: value_moments
-  description: "Completed habits in the period, excluding internal and test accounts."
+  description: >-
+    Completed habits in the period, EXCLUDING internal and test accounts. Owned by Product. Used by
+    the engagement review and the North Star metric tree.
   type: simple
   type_params: {measure: value_moment_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: total_value_moments
+  description: >-
+    Completed habits in the period, INCLUDING internal and test accounts. Owned by Platform. Used
+    for write-volume forecasting and storage planning, which care about rows rather than customers.
+  type: simple
+  type_params: {measure: value_moment_count}
 ---
 metric:
   name: app_opens
@@ -123,16 +137,58 @@ metric:
   description: "Accounts created in the period, all accounts."
   type: simple
   type_params: {measure: signup_count}
+# ── contested · recurring revenue ─────────────────────────────────────────────────────────────
 ---
 metric:
   name: mrr
-  description: "Monthly recurring revenue of the active book. An annual term counts as one twelfth."
+  description: >-
+    Monthly recurring revenue, NET of refunded terms. An annual term counts as one twelfth. Owned by
+    Finance. Used by the board pack and the revenue forecast.
   type: simple
   type_params: {measure: mrr_amount}
-  filter: "{{ Dimension('subscription__is_active') }} = true"
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+---
+metric:
+  name: gross_mrr
+  description: >-
+    Monthly recurring revenue GROSS of refunds — every term that was sold and has not been
+    cancelled, refunded or not. Owned by Sales. Used for quota attainment and commission, which pay
+    on what was closed rather than on what was kept.
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription__status') }} != 'canceled'"
+
+# ── clean · the subscription book ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: paying_users
+  description: "Distinct accounts holding a live subscription."
+  type: simple
+  type_params: {measure: paying_user_count}
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+---
+metric:
+  name: active_subscriptions
+  description: "Live subscription contracts. An account holding two counts twice."
+  type: simple
+  type_params: {measure: subscription_count}
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+# ── contested · marketing spend ───────────────────────────────────────────────────────────────
 ---
 metric:
   name: marketing_spend
-  description: "Marketing spend in the period."
+  description: >-
+    Every pound of marketing spend in the period, ALL channels. Owned by Finance. Used by the
+    budget-versus-actuals report, which must reconcile to the ledger.
   type: simple
   type_params: {measure: spend_amount}
+---
+metric:
+  name: acquisition_spend
+  description: >-
+    Marketing spend on REAL acquisition channels, excluding `partnerships` — an internal test
+    integration that books spend but buys no customers. Owned by Growth. Used for cost per
+    acquisition and channel efficiency.
+  type: simple
+  type_params: {measure: spend_amount}
+  filter: "{{ Dimension('spend_row__channel') }} != 'partnerships'"

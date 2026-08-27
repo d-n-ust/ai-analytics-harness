@@ -126,6 +126,18 @@ def query_metric_schema(base: dict, guardrails, semantic, record=None) -> dict:
     if semantic is None:
         return base
     props = dict(base["input_schema"]["properties"])
+    if guardrails.scope_declaration:
+        # Asked for in the INDEX'S OWN WORDS, not in the user's, and that is the whole design. A
+        # free-text justification would have to be judged; a string that must match the
+        # discriminator the index already records can be compared. The agent learns the exact
+        # wording from the block it just received, which names it.
+        props["resolved_scope"] = {
+            "type": "string",
+            "description": ("Only when the REQUEST ITSELF named which reading of a contested metric "
+                            "it wanted. Repeat the discriminator exactly as the block stated it "
+                            "(e.g. `is_internal = false`). Leave it out when the request did not "
+                            "say — inventing one to get past the block serves a number the reader "
+                            "did not choose.")}
     if guardrails.coverage_check:
         props["metric"] = {**props["metric"], "enum": list(semantic.metrics)}
         note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",

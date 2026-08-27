@@ -316,9 +316,43 @@ frozen suite's metric-declaring answers (1,566 answers, 631 in the contested clu
 diagnostics. The divergence threshold is **zero** and the zero is argued: danger runs inverse to
 magnitude, so "does not matter" means identical rather than close.
 
-**What is not measured, and it is the number that decides everything.** This fixture has no
-answerable pile, so the gate has never been asked a question it should have left alone. The 40.3% is
-what *membership* would have cost; what *sensitivity* costs is unknown.
+**The gate's cost, now measured: it interrupts 10 of 12 questions that had already said which
+reading they wanted.** The suite grew to 16 questions over four piles — clean metrics, contested
+metrics asked with the scope stated, unanswerable, and contested. Coverage on the answerable piles
+falls from 0.96 to 0.58 under the gate. The gate reads the SELECTION and never the question, by
+design, so a question that disambiguates itself in words is indistinguishable from one that does not.
+
+**An escape hatch the agent never used.** Given `resolved_scope` — retry the blocked call declaring
+the discriminator the block named, and the gate stands down — the agent used it **0 of 12** times.
+Blocked, told what separates the definitions, holding a question that had already answered that, it
+clarified every time. Any mechanism whose last step is the model choosing to use it is worth what
+the model's choices are worth, which §7 and the transparency null above both price at approximately
+nothing.
+
+**Attaching the rival number is advisory and behaves like one; checking that it was used is what
+closes the gap.** Appending the competing definition's figure to the governed result costs no
+coverage and interrupts nobody, and the agent names both figures **6 of 12** times. Handing back the
+one-reading answer once, with both figures, takes it to **11 of 12** at coverage 1.00. The content
+of the two arms is identical; the only difference is whether anything checks. Across five arms on 48
+runs each, that one is best by eight questions:
+
+| arm | mechanism | contested ok | stated-scope questions interrupted | silent wrong | coverage | total |
+|---|---|---|---|---|---|---|
+| A | nothing | 0/12 | 0/12 | 16/48 | 0.96 | 28/48 |
+| B | gate blocks the call | 12/12 | 10/12 | 3/48 | 0.58 | 33/48 |
+| C | gate + declared scope | 12/12 | 12/12 | 2/48 | 0.50 | 31/48 |
+| D | rival figure attached | 6/12 | 0/12 | 9/48 | 1.00 | 36/48 |
+| E | attached and checked | 11/12 | 0/12 | 3/48 | 1.00 | **44/48** |
+
+**B and E are not ranked by this table.** E answers more and interrupts nobody; B never serves a
+contested number at all. Which is right depends on the price of an answer carrying one reading
+silently against the price of a round trip, and that price is still the placeholder `WRONG_COST`.
+
+**The action-only 3×3 matrix flatters the system, and the defect is in a diagonal cell.** "The
+question had one answer and the agent answered" holds both the best available outcome and one of the
+worst. Split three ways — right, wrong number, no figure — the same runs that read 8/12 and 10/12
+read 6/12 and 9/12. The grid needs one off-diagonal cell marked correct for the same reason: a
+contested question answered with every reading and the discriminator has not made a silent choice.
 
 → [`harness/experiments/06_third_state/findings.md`](../harness/experiments/06_third_state/findings.md)
 

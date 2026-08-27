@@ -63,7 +63,8 @@ def check(semantic, guardrails, args: dict, record=None) -> Verdict:
                        f"e.g. {{\"platform\": \"ios\"}}; got {type(filters).__name__}.")
 
     if guardrails.ambiguity_check:
-        verdict = _ambiguity(semantic, args, args.get("metric"), record)
+        verdict = _ambiguity(semantic, args, args.get("metric"), record,
+                             guardrails.scope_declaration)
         if not verdict.allowed:
             return verdict
 
@@ -91,7 +92,8 @@ def check(semantic, guardrails, args: dict, record=None) -> Verdict:
                                    f"({reason}).")
 
     if guardrails.ambiguity_check:
-        verdict = _ambiguity(semantic, args, args.get("metric"), record)
+        verdict = _ambiguity(semantic, args, args.get("metric"), record,
+                             guardrails.scope_declaration)
         if not verdict.allowed:
             return verdict
 
@@ -126,7 +128,8 @@ def check(semantic, guardrails, args: dict, record=None) -> Verdict:
     return Verdict.ok()
 
 
-def _ambiguity(semantic, args: dict, metric: str, record=None) -> Verdict:
+def _ambiguity(semantic, args: dict, metric: str, record=None,
+               guardrails_scope_declaration: bool = False) -> Verdict:
     """Refuse a governed call whose metric is not the only definition of what it measures.
 
     WHY THIS BLOCKS RATHER THAN WARNS. The failure it exists for leaves no signature downstream:
@@ -162,6 +165,21 @@ def _ambiguity(semantic, args: dict, metric: str, record=None) -> Verdict:
     # and 0.00% apart on `platform=unknown` — asking on the second is friction with nothing behind
     # it, and a gate that fires on membership alone would have done so on 40.3% of the answers in
     # the frozen suite that name a metric, most of them diagnostics.
+    # A DECLARATION THE INDEX AGREES WITH stands the gate down. Verified rather than trusted: the
+    # string must match the discriminator the index records for the pair, so a declaration that
+    # names nothing real cannot pass. The risk this arm exists to measure is the obvious one — an
+    # agent that declares on every blocked call turns the gate back into advice, and the pile C
+    # clarification rate is what would show it.
+    declared = str((args or {}).get("resolved_scope") or "").strip().lower()
+    if guardrails_scope_declaration and declared:
+        for rival in competitors:
+            if declared in {d.strip().lower() for d in rival.scope_delta}:
+                note(record, "scope_declaration", Position.BEFORE, "stood down",
+                     f"the request named {declared!r}, which is what separates {metric} from "
+                     f"{rival.name}")
+                return Verdict.ok()
+        note(record, "scope_declaration", Position.BEFORE, "refused",
+             f"declared {declared!r}, which separates nothing in the index")
     rival, delta = _first_divergent(semantic, args, metric, competitors)
     if rival is None:
         note(record, "ambiguity_check", Position.BEFORE, "allowed",
@@ -190,8 +208,16 @@ def _ambiguity(semantic, args: dict, metric: str, record=None) -> Verdict:
 DIVERGENCE_THRESHOLD = 0.0
 
 
-def _value_of(semantic, args: dict, metric: str):
-    """What one metric returns for this exact request, or None if it cannot answer it.
+def value_of(semantic, args: dict, metric: str):
+    """{row label -> number} for this exact request, or None if the metric cannot answer it.
+
+    KEYED BY LABEL, NEVER BY POSITION, and that is not a detail. Two metrics grouped by the same
+    dimension are under no obligation to return their rows in the same ORDER: for one June request
+    `value_moments` came back Americas, EMEA, APAC and `total_value_moments` came back EMEA,
+    Americas, APAC. The positional version of this function compared Americas against EMEA, and
+    the disclosure built on it handed the reader a rival figure for a region they had not asked
+    about. The measure column is named `value` by the engine's own contract, so every other column
+    is what labels the row, and an ungrouped result has the single empty label.
 
     None on ANY failure, and deliberately broad: a competitor that does not accept these arguments
     — a dimension it lacks, a grain it does not carry — has not been shown to agree, and treating
@@ -204,8 +230,39 @@ def _value_of(semantic, args: dict, metric: str):
             period=args.get("period"), resolve=False, segment=args.get("segment"))
     except Exception:                                                   # noqa: BLE001
         return None
-    numbers = [v for row in (rows or []) for v in row if isinstance(v, (int, float))]
-    return tuple(numbers) if numbers else None
+    try:
+        measure = cols.index("value")
+    except ValueError:
+        return None                     # no measure column: nothing was fetched to compare
+    keyed = {}
+    for row in rows or ():
+        if isinstance(row[measure], (int, float)):
+            keyed[tuple(str(c) for i, c in enumerate(row) if i != measure)] = row[measure]
+    return keyed or None
+
+
+def gaps(mine, theirs) -> dict | None:
+    """{row label -> relative difference}, or None when the two cannot be compared at all.
+
+    Comparable means the same set of labels. Different labels is not a small discrepancy to be
+    averaged over — it means the two definitions cover different rows, which is itself a difference
+    the reader needs, and there is no honest per-row number to report for it.
+    """
+    if mine is None or theirs is None or set(mine) != set(theirs):
+        return None
+    return {k: abs(mine[k] - theirs[k]) / abs(mine[k]) for k in mine if mine[k]}
+
+
+def pair(label: tuple, mine: float, theirs: float, gap: float) -> str:
+    """One row of a two-definition comparison, in the reader's terms."""
+    where = f"for {' / '.join(label)}, " if label else ""
+    return f"{where}{mine:,.0f} against {theirs:,.0f}, {gap * 100:.2f}% apart"
+
+
+def worst_row(mine: dict, theirs: dict, differences: dict) -> str:
+    """The single row the two definitions disagree on most — the gate's one-line summary."""
+    label = max(differences, key=lambda k: differences[k])
+    return pair(label, mine[label], theirs[label], differences[label])
 
 
 def _first_divergent(semantic, args: dict, metric: str, competitors):
@@ -215,13 +272,12 @@ def _first_divergent(semantic, args: dict, metric: str, competitors):
     competitor cannot be executed with these arguments it is treated as divergent: unable to
     compare is not the same as compared and equal, and only one of those is safe to wave through.
     """
-    mine = _value_of(semantic, args, metric)
+    mine = value_of(semantic, args, metric)
     for rival in competitors:
-        theirs = _value_of(semantic, args, rival.name)
-        if mine is None or theirs is None or len(mine) != len(theirs):
+        theirs = value_of(semantic, args, rival.name)
+        differences = gaps(mine, theirs)
+        if differences is None:
             return rival, "not comparable"
-        gaps = [abs(a - b) / abs(a) for a, b in zip(mine, theirs, strict=True) if a]
-        worst = max(gaps, default=0.0)
-        if worst > DIVERGENCE_THRESHOLD:
-            return rival, f"{mine[0]:,.0f} against {theirs[0]:,.0f}, {worst * 100:.2f}% apart"
+        if max(differences.values(), default=0.0) > DIVERGENCE_THRESHOLD:
+            return rival, worst_row(mine, theirs, differences)
     return None, ""

@@ -24,8 +24,8 @@ from dataclasses import dataclass, field, replace
 import evidence as claim_audit
 
 from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
-from .guardrails import Act, Position, after
-from .numbers import bare_number
+from .guardrails import Act, Position, after, before
+from .numbers import bare_number, parse_numbers
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from .provenance import ContextLedger
 from .providers import ProviderError
@@ -229,6 +229,86 @@ class _Run:
                              f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
                              f"nothing; correction {self.claim_retries} of 2").as_dict())
         return ToolResult("\n".join(lines), is_error=True)
+
+    def needs_correction(self, exit_call):
+        """The first fault worth handing this answer back for, or None to serve it.
+
+        Two faults qualify and they share one budget. A citation that resolves to nothing is
+        objectively broken. An answer that served one of two divergent governed readings and named
+        only that one is broken in the other direction: nothing about it is malformed, and the
+        reader is the one who cannot tell.
+        """
+        return self.malformed_claims(exit_call) or self.undisclosed_rival(exit_call)
+
+    def undisclosed_rival(self, exit_call):
+        """Hand back an answer that reported one contested reading and omitted the other.
+
+        THE POINT IS THAT DISCLOSURE ALONE DOES NOT WORK. The `[also]` line puts the rival figure
+        in the model's context and asks for both; across 12 contested runs the model passed both on
+        6 times and served one number silently the other 6. `transparency` had already shown the
+        same shape — the discriminator was in the SQL 20 times out of 20 and moved nothing. So this
+        checks the served text for the figure rather than trusting that it was read.
+
+        Read from the TEXT, for the same reason grade.py reads it there: what the reader receives is
+        the answer, not the model's account of what it considered. A rival figure named in
+        `explanation` counts, one thought about and left out does not.
+
+        Bounded by the shared MAX_CORRECTIONS, so a model that will not comply serves its answer and
+        is measured serving it — the arm reports what disclosure-plus-enforcement buys, and cannot
+        loop.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not g.disclosure_check:
+            return None
+        semantic = self.grounding.semantic
+        if getattr(semantic, "clusters", None) is None:
+            return None
+        served = parse_numbers(after.served_text(exit_call.args))
+        missing = []
+        for metric, args in self._governed_calls():
+            try:
+                rivals = semantic.clusters.competitors(metric)
+            except KeyError:
+                continue
+            mine = before.value_of(semantic, args, metric)
+            for rival in rivals:
+                theirs = before.value_of(semantic, args, rival.name)
+                differences = before.gaps(mine, theirs)
+                if not differences:
+                    continue
+                absent = [k for k, gap in differences.items()
+                          if gap > before.DIVERGENCE_THRESHOLD
+                          and not any(abs(n - theirs[k]) <= 0.005 * abs(theirs[k]) for n in served)]
+                if absent:
+                    missing.append((rival, mine, theirs, {k: differences[k] for k in absent}))
+        if not missing:
+            return None
+        self.repairs.append({"undisclosed": [r.name for r, *_ in missing]})
+        lines = ["Your answer was not accepted: it reports one of two governed readings of the "
+                 "question and does not give the reader the other one."]
+        for rival, mine, theirs, absent in missing:
+            for key, gap in absent.items():
+                lines.append(f"  {before.pair(key, mine[key], theirs[key], gap)} — "
+                             f"`{rival.name}`, which differs by "
+                             f"{rival.discriminator or 'its scope'}")
+        lines.append("Send the answer again giving BOTH figures and what separates them, or end "
+                     "with `clarify` if you cannot tell which was meant.")
+        self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",
+                             f"{sum(len(a) for *_, a in missing)} contested figure(s) omitted; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        return ToolResult("\n".join(lines), is_error=True)
+
+    def _governed_calls(self):
+        """(metric, args) for every governed query this run actually made — what the answer stands
+        on. Read off the trace rather than off the model's `source_metric`, which is optional and
+        which a wrong answer has no reason to fill in correctly."""
+        seen = []
+        for step in self.steps:
+            args = step.get("args") or {}
+            metric = args.get("metric")
+            if step.get("tool") == "query_metric" and metric and not step.get("blocked_by"):
+                seen.append((metric, args))
+        return seen
 
     def _why_unresolved(self, ref: str) -> str:
         handle = str(ref).strip().strip("[]").partition(":")[0]
@@ -445,7 +525,7 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
             # which is where the model was rushing and citing loosest. Bounded twice over: at
             # most MAX_CORRECTIONS per run, and the grace turn is granted once, so this cannot
             # trade a lost measurement for an unbounded loop.
-            correction = (run.malformed_claims(turn.exit_call)
+            correction = (run.needs_correction(turn.exit_call)
                           if run.claim_retries < MAX_CORRECTIONS else None)
             if correction is not None:
                 if it == budget - 1 and budget < max_iters + GRACE:

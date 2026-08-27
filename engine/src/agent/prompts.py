@@ -86,6 +86,24 @@ _RRUNG_AMBIGUITY = (
     "separates them. When that happens, do not pick one and do not average them — end with "
     "`clarify` and ask about the difference the block named.")
 
+_RRUNG_SCOPE_DECLARATION = (
+    "\n- If a governed query is blocked for ambiguity AND the user's question already said which "
+    "reading it wanted, retry the call with `resolved_scope` set to the discriminator the block "
+    "named, word for word. If the question did not say, do not invent one — clarify instead.")
+
+# `ambiguity_disclosure` blocks nothing, so unlike the two above this line is the whole mechanism
+# on the model's side: the extra figure arrives in the tool result and this says what to do with it.
+_RRUNG_AMBIGUITY_DISCLOSURE = (
+    "\n- A governed result may carry an `[also]` line naming a second governed definition of the "
+    "same concept and the different number it returns. When it does and the question did not say "
+    "which reading it wanted, answer with BOTH figures and name what separates them. Do not pick "
+    "one silently, and do not average them.")
+
+_RRUNG_DISCLOSURE_CHECK = (
+    "\n- Naming both figures is CHECKED, not trusted: an answer that reports one reading of a "
+    "contested concept and omits the other is handed back to you once, with both numbers, to send "
+    "again.")
+
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
@@ -262,6 +280,12 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _RRUNG_TYPED_CLARIFY
     if g.ambiguity_check:
         system += _RRUNG_AMBIGUITY
+    if g.scope_declaration:
+        system += _RRUNG_SCOPE_DECLARATION
+    if g.ambiguity_disclosure:
+        system += _RRUNG_AMBIGUITY_DISCLOSURE
+    if g.disclosure_check:
+        system += _RRUNG_DISCLOSURE_CHECK
     if g.check_tools:
         system += _RRUNG_CHECKS
     if g.coverage_check:

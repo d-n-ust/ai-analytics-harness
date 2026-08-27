@@ -207,11 +207,152 @@ the file it reads.
 
 ---
 
-## 7 · Not measured
+## 7 · Twelve questions, four to a pile
 
-- **Over-clarification.** This fixture has no Pile A, so the gate has never been asked a question it
-  should have left alone. The 40.3% figure is what *membership* would have cost on the frozen suite;
-  what *sensitivity* costs is unknown. This is the number that decides whether the gate is shippable.
+The fixture grew from one question to twelve, and the layer from 7 metrics to 12, so pile C could
+hold **four distinct concepts across three axes** — internal-account exclusion, test-channel
+exclusion and refund netting — rather than one fork sliced four ways. Every question carries two to
+four primitives in experiment 04's vocabulary; none is a bare lookup.
+
+Divergence on the exact slice each pile C question asks about:
+
+| question | candidates | apart |
+|---|---|---:|
+| active users on web, last week | `active_users` / `active_accounts` | 4.33% |
+| habits completed in the Americas, June | `value_moments` / `total_value_moments` | 4.93% |
+| marketing spend, Q2 | `marketing_spend` / `acquisition_spend` | 13.38% |
+| MRR from subscriptions sold this year | `mrr` / `gross_mrr` | 1.45% |
+
+All twelve oracles verified against the layer, 0 mismatches. Pile B is unanswerable rather than
+merely ungoverned: `information_schema` has zero columns matching session, duration, feature,
+screen, ticket, survey, nps or promoter, so raw SQL cannot rescue any of them.
+
+### Pile A′ — the same concepts, asked by someone who said which reading
+
+Four more questions were added, one per contested concept, where the asker names the reading:
+*"how many active users, **excluding internal and test accounts**, did we have on web last week?"*
+There is nothing to clarify. Sixteen questions in total: 4 pile A on clean metrics, 4 pile A′ on
+contested metrics with the ambiguity resolved in words, 4 pile B, 4 pile C.
+
+### The run — gpt-5-mini, one rep, 16 questions, concurrency 8
+
+| arm | pile A (8) | pile B (4) | pile C (4) | coverage | silent error | balanced accuracy |
+|---|---|---|---|---:|---:|---:|
+| `R3+typed_clarify` | 7 right, 1 wrong | 4 refused | **0 clarified, 4 served** | **1.00** | 0.31 | 0.63 |
+| `+ambiguity_check` | 4 right, **4 interrupted** | 4 refused | **4 clarified** | **0.50** | **0.00** | 0.83 |
+
+```
+WITHOUT the gate                                WITH the gate
+                correct WRONG NUM refuse clar                   correct WRONG NUM refuse clar
+k = 1  one ans     7 ok      1 !!      ·    ·   k = 1  one ans     4 ok         ·      ·    4
+k = 0  no ans         ·         ·   2 ok    1   k = 0  no ans         ·         ·   3 ok    ·
+k >= 2 two ans        ·      4 !!      ·    ·   k >= 2 two ans        ·         ·      ·  4 ok
+       correct 9/16 · silent wrong 5                    correct 11/16 · silent wrong 0
+```
+
+**The trade, measured for the first time.** Silent wrong numbers **5 → 0**. Coverage **1.00 → 0.50**.
+Over-clarification **0% → 50%**.
+
+**And the whole cost sits on pile A′.** Every one of the four interruptions was a
+self-disambiguating question; all four clean-metric questions were answered correctly and untouched.
+
+| pile A question | metric | gate |
+|---|---|---|
+| Android app opens, June | `app_opens` | answered, correct |
+| paid-search signups, Q2 | `new_signups` | answered, correct |
+| annual paying customers | `paying_users` | answered, correct |
+| annual subs sold in Q2 | `active_subscriptions` | answered, correct |
+| active users **excluding internal**, web, last week | `active_users` | **INTERRUPTED** |
+| habits by **real accounts** in the Americas, June | `value_moments` | **INTERRUPTED** |
+| marketing spend **across every channel**, Q2 | `marketing_spend` | **INTERRUPTED** |
+| MRR **net of refunds**, sold this year | `mrr` | **INTERRUPTED** |
+
+That is not a tuning problem, it is the design: the gate fires on whether the two NUMBERS differ for
+this call, and they still differ when the asker has already chosen between them. Nothing in the call
+records that the question resolved the ambiguity, so nothing can stand the gate down.
+
+**The fix has to be mechanical.** Something in the call recording that the request named the scope —
+not the agent asserting it, because §3 is what its unprompted self-report is worth. Until that
+exists, the gate buys a silent-error rate of zero at the price of interrupting half the answerable
+questions that touch a contested metric.
+
+## 10 · Five responses to ambiguity, measured
+
+`gpt-5-mini`, 16 questions, three reps each, 48 runs per arm. Every arm sits on `R3+typed_clarify`
+and adds one mechanism.
+
+| arm | mechanism | contested ok | A′ over-asked | clean A ok | B refuse ok | silent wrong | coverage | total |
+|---|---|---|---|---|---|---|---|---|
+| A | nothing (baseline) | 0/12 | 0/12 | 7/12 | 9/12 | 16/48 | 0.96 | 28/48 |
+| B | gate blocks the call | 12/12 | 10/12 | 9/12 | 10/12 | 3/48 | 0.58 | 33/48 |
+| C | gate, stood down by a declared scope | 12/12 | 12/12 | 10/12 | 9/12 | 2/48 | 0.50 | 31/48 |
+| D | rival figure attached to the result | 6/12 | 0/12 | 11/12 | 9/12 | 9/48 | 1.00 | 36/48 |
+| E | the same, and the answer is checked for it | 11/12 | 0/12 | 10/12 | 11/12 | 3/48 | 1.00 | **44/48** |
+
+"A′ over-asked" counts questions that stated their own scope and were interrupted anyway.
+
+### The gate works and is expensive
+
+B does what §5 said it does: every contested question asked, none answered silently. The price is
+now measured rather than estimated. Ten of twelve questions that had already said which reading they
+wanted were interrupted, and coverage on the answerable piles fell from 0.96 to 0.58. The gate reads
+the selection, never the question, so a question that disambiguates itself cannot be distinguished
+from one that does not.
+
+### The declared-scope escape hatch does not work
+
+C offered the agent a way through: retry the blocked call with `resolved_scope` set to the
+discriminator the block named, and the gate stands down. Across twelve blocked A′ runs the agent
+used it **zero** times. Blocked, told what separates the two definitions, and holding a question
+that had already answered that, it went straight to `clarify` every time. C is therefore worse than
+B, not better — the same 12/12 on contested, and 12/12 rather than 10/12 interrupted on A′.
+
+The lesson is the one §3 already recorded in a different form: a mechanism whose last step is *the
+model chooses to use it* is priced at what the model's choices are worth. The retry is available,
+correct, and unused.
+
+### Disclosure alone is advisory, and behaves like every other advisory
+
+D attaches the competing definition's figure to the governed result and asks for both to be named.
+It costs nothing — coverage stays at 1.00, no A′ question is interrupted, and the clean piles are
+unharmed. On the contested pile it worked exactly half the time: 6 of 12 answers named both figures,
+6 served one number and said nothing. `transparency` had already produced this shape, and produced
+it more starkly (0 of 20).
+
+### Checking the disclosure is what closes it
+
+E changes one thing: an answer that served one of two divergent readings and named only that one is
+handed back once, with both figures, and re-sent. Contested goes 6/12 → 11/12 at no cost to
+coverage, and the total is the best of the five by eight questions. The pattern is the ladder's
+oldest result arriving again — R3 `coverage_check` is enforced and contributes, R6 `transparency` is
+advisory and does not — with a new twist: the *content* of D and E is identical. The only difference
+is whether anything checks that it was used.
+
+### What the numbers do not settle
+
+The four remaining failures in E are not the ambiguity mechanism: two are wrong numbers on clean
+Pile A metrics and one is a Pile B question answered with prose. One contested run still slipped
+through, on the second correction.
+
+E and B are not ranked by this table alone. E answers more and interrupts nobody; B never serves a
+contested number at all. Which is right depends on the price of a silently-single-reading answer
+against the price of a round trip, and that price is still the placeholder `WRONG_COST = 4.0`.
+
+### One defect this found
+
+The gate and the disclosure compared the two definitions' rows **by position**. Grouped by region,
+`value_moments` returns Americas, EMEA, APAC and `total_value_moments` returns EMEA, Americas, APAC
+for the same request — so Americas was compared against EMEA, and the disclosure handed the reader a
+rival figure for a region they had not asked about. Rows are now keyed by their labels
+(`before.value_of`), and two results with different label sets are "not comparable" rather than
+compared. The block decision was unaffected (a divergence was still a divergence); the figures
+reported to the reader were wrong.
+
+## 8 · Not measured
+
+- ~~**Over-clarification on the hard case.**~~ Measured in §10: 10 of 12 under the gate. The
+  predicted fix — a mechanical channel for the request having named the scope — was built (arm C)
+  and the agent never used it.
 - **A rate of any kind.** One question, one fixture. The sizing work in `00_reading.md` says a usable
   pile needs four to five distinct contested concepts, and the noise band does not exist.
 - **The second turn.** No user simulator, so a clarification is priced at half an episode and
@@ -219,13 +360,14 @@ the file it reads.
 - **Cost of the gate.** It runs each competitor once per contested call. Cheap on DuckDB, unmeasured
   on anything else.
 
-## 8 · Candidate next arms
+## 9 · Candidate next arms
 
 - **Disclose the definition's own filter in the scope line.** The MetricFlow adapter's scope line
   says "no filters — the whole population this metric defines" while the metric itself carries
   `is_internal = false`. The harness's own layer says "the metric definition already restricts: NOT
   is_internal" in the same position. The information is in the SQL either way, but the prose summary
   is what gets skimmed, and this is the cheapest untried advisory lever.
-- **Answer with both, disclosed** — the fourth column of the matrix. Weakened as a hypothesis by §4:
-  it rested on the model's pick being reliably sensible, and the pick follows the label.
+- ~~**Answer with both, disclosed**~~ — built and measured in §10 (arms D and E). §4's objection
+  was right about the advisory form and did not apply to the checked one: the model does not have to
+  pick well, it has to be prevented from picking silently.
 - **A non-zero divergence threshold**, as a lever rather than a default.

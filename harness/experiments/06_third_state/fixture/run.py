@@ -20,6 +20,8 @@ import argparse
 import json
 import pathlib
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 import yaml
 from agent.grounding import build_grounding
@@ -28,6 +30,7 @@ from agent.loop import Answer, run_agent
 from agent.providers import get_model
 from evals.gold import _validate, compute_gold
 from evals.grade import grade
+from evals.matrix import render as render_matrix
 from evals.selective import selective
 from warehouse.warehouse import cursor as scoped_cursor
 from warehouse.warehouse import open_warehouse
@@ -37,6 +40,10 @@ import build as fixture_build
 HERE = pathlib.Path(__file__).resolve().parent
 LAYER = HERE / "layer"
 RUNG = 3          # star + governed semantic layer, raw SQL still on the table
+
+# The three shapes a question can have, as the grader names them. Kept here so the runner's own
+# labels cannot drift from `selective.py`'s piles.
+_PILE = {"metric_answer": "A", "refuse": "B", "contested": "C"}
 
 
 def load_cases() -> list[dict]:
@@ -64,7 +71,8 @@ def demonstrate(answer: Answer, case: dict, gold, graded: dict) -> None:
     if answer.outcome == "answer":
         print(f"  served          : {answer.declared_value}  "
               f"(source_metric={answer.source_metric!r})")
-        print(f"  text            : {(answer.answer or '')[:160]}")
+        print(f"  text            : {(answer.answer or '')[:400]}")
+        print(f"  explanation     : {(answer.explanation or '')[:400]}")
     else:
         print(f"  reason          : {answer.reason}")
         if answer.outcome == "clarify":
@@ -94,6 +102,10 @@ def main() -> None:
                     help="how the metric list is laid out. `compact` puts every name and "
                          "description contiguous and the dimension detail in a second block — "
                          "same facts, different adjacency.")
+    ap.add_argument("--concurrency", type=int, default=8,
+                    help="threads over (rep, question) tasks. Safe because nothing writes: models "
+                         "are built before the pool starts and each worker takes its own cursor.")
+    ap.add_argument("--only", default=None, help="comma-separated case ids, to probe one question")
     ap.add_argument("--json", dest="out", default=None, help="write the graded rows here")
     args = ap.parse_args()
 
@@ -104,33 +116,51 @@ def main() -> None:
     fixture_build.build(con)                     # the dbt models, so the layer has something to read
     cases = load_cases()
     golds = compute_gold(con, cases)             # resolves each candidate's own oracle
-    case = cases[0]
+    if args.only:
+        cases = [c for c in cases if c["id"] in set(args.only.split(","))]
 
     guardrails = parse_cell(args.cell) if args.cell else None
     model = get_model(args.model, mock=args.mock)
 
-    print(f"question   : {case['question']}")
-    print(f"concept    : {case['expect']['concept']}")
-    print("candidates :")
-    for cand in case["expect"]["candidates"]:
-        print(f"    {cand['metric']:18} = {cand['value']:>10,.0f}   owner {cand['owner']:10} "
-              f"→ {cand['consumer']}")
+    for case in cases:
+        pile = _PILE[case["expect"]["type"]]
+        print(f"pile {pile}     : {case['question']}")
+        for cand in case["expect"].get("candidates") or ():
+            print(f"    {cand['metric']:18} = {cand['value']:>10,.0f}   owner {cand['owner']:10} "
+                  f"→ {cand['consumer']}")
     print(f"\nmodel      : {model.spec.name}   rung {RUNG}   "
           f"guardrails {args.cell or 'loop default'}   layer {args.variant or 'shipped'}   "
           f"catalogue {args.catalogue}   reps {args.reps}")
 
-    rows = []
-    for rep in range(args.reps):
-        cur = scoped_cursor(con)
+    # CONCURRENCY IS THREADS, NOT PROCESSES, and the distinction is the whole reason it is safe.
+    # Two PROCESSES cannot write one DuckDB file, but nothing here writes: the models are built once
+    # above, before the pool starts, and the time spine the MetricFlow engine needs is created under
+    # its own lock. What each worker needs is its own CURSOR — a shared connection object is not
+    # thread-safe — taken under a lock, which is the pattern evals/runner.py and experiment 05
+    # already use. The provider SDK clients are thread-safe, so one model object serves every worker.
+    # A single named case at a single rep is a DIAGNOSIS, not a measurement, and the one-line-per-run
+    # summary is the wrong output for it. Nothing to ask for: the request already said which.
+    trace = bool(args.only) and len(cases) == 1 and args.reps == 1
+
+    cursor_lock = threading.Lock()
+    print_lock = threading.Lock()
+    shown: set = set()
+
+    def one(task):
+        rep, idx, case = task
+        with cursor_lock:
+            cur = scoped_cursor(con)
         try:
             grounding = build_grounding(cur, rung=RUNG, spec_path=layer, engine="metricflow",
                                         semantic_layer=True, guardrails=guardrails)
             grounding.semantic.catalogue = args.catalogue
-            if rep == 0:
-                offered = [t["name"] for t in grounding.toolbox.specs()]
-                print(f"\ntools offered ({len(offered)}): {', '.join(offered)}")
-                print(f"metrics in the catalogue: "
-                      f"{', '.join(sorted(grounding.toolbox.semantic.metrics))}")
+            with print_lock:
+                if not shown:
+                    shown.add(True)
+                    offered = [s["name"] for s in grounding.toolbox.specs()]
+                    print(f"\ntools offered ({len(offered)}): {', '.join(offered)}")
+                    print("metrics in the catalogue: "
+                          f"{', '.join(sorted(grounding.toolbox.semantic.metrics))}\n")
             try:
                 answer = run_agent(case["question"], grounding, model)
             except Exception as exc:                                       # noqa: BLE001
@@ -138,20 +168,47 @@ def main() -> None:
                                 outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
         finally:
             cur.close()
-        print(f"\n{'─' * 100}\nrep {rep + 1}")
         graded = grade(answer, case, golds[case["id"]])
-        demonstrate(answer, case, golds[case["id"]], graded)
-        rows.append({**graded, "outcome": answer.outcome, "id": case["id"],
-                     "rep": rep, "declared": answer.declared_value,
-                     "source_metric": answer.source_metric})
+        if trace:                       # one named case, one rep: show the whole run, not a line
+            with print_lock:
+                demonstrate(answer, case, golds[case["id"]], graded)
+        pile = _PILE[case["expect"]["type"]]
+        with print_lock:
+            mark = "OK  " if graded["correct"] else "MISS"
+            served = "" if answer.declared_value is None else f"{answer.declared_value:,.1f}"
+            print(f"  rep {rep + 1}  pile {pile}  {case['id']:40} {answer.outcome:8} {mark} {served}")
+        return rep, idx, {**graded, "outcome": answer.outcome, "id": case["id"],
+                          "rep": rep, "declared": answer.declared_value,
+                          "source_metric": answer.source_metric}
+
+    tasks = [(rep, i, c) for rep in range(args.reps) for i, c in enumerate(cases)]
+    if args.concurrency <= 1:
+        results = [one(task) for task in tasks]
+    else:
+        with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+            results = list(pool.map(one, tasks))
+    # Sorted, so the stored rows do not depend on which worker finished first.
+    rows = [row for _, _, row in sorted(results, key=lambda t: (t[0], t[1]))]
 
     score = selective(rows).as_dict()
-    print(f"\n{'═' * 100}\nover {len(rows)} attempt(s) — pile C only, so coverage is not defined here")
-    for key in ("contested_n", "contested_clarified", "contested_served", "contested_refused",
-                "clarification_rate", "silent_error", "balanced_accuracy"):
-        print(f"  {key:24} {score[key]}")
+    print(f"\n{'═' * 100}\nover {len(rows)} attempt(s) across {len(cases)} question(s)")
+    print(f"  pile A  answerable   n={score['answerable_n']:<3} right={score['answerable_right']:<3} "
+          f"wrong={score['answerable_wrong']:<3} did-not-attempt={score['answerable_over_refused']:<3} "
+          f"(of which asked: {score['over_clarification_rate']:.0%})")
+    print(f"  pile B  unanswerable n={score['unanswerable_n']:<3} refused={score['unanswerable_refused']:<3} "
+          f"served={score['unanswerable_served']}")
+    print(f"  pile C  contested    n={score['contested_n']:<3} clarified={score['contested_clarified']:<3} "
+          f"served={score['contested_served']:<3} refused={score['contested_refused']}")
+    print(f"\n  coverage {score['coverage']}   silent_error {score['silent_error']}   "
+          f"balanced_accuracy {score['balanced_accuracy']}")
+    # The grid, with the answered column split: an action-only 3x3 puts a right number and a
+    # plausible wrong one in the same cell, and then reports a diagonal nobody should trust.
+    print()
+    print(render_matrix(rows))
     if args.out:
-        pathlib.Path(args.out).write_text(json.dumps(rows, indent=2, default=str))
+        out = pathlib.Path(args.out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(rows, indent=2, default=str))
         print(f"\nwrote {args.out}")
 
 
