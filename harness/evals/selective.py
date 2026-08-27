@@ -6,10 +6,17 @@ standard treatment (Chow's reject option; El-Yaniv & Wiener's selective predicti
 system on two axes at once — how much it attempts, and how it does on what it attempts — and this
 module is that pair plus the one rate an operator actually loses sleep over.
 
-Questions come in two piles, and the pile is a property of the QUESTION, fixed before the run:
+Questions come in three piles, and the pile is a property of the QUESTION, fixed before the run:
 
-    pile A   an answer exists          `expected_refuse` is false
-    pile B   no answer exists          `expected_refuse` is true
+    pile A   one answer exists          `expected_action` is "answer"
+    pile B   no answer exists           `expected_action` is "refuse"
+    pile C   two or more answers exist  `expected_action` is "clarify"
+
+Pile C is not coverage work. Answering there is not attempting the question; it is picking one of
+two governed readings and not saying so, which is the one failure in this suite that leaves no
+signature — the figure is a real result of a real metric, so provenance, unit validation and the
+judge all pass. Refusing there is an over-refusal, because something does answer it. Only asking
+is correct.
 
     coverage           of pile A, how much did it attempt?          higher is better
     silent_error       of everything, how often was it confidently  lower is better
@@ -43,6 +50,20 @@ from dataclasses import dataclass
 __all__ = ["Selective", "selective"]
 
 
+def _pile(row: dict) -> str:
+    """Which pile a scored row belongs to: "answer", "refuse" or "clarify".
+
+    Reads `expected_action` when the grader wrote one and falls back to `expected_refuse`, which is
+    on every row ever stored. The fallback is not a convenience: the coverage audit reads the whole
+    archive, and a two-pile row must keep scoring as a two-pile row or extending the metric would
+    silently restate published numbers.
+    """
+    action = row.get("expected_action")
+    if action in ("answer", "refuse", "clarify"):
+        return action
+    return "refuse" if row.get("expected_refuse") else "answer"
+
+
 def _rate(numerator: int, denominator: int) -> float:
     """A rate over an empty pile is not 0 and not 1 — it is a question nobody asked.
 
@@ -70,11 +91,21 @@ class Selective:
     answered: int          # …of which it attempted
     right: int             # …of which it got the answer right
     wrong: int             # …of which it got the answer wrong          ← invisible failure
-    over_refused: int      # …of which it declined a question it could have answered
+    # DECLINED a question it could have answered, by EITHER route. The name predates the third
+    # outcome and is kept because every published row carries it; what it counts has always been
+    # "did not attempt", and a clarification has always landed here. `over_clarified` is the part
+    # of it that asked rather than refused — a subset, not a sibling, so the two do not sum.
+    over_refused: int
+    over_clarified: int    # …of those, the ones that asked instead of refusing
 
     unanswerable: int      # pile B
     refused: int           # …of which it correctly declined
     served: int            # …of which it served a number anyway        ← invisible failure
+
+    contested: int          # pile C
+    clarified: int          # …of which it correctly asked which reading was meant
+    contested_served: int   # …of which it served one reading silently  ← invisible failure
+    contested_refused: int  # …of which it declined a question that had two answers
 
     # Both piles: an answer served anywhere can be checkable or not, and a number served against
     # an unanswerable question is exactly where a reader most needs to follow the citations.
@@ -90,16 +121,33 @@ class Selective:
     def silent_error(self) -> float:
         """Of everything asked, the share it got wrong while looking right.
 
-        Both piles contribute, because the failure is the same one from the operator's chair: a
-        confident number that no reader has any way to tell is false. A refusal — right or wrong —
-        never lands here; it is visible, and someone can act on it.
+        All three piles contribute, because the failure is the same one from the operator's chair:
+        a confident number that no reader has any way to tell is false. A refusal — right or wrong
+        — never lands here; it is visible, and someone can act on it. Nor does a clarification.
+
+        Pile C's contribution is the newest and the quietest. A wrong answer in pile A is wrong
+        against the data; a number served in pile B was never computable at all. A number served in
+        pile C is a correct result of a governed metric, and only the absence of the sentence
+        naming the other one makes it a failure.
         """
-        return _rate(self.wrong + self.served, self.n)
+        return _rate(self.wrong + self.served + self.contested_served, self.n)
 
     @property
     def balanced_accuracy(self) -> float:
-        """The mean of the two piles' accuracies — one number, immune to the question mix."""
-        return (_rate(self.right, self.answerable) + _rate(self.refused, self.unanswerable)) / 2
+        """The mean of the per-pile accuracies — one number, immune to the question mix.
+
+        Averaged over the piles that HAVE questions, not over a fixed count of them. A suite with
+        no contested questions therefore scores exactly what it scored before this pile existed,
+        and one that has them is not marked down for the piles it lacks. Always dividing by three
+        would return NaN for every run stored before pile C and a systematically low number for any
+        suite that omits a pile, which describes the suite rather than the agent — the same defect
+        the averaging was introduced to remove.
+        """
+        per_pile = ((self.right, self.answerable),
+                    (self.refused, self.unanswerable),
+                    (self.clarified, self.contested))
+        scored = [n / d for n, d in per_pile if d]
+        return sum(scored) / len(scored) if scored else float("nan")
 
     @property
     def grounded_answers(self) -> float:
@@ -142,20 +190,34 @@ class Selective:
                 "answerable_right": self.right, "answerable_wrong": self.wrong,
                 "answerable_over_refused": self.over_refused,
                 "unanswerable_n": self.unanswerable, "unanswerable_refused": self.refused,
-                "unanswerable_served": self.served}
+                "unanswerable_served": self.served,
+                "contested_n": self.contested, "contested_clarified": self.clarified,
+                "contested_served": self.contested_served,
+                "contested_refused": self.contested_refused,
+                "clarification_rate": round(_rate(self.clarified, self.contested), 4),
+                # THE CALIBRATION COUNTERWEIGHT, and the reason clarification rate is never
+                # reported without it. Asking on every question would score a perfect
+                # clarification rate; this is what that costs. It is measured on pile A only,
+                # where an answer exists and asking for it is friction.
+                "over_clarification_rate": round(_rate(self.over_clarified, self.answerable), 4)}
 
 
 def selective(rows: list[dict]) -> Selective:
     """Score a set of result rows.
 
-    `expected_refuse` decides the pile. It is written when the case is loaded, from the case's
-    `expect.type`, so it cannot drift from the question's design the way a tier list can — the tier
+    `expected_action` decides the pile. It is written by the grader from the case's `expect.type`,
+    so it cannot drift from the question's design the way a tier list can — the tier
     `valid_but_wrong` holds one deliberately-answerable control, and any split reading tiers puts
     that control in the wrong pile.
+
+    Rows written before pile C existed carry only `expected_refuse`, and `_pile` falls back to it.
+    Those runs therefore score exactly what they scored before, which is what makes this extension
+    safe to apply to the published archive rather than a reason to fork the metric.
     """
     scored = [r for r in rows if r["outcome"] != "error"]
-    a = [r for r in scored if not r.get("expected_refuse")]
-    b = [r for r in scored if r.get("expected_refuse")]
+    a = [r for r in scored if _pile(r) == "answer"]
+    b = [r for r in scored if _pile(r) == "refuse"]
+    c = [r for r in scored if _pile(r) == "clarify"]
     answered = [r for r in a if r["outcome"] == "answer"]
     right = sum(1 for r in answered if r.get("correct"))
     # A NUMBER served, not merely the answer tool used. The grader already draws this line
@@ -172,9 +234,18 @@ def selective(rows: list[dict]) -> Selective:
     checkable = sum(1 for r in audited
                     if not r["claim_audit"].get("unresolved")
                     and not r["claim_audit"].get("value_mismatch"))
+    # Pile C, and the asymmetry with pile B is the point. There, anything served is a failure and
+    # the refusals are what remains. Here, only ASKING is right: a served number is the invisible
+    # miss and a refusal is the visible one, so both are counted rather than one being the residue.
+    contested_served = sum(1 for r in c if r.get("confident_wrong") or r.get("fabricated")
+                           or r.get("off_governance"))
     return Selective(
         n=len(scored), errors=len(rows) - len(scored),
         answerable=len(a), answered=len(answered), right=right, wrong=len(answered) - right,
         over_refused=len(a) - len(answered),
+        over_clarified=sum(1 for r in a if r["outcome"] == "clarify"),
         unanswerable=len(b), refused=len(b) - served, served=served,
+        contested=len(c), clarified=sum(1 for r in c if r["outcome"] == "clarify"),
+        contested_served=contested_served,
+        contested_refused=sum(1 for r in c if r["outcome"] == "refuse"),
         audited=len(audited), checkable=checkable)

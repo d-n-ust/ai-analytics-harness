@@ -210,6 +210,63 @@
        "const": "clarify"
       }
      }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "description": "k >= 2: two or more GOVERNED definitions answer this question and all of them are defensible. Clarifying is correct; refusing is an over-refusal, because something does answer it; serving one number without disclosure is the silent error the case exists to catch. Each candidate declares its own oracle, so which one was served is recoverable and the miss can be priced by the gap between them.",
+     "required": [
+      "type",
+      "concept",
+      "candidates"
+     ],
+     "properties": {
+      "type": {
+       "const": "contested"
+      },
+      "concept": {
+       "type": "string",
+       "description": "The concept the question names, in the words a person would use. The candidates are the governed definitions that claim it."
+      },
+      "candidates": {
+       "type": "array",
+       "minItems": 2,
+       "description": "Every governed definition that legitimately answers. Hand-verified, independently of any detector — a pile whose labels come from the tool that gates at runtime proves nothing.",
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+         "metric",
+         "gold_sql",
+         "owner",
+         "consumer"
+        ],
+        "properties": {
+         "metric": {
+          "type": "string",
+          "description": "The governed metric name."
+         },
+         "gold_sql": {
+          "type": "string",
+          "description": "Independent raw-SQL oracle for THIS reading. Never the semantic layer."
+         },
+         "owner": {
+          "type": "string",
+          "description": "Who decides this definition. A candidate with no owner is a leftover, not a contested definition."
+         },
+         "consumer": {
+          "type": "string",
+          "description": "What downstream would break if this definition were deleted. This is the test of whether the ambiguity is irreducible."
+         }
+        }
+       }
+      },
+      "tolerance": {
+       "type": "number",
+       "default": 0.005,
+       "description": "Tighter than elsewhere by default: attributing a served number to one candidate requires a band narrower than the gap between them."
+      }
+     }
     }
    ]
   }
