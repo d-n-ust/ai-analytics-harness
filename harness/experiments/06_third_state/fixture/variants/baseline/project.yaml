@@ -1,0 +1,17 @@
+# MetricFlow's project configuration. It needs a one-row-per-day time spine to answer any
+# time-filtered question, and every question here names a period. The view is created by the
+# engine over the warehouse (semantic/metricflow_engine.py: _ensure_time_spine); no rows are
+# copied.
+#
+# WHY THIS DIRECTORY IS SEPARATE FROM models/. In a dbt project the semantic models live under
+# models/ and dbt compiles them into a manifest that MetricFlow then reads. This repository does
+# not run dbt-core (see semantic/metricflow_engine.py), so MetricFlow parses the YAML directly —
+# and its parser reads every .yml in the directory it is given, including dbt-only files like
+# sources.yml, which it cannot interpret. So the transformation project stays in models/ and the
+# governed layer sits here, which is also how teams who keep metrics in their own directory lay it
+# out. Nothing is duplicated: this is the only copy.
+project_configuration:
+  time_spine_table_configurations:
+    - location: _star.mf_time_spine
+      column_name: ds
+      grain: day

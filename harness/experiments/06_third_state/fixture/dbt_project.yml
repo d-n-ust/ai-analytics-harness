@@ -1,0 +1,16 @@
+# A dbt project, kept deliberately small: raw sources, a staging layer that cleans them, three
+# marts, and a MetricFlow semantic layer over the marts.
+#
+# `build.py` materialises these models into DuckDB without dbt-core, so the whole experiment still
+# runs on a laptop with no profile and no adapter. The files are ordinary dbt models — `dbt build`
+# against a duckdb profile produces the same objects — and preflight scans them as dbt.
+name: habit_tracker
+version: "1.0.0"
+config-version: 2
+profile: habit_tracker
+
+model-paths: ["models"]
+
+models:
+  habit_tracker:
+    +materialized: view

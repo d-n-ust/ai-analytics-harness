@@ -1,0 +1,138 @@
+# The governed semantic layer over the marts.
+#
+# FORMAT. This is MetricFlow's own YAML — one `semantic_model:` or `metric:` per document — which is
+# what dbt compiles its `semantic_models:` blocks into, what `metricflow` parses directly, and what
+# `preflight scan --dialect metricflow` reads. The engine takes a directory, not a file
+# (semantic/metricflow_engine.py).
+#
+# THE POINT OF THIS FILE. Two metrics answer the question "how many active users did we have last
+# week", they disagree by about 4%, and both are correct. `active_users` and `active_accounts`
+# differ in one filter, have different owners, and have different downstream consumers. Neither is
+# a leftover and neither can be deleted without breaking a real report, so no offline repair can
+# collapse them. That is what makes this ambiguity IRREDUCIBLE, and it is the whole reason the
+# experiment exists.
+#
+# MetricFlow has no field for the concept a metric claims, and no field for its owner. Both facts
+# below are written into the description because there is nowhere else to put them — which is
+# itself the finding: the format most teams use cannot express that two metrics answer the same
+# question, so nothing can compute how many definitions a question has.
+---
+semantic_model:
+  name: user_activity
+  description: "One row is one account on one day it did anything in the product."
+  node_relation: {schema_name: wh_06, alias: fct_user_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: region, type: categorical}
+    - {name: country, type: categorical}
+    - {name: platform, type: categorical}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: active_account_count, agg: count_distinct, expr: user_id}
+    - {name: value_moment_count, agg: sum, expr: value_moments}
+    - {name: app_open_count, agg: sum, expr: app_opens}
+---
+semantic_model:
+  name: users
+  description: "The account dimension. One row is one signup."
+  node_relation: {schema_name: wh_06, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities: [{name: user, type: primary, expr: user_id}]
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: channel, type: categorical}
+    - {name: region, type: categorical}
+  measures:
+    - {name: signup_count, agg: count, expr: user_id}
+---
+semantic_model:
+  name: subscriptions
+  description: "One row is one subscription term."
+  node_relation: {schema_name: wh_06, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: plan, type: categorical}
+    - {name: is_active, type: categorical}
+  measures:
+    - name: mrr_amount
+      agg: sum
+      expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"
+---
+semantic_model:
+  name: marketing
+  description: "One row is one channel-day of marketing spend."
+  node_relation: {schema_name: wh_06, alias: fct_marketing_spend}
+  defaults: {agg_time_dimension: spend_date}
+  entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
+  dimensions:
+    - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: spend_amount, agg: sum, expr: spend}
+
+# ── the contested pair ────────────────────────────────────────────────────────────────────────
+# Both answer "how many active users". Both are right. They are 3.7% apart on the last full week
+# and between 0.0% and 5.2% apart across the slices the layer can break them down by, which is the
+# range in which a swap is invisible: the wrong number is the right order of magnitude, in the right
+# unit, from a real metric, computed by real SQL.
+---
+metric:
+  name: active_users
+  description: >-
+    Distinct accounts with any product activity in the period, EXCLUDING internal and test
+    accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.
+  type: simple
+  type_params: {measure: active_account_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: active_accounts
+  description: >-
+    Distinct accounts with any product activity in the period, INCLUDING internal and test
+    accounts. Owned by Platform. Used by capacity planning and the support-volume forecast, both of
+    which care about load rather than about customers.
+  type: simple
+  type_params: {measure: active_account_count}
+
+# ── everything else, so the layer is not a two-metric toy ─────────────────────────────────────
+---
+metric:
+  name: value_moments
+  description: "Completed habits in the period, excluding internal and test accounts."
+  type: simple
+  type_params: {measure: value_moment_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: app_opens
+  description: "App opens in the period, excluding internal and test accounts."
+  type: simple
+  type_params: {measure: app_open_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: new_signups
+  description: "Accounts created in the period, all accounts."
+  type: simple
+  type_params: {measure: signup_count}
+---
+metric:
+  name: mrr
+  description: "Monthly recurring revenue of the active book. An annual term counts as one twelfth."
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription__is_active') }} = true"
+---
+metric:
+  name: marketing_spend
+  description: "Marketing spend in the period."
+  type: simple
+  type_params: {measure: spend_amount}

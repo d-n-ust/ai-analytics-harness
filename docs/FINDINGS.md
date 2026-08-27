@@ -260,7 +260,69 @@ though the name is the whole signal (0.3.0); and the same count over one process
 unreachable, because the dangerous pair scores *lower* on name similarity than a pair that must
 never be flagged, so the rule had to be structural and ignore names entirely (0.4.0).
 
-## 8. Errata and self-inflicted findings
+## 8. Irreducible ambiguity: no prompt, no name and no layout fixes it; a gate does
+
+Experiment 06, **preliminary** — one question on one fixture, so these are mechanisms and
+directions, not rates. A dbt project over the same generated warehouse, with two governed
+definitions that both answer *"how many active users did we have last week?"*: 886 excluding
+internal and test accounts (owned by Product), 919 including them (owned by Platform). Each has a
+downstream consumer that breaks if it is deleted, so unlike every finding in §7 this one **cannot be
+repaired offline** — which is the whole reason the experiment exists. The pair disagrees on 11 of 12
+slices, between 0.00% and 5.17%, and by 3.72% over the week. preflight 0.4.0 names the same pair,
+HIGH, independently of the hand labels: 1 of 1.
+
+**Everything advisory failed. 217 attempts, 16 clarifications, 201 silent errors.** Tried and null:
+no clarify tool; a prose clarify tool; a typed one carrying a coded reason and named candidates; the
+rule stated in the prompt; renaming so neither metric matches the question; reordering the
+catalogue; a compact catalogue putting the two descriptions on adjacent lines instead of five apart;
+and `transparency`, which puts the compiled SQL on every result. The transparency null is the
+strongest: the result the agent read contained `WHERE activity__is_internal = false` verbatim — the
+discriminator in the output it had just received, not in a list it skimmed — and it served the
+number without comment, 0 of 20 across two models.
+
+**The name selects the metric; the description is not consulted.** Four presentations of the same
+two definitions, identical in measure, filter, value, owner and consumer, differing only in labels
+and order. Three served 886; the fourth, which moved the word "active" onto the other definition,
+served **919** — a count including staff and test logins, from a metric whose own description says it
+is about load rather than customers. 16 of 16, two models.
+
+**It knows and does not show.** Asked to *compare* the two definitions rather than to answer, the
+same model on the same layer clarifies, names both candidates and states the discriminator exactly.
+The knowledge is available; the answering path does not use it. This reproduces *Knowing but Not
+Showing* (arXiv 2605.25284) within-subject on a governed layer.
+
+**Scale does not buy it, and good naming makes it worse.** Only `gpt-5.6-sol` ever clarified
+unprompted, and only where the question's wording matched no metric name: **10/10** on that layer,
+**1/10** where a name partly matched, **0/10** where one matched exactly. On the same no-match layer
+`gpt-5.6-terra` scored 0/10 and `gpt-5-mini` 0/10. An interaction, not a main effect — so the
+behaviour depends on which model is running and which words the user typed. Naming a metric exactly
+what users call the concept, which every governance guide prescribes, is what suppresses the
+question.
+
+**The enforced gate works: 15 of 15, silent error 1.00 → 0.00.** `ambiguity_check` at
+`Position.BEFORE` looks every governed call up in an index built by `preflight index` beside the
+layer, and refuses a call whose metric is contested. The block **carries the decision brief** rather
+than pointing at it — both names, both numbers, and the differing predicate — because the naming
+result above says an agent that does not read descriptions when answering will not go and look one up. The
+reason code corrects itself as a side effect: both voluntary clarifications filed
+`underspecified_request`, every gated one files `competing_definitions`. This is §7's advisory /
+enforced split again, and the R3-over-R6 result from the reliability ladder.
+
+**The gate fires on sensitivity, not membership**, and that distinction is what makes it shippable.
+It executes each competitor with the same arguments and stays silent when they agree — `platform =
+unknown` returns the same number under both readings and is allowed through, while the same metric
+over the whole week is blocked at 3.72%. Membership alone would have fired on **40.3%** of the
+frozen suite's metric-declaring answers (1,566 answers, 631 in the contested cluster), most of them
+diagnostics. The divergence threshold is **zero** and the zero is argued: danger runs inverse to
+magnitude, so "does not matter" means identical rather than close.
+
+**What is not measured, and it is the number that decides everything.** This fixture has no
+answerable pile, so the gate has never been asked a question it should have left alone. The 40.3% is
+what *membership* would have cost; what *sensitivity* costs is unknown.
+
+→ [`harness/experiments/06_third_state/findings.md`](../harness/experiments/06_third_state/findings.md)
+
+## 9. Errata and self-inflicted findings
 
 **Three artifacts caught in my own analysis on one day**, all the same shape, all nearly reported
 as findings:
@@ -280,20 +342,21 @@ declared `0` had matched any rate below 50%.
 
 ---
 
-## 9. Open, ranked by what it would take
+## 10. Open, ranked by what it would take
 
 | # | open question | cost | why it matters |
 |---|---|---|---|
-| 1 | **separate `rendered` from `role` framing** | 342 attempts | the only known lever on the 70% flat-list problem, currently confounded |
-| 2 | the judge's prose accuracy | needs more diagnostic questions, not a better panel | 24 decisions across every run ever stored; unmeasurable, and it kills 15 of terra's 28 over-refusals |
-| 3 | `t2_paid_search_spend_q2` | design work | 38% wrong, diagnosed, no deterministic detector exists |
-| 4 | does any of this matter on a strong model | ~500 attempts at a fair reasoning budget | repair has never fired there, but that is 0/15 |
-| 5 | split identity from arithmetic in `num_match` | small change, wide blast radius | rule (a) asks "is this a governed result", rule (b) "is this a comparison of two"; only (b) accumulates float error, and they share one predicate. Cost a correct answer 5/5 in one cell |
-| 6 | rename `value_moments` / `weekly_value_moments` | layer change + regrade | the 28% mislabel rate, and the largest single defect we have not touched |
+| 1 | **the over-clarification cost of the ambiguity gate** | a pile of answerable questions on the 06 fixture | the gate is 15/15 on questions it should stop, and nothing yet says what it costs on questions it should not. Membership would have cost 40.3%; sensitivity is unmeasured, and it is the number that decides whether §8 ships |
+| 2 | **separate `rendered` from `role` framing** | 342 attempts | the only known lever on the 70% flat-list problem, currently confounded |
+| 3 | the judge's prose accuracy | needs more diagnostic questions, not a better panel | 24 decisions across every run ever stored; unmeasurable, and it kills 15 of terra's 28 over-refusals |
+| 4 | `t2_paid_search_spend_q2` | design work | 38% wrong, diagnosed, no deterministic detector exists |
+| 5 | does any of this matter on a strong model | ~500 attempts at a fair reasoning budget | repair has never fired there, but that is 0/15 |
+| 6 | split identity from arithmetic in `num_match` | small change, wide blast radius | rule (a) asks "is this a governed result", rule (b) "is this a comparison of two"; only (b) accumulates float error, and they share one predicate. Cost a correct answer 5/5 in one cell |
+| 7 | rename `value_moments` / `weekly_value_moments` | layer change + regrade | the 28% mislabel rate, and the largest single defect we have not touched |
 
 ---
 
-## 10. What is publishable today
+## 11. What is publishable today
 
 **Yes, with the numbers we have:** the evidence-graph mechanism and the deterministic-verification
 advantage; repair moves traceability 88% → 94% and nothing else; the `n/a` argument (an
@@ -301,8 +364,18 @@ uncited agent produces nothing to audit, not weak audit material); the two-failu
 result; the decline-rate argument; and the three-times-wrong story from §5, which teaches the
 governance point without preaching it.
 
+From §8, and the split matters because the two halves have very different evidence behind them.
+**Publishable:** the advisory nulls, every one with its n — a typed clarify tool, the rule in the
+prompt, four namings, two catalogue layouts and the compiled SQL all moved nothing across 217
+attempts; that the served number follows the label rather than the definition, 16 of 16 on a
+controlled swap; and the knowing-versus-showing gap, which reproduces published work on our own
+fixture rather than restating it.
+
 **Not yet:** anything claiming the graph captures reasoning (§2); a model ranking (§6); the exact
-repair rate (§3); the judge's reliability (§8.2); orphans as any kind of signal (§4).
+repair rate (§3); the judge's reliability (§9.2); orphans as any kind of signal (§4); and the
+ambiguity gate as a RATE (§8) — 15 of 15 on one question is a demonstration that the mechanism
+works, and until the over-clarification cost is measured it says nothing about what it would cost to
+run.
 
 **The honest headline available now:** *"we kept trying to fix the AI, and the fixes that held were
 the ones that made the data say more about itself."*

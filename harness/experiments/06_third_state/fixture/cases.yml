@@ -1,0 +1,49 @@
+# One question. It is the whole experiment for now, and it is deliberately the most ordinary
+# question anyone asks of an analytics system.
+#
+# WHY THIS QUESTION. Two governed metrics answer it. Both are right. They are 3.72% apart on this
+# week, they have different owners, and each has a downstream consumer that breaks if it is
+# deleted — so no offline repair can collapse them. That is what separates this from the previous
+# experiment: there, every finding the scan produced could be fixed and was. Here the finding is
+# real, the scan sees it, and the fix does not exist.
+#
+# LABELS ARE HAND-VERIFIED. The two candidates below were written by reading the layer, not by
+# reading a detector's output. Whether preflight agrees is a separate measurement (`scan.py`), and
+# where the two disagree the hand label wins and the disagreement is reported. A pile whose labels
+# come from the tool that gates at runtime proves nothing.
+#
+# ORACLES ARE INDEPENDENT. Both `gold_sql` statements run against the raw `_source` tables, so they
+# are independent of the dbt models AND of the semantic layer — the two things under test. The
+# internal-account rule is inlined rather than referenced for the same reason.
+cases:
+  - id: c_active_users_last_week
+    tier: contested
+    question: "How many active users did we have last week?"
+    expect:
+      type: contested
+      concept: "active users"
+      candidates:
+        - metric: active_users
+          owner: "Product"
+          consumer: "the weekly product review and the North Star metric tree"
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid)
+            FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
+              AND NOT ((coalesce(u.internal, 0) = 1)
+                       OR (lower(u.email) LIKE '%@internal-test.com'))
+        - metric: active_accounts
+          owner: "Platform"
+          consumer: "capacity planning and the support-volume forecast"
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid)
+            FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
+    note: >-
+      886 against 919 for the week of 2026-07-06. Product excludes internal and test accounts
+      because it is measuring customers; Platform includes them because staff traffic is still
+      traffic and it is sizing servers and a support queue. Neither team is wrong and neither
+      metric is a leftover. The question says "active users" and does not say which reading, so
+      answering with either figure alone serves a number the reader cannot tell is a choice.
+      Every check in the harness passes on both: the figure is a governed result of a real metric,
+      computed by real SQL, in the right unit and the right order of magnitude.

@@ -1,0 +1,16 @@
+# The raw layer, as the generator writes it: cryptic column names, seven spellings of the
+# platform, country in two cases, and an `internal` flag that is NULL for 271 of 2,500 accounts.
+version: 2
+sources:
+  - name: raw
+    schema: _source
+    description: "Application tables, untouched. Nothing here has been cleaned."
+    tables:
+      - name: u
+        description: "One row per account. `internal` is 1, 0, or NULL; `email` carries a second, undocumented internal signal."
+      - name: evt
+        description: "One row per product event. `etype` 1 = app open, 2 = completed habit, 3 = reminder click."
+      - name: subs
+        description: "One row per subscription term. `p` is the plan code, `amt` the billed amount, `st` the status code."
+      - name: spend
+        description: "One row per channel-day of marketing spend."

@@ -1,0 +1,71 @@
+# Experiment 6 — the third state: what should an agent do when the layer answers twice?
+#
+# Experiments 1-3 improve the AGENT; 4 and 5 change the WAREHOUSE. This one is the first whose
+# subject is a defect no runtime check can see. Experiment 05 measured whether fixing what a static
+# scan finds removes runtime harm, and the answer was yes — its repaired arm scanned clean, 11
+# findings to 0. This experiment starts where that cannot go: a fork the scan finds and NOBODY can
+# repair, because both definitions are owned, both are consumed, and deleting either breaks a real
+# report. For that class the repair operation is undefined and the only remaining move is at query
+# time.
+
+title: "The third state — measuring an agent that should have asked which definition was meant"
+question: >-
+  When two or more governed definitions legitimately answer one question, what does an agent do,
+  what should it do, and what does each option cost? Answering serves a defensible number the
+  reader cannot tell was a choice; refusing declines a question that has answers; clarifying costs
+  a round trip. Only one of the three is correct and today none of them is scored.
+status: in-design
+
+article:
+  slug: tbd
+  repo: decisionspine-site
+
+runs: none-yet
+
+evidence:
+  - 00_reading.md               # steps 1-2: how clarify is handled today, and whether the fixture can support pile C
+  - 01_clarification_taxonomy.md  # what the published taxonomies say, and the vocabulary that follows
+  - 02_domain_map.md            # the fifteen layers, the six instruments, and where this experiment sits
+  - fixture/                    # the dbt project, the contested pair, and the one question
+  - fixture/divergence.md       # what the two definitions return, per slice
+  - fixture/scan.md             # the static dose, and its agreement with the hand labels
+
+# WHAT IS BUILT, as of the first pass.
+#
+#   fixture/models/        a dbt project over the generated warehouse: raw sources, a staging layer
+#                          that resolves seven spellings of the platform and the undocumented
+#                          internal-account rule, four marts, and a MetricFlow semantic layer.
+#   fixture/build.py       materialises the models into DuckDB without dbt-core, the same choice
+#                          semantic/metricflow_engine.py already made for MetricFlow.
+#   fixture/cases.yml      ONE question, typed `contested`, with both candidates hand-verified.
+#   fixture/divergence.py  what each candidate returns, per slice, from the raw tables.
+#   fixture/scan.py        preflight against the layer, and its agreement with the hand labels.
+#
+# The `contested` expectation is wired into the shared grader and the shared metrics, additively:
+# schema.json, evals/gold.py, evals/grade.py and evals/selective.py all know about a third pile,
+# and every published cell recomputes to the same numbers because pile C is empty in the archive.
+
+notes:
+  - "THE PAIR IS IRREDUCIBLE, and that is the entry requirement rather than a description.
+     `active_users` excludes internal and test accounts because Product is counting customers;
+     `active_accounts` includes them because Platform is sizing servers and a support queue. The
+     case schema REQUIRES an owner and a consumer per candidate for exactly this reason: a
+     definition nobody owns and nothing consumes is a leftover, it is reducible, and deleting it
+     offline is experiment 05's finding rather than this one's."
+  - "886 against 919 on the week of 2026-07-06 — 3.72% apart, and between 0.00% and 5.17% apart
+     across the twelve slices the layer can break them down by. That range is the point: at the
+     narrow end a swap is invisible to any reader and any range check, and at the wide end the
+     number is still the right order of magnitude in the right unit."
+  - "AGREEMENT, measured rather than assumed: the hand labels name one contested concept and
+     preflight 0.4.0 names one, the same one, rated HIGH as a SCOPE_TRAP. 1 of 1. The two passes
+     are kept separate because a detector that both writes the ground truth and enforces it at
+     runtime proves nothing."
+  - "MetricFlow has no field for the concept a metric claims and none for its owner, so both facts
+     live in the description because there is nowhere else to put them. That is itself a finding:
+     the semantic-layer format most teams use cannot express that two metrics answer the same
+     question, which is why nothing can compute how many definitions a question has."
+  - "ERRATUM found while regression-checking the archive: `results/published/2026-07/cells.csv`
+     records answerable_n = 52 for 20260726-224953 / R7-coverage_check, and the stored rows give
+     51. That cell holds one provider-error row in pile A, and errors are excluded from the
+     denominator. Pre-existing, one value in 413, unrelated to the third pile — recorded here
+     rather than corrected, because the file is published evidence."
