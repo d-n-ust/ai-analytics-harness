@@ -276,7 +276,7 @@ not the agent asserting it, because §3 is what its unprompted self-report is wo
 exists, the gate buys a silent-error rate of zero at the price of interrupting half the answerable
 questions that touch a contested metric.
 
-## 10 · Five responses to ambiguity, measured
+## 8 · Five responses to ambiguity, measured
 
 `gpt-5-mini`, 16 questions, three reps each, 48 runs per arm. Every arm sits on `R3+typed_clarify`
 and adds one mechanism.
@@ -348,26 +348,263 @@ rival figure for a region they had not asked about. Rows are now keyed by their 
 compared. The block decision was unaffected (a divergence was still a divergence); the figures
 reported to the reader were wrong.
 
-## 8 · Not measured
+## 9 · The residual failures are not about ambiguity
 
-- ~~**Over-clarification on the hard case.**~~ Measured in §10: 10 of 12 under the gate. The
+Across the five arms — 240 runs, 120 of them on the answerable piles — 14 answers carried a wrong
+number. They concentrate in four questions.
+
+| question | correct | served when wrong | what the wrong number is |
+|---|---:|---:|---|
+| Android users, June | 8,232 | 25,188 (5 of 15) | June across **all platforms** |
+| customers paying on the annual plan | 134 | 371 (3 of 15) | **all plans** |
+| active users, web, last week | 277 | 271 (2 of 15) | the week **before** last |
+| annual subs sold in Q2, still live | 83 | 228 / 494 / 3,872 / 6,721 (4 of 15) | four different things |
+
+The top two are exact matches for the unfiltered total, verified against the layer. **A filter the
+question asked for is dropped and the broader question is answered without comment.** That is the
+contested-metric failure one level down: there the ambiguity was between two governed metrics, here
+it is between two readings of the ARGUMENTS to one metric, and the reader cannot tell either time.
+
+**The wrong-week case is a naming defect of the same family as §4.** `prev_week` resolves to
+`last_week` shifted back seven days (`warehouse/src/warehouse/config.py`). Both names are in the
+period enum offered to the model, and in ordinary English "last" and "previous" are synonyms. §4
+found that the metric name selects the metric; here the period name selects the window.
+
+**None of the 14 was classified by the harness.** `wrong_scope` is set only on questions expected to
+be refused (`evals/grade.py`), so an answerable question that returns a wrong number is stored as
+`confident_wrong` with no sub-type. Every one of these had to be diagnosed by reading a trace.
+
+**Correction.** This was first reported as arm E's dominant residual. It is not. Pooled across arms
+the dropped filter is the largest class, but under arm E there were two wrong answers on the
+answerable piles, and re-running one of them produced 9 and 31,478 alongside 371 — that question is
+unstable across several failure modes rather than a clean dropped-filter case. The clean case is the
+Android question, which arms D and E answered correctly every time.
+
+## 10 · A rejected design, and the guardrail that already covers it
+
+**Rejected: extend the disclosure from metric selection to argument selection.** The proposal was to
+notice that the question named a governed dimension member the call did not filter on, run it both
+ways, and require the difference to be disclosed. Three structural objections, not fixable ones:
+
+| objection | why it is structural |
+|---|---|
+| the comparison set is unbounded | a metric has a small set of rivals, precomputed offline by `preflight index`. "The arguments it should have used" has no such artifact: 2^n filter subsets and nothing declaring which alternative is legitimate |
+| it requires lexical question parsing | "mobile" does not match `android` or `ios`; "yearly" does not match `annual`; "excluding Android" contains `android` and inverts the meaning; `Americas` is also an ordinary word |
+| it destroys determinism | the gate's verdict is a function of (layer, arguments). This one would be a function of (layer, arguments, wording), which is the property that makes the gate testable |
+
+This is the objection already recorded against question-to-definition similarity, arriving on a
+different mechanism. It is recorded here because the proposal is attractive and will be proposed
+again.
+
+**The non-fragile restatement needs no question at all.** The observable defect is that the answer
+text asserts a scope the query did not apply: "Android users opened the app 25,188 times" where the
+call carried no platform filter. Both artifacts belong to the harness.
+
+**That guardrail exists. It is `trajectory_verify`, and it is noisy in both directions.**
+
+| test | result |
+|---|---|
+| annual-plan question, served 371 | **refused** — the real error, caught |
+| Android question, served the correct 8,232, four runs | **all four refused** |
+| the same cell, one later run | passed |
+| the two active-users questions (§11), 8 runs, arm E alone | 7 correct, 0 refusals |
+| the same 8 runs, arm E + the reviewer | 3 correct, **5 refusals, every one on a run holding the correct 277** |
+
+**Why it over-refuses.** It cannot separate a filter the analyst added to narrow the question from
+one that is part of the metric's definition. On this fixture it cannot be told: `resolve` supplies
+the members `governed_notes` needs, and the MetricFlow engine provides none. The engine refuses the
+guardrail levels above R4 outright — `resolve` needs members and `output_validation` needs
+additivity — which is why this experiment is pinned at R3/R4. The same blindness is already
+documented as the largest single source of over-refusal at the top of the ladder
+(`guardrails/after.py`).
+
+**Verdict: measure it before building anything new.** It catches the failure and its over-refusal
+rate on this fixture is unmeasured. One arm, 16 questions, three reps, no new code.
+
+## 11 · Ambiguity through a calculation
+
+**The divergence does not propagate predictably.** The two definitions differ by 3.72% at the input
+(886 against 919, all platforms, last week). What that becomes:
+
+| quantity | users reading | accounts reading | apart |
+|---|---:|---:|---:|
+| the count itself | 886 | 919 | 3.72% |
+| app opens per active user | 6.85 | 6.61 | 3.59% |
+| active users who do not pay | 865 | 898 | 3.82% |
+| week-over-week growth, % | 5.98 | 5.75 | 3.80% |
+| **week-over-week change, absolute** | **50** | **50** | **0.00%** |
+
+The internal accounts are a stable population, so a difference of two levels cancels them entirely.
+**A question can rest on a contested metric and still have exactly one correct answer.** Any
+mechanism that fires on "an input is contested" fires on the last row. That is the
+sensitivity-not-membership rule of §5, one level up, and it is the rule the current check breaks.
+
+### Four questions, flat and derived, stated and unstated
+
+`gpt-5-mini`, arm E, three runs each.
+
+| # | question | correct | 3 runs | how it gets there |
+|---|---|---|---|---|
+| 1 | active users, web, last week | 277 **and** 289 (or ask) | ✓ ✓ ✗ | rival attached, answer names one, check fails, handed back, both |
+| 2 | the same, **excluding internal** | 277 | ✓ ✓ ✓ | the filter collapses both readings, nothing fires |
+| 3 | opens per average active user, last week | 6.85 **and** 6.61 (or ask) | ✓ ✓ ✗ | rival attached to the divisor, check fails, handed back, both rates |
+| 4 | the same, **excluding internal** | 6.85 | ✓ ✗ ✓ | the filter collapses the divisor, nothing fires |
+
+Failures: two wrong weeks and one over-refusal. **No silent single-reading answer in twelve runs.**
+
+**The convergence result is the mechanism working correctly.** With an explicit
+`activity__is_internal = false` filter, `active_accounts` returns 277 on web and 886 overall —
+identical to `active_users`. A question that resolves its own ambiguity is recognised **because two
+numbers become equal**, not because anything read the wording. That property is worth protecting.
+
+### The defect: the check verifies the input, not the answer
+
+`disclosure_check` looks for the rival's INPUT figure in the served text. Both failure directions
+follow:
+
+- **Over-fires.** On question 1's growth variant it demanded 919 and 869, numbers the reader has no
+  use for. An answer reading "50, and it is 50 under either definition" would have been handed back.
+- **Under-fires.** "6.85 opens per user, out of 919 accounts in total" satisfies the check while the
+  reader never learns the other rate is 6.61. **The check can be satisfied by a number that is not
+  the answer.**
+
+It currently produces the right outcome because the agent volunteers both rates unprompted, which is
+the kind of thing that stops holding on a different model or a longer calculation.
+
+### Options
+
+| option | verdict |
+|---|---|
+| push the calculation into the layer as a governed derived metric | correct for the few ratios a business actually governs; not general |
+| mark a derived metric contested if any input is contested | **incorrect** — membership again; it fires on the +50 row |
+| **have the agent declare its arithmetic; substitute the rival input and recompute** | **recommended** — deterministic, no wording read, correct in both directions: substituting into `886 − 836` yields 50, which is already in the answer, so it stays silent |
+| state that the figure depends on a contested input | honest, advisory, and every advisory measured here has been ignored |
+
+The recommended option needs the answer tool to carry the expression rather than only the value. The
+harness already records which governed result each number came from, so this extends the evidence
+plumbing rather than adding a parallel system.
+
+## 12 · First principles, and what the market does
+
+### The problem, derived
+
+1. **The object of ambiguity is the answer**, not the question and not the metric. Two readings
+   matter only if they produce different numbers for this request.
+2. **Detection requires an enumerable set of readings.** Derived from the wording, the set is
+   unbounded and phrasing-dependent. Derived from the governed layer, it is finite and
+   precomputable. This is the real argument for a semantic layer in agentic analytics. It also fixes
+   a hard limit: **only ambiguity represented in the layer is detectable this way.**
+3. **There are four terminal responses**, not three: pick one silently, refuse, ask, answer every
+   reading.
+4. **Anything ending in "and then the model decides" performs at chance.** Four replications here:
+   the prompt rule, the SQL disclosure, the declared-scope retry, the advisory rival figure.
+5. **The verification target is the answer, not the inputs** (§11).
+6. **Nothing ranks refuse against ask against answer-both without a cost model** — a price on a
+   silent single reading, on a round trip, and on an abandoned session.
+7. **Reducible against irreducible** is the decisive split. Published guidance assumes the first.
+
+### What the vendors do
+
+| mechanism | who | position |
+|---|---|---|
+| certify one definition per concept, owned and versioned | dbt Semantic Layer, Databricks Metric Views under Unity Catalog, Cube, the 2026 "semantic layer for agents" guidance | design time; the dominant answer, and correct where the contest is reducible |
+| pre-approve answers to anticipated questions | Snowflake Verified Query Repository, Databricks trusted assets, Power BI verified answers | removes the model's choice rather than governing it; does not reach the tail |
+| classify, reject or ask **by prompt** | Snowflake Cortex Analyst `question_categorization`, Power BI Copilot, Databricks Genie | **this is the arm measured at 16 clarifications in 217 attempts** |
+| enumerate interpretations, execute them, compare results, ask only on divergence | AmbiSQL (arXiv 2508.15276) | research; not found in a shipping product |
+| answer every interpretation | the AMBIGQA line | research; not a product feature |
+
+Snowflake's documented example for its disambiguation instruction is literally "active users".
+AmbiSQL's decision rule — resolve automatically when interpretations converge, ask when they diverge
+— is this experiment's sensitivity rule, reached independently. That is the strongest external
+support the gate has.
+
+### Where this work sits
+
+| capability | market coverage |
+|---|---|
+| certify one definition per concept | well covered, and the right first move |
+| pre-approved answers | covered, does not scale |
+| runtime detection by prompt | covered, measured here as ineffective |
+| runtime detection by result divergence | research only |
+| **enforcing that the answer discloses it** | not found anywhere |
+| **two owned definitions that must both survive** | not addressed; the advice is "certify one", which is unavailable |
+| **ambiguity through a derived calculation** | not addressed |
+
+### The systematic shape
+
+| when | mechanism | handles |
+|---|---|---|
+| design time | one certified definition per concept | the reducible majority |
+| index time | precompute contested clusters offline over the layer | the irreducible remainder, without per-query enumeration |
+| call time | execute the rival with the same arguments; act only if the numbers differ | separates ambiguity from mere membership |
+| answer time | verify the served text carries every diverging reading | the only step measured to work |
+| feedback | route a cluster that keeps firing back to its two owners | converts irreducible into reducible over time |
+
+The market owns the first row. The last row is untouched by anyone: a contested cluster firing a
+hundred times a month is a governance backlog item with a measured cost, not a runtime problem.
+
+**One rule underneath all of it: compare the two numbers the reader will actually receive, at the
+level where the answer is formed.** Every defect found in this experiment — membership instead of
+sensitivity, rows compared by position instead of by label, the divisor checked instead of the rate
+— is a violation of that sentence.
+
+### Sources
+
+Snowflake [Cortex Analyst custom instructions](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/custom-instructions),
+[Verified Query Repository](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-analyst/verified-query-repository),
+[best practices for Cortex Agents](https://www.snowflake.com/en/developers/guides/best-practices-to-building-cortex-agents/) ·
+Databricks [trusted assets in Genie spaces](https://docs.databricks.com/aws/en/genie/trusted-assets) ·
+Microsoft [Power BI Copilot verified answers](https://learn.microsoft.com/power-bi/create-reports/copilot-prepare-data-ai-verified-answers),
+[asking Copilot questions](https://learn.microsoft.com/en-us/power-bi/create-reports/copilot-ask-data-question) ·
+[dbt Semantic Layer](https://docs.getdbt.com/docs/use-dbt-semantic-layer/dbt-sl) ·
+[Cube, semantic layer for AI agents](https://cube.dev/articles/semantic-layer-for-ai-agents-2026) ·
+[OvalEdge, governed semantic layer for AI](https://www.ovaledge.com/blog/governed-semantic-layer-for-ai) ·
+[AmbiSQL](https://www.arxiv.org/pdf/2508.15276) ·
+[AMBROSIA](https://arxiv.org/pdf/2406.19073) ·
+[Disambiguation in conversational QA: a survey](https://arxiv.org/html/2505.12543v2) ·
+[AMBIGQA](https://aclanthology.org/2020.emnlp-main.466.pdf)
+
+## 13 · Not measured
+
+- ~~**Over-clarification on the hard case.**~~ Measured in §8: 10 of 12 under the gate. The
   predicted fix — a mechanical channel for the request having named the scope — was built (arm C)
   and the agent never used it.
-- **A rate of any kind.** One question, one fixture. The sizing work in `00_reading.md` says a usable
-  pile needs four to five distinct contested concepts, and the noise band does not exist.
+- **A rate of any kind.** Sixteen questions, one fixture, one model, three reps. The sizing work in
+  `00_reading.md` says a usable pile needs four to five distinct contested concepts; it now has four,
+  and the noise band still does not exist. Two of the five-arm comparisons are separated by one or
+  two questions, which is inside the run-to-run spread observed at one rep.
 - **The second turn.** No user simulator, so a clarification is priced at half an episode and
-  abandonment is unmeasurable.
+  abandonment is unmeasurable. This is the largest hole in the arm comparison: it flatters B and C
+  and penalises D and E.
+- **`WRONG_COST`.** Still the placeholder 4.0, and it is the only thing standing between the §8
+  table and a defensible choice between arm B and arm E.
+- **Any model but `gpt-5-mini`.** The D-to-E gap is a compliance failure; a stronger model may close
+  it without the check. Either result is publishable and they imply opposite decisions.
+- **`trajectory_verify`'s over-refusal rate on this fixture** (§10). Eight runs point in both
+  directions; that is a hint, not a measurement.
 - **Cost of the gate.** It runs each competitor once per contested call. Cheap on DuckDB, unmeasured
   on anything else.
 
-## 9 · Candidate next arms
+## 14 · Candidate next arms
 
 - **Disclose the definition's own filter in the scope line.** The MetricFlow adapter's scope line
   says "no filters — the whole population this metric defines" while the metric itself carries
   `is_internal = false`. The harness's own layer says "the metric definition already restricts: NOT
   is_internal" in the same position. The information is in the SQL either way, but the prose summary
   is what gets skimmed, and this is the cheapest untried advisory lever.
-- ~~**Answer with both, disclosed**~~ — built and measured in §10 (arms D and E). §4's objection
+- ~~**Answer with both, disclosed**~~ — built and measured in §8 (arms D and E). §4's objection
   was right about the advisory form and did not apply to the checked one: the model does not have to
   pick well, it has to be prevented from picking silently.
 - **A non-zero divergence threshold**, as a lever rather than a default.
+- **Verify the answer rather than the input** (§11): have the answer carry its arithmetic, substitute
+  the rival operand, recompute, and check for the recomputed figure. This is the one open defect in
+  arm E that is understood well enough to fix.
+- **Sub-type the wrong numbers on answerable questions** (§9). Fourteen wrong answers, none
+  classified, all diagnosed by hand. Everything above depends on this being automatic.
+- **Rename `prev_week` to `week_before_last`** (§9). Two names in one enum that read as synonyms in
+  English, resolving to different weeks.
+- **Give the MetricFlow layer a member resolver**, so `resolve` and `governed_notes` can run and the
+  judge stops treating a definitional filter as a narrowing (§10). This also unpins the experiment
+  from R4.
+- **Route a persistently firing cluster to its owners** (§12). Nothing in the market does this, and
+  it is the step that turns an irreducible contest into a reducible one.

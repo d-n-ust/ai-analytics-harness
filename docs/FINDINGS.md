@@ -348,6 +348,25 @@ runs each, that one is best by eight questions:
 contested number at all. Which is right depends on the price of an answer carrying one reading
 silently against the price of a round trip, and that price is still the placeholder `WRONG_COST`.
 
+**The divergence does not survive a calculation intact, so a derived question can rest on a
+contested metric and still have one correct answer.** The two definitions differ by 3.72% at the
+input; that becomes 3.59% for a per-user rate, 3.82% for a subtraction, and **0.00%** for a
+week-over-week change, because the internal accounts are a stable population. Any mechanism that
+fires on "an input is contested" fires on the last case. The current check verifies that the rival
+INPUT was named rather than the rival ANSWER, which both over-fires (demanding a divisor the reader
+has no use for) and under-fires (an answer naming the rival count in passing, while giving only one
+rate, passes). The fix is to have the answer carry its arithmetic so the harness can substitute the
+rival operand and recompute.
+
+**The market's runtime answer to ambiguity is the one measured here as ineffective.** Snowflake
+Cortex Analyst, Power BI Copilot and Databricks Genie all detect and clarify by prompt instruction;
+Cortex Analyst's documented example for that instruction is literally "active users". The
+enumerate-execute-compare rule this experiment arrived at appears in research (AmbiSQL, arXiv
+2508.15276, which resolves automatically when interpretations converge and asks when they diverge)
+but not in a shipping product. Enforcing that the served answer discloses the divergence was not
+found anywhere, and neither was any treatment of two owned definitions that must both survive — the
+published advice is to certify one, which is exactly what this case rules out.
+
 **The action-only 3×3 matrix flatters the system, and the defect is in a diagonal cell.** "The
 question had one answer and the agent answered" holds both the best available outcome and one of the
 worst. Split three ways — right, wrong number, no figure — the same runs that read 8/12 and 10/12
