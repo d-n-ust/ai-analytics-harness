@@ -484,24 +484,10 @@ The recommended option needs the answer tool to carry the expression rather than
 harness already records which governed result each number came from, so this extends the evidence
 plumbing rather than adding a parallel system.
 
-## 12 · First principles, and what the market does
+## 12 · What the market does
 
-### The problem, derived
-
-1. **The object of ambiguity is the answer**, not the question and not the metric. Two readings
-   matter only if they produce different numbers for this request.
-2. **Detection requires an enumerable set of readings.** Derived from the wording, the set is
-   unbounded and phrasing-dependent. Derived from the governed layer, it is finite and
-   precomputable. This is the real argument for a semantic layer in agentic analytics. It also fixes
-   a hard limit: **only ambiguity represented in the layer is detectable this way.**
-3. **There are four terminal responses**, not three: pick one silently, refuse, ask, answer every
-   reading.
-4. **Anything ending in "and then the model decides" performs at chance.** Four replications here:
-   the prompt rule, the SQL disclosure, the declared-scope retry, the advisory rival figure.
-5. **The verification target is the answer, not the inputs** (§11).
-6. **Nothing ranks refuse against ask against answer-both without a cost model** — a price on a
-   silent single reading, on a round trip, and on an abandoned session.
-7. **Reducible against irreducible** is the decisive split. Published guidance assumes the first.
+A scan of what is documented and what ships, against what this experiment measures. The
+analysis of why these are the mechanisms available at all is in §16.
 
 ### What the vendors do
 
@@ -564,7 +550,234 @@ Microsoft [Power BI Copilot verified answers](https://learn.microsoft.com/power-
 [Disambiguation in conversational QA: a survey](https://arxiv.org/html/2505.12543v2) ·
 [AMBIGQA](https://aclanthology.org/2020.emnlp-main.466.pdf)
 
-## 13 · Not measured
+## 13 · The second model: gpt-5.6-sol
+
+Five arms, 16 questions, three reps, on `gpt-5.6-sol` as well as `gpt-5-mini`. 480 runs.
+
+| | | contested | stated-scope interrupted | silent wrong | coverage | total |
+|---|---|---|---|---|---|---|
+| **gpt-5-mini** | A nothing | 0/12 | 0/12 | 16/48 | 0.96 | 28/48 |
+| | B gate blocks | 12/12 | 10/12 | 3/48 | 0.58 | 33/48 |
+| | C gate + declared scope | 12/12 | 12/12 | 2/48 | 0.50 | 31/48 |
+| | D rival figure attached | 6/12 | 0/12 | 9/48 | 1.00 | 36/48 |
+| | **E attached and checked** | 11/12 | 0/12 | 3/48 | 1.00 | **44/48** |
+| **gpt-5.6-sol** | A nothing | 3/12 | 0/12 | 8/48 | 1.00 | 38/48 |
+| | B gate blocks | 12/12 | 10/12 | 0/48 | 0.58 | 38/48 |
+| | C gate + declared scope | 11/12 | 3/12 | 1/48 | 0.88 | 44/48 |
+| | D rival figure attached | 9/12 | 0/12 | 3/48 | 1.00 | 45/48 |
+| | **E attached and checked** | 11/12 | 0/12 | 2/48 | 1.00 | **46/48** |
+
+**The check removes the model as a variable.** Arm E scores 11/12 on the contested pile on both
+models. Arm D — the same information, unverified — scores 6/12 on the weak model and 9/12 on the
+strong one. Enforcement is not merely better on average: the outcome stops depending on which model
+is running. That is a stronger claim than "enforced beats advisory" and it is the one worth
+publishing.
+
+**Arm C flips, so §8's conclusion needs a range rather than a constant.** `gpt-5-mini` used the
+declared-scope retry zero times in twelve. `gpt-5.6-sol` uses it: over-clarification falls from
+12/12 to 3/12, coverage from 0.50 to 0.88, total from 31 to 44. "A mechanism whose last step is the
+model choosing to use it is worth what the model's choices are worth" still holds; what those
+choices are worth is now known to vary by a lot.
+
+**Arm C's residual failure is a vocabulary mismatch and it is precise.** All three
+over-clarifications are one question — *"net of refunds, how much MRR…"*. The index's discriminator
+for that pair is `status = active` / `status <> 'canceled'`, and "net of refunds" is not in it. On
+the three A′ questions whose wording sits close to the predicate ("excluding internal and test
+accounts" against `is_internal = false`) it stands down every time. **The stand-down works exactly
+as far as the business phrase matches the technical one.**
+
+**Scale does not close it.** With no mechanism, `gpt-5.6-sol` gets 3 of 12 and answers seven
+contested questions with one number and no comment. Three questions fail identically on all reps.
+
+**Blocking ages badly.** Arm B is second of five on the weak model and last on the strong one, tied
+with doing nothing. Its coverage cost is fixed while every other arm improves.
+
+**The §9 residuals are largely a `gpt-5-mini` problem.** On `gpt-5.6-sol` the answerable piles are
+23/24 and pile B is 12/12 in every arm. The dropped filter and the wrong week are gone; what remains
+is one wrong MRR figure and the hardest contested pair.
+
+## 14 · One request, two correct queries
+
+Question A′ — *"active users, **excluding internal and test accounts**, web, last week"* — has three
+formulations in this layer, all returning 277:
+
+| | metric | filters |
+|---|---|---|
+| A | `active_users` | `platform=web, is_internal=false` |
+| B | `active_users` | `platform=web` |
+| C′ | `active_accounts` | `platform=web, is_internal=false` |
+
+They exist because **the same distinction is expressible in two places**: baked into the metric
+selected, or supplied as a filter. `active_users` declares `measure: active_account_count` plus
+`filter: is_internal = false`; `active_accounts` is the same measure without it; and
+`activity__is_internal` is also an ordinary filterable dimension. So the phrase "excluding internal
+accounts" has no canonical destination in the query language.
+
+The machinery behaves differently on A and B. Under A the rival, run with the same filter, also
+returns 277 — the readings collapse, and nothing fires. Under B the rival returns 289 and the answer
+is handed back, so the user receives a correct answer with one redundant clause and the agent spends
+one extra internal turn. **The recognition in path A is worth stating plainly: a question that
+resolves its own ambiguity is detected because two numbers become equal, not because anything read
+the wording.**
+
+**A rejected fix, and why.** Normalising `(metric, filters)` to `(measure, predicates)` was proposed
+to make the verdict identical across A and B. It does not: path B's query carries less information
+— it says nothing about internal accounts and merely selects a metric that happens to exclude them
+— so firing is the correct verdict for the query as expressed. Normalisation reproduces exactly the
+verdicts the numeric comparison already gives. The proposal is recorded as rejected because it is
+attractive and will be proposed again.
+
+## 15 · The interface authored the failure
+
+A third path exists and it is a wrong answer. Asked question A′, one run tried to filter to web
+using `platform`, was rejected, tried the same name again, then **dropped the filter entirely** and
+answered across all platforms: 886 where 277 was correct. Four causes, chained:
+
+| | cause | fixable |
+|---|---|---|
+| 1 | the tool description read `e.g. {"platform": "ios", "is_internal": false}` — unqualified names, because the other engine accepts them. The agent sent that example almost verbatim | yes |
+| 2 | `filters` was `additionalProperties: True`, so an invalid key was a runtime error rather than an impossible call | yes |
+| 3 | the engine error was truncated at 400 characters, landing mid-word at `Suggestions: [ "Dimensi` — removing the list of valid names | yes |
+| 4 | **dropping the filter is the only action guaranteed to succeed** | structural |
+
+Cause 4 is the general one. An agent under tool-error pressure optimises for a call that returns
+data. Fixing a rejected name needs information it does not have; removing the restriction always
+works, and the broader query returns an entirely plausible number. **The action space has a gradient
+pointing at answering a different question, and nothing points back.**
+
+### What was built
+
+- **`filter_vocabulary`** (ACTION_SPACE, out of ladder): `filters` and `group_by` closed to the
+  layer's own dimension names, `additionalProperties: false`, and the example rebuilt from a real
+  one. Makes the wrong call unmakeable rather than merely correctable — the same argument the metric
+  enum already makes one field along.
+- **The engine error keeps its suggestions.** Head plus the `Suggestions:` block, both.
+- **`constraint_regression`** (REPAIR, out of ladder): hands back an answer whose number came from a
+  call that dropped a filter an earlier call asked for. Neither set comes from the question; both
+  are the agent's own calls. Keys compare on their last segment, so correcting `platform` to
+  `activity__platform` is not mistaken for abandoning a restriction, and a key matching no dimension
+  in the layer is ignored.
+
+### Measured, `gpt-5-mini`, 16 questions, five reps, 80 runs per arm
+
+| | correct | contested | answerable | unanswerable | silent wrong |
+|---|---|---|---|---|---|
+| E, before | 67/80 | 17/20 | 32/40 | 18/20 | 9/80 |
+| E + both, after | **70/80** | **19/20** | **34/40** | 16/20 | **5/80** |
+
+Silent wrong numbers roughly halved and the dimension-name error class disappeared on the questions
+that had it (both `active_users` questions went 1 tool error to 0). The unanswerable pile lost two,
+which is not separable from noise at this n.
+
+**Two results that did not go as predicted, recorded because they are the informative ones.**
+`constraint_regression` fired **zero times in 80 runs** — consistent with the vocabulary fix
+removing its cause, but it means the check is untested against a live case and should be described
+as a backstop rather than as working. And **total tool errors rose, 19 to 24**, because the residual
+errors are a different class entirely: the agent using `run_sql` as a calculator to add three
+monthly figures, and hitting a binder error on the first attempt.
+
+**That last one is an action-space gap, not a naming problem.** There is no governed way to add up
+governed results, so arithmetic leaves the governed path — which is exactly the situation §11 says
+the disclosure check cannot follow. It is the strongest candidate for the next piece of work.
+
+## 16 · Synthesis: where this sits in the published work
+
+### 1 · Abstention is the wrong instrument, because the uncertainty is not in the model
+
+Selective prediction, from Chow's reject option through the current abstention survey, assumes the
+system is unsure and buys safety with coverage. Definitional ambiguity is not that: the system holds
+277 and 289, both correct. The uncertainty is in the QUESTION. So the coverage/risk trade-off is not
+a trade-off — blocking handles 12/12 at coverage 0.58, disclosing handles 11/12 at coverage 1.00.
+Disclosure is not a better point on the curve; it is off the curve, because abstention was invented
+for a different problem. This also explains why blocking ages badly: its cost is fixed while the
+epistemic problem it addresses shrinks with capability. *Knowing but Not Showing* (2605.25284) is
+the same observation from the model side; the deployment consequence is that the behaviour need not
+be bought with coverage.
+
+### 2 · Asserted controls against maintained ones, measured on identical content
+
+The security taxonomy separates preventive controls, which constrain behaviour, from detective ones,
+which catch violations afterwards. Arms D and E are that distinction with the content held
+byte-identical, and the result is in §13: 6/12 and 9/12 unverified against 11/12 and 11/12 verified.
+**Verification converts a capability-dependent behaviour into a capability-independent guarantee.**
+That is an assurance argument rather than a performance one, and it is why "it works on the frontier
+model" is not a control. The constraint-drift work states the thesis in its title — safe behaviour
+must be maintained, not merely asserted — for multi-agent systems; AGENTIF finds condition and tool
+constraints are where instruction-following fails. This experiment adds four independent nulls in
+one system: the prompt rule, the compiled SQL carrying the discriminator, the declared-scope retry
+on the weak model, and the advisory rival figure. **Every shipping product's runtime ambiguity
+mechanism is prompt-level, which is the arm measured as ineffective.**
+
+### 3 · Sensitivity over membership, and the provenance of the alternatives
+
+AmbiSQL (2508.15276) independently reached the same rule: enumerate interpretations, execute them,
+compare results, ask only on divergence. Convergent arrival on a non-obvious design is the strongest
+external support the gate has. The difference is where the alternatives come from — a model, per
+query, or an offline index over the governed layer. Given claim 2 that difference decides
+everything: **a model-generated alternative set inherits model variance, so the same comparison rule
+is a control in one architecture and a heuristic in the other.** This is the real argument for a
+semantic layer under agentic analytics: not that the agent will not guess joins, but that the
+alternatives are enumerable without asking a model.
+
+### 4 · Ambiguity is not preserved under composition
+
+AMBROSIA defines a question as ambiguous when the set of non-equivalent queries has cardinality at
+least two — a property of the question. §11 shows it cannot be. The same pair, 3.72% apart at the
+input, is 3.59% through a ratio, 3.82% through a subtraction, and **0.00%** through a
+week-over-week difference. A question can rest on a k=2 input and have exactly one correct answer.
+So ambiguity is a property of the (question, layer, request, computation) tuple, evaluated at the
+answer, and any check anchored at the input is wrong in both directions — as ours measurably is.
+Every taxonomy that labels QUESTIONS ambiguous breaks on derived metrics, which is most of real
+analytics.
+
+### 5 · The action space has a gradient, and it points at a broader question
+
+§15's cause 4. The literature has the pieces — schema-first tool APIs (2603.13404) catalogues tool
+misuse including invalid enumerations and constraint violations; the standard advice is that enums
+eliminate plausible-but-invalid outputs; constraint drift names the phenomenon for multi-agent
+communication. Nothing found locates it in **single-agent tool-error recovery**, and nothing gives
+it a detector. `constraint_regression` is one, and it reads no language: a filter key present in an
+earlier attempt and absent from the call that was served.
+
+### 6 · Compare what the reader receives, at the level the answer is formed
+
+Four defects in this experiment, all the same shape: rows matched by position (Americas against
+EMEA); the disclosure naming two numbers without attaching either to its metric; the derived check
+reading the divisor rather than the rate; the served text taken as `answer` plus `explanation` where
+a product may render only `answer`. **A disambiguation mechanism was built at the wrong level four
+times, by the same author.** That is worth recording as a finding rather than as an embarrassment:
+deciding which projection of the trace to check is the hard part of this design and has no default.
+
+### 7 · The blind spot is irreducibility, and the missing meter
+
+Every vendor's answer is to certify one definition per concept, and where the conflict is technical
+debt that is correct and should be done first. It is unavailable here for an ORGANISATIONAL reason:
+Finance nets refunds because the board pack must and Sales does not because commission pays on what
+was closed; Product excludes staff and Platform includes them because servers do not care who is
+logged in. Those are not modelling mistakes. So runtime disclosure is not a workaround for weak
+governance — it is the correct steady state for a multi-stakeholder organisation, plus the one thing
+nobody ships: **a cluster that fires two hundred times a month is a governance backlog item with a
+measured price, routable to its two owners.**
+
+### Claims this experiment can defend as its own
+
+1. **Verification makes ambiguity handling independent of the model** (§13, claim 2).
+2. **Ambiguity is not preserved under composition** (§11, claim 4).
+3. **Widening is the cheapest escape from a tool error** (§15, claim 5).
+
+The rest is the published work, and it agrees.
+
+### Added sources
+
+[Know Your Limits: a survey of abstention in LLMs](https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00754/131566/Know-Your-Limits-A-Survey-of-Abstention-in-Large) ·
+[Selective risk certification for LLM outputs](https://arxiv.org/pdf/2509.12527) ·
+[Constraint drift in LLM-based multi-agent systems](https://arxiv.org/html/2605.10481) ·
+[AGENTIF: instruction following in agentic scenarios](https://arxiv.org/pdf/2505.16944) ·
+[Schema-first tool APIs for LLM agents](https://arxiv.org/html/2603.13404v1) ·
+[From agent traces to trust: evidence tracing and execution provenance](https://arxiv.org/pdf/2606.04990) ·
+[OWASP GenAI LLM guardrails taxonomy](https://genai.owasp.org/solution-taxonomy/llm-guardrails/)
+
+## 17 · Not measured
 
 - ~~**Over-clarification on the hard case.**~~ Measured in §8: 10 of 12 under the gate. The
   predicted fix — a mechanical channel for the request having named the scope — was built (arm C)
@@ -578,14 +791,23 @@ Microsoft [Power BI Copilot verified answers](https://learn.microsoft.com/power-
   and penalises D and E.
 - **`WRONG_COST`.** Still the placeholder 4.0, and it is the only thing standing between the §8
   table and a defensible choice between arm B and arm E.
-- **Any model but `gpt-5-mini`.** The D-to-E gap is a compliance failure; a stronger model may close
-  it without the check. Either result is publishable and they imply opposite decisions.
+- ~~**Any model but `gpt-5-mini`.**~~ Done in §13. `gpt-5.6-sol` narrows the D-to-E gap (6/12 to
+  9/12) without closing it, and arm E lands on 11/12 under both models. A THIRD model would test
+  whether that ceiling is the check's or the suite's.
 - **`trajectory_verify`'s over-refusal rate on this fixture** (§10). Eight runs point in both
   directions; that is a hint, not a measurement.
+- **`constraint_regression` against a live case** (§15). It fired zero times in 80 runs after the
+  vocabulary fix removed its cause, so it is a backstop that has never caught anything. A run with
+  `filter_vocabulary` off would test the check itself.
+- **Whether the §15 gain came from the schema or from the prompt line.** The two arrived together.
+  An arm with the closed vocabulary and no prompt sentence would separate them.
+- **The other branches of the taxonomy.** Everything here is DEFINITIONAL ambiguity. Vagueness
+  ("our best product"), missing scope, and entity ambiguity are untouched, and enumerate-compare-
+  enforce has no obvious purchase on them: there is no governed alternative to execute.
 - **Cost of the gate.** It runs each competitor once per contested call. Cheap on DuckDB, unmeasured
   on anything else.
 
-## 14 · Candidate next arms
+## 18 · Candidate next arms
 
 - **Disclose the definition's own filter in the scope line.** The MetricFlow adapter's scope line
   says "no filters — the whole population this metric defines" while the metric itself carries
@@ -596,9 +818,12 @@ Microsoft [Power BI Copilot verified answers](https://learn.microsoft.com/power-
   was right about the advisory form and did not apply to the checked one: the model does not have to
   pick well, it has to be prevented from picking silently.
 - **A non-zero divergence threshold**, as a lever rather than a default.
+- **A governed way to do arithmetic on governed results** (§15). The residual tool errors are the
+  agent using `run_sql` as a calculator to add three monthly figures. Arithmetic leaving the governed
+  path is what puts §11's derived case beyond the check's reach, so this is one fix serving two
+  findings, and it is the strongest next candidate.
 - **Verify the answer rather than the input** (§11): have the answer carry its arithmetic, substitute
-  the rival operand, recompute, and check for the recomputed figure. This is the one open defect in
-  arm E that is understood well enough to fix.
+  the rival operand, recompute, and check for the recomputed figure. Depends on the item above.
 - **Sub-type the wrong numbers on answerable questions** (§9). Fourteen wrong answers, none
   classified, all diagnosed by hand. Everything above depends on this being automatic.
 - **Rename `prev_week` to `week_before_last`** (§9). Two names in one enum that read as synonyms in
@@ -606,5 +831,9 @@ Microsoft [Power BI Copilot verified answers](https://learn.microsoft.com/power-
 - **Give the MetricFlow layer a member resolver**, so `resolve` and `governed_notes` can run and the
   judge stops treating a definitional filter as a narrowing (§10). This also unpins the experiment
   from R4.
+- **The second turn**, still. §16's claim 1 rests on disclosure dominating abstention, and that
+  comparison prices a clarification by assumption. A user simulator answering with the case's own
+  intended reading turns the clarify column into resolved-correct / resolved-wrong / unresolved,
+  which is the same split §8 forced on the answered column.
 - **Route a persistently firing cluster to its owners** (§12). Nothing in the market does this, and
   it is the step that turns an irreducible contest into a reducible one.

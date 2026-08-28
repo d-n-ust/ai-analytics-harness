@@ -367,6 +367,31 @@ but not in a shipping product. Enforcing that the served answer discloses the di
 found anywhere, and neither was any treatment of two owned definitions that must both survive — the
 published advice is to certify one, which is exactly what this case rules out.
 
+**Verification makes the behaviour independent of which model is running.** Across five arms on two
+models, 480 runs: the arm that attaches the rival figure and CHECKS the answer for it scores 11/12
+on the contested pile on both `gpt-5-mini` and `gpt-5.6-sol`. The arm with the same information and
+no check scores 6/12 and 9/12. Enforcement is not merely better on average — the outcome stops
+tracking the model. Scale alone does not close it: with no mechanism `gpt-5.6-sol` still answers
+seven of twelve contested questions with one number and no comment. And blocking ages badly, going
+from second of five arms on the weak model to last on the strong one, because its coverage cost is
+fixed while the problem it addresses shrinks.
+
+**The declared-scope escape hatch is model-dependent, which qualifies rather than overturns the
+earlier null.** `gpt-5-mini` used it zero times in twelve; `gpt-5.6-sol` uses it, taking coverage
+from 0.50 to 0.88. Its one remaining failure is a vocabulary mismatch: the user says "net of
+refunds" and the index's discriminator says `status = active`. The stand-down works exactly as far
+as the business phrase matches the technical predicate.
+
+**The interface authored one whole failure class.** The governed-query tool's own example used
+unqualified dimension names, because a second engine accepts them; an agent copied the example, was
+rejected twice, and then dropped the filter and answered across all platforms — 886 where 277 was
+correct. The engine's error was truncated at 400 characters, landing one word before the list of
+valid names. Closing the filter vocabulary to the layer's own dimensions and preserving the
+suggestion list halved the silent wrong numbers, 9/80 to 5/80. Underneath the three fixable causes
+is one that is not: **under tool-error pressure, dropping a constraint is the only action guaranteed
+to succeed**, so the action space has a gradient pointing at answering a broader question, and
+nothing points back until something checks for it.
+
 **The action-only 3×3 matrix flatters the system, and the defect is in a diagonal cell.** "The
 question had one answer and the agent answered" holds both the best available outcome and one of the
 worst. Split three ways — right, wrong number, no figure — the same runs that read 8/12 and 10/12
