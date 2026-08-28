@@ -85,13 +85,14 @@ def _competing_value(result: ToolResult, args: dict, semantic, guardrails, recor
         # about a particular region or platform. Naming only the largest gap would leave them
         # holding a figure for a row they did not ask about — the same defect as comparing rows by
         # position, arriving one layer later.
-        rows = "; ".join(pair(k, mine[k], theirs[k], g) for k, g in list(divergent.items())[:_MAX_ROWS])
+        rows = "; ".join(pair(k, metric, mine[k], rival.name, theirs[k], g)
+                         for k, g in list(divergent.items())[:_MAX_ROWS])
         more = "" if len(divergent) <= _MAX_ROWS else f"; and {len(divergent) - _MAX_ROWS} more rows"
         lines.append(
             f"[also] `{rival.name}` is an equally governed answer to the same question and returns "
-            f"{rows}{more}. The two differ by {rival.discriminator or 'their scope'}. If the "
-            f"request did not say which reading it wanted, give BOTH figures and say what "
-            f"separates them.")
+            f"a different number here: {rows}{more}. The two differ by "
+            f"{rival.discriminator or 'their scope'}. If the request did not say which reading it "
+            f"wanted, give BOTH figures and say what separates them.")
     if not lines:
         note(record, "ambiguity_disclosure", Position.DISCLOSURE, "stood down",
              f"no other governed definition returns a different number for this {metric} request")

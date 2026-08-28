@@ -280,17 +280,18 @@ class _Run:
                           if gap > before.DIVERGENCE_THRESHOLD
                           and not any(abs(n - theirs[k]) <= 0.005 * abs(theirs[k]) for n in served)]
                 if absent:
-                    missing.append((rival, mine, theirs, {k: differences[k] for k in absent}))
+                    missing.append((metric, rival, mine, theirs,
+                                    {k: differences[k] for k in absent}))
         if not missing:
             return None
-        self.repairs.append({"undisclosed": [r.name for r, *_ in missing]})
+        self.repairs.append({"undisclosed": [r.name for _m, r, *_ in missing]})
         lines = ["Your answer was not accepted: it reports one of two governed readings of the "
                  "question and does not give the reader the other one."]
-        for rival, mine, theirs, absent in missing:
+        for metric, rival, mine, theirs, absent in missing:
             for key, gap in absent.items():
-                lines.append(f"  {before.pair(key, mine[key], theirs[key], gap)} — "
-                             f"`{rival.name}`, which differs by "
-                             f"{rival.discriminator or 'its scope'}")
+                lines.append(
+                    f"  {before.pair(key, metric, mine[key], rival.name, theirs[key], gap)}"
+                    f" — they differ by {rival.discriminator or 'their scope'}")
         lines.append("Send the answer again giving BOTH figures and what separates them, or end "
                      "with `clarify` if you cannot tell which was meant.")
         self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",

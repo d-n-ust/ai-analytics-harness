@@ -253,16 +253,25 @@ def gaps(mine, theirs) -> dict | None:
     return {k: abs(mine[k] - theirs[k]) / abs(mine[k]) for k in mine if mine[k]}
 
 
-def pair(label: tuple, mine: float, theirs: float, gap: float) -> str:
-    """One row of a two-definition comparison, in the reader's terms."""
+def pair(label: tuple, mine_name: str, mine: float, theirs_name: str, theirs: float,
+         gap: float) -> str:
+    """One row of a two-definition comparison, with each figure attached to the name it came from.
+
+    EVERY NUMBER CARRIES ITS NAME. The first version read "`active_accounts` ... returns 277 against
+    289", where 277 is the OTHER metric's figure — a sentence about which definition owns which
+    number, written so that a reader could take either. A disambiguation message that is itself
+    ambiguous about its two operands is worse than no message.
+    """
     where = f"for {' / '.join(label)}, " if label else ""
-    return f"{where}{mine:,.0f} against {theirs:,.0f}, {gap * 100:.2f}% apart"
+    return (f"{where}`{mine_name}` {mine:,.0f} against `{theirs_name}` {theirs:,.0f}, "
+            f"{gap * 100:.2f}% apart")
 
 
-def worst_row(mine: dict, theirs: dict, differences: dict) -> str:
+def worst_row(mine_name: str, mine: dict, theirs_name: str, theirs: dict,
+              differences: dict) -> str:
     """The single row the two definitions disagree on most — the gate's one-line summary."""
     label = max(differences, key=lambda k: differences[k])
-    return pair(label, mine[label], theirs[label], differences[label])
+    return pair(label, mine_name, mine[label], theirs_name, theirs[label], differences[label])
 
 
 def _first_divergent(semantic, args: dict, metric: str, competitors):
@@ -279,5 +288,5 @@ def _first_divergent(semantic, args: dict, metric: str, competitors):
         if differences is None:
             return rival, "not comparable"
         if max(differences.values(), default=0.0) > DIVERGENCE_THRESHOLD:
-            return rival, worst_row(mine, theirs, differences)
+            return rival, worst_row(metric, mine, rival.name, theirs, differences)
     return None, ""
