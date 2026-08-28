@@ -1,9 +1,14 @@
 """The LLM critic the trajectory_verify guardrail runs.
 
-Kept apart from after.py because it is the only guardrail machinery in the repo that calls a
-model, and therefore the only one whose verdict is a probability rather than a proof. Everything
-else at position AFTER is deterministic and provable; this is an opinion, and an opinion has to
-be scored against labels before it can be trusted (evals/components/verifier_audit.py).
+Kept apart from after.py because its verdict is a probability rather than a proof: everything else
+at position AFTER is deterministic and provable, while this is an opinion, and an opinion has to be
+scored against labels before it can be trusted (evals/components/verifier_audit.py).
+
+It is not the only model call in the guardrails — `classify.py` holds the ones that categorise a
+REQUEST rather than adjudicate an answer. The two are kept apart because they version
+independently: `prompt_fingerprint` here exists to mark a stored verdict stale the moment the
+judge's spec changes, and folding an unrelated prompt into that hash would invalidate every stored
+verifier result whenever the other one was reworded.
 
 It INSPECTS rather than re-answers: it is shown exactly what the analyst computed and asked for a
 concrete reason the number does not hold up. Verification is easier than generation, and a
@@ -369,5 +374,3 @@ def verify_trajectory(model, question: str, metric_name: str, metric_def: dict,
             return Judgement(allowed, mismatch, v.get("reason", ""), role)
     # No verdict is not a veto: the judge is refuse-only, so silence leaves the answer standing.
     return Judgement(True, "none", "verifier produced no verdict", role)
-
-

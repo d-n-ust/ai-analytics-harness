@@ -255,6 +255,13 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     # the two sets compared are both the agent's own calls, one attempt against the one that was
     # served. Answering a broader question than the one asked is the cheapest way out of a tool
     # error, because dropping a filter always succeeds, and nothing else penalises it.
+    # The one delegated judgement. Everything else about ambiguity here is mechanical; this asks a
+    # focused model call whether the REQUEST already chose, because two definitions produce
+    # identical tool calls either way and nothing in the trace can distinguish them.
+    Guardrail("scope_classifier", Position.REPAIR,
+              "asks a focused model call whether the request itself already chose between the two "
+              "definitions, and stands the disclosure check down when it did",
+              ("guardrails/classify.py", "loop.py", "prompts.py"), in_ladder=False),
     Guardrail("constraint_regression", Position.REPAIR,
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
@@ -305,6 +312,7 @@ class GuardrailSet:
     ambiguity_disclosure: bool = False
     filter_vocabulary: bool = False
     disclosure_check: bool = False
+    scope_classifier: bool = False
     constraint_regression: bool = False
 
     def label(self) -> str:
@@ -405,6 +413,9 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
     from ..rungs import capabilities
+    if g.scope_classifier and not g.disclosure_check:
+        return ("scope_classifier without disclosure_check: it stands down a check that is not "
+                "running, so it can only cost a model call.")
     if g.constraint_regression and not g.coverage_check:
         return ("constraint_regression without coverage_check: raw SQL is still on the table, so a "
                 "restriction can be re-expressed in a query this check cannot read.")

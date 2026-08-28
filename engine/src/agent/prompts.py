@@ -110,6 +110,9 @@ _RRUNG_FILTER_VOCABULARY = (
     "\n- `filters` and `group_by` accept only this layer's own dimension names, spelled exactly as "
     "`list_metrics` prints them. A name that is not on that list cannot be sent.")
 
+# `scope_classifier` changes nothing the agent must do — it only decides whether the sentence above
+# is enforced on this question — so it gets no line of its own. Named here because the registry
+# requires every guardrail to be traceable to the files that implement it.
 _RRUNG_CONSTRAINT_REGRESSION = (
     "\n- If a call fails, FIX it rather than widening it. An answer whose number comes from a call "
     "that dropped a restriction an earlier call asked for is handed back: answering a broader "

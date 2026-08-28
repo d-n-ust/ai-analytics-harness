@@ -25,6 +25,7 @@ import evidence as claim_audit
 
 from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after, before
+from .guardrails import classify as _classify
 from .numbers import bare_number, parse_numbers
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from .provenance import ContextLedger
@@ -139,6 +140,7 @@ class _Run:
     # of the broken ones — and the final `claims` on the Answer records what came out. A
     # sentence that vanished between the two was deleted, not fixed.
     repairs: list = field(default_factory=list)
+    _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
 
     @property
@@ -358,6 +360,8 @@ class _Run:
                                     {k: differences[k] for k in absent}))
         if not missing:
             return None
+        if g.scope_classifier and self._request_chose(missing):
+            return None
         self.repairs.append({"undisclosed": [r.name for _m, r, *_ in missing]})
         lines = ["Your answer was not accepted: it reports one of two governed readings of the "
                  "question and does not give the reader the other one."]
@@ -372,6 +376,33 @@ class _Run:
                              f"{sum(len(a) for *_, a in missing)} contested figure(s) omitted; "
                              f"correction {self.claim_retries} of 2").as_dict())
         return ToolResult("\n".join(lines), is_error=True)
+
+    def _request_chose(self, missing) -> bool:
+        """Did the question itself already pick a reading? One focused model call, cached per run.
+
+        THE LAST STEP IS STILL MECHANICAL. This decides whether the check applies, not what the
+        reader receives — an answer the check does apply to is still verified against the served
+        text. The model contributes the one judgement nothing else can make and is kept out of the
+        step before the reader, which is the distinction four advisory nulls in this project were
+        actually about.
+        """
+        if self._scope_verdict is None:
+            metric, rival = missing[0][0], missing[0][1]
+            chose, quote = _classify.question_chose_scope(
+                self.model, self.question, metric, self._describe(metric),
+                rival.name, self._describe(rival.name), rival.discriminator)
+            self._scope_verdict = (chose, quote)
+            self.acts.append(Act("scope_classifier", str(Position.REPAIR),
+                                 "stood down" if chose else "applied",
+                                 f"the request {'named' if chose else 'did not name'} which reading"
+                                 + (f": {quote!r}" if quote else "")).as_dict())
+        return self._scope_verdict[0]
+
+    def _describe(self, metric: str) -> str:
+        """The metric's own catalogue description — where this layer records EXCLUDING or INCLUDING
+        internal and test accounts, which is the distinction the question either names or does not."""
+        entry = (getattr(self.grounding.semantic, "metrics", {}) or {}).get(metric) or {}
+        return str(entry.get("description") or "") if isinstance(entry, dict) else str(entry)
 
     def _governed_calls(self):
         """(metric, args) for every governed query this run actually made — what the answer stands
