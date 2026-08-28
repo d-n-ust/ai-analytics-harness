@@ -243,9 +243,21 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     # Makes the line above ENFORCED instead of advisory. An answer that served one of two divergent
     # governed readings and named only that one is handed back, once, with both figures. The ladder
     # has shown twice that a disclosure the model may ignore is a disclosure the model does ignore.
+    Guardrail("filter_vocabulary", Position.ACTION_SPACE,
+              "closes `filters` and `group_by` to the layer's own dimension names, and builds the "
+              "example from one of them, so an unqualified key cannot be sent at all",
+              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
     Guardrail("disclosure_check", Position.REPAIR,
               "hands back an answer that served one contested reading without naming the other, so "
               "the disclosure has to be acted on rather than merely read",
+              ("loop.py", "prompts.py"), in_ladder=False),
+    # A restriction the agent asked for and then abandoned. Not a judgement about the question:
+    # the two sets compared are both the agent's own calls, one attempt against the one that was
+    # served. Answering a broader question than the one asked is the cheapest way out of a tool
+    # error, because dropping a filter always succeeds, and nothing else penalises it.
+    Guardrail("constraint_regression", Position.REPAIR,
+              "hands back an answer whose number came from a call that dropped a filter an earlier "
+              "call had asked for",
               ("loop.py", "prompts.py"), in_ladder=False),
 )
 
@@ -291,7 +303,9 @@ class GuardrailSet:
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False
+    filter_vocabulary: bool = False
     disclosure_check: bool = False
+    constraint_regression: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -334,7 +348,8 @@ _LEGACY_NAMES = {"gate": "coverage_check", "single_metric": "governed_numbers"}
 # governed layer can still decline, and can still say the question has more than one answer.
 # Stated as a set rather than as a growing chain of `!=` comparisons, which is how `abstain` came
 # to be the only exception for as long as it was the only one.
-_LAYER_INDEPENDENT = frozenset({"abstain", "clarify", "typed_clarify"})
+_LAYER_INDEPENDENT = frozenset({"abstain", "clarify", "typed_clarify",
+                               "constraint_regression"})
 # `ambiguity_check` is NOT in that set: it reads the layer's index, so a rung with no
 # semantic layer genuinely cannot run it.
 
@@ -390,6 +405,9 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
     from ..rungs import capabilities
+    if g.constraint_regression and not g.coverage_check:
+        return ("constraint_regression without coverage_check: raw SQL is still on the table, so a "
+                "restriction can be re-expressed in a query this check cannot read.")
     if g.disclosure_check and not g.ambiguity_disclosure:
         return ("disclosure_check without ambiguity_disclosure: the answer would be handed back for "
                 "omitting a figure the model was never shown. Enforce a disclosure, not a guess.")

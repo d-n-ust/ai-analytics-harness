@@ -74,6 +74,11 @@ def _citable(handle: str, result) -> str:
     return f"\n[cite] {shown}{more}"
 
 
+def _leaf(name) -> str:
+    """The last segment of a dimension name: `activity__platform` and `platform` are one thing."""
+    return str(name).strip().rsplit("__", 1)[-1].lower()
+
+
 def _as_number(value):
     """The declared `value`, as a number — or None when it is not one.
 
@@ -238,7 +243,62 @@ class _Run:
         only that one is broken in the other direction: nothing about it is malformed, and the
         reader is the one who cannot tell.
         """
-        return self.malformed_claims(exit_call) or self.undisclosed_rival(exit_call)
+        return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
+                or self.undisclosed_rival(exit_call))
+
+    def dropped_constraint(self, exit_call):
+        """Hand back an answer whose number came from a call that abandoned a restriction the run
+        had already asked for.
+
+        WIDENING IS THE CHEAPEST WAY OUT OF A TOOL ERROR, and that is the whole reason this exists.
+        Fixing a rejected dimension name needs information the agent does not have; removing the
+        filter always works, and the broader query returns a number that looks entirely reasonable.
+        The gradient points at answering a different question, and until now nothing pointed back.
+
+        NEITHER SET COMES FROM THE QUESTION. Both are the agent's own calls: what it asked for on
+        some attempt, against what the call it served actually carried. So there is no wording to
+        parse and the verdict is the same every time for the same trace.
+
+        Keys are compared on their last segment, so `platform` and `activity__platform` are the same
+        restriction differently spelled — otherwise correcting a name would look like dropping one.
+        A key matching no dimension in the layer is ignored: `is_test_account` names nothing here,
+        and an agent cannot be faulted for abandoning a filter that never existed.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not g.constraint_regression:
+            return None
+        semantic = self.grounding.semantic
+        if semantic is None:
+            return None
+        known = set()
+        for metric in getattr(semantic, "metrics", ()):
+            try:
+                known |= {_leaf(d) for d in semantic.allowed_filters(metric)}
+            except Exception:                                               # noqa: BLE001
+                continue
+        asked, served = set(), set()
+        for step in self.steps:
+            if step.get("tool") != "query_metric":
+                continue
+            keys = {_leaf(k) for k in (step.get("args") or {}).get("filters") or {}}
+            asked |= keys
+            if not step.get("error") and not step.get("blocked_by"):
+                served |= keys
+        abandoned = sorted((asked - served) & known)
+        if not abandoned:
+            return None
+        self.repairs.append({"dropped": abandoned})
+        self.acts.append(Act("constraint_regression", str(Position.REPAIR), "handed back",
+                             f"{', '.join(abandoned)} asked for and then dropped; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        return ToolResult(
+            "Your answer was not accepted: an earlier call asked to restrict this number by "
+            + ", ".join(f"`{a}`" for a in abandoned)
+            + ", and the call your number came from carries no such restriction — so it answers a "
+              "broader question than the one asked. Re-run the governed query with that "
+              "restriction, spelling the dimension exactly as `list_metrics` prints it, and answer "
+              "from that result. If the layer genuinely cannot express it, `refuse` instead of "
+              "widening.", is_error=True)
 
     def undisclosed_rival(self, exit_call):
         """Hand back an answer that reported one contested reading and omitted the other.

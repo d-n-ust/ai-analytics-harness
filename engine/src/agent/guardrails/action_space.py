@@ -142,6 +142,8 @@ def query_metric_schema(base: dict, guardrails, semantic, record=None) -> dict:
         props["metric"] = {**props["metric"], "enum": list(semantic.metrics)}
         note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",
              f"metric closed to the {len(semantic.metrics)}-metric catalog")
+    if guardrails.filter_vocabulary:
+        props.update(_filter_vocabulary(semantic, props, record))
     segments = semantic.segment_names()
     if segments:
         props["segment"] = {
@@ -337,3 +339,41 @@ def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
              "answer gained a REQUIRED `claims` — each assertion names the value it rests on")
 
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
+def _filter_vocabulary(semantic, props: dict, record=None) -> dict:
+    """Close `filters` and `group_by` to the dimensions this layer actually has.
+
+    THE TOOL TAUGHT THE MISTAKE. The stock description read `e.g. {"platform": "ios",
+    "is_internal": false}` — unqualified names, because one of the two engines accepts them. On
+    the MetricFlow layer the names are `activity__platform` and `activity__is_internal`, and one
+    run sent `{'platform': 'web', 'is_internal': False, 'is_test_account': False}`, which is the
+    example almost verbatim. Two rejections later it dropped the restriction entirely and answered
+    across all platforms.
+
+    So this does two things at once, and the second is why it is an ACTION_SPACE guardrail rather
+    than a better sentence: the example is rebuilt from a real dimension of this layer, and the key
+    set is CLOSED, which makes the wrong call unmakeable instead of merely correctable. That is the
+    same argument the metric enum already makes one field along.
+    """
+    names = set()
+    for metric in getattr(semantic, "metrics", ()):          # union: filters are per-metric
+        try:
+            names |= set(semantic.allowed_filters(metric))
+        except Exception:                                    # noqa: BLE001 — a layer without them
+            continue
+    names = sorted(n for n in names if n)
+    if not names:
+        return {}
+    example = next((n for n in names if n.endswith("platform")), names[0])
+    out = {"filters": {"type": "object",
+                       "properties": {n: {} for n in names},
+                       "additionalProperties": False,
+                       "description": ("Restrict the metric. Use the dimension names exactly as "
+                                       f"list_metrics prints them, e.g. {{\"{example}\": \"web\"}}. "
+                                       "No other key is accepted.")}}
+    if "group_by" in props:
+        out["group_by"] = {**props["group_by"], "items": {"type": "string", "enum": names}}
+    note(record, "filter_vocabulary", Position.ACTION_SPACE, "narrowed",
+         f"filters and group_by closed to the layer's {len(names)} dimensions")
+    return out

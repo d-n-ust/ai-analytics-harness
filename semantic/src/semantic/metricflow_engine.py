@@ -395,7 +395,7 @@ class MetricFlowLayer:
             table = self._engine.query(request).result_df
         except Exception as exc:            # noqa: BLE001 — the foreign boundary is the point
             first = str(exc).strip().splitlines()
-            detail = " ".join(x.strip() for x in first if x.strip())[:400]
+            detail = _actionable(" ".join(x.strip() for x in first if x.strip()))
             raise SemanticError(detail or f"{type(exc).__name__}") from exc
         # THE MEASURE COLUMN MUST BE CALLED `value`. That is the harness's contract — the AFTER
         # guardrails read the measure by that name and fail CLOSED when it is absent, so an
@@ -667,6 +667,28 @@ class MetricFlowLayer:
         """Always false, and truthfully so: MetricFlow has no named segments, so no term is one."""
         return False, ("this layer declares no named segments — a population is expressed as a "
                        "filter over a dimension, so name the dimension and the value instead")
+
+
+_ERROR_HEAD = 400          # how much of the engine's prose survives, before the suggestions
+
+
+def _actionable(message: str) -> str:
+    """Shorten a MetricFlow error without cutting away the part that repairs the call.
+
+    THE CAP LANDED EXACTLY ON THE ANSWER. MetricFlow rejects an unqualified dimension name with a
+    paragraph of generic advice followed by `Suggestions: [ 'activity__platform', ... ]` — the valid
+    names. Four hundred characters stopped mid-word at `[ "Dimensi`. One run read that twice, sent
+    the same wrong name twice, then dropped the filter altogether and answered a broader question
+    than it was asked: 886 across all platforms where 277 was the web figure. The suggestions are
+    kept verbatim, because they are the whole repair.
+    """
+    marker = message.find("Suggestions:")
+    if len(message) <= _ERROR_HEAD:
+        return message
+    if marker == -1:
+        return message[:_ERROR_HEAD]
+    head = message[:min(marker, _ERROR_HEAD)].rstrip()
+    return f"{head} … {message[marker:marker + _ERROR_HEAD]}"
 
 
 class _DuckDbClient:

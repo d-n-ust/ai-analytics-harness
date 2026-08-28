@@ -177,9 +177,16 @@ def main() -> None:
             mark = "OK  " if graded["correct"] else "MISS"
             served = "" if answer.declared_value is None else f"{answer.declared_value:,.1f}"
             print(f"  rep {rep + 1}  pile {pile}  {case['id']:40} {answer.outcome:8} {mark} {served}")
+        # Recorded because the score alone cannot separate "the mechanism worked" from "the model
+        # had a good day": a fix aimed at tool errors is measured by tool errors, which vary far
+        # less than the graded outcome does.
         return rep, idx, {**graded, "outcome": answer.outcome, "id": case["id"],
                           "rep": rep, "declared": answer.declared_value,
-                          "source_metric": answer.source_metric}
+                          "source_metric": answer.source_metric,
+                          "tool_calls": len(answer.steps),
+                          "tool_errors": sum(1 for s in answer.steps if s.get("error")),
+                          "handbacks": len(answer.repairs),
+                          "acts": [a.get("guardrail") for a in (answer.acts or [])]}
 
     tasks = [(rep, i, c) for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:

@@ -104,6 +104,17 @@ _RRUNG_DISCLOSURE_CHECK = (
     "contested concept and omits the other is handed back to you once, with both numbers, to send "
     "again.")
 
+# `filter_vocabulary` and `constraint_regression` are structural, like the coverage check: the
+# lines below describe the environment so the agent does not spend turns discovering it.
+_RRUNG_FILTER_VOCABULARY = (
+    "\n- `filters` and `group_by` accept only this layer's own dimension names, spelled exactly as "
+    "`list_metrics` prints them. A name that is not on that list cannot be sent.")
+
+_RRUNG_CONSTRAINT_REGRESSION = (
+    "\n- If a call fails, FIX it rather than widening it. An answer whose number comes from a call "
+    "that dropped a restriction an earlier call asked for is handed back: answering a broader "
+    "question than the one asked is a wrong answer, not a partial one.")
+
 _RRUNG_CHECKS = ("\n- Before answering or refusing, you may verify answerability with the check_* "
                  "tools: they consult the governed catalog, coverage windows, segment "
                  "definitions, and causal edges.")
@@ -284,8 +295,12 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _RRUNG_SCOPE_DECLARATION
     if g.ambiguity_disclosure:
         system += _RRUNG_AMBIGUITY_DISCLOSURE
+    if g.filter_vocabulary:
+        system += _RRUNG_FILTER_VOCABULARY
     if g.disclosure_check:
         system += _RRUNG_DISCLOSURE_CHECK
+    if g.constraint_regression:
+        system += _RRUNG_CONSTRAINT_REGRESSION
     if g.check_tools:
         system += _RRUNG_CHECKS
     if g.coverage_check:
