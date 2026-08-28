@@ -658,23 +658,47 @@ pointing at answering a different question, and nothing points back.**
   `activity__platform` is not mistaken for abandoning a restriction, and a key matching no dimension
   in the layer is ignored.
 
+### A regression the fixes introduced, and the row rule that closes it
+
+The closed `group_by` enum made grouping more attractive than filtering, and a grouped result has
+many rows. The first version of `disclosure_check` owed the rival figure for EVERY divergent row, so
+a correct answer about web was handed back twice for omitting android and ios — platforms nobody had
+asked about — at a cost of 27,923 input tokens against 15,026 for the same question afterwards.
+
+The rule is now per row and symmetric: **report either reading of a row and you owe the other;
+report neither and you owe nothing for that row.** Symmetric, because an answer serving only the
+rival's figure has made the same silent choice in the other direction.
+
+This is §16's claim 6 for the fifth time. The check was comparing against rows the query returned
+rather than rows the answer reported.
+
 ### Measured, `gpt-5-mini`, 16 questions, five reps, 80 runs per arm
 
-| | correct | contested | answerable | unanswerable | silent wrong |
+| | correct | silent wrong | hand-backs | runs needing two | tool errors |
 |---|---|---|---|---|---|
-| E, before | 67/80 | 17/20 | 32/40 | 18/20 | 9/80 |
-| E + both, after | **70/80** | **19/20** | **34/40** | 16/20 | **5/80** |
+| E, no interface fixes | 67/80 | 9 | 25 over 16 runs | 9 | 19 |
+| F, fixes, every row owed | 69/80 | 5 | 30 over 20 runs | 10 | 24 |
+| F2, fixes + the row rule | 66/80 | 6 | **13 over 13 runs** | **0** | 19 |
 
-Silent wrong numbers roughly halved and the dimension-name error class disappeared on the questions
-that had it (both `active_users` questions went 1 tool error to 0). The unanswerable pile lost two,
-which is not separable from noise at this n.
+**What is established.** The row rule more than halves the hand-back cost and removes every
+double-correction. That is a large, mechanism-level effect measured on the thing the rule changes.
+And the dimension-name error class disappeared on the questions that had it — both `active_users`
+questions went from one tool error to zero, and the traces now show `activity__platform` on the
+first attempt.
+
+**What is NOT established, and was claimed before this run.** The graded score across the three
+configurations is 67, 69, 66 and the silent-wrong count is 9, 5, 6. **The suite's noise band at five
+reps on `gpt-5-mini` is about ±4 of 80.** An earlier draft of this section reported the interface
+fixes as 67 to 70 with silent errors halved; that difference is inside the band and the claim is
+withdrawn. The fixes are justified by the error class they remove and by the trace, not by the
+score.
 
 **Two results that did not go as predicted, recorded because they are the informative ones.**
 `constraint_regression` fired **zero times in 80 runs** — consistent with the vocabulary fix
 removing its cause, but it means the check is untested against a live case and should be described
-as a backstop rather than as working. And **total tool errors rose, 19 to 24**, because the residual
-errors are a different class entirely: the agent using `run_sql` as a calculator to add three
-monthly figures, and hitting a binder error on the first attempt.
+as a backstop rather than as working. And **total tool errors did not fall** (19, 24, 19): the
+residual errors are a different class entirely, the agent using `run_sql` as a calculator to add
+three monthly figures and hitting a binder error on the first attempt.
 
 **That last one is an action-space gap, not a naming problem.** There is no governed way to add up
 governed results, so arithmetic leaves the governed path — which is exactly the situation §11 says
@@ -782,6 +806,12 @@ The rest is the published work, and it agrees.
 - ~~**Over-clarification on the hard case.**~~ Measured in §8: 10 of 12 under the gate. The
   predicted fix — a mechanical channel for the request having named the scope — was built (arm C)
   and the agent never used it.
+- **THE NOISE BAND, now partly known and wider than several comparisons in this document.** Three
+  runs of near-identical configurations at five reps scored 67, 69 and 66 of 80, with silent-wrong
+  counts of 9, 5 and 6 (§15). So ±4 of 80 is noise at this n, and any arm difference smaller than
+  that is not a result. §8's B-against-C gap (33 against 31 at three reps) and §15's original score
+  claim are both inside it. Mechanism-level counts — hand-backs, tool errors by class, which
+  guardrail acted — move far less and are what smaller effects must be measured on.
 - **A rate of any kind.** Sixteen questions, one fixture, one model, three reps. The sizing work in
   `00_reading.md` says a usable pile needs four to five distinct contested concepts; it now has four,
   and the noise band still does not exist. Two of the five-arm comparisons are separated by one or

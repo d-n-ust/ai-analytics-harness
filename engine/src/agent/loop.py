@@ -74,6 +74,12 @@ def _citable(handle: str, result) -> str:
     return f"\n[cite] {shown}{more}"
 
 
+def _reported(served: list, value: float) -> bool:
+    """Is this figure in the text the reader receives? Half a percent of slack, so a rounded
+    rendering of the same number still counts as having been reported."""
+    return any(abs(n - value) <= 0.005 * abs(value) for n in served)
+
+
 def _leaf(name) -> str:
     """The last segment of a dimension name: `activity__platform` and `platform` are one thing."""
     return str(name).strip().rsplit("__", 1)[-1].lower()
@@ -313,6 +319,14 @@ class _Run:
         the answer, not the model's account of what it considered. A rival figure named in
         `explanation` counts, one thought about and left out does not.
 
+        ONLY THE ROWS THE ANSWER ACTUALLY REPORTS. A grouped query returns every platform, and the
+        first version of this demanded the rival figure for all of them — so a correct answer about
+        web was handed back twice for omitting android and ios, which nobody had asked about, at a
+        cost of 28,000 input tokens. The debt is symmetric and per row: report either reading of a
+        row and you owe the other; report neither and you owe nothing for that row. Symmetric
+        because an answer that serves only the RIVAL's figure has made the same silent choice in the
+        other direction.
+
         Bounded by the shared MAX_CORRECTIONS, so a model that will not comply serves its answer and
         is measured serving it — the arm reports what disclosure-plus-enforcement buys, and cannot
         loop.
@@ -338,7 +352,7 @@ class _Run:
                     continue
                 absent = [k for k, gap in differences.items()
                           if gap > before.DIVERGENCE_THRESHOLD
-                          and not any(abs(n - theirs[k]) <= 0.005 * abs(theirs[k]) for n in served)]
+                          and _reported(served, mine[k]) != _reported(served, theirs[k])]
                 if absent:
                     missing.append((metric, rival, mine, theirs,
                                     {k: differences[k] for k in absent}))

@@ -387,7 +387,9 @@ unqualified dimension names, because a second engine accepts them; an agent copi
 rejected twice, and then dropped the filter and answered across all platforms — 886 where 277 was
 correct. The engine's error was truncated at 400 characters, landing one word before the list of
 valid names. Closing the filter vocabulary to the layer's own dimensions and preserving the
-suggestion list halved the silent wrong numbers, 9/80 to 5/80. Underneath the three fixable causes
+suggestion list removed that error class — the traces now use the qualified name on the first
+attempt — though the graded score did not move outside the suite's noise band, which three runs of
+near-identical configurations put at about ±4 of 80. Underneath the three fixable causes
 is one that is not: **under tool-error pressure, dropping a constraint is the only action guaranteed
 to succeed**, so the action space has a gradient pointing at answering a broader question, and
 nothing points back until something checks for it.
