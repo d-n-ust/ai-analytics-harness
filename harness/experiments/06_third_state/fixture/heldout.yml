@@ -70,16 +70,19 @@ cases:
     gold_sql: SELECT count(*) FROM "_source".u WHERE upper(ctry) IN ('PH','ID','IN') AND created >= DATE '2026-04-01'
       AND created < DATE '2026-07-01'
   note: entity + segment (region, derived from country) + window
-- id: h_a_top_habit_category
+- id: h_a_app_opens_emea_h1
   tier: answerable
-  question: Which habit category did people create the most habits in during the first half of 2026?
+  question: How many times did users in the EMEA region open the app in the first half of 2026?
   expect:
     type: metric_answer
-    tolerance: 0.005
-    no_governed_metric: true
-    gold_sql: SELECT count(*) FROM "_source".hab WHERE created >= DATE '2026-01-01' AND created < DATE '2026-07-01'
-      GROUP BY cat ORDER BY 1 DESC LIMIT 1
-  note: entity + grouping + window; no governed metric covers habit categories, so this needs SQL
+    metric: app_opens
+    tolerance: 0.02
+    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1
+      AND upper(u.ctry) IN ('GB','DE','FR') AND e.ts >= DATE '2026-01-01' AND e.ts < DATE '2026-07-01'
+      AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: entity + segment (region, derived from country) + window; app_opens is a clean metric that
+    excludes internal accounts by definition, so the oracle does too. Replaces a "which category"
+    question that was mis-typed as metric_answer — its answer is a name, not a number.
 - id: h_a_active_users_android_stated
   tier: answerable_stated
   question: How many active users, excluding staff and test accounts, did we have on Android last week?
