@@ -1,0 +1,229 @@
+# THE SAME GOVERNED LAYER, over a warehouse that models a balance as a balance.
+#
+# WHAT IS DELIBERATELY UNCHANGED. All four contested pairs survive: active_users/active_accounts,
+# value_moments/total_value_moments, mrr/gross_mrr, marketing_spend/acquisition_spend. They are not
+# modelling defects and cleaning them up would delete the subject of the experiment. Two teams
+# needing different numbers from the same concept is an organisational fact, and the point of this
+# second warehouse is to show that the ambiguity survives good modelling — it is not a symptom of
+# bad modelling that better modelling removes.
+#
+# WHAT CHANGED, AND WHY. `mrr`, `gross_mrr`, `paying_users` and `active_subscriptions` are BALANCES,
+# and the base warehouse models them as sums over `started_date` on one row per term. Three
+# consequences, all measured on that warehouse before this file was written:
+#
+#   * "MRR as at 2026-03-31" is inexpressible. The nearest answer is 322.36 — terms that STARTED
+#     that month — against a true balance of 1,110.24.
+#   * Supplying a period silently swaps a stock reading for a cohort one. A live agent asked what
+#     our monthly plans bring in returned 501.92 against 1,888.44, and every guardrail passed it.
+#   * The twelve monthly figures sum to exactly the current balance, because they are cohorts of
+#     it. A reader who sums them gets a number that reconciles and means something else.
+#
+# So they are re-expressed over `fct_subscription_snapshot` — one row per term per day it was live —
+# with the time dimension being the SNAPSHOT date rather than the start date, and each measure
+# declared `non_additive_dimension` so the engine refuses to sum across dates instead of returning
+# a plausible number. That is Kimball's rule for a semi-additive measure, and the harness already
+# reads the declaration: `metricflow_engine.additivity()` reports `semi_additive` when it is set,
+# which is what `output_validation` consumes.
+#
+# The revenue discriminator is unchanged in meaning and clearer in form. `mrr` is net of refunds,
+# so a term later refunded never counted; `gross_mrr` is gross, so it counted while it was live.
+# In the base warehouse that is `status = active` against `status IN (active, refunded)`, which
+# reads as a state filter; here it is `was_refunded`, which is what the two teams actually disagree
+# about.
+
+# The governed semantic layer over the marts.
+#
+# FORMAT. This is MetricFlow's own YAML — one `semantic_model:` or `metric:` per document — which is
+# what dbt compiles its `semantic_models:` blocks into, what `metricflow` parses directly, and what
+# `preflight scan --dialect metricflow` reads. The engine takes a directory, not a file
+# (semantic/metricflow_engine.py).
+#
+# THE POINT OF THIS FILE. Two metrics answer the question "how many active users did we have last
+# week", they disagree by about 4%, and both are correct. `active_users` and `active_accounts`
+# differ in one filter, have different owners, and have different downstream consumers. Neither is
+# a leftover and neither can be deleted without breaking a real report, so no offline repair can
+# collapse them. That is what makes this ambiguity IRREDUCIBLE, and it is the whole reason the
+# experiment exists.
+#
+# MetricFlow has no field for the concept a metric claims, and no field for its owner. Both facts
+# below are written into the description because there is nowhere else to put them — which is
+# itself the finding: the format most teams use cannot express that two metrics answer the same
+# question, so nothing can compute how many definitions a question has.
+---
+semantic_model:
+  name: user_activity
+  description: "One row is one account on one day it did anything in the product."
+  node_relation: {schema_name: wh_06k, alias: fct_user_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: region, type: categorical}
+    - {name: country, type: categorical}
+    - {name: platform, type: categorical}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: active_account_count, agg: count_distinct, expr: user_id}
+    - {name: value_moment_count, agg: sum, expr: value_moments}
+    - {name: app_open_count, agg: sum, expr: app_opens}
+---
+semantic_model:
+  name: users
+  description: "The account dimension. One row is one signup."
+  node_relation: {schema_name: wh_06k, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities: [{name: user, type: primary, expr: user_id}]
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical}
+    - {name: channel, type: categorical}
+    - {name: region, type: categorical}
+  measures:
+    - {name: signup_count, agg: count, expr: user_id}
+---
+semantic_model:
+  name: marketing
+  description: "One row is one channel-day of marketing spend."
+  node_relation: {schema_name: wh_06k, alias: fct_marketing_spend}
+  defaults: {agg_time_dimension: spend_date}
+  entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
+  dimensions:
+    - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    - {name: channel, type: categorical}
+  measures:
+    - {name: spend_amount, agg: sum, expr: spend}
+
+# ── the contested pair ────────────────────────────────────────────────────────────────────────
+# Both answer "how many active users". Both are right. They are 3.7% apart on the last full week
+# and between 0.0% and 5.2% apart across the slices the layer can break them down by, which is the
+# range in which a swap is invisible: the wrong number is the right order of magnitude, in the right
+# unit, from a real metric, computed by real SQL.
+---
+metric:
+  name: active_users
+  description: >-
+    Distinct accounts with any product activity in the period, EXCLUDING internal and test
+    accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.
+  type: simple
+  type_params: {measure: active_account_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: active_accounts
+  description: >-
+    Distinct accounts with any product activity in the period, INCLUDING internal and test
+    accounts. Owned by Platform. Used by capacity planning and the support-volume forecast, both of
+    which care about load rather than about customers.
+  type: simple
+  type_params: {measure: active_account_count}
+
+# ── everything else, so the layer is not a two-metric toy ─────────────────────────────────────
+# ── contested · engagement volume ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: value_moments
+  description: >-
+    Completed habits in the period, EXCLUDING internal and test accounts. Owned by Product. Used by
+    the engagement review and the North Star metric tree.
+  type: simple
+  type_params: {measure: value_moment_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: total_value_moments
+  description: >-
+    Completed habits in the period, INCLUDING internal and test accounts. Owned by Platform. Used
+    for write-volume forecasting and storage planning, which care about rows rather than customers.
+  type: simple
+  type_params: {measure: value_moment_count}
+---
+metric:
+  name: app_opens
+  description: "App opens in the period, excluding internal and test accounts."
+  type: simple
+  type_params: {measure: app_open_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: new_signups
+  description: "Accounts created in the period, all accounts."
+  type: simple
+  type_params: {measure: signup_count}
+# ── contested · recurring revenue ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: marketing_spend
+  description: >-
+    Every pound of marketing spend in the period, ALL channels. Owned by Finance. Used by the
+    budget-versus-actuals report, which must reconcile to the ledger.
+  type: simple
+  type_params: {measure: spend_amount}
+---
+metric:
+  name: acquisition_spend
+  description: >-
+    Marketing spend on REAL acquisition channels, excluding `partnerships` — an internal test
+    integration that books spend but buys no customers. Owned by Growth. Used for cost per
+    acquisition and channel efficiency.
+  type: simple
+  type_params: {measure: spend_amount}
+  filter: "{{ Dimension('spend_row__channel') }} != 'partnerships'"
+---
+semantic_model:
+  name: subscription_snapshot
+  description: "One row is one subscription on one day it was live. A periodic snapshot: the
+    measures on it are balances and are semi-additive — summable across subscriptions and plans on
+    one date, never summable across dates."
+  node_relation: {schema_name: wh_06k, alias: fct_subscription_snapshot}
+  defaults: {agg_time_dimension: snapshot_date}
+  entities: [{name: subscription_day, type: primary, expr: "subscription_id || '|' || CAST(snapshot_date AS VARCHAR)"}]
+  dimensions:
+    - {name: snapshot_date, type: time, type_params: {time_granularity: day}}
+    - {name: plan, type: categorical}
+    - {name: final_status, type: categorical}
+    - {name: was_refunded, type: categorical, description: "Whether this term was later refunded.
+        The only thing Finance and Sales disagree about when they report recurring revenue."}
+  measures:
+    - name: mrr_amount
+      agg: sum
+      non_additive_dimension: {name: snapshot_date, window_choice: max}
+    - name: subscription_count
+      agg: count
+      expr: subscription_id
+      non_additive_dimension: {name: snapshot_date, window_choice: max}
+    - name: paying_user_count
+      agg: count_distinct
+      expr: user_id
+      non_additive_dimension: {name: snapshot_date, window_choice: max}
+---
+metric:
+  name: mrr
+  description: "Monthly recurring revenue, NET of refunded terms. A balance: the rate as at a date,
+    not a total over a period. An annual term counts as one twelfth. Owned by Finance. Used by the
+    board pack and the revenue forecast."
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription_day__was_refunded') }} = false"
+---
+metric:
+  name: gross_mrr
+  description: "Monthly recurring revenue GROSS of refunds — every term that was live on the date,
+    refunded later or not. A balance, like mrr. Owned by Sales. Used for quota attainment and
+    commission, which pay on what was closed rather than on what was kept."
+  type: simple
+  type_params: {measure: mrr_amount}
+---
+metric:
+  name: paying_users
+  description: "Distinct accounts holding a live subscription on the date. A balance."
+  type: simple
+  type_params: {measure: paying_user_count}
+---
+metric:
+  name: active_subscriptions
+  description: "Live subscription contracts on the date. An account holding two counts twice. A balance."
+  type: simple
+  type_params: {measure: subscription_count}

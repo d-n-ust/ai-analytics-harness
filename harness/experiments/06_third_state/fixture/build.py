@@ -35,10 +35,10 @@ _REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
 SOURCE_SCHEMA = {"raw": "_source"}
 
 
-def _models() -> dict[str, str]:
-    """{model name -> SQL}, from every .sql file under models/. The file name is the model name,
-    which is dbt's own rule and the reason no manifest is needed to find one."""
-    return {p.stem: p.read_text() for p in sorted(MODELS.rglob("*.sql"))}
+def _models(root=None) -> dict[str, str]:
+    """{model name -> SQL}, from every .sql file under a models directory. The file name is the
+    model name, which is dbt's own rule and the reason no manifest is needed to find one."""
+    return {p.stem: p.read_text() for p in sorted((root or MODELS).rglob("*.sql"))}
 
 
 def _refs(sql: str) -> set[str]:
@@ -62,33 +62,42 @@ def _ordered(models: dict[str, str]) -> list[str]:
     return placed
 
 
-def _compile(sql: str) -> str:
+def _compile(sql: str, schema: str = SCHEMA) -> str:
     sql = _SOURCE.sub(lambda m: f'"{SOURCE_SCHEMA[m.group(1)]}".{m.group(2)}', sql)
-    return _REF.sub(lambda m: f"{SCHEMA}.{m.group(1)}", sql)
+    return _REF.sub(lambda m: f"{schema}.{m.group(1)}", sql)
 
 
-def build(con, drop: bool = False) -> list[str]:
+def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]:
+    """Materialise one models directory into one schema.
+
+    Parameterised so a SECOND warehouse can live beside the first rather than replacing it. The
+    original stays exactly as it is, because every number measured in this experiment was measured
+    against it and a rebuilt fixture is not a comparison.
+    """
     if drop:
-        con.execute(f"DROP SCHEMA IF EXISTS {SCHEMA} CASCADE")
-    con.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
-    models = _models()
+        con.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+    models = _models(root)
     built = []
     for name in _ordered(models):
-        con.execute(f"CREATE OR REPLACE VIEW {SCHEMA}.{name} AS\n{_compile(models[name])}")
+        con.execute(f"CREATE OR REPLACE VIEW {schema}.{name} AS\n{_compile(models[name], schema)}")
         built.append(name)
     return built
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--models", default=None, help="models directory (default: ./models)")
+    ap.add_argument("--schema", default=SCHEMA, help=f"target schema (default: {SCHEMA})")
     ap.add_argument("--drop", action="store_true",
                     help="drop the schema first, so a model renamed in git cannot survive as an object")
     args = ap.parse_args()
     con = open_warehouse(create_star_views=True)
-    built = build(con, drop=args.drop)
-    print(f"built {len(built)} models into {SCHEMA}:")
+    root = pathlib.Path(args.models) if args.models else None
+    built = build(con, drop=args.drop, root=root, schema=args.schema)
+    print(f"built {len(built)} models into {args.schema}:")
     for name in built:
-        n = con.execute(f"SELECT count(*) FROM {SCHEMA}.{name}").fetchone()[0]
+        n = con.execute(f"SELECT count(*) FROM {args.schema}.{name}").fetchone()[0]
         print(f"  {name:24} {n:>8,} rows")
 
 

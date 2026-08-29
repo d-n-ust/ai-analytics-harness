@@ -39,6 +39,13 @@ import build as fixture_build
 
 HERE = pathlib.Path(__file__).resolve().parent
 LAYER = HERE / "layer"
+
+# TWO WAREHOUSES OVER THE SAME RAW DATA. `base` is the one every number in this experiment was
+# measured against and it does not change: a rebuilt fixture is not a comparison. `kimball` models
+# the balances as balances — see kimball/README.md — and exists to separate the definitional
+# conflicts that are organisational from the ones that were modelling debt.
+WAREHOUSES = {"base":    (None,                  "wh_06",  HERE / "layer"),
+              "kimball": (HERE / "kimball/models", "wh_06k", HERE / "kimball/layer")}
 RUNG = 3          # star + governed semantic layer, raw SQL still on the table
 
 # The three shapes a question can have, as the grader names them. Kept here so the runner's own
@@ -107,6 +114,8 @@ def main() -> None:
     ap.add_argument("--concurrency", type=int, default=8,
                     help="threads over (rep, question) tasks. Safe because nothing writes: models "
                          "are built before the pool starts and each worker takes its own cursor.")
+    ap.add_argument("--warehouse", default="base", choices=sorted(WAREHOUSES),
+                    help="which warehouse and layer to run against (see kimball/README.md)")
     ap.add_argument("--cases", default="cases.yml",
                     help="which suite to run: cases.yml (the original, now partly a training set) "
                          "or heldout.yml (authored after the mechanisms were frozen)")
@@ -114,11 +123,15 @@ def main() -> None:
     ap.add_argument("--json", dest="out", default=None, help="write the graded rows here")
     args = ap.parse_args()
 
-    layer = (HERE / "variants" / args.variant) if args.variant else LAYER
+    models_root, schema, layer = WAREHOUSES[args.warehouse]
+    if args.variant:
+        if args.warehouse != "base":
+            sys.exit("--variant varies the BASE layer's presentation; it has no counterpart here")
+        layer = HERE / "variants" / args.variant
     if not layer.is_dir():
         sys.exit(f"{layer} does not exist — run `python variants.py --write` first")
     con = open_warehouse(create_star_views=True)
-    fixture_build.build(con)                     # the dbt models, so the layer has something to read
+    fixture_build.build(con, root=models_root, schema=schema)   # so the layer has something to read
     cases = load_cases(args.cases)
     golds = compute_gold(con, cases)             # resolves each candidate's own oracle
     if args.only:
@@ -135,7 +148,7 @@ def main() -> None:
                   f"→ {cand['consumer']}")
     print(f"\nmodel      : {model.spec.name}   rung {RUNG}   "
           f"guardrails {args.cell or 'loop default'}   layer {args.variant or 'shipped'}   "
-          f"catalogue {args.catalogue}   reps {args.reps}")
+          f"catalogue {args.catalogue}   reps {args.reps}   warehouse {args.warehouse}")
 
     # CONCURRENCY IS THREADS, NOT PROCESSES, and the distinction is the whole reason it is safe.
     # Two PROCESSES cannot write one DuckDB file, but nothing here writes: the models are built once

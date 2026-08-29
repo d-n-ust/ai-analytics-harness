@@ -1,0 +1,128 @@
+# GENERATED from layer.clusters.yml. `preflight index` is the tool that writes these and it
+# lives in another repository, so this was derived: the same four pairs and collision classes,
+# the fingerprint recomputed with the harness's own `semantic.clusters.fingerprint`, and the
+# revenue pair's discriminator restated in the terms the corrected layer uses.
+version: 1
+generated:
+  by: derived from layer.clusters.yml
+  dialect: metricflow
+  gate: lexical
+  at: '2026-08-29T00:00:00Z'
+source:
+  fingerprint: sha256:1a3795cc7d951de0d72deea609a63f50e420271affc3bb18cfff9d9f641407a6
+  files:
+  - layer/project.yaml
+  - layer/semantic_models.yml
+names:
+  acquisition_spend:
+    competes_with:
+    - name: marketing_spend
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - channel cmp channel <> 'partnerships'
+  active_accounts:
+    competes_with:
+    - name: active_users
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  active_subscriptions:
+    competes_with: []
+  active_users:
+    competes_with:
+    - name: active_accounts
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  app_opens:
+    competes_with: []
+  gross_mrr:
+    competes_with:
+    - name: mrr
+      layer: semantic
+      collision: SIBLING
+      danger: low
+      note: "same balance; `mrr` excludes a term that was later refunded and `gross_mrr` counts it while\
+        \ it was live \u2014 bare question silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - was_refunded = false
+  marketing_spend:
+    competes_with:
+    - name: acquisition_spend
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - channel cmp channel <> 'partnerships'
+  mrr:
+    competes_with:
+    - name: gross_mrr
+      layer: semantic
+      collision: SIBLING
+      danger: low
+      note: "same balance; `mrr` excludes a term that was later refunded and `gross_mrr` counts it while\
+        \ it was live \u2014 bare question silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - was_refunded = false
+  new_signups:
+    competes_with: []
+  paying_users:
+    competes_with: []
+  total_value_moments:
+    competes_with:
+    - name: value_moments
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  value_moments:
+    competes_with:
+    - name: total_value_moments
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
