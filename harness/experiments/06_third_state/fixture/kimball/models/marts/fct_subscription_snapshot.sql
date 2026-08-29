@@ -17,8 +17,19 @@
 -- Live on a date means started on or before it and not yet ended. A term that was later cancelled
 -- WAS live before it ended and counts on those days, which is the whole reason a snapshot exists
 -- rather than a filter on current status.
+-- BOTH DATES ARE CARRIED, and that is the point of the second one. A subscription term has more
+-- than one date that a period filter could legitimately attach to, and "June MRR" means different
+-- things depending on which: the balance on 30 June (2,420.56) or the revenue from terms that
+-- STARTED in June (750.88). Kimball calls these role-playing dates.
+--
+-- Carrying only one date does not resolve that ambiguity, it hides it. The base warehouse carries
+-- only `started_date` and can therefore express only the cohort reading; the first version of THIS
+-- table carried only `snapshot_date` and could express only the balance. Each looks unambiguous
+-- from inside, and each has silently answered a question nobody chose, in a YAML default nobody
+-- reads. Carrying both makes the choice visible at query time, which is where it can be detected.
 select
     d.date_day                                           as snapshot_date,
+    s.started_date,
     s.subscription_id,
     s.user_id,
     s.plan,

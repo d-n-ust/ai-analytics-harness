@@ -181,7 +181,15 @@ semantic_model:
   defaults: {agg_time_dimension: snapshot_date}
   entities: [{name: subscription_day, type: primary, expr: "subscription_id || '|' || CAST(snapshot_date AS VARCHAR)"}]
   dimensions:
-    - {name: snapshot_date, type: time, type_params: {time_granularity: day}}
+    # TWO TIME ROLES, both declared. `snapshot_date` is the default because a balance is read as at
+    # a date; `started_date` is what a cohort question attaches to. Declaring only one does not
+    # settle which "June" means, it just makes the other reading unaskable.
+    - {name: snapshot_date, type: time, type_params: {time_granularity: day},
+       description: "The date this row describes. A period filter binds here by default, giving the
+         balance as at that date."}
+    - {name: started_date, type: time, type_params: {time_granularity: day},
+       description: "When the term began. Filter on this instead for a cohort reading: the revenue
+         contributed by terms that started in the period."}
     - {name: plan, type: categorical}
     - {name: final_status, type: categorical}
     - {name: was_refunded, type: categorical, description: "Whether this term was later refunded.

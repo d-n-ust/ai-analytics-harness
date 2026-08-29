@@ -92,6 +92,47 @@ conflict is irreducible — three pairs demonstrate it unchanged — but it shar
 method: model the balances correctly first, and whatever conflict survives is the organisational
 kind that a runtime mechanism has to handle.
 
+## A second ambiguity, now expressible
+
+A subscription term has more than one date a period filter could legitimately attach to, and
+Kimball calls these **role-playing dates**. "June MRR" therefore has two correct readings:
+
+```
+balance as at 2026-06-30                2,420.56
+revenue from terms that STARTED in June   750.88     222% apart
+```
+
+Both are governed, both are used, and a business will ask for both — sometimes in the same meeting.
+
+**Carrying one date does not resolve that. It hides it.** The base warehouse carries only
+`started_date`, so it can express only the cohort reading and answers every "as at" question with a
+cohort. The first version of this table carried only `snapshot_date` and had the opposite blindness.
+Each looks unambiguous from inside, and each silently answers a question nobody chose, in a YAML
+default nobody reads.
+
+So the snapshot carries both dates and the semantic model declares both time dimensions, with
+`snapshot_date` as the default because a balance is read as at a date. The choice is now made at
+query time, where it is visible, rather than in the manifest, where it is not.
+
+**This is a different axis from the contested pairs**, and the machinery built for those is
+structurally blind to it: the cluster index enumerates METRICS and asks which collide, and here
+there is one metric and two time roles. There is no second name to point at. A third axis exists
+too and this file created it — `window_choice: max` decides that "MRR over Q2" means the balance on
+the last day rather than the average across the quarter, which is defensible and was chosen
+silently.
+
+| axis | the question | detected today? |
+|---|---|---|
+| which rows | whose scope? | yes — indexed, executed, compared |
+| which date | what does "June" attach to? | no |
+| how to collapse a period | last, first, or average? | no |
+
+All three share the property that made the first tractable: **the alternatives are enumerable
+offline from the layer.** The competing metrics come from the manifest, the time roles from the
+semantic model's time dimensions, the window choices from the legal set for a semi-additive
+measure. So the index generalises from "which metrics collide" to "which readings of this request
+collide", and everything downstream works unchanged.
+
 ## Known gap
 
 The case oracles in `cases.yml` and `heldout.yml` are written against base semantics for the four
