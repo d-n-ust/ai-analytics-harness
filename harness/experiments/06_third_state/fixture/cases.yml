@@ -12,6 +12,13 @@
 # ORACLES ARE INDEPENDENT. Every `gold_sql` runs against the raw `_source` tables, so it is
 # independent of the dbt models AND of the semantic layer — the two things under test. Where a
 # metric carries a filter of its own, the oracle inlines the same rule rather than referencing it.
+# TOLERANCE ON THE STATED-SCOPE PILE. Each `ad_*` case names ONE of two governed definitions
+# that answer it, and the pair can be as little as 1.45% apart (mrr against gross_mrr). The
+# 2% default used elsewhere is WIDER than that gap, so serving the definition the question
+# did not ask for would have graded correct. It never did — every stored run served the right
+# figure or one that was plainly wrong — but the pile that measures over-clarification cost
+# must not be gradeable by luck. 0.005 is narrower than every gap in this layer.
+
 cases:
 
   # ══ PILE A · one right answer ═════════════════════════════════════════════════════════════════
@@ -231,7 +238,7 @@ cases:
     expect:
       type: metric_answer
       metric: active_users
-      tolerance: 0.02
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
       gold_sql: >-
         SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
         WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
@@ -247,7 +254,7 @@ cases:
     expect:
       type: metric_answer
       metric: value_moments
-      tolerance: 0.02
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
       gold_sql: >-
         SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
         WHERE e.etype = 2 AND upper(u.ctry) IN ('US', 'BR')
@@ -263,7 +270,7 @@ cases:
     expect:
       type: metric_answer
       metric: marketing_spend
-      tolerance: 0.02
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
       gold_sql: >-
         SELECT round(sum(amt), 2) FROM "_source".spend
         WHERE dt >= DATE '2026-04-01' AND dt < DATE '2026-07-01'
@@ -277,7 +284,7 @@ cases:
     expect:
       type: metric_answer
       metric: mrr
-      tolerance: 0.02
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
       gold_sql: >-
         SELECT round(sum(CASE WHEN p = 'a' THEN amt / 12.0 ELSE amt END), 2)
         FROM "_source".subs WHERE st = 1 AND "start" >= DATE '2026-01-01'

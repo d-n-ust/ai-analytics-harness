@@ -34,6 +34,7 @@ packages and pulls no dbt-core, against 51 for the dbt route.
 
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 
@@ -41,6 +42,8 @@ from semantic.engine import Capabilities
 from semantic.semantic import SemanticError
 from warehouse.config import TIME_GRAINS
 from warehouse.warehouse import STAR_SCHEMA
+
+log = logging.getLogger(__name__)
 
 # One time spine per database, however many layers are built concurrently.
 _SPINE_LOCK = threading.Lock()
@@ -138,6 +141,7 @@ class MetricFlowLayer:
         # as an error, not as "nothing competes".
         from .clusters import load as _load_clusters
         self.clusters = _load_clusters(directory)
+        self._members = None          # dimension vocabulary, enumerated once on demand
         self._windows: dict[str, tuple] = {}   # semantic model -> (first date, last date), lazily read
 
     def _ensure_time_spine(self) -> None:
@@ -268,20 +272,9 @@ class MetricFlowLayer:
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} "
                      "(or pass explicit start/end 'YYYY-MM-DD').")
 
-        # Dimension values, which MetricFlow can enumerate and the first renderer threw away.
-        # Time dimensions are skipped: their domain is every date, which is noise rather than a
-        # governed vocabulary.
-        values = []
-        for d in sorted(dims_seen):
-            if d.endswith("_date") or d.endswith("__ds"):
-                continue
-            try:
-                got = self._engine.get_dimension_values(
-                    metric_names=[ordered[0].name], get_group_by_values=d)
-            except Exception:
-                continue
-            if got:
-                values.append(f"- {d}: {', '.join(sorted(str(v) for v in got))}")
+        # Dimension values. Time dimensions are skipped: their domain is every date, which is
+        # noise rather than a governed vocabulary.
+        values = [f"- {d}: {', '.join(v)}" for d, v in sorted(self.dimension_members().items())]
         if values:
             lines.append("\nGoverned dimension values (any other value is refused, "
                          "not approximated):")
@@ -656,6 +649,50 @@ class MetricFlowLayer:
         there is no named segment to offer — and an empty list is exactly right: the tool schema
         then offers no `segment` argument at all, which is the honest surface for this engine."""
         return []
+
+    def dimension_members(self) -> dict:
+        """{dimension -> every governed member of it}, enumerated across the whole catalogue.
+
+        ASKED OF A METRIC THAT ACTUALLY HAS THE DIMENSION, which is the fix. MetricFlow enumerates
+        members per METRIC, and the first version of this asked one metric — whichever rendered
+        first — for every dimension in the catalogue, then swallowed the exception when that metric
+        did not have it. Two defects followed and both were live for the whole of experiment 06:
+
+          FOUR DIMENSIONS WERE PUBLISHED WITH NO MEMBERS AT ALL. `subscription__plan`,
+          `subscription__status`, `subscription__is_active` and `spend_row__channel` all raise on
+          `active_users`, so the catalogue never said that a plan is `annual` or `monthly`. An agent
+          asked for customers on the monthly plan answered 371 — every plan — because nothing had
+          told it the value to filter by, and an agent asked about an `enterprise` plan could not
+          discover that no such member exists.
+
+          AND THE MEMBERS IT DID PUBLISH WERE WRONG. `activity__is_internal` was listed as `False`
+          alone, because `active_users` excludes internal accounts by definition and that is all its
+          own result contains. Printed under a heading promising that any other value is refused,
+          that states the opposite of the truth for `active_accounts`.
+
+        The union across metrics is the catalogue's vocabulary. A metric whose own definition sees
+        FEWER members than that is a real and useful fact — it is exactly what separates a contested
+        pair — but it belongs to a treatment being measured separately, not to this list.
+
+        Cached: 57 pairs cost 0.7 seconds on this fixture and the answer cannot change within a run.
+        """
+        if self._members is None:
+            members: dict = {}
+            for metric in sorted(self.metrics):
+                for d in sorted(self.allowed_filters(metric)):
+                    if d.startswith("metric_time") or d.endswith("_date") or d.endswith("__ds"):
+                        continue
+                    try:
+                        got = self._engine.get_dimension_values(
+                            metric_names=[metric], get_group_by_values=d)
+                    except Exception:                                       # noqa: BLE001
+                        # Only pairs the layer itself calls filterable are asked, so this is a
+                        # genuine surprise rather than the expected miss it used to hide.
+                        log.warning("dimension %s is filterable on %s but would not enumerate", d, metric)
+                        continue
+                    members.setdefault(d, set()).update(str(v) for v in got)
+            self._members = {d: sorted(v) for d, v in members.items() if v}
+        return self._members
 
     def allowed_filters(self, metric: str) -> set:
         """The dimensions this metric can be filtered by — MetricFlow's answer to the same

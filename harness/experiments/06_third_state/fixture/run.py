@@ -46,10 +46,12 @@ RUNG = 3          # star + governed semantic layer, raw SQL still on the table
 _PILE = {"metric_answer": "A", "refuse": "B", "contested": "C"}
 
 
-def load_cases() -> list[dict]:
-    cases = yaml.safe_load((HERE / "cases.yml").read_text())["cases"]
+def load_cases(name: str = "cases.yml") -> list[dict]:
+    """The suite to run. `heldout.yml` exists because every guardrail here was chosen after watching
+    `cases.yml` fail, so that file measures fit rather than generalisation."""
+    cases = yaml.safe_load((HERE / name).read_text())["cases"]
     for case in cases:
-        _validate(case, "cases.yml")
+        _validate(case, name)
     return cases
 
 
@@ -105,6 +107,9 @@ def main() -> None:
     ap.add_argument("--concurrency", type=int, default=8,
                     help="threads over (rep, question) tasks. Safe because nothing writes: models "
                          "are built before the pool starts and each worker takes its own cursor.")
+    ap.add_argument("--cases", default="cases.yml",
+                    help="which suite to run: cases.yml (the original, now partly a training set) "
+                         "or heldout.yml (authored after the mechanisms were frozen)")
     ap.add_argument("--only", default=None, help="comma-separated case ids, to probe one question")
     ap.add_argument("--json", dest="out", default=None, help="write the graded rows here")
     args = ap.parse_args()
@@ -114,7 +119,7 @@ def main() -> None:
         sys.exit(f"{layer} does not exist — run `python variants.py --write` first")
     con = open_warehouse(create_star_views=True)
     fixture_build.build(con)                     # the dbt models, so the layer has something to read
-    cases = load_cases()
+    cases = load_cases(args.cases)
     golds = compute_gold(con, cases)             # resolves each candidate's own oracle
     if args.only:
         cases = [c for c in cases if c["id"] in set(args.only.split(","))]
@@ -189,7 +194,15 @@ def main() -> None:
                           "acts": [a.get("guardrail") for a in (answer.acts or [])],
                           # The served TEXT, because several checks are about what the reader
                           # receives and cannot be evaluated from a graded row without it.
-                          "answer_text": answer.answer, "explanation": answer.explanation}
+                          "answer_text": answer.answer, "explanation": answer.explanation,
+                          # A compact trace on the row, so a failure can be diagnosed from stored
+                          # results instead of re-run. Re-running gives a DIFFERENT sample, which
+                          # is the wrong thing to diagnose when the question is why THIS run failed.
+                          "steps": [{"tool": s.get("tool"), "args": s.get("args"),
+                                     "error": bool(s.get("error")),
+                                     "blocked": bool(s.get("blocked_by")),
+                                     "result": str(s.get("result") or s.get("error") or "")[:300]}
+                                    for s in answer.steps]}
 
     tasks = [(rep, i, c) for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:

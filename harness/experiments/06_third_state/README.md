@@ -20,6 +20,30 @@ trajectory. Nothing in the system has a signature to test against.
 
 This experiment scores that.
 
+## The stack, and a constraint on it
+
+**Open source only. No hosted service is used or required.**
+
+- **MetricFlow 0.211.0**, the open-source engine behind the dbt Semantic Layer, run in process.
+  The layer is a standard MetricFlow manifest and the engine's own API produces both the compiled
+  SQL and the results.
+- **DuckDB**, local, over a generated warehouse.
+- **The dbt models are real dbt SQL** — `{{ source() }}`, `{{ ref() }}`, one SELECT per file — but
+  they are materialised by `fixture/build.py`, a documented subset, because dbt-core plus an adapter
+  is fifty packages and a profile file for models this simple. `dbt build` against a duckdb profile
+  produces the same objects from the same files.
+- **Not the dbt Cloud Semantic Layer API**, and nothing here calls a metrics service over a network.
+
+The reason is not cost. A result that depends on a hosted product cannot be reproduced by a reader,
+cannot be inspected when it disagrees with expectation, and cannot be pinned to a version. Every
+number in this experiment is reproducible from this repository and a model API key.
+
+The choice has a price and it is visible in the findings: this engine exposes no dimension-member
+resolver and no additivity metadata, so `resolve` and `output_validation` cannot run here, and the
+experiment is pinned below R5. That is a fact about the stack teams actually deploy, which is the
+point of using it.
+
+
 ## Why it is not experiment 05 again
 
 Experiment 05 asked whether fixing what a static scan finds removes runtime harm. It does: eleven
