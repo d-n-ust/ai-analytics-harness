@@ -262,13 +262,6 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "asks a focused model call whether the request itself already chose between the two "
               "definitions, and stands the disclosure check down when it did",
               ("guardrails/classify.py", "loop.py", "prompts.py"), in_ladder=False),
-    # The NIL path for a dimension value: hand back an answer that served a number for a question
-    # naming a value the layer has no member for. Reads the question, decides by membership.
-    Guardrail("value_membership", Position.REPAIR,
-              "hands back an answer that served a number for a question naming a value outside the "
-              "governed vocabulary, so the agent refuses or corrects instead of answering a broader "
-              "scope",
-              ("guardrails/classify.py", "loop.py", "prompts.py"), in_ladder=False),
     Guardrail("constraint_regression", Position.REPAIR,
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
@@ -320,7 +313,6 @@ class GuardrailSet:
     filter_vocabulary: bool = False
     disclosure_check: bool = False
     scope_classifier: bool = False
-    value_membership: bool = False
     constraint_regression: bool = False
 
     def label(self) -> str:

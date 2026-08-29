@@ -113,12 +113,6 @@ _RRUNG_FILTER_VOCABULARY = (
 # `scope_classifier` changes nothing the agent must do — it only decides whether the sentence above
 # is enforced on this question — so it gets no line of its own. Named here because the registry
 # requires every guardrail to be traceable to the files that implement it.
-_RRUNG_VALUE_MEMBERSHIP = (
-    "\n- If the question names a value the governed layer has no member for — a channel, region, "
-    "plan or platform that is not in the catalog's allowed values — do NOT answer for a broader "
-    "scope. Refuse with `ungoverned_dimension_value` and name what the layer does have, or "
-    "`clarify`.")
-
 _RRUNG_CONSTRAINT_REGRESSION = (
     "\n- If a call fails, FIX it rather than widening it. An answer whose number comes from a call "
     "that dropped a restriction an earlier call asked for is handed back: answering a broader "
@@ -308,8 +302,6 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _RRUNG_FILTER_VOCABULARY
     if g.disclosure_check:
         system += _RRUNG_DISCLOSURE_CHECK
-    if g.value_membership:
-        system += _RRUNG_VALUE_MEMBERSHIP
     if g.constraint_regression:
         system += _RRUNG_CONSTRAINT_REGRESSION
     if g.check_tools:
