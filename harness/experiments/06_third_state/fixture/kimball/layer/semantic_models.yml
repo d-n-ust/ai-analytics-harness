@@ -222,7 +222,7 @@ semantic_model:
       non_additive_dimension: {name: snapshot_date, window_choice: max}
     - name: paying_user_count
       agg: count_distinct
-      expr: user_id
+      expr: customer_id
       # NO `window_groupings` HERE. It means "take the last row within each group", so grouping
       # by customer keeps a churned customer's final row alive: 44 monthly subscriptions that
       # ended before the last snapshot were still being counted, inflating the figure from

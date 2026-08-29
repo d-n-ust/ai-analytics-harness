@@ -650,6 +650,29 @@ class MetricFlowLayer:
         then offers no `segment` argument at all, which is the honest surface for this engine."""
         return []
 
+    def self_test(self) -> dict:
+        """{metric -> the error it raises}, empty when every metric runs. One query each, no
+        arguments.
+
+        THE LAYER PARSING IS NOT EVIDENCE THAT ITS METRICS RUN. MetricFlow validates the manifest at
+        load and resolves a measure's `expr` only when it compiles a query, so a measure naming a
+        column that does not exist loads clean and fails on every call. That happened here: a fact
+        was renamed `user_id` to `customer_id`, the measure was not, `paying_users` was broken for
+        every possible argument, and forty-six agent runs and an API bill went by before anyone
+        noticed — because the one failing question looked like an agent failure, and the agent had
+        in fact behaved correctly and refused with an honest reason.
+
+        Cheap enough to run before every study: one query per metric, about a second on this
+        fixture. A study that starts against a broken layer measures the layer, not the treatment.
+        """
+        broken = {}
+        for name in sorted(self.metrics):
+            try:
+                self.query_with_sql(name, resolve=False)
+            except Exception as exc:                                        # noqa: BLE001
+                broken[name] = f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}"
+        return broken
+
     def dimension_members(self) -> dict:
         """{dimension -> every governed member of it}, enumerated across the whole catalogue.
 

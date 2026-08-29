@@ -150,6 +150,17 @@ def main() -> None:
         cases = [c for c in cases if c["id"] in set(args.only.split(","))]
 
     guardrails = parse_cell(args.cell) if args.cell else None
+
+    # A study that starts against a broken layer measures the layer, not the treatment. One query
+    # per metric, about a second, before any model call is paid for.
+    probe = build_grounding(scoped_cursor(con), rung=RUNG, spec_path=layer, engine="metricflow",
+                            semantic_layer=True, guardrails=guardrails)
+    broken = getattr(probe.semantic, "self_test", lambda: {})()
+    if broken:
+        for name, err in broken.items():
+            print(f"  BROKEN  {name:24} {err}")
+        sys.exit(f"{len(broken)} metric(s) in {layer} do not run. Fix the layer before measuring.")
+
     model = get_model(args.model, mock=args.mock)
 
     for case in cases:
