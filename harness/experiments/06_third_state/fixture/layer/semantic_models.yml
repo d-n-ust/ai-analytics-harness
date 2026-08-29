@@ -59,6 +59,10 @@ semantic_model:
   entities: [{name: subscription, type: primary, expr: subscription_id}]
   dimensions:
     - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: cohort_month, type: categorical, expr: "strftime(started_date, '%Y-%m')",
+       description: "The month a term STARTED, as YYYY-MM. Filter this for a cohort question — how
+         much recurring revenue comes from terms that began in a given month — as a first-class
+         equality that composes with plan. It is a different question from the current book."}
     - {name: plan, type: categorical}
     - {name: is_active, type: categorical}
     - {name: status, type: categorical}
@@ -147,7 +151,9 @@ metric:
     asking for. A `period` here selects terms that STARTED in it — a cohort, a different question —
     not the running figure on that date. An annual term counts as one twelfth. Example:
     query_metric(metric='mrr', filters={'subscription__plan': 'monthly'}) is the monthly-plan figure
-    today. Owned by Finance. Used by the board pack and the revenue forecast.
+    today, and query_metric(metric='mrr', filters={'subscription__cohort_month': '2026-06'}) is the
+    revenue from terms that started in June — a cohort, not the current book. Owned by Finance. Used
+    by the board pack and the revenue forecast.
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
