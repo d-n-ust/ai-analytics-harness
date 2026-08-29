@@ -197,7 +197,7 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint d80571c29dc5 ===
+=== rung 3 · R0 · fingerprint 5c9f3205d329 ===
 system: sha256=b3932ec88871 chars=951
 [
   {
@@ -283,10 +283,10 @@ system: sha256=b3932ec88871 chars=951
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -356,7 +356,7 @@ system: sha256=b3932ec88871 chars=951
   }
 ]
 
-=== rung 3 · R2 · fingerprint d74382808e27 ===
+=== rung 3 · R2 · fingerprint 3d1270d64a0d ===
 system: sha256=541a80869276 chars=1546
 [
   {
@@ -442,10 +442,10 @@ system: sha256=541a80869276 chars=1546
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -630,7 +630,7 @@ system: sha256=541a80869276 chars=1546
   }
 ]
 
-=== rung 3 · R4 · fingerprint ef3e3430255a ===
+=== rung 3 · R4 · fingerprint 61af2d8c7a05 ===
 system: sha256=bcd41ca8653e chars=1861
 [
   {
@@ -720,10 +720,10 @@ system: sha256=bcd41ca8653e chars=1861
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -908,7 +908,7 @@ system: sha256=bcd41ca8653e chars=1861
   }
 ]
 
-=== rung 3 · R6 · fingerprint 3df28841a6e2 ===
+=== rung 3 · R6 · fingerprint 3f2103c9603c ===
 system: sha256=6a06892ba048 chars=2372
 [
   {
@@ -998,10 +998,10 @@ system: sha256=6a06892ba048 chars=2372
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1186,7 +1186,7 @@ system: sha256=6a06892ba048 chars=2372
   }
 ]
 
-=== rung 3 · R9 · fingerprint 0f39fdbc8f9c ===
+=== rung 3 · R9 · fingerprint 5d29bd57b3cb ===
 system: sha256=78da06e54edc chars=3834
 [
   {
@@ -1276,10 +1276,10 @@ system: sha256=78da06e54edc chars=3834
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1498,7 +1498,7 @@ system: sha256=78da06e54edc chars=3834
   }
 ]
 
-=== rung 6 · R0 · fingerprint ab8754f010ec ===
+=== rung 6 · R0 · fingerprint 886206ffc460 ===
 system: sha256=10ce3dd5f275 chars=5862
 [
   {
@@ -1584,10 +1584,10 @@ system: sha256=10ce3dd5f275 chars=5862
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1707,7 +1707,7 @@ system: sha256=10ce3dd5f275 chars=5862
   }
 ]
 
-=== rung 6 · R2 · fingerprint 949a8325ec53 ===
+=== rung 6 · R2 · fingerprint 0eb960b416cb ===
 system: sha256=dd3f8d612279 chars=6457
 [
   {
@@ -1793,10 +1793,10 @@ system: sha256=dd3f8d612279 chars=6457
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2031,7 +2031,7 @@ system: sha256=dd3f8d612279 chars=6457
   }
 ]
 
-=== rung 6 · R4 · fingerprint c15fbe1ed879 ===
+=== rung 6 · R4 · fingerprint 3c8887f41ccb ===
 system: sha256=f5657c94f5ee chars=6772
 [
   {
@@ -2121,10 +2121,10 @@ system: sha256=f5657c94f5ee chars=6772
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2368,7 +2368,7 @@ system: sha256=f5657c94f5ee chars=6772
   }
 ]
 
-=== rung 6 · R6 · fingerprint 0077eb626da9 ===
+=== rung 6 · R6 · fingerprint 96b750fd8672 ===
 system: sha256=0661873056fe chars=7283
 [
   {
@@ -2458,10 +2458,10 @@ system: sha256=0661873056fe chars=7283
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2705,7 +2705,7 @@ system: sha256=0661873056fe chars=7283
   }
 ]
 
-=== rung 6 · R9 · fingerprint 25fd7351bc58 ===
+=== rung 6 · R9 · fingerprint d2e9db4c8927 ===
 system: sha256=2b63dd316caf chars=8745
 [
   {
@@ -2795,10 +2795,10 @@ system: sha256=2b63dd316caf chars=8745
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3076,7 +3076,7 @@ system: sha256=2b63dd316caf chars=8745
   }
 ]
 
-=== rung 7 · R0 · fingerprint ec50a789f8d4 ===
+=== rung 7 · R0 · fingerprint 5116fb44a2bd ===
 system: sha256=4ccdadfd4322 chars=1329
 [
   {
@@ -3162,10 +3162,10 @@ system: sha256=4ccdadfd4322 chars=1329
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3285,7 +3285,7 @@ system: sha256=4ccdadfd4322 chars=1329
   }
 ]
 
-=== rung 7 · R2 · fingerprint ac0489765815 ===
+=== rung 7 · R2 · fingerprint 676a504a537b ===
 system: sha256=21c611aa1778 chars=1924
 [
   {
@@ -3371,10 +3371,10 @@ system: sha256=21c611aa1778 chars=1924
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3609,7 +3609,7 @@ system: sha256=21c611aa1778 chars=1924
   }
 ]
 
-=== rung 7 · R4 · fingerprint 988c3e6a17f6 ===
+=== rung 7 · R4 · fingerprint 06fa1b9688bd ===
 system: sha256=f6fa332612c3 chars=2239
 [
   {
@@ -3699,10 +3699,10 @@ system: sha256=f6fa332612c3 chars=2239
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3946,7 +3946,7 @@ system: sha256=f6fa332612c3 chars=2239
   }
 ]
 
-=== rung 7 · R6 · fingerprint c50d4cb6c445 ===
+=== rung 7 · R6 · fingerprint 2d75499577f0 ===
 system: sha256=4fcfa635ca94 chars=2750
 [
   {
@@ -4036,10 +4036,10 @@ system: sha256=4fcfa635ca94 chars=2750
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4283,7 +4283,7 @@ system: sha256=4fcfa635ca94 chars=2750
   }
 ]
 
-=== rung 7 · R9 · fingerprint e887b47c7fa3 ===
+=== rung 7 · R9 · fingerprint 5e8a8827571f ===
 system: sha256=bc9a5349fe29 chars=4212
 [
   {
@@ -4373,10 +4373,10 @@ system: sha256=bc9a5349fe29 chars=4212
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4654,7 +4654,7 @@ system: sha256=bc9a5349fe29 chars=4212
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint d458c557b66c ===
+=== rung 7 · R9/purpose · fingerprint cc6ef85beeb5 ===
 system: sha256=f58f8e6082be chars=4586
 [
   {
@@ -4748,10 +4748,10 @@ system: sha256=f58f8e6082be chars=4586
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5033,7 +5033,7 @@ system: sha256=f58f8e6082be chars=4586
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint 62a9aea928f6 ===
+=== rung 7 · R9/claims · fingerprint 5017dd8b7e08 ===
 system: sha256=68cafd4271e5 chars=4916
 [
   {
@@ -5123,10 +5123,10 @@ system: sha256=68cafd4271e5 chars=4916
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5439,7 +5439,7 @@ system: sha256=68cafd4271e5 chars=4916
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint b372dd84e152 ===
+=== rung 7 · R9/claims+repair · fingerprint e799b5a36870 ===
 system: sha256=eea8b0e9a393 chars=5122
 [
   {
@@ -5529,10 +5529,10 @@ system: sha256=eea8b0e9a393 chars=5122
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5845,7 +5845,7 @@ system: sha256=eea8b0e9a393 chars=5122
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint 92ec6ef66505 ===
+=== rung 7 · R9/purpose+claims+repair · fingerprint d696b9554f6c ===
 system: sha256=8c766050a8fe chars=5496
 [
   {
@@ -5939,10 +5939,10 @@ system: sha256=8c766050a8fe chars=5496
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6259,7 +6259,7 @@ system: sha256=8c766050a8fe chars=5496
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint ca2375544fe4 ===
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint 1f5d1b441c2d ===
 system: sha256=47984fc1fb8e chars=6315
 [
   {
@@ -6353,10 +6353,10 @@ system: sha256=47984fc1fb8e chars=6315
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6673,7 +6673,7 @@ system: sha256=47984fc1fb8e chars=6315
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint 3ad3da628744 ===
+=== rung 5 · R5/claims · fingerprint a87db52e8a19 ===
 system: sha256=1e342c97f77d chars=7337
 [
   {
@@ -6763,10 +6763,10 @@ system: sha256=1e342c97f77d chars=7337
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6986,7 +6986,7 @@ system: sha256=1e342c97f77d chars=7337
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint f789107b05be ===
+=== rung 5 · R5/claims+role · fingerprint df2195aae4ac ===
 system: sha256=e8e9c0005054 chars=8158
 [
   {
@@ -7076,10 +7076,10 @@ system: sha256=e8e9c0005054 chars=8158
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {

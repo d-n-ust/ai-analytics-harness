@@ -1,0 +1,561 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_apac_signups_q2",
+    "error": null,
+    "question": "How many people signed up in the APAC region during the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 0,
+    "declared": 388.0,
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "388",
+    "explanation": "Queried governed metric 'new_signups' filtered to user__region = APAC for period 2026-Q2 (2026-04-01 to 2026-06-30) returned 388 signups (see r2).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "filters": {
+            "user__region": "APAC"
+          },
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(388,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 0,
+    "declared": null,
+    "source_metric": null,
+    "tool_calls": 6,
+    "tool_errors": 1,
+    "handbacks": 2,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 contested figure(s) omitted; correction 2 of 2"
+      }
+    ],
+    "answer_text": "Active users grew by 50 (886 \u2192 936)?",
+    "explanation": "placeholder",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 11, 0, 0), 273)\n(datetime.datetime(2026, 7, 9, 0, 0), 268)\n(datetime.datetime(2026, 7, 6, 0, 0), 278)\n(datetime.datetime(2026, 7, 8, 0, 0), 294)\n(datetime.datetime(2026, 7, 7, 0, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 321)\n(datetime.datetime(2026, 7, 3, 0, 0), 341)\n(datetime.datetime(2026, 6, 30, 0, 0), 317)\n(datetime.datetime(2026, 7, 5, 0, 0), 347)\n(datetime.datetime(2026, 6, 29, 0,"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT SUM(value) as week_total, MIN(metric_time__day) as week_start, MAX(metric_time__day) as week_end FROM (\n  SELECT metric_time__day, value FROM \"query_metric_active_users_week_last_week\"\n)"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name query_metric_active_users_week_last_week does not exist!\nDid you mean \"u\"?\n\nLINE 2:   SELECT metric_time__day, value FROM \"query_metric_active_users_week_last_week\"\n                                              ^"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_apac_signups_q2",
+    "error": null,
+    "question": "How many people signed up in the APAC region during the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 1,
+    "declared": 388.0,
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "388",
+    "explanation": "Sum of new_signups for user__region=APAC between 2026-04-01 and 2026-06-30 returned 388 rows and value column total is 388.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "region": "APAC"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12). (this layer has no governed regions, so 'APAC' was not applied)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-04-01..2026-06-30",
+          "filters": {
+            "user__region": "APAC"
+          }
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: unknown period '2026-04-01..2026-06-30'; use one of ('last_week', 'prev_week', 'last_month', 'last_quarter', 'ytd', 'all'), a month as YYYY-MM, a quarter as YYYY-Qn, a half as YYYY-Hn, or explicit start/end dates"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "filters": {
+            "user__region": "APAC"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(388,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT SUM(value) AS total_new_signups_apac_q2_2026 FROM (\n  SELECT value FROM query_result_limit_388\n) as t;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name query_result_limit_388 does not exist!\nDid you mean \"u\"?\n\nLINE 2:   SELECT value FROM query_result_limit_388\n                            ^"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "filters": {
+            "user__region": "APAC"
+          },
+          "time_grain": "month",
+          "group_by": [
+            "user__signup_date"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: 2026-04-01..2026-06-30\ncolumns: user__signup_date__day, value\n(datetime.datetime(2026, 6, 10, 0, 0), 7)\n(datetime.datetime(2026, 5, 12, 0, 0), 8)\n(datetime.datetime(2026, 6, 18, 0, 0), 10)\n(datetime.datetime(2026, 4, 26, 0, 0), 1)\n(datetime.datetime(2026, 5, 23, 0, 0), 8)\n(datetime."
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "filters": {
+            "user__region": "APAC"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(388,)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 1,
+    "declared": 50.0,
+    "source_metric": null,
+    "tool_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "50",
+    "explanation": "active_users rose from 836 in prev_week (2026-06-29..2026-07-05) to 886 in last_week (2026-07-06..2026-07-12): 886 \u2212 836 = 50 (governed metric `active_users`). [Also: `active_accounts` reads 869 \u2192 919, same increase; difference is inclusion of internal/test accounts].",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 11, 0, 0), 273)\n(datetime.datetime(2026, 7, 9, 0, 0), 268)\n(datetime.datetime(2026, 7, 6, 0, 0), 278)\n(datetime.datetime(2026, 7, 8, 0, 0), 294)\n(datetime.datetime(2026, 7, 7, 0, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 321)\n(datetime.datetime(2026, 7, 3, 0, 0), 341)\n(datetime.datetime(2026, 6, 30, 0, 0), 317)\n(datetime.datetime(2026, 7, 5, 0, 0), 347)\n(datetime.datetime(2026, 6, 29, 0,"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_apac_signups_q2",
+    "error": null,
+    "question": "How many people signed up in the APAC region during the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 2,
+    "declared": 388.0,
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "388",
+    "explanation": "Queried governed metric new_signups for period 2026-Q2 (2026-04-01 to 2026-06-30) filtered by user__region; APAC = 388 signups (source: governed metric new_signups).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2",
+          "group_by": [
+            "user__region"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: user__region, value\n('EMEA', 522)\n('Americas', 304)\n('APAC', 388)\n[cite] r2:EMEA \u00b7 r2:Americas \u00b7 r2:APAC"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 2,
+    "declared": 50.0,
+    "source_metric": null,
+    "tool_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "50",
+    "explanation": "active_users last_week (2026-07-06..2026-07-12) = 886; previous_week (2026-06-29..2026-07-05) = 836; growth = 886 - 836 = 50 (governed metric 'active_users'). [also: 'active_accounts' would give 919 vs 869, growth 50; the difference between the two metrics is internal/test accounts excluded vs included].",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "activity__active_date"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__active_date__day, value\n(datetime.datetime(2026, 7, 11, 0, 0), 273)\n(datetime.datetime(2026, 7, 9, 0, 0), 268)\n(datetime.datetime(2026, 7, 6, 0, 0), 278)\n(datetime.datetime(2026, 7, 8, 0, 0), 294)\n(datetime.datetime(2026,"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "activity__active_date"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__active_date__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 321)\n(datetime.datetime(2026, 7, 5, 0, 0), 347)\n(datetime.datetime(2026, 7, 2, 0, 0), 308)\n(datetime.datetime(2026, 7, 4, 0, 0), 319)\n(datetime.datetime(2026, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  }
+]

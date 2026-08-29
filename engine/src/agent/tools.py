@@ -143,10 +143,11 @@ _QUERY_METRIC = {
             # never risked making.
             "period": {"type": "string",
                        "anyOf": [{"enum": list(NAMED_PERIODS)},
-                                 {"pattern": r"^\d{4}-\d{2}$"}],
+                                 {"pattern": r"^\d{4}-(\d{2}|[Qq][1-4]|[Hh][12])$"}],
                        "description": "Either a RELATIVE preset (always a complete period: "
-                                      f"{', '.join(NAMED_PERIODS)}) or a specific calendar month "
-                                      "as YYYY-MM. For any other exact range use start/end. "
+                                      f"{', '.join(NAMED_PERIODS)}), a calendar month as YYYY-MM, "
+                                      "a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as "
+                                      "YYYY-Hn. For any other exact range use start/end. "
                                       "Omit period entirely for the current value: a snapshot "
                                       "(stock) metric then returns its latest snapshot, which is "
                                       "the 'right now' number; a flow metric totals all time."},
