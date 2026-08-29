@@ -30,6 +30,7 @@
 select
     snapshot_date,
     started_date,
+    cohort_month,
     subscription_id,
     customer_id,
     billing_interval,

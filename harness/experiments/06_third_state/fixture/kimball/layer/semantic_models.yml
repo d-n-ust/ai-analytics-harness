@@ -195,6 +195,10 @@ semantic_model:
     - {name: started_date, type: time, type_params: {time_granularity: day},
        description: "When the term began. Filter on this instead for a cohort reading: the revenue
          contributed by terms that started in the period."}
+    - {name: cohort_month, type: categorical,
+       description: "The month the subscription started, as YYYY-MM. Filter on this for a cohort
+         question — how much revenue comes from terms that began in a given month — since `period`
+         binds to the snapshot date and is the only way to express a range."}
     - {name: billing_interval, type: categorical,
        description: "How often the term is billed: `month` or `year`. Named for the interval rather
          than the plan so a question about monthly plans cannot be confused with the monthly unit
