@@ -801,7 +801,155 @@ The rest is the published work, and it agrees.
 [From agent traces to trust: evidence tracing and execution provenance](https://arxiv.org/pdf/2606.04990) ·
 [OWASP GenAI LLM guardrails taxonomy](https://genai.owasp.org/solution-taxonomy/llm-guardrails/)
 
-## 17 · Not measured
+## 17 · The held-out suite: the tuned numbers were fit, not capability
+
+Every guardrail in this experiment was chosen after watching the sixteen-question suite fail, so
+that suite measures FIT. A held-out set (`heldout.yml`, 46 questions) was authored afterwards with
+the mechanisms frozen, from the schema, the catalogue and the pile definitions only — never by
+looking at which questions the agent fails. Fifteen questions per pile, two to four primitives each,
+red-teaming in the SHAPE of the questions rather than in knowledge of which break.
+
+**Every oracle was executed and every pile membership proved before the file was written, and three
+questions failed that check during authoring** — the guard doing its job on its author. Habits
+May→June does not cancel (3,689 against 3,792); no Q2 subscription was ever refunded, so `mrr` and
+`gross_mrr` agree for that window; the doubly-contested ratio diverges by 0.19%, narrower than the
+default tolerance. All three were moved or given their own tolerance.
+
+**The result is the point.** On the tuned suite the same configuration scores 14 of 16. On the
+held-out set it scores around 30 of 46 at one rep — and the gap is where fit ends and capability
+begins. The ambiguity machinery GENERALISED: contested pile 12/12, derived contested 3/3, the piles
+where two definitions agree 12/12, stated-scope 11/12. What did not generalise was everything around
+it — the residual failures are scope, substitution, and reason codes, none of them the ambiguity
+subject. Several numbers reported before this section describe fit; the held-out numbers are the
+ones to publish.
+
+## 18 · Model judgement, mechanically checked: the scope classifier
+
+`scope_classifier` is the one place a model call sits inside a control path, and it is built to the
+rule the rest of the module follows: **the model makes the judgement nothing mechanical can make,
+and a mechanism decides whether to believe it.**
+
+The judgement it makes: two governed definitions of one concept produce byte-identical tool calls
+whether or not the user said which reading they wanted, so no check that refuses to read the
+question can tell "active users, web, last week" from "active users EXCLUDING INTERNAL AND TEST
+ACCOUNTS, web, last week". Only reading the question answers it. The classifier is asked, in
+isolation, whether the request already chose — and told to QUOTE the words that chose.
+
+The check on the judgement is what makes it safe. First run, it answered `yes` on the bare question
+and quoted `is_internal = false` — the discriminator it had been handed, which appears nowhere in
+the question. It was quoting the prompt back. Requiring the quote and VERIFYING it is in the
+question turned that into a `no`; retested, it fabricated a different phrase — the definition's own
+wording this time — caught by the same substring check. **The model is good at the judgement and
+will manufacture a justification for it, so the justification is verified rather than taken.** With
+that check the classifier suppresses the disclosure only when the request genuinely named the scope,
+and the stated-scope pile answers with one number and no interruption.
+
+The module was split from the trajectory judge into `guardrails/classify.py`: the judge adjudicates
+an ANSWER, the classifier categorises a REQUEST, and they version independently, so a reworded
+classifier must not mark a stored verifier verdict stale.
+
+## 19 · A second warehouse, built to dbt's MRR pattern, then retired
+
+A held-out question — "how much MRR do our monthly plans bring in?" — was answered 501.92 against a
+true 1,888.44. Diagnosing it exposed a real modelling defect: MRR is a BALANCE, a semi-additive
+level, and the base warehouse models it as a transaction sum over `started_date`. So "as at a date"
+is inexpressible, a `period` silently returns the cohort that STARTED in it rather than the balance
+on it, and the twelve monthly figures sum to the current balance because they are cohorts of it. The
+agent was more correct than the layer it queried.
+
+A corrected warehouse was built to dbt's own documented MRR pattern — the measures docs use MRR as
+THE worked example of a semi-additive measure: a daily snapshot fact, `non_additive_dimension`, a
+movement fact beside it, staging/intermediate/marts, the mrr-playbook's spine. The two facts
+reconciled to the penny (`mrr(month end) − mrr(prior) == sum of that month's movements`).
+
+**And it was retired, from first principles.** The experiment studies the third state — it needs
+contested pairs that diverge. The corrected warehouse DESTROYED one: on base all four pairs diverge;
+correctly modelled, `mrr`/`gross_mrr` agree today, because every refunded term had ended by 25 May.
+"Correct" modelling removed a quarter of the experiment's subject. It also forced per-warehouse
+grading overrides, split the SQL and semantic search paths, and shipped its own bugs. That is the
+overcomplication `05_preflight_ambiguity` avoids by making arms thin views over the shared star.
+
+**Two things were kept, lifted onto the base layer.** First, the finding: part of the `mrr`/`gross_mrr`
+disagreement was modelling debt, not governance, and only good modelling could tell which — it
+sharpens the irreducibility claim rather than weakening it (three pairs survive unchanged). Second,
+the one fix that MOVED THE AGENT: a metric description stating that `mrr` is a running figure read
+today when `period` is omitted, and that a `period` selects the cohort that started in it. Stating
+the CONSEQUENCE rather than the classification ("a balance, not a total") is what worked — the
+question that started the thread went 0/3 to 3/3 on the original frozen warehouse, no rebuild. The
+warehouse rebuild itself never fixed the agent (3/3 wrong on both warehouses); correct modelling
+only shrank the error from a category swap to a wrong-date reading.
+
+## 20 · A cohort as a first-class dimension
+
+The A-pile WRONG NUM failure: "how much MRR came from subscriptions that started in the second
+quarter?" (1,653.64) answered 67. The agent passed `filters={started_date: ['2026-04-01',
+'2026-06-30']}` as a range; the equality-only filter read the list as "started on one of these two
+exact days", two daily balances survived, and it summed them. A cohort was reachable only two ways,
+both traps: `period` binding implicitly to `started_date`, or a range the filter cannot express.
+
+`cohort_month`, a categorical dimension computed as `strftime(started_date, '%Y-%m')`, makes "revenue
+from terms that started in a month" a first-class equality that composes with `plan`. June cohort
+750.88; June AND monthly 501.92 — the number the agent had wrongly served for CURRENT monthly MRR,
+now with a legitimate home. **A list on a CATEGORICAL dimension reads as IN**, so
+`cohort_month=[Apr,May,Jun]` returns the Q2 total, while the identical list on the TIME dimension did
+not — the categorical route is the one the agent cannot misfire on. The question went 0/3 to 3/3.
+
+## 21 · The substitution class, and a mechanism that could not be made to hold
+
+The largest recurring REAL agent failure across the held-out set is not ambiguity. It is
+substitution under a binding failure: the requested thing has no governed referent, so the agent
+answers the nearest thing that does. "TikTok ads" (not a channel) → 61,233, all-channel spend.
+"APAC signups" after a filter error → 28,412, matching nothing. "Enterprise plan" (not a plan) →
+371, all plans. In each the agent identifies the metric and period correctly and fails only on a
+VALUE, relaxing the constraint it cannot satisfy — and relaxing a constraint always succeeds and
+returns a plausible number.
+
+Three fields have named exactly this and converge on one rule — a mention bound to a closed
+vocabulary needs an explicit NO-REFERENT outcome, or the system force-binds to the nearest
+candidate: false-presupposition QA (CREPE: a false existential presupposition, corrected not
+answered), value-linking unanswerability in text-to-SQL, and NIL prediction in entity linking. The
+agent has no such outcome for a dimension value.
+
+**A `value_membership` check was built for it and reverted.** It read the question, extracted the
+categorical values, and tested each against the published members. Standalone on eight clean
+controls it scored 8/8 and caught TikTok and enterprise end to end — the agent reached `exit=answer`,
+was handed back, and re-exited as a refusal naming the governed channels, the CREPE correction by
+enforcement. **On the full held-out suite it refused or clarified eleven answerable questions.** It
+flagged dates ("May 2026", "second quarter"), partial channel names ("content"/"SEO" against the
+member `content_seo`), and descriptors ("staff", "live", "platform") as ungoverned values. A
+precision pass — exclude time expressions, bidirectional substring match, tighten the extractor —
+removed every false positive on the controls and also suppressed the true positives. **Loosen it and
+it refuses good questions; tighten it and it misses the ungoverned ones; there is no cheap stable
+operating point.** This is the read-the-question fragility the first-principles analysis and the
+literature both warned about, and the standalone 8/8 gave false confidence because the controls were
+too few and too clean. The class is real; the check that reads the question freely is not the way.
+The candidates that remain are answer-level (does the served answer report the value asked for) or
+grounded to the agent's own dropped filter rather than a free read of the question.
+
+## 22 · What the diagnostic map shows that the headline metrics hide
+
+The three-need by five-action map (piles A/B/C against right/wrong-number/no-figure/refused/
+clarified) carries two things the scalar metrics do not.
+
+**Silent error is the metric that tells the truth here.** On a held-out run it was ~0.09, and the
+`!!` cells — a number handed over that the reader cannot tell is false — are all pile-A/B modelling
+or substitution issues; ZERO on the contested pile, the pile the experiment exists for.
+
+**Balanced accuracy under-counts the winning strategy.** The contested pile lands in the `both`
+cell — answered with every reading and the discriminator — which is correct and is the fourth
+action. But the formula credits only literal `clarify`, so it scores that pile near-zero
+(`clarified/C = 0/15`) while the map shows 11–14 of 15 handled correctly. The matrix is telling the
+truth; the balanced-accuracy formula needs the `both` cell folded into the contested numerator
+before it appears in any write-up. This is a metric-definition defect, not an agent result.
+
+Two smaller cells resolved by tracing, both mine not the agent's: an A-pile "no figure" was a
+which-category question mis-typed as `metric_answer` expecting a number (replaced with a numeric
+governed question); a B-pile "correct" was a false-premise question the agent handled exactly right,
+correcting the premise ("they rose by 50"). And the tooling earned a fix: `bench trace` crashed on
+rows storing acts as names, and `run.py` now stores the full act dicts and the served text, so a
+failure is diagnosable from stored results without a re-run — which is a different sample.
+
+## 23 · Not measured
 
 - ~~**Over-clarification on the hard case.**~~ Measured in §8: 10 of 12 under the gate. The
   predicted fix — a mechanical channel for the request having named the scope — was built (arm C)
@@ -836,8 +984,29 @@ The rest is the published work, and it agrees.
   enforce has no obvious purchase on them: there is no governed alternative to execute.
 - **Cost of the gate.** It runs each competitor once per contested call. Cheap on DuckDB, unmeasured
   on anything else.
+- **The held-out set at reps=3, with the current cell.** Everything in §17–§22 is a one-rep
+  snapshot inside the ±4–5 band. No held-out number is stable yet; the current cell
+  (`+scope_classifier+filter_vocabulary+constraint_regression`, cohort dimension, clarified MRR
+  description) has never run at three reps over all 46.
+- **The substitution rate** (§21). How often the agent answers a broader scope for a value with no
+  governed referent is measured only anecdotally (three questions). It is the largest real agent
+  failure and its rate is the thing that would justify building the answer-level catch.
 
-## 18 · Candidate next arms
+## 24 · Candidate next arms
+
+- **The balanced-accuracy formula must credit the `both` cell** (§22) before any write-up. It
+  currently scores the winning contested strategy near-zero. A metric-definition fix, not an arm,
+  and the most urgent item here because it misrepresents every run.
+- **Widen the accepted reason codes per case** (§21, §9). Unanswerable questions refuse with a
+  defensible code that is not the single one the case declares (`segment_undefined` against
+  `ungoverned_dimension_value`), inflating the B-pile miss count. Cheap; unblocks a clean B read.
+- **An answer-level scope check for the substitution class** (§21). Does the served answer report
+  the value the question asked for — grounded on the ANSWER and the agent's own query, not a free
+  read of the question, which §21 measured as too fragile to ship.
+- **Break the governed_numbers / tool_restriction coupling** (§21). `governed_numbers` would catch
+  the substituted total (61,233 has governed provenance but for the wrong question) and the
+  non-additive sum, but it cannot run without removing `run_sql`. Checking only governed-origin
+  answers and standing down on raw-SQL ones would let it run at R3.
 
 - **Disclose the definition's own filter in the scope line.** The MetricFlow adapter's scope line
   says "no filters — the whole population this metric defines" while the metric itself carries
