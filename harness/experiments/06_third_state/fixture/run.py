@@ -186,6 +186,11 @@ def main() -> None:
         # had a good day": a fix aimed at tool errors is measured by tool errors, which vary far
         # less than the graded outcome does.
         return rep, idx, {**graded, "outcome": answer.outcome, "id": case["id"],
+                          # Header fields cli/trace.py needs to render a stored row without the
+                          # run that produced it. A trace you can only see live is a trace you
+                          # cannot go back to when a number looks wrong.
+                          "question": case["question"], "rung": RUNG, "model": model.spec.name,
+                          "config": args.cell or "loop default",
                           "rep": rep, "declared": answer.declared_value,
                           "source_metric": answer.source_metric,
                           "tool_calls": len(answer.steps),

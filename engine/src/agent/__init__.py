@@ -27,7 +27,7 @@ from .models import DEFAULT_MODEL
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
             protocol=None, mock: bool = False, verbose: bool = False, con=None,
-            trace=None):
+            trace=None, spec_path=None, engine: str = "harness"):
     """Ask one question at one rung and return the typed Answer.
 
     `trace` is a RENDERER — a callable taking the run row and returning text — not a boolean.
@@ -39,7 +39,13 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     the one place the engine reached into the apparatus. Inverting it means every dependency now
     points apparatus -> engine, which is what lets the engine be installed, tested, and one day
     shipped without the harness. The alternative — guarding the import — would leave the name
-    unbound at the call site below and raise NameError instead of degrading.""" 
+    unbound at the call site below and raise NameError instead of degrading.
+
+    `spec_path` and `engine` name WHICH semantic layer to ask against. Without them this function
+    could only reach the default layer, so the one command built for asking a single question could
+    not ask any question an experiment studies — and every experiment layer had to be driven
+    through its own script. They are passed straight to `build_grounding`, which already took
+    both.""" 
     from warehouse import open_warehouse, set_star
 
     from .grounding import RUNG_NAMES, build_grounding
@@ -49,7 +55,9 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
 
     con = con or open_warehouse()
     set_star(con, capabilities(rung).star)  # rung 1 is raw-only
-    grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol)
+    grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol,
+                                spec_path=spec_path, engine=engine,
+                                semantic_layer=True if spec_path else None)
     live = get_model(model, mock=mock)
     result = run_agent(question, grounding, live)
     if trace is not None:
