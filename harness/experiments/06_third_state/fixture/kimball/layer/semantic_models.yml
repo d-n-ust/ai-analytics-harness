@@ -179,7 +179,9 @@ semantic_model:
     one date, never summable across dates."
   node_relation: {schema_name: wh_06k, alias: fct_subscription_snapshot}
   defaults: {agg_time_dimension: snapshot_date}
-  entities: [{name: subscription_day, type: primary, expr: "subscription_id || '|' || CAST(snapshot_date AS VARCHAR)"}]
+  entities:
+    - {name: subscription_day, type: primary, expr: "subscription_id || '|' || CAST(snapshot_date AS VARCHAR)"}
+    - {name: customer, type: foreign, expr: customer_id}
   dimensions:
     # TWO TIME ROLES, both declared. `snapshot_date` is the default because a balance is read as at
     # a date; `started_date` is what a cohort question attaches to. Declaring only one does not
@@ -190,37 +192,62 @@ semantic_model:
     - {name: started_date, type: time, type_params: {time_granularity: day},
        description: "When the term began. Filter on this instead for a cohort reading: the revenue
          contributed by terms that started in the period."}
-    - {name: plan, type: categorical}
+    - {name: billing_interval, type: categorical,
+       description: "How often the term is billed: `month` or `year`. Named for the interval rather
+         than the plan so a question about monthly plans cannot be confused with the monthly unit
+         that MRR is already expressed in."}
     - {name: final_status, type: categorical}
     - {name: was_refunded, type: categorical, description: "Whether this term was later refunded.
         The only thing Finance and Sales disagree about when they report recurring revenue."}
   measures:
     - name: mrr_amount
       agg: sum
+      # NO `window_groupings` HERE. It means "take the last row within each group", so grouping
+      # by customer keeps a churned customer's final row alive: 44 monthly subscriptions that
+      # ended before the last snapshot were still being counted, inflating the figure from
+      # 1,888.44 to 2,163.05. dbt's example uses window_groupings for a PER-USER measure, where
+      # that is exactly what you want; for a company-wide balance you want the global last date.
       non_additive_dimension: {name: snapshot_date, window_choice: max}
     - name: subscription_count
       agg: count
       expr: subscription_id
+      # NO `window_groupings` HERE. It means "take the last row within each group", so grouping
+      # by customer keeps a churned customer's final row alive: 44 monthly subscriptions that
+      # ended before the last snapshot were still being counted, inflating the figure from
+      # 1,888.44 to 2,163.05. dbt's example uses window_groupings for a PER-USER measure, where
+      # that is exactly what you want; for a company-wide balance you want the global last date.
       non_additive_dimension: {name: snapshot_date, window_choice: max}
     - name: paying_user_count
       agg: count_distinct
       expr: user_id
+      # NO `window_groupings` HERE. It means "take the last row within each group", so grouping
+      # by customer keeps a churned customer's final row alive: 44 monthly subscriptions that
+      # ended before the last snapshot were still being counted, inflating the figure from
+      # 1,888.44 to 2,163.05. dbt's example uses window_groupings for a PER-USER measure, where
+      # that is exactly what you want; for a company-wide balance you want the global last date.
       non_additive_dimension: {name: snapshot_date, window_choice: max}
 ---
 metric:
   name: mrr
-  description: "Monthly recurring revenue, NET of refunded terms. A balance: the rate as at a date,
-    not a total over a period. An annual term counts as one twelfth. Owned by Finance. Used by the
-    board pack and the revenue forecast."
+  description: "The monthly value of every subscription that is live, net of terms later refunded.
+    A running number: it goes up when someone subscribes and down when someone leaves. Read it,
+    never add it up across days. Leave `period` out to get the figure today — that is what a
+    question with no date is asking for. Give a `period` only to get the figure on that period's
+    last day. An annual term counts as one twelfth of its yearly amount.
+    Example: query_metric(metric='mrr', filters={'subscription_day__billing_interval': 'month'})
+    is the monthly-plan figure today.
+    Owned by Finance. Used by the board pack and the revenue forecast."
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription_day__was_refunded') }} = false"
 ---
 metric:
   name: gross_mrr
-  description: "Monthly recurring revenue GROSS of refunds — every term that was live on the date,
-    refunded later or not. A balance, like mrr. Owned by Sales. Used for quota attainment and
-    commission, which pay on what was closed rather than on what was kept."
+  description: "The same running number as `mrr`, but counting a term that was later refunded for
+    the days it was live. That single difference is what separates the two. Same rules otherwise:
+    read it, never add it up across days; leave `period` out for the figure today.
+    Owned by Sales. Used for quota attainment and commission, which pay on what was closed rather
+    than on what was kept."
   type: simple
   type_params: {measure: mrr_amount}
 ---
@@ -235,3 +262,49 @@ metric:
   description: "Live subscription contracts on the date. An account holding two counts twice. A balance."
   type: simple
   type_params: {measure: subscription_count}
+---
+semantic_model:
+  name: mrr_movement
+  description: "One row is one customer in one month, with the change from the month before
+    categorised. The companion to the snapshot: that one holds the BALANCE and must never be summed
+    across dates, this one holds the CHANGE and is fully additive — new plus expansion minus churn
+    minus contraction is the month's net movement, and those do add up across months and customers."
+  node_relation: {schema_name: wh_06k, alias: fct_mrr_movement}
+  defaults: {agg_time_dimension: date_month}
+  entities:
+    - {name: customer_month, type: primary, expr: "customer_id || '|' || CAST(date_month AS VARCHAR)"}
+    - {name: customer, type: foreign, expr: customer_id}
+  dimensions:
+    - {name: date_month, type: time, type_params: {time_granularity: month}}
+    - {name: change_category, type: categorical,
+       description: "new | reactivation | expansion | contraction | churn | unchanged"}
+  measures:
+    - {name: mrr_delta_amount, agg: sum, expr: mrr_delta}
+---
+metric:
+  name: net_new_mrr
+  description: "Net movement in monthly recurring revenue over the period. Additive: unlike `mrr`
+    itself, these DO sum across months. Owned by Finance."
+  type: simple
+  type_params: {measure: mrr_delta_amount}
+---
+metric:
+  name: new_mrr
+  description: "Monthly recurring revenue added by customers subscribing for the first time."
+  type: simple
+  type_params: {measure: mrr_delta_amount}
+  filter: "{{ Dimension('customer_month__change_category') }} = 'new'"
+---
+metric:
+  name: churned_mrr
+  description: "Monthly recurring revenue lost to customers who stopped paying. Negative."
+  type: simple
+  type_params: {measure: mrr_delta_amount}
+  filter: "{{ Dimension('customer_month__change_category') }} = 'churn'"
+---
+metric:
+  name: expansion_mrr
+  description: "Monthly recurring revenue added by existing customers paying more."
+  type: simple
+  type_params: {measure: mrr_delta_amount}
+  filter: "{{ Dimension('customer_month__change_category') }} = 'expansion'"

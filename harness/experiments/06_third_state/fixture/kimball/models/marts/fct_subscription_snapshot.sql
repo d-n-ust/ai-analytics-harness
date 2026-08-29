@@ -28,15 +28,12 @@
 -- from inside, and each has silently answered a question nobody chose, in a YAML default nobody
 -- reads. Carrying both makes the choice visible at query time, which is where it can be detected.
 select
-    d.date_day                                           as snapshot_date,
-    s.started_date,
-    s.subscription_id,
-    s.user_id,
-    s.plan,
-    s.final_status,
-    s.was_refunded,
-    s.mrr_amount
-from {{ ref('dim_subscriptions') }} s
-join {{ ref('dim_date') }} d
-  on s.started_date <= d.date_day
- and (s.ended_date is null or s.ended_date > d.date_day)
+    snapshot_date,
+    started_date,
+    subscription_id,
+    customer_id,
+    billing_interval,
+    final_status,
+    was_refunded,
+    mrr_amount
+from {{ ref('int_subscription_days') }}

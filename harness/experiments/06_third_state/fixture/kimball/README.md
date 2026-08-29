@@ -133,6 +133,44 @@ semantic model's time dimensions, the window choices from the legal set for a se
 measure. So the index generalises from "which metrics collide" to "which readings of this request
 collide", and everything downstream works unchanged.
 
+## What fixed the question, and what did not
+
+The failure that started this: *"How much monthly recurring revenue do our monthly plans bring
+in?"* — the agent called `mrr` with `period=last_month` and answered **501.92** where **1,888.44**
+is correct. Four changes, three reps each, one question:
+
+| | served | the call it made |
+|---|---:|---|
+| original, base warehouse | 501.92 | `period=last_month` |
+| + this warehouse (snapshot, semi-additive) | 1,693.77 | `period=last_month` |
+| + a clearer metric description | 2,163.05 | **no period** ← behaviour fixed |
+| + `window_groupings` removed | **1,888.44** | no period ← number fixed |
+
+**Correct modelling was not enough.** It changed the *kind* of wrongness — a cohort became a
+balance read on the wrong day — and the agent kept supplying a period the question never mentioned.
+A test with `ANALYSIS_DATE` set equal to `DATA_END`, so "today" and the last day of data coincide,
+did not change that either: two of three runs still reached for last month. The four-day gap was not
+the cause.
+
+**The description was.** What worked was stating the CONSEQUENCE rather than the classification:
+
+> Leave `period` out to get the figure today — that is what a question with no date is asking for.
+> Give a `period` only to get the figure on that period's last day.
+> Example: `query_metric(metric='mrr', filters={'subscription_day__billing_interval': 'month'})`
+
+The previous wording — "a balance: the rate as at a date, not a total over a period" — is true,
+correct, and was not actionable. After the rewrite all three runs made exactly the call the example
+shows, with no period, identically.
+
+**And that exposed a defect it had been hiding.** `window_groupings: [customer]` was copied from
+dbt's `user_mrr` example without noticing that example is a PER-USER measure. It takes each
+customer's own last row, so 44 monthly subscriptions that had already ended were still counted:
+1,888.44 inflated to 2,163.05. For a company-wide balance you want the global last date and no
+groupings. The bug only surfaced once the agent finally issued the correct call.
+
+The lesson matches the dimension-vocabulary one earlier in this experiment: the agent was not being
+careless, it was filling a gap the layer left, and the fix was to stop leaving it.
+
 ## Known gap
 
 The case oracles in `cases.yml` and `heldout.yml` are written against base semantics for the four

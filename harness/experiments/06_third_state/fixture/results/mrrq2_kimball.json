@@ -1,0 +1,175 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_c_mrr_monthly_plan",
+    "question": "How much monthly recurring revenue do our monthly plans bring in?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 0,
+    "declared": 2558.33,
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "\u00a32,558.33",
+    "explanation": "Finance MRR (net of refunded terms) for monthly recurring plans in June 2026 (last_month) is \u00a32,558.33 \u2014 computed from the governed metric `mrr` for period=last_month. Also note `gross_mrr` (gross of refunds) returns the same \u00a32,558.33 for that month; the two differ only by excluding refunded terms (subscription_day__was_refunded). [source: governed metric mrr last_month]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "last_month",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_month -> 2026-06-01..2026-06-30\ncolumns: value\n(2558.333333333333,)\n[also] `gross_mrr` is an equally governed answer to the same question and returns a different number here: `mrr` 2,558 against `gross_mrr` 2,558, 0.00% apart. The two differ by was_refunded = false. If t"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_c_mrr_monthly_plan",
+    "question": "How much monthly recurring revenue do our monthly plans bring in?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 1,
+    "declared": 1783.52,
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "\u00a31,783.52",
+    "explanation": "Finance-defined MRR for last month (2026-06-01..2026-06-30) from subscription_day__billing_interval='month' is \u00a31,783.52 (excluding yearly plans which are billed annually and counted separately).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "last_month",
+          "group_by": [
+            "subscription_day__billing_interval"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_month -> 2026-06-01..2026-06-30\ncolumns: subscription_day__billing_interval, value\n('month', 1783.5200000000004)\n('year', 774.813333333333)\n[cite] r2:month \u00b7 r2:year"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_c_mrr_monthly_plan",
+    "question": "How much monthly recurring revenue do our monthly plans bring in?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression",
+    "rep": 2,
+    "declared": 1783.52,
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "1,783.52",
+    "explanation": "Using the governed metric `mrr` for last month (2026-06) and filtered by subscription_day__billing_interval='month', the monthly plans contributed \u00a31,783.52 of MRR (metric returned in same currency units as finance). [source: governed metric mrr by billing interval for 2026-06]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "group_by": [
+            "subscription_day__billing_interval"
+          ],
+          "period": "last_month",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_month -> 2026-06-01..2026-06-30\ncolumns: subscription_day__billing_interval, value\n('month', 1783.5200000000004)\n('year', 774.813333333333)\n[cite] r2:month \u00b7 r2:year"
+      }
+    ]
+  }
+]

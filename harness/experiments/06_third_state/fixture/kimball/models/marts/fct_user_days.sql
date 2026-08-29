@@ -16,5 +16,5 @@ select
     u.platform,
     u.channel
 from {{ ref('stg_events') }} e
-join {{ ref('dim_users') }} u using (user_id)
+join {{ ref('stg_users') }} u using (user_id)
 group by 1, 2, 3, 6, 7, 8, 9, 10
