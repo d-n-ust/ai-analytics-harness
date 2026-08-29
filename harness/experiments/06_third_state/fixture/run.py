@@ -53,13 +53,25 @@ RUNG = 3          # star + governed semantic layer, raw SQL still on the table
 _PILE = {"metric_answer": "A", "refuse": "B", "contested": "C"}
 
 
-def load_cases(name: str = "cases.yml") -> list[dict]:
+def load_cases(name: str = "cases.yml", warehouse: str = "base") -> list[dict]:
     """The suite to run. `heldout.yml` exists because every guardrail here was chosen after watching
-    `cases.yml` fail, so that file measures fit rather than generalisation."""
+    `cases.yml` fail, so that file measures fit rather than generalisation.
+
+    A case may carry `overrides: {<warehouse>: <expect>}`, and the whole `expect` block is REPLACED
+    rather than merged. Most questions mean the same thing on both warehouses and carry no override;
+    the ones that do are the subscription metrics, where the corrected model changes what a question
+    is asking — and a merge would leave `candidates` behind when `type` changes from `contested` to
+    `metric_answer`, which is exactly the case that needs the override.
+    """
     cases = yaml.safe_load((HERE / name).read_text())["cases"]
+    out = []
     for case in cases:
-        _validate(case, name)
-    return cases
+        override = (case.pop("overrides", None) or {}).get(warehouse)
+        if override:
+            case = {**case, "expect": override}
+        _validate(case, f"{name} [{warehouse}]")
+        out.append(case)
+    return out
 
 
 def _render_step(step: dict) -> str:
@@ -132,7 +144,7 @@ def main() -> None:
         sys.exit(f"{layer} does not exist — run `python variants.py --write` first")
     con = open_warehouse(create_star_views=True)
     fixture_build.build(con, root=models_root, schema=schema)   # so the layer has something to read
-    cases = load_cases(args.cases)
+    cases = load_cases(args.cases, args.warehouse)
     golds = compute_gold(con, cases)             # resolves each candidate's own oracle
     if args.only:
         cases = [c for c in cases if c["id"] in set(args.only.split(","))]
@@ -194,7 +206,8 @@ def main() -> None:
         with print_lock:
             mark = "OK  " if graded["correct"] else "MISS"
             served = "" if answer.declared_value is None else f"{answer.declared_value:,.1f}"
-            print(f"  rep {rep + 1}  pile {pile}  {case['id']:40} {answer.outcome:8} {mark} {served}")
+            print(f"  rep {rep + 1}  pile {pile}  {case['id']:40} {answer.outcome:8} {mark} {served}"
+                  + (f"  {answer.error}" if answer.error else ""))
         # Recorded because the score alone cannot separate "the mechanism worked" from "the model
         # had a good day": a fix aimed at tool errors is measured by tool errors, which vary far
         # less than the graded outcome does.
@@ -202,6 +215,10 @@ def main() -> None:
                           # Header fields cli/trace.py needs to render a stored row without the
                           # run that produced it. A trace you can only see live is a trace you
                           # cannot go back to when a number looks wrong.
+                          # The exception text, because a row that says outcome=error and nothing
+                          # else cannot be diagnosed without re-running, and re-running is a
+                          # different sample.
+                          "error": answer.error,
                           "question": case["question"], "rung": RUNG, "model": model.spec.name,
                           "config": args.cell or "loop default",
                           "rep": rep, "declared": answer.declared_value,

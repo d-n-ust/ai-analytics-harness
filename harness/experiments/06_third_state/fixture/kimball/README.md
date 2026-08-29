@@ -171,9 +171,36 @@ groupings. The bug only surfaced once the agent finally issued the correct call.
 The lesson matches the dimension-vocabulary one earlier in this experiment: the agent was not being
 careless, it was filling a gap the layer left, and the fix was to stop leaving it.
 
-## Known gap
+## Grading across two warehouses
 
-The case oracles in `cases.yml` and `heldout.yml` are written against base semantics for the four
-subscription metrics, so those questions do not transfer. A run with `--warehouse kimball` grades
-them wrongly until each declares its own expectation per warehouse. Everything not touching
-subscriptions transfers unchanged.
+A case may carry `overrides: {<warehouse>: <expect>}`, and the whole `expect` block is REPLACED
+rather than merged — a merge would leave `candidates` behind when `type` changes from `contested`
+to `metric_answer`, which is exactly the case that needs an override.
+
+Only four of the forty-six held-out questions need one. Three of them are the MRR questions, which
+stop being contested here: `mrr` and `gross_mrr` return the same figure today, because every
+refunded term had ended by 25 May. The fourth is the gross-MRR year-to-date question, whose value
+changes for the same reason. Everything else means the same thing on both warehouses and carries no
+override — including questions on `paying_users` and `active_subscriptions`, whose values are
+unchanged.
+
+    base      metric_answer 16   refuse 15   contested 15
+    kimball   metric_answer 19   refuse 15   contested 12
+
+## First run, gpt-5-mini, one rep, all 46
+
+    subtype                        base    kimball
+    contested_level                9/12      12/12   <- all three MRR questions fixed
+    answerable_cancel               1/2        2/2
+    unanswerable_adjacent           2/5        0/5
+    TOTAL                         30/46      32/46
+
+Inside the noise band, so the total is not a result. The class this warehouse was built for is
+fixed: every MRR question correct, and the balance-read-as-cohort error gone.
+
+Three things this run raises and does not settle. Two questions that filter on `started_date` got
+worse — that column is now one of two time roles rather than the only one, and the agent picks the
+wrong one. And the adjacent pile fell from 2/5 to 0/5, which nothing in the subscription modelling
+touches; the likeliest explanation is that the catalogue grew from 12 metrics to 16, and a longer
+list of adjacent-looking things makes refusing harder. That is consistent with the adjacency
+finding and is a guess at one rep.

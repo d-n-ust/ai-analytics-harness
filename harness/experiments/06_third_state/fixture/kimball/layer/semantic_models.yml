@@ -73,16 +73,19 @@ semantic_model:
 semantic_model:
   name: users
   description: "The account dimension. One row is one signup."
-  node_relation: {schema_name: wh_06k, alias: dim_users}
+  node_relation: {schema_name: wh_06k, alias: dim_customer}
   defaults: {agg_time_dimension: signup_date}
-  entities: [{name: user, type: primary, expr: user_id}]
+  # The entity stays named `user` even though the table is now dim_customer: the name is what
+  # MetricFlow joins on and what every `user__*` dimension is prefixed with, so renaming it would
+  # change the vocabulary the catalogue publishes and the cluster index records, for nothing.
+  entities: [{name: user, type: primary, expr: customer_id}]
   dimensions:
     - {name: signup_date, type: time, type_params: {time_granularity: day}}
     - {name: is_internal, type: categorical}
     - {name: channel, type: categorical}
     - {name: region, type: categorical}
   measures:
-    - {name: signup_count, agg: count, expr: user_id}
+    - {name: signup_count, agg: count, expr: customer_id}
 ---
 semantic_model:
   name: marketing
