@@ -124,15 +124,7 @@ cases:
     metric: gross_mrr
     gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN (1,4)
       AND "start" >= DATE '2026-01-01'
-  note: contested concept, scope stated on the gross side; the window is chosen so the two readings differ || on
-    `kimball` a refunded term is not live today, so gross and net agree and the figure changes
-  overrides:
-    kimball:
-      type: metric_answer
-      metric: gross_mrr
-      tolerance: 0.005
-      gold_sql: SELECT round(sum(mrr_amount),2) FROM wh_06k.fct_subscription_snapshot WHERE snapshot_date=(SELECT
-        max(snapshot_date) FROM wh_06k.fct_subscription_snapshot) AND started_date >= DATE '2026-01-01'
+  note: contested concept, scope stated on the gross side; the window is chosen so the two readings differ
 - id: h_a_mrr_q2_starts_agree
   tier: answerable_agree
   question: How much monthly recurring revenue came from subscriptions that started in the second quarter?
@@ -479,14 +471,7 @@ cases:
       consumer: quota attainment and commission
       gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN
         (1,4) AND p='a'
-  note: plan slice || on `kimball` mrr and gross_mrr AGREE today, so this has one right answer
-  overrides:
-    kimball:
-      type: metric_answer
-      metric: mrr
-      tolerance: 0.005
-      gold_sql: SELECT round(sum(mrr_amount),2) FROM wh_06k.fct_subscription_snapshot WHERE snapshot_date=(SELECT
-        max(snapshot_date) FROM wh_06k.fct_subscription_snapshot) AND NOT was_refunded AND billing_interval='year'
+  note: plan slice
 - id: h_c_mrr_monthly_plan
   tier: contested_level
   question: How much monthly recurring revenue do our monthly plans bring in?
@@ -503,14 +488,7 @@ cases:
       consumer: quota attainment and commission
       gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN
         (1,4) AND p='m'
-  note: plan slice || on `kimball` mrr and gross_mrr AGREE today, so this has one right answer
-  overrides:
-    kimball:
-      type: metric_answer
-      metric: mrr
-      tolerance: 0.005
-      gold_sql: SELECT round(sum(mrr_amount),2) FROM wh_06k.fct_subscription_snapshot WHERE snapshot_date=(SELECT
-        max(snapshot_date) FROM wh_06k.fct_subscription_snapshot) AND NOT was_refunded AND billing_interval='month'
+  note: plan slice
 - id: h_c_mrr_total
   tier: contested_level
   question: What is our total monthly recurring revenue?
@@ -526,14 +504,7 @@ cases:
       consumer: quota attainment and commission
       gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN
         (1,4)
-  note: no slice at all || on `kimball` mrr and gross_mrr AGREE today, so this has one right answer
-  overrides:
-    kimball:
-      type: metric_answer
-      metric: mrr
-      tolerance: 0.005
-      gold_sql: SELECT round(sum(mrr_amount),2) FROM wh_06k.fct_subscription_snapshot WHERE snapshot_date=(SELECT
-        max(snapshot_date) FROM wh_06k.fct_subscription_snapshot) AND NOT was_refunded
+  note: no slice at all
 - id: h_c_spend_june
   tier: contested_level
   question: How much did we spend on marketing in June 2026?

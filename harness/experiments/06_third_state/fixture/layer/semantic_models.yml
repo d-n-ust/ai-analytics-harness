@@ -142,8 +142,12 @@ metric:
 metric:
   name: mrr
   description: >-
-    Monthly recurring revenue, NET of refunded terms. An annual term counts as one twelfth. Owned by
-    Finance. Used by the board pack and the revenue forecast.
+    The current monthly value of every active subscription, net of terms later refunded. A running
+    figure: leave `period` out to get it as it stands today, which is what a question with no date is
+    asking for. A `period` here selects terms that STARTED in it — a cohort, a different question —
+    not the running figure on that date. An annual term counts as one twelfth. Example:
+    query_metric(metric='mrr', filters={'subscription__plan': 'monthly'}) is the monthly-plan figure
+    today. Owned by Finance. Used by the board pack and the revenue forecast.
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
@@ -151,9 +155,10 @@ metric:
 metric:
   name: gross_mrr
   description: >-
-    Monthly recurring revenue GROSS of refunds — every term that was sold and has not been
-    cancelled, refunded or not. Owned by Sales. Used for quota attainment and commission, which pay
-    on what was closed rather than on what was kept.
+    The same running figure as `mrr`, but gross of refunds — a term that was later refunded still
+    counts. That single difference is what separates the two. Same rules: leave `period` out for the
+    figure today; a `period` selects the cohort that started in it. Owned by Sales. Used for quota
+    attainment and commission, which pay on what was closed rather than on what was kept.
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription__status') }} != 'canceled'"

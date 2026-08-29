@@ -35,32 +35,10 @@ _REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
 SOURCE_SCHEMA = {"raw": "_source"}
 
 
-# WHICH SCHEMA EACH LAYER LANDS IN. dbt's own convention, and here it is load-bearing rather than
-# tidy: the agent is given ONE schema to read, so staging and intermediate must not be in it.
-# `stg_users` is the messy source with the casing fixed and nothing else decided; `int_*` are spine
-# tables that exist only to build a mart. An agent that can reach them can answer from a layer that
-# has had no business logic applied and looks exactly like one that has.
-LAYER_SUFFIX = {"staging": "_stg", "intermediate": "_int", "marts": ""}
-
-
-def _layer_of(path, root) -> str:
-    """The layer a model file belongs to, from its directory. Unfiled models land in marts, which
-    is the safe default: a model nobody classified is visible rather than silently hidden."""
-    rel = path.relative_to(root).parts
-    return rel[0] if len(rel) > 1 and rel[0] in LAYER_SUFFIX else "marts"
-
-
 def _models(root=None) -> dict[str, str]:
     """{model name -> SQL}, from every .sql file under a models directory. The file name is the
     model name, which is dbt's own rule and the reason no manifest is needed to find one."""
-    root = root or MODELS
-    return {p.stem: p.read_text() for p in sorted(root.rglob("*.sql"))}
-
-
-def _schemas(root, schema: str) -> dict[str, str]:
-    """{model name -> the schema it is built into}."""
-    root = root or MODELS
-    return {p.stem: schema + LAYER_SUFFIX[_layer_of(p, root)] for p in sorted(root.rglob("*.sql"))}
+    return {p.stem: p.read_text() for p in sorted((root or MODELS).rglob("*.sql"))}
 
 
 def _refs(sql: str) -> set[str]:
@@ -84,9 +62,9 @@ def _ordered(models: dict[str, str]) -> list[str]:
     return placed
 
 
-def _compile(sql: str, schema: str = SCHEMA, schemas: dict | None = None) -> str:
+def _compile(sql: str, schema: str = SCHEMA) -> str:
     sql = _SOURCE.sub(lambda m: f'"{SOURCE_SCHEMA[m.group(1)]}".{m.group(2)}', sql)
-    return _REF.sub(lambda m: f"{(schemas or {}).get(m.group(1), schema)}.{m.group(1)}", sql)
+    return _REF.sub(lambda m: f"{schema}.{m.group(1)}", sql)
 
 
 def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]:
@@ -96,18 +74,14 @@ def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]
     original stays exactly as it is, because every number measured in this experiment was measured
     against it and a rebuilt fixture is not a comparison.
     """
-    schemas = _schemas(root, schema)
-    for target in sorted(set(schemas.values())):
-        if drop:
-            con.execute(f"DROP SCHEMA IF EXISTS {target} CASCADE")
-        con.execute(f"CREATE SCHEMA IF NOT EXISTS {target}")
+    if drop:
+        con.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
     models = _models(root)
     built = []
     for name in _ordered(models):
-        into = schemas[name]
-        con.execute(f"CREATE OR REPLACE VIEW {into}.{name} AS\n"
-                    f"{_compile(models[name], schema, schemas)}")
-        built.append((into, name))
+        con.execute(f"CREATE OR REPLACE VIEW {schema}.{name} AS\n{_compile(models[name], schema)}")
+        built.append(name)
     return built
 
 
@@ -121,10 +95,10 @@ def main() -> None:
     con = open_warehouse(create_star_views=True)
     root = pathlib.Path(args.models) if args.models else None
     built = build(con, drop=args.drop, root=root, schema=args.schema)
-    print(f"built {len(built)} models:")
-    for into, name in built:
-        n = con.execute(f"SELECT count(*) FROM {into}.{name}").fetchone()[0]
-        print(f"  {into + '.' + name:44} {n:>8,} rows")
+    print(f"built {len(built)} models into {args.schema}:")
+    for name in built:
+        n = con.execute(f"SELECT count(*) FROM {args.schema}.{name}").fetchone()[0]
+        print(f"  {name:24} {n:>8,} rows")
 
 
 if __name__ == "__main__":

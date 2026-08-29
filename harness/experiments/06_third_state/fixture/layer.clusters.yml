@@ -13,7 +13,7 @@ generated:
   gate: lexical
   at: '2026-08-27T20:26:51Z'
 source:
-  fingerprint: sha256:7a29bf65c1035096fd7c1cf594b5e92b011851ce7b1716e20cd872ccd4f5f41e
+  fingerprint: sha256:0a17c6c3535b2f8794a89023f962d7bff78c7c5dbdbddcc2a658f1315b616cfe
   files:
   - layer/project.yaml
   - layer/semantic_models.yml
@@ -24,8 +24,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'acquisition_spend' is 'marketing_spend' plus a filter — bare question silently
-        scoped, swap invisible
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
@@ -37,8 +37,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'active_users' is 'active_accounts' plus a filter — bare question silently scoped,
-        swap invisible
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
@@ -52,8 +52,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'active_users' is 'active_accounts' plus a filter — bare question silently scoped,
-        swap invisible
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
@@ -67,7 +67,7 @@ names:
       layer: semantic
       collision: SIBLING
       danger: low
-      note: same measure, incomparable scopes — a question must name one
+      note: "same measure, incomparable scopes \u2014 a question must name one"
       kind: metric
       differs_in:
       - scope
@@ -80,8 +80,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'acquisition_spend' is 'marketing_spend' plus a filter — bare question silently
-        scoped, swap invisible
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
@@ -93,7 +93,7 @@ names:
       layer: semantic
       collision: SIBLING
       danger: low
-      note: same measure, incomparable scopes — a question must name one
+      note: "same measure, incomparable scopes \u2014 a question must name one"
       kind: metric
       differs_in:
       - scope
@@ -110,8 +110,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'value_moments' is 'total_value_moments' plus a filter — bare question silently
-        scoped, swap invisible
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
@@ -123,8 +123,8 @@ names:
       layer: semantic
       collision: SCOPE_TRAP
       danger: high
-      note: same measure; 'value_moments' is 'total_value_moments' plus a filter — bare question silently
-        scoped, swap invisible
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
       kind: metric
       differs_in:
       - scope
