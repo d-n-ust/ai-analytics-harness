@@ -128,6 +128,8 @@ def _act_lines(acts, paint, indent: str) -> list[str]:
     are very different claims about a number."""
     lines = []
     for a in acts or []:
+        if isinstance(a, str):                      # a row may store just the guardrail name
+            a = {"guardrail": a}
         glyph, colour = _MARK.get(a.get("outcome", ""), ("·", "dim"))
         name = a.get("guardrail", "?")
         detail = a.get("detail") or ""
