@@ -127,3 +127,93 @@ def question_chose_scope(model, question: str, mine: str, mine_desc: str,
                 return False, f"unverified quote {quote!r}"
             return chose, quote
     return False, ""
+
+
+# --- `value_membership`: does the question name a value outside the governed vocabulary? --------- #
+#
+# THE NIL PATH FOR A DIMENSION VALUE. A question that names a value with no governed referent — "how
+# much did we spend on TikTok ads", where the channels are content_seo / paid_search / partnerships
+# / referral — carries a FALSE EXISTENTIAL PRESUPPOSITION: it presupposes a channel called TikTok.
+# The agent cannot bind the value, so it relaxes the constraint that failed and answers the universal
+# set: it drops the channel filter and serves total marketing spend, 61,233, as the TikTok figure.
+#
+# Three fields have named exactly this — false-presupposition QA (CREPE), value-linking
+# unanswerability in text-to-SQL, and NIL prediction in entity linking — and they converge on one
+# rule: binding a mention to a closed vocabulary must have an explicit NO-REFERENT outcome, or the
+# system force-binds to the nearest candidate. This supplies that outcome.
+#
+# THE DIVISION, as everywhere in this module: the model reads the question and proposes which tokens
+# are categorical VALUES (a channel, a region, a plan), quoting each; the mechanism decides governed
+# or not, by membership against the layer's published members. A value is governed iff it matches
+# some member of some dimension, so a real value the model mis-attributes to the wrong dimension is
+# still recognised as governed and does not fire. It fires only on a quoted value that is in the
+# question and matches NO governed member anywhere.
+_VALUE_SYSTEM = (
+    "You are given an analytics question and the complete governed vocabulary of a data warehouse: "
+    "every categorical dimension and its allowed values (channels, regions, countries, platforms, "
+    "plans, statuses).\n\n"
+    "List every value the question names that is meant as one of these categorical values — a "
+    "specific channel, region, country, platform, plan or status to filter or break down by. "
+    "Whether or not it appears in the allowed lists. Quote each exactly as it appears in the "
+    "question.\n\n"
+    "Do NOT list metrics, dates, numbers, or ordinary words. Only values that name a member of a "
+    "categorical dimension. If the question names none, return an empty list.")
+
+_VALUE_USER = "Question: {question}\n\nGoverned vocabulary:\n{vocab}"
+
+_VALUE_REPORT = {
+    "name": "report_values",
+    "description": "The categorical dimension-values the question names, each quoted from it.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "values": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "quote": {"type": "string", "description": "copied exactly from the question"},
+                        "reads_as": {"type": "string",
+                                     "description": "the kind of value: channel, region, plan, …"},
+                    },
+                    "required": ["quote"],
+                },
+            },
+        },
+        "required": ["values"],
+    },
+}
+
+
+def _norm(s: str) -> str:
+    """Fold spelling variants that mean the same member: case, and the space/underscore/hyphen a
+    catalogue writes one way and a person another (`paid search` == `paid_search`)."""
+    return "".join(c for c in str(s or "").lower() if c.isalnum())
+
+
+def question_names_ungoverned_value(model, question: str, members: dict) -> list:
+    """[{value, reads_as}] for each value the question names that is in NO governed dimension.
+
+    `members` is {dimension -> [governed values]}. A quoted value counts as ungoverned only when it
+    is verifiably in the question AND matches no member of any dimension — so an incidental word, or
+    a value attributed to the wrong dimension, cannot fire. Empty list on any failure: a check that
+    did not run must not invent a refusal.
+    """
+    governed = {_norm(v) for vals in members.values() for v in vals}
+    vocab = "\n".join(f"  {d}: {', '.join(map(str, vals))}" for d, vals in sorted(members.items()))
+    try:
+        turn = model.respond(Conversation.opening(_VALUE_SYSTEM,
+                                                  _VALUE_USER.format(question=question, vocab=vocab)),
+                             [_VALUE_REPORT], force_tool="report_values", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return []
+    named = next((c.args.get("values") for c in turn.tool_calls if c.name == "report_values"), None)
+    out = []
+    for item in named or []:
+        quote = str((item or {}).get("quote") or "").strip()
+        if not quote or _norm(quote) in governed:
+            continue                                     # governed, or empty — nothing to report
+        if _norm(quote) not in _norm(question):
+            continue                                     # unverified: the model must quote the question
+        out.append({"value": quote, "reads_as": str((item or {}).get("reads_as") or "").strip()})
+    return out

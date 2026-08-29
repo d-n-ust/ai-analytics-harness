@@ -81,6 +81,18 @@ def _reported(served: list, value: float) -> bool:
     return any(abs(n - value) <= 0.005 * abs(value) for n in served)
 
 
+def _closest_dimension(value, members: dict) -> str:
+    """The dimension whose name shares a token with the ungoverned value's kind, for a helpful
+    hand-back line. Best-effort only: a wrong guess costs a slightly vaguer message, never a wrong
+    verdict — the verdict was already made by membership."""
+    v = value.lower()
+    for d, vals in members.items():
+        leaf = d.rsplit("__", 1)[-1]
+        if leaf in v or any(leaf in str(x).lower() for x in vals if leaf):
+            return d
+    return ""
+
+
 def _leaf(name) -> str:
     """The last segment of a dimension name: `activity__platform` and `platform` are one thing."""
     return str(name).strip().rsplit("__", 1)[-1].lower()
@@ -141,6 +153,7 @@ class _Run:
     # sentence that vanished between the two was deleted, not fixed.
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
+    _ungoverned: object = None         # cached ungoverned values the question names, once per run
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
 
     @property
@@ -251,8 +264,54 @@ class _Run:
         only that one is broken in the other direction: nothing about it is malformed, and the
         reader is the one who cannot tell.
         """
-        return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
-                or self.undisclosed_rival(exit_call))
+        return (self.malformed_claims(exit_call) or self.ungoverned_value(exit_call)
+                or self.dropped_constraint(exit_call) or self.undisclosed_rival(exit_call))
+
+    def ungoverned_value(self, exit_call):
+        """Hand back an answer that served a number for a question naming a value the layer has no
+        member for — the NIL path for a dimension value.
+
+        THE FALSE PRESUPPOSITION the answer walked past. "How much on TikTok ads" presupposes a
+        channel called TikTok; there is none, the agent dropped the channel filter, and served total
+        spend as the TikTok figure. A served number is required for this to fire: refusing or
+        correcting the premise is the right response and must not be handed back.
+
+        The model reads the question and proposes which tokens are categorical values; the mechanism
+        decides governed-or-not against the published members. Cached per run, like the scope judge,
+        because the question does not change within a run.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not g.value_membership:
+            return None
+        semantic = self.grounding.semantic
+        served = bare_number(str(exit_call.args.get("answer") or "")) is not None \
+            or _as_number(exit_call.args.get("value")) is not None
+        if not served or semantic is None or not hasattr(semantic, "dimension_members"):
+            return None
+        if self._ungoverned is None:
+            self._ungoverned = _classify.question_names_ungoverned_value(
+                self.model, self.question, semantic.dimension_members())
+            if self._ungoverned:
+                named = ", ".join(f"{v['value']!r}" for v in self._ungoverned)
+                self.acts.append(Act("value_membership", str(Position.REPAIR), "handed back",
+                                     f"question names ungoverned value(s): {named}").as_dict())
+            else:
+                self.acts.append(Act("value_membership", str(Position.REPAIR), "stood down",
+                                     "every value the question names is governed").as_dict())
+        if not self._ungoverned:
+            return None
+        members = semantic.dimension_members()
+        lines = ["Your answer was not accepted: the question names a value this layer does not "
+                 "have, so a number cannot be right — it can only be the figure for some other "
+                 "scope."]
+        for v in self._ungoverned:
+            hint = _closest_dimension(v["value"], members)
+            lines.append(f"  {v['value']!r} is not a governed value"
+                         + (f" of {hint}" if hint else "") + ".")
+        lines.append("Refuse with reason `ungoverned_dimension_value` and name what the layer does "
+                     "have, or `clarify` if you cannot tell which governed value was meant. Do not "
+                     "answer for a broader scope.")
+        return ToolResult("\n".join(lines), is_error=True)
 
     def dropped_constraint(self, exit_call):
         """Hand back an answer whose number came from a call that abandoned a restriction the run
