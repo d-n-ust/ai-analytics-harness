@@ -44,13 +44,29 @@ LAYER = HERE / "layer"
 # measured against and it does not change: a rebuilt fixture is not a comparison. `kimball` models
 # the balances as balances — see kimball/README.md — and exists to separate the definitional
 # conflicts that are organisational from the ones that were modelling debt.
-WAREHOUSES = {"base":    (None,                  "wh_06",  HERE / "layer"),
-              "kimball": (HERE / "kimball/models", "wh_06k", HERE / "kimball/layer")}
+WAREHOUSES = {"base":    (None,                  "wh_06",  HERE / "layer",        None),
+              "kimball": (HERE / "kimball/models", "wh_06k", HERE / "kimball/layer", "wh_06k")}
 RUNG = 3          # star + governed semantic layer, raw SQL still on the table
 
 # The three shapes a question can have, as the grader names them. Kept here so the runner's own
 # labels cannot drift from `selective.py`'s piles.
 _PILE = {"metric_answer": "A", "refuse": "B", "contested": "C"}
+
+
+def _cursor(con, sql_schema):
+    """The handle the agent's tools get.
+
+    When a warehouse names its own marts schema, the cursor's search_path is THAT SCHEMA ALONE —
+    the same rule `warehouse.Environment.cursor` uses for per-arm environments, and for the same
+    reason: `_source` absent means an unqualified reference to a raw table fails rather than
+    silently returning uncleaned ground truth. Without it the agent is shown a list of marts and can
+    still read `subs` and `u` by name, which makes the star a listing rather than a boundary.
+    """
+    if sql_schema is None:
+        return scoped_cursor(con)
+    cur = con.cursor()
+    cur.execute(f"SET search_path='{sql_schema}'")
+    return cur
 
 
 def load_cases(name: str = "cases.yml", warehouse: str = "base") -> list[dict]:
@@ -135,7 +151,7 @@ def main() -> None:
     ap.add_argument("--json", dest="out", default=None, help="write the graded rows here")
     args = ap.parse_args()
 
-    models_root, schema, layer = WAREHOUSES[args.warehouse]
+    models_root, schema, layer, sql_schema = WAREHOUSES[args.warehouse]
     if args.variant:
         if args.warehouse != "base":
             sys.exit("--variant varies the BASE layer's presentation; it has no counterpart here")
@@ -153,8 +169,8 @@ def main() -> None:
 
     # A study that starts against a broken layer measures the layer, not the treatment. One query
     # per metric, about a second, before any model call is paid for.
-    probe = build_grounding(scoped_cursor(con), rung=RUNG, spec_path=layer, engine="metricflow",
-                            semantic_layer=True, guardrails=guardrails)
+    probe = build_grounding(_cursor(con, sql_schema), rung=RUNG, spec_path=layer, engine="metricflow",
+                            semantic_layer=True, guardrails=guardrails, schema=sql_schema)
     broken = getattr(probe.semantic, "self_test", lambda: {})()
     if broken:
         for name, err in broken.items():
@@ -190,10 +206,15 @@ def main() -> None:
     def one(task):
         rep, idx, case = task
         with cursor_lock:
-            cur = scoped_cursor(con)
+            cur = _cursor(con, sql_schema)
         try:
+            # `schema` is what raw SQL may read. `base` passes None and inherits the shared star,
+            # which is how every number in this experiment was measured. `kimball` names its own
+            # MARTS schema, so run_sql sees the same warehouse the semantic layer does and cannot
+            # reach staging, intermediate, or the raw source behind them.
             grounding = build_grounding(cur, rung=RUNG, spec_path=layer, engine="metricflow",
-                                        semantic_layer=True, guardrails=guardrails)
+                                        semantic_layer=True, guardrails=guardrails,
+                                        schema=sql_schema)
             grounding.semantic.catalogue = args.catalogue
             with print_lock:
                 if not shown:

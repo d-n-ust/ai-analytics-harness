@@ -171,6 +171,41 @@ groupings. The bug only surfaced once the agent finally issued the correct call.
 The lesson matches the dimension-vocabulary one earlier in this experiment: the agent was not being
 careless, it was filling a gap the layer left, and the fix was to stop leaving it.
 
+## The layers, and the boundary between them
+
+    raw          _source                    the generated mess, unreachable
+    staging      wh_06k_stg   6 models      renamed, cast, one normalisation
+    intermediate wh_06k_int   4 models      spines and lags, plumbing only
+    marts        wh_06k      12 models      what the agent may read
+    semantic     kimball/layer              16 metrics over the marts
+
+One schema per layer, which is dbt's convention and here it is load-bearing rather than tidy: the
+agent is given ONE schema, so staging and intermediate must not be in it. `stg_users` is the messy
+source with the casing fixed and nothing else decided, and it looks exactly like a mart to anything
+reading a table list.
+
+The boundary is now enforced rather than listed. The base warehouse shows the agent seven clean star
+tables while `_source` sits on the search path, so `SELECT count(*) FROM subs` and `FROM u` both
+work — the raw table with `plat` spelled four ways and `st` as an integer code. Here the cursor's
+search_path is the marts schema alone, the rule `warehouse.Environment.cursor` already used for
+per-arm environments:
+
+    SELECT count(*) FROM fct_value_moments      67,132
+    SELECT count(*) FROM stg_users              Catalog Error: does not exist
+    SELECT count(*) FROM int_subscription_days  Catalog Error: does not exist
+    SELECT count(*) FROM subs                   Catalog Error: does not exist
+    SELECT count(*) FROM "_source".subs         names _source, outside this environment
+    SELECT count(*) FROM "_star".dim_users      names _star, outside this environment
+
+**And raw SQL now reads the same warehouse the semantic layer does.** It did not before: the
+semantic layer read `wh_06k` while `run_sql` read the shared `_star`, which has no snapshot, no
+cohort column and no movement fact. An agent dropping to SQL was querying a warehouse in which the
+modelling work did not exist, while being told about metrics built on it.
+
+That asymmetry is deliberate for `base`, which passes no schema and keeps the behaviour every number
+in this experiment was measured against. It does mean a comparison between the two warehouses is
+confounded for any question the agent answers with SQL rather than a governed metric.
+
 ## Grading across two warehouses
 
 A case may carry `overrides: {<warehouse>: <expect>}`, and the whole `expect` block is REPLACED
