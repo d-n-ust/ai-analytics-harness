@@ -186,7 +186,10 @@ def main() -> None:
                           "tool_calls": len(answer.steps),
                           "tool_errors": sum(1 for s in answer.steps if s.get("error")),
                           "handbacks": len(answer.repairs),
-                          "acts": [a.get("guardrail") for a in (answer.acts or [])]}
+                          "acts": [a.get("guardrail") for a in (answer.acts or [])],
+                          # The served TEXT, because several checks are about what the reader
+                          # receives and cannot be evaluated from a graded row without it.
+                          "answer_text": answer.answer, "explanation": answer.explanation}
 
     tasks = [(rep, i, c) for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:
