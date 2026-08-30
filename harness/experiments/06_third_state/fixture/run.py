@@ -32,7 +32,20 @@ from evals.gold import _validate, compute_gold
 from evals.grade import grade
 from evals.matrix import render as render_matrix
 from evals.selective import selective
-from warehouse.warehouse import cursor as scoped_cursor
+from warehouse.warehouse import cursor as _shared_cursor
+
+
+MARTS = "wh_06"
+
+
+def scoped_cursor(con):
+    """The handle the agent's tools get: search_path is the MARTS schema alone. `_source`, `_star`
+    and the `_stg` staging schema are all absent, so an unqualified reference to anything but a
+    documented mart fails rather than silently returning uncleaned or undocumented data. The same
+    rule `warehouse.Environment.cursor` uses for per-arm environments."""
+    cur = con.cursor()
+    cur.execute(f"SET search_path='{MARTS}'")
+    return cur
 from warehouse.warehouse import open_warehouse
 
 import build as fixture_build
@@ -119,7 +132,8 @@ def main() -> None:
     if not layer.is_dir():
         sys.exit(f"{layer} does not exist — run `python variants.py --write` first")
     con = open_warehouse(create_star_views=True)
-    fixture_build.build(con)                      # so the layer has something to read
+    fixture_build.build(con, drop=True)           # so the layer has something to read; drop clears
+                                                  # any stale view a renamed model left behind
     cases = load_cases(args.cases)
     golds = compute_gold(con, cases)             # resolves each candidate's own oracle
     if args.only:
@@ -130,7 +144,7 @@ def main() -> None:
     # A study that starts against a broken layer measures the layer, not the treatment. One query
     # per metric, about a second, before any model call is paid for.
     probe = build_grounding(scoped_cursor(con), rung=RUNG, spec_path=layer, engine="metricflow",
-                            semantic_layer=True, guardrails=guardrails)
+                            semantic_layer=True, guardrails=guardrails, schema=MARTS)
     broken = getattr(probe.semantic, "self_test", lambda: {})()
     if broken:
         for name, err in broken.items():
@@ -168,8 +182,10 @@ def main() -> None:
         with cursor_lock:
             cur = scoped_cursor(con)
         try:
+            # schema=MARTS: run_sql reads and is bounded to the documented marts, the same
+            # warehouse the semantic layer uses — not staging, the raw source, or the shared star.
             grounding = build_grounding(cur, rung=RUNG, spec_path=layer, engine="metricflow",
-                                        semantic_layer=True, guardrails=guardrails)
+                                        semantic_layer=True, guardrails=guardrails, schema=MARTS)
             grounding.semantic.catalogue = args.catalogue
             with print_lock:
                 if not shown:

@@ -35,10 +35,25 @@ _REF = re.compile(r"\{\{\s*ref\(\s*['\"](\w+)['\"]\s*\)\s*\}\}")
 SOURCE_SCHEMA = {"raw": "_source"}
 
 
+# The layer a model belongs to decides which schema it lands in — dbt's convention, and here it is
+# load-bearing: the agent is scoped to the MARTS schema, so staging must sit elsewhere or an
+# unmodelled staging table would show up beside the documented facts.
+LAYER_SUFFIX = {"staging": "_stg", "intermediate": "_int", "marts": ""}
+
+
 def _models(root=None) -> dict[str, str]:
     """{model name -> SQL}, from every .sql file under a models directory. The file name is the
     model name, which is dbt's own rule and the reason no manifest is needed to find one."""
     return {p.stem: p.read_text() for p in sorted((root or MODELS).rglob("*.sql"))}
+
+
+def _schema_of(name: str, root=None) -> str:
+    """The schema a model lands in, from the sub-directory it sits in (marts is the default)."""
+    for path in (root or MODELS).rglob(f"{name}.sql"):
+        parts = path.relative_to(root or MODELS).parts
+        if len(parts) > 1 and parts[0] in LAYER_SUFFIX:
+            return LAYER_SUFFIX[parts[0]]
+    return ""
 
 
 def _refs(sql: str) -> set[str]:
@@ -62,9 +77,9 @@ def _ordered(models: dict[str, str]) -> list[str]:
     return placed
 
 
-def _compile(sql: str, schema: str = SCHEMA) -> str:
+def _compile(sql: str, schema: str = SCHEMA, ref_schema=None) -> str:
     sql = _SOURCE.sub(lambda m: f'"{SOURCE_SCHEMA[m.group(1)]}".{m.group(2)}', sql)
-    return _REF.sub(lambda m: f"{schema}.{m.group(1)}", sql)
+    return _REF.sub(lambda m: f"{(ref_schema or (lambda n: schema))(m.group(1))}.{m.group(1)}", sql)
 
 
 def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]:
@@ -74,15 +89,43 @@ def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]
     original stays exactly as it is, because every number measured in this experiment was measured
     against it and a rebuilt fixture is not a comparison.
     """
-    if drop:
-        con.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-    con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
     models = _models(root)
+    target = lambda n: (schema + _schema_of(n, root))          # marts -> schema, staging -> _stg
+    for s in sorted({target(n) for n in models}):
+        if drop:
+            con.execute(f"DROP SCHEMA IF EXISTS {s} CASCADE")
+        con.execute(f"CREATE SCHEMA IF NOT EXISTS {s}")
     built = []
     for name in _ordered(models):
-        con.execute(f"CREATE OR REPLACE VIEW {schema}.{name} AS\n{_compile(models[name], schema)}")
+        con.execute(f"CREATE OR REPLACE VIEW {target(name)}.{name} AS\n"
+                    f"{_compile(models[name], schema, target)}")
         built.append(name)
+    _apply_docs(con, root or MODELS, schema)
     return built
+
+
+def _apply_docs(con, root: pathlib.Path, schema: str) -> None:
+    """Persist table and column descriptions from marts/schema.yml as COMMENT ON — dbt's
+    `persist_docs`. `warehouse.schema_text` reads these back, so a documented mart reaches the agent
+    as documentation rather than as bare names and types. Silently does nothing when no docs file
+    exists, so an undocumented project still builds."""
+    docs = root / "marts" / "schema.yml"
+    if not docs.is_file():
+        return
+    import yaml
+    spec = yaml.safe_load(docs.read_text()) or {}
+    esc = lambda s: str(s).replace("'", "''")
+    for model in spec.get("models", []):
+        name = model["name"]
+        if model.get("description"):
+            con.execute(f"COMMENT ON VIEW {schema}.{name} IS '{esc(model['description'])}'")
+        cols = {c[0] for c in con.execute(f"DESCRIBE {schema}.{name}").fetchall()}
+        for col in model.get("columns", []):
+            if col.get("description") and col["name"] in cols:
+                con.execute(f"COMMENT ON COLUMN {schema}.{name}.{col['name']} IS "
+                            f"'{esc(col['description'])}'")
+            elif col.get("description"):
+                print(f"  doc skipped: {name}.{col['name']} is not a column")
 
 
 def main() -> None:
@@ -95,10 +138,12 @@ def main() -> None:
     con = open_warehouse(create_star_views=True)
     root = pathlib.Path(args.models) if args.models else None
     built = build(con, drop=args.drop, root=root, schema=args.schema)
-    print(f"built {len(built)} models into {args.schema}:")
+    root = pathlib.Path(args.models) if getattr(args, "models", None) else None
+    print(f"built {len(built)} models:")
     for name in built:
-        n = con.execute(f"SELECT count(*) FROM {args.schema}.{name}").fetchone()[0]
-        print(f"  {name:24} {n:>8,} rows")
+        into = args.schema + _schema_of(name, root)
+        n = con.execute(f"SELECT count(*) FROM {into}.{name}").fetchone()[0]
+        print(f"  {into + '.' + name:34} {n:>8,} rows")
 
 
 if __name__ == "__main__":
