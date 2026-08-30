@@ -370,10 +370,24 @@ class MetricFlowLayer:
                 return f"{dim} = {_literal(val)}"
 
             where = " AND ".join(_predicate(col, val) for col, val in kw["filters"].items())
+        # TIME_GRAIN WAS A DEAD PARAMETER, and that was the footgun. The grain of a time breakdown
+        # comes only from the group-by column name — `metric_time` is day, `metric_time__week` is
+        # week — so a caller passing `time_grain='week'` alongside a bare `metric_time` was handed
+        # DAY rows, and a semi-additive measure returned at day grain invites a SUM over time: the
+        # weekly active_users was reported as the sum of its seven daily distinct counts, ~2.3x too
+        # high, a plausible number for the wrong grain. Honoring the grain binds a bare metric_time
+        # to it. An explicit `metric_time__day` the caller wrote is left alone, so a real by-day
+        # breakdown still works — the fix targets the CONFLICT (week asked, day returned), not
+        # day-grain queries. This is what a real semantic layer does: a grain request returns that
+        # grain.
+        group_by = list(kw.get("group_by") or [])
+        grain = kw.get("time_grain")
+        if grain:
+            group_by = [f"metric_time__{grain}" if g == "metric_time" else g for g in group_by]
         request = MetricFlowQueryRequest.create(
             metric_names=[name],
             where_constraints=[where] if where else None,
-            group_by_names=kw.get("group_by") or None,
+            group_by_names=group_by or None,
             time_constraint_start=to_dt(start), time_constraint_end=to_dt(end))
         # METRICFLOW'S OWN EXCEPTIONS STOP HERE. `dispatch` catches SemanticError and hands the
         # agent a recoverable tool error; an exception type it does not know propagates out of the

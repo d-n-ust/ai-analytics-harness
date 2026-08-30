@@ -281,6 +281,24 @@ def main() -> None:
         print(f"  proxy-offers {len(proxy)}   construct-invalid (over-offer): "
               f"{sum(1 for r in proxy if want.get(r['id']) != 'ambiguous')}"
               f"{'  ' + ', '.join(over) if over else ''}")
+    # Summing-occurrence counter: the semi-additive roll-up (a run_sql that SUMs alongside a
+    # distinct-count metric), measured DIRECTLY rather than via the score. A fix aimed at the
+    # summing is measured by the summing, which varies far less than the graded outcome — the
+    # interface fix (weekly means weekly) should drive this toward zero.
+    semi_additive = {"active_users", "active_accounts", "paying_users"}
+
+    def _summed(r) -> bool:
+        steps = r.get("steps") or []
+        sql_sum = any(s.get("tool") == "run_sql" and "sum(" in str(s.get("args") or {}).lower()
+                      for s in steps)
+        distinct = any(s.get("tool") == "query_metric"
+                       and (s.get("args") or {}).get("metric") in semi_additive for s in steps)
+        return sql_sum and distinct
+
+    summed = sorted({r["id"] for r in rows if _summed(r)})
+    if summed:
+        print(f"  semi-additive SUMs (run_sql sum + a distinct-count metric): "
+              f"{sum(1 for r in rows if _summed(r))}  {', '.join(summed)}")
     # The grid, with the answered column split: an action-only 3x3 puts a right number and a
     # plausible wrong one in the same cell, and then reports a diagonal nobody should trust.
     print()

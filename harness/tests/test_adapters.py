@@ -156,6 +156,34 @@ def test_tools_schema_mapping():
     assert flat[0]["name"] == "answer" and "function" not in flat[0]   # flat — no nested wrapper
 
 
+def test_time_grain_binds_metric_time_so_a_weekly_ask_is_not_returned_daily():
+    """`time_grain` was a DEAD parameter: the grain of a time breakdown came only from the group-by
+    column name, so a bare `metric_time` (day) returned DAY rows even when the caller asked for
+    week. A semi-additive measure handed back at day grain invites a SUM over time — the weekly
+    figure reported as the sum of its daily distinct counts, a plausible number for the wrong
+    grain. The fix binds a bare metric_time to the requested grain; an explicit metric_time__day is
+    left alone, so a real by-day breakdown still works. NO LLM."""
+    from semantic.metricflow_engine import MetricFlowLayer
+    from warehouse.warehouse import open_warehouse, set_star
+
+    con = open_warehouse()
+    set_star(con, 3)
+    layer = MetricFlowLayer(con, harness_paths.ROOT / ("harness/experiments/04_repair_matrix"
+                            "/00_primitive_load/layers/D_declared"))
+    win = {"start": "2026-06-01", "end": "2026-06-30"}
+
+    # Week asked + bare metric_time -> WEEKLY buckets, not the day rows the summing bug rode in on.
+    _, cols, _ = layer.query_with_sql("people_reminded", group_by=["metric_time"],
+                                      time_grain="week", **win)
+    assert "metric_time__week" in cols and "metric_time__day" not in cols, \
+        f"a weekly ask on a semi-additive metric returned {cols} — the day-grain footgun"
+
+    # An EXPLICIT day grain still returns daily: a real by-day series must not break.
+    _, cday, rday = layer.query_with_sql("people_reminded", group_by=["metric_time__day"], **win)
+    assert "metric_time__day" in cday and len(rday) > 1, \
+        "an explicit by-day breakdown must still return day rows"
+
+
 TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
          test_a_model_never_asks_for_an_effort_it_rejects,
          test_empty_assistant_content_is_string_not_null,
@@ -163,13 +191,15 @@ TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
          test_responses_threads_a_call_to_its_result_by_call_id,
          test_anthropic_renders_like_every_other_provider,
          test_a_received_turn_is_echoed_back_verbatim,
-         test_tools_schema_mapping]
+         test_tools_schema_mapping,
+         test_time_grain_binds_metric_time_so_a_weekly_ask_is_not_returned_daily]
 
 
 if __name__ == "__main__":
     for fn in TESTS:
         fn()
-    print(f"OK - adapters: {len(TESTS)} shape tests pass, wire payloads byte-identical to golden.")
+    print(f"OK - adapters: {len(TESTS)} tests pass, wire payloads byte-identical to golden and a "
+          f"weekly ask is not returned at day grain.")
 
 
 # --------------------------------------------------------------------------- #
