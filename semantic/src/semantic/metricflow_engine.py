@@ -227,6 +227,18 @@ class MetricFlowLayer:
         # present but a lookup apart).
         inline = self.catalogue == "inline"
         members = self.dimension_members() if inline else {}
+        # Under `inline`, each dimension carries BOTH its categories and its description beside the
+        # metric, so the block is self-contained: nothing about a filterable dimension lives in a
+        # section the agent must cross-reference. `content_seo` is shown, and next to it that it
+        # means "content and SEO", where the question's phrasing and the value token diverge.
+        descs: dict = {}
+        if inline:
+            for sm in self._manifest.semantic_models:
+                entity = next((e.name for e in sm.entities), None)
+                for d in sm.dimensions:
+                    if d.description:
+                        key = f"{entity}__{d.name}" if entity else d.name
+                        descs[key] = " ".join(d.description.split())
         detail: list = []
         if compact:
             for m in ordered:
@@ -271,11 +283,14 @@ class MetricFlowLayer:
                     else:
                         label = f"by {prefix} (joined)"
                     if inline and prefix != "metric_time":
-                        shown = ", ".join(
-                            f"{d} ({'/'.join(members[d])})" if members.get(d) else d for d in group)
+                        # One dimension per line: name (categories) — description. Self-contained.
+                        block.append(f"    {label}:")
+                        for d in group:
+                            vals = f" ({'/'.join(members[d])})" if members.get(d) else ""
+                            desc = f" — {descs[d]}" if descs.get(d) else ""
+                            block.append(f"        {d}{vals}{desc}")
                     else:
-                        shown = ", ".join(group)
-                    block.append(f"    {label}: {shown}")
+                        block.append(f"    {label}: {', '.join(group)}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
             block.append("    time-filterable (period=…) and grainable "
                          f"(time_grain={'|'.join(TIME_GRAINS)})")
@@ -306,7 +321,7 @@ class MetricFlowLayer:
                 if d.description:
                     name = f"{entity}__{d.name}" if entity else d.name
                     described.append(f"- {name}: {' '.join(d.description.split())}")
-        if described:
+        if described and not inline:   # under `inline` the descriptions already sit beside each metric
             lines.append("\nWhat the dimensions mean:")
             lines += described
         return "\n".join(lines)

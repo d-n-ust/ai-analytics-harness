@@ -81,7 +81,10 @@ semantic_model:
   entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
   dimensions:
     - {name: spend_date, type: time, type_params: {time_granularity: day}}
-    - {name: channel, type: categorical}
+    - {name: channel, type: categorical,
+       description: "The marketing channel the spend is on. content_seo is spend on CONTENT and
+         SEO; paid_search is paid search advertising; partnerships is an internal test integration
+         that books spend but buys no customers; referral is referrals."}
   measures:
     - {name: spend_amount, agg: sum, expr: spend}
 
@@ -199,8 +202,10 @@ metric:
 metric:
   name: marketing_spend
   description: >-
-    Every pound of marketing spend in the period, ALL channels. Owned by Finance. Used by the
-    budget-versus-actuals report, which must reconcile to the ledger.
+    Every pound of marketing spend in the period, ALL channels. Filter by channel for one
+    channel's spend: query_metric(marketing_spend, filters={'spend_row__channel': 'content_seo'})
+    is spend on content and SEO; leave the filter off for all channels. Owned by Finance. Used by
+    the budget-versus-actuals report, which must reconcile to the ledger.
   type: simple
   type_params: {measure: spend_amount}
 ---
