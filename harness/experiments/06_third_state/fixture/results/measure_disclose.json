@@ -1,0 +1,1563 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_android_stated",
+    "error": null,
+    "question": "How many active users, excluding staff and test accounts, did we have on Android last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": 291.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of active users (metric 'active_users') excluding internal and test accounts on Android for last_week (2026-07-06..2026-07-12) for asked How many active users, excluding staff and test accounts, did we have on Android last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "291",
+    "explanation": "Query of governed metric 'active_users' by week for last_week (2026-07-06..2026-07-12) filtered to activity__platform=android returned 291 active users; this metric excludes internal and test accounts. (Also: 'active_accounts' = 302 if including internal/test accounts.)",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "android"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(291,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 291 against `active_accounts` 302, 3.78% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_seo_spend_june",
+    "error": null,
+    "question": "How much did we spend on content and SEO in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": 3605.41,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of marketing_spend for spend_row__channel = content_seo during period 2026-06 (governed metric marketing_spend, month grain) for asked How much did we spend on content and SEO in June 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3605.41",
+    "explanation": "Sum of marketing_spend for spend_row__channel = content_seo during period 2026-06 (governed metric marketing_spend, month grain). Retrieved via query_metric.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "time_grain": "month",
+          "period": "2026-06",
+          "group_by": [
+            "spend_row__channel"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: spend_row__channel, value\n('content_seo', 3605.4100000000003)\n('referral', 1874.9499999999998)\n('partnerships', 2746.03)\n('paid_search', 12786.809999999996)\n[cite] r2:content_seo \u00b7 r2:referral \u00b7 r2:partnerships \u00b7 r2:paid_search"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "error",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "error",
+    "id": "h_a_active_users_growth_web",
+    "error": "max_iterations",
+    "question": "By how many did active users on the web platform grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'is_internal = false'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "3 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "3 contested figure(s) omitted; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform",
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__day, activity__platform, value\n(datetime.datetime(2026, 7, 6, 0, 0), 'unknown', 9)\n(datetime.datetime(2026, 7, 7, 0, 0), 'web', 113)\n(datetime.datetime(2026, 7, 9, 0, 0), 'unknown', 8)\n(datetime.datetime(2026, 7, 9, 0,"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform",
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: metric_time__day, activity__platform, value\n(datetime.datetime(2026, 6, 30, 0, 0), 'android', 100)\n(datetime.datetime(2026, 6, 30, 0, 0), 'ios', 107)\n(datetime.datetime(2026, 7, 4, 0, 0), 'web', 113)\n(datetime.datetime(2026, 7, 3, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 11, 0, 0), 88)\n(datetime.datetime(2026, 7, 9, 0, 0), 95)\n(datetime.datetime(2026, 7, 6, 0, 0), 84)\n(datetime.datetime(2026, 7, 8, 0, 0), 80)\n(datetime.datetime(2026, 7, 10, 0, 0),"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "prev_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 97)\n(datetime.datetime(2026, 7, 3, 0, 0), 104)\n(datetime.datetime(2026, 6, 30, 0, 0), 100)\n(datetime.datetime(2026, 7, 5, 0, 0), 103)\n(datetime.datetime(2026, 6, 29, 0, "
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT SUM(value) FILTER () AS total FROM (SELECT value FROM r4) LIMIT 10"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Parser Error: syntax error at or near \")\"\n\nLINE 1: SELECT SUM(value) FILTER () AS total FROM (SELECT value FROM r4) LIMIT 10\n                                  ^"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(277,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 277 against `active_accounts` 289, 4.33% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_revenue_per_employee",
+    "error": null,
+    "question": "What was our revenue per employee last quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": null,
+    "reason": "wrong_measure",
+    "missing": "There is no governed metric named 'revenue' or 'revenue_per_employee'; mrr is a monthly run-rate, not total revenue for the quarter. The user asked 'last quarter' (Q2 2026). To report true revenue per employee we need a governed quarterly revenue metric (e.g., GAAP revenue or recognized revenue) or guidance that MRR can be used as a proxy.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served monthly run-rate MRR averaged over the quarter divided by active employees (MRR per employee) for asked revenue per employee [proxy]; correction 0 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metric mrr provides monthly recurring revenue run-rate; dividing it by internal headcount yields MRR per employee (a proxy), but the workspace has no governed quarterly revenue metric to compute actual revenue per employee for the quarter.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "2026-Q2",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1653.644166666666,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT count(*) AS employees FROM dim_employees WHERE status = 'active' AND hired_date <= '2026-06-30';"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name dim_employees does not exist!\nDid you mean \"dim_users\"?\n\nLINE 1: SELECT count(*) AS employees FROM dim_employees WHERE status = 'active' AND hired_date <=...\n                                          ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1653.644166666666,)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT COUNT(*) AS employees FROM dim_users WHERE is_internal = true AND signup_date <= '2026-06-30';"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] columns: employees\n(84,)\n[cite] r6 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_time_per_category",
+    "error": null,
+    "question": "Which habit category do users spend the most time on?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "time spent per habit category (session duration or time-in-app) is not recorded in the warehouse",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served count of completions (11,416) for asked time [proxy]; correction 0 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse records habit completions (fct_value_moments) but does not record session duration or time-in-app; therefore 'time spent' by category cannot be measured. I can report completions by category as a proxy (productivity = 11,416 completions) if you want.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2025-09-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2025-09-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT h.category, SUM(vm_count) AS completions\nFROM (\n  SELECT habit_id, COUNT(*) AS vm_count\n  FROM fct_value_moments\n  WHERE completed_date BETWEEN DATE '2025-09-01' AND DATE '2026-07-12'\n  GROUP BY habit_id\n) v\nJOIN dim_habit h USING (habit_id)\nGROUP BY h.category\nORDER BY completions DESC;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] columns: category, completions\n('productivity', 11416)\n('learning', 11315)\n('finance', 11198)\n('health', 11195)\n('fitness', 11191)\n('mindfulness', 10817)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_habits_per_session",
+    "error": null,
+    "question": "What is the average number of habits completed per session?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "no data source or governed metric records 'sessions' \u2014 neither a governed metric 'sessions' nor a raw table/column for session events exists in the semantic layer or warehouse to compute habits-per-session",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse has governed metrics for completed habits (value_moments/total_value_moments) and for app opens, but there is no governed metric or table capturing 'sessions' as you defined; without session instrumentation I cannot compute habits per session.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "average habits per session"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named 'average habits per session'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014 cite this whole statement as evide"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "group_by": [
+            "activity__active_date"
+          ],
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__active_date__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 580)\n(datetime.datetime(2026, 7, 3, 0, 0), 614)\n(datetime.datetime(2026, 6, 30, 0, 0), 573)\n(datetime.datetime(2026, 7, 5, 0, 0), 635)\n(datetime.datetime(2026,"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "sessions"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] NO \u2014 no governed metric named 'sessions'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_tiktok_spend",
+    "error": null,
+    "question": "How much did we spend on TikTok ads in the second quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "spend_row__channel value 'tiktok' (only governed values: content_seo, paid_search, partnerships, referral)",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The marketing_spend metric covers Q2 spend and the date range is in coverage (2026-04-01..2026-06-30), but the channel dimension only accepts the governed members above, and 'TikTok' is not one of them \u2014 the dataset does not expose a governed channel value for TikTok, so we cannot pull a reliable TikTok spend number.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "group_by": [
+            "spend_row__channel"
+          ],
+          "time_grain": "month",
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: 2026-04-01..2026-06-30\ncolumns: spend_row__channel, value\n('content_seo', 10643.219999999998)\n('referral', 5522.3499999999985)\n('partnerships', 8191.77)\n('paid_search', 36875.979999999996)\n[cite] r3:content_seo \u00b7 r3:referral \u00b7 r3:partnerships \u00b7 r3:paid_search"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": 371.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct accounts holding a live subscription (paying_users) for asked How many customers are on the enterprise plan? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "371",
+    "explanation": "Queried the governed metric 'paying_users' (distinct accounts holding a live subscription) with no period or filters to get the current snapshot; result = 371.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_mrr_annual",
+    "error": null,
+    "question": "How much monthly recurring revenue do our annual plans bring in?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 0,
+    "declared": 796.6366666666664,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Current running monthly recurring revenue from subscriptions on the annual plan (mrr metric, latest snapshot) for asked How much monthly recurring revenue do our annual plans bring in? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "796.6366666666664",
+    "explanation": "Current running monthly recurring revenue from subscriptions on the annual plan (mrr metric, latest snapshot). Gross MRR (gross_mrr) is 819 \u2014 differs because gross_mrr counts refunded terms that mrr excludes.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "filters": {
+            "subscription__plan": "annual"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(796.6366666666664,)\n[also] `gross_mrr` is an equally governed answer to the same question and returns a different number here: `mrr` 797 against `gross_mrr` 819, 2.81% apart. The two differ by status = active and "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_android_stated",
+    "error": null,
+    "question": "How many active users, excluding staff and test accounts, did we have on Android last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": 291.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding staff and test accounts'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served governed metric active_users (excludes internal/test accounts) on activity__platform=android for last_week (2026-07-06..2026-07-12) for asked active users, excluding staff and test accounts [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "291",
+    "explanation": "Governed metric active_users (excludes internal/test accounts) on activity__platform=android for last_week (2026-07-06..2026-07-12) returned 291.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "activity__platform"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n('android', 291)\n('ios', 293)\n('unknown', 25)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 again"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_seo_spend_june",
+    "error": null,
+    "question": "How much did we spend on content and SEO in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": 3605.41,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served content_seo spend (currency units) from marketing_spend metric for 2026-06 for asked How much did we spend on content and SEO in June 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3605.41",
+    "explanation": "Query of governed metric marketing_spend for period 2026-06, filtered by spend_row__channel shows content_seo spend = 3605.41 (currency units).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "group_by": [
+            "spend_row__channel"
+          ],
+          "time_grain": "month",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: spend_row__channel, value\n('content_seo', 3605.4100000000003)\n('referral', 1874.9499999999998)\n('partnerships', 2746.03)\n('paid_search', 12786.809999999996)\n[cite] r2:content_seo \u00b7 r2:referral \u00b7 r2:partnerships \u00b7 r2:paid_search"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth_web",
+    "error": null,
+    "question": "By how many did active users on the web platform grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 2,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'is_internal = false'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "3 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 contested figure(s) omitted; correction 2 of 2"
+      }
+    ],
+    "answer_text": "6 (active_users) and 6 (active_accounts)",
+    "explanation": "active_users on web: 277 last_week vs 271 prev_week \u2192 +6. active_accounts on web: 289 last_week vs 283 prev_week \u2192 +6. The two differ by inclusion of internal/test accounts (active_accounts includes them; active_users excludes them).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform",
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__day, activity__platform, value\n(datetime.datetime(2026, 7, 6, 0, 0), 'unknown', 9)\n(datetime.datetime(2026, 7, 7, 0, 0), 'web', 113)\n(datetime.datetime(2026, 7, 9, 0, 0), 'unknown', 8)\n(datetime.datetime(2026, 7, 9, 0,"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "prev_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__platform, value\n('web', 271)\n('android', 268)\n('ios', 274)\n('unknown', 23)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 271 again"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n('android', 291)\n('ios', 293)\n('unknown', 25)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 again"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_revenue_per_employee",
+    "error": null,
+    "question": "What was our revenue per employee last quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "headcount (employees) is not instrumented in the governed layer; there is no governed metric or fact table for company headcount (hr table missing).",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "There is no governed metric for headcount and no table with employee counts (no fct_headcount or hr_headcount). I can compute revenue per employee only if a headcount time series exists.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "2026-Q2",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1653.644166666666,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT as_of_date, headcount\nFROM fct_headcount\nWHERE as_of_date BETWEEN '2026-04-01' AND '2026-06-30'\nORDER BY as_of_date;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_headcount does not exist!\nDid you mean \"fct_value_moments\"?\n\nLINE 2: FROM fct_headcount\n             ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1653.644166666666,)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT as_of_date, total_employees\nFROM hr_headcount\nWHERE as_of_date BETWEEN '2026-04-01' AND '2026-06-30'\nORDER BY as_of_date;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name hr_headcount does not exist!\nDid you mean \"fct_value_moments\"?\n\nLINE 2: FROM hr_headcount\n             ^"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_time_per_category",
+    "error": null,
+    "question": "Which habit category do users spend the most time on?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 2,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served summed habit completions (count of completions) for asked time [proxy]; correction 0 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served sum of habit completions by category (count of completions) for asked time on [proxy]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "refuse",
+    "explanation": "The warehouse does not record time-in-app or session duration, so the exact question as asked cannot be answered. Missing: time-in-app/session duration metric or column in the data (uninstrumented).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2025-09-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2025-09-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "dim_habit"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_habit\ncolumns: habit_id (bigint), user_id (bigint), habit_name (varchar), category (varchar), created_date (date), archived_date (date), is_archived (boolean)\nsample rows:\n(2460, 811, 'Budget check', 'finance', datetime.date(2026, 3, 11), None, False)\n(3644, 1203, 'Journal', 'health', datet"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT h.category, SUM(vm_count) AS total_completions FROM (\n  SELECT habit_id, COUNT(*) AS vm_count FROM fct_value_moments\n  WHERE completed_date BETWEEN DATE '2025-09-01' AND DATE '2026-07-12'\n  GROUP BY habit_id\n) vm JOIN dim_habit h USING (habit_id)\nGROUP BY h.category\nORDER BY total_completions DESC\nLIMIT 1;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] columns: category, total_completions\n('productivity', 11416)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_habits_per_session",
+    "error": null,
+    "question": "What is the average number of habits completed per session?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "no governed 'session' metric or sessions table/column in the warehouse",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalog contains completed-habit metrics (value_moments/total_value_moments) and app_opens, but there is no governed definition or table for 'session' so the requested metric cannot be reliably computed as asked.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "average habits per session"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named 'average habits per session'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014 cite this whole statement as evide"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "activity__active_date"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__active_date__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 580)\n(datetime.datetime(2026, 6, 30, 0, 0), 573)\n(datetime.datetime(2026, 7, 5, 0, 0), 635)\n(datetime.datetime(2026, 7, 3, 0, 0), 614)\n(datetime.datetime(2026,"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "activity__active_date"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__active_date__day, value\n(datetime.datetime(2026, 7, 1, 0, 0), 943)\n(datetime.datetime(2026, 7, 3, 0, 0), 984)\n(datetime.datetime(2026, 7, 5, 0, 0), 1030)\n(datetime.datetime(2026, 7, 2, 0, 0), 937)\n(datetime.datetime(2026,"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "session"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] NO \u2014 no governed metric named 'session'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r5 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_tiktok_spend",
+    "error": null,
+    "question": "How much did we spend on TikTok ads in the second quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "spend_row__channel value 'TikTok' is not a governed channel",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The dataset's governed spend channels do not include 'TikTok', so the governed marketing_spend metric cannot return TikTok-specific spend without mapping or raw data.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "TikTok"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named 'TikTok'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "group_by": [
+            "spend_row__channel"
+          ],
+          "time_grain": "month",
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: 2026-04-01..2026-06-30\ncolumns: spend_row__channel, value\n('content_seo', 10643.219999999998)\n('paid_search', 36875.979999999996)\n('referral', 5522.3499999999985)\n('partnerships', 8191.77)\n[cite] r4:content_seo \u00b7 r4:paid_search \u00b7 r4:referral \u00b7 r4:partnerships"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": 371.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct accounts holding a live subscription ('paying_users') for asked How many customers are on the enterprise plan? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "371",
+    "explanation": "Queried governed metric 'paying_users' (distinct accounts holding a live subscription); latest snapshot returned 371 accounts [list_metrics r1; query_metric r2].",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_mrr_annual",
+    "error": null,
+    "question": "How much monthly recurring revenue do our annual plans bring in?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure",
+    "rep": 1,
+    "declared": 796.6366666666664,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Sum of current MRR from subscriptions on the annual plan (annual terms counted as one-twelfth) for asked monthly recurring revenue [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "796.6366666666664",
+    "explanation": "Sum of current MRR from subscriptions on the annual plan (annual terms counted as one-twelfth) \u2014 the governed metric 'mrr' filtered to subscription__plan = 'annual' returned 796.6366666666664. (Also: gross_mrr returns 819; gross is gross of refunds.)",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.\n    by activity (what this metric counts): "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr",
+          "filters": {
+            "subscription__plan": "annual"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(796.6366666666664,)\n[also] `gross_mrr` is an equally governed answer to the same question and returns a different number here: `mrr` 797 against `gross_mrr` 819, 2.81% apart. The two differ by status = active and "
+      }
+    ]
+  }
+]

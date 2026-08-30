@@ -96,6 +96,13 @@ metric:
   description: >-
     Distinct accounts with any product activity in the period, EXCLUDING internal and test
     accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.
+    This is a DISTINCT COUNT, so it is SEMI-ADDITIVE: an account active on several days is counted
+    once for the period, and a weekly figure is NOT the sum of its seven daily figures — summing
+    days double-counts anyone active more than once. Ask for the grain you want and read the value
+    directly; do not pull it by day and add the days up. Example — weekly active users by platform:
+    query_metric(active_users, group_by=['activity__platform'], time_grain='week'), which returns
+    one already-weekly distinct count per platform. To compare two weeks, run it once per period
+    (period='last_week', then period='prev_week') and subtract the two values.
   type: simple
   type_params: {measure: active_account_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"

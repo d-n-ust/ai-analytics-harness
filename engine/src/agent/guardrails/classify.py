@@ -32,7 +32,8 @@ def prompt_fingerprint() -> str:
     user templates, and the whole report schemas. It changes iff a classifier's spec changes, so a
     stored row can be flagged stale. Deliberately NOT shared with judge.py: rewording a classifier
     must not invalidate a verifier result, or the other way round."""
-    surface = "|".join([_SCOPE_SYSTEM, _SCOPE_USER, json.dumps(_SCOPE_REPORT, sort_keys=True)])
+    surface = "|".join([_SCOPE_SYSTEM, _SCOPE_USER, json.dumps(_SCOPE_REPORT, sort_keys=True),
+                        _MEASURE_SYSTEM, _MEASURE_USER, json.dumps(_MEASURE_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -127,3 +128,83 @@ def question_chose_scope(model, question: str, mine: str, mine_desc: str,
                 return False, f"unverified quote {quote!r}"
             return chose, quote
     return False, ""
+
+
+# --- measure check (the `grounded_measure` guardrail): did the served number measure the -------- #
+# --- quantity the question asked for? ----------------------------------------------------------- #
+#
+# The substitution failure is on the answer path, one level below the clarify grounding: "which
+# category do users spend the most TIME on" answered with a COUNT of completions. The dimension
+# (category) grounds, so a concept-level check passes; the swap is in the MEASURE, and it is
+# invisible to the reader because a per-category number looks responsive whatever it counts.
+#
+# Nothing mechanical reads "a count is not a duration" without becoming the brittle equality gate
+# this design rejects. So the model judges its OWN served answer against the question, and — as with
+# the scope classifier — the justification is verified rather than taken: a `proxy`/`unmeasured`
+# verdict survives only if the words it says the question asked for are actually in the question.
+# The routing that follows (serve / disclose / refuse) is the guardrail's, and is the dial the
+# experiment turns; this only supplies the one judgement about language.
+#
+# Defaults to `measures` — SERVE — on anything unexpected, the non-rigid reading: a judgement that
+# did not arrive must not be the one that refuses an answer the reader could have used.
+_MEASURE_SYSTEM = (
+    "You check ONE thing about an analytics answer: did the number it reports measure the quantity "
+    "the question asked for, or a different quantity standing in for it?\n\n"
+    "Report:\n"
+    "- `measures`: the number IS the quantity asked for (a count answering 'how many', spend "
+    "answering 'how much did we spend').\n"
+    "- `proxy`: the number is a RELATED but different quantity, offered in place of the one asked "
+    "for — completions reported for a question about time spent, app-opens for engagement.\n"
+    "- `unmeasured`: the quantity asked for is not captured in this data at all, and something "
+    "else was reported instead.\n\n"
+    "Judge the QUANTITY only — never the filters, the period, or the grouping. Copy the words from "
+    "the QUESTION that name the quantity asked for.")
+
+_MEASURE_USER = (
+    "Question: {question}\n\n"
+    "The answer given: {answer}\n\n"
+    "Did the number reported measure the quantity the question asked for?")
+
+_MEASURE_REPORT = {
+    "name": "report_measure",
+    "description": "Report whether the answer measured the quantity the question asked for.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "verdict": {"type": "string", "enum": ["measures", "proxy", "unmeasured"]},
+            "asked": {"type": "string",
+                      "description": "The words FROM THE QUESTION naming the quantity asked for, "
+                                     "copied exactly. Empty only when verdict is `measures`."},
+            "served": {"type": "string",
+                       "description": "What the reported number actually measures, in a few "
+                                      "words (e.g. 'count of completed habits')."},
+        },
+        "required": ["verdict"],
+    },
+}
+
+
+def answer_measures_asked(model, question: str, answer: str) -> tuple:
+    """(verdict, asked, served) — did the served number measure the quantity the question asked
+    for, a proxy for it, or something the data does not capture?
+
+    A `proxy`/`unmeasured` verdict survives only if `asked` is verifiably the question's own words;
+    otherwise it is downgraded to `measures`, so the check cannot refuse an answer on a quantity it
+    cannot point at in the question. Same division as the scope classifier: the model makes the
+    judgement, the mechanism decides whether to believe it, and the safe default is to serve.
+    """
+    user = _MEASURE_USER.format(question=question, answer=answer or "(no text)")
+    try:
+        turn = model.respond(Conversation.opening(_MEASURE_SYSTEM, user), [_MEASURE_REPORT],
+                             force_tool="report_measure", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return "measures", "", ""
+    for call in turn.tool_calls:
+        if call.name == "report_measure":
+            verdict = str(call.args.get("verdict") or "measures").strip().lower()
+            asked = str(call.args.get("asked") or "").strip()
+            served = str(call.args.get("served") or "").strip()
+            if verdict in ("proxy", "unmeasured") and not _quoted_from(question, asked):
+                return "measures", "", served       # unverified claim of substitution -> serve
+            return verdict, asked, served
+    return "measures", "", ""

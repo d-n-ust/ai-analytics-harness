@@ -224,6 +224,25 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "the run refuses `uninstrumented` instead of offering definitions the layer lacks",
               ("guardrails/action_space.py", "guardrails/grounding_check.py", "loop.py"),
               in_ladder=False),
+    # The measure-level analog on the answer path. The model judges its own served answer — did the
+    # number measure the quantity asked for, a proxy, or something the data does not capture — and
+    # this hands the answer back to disclose the proxy or refuse `uninstrumented`. Catches the
+    # substitution the grounding protocol cannot see, because it lives in the measure, not the
+    # concept (a count of completions served for a question about time spent).
+    Guardrail("grounded_measure", Position.REPAIR,
+              "asks whether the served number measured the quantity the question asked for; hands "
+              "back a substitution to disclose the proxy or refuse, rather than serve a count as "
+              "if it were the duration that was asked",
+              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+    # The lightest disclosure lever: shape the answer so a figure states what it measures — the
+    # measure, grain, units, and segment — so a per-day rate served for a weekly question, or one
+    # channel's spend served for all, is visible rather than silent. A prompt/schema nudge, not an
+    # enforced check: writing the grain down tends to make the model compute the asked one.
+    Guardrail("answer_spec", Position.ACTION_SPACE,
+              "shapes the answer to state the measure, grain, units, and segment of a figure, so a "
+              "number that answers a neighbouring question (a per-day rate for a weekly ask) is "
+              "seen rather than served silently",
+              ("guardrails/action_space.py",), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -318,6 +337,8 @@ class GuardrailSet:
     clarify: bool = True
     typed_clarify: bool = False
     grounded_candidates: bool = False
+    grounded_measure: bool = False
+    answer_spec: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False

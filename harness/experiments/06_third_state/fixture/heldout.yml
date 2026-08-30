@@ -201,7 +201,9 @@ cases:
   question: What was our revenue per employee last quarter?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: no employee data of any kind
 - id: h_b_csat_by_channel
   tier: unanswerable_bare
@@ -240,7 +242,9 @@ cases:
   question: Which habit category do users spend the most time on?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: habit categories exist and are groupable; TIME does not exist anywhere
 - id: h_b_minutes_in_app
   tier: unanswerable_adjacent
@@ -268,7 +272,9 @@ cases:
   question: What is the average number of habits completed per session?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: habits are countable; sessions do not exist
 - id: h_b_opens_august
   tier: unanswerable_coverage

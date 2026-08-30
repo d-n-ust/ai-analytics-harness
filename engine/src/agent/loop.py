@@ -253,7 +253,59 @@ class _Run:
         reader is the one who cannot tell.
         """
         return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
-                or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call))
+                or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call)
+                or self.substituted_measure(exit_call))
+
+    # Which way the proxy case leans: "disclose" serves the proxy with the gap stated, "refuse"
+    # pushes the substitution back to a decline. The dial the experiment turns — a module constant
+    # so the A/B is one edit, not a schema change. `unmeasured` always leans refuse: a quantity the
+    # data does not capture has no honest proxy to disclose.
+    MEASURE_PROXY_LEAN = "disclose"
+
+    def substituted_measure(self, exit_call):
+        """Hand back an answer whose number measures a DIFFERENT quantity than the question asked
+        for — the substitution the grounding protocol cannot see, because it lives in the measure
+        rather than the concept ("time spent per category" answered with a COUNT of completions).
+
+        The judgement is the model's, on its own served answer, and its citation is verified
+        (`classify.answer_measures_asked`); this method only routes the verdict. `unmeasured` — the
+        asked quantity is not in the data at all — pushes to refuse. `proxy` — a related quantity
+        stood in — leans by `MEASURE_PROXY_LEAN`: disclose the gap and serve, or refuse. `measures`
+        serves untouched, which is the default on any doubt, so a clean answer is never delayed.
+
+        Not a rigid equality gate: nothing here compares measure NAMES, and the model keeps the
+        call. What changes is that the substitution must be made explicit — the same lever that
+        turned the CSAT menu into a refusal, applied one level down.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "grounded_measure", False):
+            return None
+        parsed = AnswerArgs.of(exit_call.args)
+        text = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
+        if not text:
+            return None
+        verdict, asked, served = _classify.answer_measures_asked(self.model, self.question, text)
+        self.acts.append(Act("grounded_measure", str(Position.REPAIR),
+                             "stood down" if verdict == "measures" else "handed back",
+                             f"served {served or '?'} for asked {asked or '(same)'} [{verdict}]; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        if verdict == "measures":
+            return None
+        self.repairs.append({"substituted_measure":
+                             {"asked": asked, "served": served, "verdict": verdict}})
+        if verdict == "unmeasured" or self.MEASURE_PROXY_LEAN == "refuse":
+            tail = (f"The quantity the question asks for — {asked!r} — is not measured in this "
+                    f"data; your number reports {served or 'something else'} instead. `refuse` "
+                    f"with reason `uninstrumented`, unless that number genuinely answers the "
+                    f"question — in which case say plainly why.")
+        else:
+            tail = (f"Your number reports {served or 'a related quantity'}, a stand-in for the "
+                    f"{asked!r} the question asks for, and the reader cannot tell one from the "
+                    f"other. Answer again stating plainly that {asked!r} is not directly measured "
+                    f"and that {served or 'this'} is a proxy — or `refuse` if the proxy is too "
+                    f"weak to stand for it.")
+        return ToolResult("Your answer was not accepted: it does not measure what was asked.\n"
+                          + tail, is_error=True)
 
     def ungrounded_candidates(self, exit_call):
         """Hand back a clarification whose options do not each ground to a real object.

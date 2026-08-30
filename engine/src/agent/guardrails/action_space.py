@@ -253,6 +253,33 @@ def clarify_schema(base: dict, guardrails, record=None) -> dict:
                              "required": required}}
 
 
+def _spec_answer(base: dict, record=None) -> dict:
+    """Make the final answer state WHAT IT MEASURES, so a figure cannot be mistaken for a
+    different question than the one asked.
+
+    The lightest form of the disclosure principle the series has been building: a governed number
+    answers a query with four slots — measure, grain, segment, and which definition — and a silent
+    wrong answer is a slot that differs from the question's without the reader seeing it (a COUNT
+    for a duration, a PER-DAY rate for a weekly question, ALL channels for one). This does not
+    police the slots against the question, which would mean reading it; it asks the answer to name
+    them, which does the work two ways — writing "per day" tends to make the model recompute to the
+    week, and where it does not, the reader can see the mismatch instead of being trapped by it.
+    """
+    props = dict(base["input_schema"]["properties"])
+    props["explanation"] = {
+        "type": "string",
+        "description": ("One line on how you got the answer. Where the answer is a figure, state "
+                        "WHAT IT MEASURES so it cannot be read as a different question: the MEASURE "
+                        "(what is counted or summed), the GRAIN (per week / per day / total / per "
+                        "user — the level the figure is at), the UNITS, and the SEGMENT (which "
+                        "population — e.g. excluding internal accounts, one channel, one platform). "
+                        "A figure given without these can answer a neighbouring question without "
+                        "the reader noticing.")}
+    note(record, "answer_spec", Position.ACTION_SPACE, "applied",
+         "answer must state measure, grain, units, and segment")
+    return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
 def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:
     """Add typed provenance to the answer tool when the served number must be checked.
 
@@ -274,6 +301,8 @@ def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) 
     the search back into a lookup.
     """
     protocol = protocol or Protocol()
+    if getattr(guardrails, "answer_spec", False):
+        base = _spec_answer(base, record)
     if semantic is None or not (guardrails.governed_numbers or protocol.claims):
         return base
     props = dict(base["input_schema"]["properties"])

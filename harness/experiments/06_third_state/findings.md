@@ -1136,3 +1136,53 @@ The headline balanced accuracy did not move (rep-1 37/45 against the 37/46 basel
 trade sits inside the noise band, and the result is the composition, not the number. Two silent
 menus became typed refusals, one mislabelled case was exposed, and the guarantee — no ungrounded
 reading reaches the user — is structural rather than a behaviour the model happened to choose.
+
+## 27 · The four slots: every silent wrong number is an undisclosed spec mismatch
+
+The grounding protocol (§26) handled the clarify path. The silent wrong numbers that remained on the
+ANSWER path turned out to be one shape seen four ways. A governed number answers a query, and a
+query is four slots — the semantic layer's own decomposition:
+
+| slot | the silent error when it differs from the question, undisclosed |
+|------|----------------------------------------------------------------|
+| measure    | a COUNT of completions served for a question about time spent |
+| grain      | a PER-DAY rate served for a question about the week |
+| segment    | ALL channels served for a question about one |
+| definition | ONE of two governed readings served, the rival not disclosed |
+
+Each is the same failure: the number answers a neighbouring question and the reader cannot see the
+swap. The fix is not to police the slots against the question, which means reading it — the fragile
+move that sank an earlier value-membership check. It is to make the answer SELF-DESCRIBING, which
+does the work two ways: writing the elided slot down tends to make the model recompute the asked
+one, and where it does not, the mismatch is visible instead of silent. Three mechanisms, built one
+slot at a time:
+
+- **measure** — `grounded_measure`. The model judges its own served answer (`classify.
+  answer_measures_asked`): did the number measure the quantity asked for, a proxy, or something the
+  data does not capture? A proxy is disclosed or refused. On the substitution pile the model, made
+  to be explicit, refused rather than served a proxy — `time_per_category` and `habits_per_session`
+  moved from a silent number to a refusal, with no over-refusal on the answerable controls (they
+  verdict `measures` and serve untouched).
+
+- **grain and segment** — `answer_spec`. A prompt/schema nudge, not a gate: the answer must state
+  the measure, grain, units, and segment of a figure. `habits_per_active_user` moved from 0.60 (the
+  per-DAY ratio) to 4.11 (the weekly one) — forced to state the grain, the model computed the asked
+  grain. `seo_spend_june` moved from 21,013 (all channels) to 3,605 (content_seo) — forced to state
+  the segment, the model applied the filter. The segment slot was the one predicted to need a
+  question-reading check; naming it in the answer closed it without one.
+
+- **definition** — `disclosure_check` already exists (pile C discloses both governed readings), but
+  `scope_classifier` defeats it: asked whether "total monthly recurring revenue" chose between `mrr`
+  and `gross_mrr`, it answered yes and cited the WHOLE QUESTION as its quote, which the
+  `_quoted_from` check passes because the whole question is trivially in the question. This is the
+  last open slot, and the fix is to harden the citation the same way it is already hardened against
+  a quote that is absent: a quote that is the whole question is not a quote.
+
+One measured caution on the documented-example lever (§27 rests on it for additivity). A usage
+example added to `active_users` — "a distinct count is semi-additive; query at the grain you want,
+do not sum the days" — fixed the observed summing bug (`active_users_growth*` went to 3/3). But the
+same treatment applied PREVENTIVELY to `paying_users` BROKE a case that had been correct in every
+prior run: the example emphasised "read the value directly", and the model dropped a plan filter it
+had always applied. A usage example is a behavioural nudge, and nudging one thing dents another, so
+each must fix an OBSERVED failure and be measured — not added across a class on principle. The
+preventive examples were reverted; the one that earned its place was kept.
