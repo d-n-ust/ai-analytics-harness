@@ -1300,3 +1300,40 @@ by the aggregate — a fix can pass every targeted check while the noisy headlin
 feature can look fine on targeted tests while costing on the whole (the proxy-offer, §29). A
 publishable aggregate at this question count needs rep-10 or more; the per-slot counters are the
 instrument in the meantime.
+
+## 33 · The segment slot: the recipe, not the fact, and the self-contained metric block
+
+The segment slot — a filter the question names and the answer drops — was §27's holdout, and §31
+explained why it is the hard one: grain and direction can be recovered from the EVIDENCE (the query
+values), but the segment lives only in the QUESTION, so there is nothing to enforce against. The
+fixes here are documentation, not enforcement, and they are the right shape for exactly that reason.
+
+`monthly_paying_users` — "customers currently paying on the monthly plan" — answered 371, all plans,
+3/3. The segment was NOT missing from context: the inline catalogue shows `subscription__plan
+(annual/monthly)` beside `paying_users`. The agent satisfices on the strong `paying_users` match for
+"customers paying" and drops the "monthly plan" qualifier. A natural control settled the cause:
+`mrr`, whose description CARRIES a plan-filter usage example, applies that exact filter 3/3 on "MRR
+from our monthly plans"; `paying_users`, with a bare description, drops it 3/3 — same filter, same
+question shape, same warehouse. Giving `paying_users` the same example took it 0/3 -> 3/3. The
+catalogue says the dimension EXISTS; the example says to USE it, and how. And it generalises: the
+`annual` variant — named in the example but not demonstrated — transferred 2/3, so the example
+teaches the OPERATION rather than a lookup, with the demonstrated value the strongest anchor.
+
+`seo_spend_june` — "spend on content and SEO" — answered all-channels, and the metric-level example
+alone did NOT land (~1-2/3). Two reasons: "content and SEO" -> `content_seo` is a compressed,
+reordered token, and the `channel` dimension was bare, so nothing bridged the phrasing to the value;
+and the values sat beside the metric while the dimension DESCRIPTIONS lived in a separate section the
+agent had to cross-reference. The fix renders each dimension on its own line with BOTH its categories
+and its description — a SELF-CONTAINED metric block, nothing a lookup away — and gives `channel` the
+value->plain-name mapping (`content_seo` is spend on content and SEO). That lifted it to 3/4;
+`paid_search` (a direct token match) was already 4/4 and generalised; controls drew no channel filter
+(no over-application). The residual miss is a COMPOUND case — `marketing_spend` has a contested rival
+(`acquisition_spend`), and disclosing the two crowds out the channel filter: the segment slot tangled
+with the definition slot.
+
+The lesson across both: the catalogue makes a dimension VISIBLE; the usage example and the dimension
+description make it USABLE — the recipe (filter by plan, here is how) and the value mapping
+("content and SEO" is `content_seo`). A bare metric block is a lookup problem the agent solves ~half
+the time; a self-contained one is a read. And documentation is the correct lever for the segment slot
+specifically, because the requirement is in the question and not the evidence, so there is nothing to
+enforce — only to make legible.
