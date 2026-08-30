@@ -96,18 +96,6 @@ CLARIFY_MEANINGS: dict[str, str] = {
     "underspecified_request":
         "the question leaves out something the answer depends on — the period, the population, the "
         "level of detail, or what to compare against",
-    "proxy_offer":
-        "ONLY when the asked thing cannot be computed AT ALL. First check, and it rules most "
-        "questions out: if the asked thing is a governed metric that merely needs a FILTER or a "
-        "GROUP-BY, it is computable — ANSWER it, do not offer the unfiltered total as a proxy. "
-        "'iOS app-opens' is app_opens filtered to platform='ios'; 'monthly-plan payers' is "
-        "paying_users filtered to plan='monthly' — compute these, they are not proxy situations. "
-        "A proxy is only for a concept the layer has NO way to compute (sessions, time-in-app, "
-        "satisfaction). When one is genuinely absent, the proxy must measure the SAME KIND OF "
-        "THING — an app-open for a session (both a usage occasion) — NOT a number near the "
-        "question: a COUNT is not a proxy for a DURATION, activity is not satisfaction. If no "
-        "same-kind proxy exists, refuse. Name the proxy in `candidates` (it must ground), and in "
-        "`question` say what is absent and that this is a stand-in. One proxy, not a menu",
     "other":
         "none of the above fits. Prefer a specific code: `other` cannot be counted or routed, so "
         "reach for it only when nothing else is true",

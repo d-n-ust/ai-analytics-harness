@@ -271,12 +271,11 @@ cases:
   tier: unanswerable_adjacent
   question: What is the average number of habits completed per session?
   expect:
-    type: ambiguous
+    type: refuse
     reason:
-    - uninstrumented
     - no_governed_definition
-  note: habits are countable; sessions do not exist || no session concept; app_opens is a DEFENSIBLE proxy, so refuse
-    (uninstrumented) or a proxy_offer clarify are both correct.
+    - uninstrumented
+  note: habits are countable; sessions do not exist
 - id: h_b_opens_august
   tier: unanswerable_coverage
   question: How many times did people open the app in August 2026?
