@@ -1196,3 +1196,107 @@ prior run: the example emphasised "read the value directly", and the model dropp
 had always applied. A usage example is a behavioural nudge, and nudging one thing dents another, so
 each must fix an OBSERVED failure and be measured — not added across a class on principle. The
 preventive examples were reverted; the one that earned its place was kept.
+
+## 28 · Additivity: a documented example patched it, the interface closed it
+
+§27 credited the grain slot partly to a usage example on `active_users` — "a distinct count is
+semi-additive; query at the grain you want, do not sum the days." Measured across rep-3 draws, that
+was only a partial fix: `active_users_growth` still summed daily distinct counts on about one draw
+in three. A usage example is a behaviour the model CHOOSES, and it chose wrong intermittently.
+
+The root cause is structural. `time_grain` was a DEAD parameter: the grain of a time breakdown came
+only from the group-by column name — `metric_time` is day, `metric_time__week` is week — so a
+caller passing `time_grain='week'` alongside a bare `metric_time` was handed DAY rows, and a
+`count_distinct` measure at day grain invites a SUM over time. The weekly figure was reported as the
+sum of its seven daily distinct counts, ~2.3x too high, a plausible number for the wrong grain.
+
+The fix binds a bare `metric_time` to the requested grain; an explicit `metric_time__day` is left
+alone, so a real by-day breakdown still works. This is what a real semantic layer does — a grain
+request returns that grain — and it makes the invalid state unrepresentable rather than merely
+discouraged (data-modelling principle #7). Measured DIRECTLY (a summing-occurrence counter — a
+`run_sql` SUM beside a distinct-count metric — which varies far less than the graded score), it
+went to zero on the `active_users` cases, and `active_users_growth` became 3/3 stable. Additivity
+is derivable from the `agg`, so nothing here is hand-annotated. The lesson is the pairing:
+documentation is the ~half lever on a behaviour; the interface is the guarantee.
+
+## 29 · The proxy-offer clarify, built and reverted
+
+The clarify state has a second shape beyond "which of two governed definitions": a PROXY-OFFER —
+when the asked thing is not measured but a same-kind proxy exists, offer it and let the user accept
+or decline ("we do not track sessions — would habits per app-open do?"). It was built with two
+guards: the proxy must GROUND (one real object), and — on the board's construct-validity rule — it
+must measure the SAME KIND of thing (an app-open for a session, not a count for a duration).
+
+It over-fired. The model used the route to dodge a FILTER, offering an unfiltered total as a
+"proxy" for a filterable question: all-platform app-opens for iOS, all-plan payers for monthly-plan
+payers, all customers for enterprise. An over-offer counter (proxy-offers on cases that should not
+accept one) caught it — 3/3 construct-invalid, two on answerable questions. A computability gate
+("if it is a filter away, answer it, that is not a proxy situation") fixed the filter-dodge, but
+the aggregate went 122 -> 114 -> 111 across draws and the feature hurt its own target:
+`habits_per_session` moved from a clean refuse (67%) to answering the app-opens proxy (0%). Reverted.
+
+The finding is the one the board predicted: a visible clarify is not confident-wrong, but an agent
+that offers a proxy liberally trades away the refusal discipline that is the point of the third
+state. And the method lesson: the over-offer counter earned its keep — it made the failure a number
+instead of leaving it buried in a score that could not resolve it.
+
+## 30 · The inline catalogue: the information was present, the ergonomics were not
+
+`ios_opens_may` answered "how many times did iOS users open the app" as ALL-platform app_opens, the
+platform filter dropped, 3/3. The hypothesis was that the agent could not see that `platform`
+applies to `app_opens`. Tested against what the agent actually reads — the rendered catalogue, not
+the YAML — it was disconfirmed: the catalogue lists `activity__platform` directly under `app_opens`,
+and `ios` among its governed values. Everything needed was present.
+
+But the dimension and its VALUES were separated: the dimension sat under the metric, the values in a
+distinct section the agent had to cross-reference. The `inline` catalogue renders each filterable
+dimension WITH its values beside the metric — `activity__platform (android/ios/web/unknown)` — and
+drops the separate section. `ios_opens_may` went 0/3 -> 3/3; controls unchanged. The information was
+present; the ERGONOMICS were the blocker, and adjacency is a treatment (the renderer already knew
+this: grouping dimensions by entity had earlier cut dropped-filter failures from four to one). One
+honest qualifier: the model's prose said "iOS" while its query filtered nothing, so this is partly a
+query-construction gap the presentation reduced rather than a pure visibility one; the plan/channel
+filter cases improved less, because "iOS" -> `platform='ios'` is a more direct value-match than
+"monthly plan" or "content and SEO".
+
+## 31 · Direction from evidence: the R7 transparency guarantee, at R3
+
+`active_users_fell` — "active users fell last week, by how much?" — answered "fell by 50" while the
+model's own two queries returned 836 (prev_week) then 886 (last_week), a rise. The model echoes the
+question's presupposition even as its numbers contradict it. Three interventions, and the
+progression is the finding:
+
+| intervention | result |
+|--------------|--------|
+| prose hint in the explanation ("state the direction from your own numbers") | ~half, ignored |
+| a typed `direction` enum + self-declared `value_before`/`value_after`, checked | ~half, GAMED |
+| the direction checked against the run's GOVERNED CALLS | 2/3, un-gameable |
+
+The middle one fails in a specific, instructive way: told "836 -> 886 is a rise", an anchored model
+keeps "fell" by FLIPPING the levels it declares (`value_before=886, value_after=836`). The label
+ordering is the model's to fabricate, so a check against self-declared levels cannot hold.
+
+The binding it cannot fabricate is which QUERY returned which value. `_governed_calls` reads the
+run's `query_metric` calls off the trace; `value_of` recomputes each; ordering a metric's two
+same-argument, different-period calls by their period gives the true direction, which the model
+cannot flip because it did not author the query->period binding. This is exactly R7's `transparency`
+guarantee — a measurement written from the evidence, not from the model's words — obtained at R3 by
+READING the governed calls rather than rendering them, with no claims machinery. The residual is a
+model that re-declares "fell" through both corrections and serves at the `MAX_CORRECTIONS` cap:
+measured serving it, not gamed into it. It generalises to any change or comparison claim.
+
+## 32 · The instrument problem: rep-3 cannot resolve a per-fix effect
+
+Across the four-slot work and the fixes above, rep-3 draws of essentially one config read 122, 114,
+111, 113 — all consistent with a single rate near 115 +/- 6. A per-fix effect is +/-2 to 5, inside
+that band. The headline cannot resolve the changes, and reading single draws as wins and losses
+(which this log did, for a stretch) is reading noise.
+
+The evidence that DID resolve is the direct, per-slot counters, which vary far less: summing
+occurrences went to zero; contested pairs disclosed both readings 3/3 on their exemplars;
+`ios_opens` reached 3/3; `csat` refused 3/3. The discipline the board imposed, recorded here because
+it was learned the hard way: judge a fix by the specific failure it targets, measured directly, not
+by the aggregate — a fix can pass every targeted check while the noisy headline says nothing, and a
+feature can look fine on targeted tests while costing on the whole (the proxy-offer, §29). A
+publishable aggregate at this question count needs rep-10 or more; the per-slot counters are the
+instrument in the meantime.
