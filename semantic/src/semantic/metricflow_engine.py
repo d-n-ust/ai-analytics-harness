@@ -219,6 +219,14 @@ class MetricFlowLayer:
         # In "compact" the headline lines are emitted together first and the machinery is
         # accumulated for a second block; in "full" both go out interleaved, as they always have.
         compact = self.catalogue == "compact"
+        # `inline` prints each filterable dimension WITH its governed values right beside the
+        # metric — `activity__platform (android/ios/web/unknown)` — instead of naming the
+        # dimension here and listing its values in a separate section the agent must cross-
+        # reference. Tests whether the ergonomics, not the information, are why a segment filter
+        # goes unapplied ("iOS app opens" answered as all-platform, the dimension and value both
+        # present but a lookup apart).
+        inline = self.catalogue == "inline"
+        members = self.dimension_members() if inline else {}
         detail: list = []
         if compact:
             for m in ordered:
@@ -262,7 +270,12 @@ class MetricFlowLayer:
                         label = f"by {prefix} (what this metric counts)"
                     else:
                         label = f"by {prefix} (joined)"
-                    block.append(f"    {label}: {', '.join(group)}")
+                    if inline and prefix != "metric_time":
+                        shown = ", ".join(
+                            f"{d} ({'/'.join(members[d])})" if members.get(d) else d for d in group)
+                    else:
+                        shown = ", ".join(group)
+                    block.append(f"    {label}: {shown}")
                 dims_seen.update(d for d in dims if not d.startswith("metric_time"))
             block.append("    time-filterable (period=…) and grainable "
                          f"(time_grain={'|'.join(TIME_GRAINS)})")
@@ -275,7 +288,7 @@ class MetricFlowLayer:
         # Dimension values. Time dimensions are skipped: their domain is every date, which is
         # noise rather than a governed vocabulary.
         values = [f"- {d}: {', '.join(v)}" for d, v in sorted(self.dimension_members().items())]
-        if values:
+        if values and not inline:      # under `inline` the values already sit beside each metric
             lines.append("\nGoverned dimension values (any other value is refused, "
                          "not approximated):")
             lines += values
