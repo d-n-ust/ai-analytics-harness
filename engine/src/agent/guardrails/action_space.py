@@ -275,9 +275,25 @@ def _spec_answer(base: dict, record=None) -> dict:
                         "population — e.g. excluding internal accounts, one channel, one platform). "
                         "A figure given without these can answer a neighbouring question without "
                         "the reader noticing.")}
+    # A TYPED direction, because a change question has a fifth slot — which way it moved — and a
+    # prose instruction to state it lets the model skip it and echo the question's presupposition
+    # ("fell") while its own numbers rose. A required enum forces the judgement on every answer:
+    # for a change it must commit to rose/fell READ FROM ITS OWN VALUES, which is where the
+    # contradiction with a false premise becomes unavoidable; a level answer says `not_a_change`.
+    props["direction"] = {
+        "type": "string",
+        "enum": ["rose", "fell", "unchanged", "not_a_change"],
+        "description": ("Only meaningful for a CHANGE or COMPARISON question (grew, fell, more "
+                        "than, versus last week): the direction read from YOUR OWN two values — "
+                        "836 then 886 is `rose` — NOT from how the question phrased it. If the "
+                        "question presumes a direction your numbers contradict, trust your numbers "
+                        "and say so in `explanation`. Use `not_a_change` when the answer is a "
+                        "level, not a change.")}
     note(record, "answer_spec", Position.ACTION_SPACE, "applied",
          "answer must state measure, grain, units, and segment")
-    return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+    required = list(base["input_schema"].get("required", [])) + ["direction"]
+    return {**base, "input_schema": {**base["input_schema"], "properties": props,
+                                     "required": required}}
 
 
 def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:

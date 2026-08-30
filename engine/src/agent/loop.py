@@ -254,7 +254,103 @@ class _Run:
         """
         return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
                 or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call)
-                or self.substituted_measure(exit_call))
+                or self.substituted_measure(exit_call) or self.direction_vs_evidence(exit_call))
+
+    def direction_vs_evidence(self, exit_call):
+        """Hand back an answer whose declared DIRECTION contradicts the values its OWN queries
+        returned — read from the governed calls, not from what the model declares in the answer.
+
+        The false-premise defect on the answer path: "active users fell last week — by how much?"
+        answered "fell" while the model's two queries returned 836 (prev_week) then 886 (last_week)
+        — a rise. Checking the direction against the model's SELF-DECLARED levels does not hold: an
+        anchored model, told 836->886 is a rise, keeps "fell" by FLIPPING the levels it declares
+        (value_before=886, value_after=836). The label ordering is the model's to fabricate.
+
+        The evidence binding it cannot fabricate is which QUERY returned which value: it asked
+        `active_users` for prev_week and got 836, for last_week and got 886, and those bindings sit
+        in the trace (`_governed_calls`), each value recomputed deterministically by `value_of`.
+        Ordering the two by their period and comparing the values gives the true direction, which
+        the model cannot flip because it did not author the query->period binding. This is the R7
+        transparency guarantee — a measurement written from the evidence — obtained at R3 by
+        reading the run's own governed calls rather than rendering them.
+
+        Scoped tight: fires only when the model committed to rose/fell AND its calls include a
+        metric queried at two orderable time windows with the same non-time arguments (a genuine
+        before/after of the same thing). A grouped or single-window answer is untouched.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
+            return None
+        direction = str(exit_call.args.get("direction") or "").strip().lower()
+        if direction not in ("rose", "fell"):
+            return None
+        semantic = self.grounding.semantic
+        if semantic is None:
+            return None
+        pair = self._before_after_from_calls(semantic)
+        if pair is None:
+            return None
+        metric, v0, v1 = pair
+        actual = "rose" if v1 > v0 else "fell" if v1 < v0 else "unchanged"
+        if direction == actual:
+            return None
+        self.repairs.append({"direction_vs_evidence":
+                             {"said": direction, "earlier": v0, "later": v1, "metric": metric}})
+        self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
+                             f"direction={direction} but {metric} {v0}->{v1} is {actual}; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        return ToolResult(
+            f"Your answer was not accepted: you declared direction={direction!r}, but the values "
+            f"YOUR OWN queries returned for {metric} are {round(v0, 4)} for the earlier window then "
+            f"{round(v1, 4)} for the later one — that is {actual!r}, not {direction!r}. This is "
+            f"read from your query_metric calls, not from how the question was phrased: the "
+            f"question presumed the wrong direction. Re-answer with {actual!r}, and state it "
+            f"plainly in the text.", is_error=True)
+
+    def _before_after_from_calls(self, semantic):
+        """The earlier and later value of one metric this run queried at two time windows, or None.
+
+        A comparison pair is two governed calls with the SAME metric and the SAME non-time
+        arguments (filters, group_by) but DIFFERENT, orderable time windows — a before and an after
+        of the same thing. Both must be SCALAR (one number): a grouped result is a set of
+        comparisons, not one, and forcing a single direction on it would be the wrong question.
+        """
+        from collections import defaultdict
+
+        from warehouse.config import resolve_period
+        _TIME = {"period", "start", "end", "time_grain", "metric"}
+
+        def _sig(args):
+            return tuple(sorted((k, str(v)) for k, v in args.items() if k not in _TIME))
+
+        def _start(args):
+            if args.get("period"):
+                try:
+                    return str(resolve_period(args["period"])[0])
+                except Exception:                                           # noqa: BLE001
+                    return None
+            return str(args["start"]) if args.get("start") else None
+
+        def _scalar(values):
+            if isinstance(values, dict) and len(values) == 1:
+                (v,) = values.values()
+                return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+            return None
+
+        groups = defaultdict(dict)                     # (metric, sig) -> {start_date: args}
+        for metric, args in self._governed_calls():
+            start = _start(args)
+            if start is not None:
+                groups[(metric, _sig(args))].setdefault(start, args)
+        for (metric, _s), by_time in groups.items():
+            if len(by_time) < 2:
+                continue
+            times = sorted(by_time)
+            v0 = _scalar(before.value_of(semantic, by_time[times[0]], metric))
+            v1 = _scalar(before.value_of(semantic, by_time[times[-1]], metric))
+            if v0 is not None and v1 is not None:
+                return metric, v0, v1
+        return None
 
     # Which way the proxy case leans: "disclose" serves the proxy with the gap stated, "refuse"
     # pushes the substitution back to a decline. The dial the experiment turns — a module constant
