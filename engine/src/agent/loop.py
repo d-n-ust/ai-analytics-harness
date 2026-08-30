@@ -301,9 +301,11 @@ class _Run:
         else:
             tail = (f"Your number reports {served or 'a related quantity'}, a stand-in for the "
                     f"{asked!r} the question asks for, and the reader cannot tell one from the "
-                    f"other. Answer again stating plainly that {asked!r} is not directly measured "
-                    f"and that {served or 'this'} is a proxy — or `refuse` if the proxy is too "
-                    f"weak to stand for it.")
+                    f"other. You have three honest routes: answer again stating plainly that "
+                    f"{asked!r} is not directly measured and that {served or 'this'} is a proxy; "
+                    f"or clarify with reason `proxy_offer`, naming {served or 'the proxy'} and "
+                    f"asking whether it is an acceptable stand-in for {asked!r} (best when the "
+                    f"user may not want the proxy); or `refuse` if the proxy is too weak to stand.")
         return ToolResult("Your answer was not accepted: it does not measure what was asked.\n"
                           + tail, is_error=True)
 
@@ -316,13 +318,23 @@ class _Run:
         grounding resolves to nothing is dropped, because it is a reading the system cannot deliver
         however the user answers.
 
-        The count of survivors decides the terminal, and that is the point: two or more grounded
-        readings ARE a contest, so the clarification stands. Fewer than two is not — nothing
-        grounds it (refuse `uninstrumented`) or exactly one does (answer from it). This is what
-        turns the CSAT menu — NPS, CSAT, a rating, none of which the warehouse records — back into
-        the refusal it always was, without the mechanism ever judging whether a grounding is the
-        RIGHT one for the concept. That relevance judgement stays the model's; existence is all the
-        machine decides.
+        The count of survivors decides the terminal, and there are TWO valid shapes of
+        clarification, distinguished by the reason the model gives — the branch a clarify state
+        needs so it is not one rigid mould:
+
+          contested (competing_definitions / undefined_term) — a choice between governed readings,
+          so TWO OR MORE must ground. Fewer is not a contest: nothing grounds it (refuse) or one
+          does (answer). This is what turned the CSAT menu — NPS, CSAT, a rating, none recorded —
+          back into a refusal.
+
+          proxy_offer — the asked thing is not measured, but ONE defensible proxy is. The proxy
+          must ground; the question names what is absent and asks whether the stand-in is
+          acceptable. "We do not track sessions — would habits per app-open do?" is a real,
+          helpful clarification with a single grounded candidate.
+
+        Either way the machine only checks that what is offered EXISTS. Whether a grounding is the
+        RIGHT one for the concept, and whether a proxy is good enough to offer, stay the model's
+        judgement.
         """
         g = self.grounding.guardrails
         if exit_call.name != "clarify" or not getattr(g, "grounded_candidates", False):
@@ -330,8 +342,9 @@ class _Run:
         semantic = self.grounding.semantic
         con = getattr(self.grounding.toolbox, "con", None)
         schema = getattr(self.grounding.toolbox, "schema", None)
+        parsed = ClarifyArgs.of(exit_call.args)
         survived, dropped = [], []
-        for cand in ClarifyArgs.of(exit_call.args).candidates:
+        for cand in parsed.candidates:
             # A candidate is a {reading, grounding} pair under this guardrail; tolerate a bare
             # string (its own text is then both the reading and the grounding) so a schema slip
             # degrades to a check rather than a crash.
@@ -339,24 +352,35 @@ class _Run:
             ref = cand.get("grounding") if isinstance(cand, dict) else str(cand)
             (survived if _grounding.resolve_grounding(ref, semantic, con, schema)
              else dropped).append((reading, ref))
-        if len(survived) >= 2:
+        # A proxy-offer needs one grounded stand-in; a contest needs two diverging readings.
+        proxy = str(parsed.reason or "").strip().lower() == "proxy_offer"
+        need = 1 if proxy else 2
+        if len(survived) >= need:
             return None
         self.repairs.append({"ungrounded": [ref for _r, ref in dropped]})
         self.acts.append(Act("grounded_candidates", str(Position.REPAIR), "handed back",
                              f"{len(dropped)} option(s) grounded to nothing, {len(survived)} "
-                             f"survived; correction {self.claim_retries} of 2").as_dict())
+                             f"survived (need {need}); correction {self.claim_retries} of 2")
+                         .as_dict())
         lines = ["Your clarification was not accepted: each option you offer the user must ground "
                  "to a real object (a metric, a table, or a column) that already exists."]
         lines += [f"  dropped {reading!r} — grounding {ref!r} resolves to nothing in any layer"
                   for reading, ref in dropped]
-        if not survived:
+        if proxy:
+            lines.append("A proxy-offer needs ONE proxy that grounds; yours does not. If nothing "
+                         "in the warehouse can stand in for what was asked, `refuse` with reason "
+                         "`uninstrumented`.")
+        elif not survived:
             lines.append("No option grounds. Nothing in the warehouse measures what was asked, so "
-                         "there is no choice to offer — `refuse` with reason `uninstrumented`.")
+                         "there is no choice to offer — `refuse` with reason `uninstrumented`, or, "
+                         "if a defensible proxy DOES exist, clarify with reason `proxy_offer` and "
+                         "name it.")
         else:
             reading, ref = survived[0]
             lines.append(f"Only one option grounds ({ref}), so this is not a contest between "
-                         f"definitions. `answer` from it, or `refuse` if it does not truly answer "
-                         f"the question.")
+                         f"definitions. `answer` from it; or, if it is a STAND-IN for something "
+                         f"the layer lacks, clarify with reason `proxy_offer` to offer it; or "
+                         f"`refuse` if it does not truly answer the question.")
         return ToolResult("\n".join(lines), is_error=True)
 
     def dropped_constraint(self, exit_call):

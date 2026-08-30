@@ -57,7 +57,7 @@ RUNG = 3          # star + governed semantic layer, raw SQL still on the table
 
 # The three shapes a question can have, as the grader names them. Kept here so the runner's own
 # labels cannot drift from `selective.py`'s piles.
-_PILE = {"metric_answer": "A", "refuse": "B", "contested": "C"}
+_PILE = {"metric_answer": "A", "refuse": "B", "ambiguous": "B", "contested": "C"}
 
 
 def load_cases(name: str = "cases.yml") -> list[dict]:
@@ -270,6 +270,17 @@ def main() -> None:
           f"served={score['contested_served']:<3} refused={score['contested_refused']}")
     print(f"\n  coverage {score['coverage']}   silent_error {score['silent_error']}   "
           f"balanced_accuracy {score['balanced_accuracy']}")
+    # Over-offer counter: a proxy_offer clarify is legitimate only on a case that accepts one
+    # (type `ambiguous` — a same-construct proxy exists). On any other case it offered a stand-in
+    # where the answer was to refuse or answer, which is the construct rule loosening. Tracked as
+    # its own number, not folded into the score, so a rising over-offer rate is visible.
+    want = {c["id"]: c["expect"]["type"] for c in cases}
+    proxy = [r for r in rows if r["outcome"] == "clarify" and str(r.get("reason")) == "proxy_offer"]
+    over = sorted({r["id"] for r in proxy if want.get(r["id"]) != "ambiguous"})
+    if proxy:
+        print(f"  proxy-offers {len(proxy)}   construct-invalid (over-offer): "
+              f"{sum(1 for r in proxy if want.get(r['id']) != 'ambiguous')}"
+              f"{'  ' + ', '.join(over) if over else ''}")
     # The grid, with the answered column split: an action-only 3x3 puts a right number and a
     # plausible wrong one in the same cell, and then reports a diagonal nobody should trust.
     print()

@@ -96,6 +96,16 @@ CLARIFY_MEANINGS: dict[str, str] = {
     "underspecified_request":
         "the question leaves out something the answer depends on — the period, the population, the "
         "level of detail, or what to compare against",
+    "proxy_offer":
+        "the question asks for something the layer does not measure directly, but a defensible "
+        "PROXY exists. The proxy must measure the SAME KIND OF THING — an app-open for a session "
+        "(both a usage occasion), a smaller revenue cut for revenue — NOT merely a number near the "
+        "question: a COUNT is not a proxy for a DURATION (completions do not measure time spent), "
+        "and activity is not a proxy for satisfaction. If no same-kind proxy exists, refuse rather "
+        "than offer a stand-in that answers a different question. Name the proxy in `candidates` "
+        "(it must ground to a real object), and in `question` say what is absent and that this is a "
+        "stand-in, so the user can accept or decline. One proxy, not a menu — not two governed "
+        "readings",
     "other":
         "none of the above fits. Prefer a specific code: `other` cannot be counted or routed, so "
         "reach for it only when nothing else is true",
