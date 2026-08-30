@@ -77,12 +77,12 @@ cases:
     type: metric_answer
     metric: app_opens
     tolerance: 0.02
-    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1
-      AND upper(u.ctry) IN ('GB','DE','FR') AND e.ts >= DATE '2026-01-01' AND e.ts < DATE '2026-07-01'
-      AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
-  note: entity + segment (region, derived from country) + window; app_opens is a clean metric that
-    excludes internal accounts by definition, so the oracle does too. Replaces a "which category"
-    question that was mis-typed as metric_answer — its answer is a name, not a number.
+    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND upper(u.ctry)
+      IN ('GB','DE','FR') AND e.ts >= DATE '2026-01-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal,0)=1)
+      OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: entity + segment (region, derived from country) + window; app_opens is a clean metric that excludes internal
+    accounts by definition, so the oracle does too. Replaces a "which category" question that was mis-typed as metric_answer
+    — its answer is a name, not a number.
 - id: h_a_active_users_android_stated
   tier: answerable_stated
   question: How many active users, excluding staff and test accounts, did we have on Android last week?
@@ -208,7 +208,9 @@ cases:
   question: What was our customer satisfaction score by acquisition channel in June 2026?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: no survey or CSAT data
 - id: h_b_churn_reasons
   tier: unanswerable_bare
@@ -222,7 +224,9 @@ cases:
   question: What was the open rate on our marketing emails last month?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: no email data
 - id: h_b_dark_mode_adoption
   tier: unanswerable_bare
@@ -306,8 +310,21 @@ cases:
   question: How many customers are on the enterprise plan?
   expect:
     type: refuse
-    reason: ungoverned_dimension_value
-  note: only annual and monthly plans exist
+    reason:
+    - ungoverned_dimension_value
+    - segment_undefined
+    - false_premise
+    rebuttal:
+    - no enterprise
+    - don't have an enterprise
+    - not a plan
+    - no such plan
+    - annual
+    - monthly
+    - billing interval
+  note: '''enterprise plan'' has no referent: `plan` is a billing interval (annual/monthly), not a tier. Refusing
+    with any of {ungoverned_dimension_value, segment_undefined, false_premise} is correct; answering is correct
+    only if it rebuts the premise rather than fabricating a count.'
 - id: h_c_active_users_last_week
   tier: contested_level
   question: How many active users did we have last week?

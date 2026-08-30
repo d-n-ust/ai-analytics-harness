@@ -225,6 +225,14 @@ def main() -> None:
                           "question": case["question"], "rung": RUNG, "model": model.spec.name,
                           "config": args.cell or "loop default",
                           "rep": rep, "declared": answer.declared_value,
+                          # The coded reason/missing a decline carried, so a refusal's CODE is
+                          # visible in the stored row (grade.py already grades on answer.reason;
+                          # this makes it inspectable without re-running).
+                          "reason": answer.reason, "missing": answer.missing,
+                          # The clarify options, with their groundings under grounded_candidates.
+                          # Without this the trace cannot show what the model offered — the gap
+                          # that made a laundered clarify look reason-less until it was stored.
+                          "candidates": list(getattr(answer, "candidates", ()) or ()),
                           "source_metric": answer.source_metric,
                           "tool_calls": len(answer.steps),
                           "tool_errors": sum(1 for s in answer.steps if s.get("error")),

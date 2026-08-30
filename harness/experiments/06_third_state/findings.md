@@ -1036,3 +1036,103 @@ failure is diagnosable from stored results without a re-run — which is a diffe
   which is the same split §8 forced on the answered column.
 - **Route a persistently firing cluster to its owners** (§12). Nothing in the market does this, and
   it is the step that turns an irreducible contest into a reducible one.
+
+## 25 · The reason code was never stored, and what it showed once it was
+
+The stored result row carried `outcome` but not the coded `reason` a decline named. Post-hoc
+analysis read the missing key as `None` and concluded that correct refusals were arriving with no
+reason. They were not: `grade.py` graded on `answer.reason` all along, so the code was present at
+grading time and absent only from the record. The fix is one line in `run.py` — persist
+`answer.reason` and `answer.missing` on the row — and it changed no score. What it changed is that
+the failure is now readable without re-running, and re-running is a different sample.
+
+Read once it was visible (marts layer, gpt-5-mini, R3 held-out cell, three reps, 138 rows):
+
+| pile | need | correct |
+|------|------|---------|
+| A | k = 1, one answer | 41 / 48 |
+| B | k = 0, unanswerable / substitution | 22 / 45 |
+| C | k >= 2, contested | 41 / 45 |
+| | **total** | **107 / 138 (77.5%)** |
+
+Pile B is the whole gap, and the stored codes split it into two behaviours that a bare count had
+merged:
+
+- **Clarify used as a soft refusal.** On a concept the layer does not define at all — CSAT,
+  email open rate, retention broken out by channel — the model asks *which definition* when the
+  answer is *there is no definition*. `clarify` is for `k >= 2`, two governed readings that
+  diverge; firing it at `k = 0` invents a choice the layer cannot offer. csat_by_channel clarified
+  on all three reps, retention_by_channel on all three.
+- **Substitution, unchanged from §21.** time_per_category answered on all three reps,
+  habits_per_session and tiktok_spend on two of three. A governed count exists and the ungoverned
+  filter or ratio is served against it, and no coverage document forbids the shape.
+
+A third, smaller behaviour is the one the reason code was needed to see: on a value-membership
+failure the model refuses with the right ACTION and the wrong CODE. "How many customers are on the
+enterprise plan?" has no referent — `plan` is a billing interval (`annual` / `monthly`), not a
+tier — so the actionable typed refusal is `ungoverned_dimension_value` or `false_premise`, either
+of which routes to "tell the user enterprise does not exist." The model refused with
+`no_governed_definition`, which routes to "go define a metric" — the wrong repair, because the
+count is already governed and only the filter value is missing. The case now accepts the three
+defensible codes and, if answered, a premise rebuttal; the model still reached past all of them
+for the generic one. This is RefusalBench's separable-skill result (arXiv 2510.10390) reproduced
+on the fixture: the action is easier than the category, and the category is where a typed refusal
+earns its keep.
+
+## 26 · The grounding protocol: a clarification must ground, or it is a refusal
+
+§25 left the clarify-as-soft-refusal cases open. The clearest, `csat_by_channel` — "customer
+satisfaction by channel" — clarified on every rep, offering "NPS, CSAT, or a rating." The
+warehouse instruments none of the three: no survey, no rating, no sentiment, in any layer. The
+right terminal is refuse, and the clarification is a menu of definitions the system does not have.
+
+The stored candidates showed why a naive gate cannot catch it. The model offered, in the
+`candidates` field, three REAL metrics — `active_users`, `value_moments`, `app_opens` — while the
+prose question named NPS and CSAT. The two representations were never reconciled, so a check that
+the candidates EXIST passes (all three do) and a check that they DIVERGE passes (three different
+quantities, wildly). Neither is the defect. The defect is that the candidates are not readings of
+the asked concept at all.
+
+The fix moves the semantic work to where it belongs and keeps the mechanism to what it can prove.
+The model interprets the question and binds each reading it would offer the user to the object that
+grounds it — a governed metric, a fact/dimension table, or a column. The mechanism verifies only
+that each grounding EXISTS; whether it is the RIGHT object for the concept stays the model's
+judgement, because a deterministic relevance check is the brittle thing this avoids. A reading the
+model cannot ground cannot be shown, so a clarification with fewer than two grounded readings is
+handed back to refuse (nothing grounds it) or answer (one does). This is the `grounded_candidates`
+guardrail: a schema enrichment (`candidates` become `{reading, grounding}` pairs) plus a REPAIR
+check (`loop.ungrounded_candidates`, resolver in `guardrails/grounding_check.py`), and a new
+refusal reason `uninstrumented`.
+
+Result (gpt-5-mini, held-out cell + `grounded_candidates`, three reps):
+
+| case | marts only | + grounding protocol |
+|------|-----------|----------------------|
+| csat_by_channel | clarify 3/3 | **refuse `uninstrumented` 3/3** |
+| email_open_rate | clarify 2/3 | **refuse 3/3** |
+| retention_by_channel | clarify 3/3 | clarify 1 / refuse 2 |
+| pile C (contested) | answer-both 14/15 | answer-both, no regression |
+
+Three findings, in order of what they teach:
+
+1. **The correction needed no correction.** `repairs = 0` on every CSAT rep: the model refused at
+   the decision point, not after a handback. Requiring the grounding to be explicit was enough —
+   forced to bind "CSAT" to an object and finding none, the model does not offer it. The
+   enforcement changed the behaviour without ever firing.
+
+2. **The protocol discriminates; it does not blanket-refuse.** `retention_by_channel` is the
+   control. Forced to ground its readings, the model produced two that DO ground — "day-90 exact"
+   and "within-90 cumulative", both over `fct_user_days.active_date` and `dim_users.signup_date` —
+   and diverge. So retention is not uninstrumented: the data to define it exists, there is simply
+   no governed metric and the concept is definitionally ambiguous. It is the genuine middle case,
+   derivable but ungoverned, and it is a different problem from CSAT rather than the same one. The
+   `uninstrumented` refusals it also produced are mis-coded on that ground.
+
+3. **No failure moved into the answer path.** The risk of gating a clarify is that the model
+   escapes into a silent substitution. CSAT and email refused; neither answered. Pile C, which
+   already resolves contested questions by disclosing both readings, was unaffected.
+
+The headline balanced accuracy did not move (rep-1 37/45 against the 37/46 baseline): at this n the
+trade sits inside the noise band, and the result is the composition, not the number. Two silent
+menus became typed refusals, one mislabelled case was exposed, and the guarantee — no ungrounded
+reading reaches the user — is structural rather than a behaviour the model happened to choose.

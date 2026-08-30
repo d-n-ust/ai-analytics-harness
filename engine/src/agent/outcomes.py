@@ -35,6 +35,12 @@ TERMINAL_TOOLS = ("answer", "refuse", "clarify")
 REASON_MEANINGS: dict[str, str] = {
     "no_governed_definition":
         "no governed metric defines what was asked (ARR, churn rate, an engagement score)",
+    "uninstrumented":
+        "the question asks to measure something the warehouse does not instrument AT ALL — no "
+        "metric, table, or column, in any layer, records it (customer satisfaction, when nothing "
+        "captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is "
+        "a metric not yet defined over data that exists; this is data that does not exist to define "
+        "one over",
     "out_of_coverage":
         "the metric exists but the period asked for falls outside the data's coverage window",
     "segment_undefined":

@@ -214,6 +214,16 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "clarification can be checked against the catalogue and the warehouse rather than "
               "read",
               ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+    # The grounding protocol. Enriches the clarify schema (each candidate binds a reading to a
+    # grounded object) and verifies at REPAIR that each grounding resolves — dropping the ones that
+    # do not, and handing the run back to refuse (nothing grounds it) or answer (one does) when
+    # fewer than two survive. Builds on typed_clarify: it reshapes the same `candidates` field.
+    Guardrail("grounded_candidates", Position.REPAIR,
+              "requires each clarify option to name the real object (metric, table, or column) it "
+              "is computed from, and hands back a clarification whose options ground to nothing so "
+              "the run refuses `uninstrumented` instead of offering definitions the layer lacks",
+              ("guardrails/action_space.py", "guardrails/grounding_check.py", "loop.py"),
+              in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -307,6 +317,7 @@ class GuardrailSet:
     # without a rung changing meaning.
     clarify: bool = True
     typed_clarify: bool = False
+    grounded_candidates: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False

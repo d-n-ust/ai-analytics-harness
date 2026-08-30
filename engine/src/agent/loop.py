@@ -26,6 +26,7 @@ import evidence as claim_audit
 from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after, before
 from .guardrails import classify as _classify
+from .guardrails import grounding_check as _grounding
 from .numbers import bare_number, parse_numbers
 from .outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from .provenance import ContextLedger
@@ -252,7 +253,59 @@ class _Run:
         reader is the one who cannot tell.
         """
         return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
-                or self.undisclosed_rival(exit_call))
+                or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call))
+
+    def ungrounded_candidates(self, exit_call):
+        """Hand back a clarification whose options do not each ground to a real object.
+
+        A clarification offers the user a choice between governed readings of the question. Under
+        the grounding protocol each option names the object it is computed from, and this verifies
+        that object EXISTS — a metric, a table, or a column, in any layer. An option whose
+        grounding resolves to nothing is dropped, because it is a reading the system cannot deliver
+        however the user answers.
+
+        The count of survivors decides the terminal, and that is the point: two or more grounded
+        readings ARE a contest, so the clarification stands. Fewer than two is not — nothing
+        grounds it (refuse `uninstrumented`) or exactly one does (answer from it). This is what
+        turns the CSAT menu — NPS, CSAT, a rating, none of which the warehouse records — back into
+        the refusal it always was, without the mechanism ever judging whether a grounding is the
+        RIGHT one for the concept. That relevance judgement stays the model's; existence is all the
+        machine decides.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "clarify" or not getattr(g, "grounded_candidates", False):
+            return None
+        semantic = self.grounding.semantic
+        con = getattr(self.grounding.toolbox, "con", None)
+        schema = getattr(self.grounding.toolbox, "schema", None)
+        survived, dropped = [], []
+        for cand in ClarifyArgs.of(exit_call.args).candidates:
+            # A candidate is a {reading, grounding} pair under this guardrail; tolerate a bare
+            # string (its own text is then both the reading and the grounding) so a schema slip
+            # degrades to a check rather than a crash.
+            reading = cand.get("reading") if isinstance(cand, dict) else str(cand)
+            ref = cand.get("grounding") if isinstance(cand, dict) else str(cand)
+            (survived if _grounding.resolve_grounding(ref, semantic, con, schema)
+             else dropped).append((reading, ref))
+        if len(survived) >= 2:
+            return None
+        self.repairs.append({"ungrounded": [ref for _r, ref in dropped]})
+        self.acts.append(Act("grounded_candidates", str(Position.REPAIR), "handed back",
+                             f"{len(dropped)} option(s) grounded to nothing, {len(survived)} "
+                             f"survived; correction {self.claim_retries} of 2").as_dict())
+        lines = ["Your clarification was not accepted: each option you offer the user must ground "
+                 "to a real object (a metric, a table, or a column) that already exists."]
+        lines += [f"  dropped {reading!r} — grounding {ref!r} resolves to nothing in any layer"
+                  for reading, ref in dropped]
+        if not survived:
+            lines.append("No option grounds. Nothing in the warehouse measures what was asked, so "
+                         "there is no choice to offer — `refuse` with reason `uninstrumented`.")
+        else:
+            reading, ref = survived[0]
+            lines.append(f"Only one option grounds ({ref}), so this is not a contest between "
+                         f"definitions. `answer` from it, or `refuse` if it does not truly answer "
+                         f"the question.")
+        return ToolResult("\n".join(lines), is_error=True)
 
     def dropped_constraint(self, exit_call):
         """Hand back an answer whose number came from a call that abandoned a restriction the run

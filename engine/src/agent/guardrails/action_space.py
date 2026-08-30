@@ -217,11 +217,40 @@ def clarify_schema(base: dict, guardrails, record=None) -> dict:
                         "the data team has to be able to answer it.")}
     note(record, "typed_clarify", Position.ACTION_SPACE, "applied",
          "clarify gained a coded reason and named candidates")
+    required = ["reason", "question"]
+    if getattr(guardrails, "grounded_candidates", False):
+        # The grounding protocol: each option offered to the user must name the object that
+        # operationalises it. Making the binding explicit is the lever — a reading the model cannot
+        # ground (NPS, when nothing records a survey) cannot be shown as a choice, so a menu of
+        # definitions the system does not have collapses to the refusal it always was. The
+        # mechanism verifies each grounding EXISTS (guardrails/grounding_check.py); whether it is
+        # the right object for the concept stays the model's judgement.
+        props["candidates"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "reading": {"type": "string", "description":
+                                "One interpretation of the question, in the user's words."},
+                    "grounding": {"type": "string", "description":
+                                  "The real object this reading is computed from, spelled as the "
+                                  "catalogue spells it: a governed metric, a fact/dimension table, "
+                                  "or a column (`mrr`, `fct_subscriptions`, "
+                                  "`fct_subscriptions.plan`). It must already exist — do not name "
+                                  "one you would have to build."}},
+                "required": ["reading", "grounding"]},
+            "description": ("The competing readings, EACH bound to the object that grounds it. Two "
+                            "or more genuinely-grounded readings make this a clarification; if you "
+                            "cannot ground two, this is not one — refuse (nothing grounds it) or "
+                            "answer (one does).")}
+        required = ["reason", "question", "candidates"]
+        note(record, "grounded_candidates", Position.ACTION_SPACE, "applied",
+             "clarify candidates must each bind a reading to a grounded object")
     return {**base,
             "description": ("End by asking one clarifying question, because more than one reading "
                             "of the question is defensible and they give different numbers."),
             "input_schema": {**base["input_schema"], "properties": props,
-                             "required": ["reason", "question"]}}
+                             "required": required}}
 
 
 def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:

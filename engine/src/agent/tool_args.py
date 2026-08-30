@@ -118,6 +118,19 @@ class ClarifyArgs(_ExitArgs):
     @field_validator("candidates", mode="before")
     @classmethod
     def _names(cls, value: Any) -> tuple:
+        """Preserve whichever shape the guardrail asked for. `typed_clarify` sends bare metric
+        names; `grounded_candidates` sends `{reading, grounding}` objects binding each option to
+        the thing that grounds it. A string stays a string so the typed arm is untouched; a dict
+        is normalised to those two keys so the repair check and the stored row see one shape."""
         if isinstance(value, str):
             value = value.replace(",", " ").split()
-        return tuple(n for n in (str(v).strip() for v in (value or ())) if n)
+        out: list = []
+        for v in (value or ()):
+            if isinstance(v, dict):
+                pair = {"reading": str(v.get("reading", "")).strip(),
+                        "grounding": str(v.get("grounding", "")).strip()}
+                if pair["reading"] or pair["grounding"]:
+                    out.append(pair)
+            elif str(v).strip():
+                out.append(str(v).strip())
+        return tuple(out)
