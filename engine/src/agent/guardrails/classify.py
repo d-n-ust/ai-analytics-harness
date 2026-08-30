@@ -90,18 +90,31 @@ _SCOPE_REPORT = {
 
 
 def _quoted_from(question: str, quote: str) -> bool:
-    """Are these actually the question's own words?
+    """Are these the question's own words, AND a SPECIFIC span rather than the whole question?
 
-    THE JUSTIFICATION IS VERIFIED, NOT TAKEN. Asked whether "how many active users on web last
-    week" had chosen a reading, the judge answered yes and quoted `is_internal = false` — the
-    discriminator it had been handed, which appears nowhere in the question. It suppressed the
-    disclosure and the run served one reading silently, which is the failure the whole mechanism
-    exists to prevent. A yes that cannot point at the question is a no. Whitespace and case are
-    normalised; nothing else is, because a quote that needs interpretation is not a quote.
+    THE JUSTIFICATION IS VERIFIED, NOT TAKEN, and it fails two ways. Asked whether "how many active
+    users on web last week" had chosen a reading, the judge answered yes and quoted
+    `is_internal = false` — the discriminator it was handed, which appears nowhere in the question.
+    A yes that cannot point at the question is a no.
+
+    The second way is the mirror, and it defeated the first guard: asked whether "total monthly
+    recurring revenue" chose between `mrr` and `gross_mrr`, the judge answered yes and quoted the
+    WHOLE QUESTION. That passes "is it in the question" trivially, and it suppressed the disclosure,
+    so the run served one reading of a contested metric silently. A quote that is the whole question
+    isolates no distinction — it is what the model produces when the question named none and it
+    grabbed everything. A real scope quote is a phrase ("excluding internal and test accounts"),
+    materially shorter than the question. So a quote covering most of the question is not a quote.
+
+    Erring strict is the safe direction: a wrongly-rejected quote costs a redundant disclosure; a
+    wrongly-accepted one loses the disclosure entirely, which is the silent failure. Whitespace and
+    case are normalised; nothing else is, because a quote that needs interpretation is not a quote.
     """
     norm = lambda s: " ".join(str(s or "").lower().split())
-    q = norm(quote)
-    return bool(q) and q in norm(question)
+    q, whole = norm(quote), norm(question)
+    if not q or q not in whole:
+        return False
+    qw, ww = len(q.split()), len(whole.split())
+    return qw <= 0.8 * ww
 
 
 def question_chose_scope(model, question: str, mine: str, mine_desc: str,

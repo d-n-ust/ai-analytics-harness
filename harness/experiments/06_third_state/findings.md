@@ -1172,11 +1172,21 @@ slot at a time:
   question-reading check; naming it in the answer closed it without one.
 
 - **definition** — `disclosure_check` already exists (pile C discloses both governed readings), but
-  `scope_classifier` defeats it: asked whether "total monthly recurring revenue" chose between `mrr`
-  and `gross_mrr`, it answered yes and cited the WHOLE QUESTION as its quote, which the
-  `_quoted_from` check passes because the whole question is trivially in the question. This is the
-  last open slot, and the fix is to harden the citation the same way it is already hardened against
-  a quote that is absent: a quote that is the whole question is not a quote.
+  `scope_classifier` defeated it: asked whether "total monthly recurring revenue" chose between
+  `mrr` and `gross_mrr`, it answered yes and cited the WHOLE QUESTION as its quote, which the
+  `_quoted_from` check passed because the whole question is trivially in the question. Closed by
+  hardening the citation the same way it was already hardened against an absent quote: a quote
+  covering most of the question isolates no distinction, so a quote is now required to be
+  materially shorter than the question (<= 0.8 of its words). `mrr_total`, `active_users_ios` and
+  `active_users_organic` went from serving one reading silently to disclosing both 3/3;
+  `active_users_android_stated`, where the question DID choose ("excluding staff and test
+  accounts"), still stands the disclosure down and answers cleanly — the strict direction costs at
+  most a redundant disclosure, never a lost one. The residual is `habits_per_active_user`, whose two
+  readings differ by ~0.5% (below the divergence threshold) and which tangles with the grain axis —
+  a threshold-calibration case, not the citation.
+
+With this the four slots are closed: measure (`grounded_measure`), grain and segment (`answer_spec`),
+definition (`disclosure_check` + the hardened `scope_classifier`).
 
 One measured caution on the documented-example lever (§27 rests on it for additivity). A usage
 example added to `active_users` — "a distinct count is semi-additive; query at the grain you want,
