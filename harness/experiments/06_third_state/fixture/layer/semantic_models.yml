@@ -180,7 +180,10 @@ metric:
 ---
 metric:
   name: paying_users
-  description: "Distinct accounts holding a live subscription."
+  description: >-
+    Distinct accounts holding a live subscription. Filter by plan for a plan-specific count:
+    query_metric(paying_users, filters={'subscription__plan': 'monthly'}) is the customers on the
+    monthly plan today, and 'annual' for the annual plan; leave the filter off for all plans.
   type: simple
   type_params: {measure: paying_user_count}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
