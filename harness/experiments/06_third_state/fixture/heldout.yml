@@ -591,26 +591,18 @@ cases:
         WHERE created >= DATE '2026-04-01' AND created < DATE '2026-07-01'), 2)
   note: 'a RATIO: the divergence passes through the numerator'
 - id: h_c_habits_per_active_user
-  tier: contested_derived
+  tier: governed_ratio
   question: How many habits did the average active user complete last week?
   expect:
-    type: contested
-    candidates:
-    - metric: value_moments
-      owner: Product
-      consumer: the engagement review and the North Star metric tree
-      gold_sql: SELECT round((SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype=2
-        AND CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email)
-        LIKE '%@internal-test.com'))) * 1.0 / (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u
-        u ON u.uid = e.uid WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND NOT ((coalesce(u.internal,0)=1)
-        OR (lower(u.email) LIKE '%@internal-test.com'))), 4)
-    - metric: total_value_moments
-      owner: Platform
-      consumer: write-volume forecasting and storage planning
-      gold_sql: SELECT round((SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype=2
-        AND CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06') * 1.0 / (SELECT count(DISTINCT e.uid) FROM
-        "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE
-        '2026-07-06'), 4)
-    tolerance: 0.0005
-  note: BOTH sides of the ratio are contested and move together, so the ratio diverges by only 0.19% — less than
-    the 0.5% default tolerance, hence its own
+    type: metric_answer
+    metric: habits_per_active_user
+    tolerance: 0.005
+    gold_sql: SELECT round((SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype=2
+      AND CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email)
+      LIKE '%@internal-test.com'))) * 1.0 / (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u
+      u ON u.uid = e.uid WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND NOT ((coalesce(u.internal,0)=1)
+      OR (lower(u.email) LIKE '%@internal-test.com'))), 4)
+  note: now a GOVERNED type:ratio metric (value_moments / active_users, customer-facing). The two readings
+    diverge by only 0.19% so one definition is unambiguous; governing the ratio also removes the semi-additive
+    grain trap that made the hand-computed denominator wrong. spend_per_signup stays contested — its readings
+    diverge 15%, and being all-additive it has no grain trap.

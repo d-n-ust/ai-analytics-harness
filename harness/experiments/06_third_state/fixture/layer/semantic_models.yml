@@ -244,3 +244,15 @@ metric:
   type: simple
   type_params: {measure: spend_amount}
   filter: "{{ Dimension('spend_row__channel') }} != 'partnerships'"
+---
+metric:
+  name: habits_per_active_user
+  description: >-
+    Average completed habits per active user, customer-facing (numerator and denominator both
+    exclude internal and test accounts). A GOVERNED ratio metric, so the LAYER computes it at the
+    query grain — do not divide two figures by hand. query_metric(habits_per_active_user,
+    period='last_week') is last week's completed habits per active user.
+  type: ratio
+  type_params:
+    numerator: {name: value_moments}
+    denominator: {name: active_users}
