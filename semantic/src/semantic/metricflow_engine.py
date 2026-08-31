@@ -210,6 +210,44 @@ class MetricFlowLayer:
         different question from a segment and listing its months invites a spurious match."""
         return {d: v for d, v in self.dimension_members().items() if not d.endswith("cohort_month")}
 
+    def ontology_source(self) -> dict:
+        """The structure the marts ontology (ai-analytics-ontology) is generated FROM, read off the
+        MetricFlow manifest rather than re-declared: for each entity, its table, its GRAIN (the
+        model's own description of what one row is), its measure columns, and the entities it can be
+        JOINED to. The ATTRIBUTES are deliberately absent — the ontology reads them from
+        information_schema so the present is complete by construction and cannot drift from the
+        warehouse. This is what keeps 'generated' honest: entities, measures, grain and relationships
+        all trace to the manifest, not to a hand-authored dict.
+
+        Scope: entities that a semantic model declares (its primary entity). A marts table with no
+        semantic model is not represented here yet — a known completeness gap the caller should close
+        by unioning in the remaining tables from information_schema."""
+        ents: dict = {}
+        semantics: dict = {}
+        for sm in self._manifest.semantic_models:
+            primary = next((e for e in sm.entities
+                            if str(e.type).lower().endswith("primary")), None)
+            if primary is None:
+                continue
+            d = ents.setdefault(primary.name, {
+                "table": sm.node_relation.alias,
+                "grain": " ".join((sm.description or "").split()) or f"one row per {primary.name}",
+                "measures": [], "relationships": []})
+            for m in sm.measures:
+                agg = str(getattr(m, "agg", "")).lower()
+                expr = str(getattr(m, "expr", None) or m.name)
+                # A simple-column sum/avg/min/max is a measure column. A distinct-count of a KEY is a
+                # row/entity count already carried by a governed metric, not a raw measure column.
+                if expr.isidentifier() and any(agg.endswith(a) for a in ("sum", "average", "avg", "min", "max")):
+                    if expr not in d["measures"]:
+                        d["measures"].append(expr)
+                        semantics[expr] = f"{agg.split('.')[-1]} of {expr}"
+            for e in sm.entities:
+                if not str(e.type).lower().endswith("primary"):
+                    d["relationships"].append((e.name, f"joined on {e.expr or e.name}"))
+        metrics = {name: (self.metrics.get(name, {}).get("description") or "") for name in self.metrics}
+        return {"entities": ents, "metrics": metrics, "measure_semantics": semantics}
+
     def ontology_text(self) -> str:
         """The whole governed ontology in one block, for the grounding resolver: every metric with
         its full definition (so a metric concept like 'real acquisition channels' grounds to

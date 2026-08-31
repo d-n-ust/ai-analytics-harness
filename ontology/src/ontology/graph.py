@@ -1,131 +1,174 @@
 """The marts ontology graph: a complete, closed-world model of what the warehouse captures.
 
-Two halves, kept apart on purpose:
+Design: a functional core with an imperative shell.
 
-  the GRAPH (this module, deterministic)   — every entity, attribute, measure and relationship the
-                                             warehouse holds, generated and verified against
-                                             information_schema. It answers one question: does this
-                                             node EXIST? Closure is a stance (the graph is complete),
-                                             never an enumerated list of what is absent.
-  the SEAM (this module, deterministic)    — given a measure the model has decomposed into
-                                             ingredients, verify() confirms those ingredients exist
-                                             and returns instrumented / computable / uninstrumented.
-  the MODEL (elsewhere, in the agent)       — decomposes a natural-language measure into ingredients
-                                             by meaning. The graph never interprets language; the
-                                             model never invents a node.
+  PURE CORE (no I/O — a function of plain data, so it tests without a database):
+    from_source(source, columns_by_table) -> MartsOntology   assemble the graph
+    joinable(edges, entities) -> bool                         can these entities be joined
+    ontology.render() -> str                                  the text the model reads
+    ontology.verify(kind, ...) -> (verdict, detail)           decide existence AND joinability
+    ontology.fingerprint() -> str                             digest of everything the model reads
+  IMPERATIVE SHELL (the only side effect is reading information_schema):
+    build(cursor, schema, source) -> MartsOntology            fetch columns, then from_source
 
-Absence is DERIVED from a complete present under the closed-world assumption, not stated: a concept
-not in the graph does not exist. So there is no negative knowledge for a human to keep true — the
-only guarantee needed is that the present is complete, which generating from information_schema gives
-by construction, and which fingerprint() protects against schema drift.
+Two halves are kept apart on purpose. The GRAPH (this module, deterministic) holds every entity —
+with its grain — every attribute, measure and RELATIONSHIP the warehouse captures, generated from a
+`source` read off the semantic-layer manifest and verified against information_schema. The MODEL
+(elsewhere, in the agent) decomposes a natural-language measure into ingredients by meaning. The
+graph never interprets language; the model never invents a node.
+
+Absence is DERIVED from a complete present under the closed-world assumption, not enumerated: a
+concept not in the graph does not exist. So there is no negative knowledge for a human to keep true —
+the only property needed is that the present is complete, which generating from information_schema
+gives by construction, and which fingerprint() (over the whole rendered surface) protects from drift.
 """
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass
+
+# The verdict vocabulary, defined once. The agent maps these to its reason codes; keeping the
+# strings here (not spread across call sites) means the mapping has one place to read them from.
+INSTRUMENTED = "instrumented"      # a governed metric answers directly
+COMPUTABLE = "computable"          # no governed metric, but derivable from nodes that join
+UNINSTRUMENTED = "uninstrumented"  # needs something absent from the complete graph
+
+
+def joinable(edges: frozenset, entities) -> bool:
+    """PURE. Are all `entities` in one relationship-connected component of `edges`? A measure derived
+    from attributes on several entities is only computable if those entities can actually be joined —
+    the edge check a node-existence check alone cannot make. Fewer than two entities is trivially
+    joinable; an entity in no edge forms its own component and fails against any other.
+    """
+    entities = set(entities)
+    if len(entities) <= 1:
+        return True
+    seen, frontier = set(), {next(iter(entities))}
+    while frontier:
+        node = frontier.pop()
+        seen.add(node)
+        for edge in edges:
+            if node in edge:
+                frontier |= (edge - seen)
+    return entities <= seen
 
 
 @dataclass(frozen=True)
 class MartsOntology:
-    """A closed-world graph over the marts. Build it with `build`; the model resolves a question
-    against `render()`, and `verify()` decides the verdict from the graph."""
+    """A closed-world graph over the marts, as an immutable value. Assemble it with `build` (from a
+    cursor) or `from_source` (from plain data); the model resolves a question against `render()`, and
+    `verify()` decides the verdict from the graph — existence AND joinability."""
 
-    entities: dict           # entity -> {"table": str, "attributes": [str], "measures": [str]}
-    relationships: tuple     # (from_entity, to_entity, note)
+    entities: dict           # entity -> {"table", "grain", "attributes": tuple, "measures": tuple}
+    edges: frozenset         # frozenset({entity_a, entity_b}) — undirected, traversable relationships
+    edge_notes: tuple        # (from, to, note) for the model's reading
     metrics: dict            # metric name -> one-line description
     measure_semantics: dict  # measure column -> what it IS (positive description)
     nodes: frozenset         # every valid node reference: "entity.column" and "metric.<name>"
 
-    # ── build ────────────────────────────────────────────────────────────────────────────────
+    # ── construction: pure core, then the impure shell ─────────────────────────────────────────
     @classmethod
-    def build(cls, cursor, schema: str, entity_tables: dict, metrics: dict,
-              relationships=(), measure_semantics=None) -> "MartsOntology":
-        """Generate the complete present-graph.
-
-        `entity_tables` maps a conceptual entity to its (table, [measure columns]); the ATTRIBUTES
-        are generated as every other column of that table, read from information_schema, so the graph
-        is complete by construction and cannot claim a column the warehouse lacks. In production the
-        entity/measure mapping and the relationships come from the semantic-layer manifest; here they
-        are passed in so this module stays warehouse-agnostic.
+    def from_source(cls, source: dict, columns_by_table: dict, measure_semantics=None) -> "MartsOntology":
+        """PURE. Assemble the complete present-graph from a `source` (each entity's table, grain,
+        measures and relationships, read from the manifest by the caller) and the columns of each
+        table. ATTRIBUTES are every non-measure column, so the graph is complete and cannot claim a
+        column the warehouse lacks; a declared measure that is not a column raises. No database here —
+        this is the whole of the assembly logic, testable with dicts.
         """
-        measure_semantics = dict(measure_semantics or {})
-        nodes, entities = set(), {}
-        for ent, (table, meas) in entity_tables.items():
-            cols = [r[0] for r in cursor.execute(
-                "select column_name from information_schema.columns "
-                "where table_schema = ? and table_name = ? order by ordinal_position",
-                [schema, table]).fetchall()]
+        nodes, entities, edges, edge_notes = set(), {}, set(), []
+        for ent, spec in source["entities"].items():
+            table, meas = spec["table"], tuple(spec.get("measures", ()))
+            cols = tuple(columns_by_table[table])
             missing = [m for m in meas if m not in cols]
             if missing:
                 raise ValueError(f"{ent}: {table} has no column(s) {missing} declared as measures")
-            attrs = [c for c in cols if c not in meas]
-            for col in cols:
-                nodes.add(f"{ent}.{col}")
-            entities[ent] = {"table": table, "attributes": attrs, "measures": list(meas)}
-        for m in metrics:
-            nodes.add(f"metric.{m}")
-        return cls(entities=entities, relationships=tuple(relationships),
-                   metrics={m: " ".join((d or "").split()) for m, d in metrics.items()},
-                   measure_semantics=measure_semantics, nodes=frozenset(nodes))
+            nodes.update(f"{ent}.{col}" for col in cols)
+            entities[ent] = {"table": table, "grain": " ".join((spec.get("grain") or "").split()),
+                             "attributes": tuple(c for c in cols if c not in meas), "measures": meas}
+            for to_ent, note in spec.get("relationships", ()):
+                edges.add(frozenset((ent, to_ent)))
+                edge_notes.append((ent, to_ent, note))
+        nodes.update(f"metric.{m}" for m in source["metrics"])
+        sem = {**(source.get("measure_semantics") or {}), **(measure_semantics or {})}
+        return cls(entities=entities, edges=frozenset(edges), edge_notes=tuple(edge_notes),
+                   metrics={m: " ".join((d or "").split()) for m, d in source["metrics"].items()},
+                   measure_semantics=sem, nodes=frozenset(nodes))
 
-    # ── the model's view ───────────────────────────────────────────────────────────────────────
+    @classmethod
+    def build(cls, cursor, schema: str, source: dict, measure_semantics=None) -> "MartsOntology":
+        """The imperative shell: read each entity table's columns from information_schema, then hand
+        them to the pure `from_source`. The only side effect in the module lives here."""
+        tables = {spec["table"] for spec in source["entities"].values()}
+        columns_by_table = {t: _fetch_columns(cursor, schema, t) for t in tables}
+        return cls.from_source(source, columns_by_table, measure_semantics)
+
+    # ── the model's view: pure ─────────────────────────────────────────────────────────────────
     def render(self, metric_desc_chars: int = 120) -> str:
-        """The text the model resolves a question against. Asserts the closed-world stance once;
-        lists the complete present; describes each measure positively so a count is not mistaken for
-        a duration."""
+        """The text the model resolves a question against, and the whole surface fingerprint() hashes.
+        Asserts the closed-world stance once; states each entity's GRAIN; describes measures positively
+        so a count is not mistaken for a duration."""
         out = [
             "MARTS ONTOLOGY.", "",
             "CLOSED WORLD: this graph lists EVERYTHING the warehouse captures — every entity, every "
-            "attribute, every measure. It is COMPLETE. If a concept a question needs is not "
-            "represented here, the warehouse does NOT capture it; assume nothing beyond this graph "
-            "exists.", "",
+            "attribute, every measure. It is COMPLETE. If a concept a question needs is not represented "
+            "here, the warehouse does NOT capture it; assume nothing beyond this graph exists.", "",
             "Governed metrics (a direct answer, alone or combined as a ratio, if one fits):",
         ]
         for m in sorted(self.metrics):
             out.append(f"  metric.{m}: {self.metrics[m][:metric_desc_chars]}")
-        out += ["", "Entities, their attributes, and the measures they support "
-                "(a node is entity.attribute or entity.measure):"]
+        out += ["", "Entities (a node is entity.attribute or entity.measure):"]
         for ent, d in self.entities.items():
-            out.append(f"  {ent} ({d['table']}):")
+            out.append(f"  {ent} ({d['table']}) — grain: {d['grain'] or 'one row per ' + ent}")
             out.append(f"      attributes: {', '.join(d['attributes']) or '(none)'}")
             meas = ", ".join(f"{m} [{self.measure_semantics.get(m, 'a measure')}]"
                              for m in d["measures"]) or "(none)"
             out.append(f"      measures:   {meas}")
-        if self.relationships:
-            out += ["", "Relationships:"]
-            for a, b, note in self.relationships:
-                out.append(f"  {a} -> {b}: {note}")
+        if self.edge_notes:
+            out += ["", "Relationships (which entities can be joined):"]
+            for a, b, note in self.edge_notes:
+                out.append(f"  {a} <-> {b}: {note}")
         return "\n".join(out)
 
-    # ── the seam ───────────────────────────────────────────────────────────────────────────────
+    # ── the seam: pure ─────────────────────────────────────────────────────────────────────────
     def verify(self, kind: str, metric: str = "", ingredients=()) -> tuple[str, str]:
-        """Turn the model's decomposition into a verdict, deciding EXISTENCE deterministically.
+        """Turn the model's decomposition into a verdict, deciding EXISTENCE and JOINABILITY.
 
-        Returns (verdict, detail) where verdict is 'instrumented', 'computable', or 'uninstrumented'.
-        The model proposes; the graph decides: a `governed` claim whose metric is not a real node,
-        or a `computable` claim naming an ingredient that is not a real node, is not upheld. Join
-        keys (columns ending in _id) are relationships the graph already carries, so they are not
-        required to appear as ingredient nodes.
+        Returns (verdict, detail) where verdict is INSTRUMENTED, COMPUTABLE or UNINSTRUMENTED. The
+        model proposes; the graph decides: a `governed` claim whose metric is not a node, a
+        `computable` claim citing no ingredients, one naming an ingredient that is not a node, or one
+        whose ingredients span entities that cannot be joined, is not upheld. Existence closes the
+        absence gap; joinability closes the fan/chasm gap a node-only check would miss.
         """
         if kind == "governed":
             name = metric.replace("metric.", "").strip()
             if f"metric.{name}" in self.nodes:
-                return "instrumented", f"governed metric `{name}`"
-            return "uninstrumented", f"claimed governed metric `{name}` is not in the graph"
+                return INSTRUMENTED, f"governed metric `{name}`"
+            return UNINSTRUMENTED, f"claimed governed metric `{name}` is not in the graph"
         if kind == "computable":
-            needed = [str(i).strip() for i in ingredients if not str(i).strip().endswith("_id")]
+            needed = [str(i).strip() for i in ingredients if "." in str(i)]
+            if not needed:
+                return UNINSTRUMENTED, "computable claim cited no graph ingredients"
             absent = [i for i in needed if i not in self.nodes]
             if absent:
-                return "uninstrumented", f"required ingredient(s) absent from the graph: {absent}"
-            return "computable", f"all ingredients exist: {needed}"
-        return "uninstrumented", "measure needs an ingredient absent from the complete graph"
+                return UNINSTRUMENTED, f"required ingredient(s) absent from the graph: {absent}"
+            touched = {i.split(".", 1)[0] for i in needed}
+            if not joinable(self.edges, touched):
+                return UNINSTRUMENTED, f"entities {sorted(touched)} are not related — cannot be joined"
+            return COMPUTABLE, f"ingredients exist and join: {needed}"
+        return UNINSTRUMENTED, "measure needs an ingredient absent from the complete graph"
 
-    # ── staleness ────────────────────────────────────────────────────────────────────────────
+    # ── staleness: pure ────────────────────────────────────────────────────────────────────────
     def fingerprint(self) -> str:
-        """A digest of the graph's structure. Changes iff the entities, columns, measures, or
-        relationships change — so a schema change forces a regenerate and stale closure cannot lie."""
-        surface = json.dumps({"entities": self.entities,
-                              "relationships": [list(r) for r in self.relationships],
-                              "metrics": sorted(self.metrics)}, sort_keys=True)
-        return "sha256:" + hashlib.sha256(surface.encode()).hexdigest()[:16]
+        """A digest of EVERYTHING the model reads — the rendered surface. Changes iff any of it
+        changes (entities, columns, grain, measures and their semantics, metrics, relationships), so a
+        schema or manifest change forces a regenerate and a stale graph cannot lie."""
+        return "sha256:" + hashlib.sha256(self.render().encode()).hexdigest()[:16]
+
+
+def _fetch_columns(cursor, schema: str, table: str) -> tuple:
+    """The module's sole I/O: the ordered column names of one marts table."""
+    rows = cursor.execute(
+        "select column_name from information_schema.columns "
+        "where table_schema = ? and table_name = ? order by ordinal_position",
+        [schema, table]).fetchall()
+    return tuple(r[0] for r in rows)

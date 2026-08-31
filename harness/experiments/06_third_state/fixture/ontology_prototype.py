@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """End-to-end check that the ai-analytics-ontology module works on the real marts + a live model.
 
-The inline graph is gone — this now USES `ontology.MartsOntology` (generated from information_schema,
-closed-world over a complete present, no enumerated absence). The prototype keeps only the agent's
-half: the LLM decomposes a measure into ingredients against ont.render(), and ont.verify() decides
-the verdict. If this matches the hand-rolled prototype's 7/7, the productionised module is faithful.
+Two things are now proven together:
+
+  1. the SOURCE is read off the MetricFlow manifest — `sem.ontology_source()` gives the entities,
+     their grain, measure columns and relationships; nothing about the graph is hand-authored here
+     except the resolve prompt. This is the review's "generated, honestly" fix.
+  2. the module decides. The LLM keeps only the agent's half — it decomposes a measure into
+     ingredients against `ont.render()`; `ont.verify()` decides existence AND joinability.
+
+If this matches the hand-rolled prototype's 7/7 on the target questions, the productionised module,
+fed from the manifest, is faithful.
 """
 from __future__ import annotations
 
@@ -22,28 +28,6 @@ from ontology import MartsOntology                         # noqa: E402
 import build as fixture_build                              # noqa: E402
 
 
-# The marts-specific inputs the module generates the graph from. In production these come from the
-# MetricFlow manifest (entities + type_params.measure) and column comments; here they are the small
-# curated mapping the module turns into a complete, verified graph.
-ENTITY_TABLES = {
-    "user":         ("dim_users",          []),
-    "activity":     ("fct_user_days",      ["value_moments", "app_opens"]),
-    "subscription": ("fct_subscriptions",  ["billed_amount"]),
-    "spend":        ("fct_marketing_spend",["spend"]),
-    "habit":        ("dim_habit",          []),
-}
-RELATIONSHIPS = [
-    ("activity", "user", "each activity row is performed_by a user (user_id), dated by active_date"),
-    ("subscription", "user", "each subscription is held_by a user (user_id), started_date/ended_date"),
-    ("habit", "user", "each habit was created_by a user (user_id)"),
-]
-MEASURE_SEMANTICS = {
-    "value_moments": "number of completed habits (a count of habit-completion events)",
-    "app_opens": "number of app-open events (an event count)",
-    "billed_amount": "amount billed on a subscription term (currency)",
-    "spend": "amount of marketing spend (currency)",
-}
-
 _SYSTEM = (
     "You resolve an analytics question against a CLOSED-WORLD marts ontology that lists everything "
     "the warehouse captures. Decide how the MEASURE the question asks for is answered, IN THIS "
@@ -52,9 +36,10 @@ _SYSTEM = (
     "metrics ('habits per active user' = value_moments per active_users). Report kind='governed', "
     "metric=metric.<name>.\n"
     "2. COMPUTABLE — no governed metric, but the measure can be DERIVED from attributes and measures "
-    "IN the graph, via the relationships. DECOMPOSE it and list the ingredient nodes "
-    "(entity.attribute / entity.measure), NOT join keys. Example: 90-day retention = signup cohort "
-    "(user.signup_date) observed for return activity (activity.active_date), sliced by user.channel.\n"
+    "IN the graph, joined via the relationships. DECOMPOSE it and list the ingredient nodes "
+    "(entity.attribute / entity.measure); you may cite join keys, they are real columns. Example: "
+    "90-day retention = signup cohort (user.signup_date) observed for return activity "
+    "(activity.active_date), sliced by user.channel.\n"
     "3. UNINSTRUMENTED — the measure needs an ingredient NOT in this complete graph. Since the graph "
     "is complete, a concept absent from it does not exist: 'minutes in app' needs a duration measure "
     "and there is none (only event counts); 'top screen' needs a screen attribute and there is none; "
@@ -94,11 +79,10 @@ def main():
     cur = scoped_cursor(con)
     sem = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow",
                           semantic_layer=True, guardrails=None, schema=MARTS).semantic
-    ont = MartsOntology.build(cur, MARTS, ENTITY_TABLES,
-                              {m: (d.get("description") if isinstance(d, dict) else "") for m, d in sem.metrics.items()},
-                              relationships=RELATIONSHIPS, measure_semantics=MEASURE_SEMANTICS)
+    ont = MartsOntology.build(cur, MARTS, sem.ontology_source())   # source READ from the manifest
     model = get_model("gpt-5-mini")
-    print(f"MartsOntology: {len(ont.entities)} entities, {len(ont.nodes)} nodes, {ont.fingerprint()}\n")
+    print(f"MartsOntology: {len(ont.entities)} entities "
+          f"({', '.join(sorted(ont.entities))}), {len(ont.nodes)} nodes, {ont.fingerprint()}\n")
     for q, expect in TARGETS:
         verdict, why = resolve(model, q, ont)
         flag = "OK " if verdict == expect else "XX "
