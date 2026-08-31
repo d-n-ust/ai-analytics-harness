@@ -243,6 +243,36 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "number that answers a neighbouring question (a per-day rate for a weekly ask) is "
               "seen rather than served silently",
               ("guardrails/action_space.py",), in_ladder=False),
+    # Just-in-time per-metric context: the query result leads with `metric_brief` — the metric's
+    # own-entity dimensions, governed values, and a mark on the segments this call applied — so the
+    # focused contract arrives with the number, no extra turn. Its enforcement half, `applied_segment`
+    # (loop.py), hands an answer back when the question names a governed segment the serving call
+    # omitted (the model finds the segment via classify.segment_named, the mechanism verifies it is a
+    # real member and that the call applied it). The lean catalogue in the prompt is unchanged.
+    Guardrail("metric_brief", Position.REPAIR,
+              "prepends each metric's focused contract to its own query result and hands an answer "
+              "back when the question names a governed segment the served number did not filter by, "
+              "rather than serve the unfiltered total as if it were the segment",
+              ("tools.py", "guardrails/classify.py", "loop.py"), in_ladder=False),
+    # The pull-tool alternative to `metric_brief`'s pushed block: the lean metric list moves into the
+    # system prompt (so `list_metrics` costs no turn) and `show_metric_ontology(metric)` returns the
+    # full per-metric contract on demand — arguments, dimensions with governed values, the example,
+    # the refuse-if-absent rule — BEFORE the query, so the first call is right rather than corrected.
+    Guardrail("ontology_tool", Position.ACTION_SPACE,
+              "offers show_metric_ontology, a pull tool giving a metric's full contract (arguments, "
+              "dimensions and governed values, example, refuse-if-absent rule) before it is queried, "
+              "while the lean metric list sits in the system prompt",
+              ("guardrails/action_space.py", "tools.py"), in_ladder=False),
+    # The enforced answer to the substitution the ontology tool could not stop: a question that
+    # restricts to a segment which is NOT a governed value ("TikTok" as a channel) is refused rather
+    # than answered from the nearest governed one. The model names the segment and its dimension; the
+    # mechanism confirms the value does not link (not a member, or not lexically anchored in the
+    # phrase); a served number is handed back to refuse, naming the governed siblings.
+    Guardrail("segment_gate", Position.REPAIR,
+              "grounds the whole question against the ontology and refuses an answer that names a "
+              "concept with no referent (TikTok as a channel, enterprise as a plan), naming the "
+              "governed siblings, rather than serve a number computed for a different concept",
+              ("guardrails/classify.py", "loop.py"), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -339,6 +369,9 @@ class GuardrailSet:
     grounded_candidates: bool = False
     grounded_measure: bool = False
     answer_spec: bool = False
+    metric_brief: bool = False
+    ontology_tool: bool = False
+    segment_gate: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False

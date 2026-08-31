@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import time
 from dataclasses import dataclass, field, replace
 
@@ -80,6 +81,7 @@ def _reported(served: list, value: float) -> bool:
     """Is this figure in the text the reader receives? Half a percent of slack, so a rounded
     rendering of the same number still counts as having been reported."""
     return any(abs(n - value) <= 0.005 * abs(value) for n in served)
+
 
 
 def _leaf(name) -> str:
@@ -254,7 +256,125 @@ class _Run:
         """
         return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
                 or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call)
-                or self.substituted_measure(exit_call) or self.direction_vs_evidence(exit_call))
+                or self.substituted_measure(exit_call) or self.direction_vs_evidence(exit_call)
+                or self.segment_gate(exit_call) or self.applied_segment(exit_call))
+
+    def _resolve_segment(self):
+        """The shared segment resolver behind `segment_gate` and `applied_segment`.
+
+        The model names the segment the question restricts to (phrase, dimension, and value if one
+        matches); the mechanism decides `linked` — the value is a real member AND is lexically
+        anchored in the phrase. One model call, one verification, read by both guards: the gate acts
+        when a segment is named but does NOT link (refuse), the application check acts when it DOES
+        link but the served call ignored it. Returns None when no segment is named."""
+        semantic = self.grounding.semantic
+        if semantic is None or not hasattr(semantic, "segment_vocabulary"):
+            return None
+        vocab = semantic.segment_vocabulary()
+        restricts, phrase, dim, value = _classify.segment_named(self.model, self.question, vocab)
+        if not restricts or not phrase:
+            return None
+        members = list(vocab.get(dim, ()))
+        # Membership-only: the model's proposal is trusted for SEMANTIC fit (its superpower) and
+        # verified only for EXISTENCE — the value must be a real member. A lexical anchor test here
+        # false-refused a correct semantic link ("platform not recorded" -> `unknown`), so it is gone.
+        linked = bool(value) and value in set(members)
+        return {"phrase": phrase, "dim": dim, "value": value, "members": members, "linked": linked}
+
+    def _grounds_literally(self, concept: str, semantic) -> bool:
+        """Existence backstop for the grounding resolver: True when the concept LITERALLY matches a
+        governed value or metric name (shares a content token). The resolver owns semantic grounding;
+        this only stops a refusal when the concept is obviously present ("monthly" wrongly reported
+        ungrounded still matches the `monthly` value), so a model slip cannot refuse a real segment.
+        It says nothing about semantic-only links, which the resolver already answered by grounding."""
+        toks = {t for t in re.findall(r"[a-z0-9]+", str(concept).lower())
+                if t not in {"the", "a", "an", "of", "on", "in", "for", "and", "not", "no"}}
+        if not toks:
+            return False
+        pools = [str(v).replace("_", " ") for vals in semantic.segment_vocabulary().values()
+                 for v in vals] + [m.replace("_", " ") for m in semantic.metrics]
+        return any(toks & set(re.findall(r"[a-z0-9]+", pool.lower())) for pool in pools)
+
+    def segment_gate(self, exit_call):
+        """Refuse an answer whose question names a concept the ONTOLOGY does not contain.
+
+        The full-ontology grounding gate. The substitution the ontology tool could not stop —
+        "spend on TikTok ads" served `paid_search`'s number — is a grounding failure: "TikTok" has
+        no referent in the layer, so the question is unanswerable. `classify.ground_question` gives
+        the model the whole ontology and asks whether every concept grounds, resolving by MEANING
+        ('not recorded' -> `unknown`, 'real acquisition channels' -> the `acquisition_spend` metric,
+        'TikTok' -> nothing). The model owns the semantics; this verifies only that the concept it
+        calls ungrounded is genuinely absent (`_grounds_literally`) before refusing on its word, and
+        names the governed siblings so the refusal is legible.
+
+        Fires only when a concept does not ground AND a number was served; an answerable question, a
+        grounded concept, or a refusal is untouched, and the resolver defaults to answerable on any
+        doubt — so a false refusal needs both a clear grounding miss and a served number."""
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "segment_gate", False):
+            return None
+        semantic = self.grounding.semantic
+        if semantic is None or not hasattr(semantic, "ontology_text"):
+            return None
+        answerable, concept, dim = _classify.ground_question(
+            self.model, self.question, semantic.ontology_text())
+        if answerable or not concept or self._grounds_literally(concept, semantic):
+            return None
+        members = list(semantic.segment_vocabulary().get(dim, ())) if dim else []
+        sibling = (f" The governed values of {dim} are: {', '.join(members)}." if members else "")
+        self.repairs.append({"ungrounded_concept": {"concept": concept, "dim": dim}})
+        self.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
+                             f"question names {concept!r}, which does not ground to the ontology; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        return ToolResult(
+            "Your answer was not accepted: the question names something this data does not contain.\n"
+            f"{concept!r} has no referent in the governed ontology — no metric and no dimension value "
+            f"matches it.{sibling} It is not in the data, so `refuse` with reason "
+            f"`ungoverned_dimension_value` rather than serve a number computed for a different "
+            f"concept.", is_error=True)
+
+    def applied_segment(self, exit_call):
+        """Hand back an answer whose serving call OMITTED a governed segment the QUESTION named.
+
+        The four-slots segment miss on the answer path: "spend on paid search" served the
+        all-channel total because the call carried no channel filter. `dropped_constraint` cannot
+        see it — nothing was dropped, the filter was never applied — so this reads the question.
+
+        The division is `ungrounded_candidates`': the MODEL judges which governed value the question
+        restricts to (`classify.segment_named`, mapping "paid search" onto `paid_search`), and the
+        MECHANISM verifies that value EXISTS among the metric's governed members before acting, then
+        checks the serving call applied it. A named segment that grounds to nothing — "TikTok", no
+        such channel — is left alone: that is the refuse case, carried by the brief's own "refuse if
+        absent" line, not turned into a filter for a value the layer lacks.
+
+        Paired with the `metric_brief` block, which rides on the query result and so adds no turn:
+        the block is the context to fix the miss, this is the enforcement that a miss is fixed. Fires
+        only when the question names a real governed segment AND the number served ignored it.
+        """
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "metric_brief", False):
+            return None
+        r = self._resolve_segment()
+        # Only a LINKED segment (a real member, lexically anchored) can be one the answer should
+        # have applied; an unlinked one is the refuse case that `segment_gate` owns, not this.
+        if r is None or not r["linked"]:
+            return None
+        dim, value = r["dim"], r["value"]
+        leaf, want = dim.split("__")[-1], str(value).lower()
+        for _metric, args in self._governed_calls():
+            for k, v in (args.get("filters") or {}).items():
+                if str(k).split("__")[-1] == leaf and str(v).lower() == want:
+                    return None                                   # the segment was applied -> serve
+        self.repairs.append({"applied_segment": {"dimension": dim, "value": value}})
+        self.acts.append(Act("metric_brief", str(Position.REPAIR), "handed back",
+                             f"question restricts to {dim}={value!r} but the served number applied "
+                             f"no such filter; correction {self.claim_retries} of 2").as_dict())
+        return ToolResult(
+            "Your answer was not accepted: the question restricts to a specific segment.\n"
+            f"The question names {value!r} ({dim}, a governed value), but the number you served came "
+            f"from a call with no such filter — it reports the unfiltered total across all values. "
+            f"Re-query with filters={{'{dim}': '{value}'}} and answer that slice, or `refuse` if the "
+            f"segment truly cannot be isolated.", is_error=True)
 
     def direction_vs_evidence(self, exit_call):
         """Hand back an answer whose declared DIRECTION contradicts the values its OWN queries

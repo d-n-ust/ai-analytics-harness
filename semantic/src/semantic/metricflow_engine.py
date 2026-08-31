@@ -191,6 +191,120 @@ class MetricFlowLayer:
                 return primary
         return None
 
+    def _dim_descriptions(self) -> dict:
+        """{entity__dimension -> its one-line description}, read from the manifest because the
+        engine's Dimension object does not carry one. Shared by the catalogue and by metric_brief."""
+        out: dict = {}
+        for sm in self._manifest.semantic_models:
+            entity = next((e.name for e in sm.entities), None)
+            for d in sm.dimensions:
+                if d.description:
+                    key = f"{entity}__{d.name}" if entity else d.name
+                    out[key] = " ".join(d.description.split())
+        return out
+
+    def segment_vocabulary(self) -> dict:
+        """{entity__dimension -> [governed values]} for the categorical segment dimensions — the
+        vocabulary the `metric_brief` self-check judges a question's segment against. It is
+        `dimension_members` with the high-cardinality cohort_month dropped, since a cohort is a
+        different question from a segment and listing its months invites a spurious match."""
+        return {d: v for d, v in self.dimension_members().items() if not d.endswith("cohort_month")}
+
+    def ontology_text(self) -> str:
+        """The whole governed ontology in one block, for the grounding resolver: every metric with
+        its full definition (so a metric concept like 'real acquisition channels' grounds to
+        `acquisition_spend`), and every segment dimension with its governed values and description
+        (so 'not recorded' can ground to `unknown` and 'TikTok' can ground to nothing). Compact and
+        complete — the resolver decides answerability from this, nothing else."""
+        lines = ["GOVERNED ONTOLOGY", "", "Metrics (name: definition):"]
+        for name in self.metrics:
+            desc = " ".join((self.metrics[name].get("description") or "").split())
+            lines.append(f"- {name}: {desc}")
+        descs = self._dim_descriptions()
+        lines += ["", "Segment dimensions and their governed values "
+                  "(a value not listed here does not exist in the data):"]
+        for d, vals in sorted(self.segment_vocabulary().items()):
+            dd = f"  — {descs[d]}" if descs.get(d) else ""
+            lines.append(f"  {d}: {', '.join(vals)}{dd}")
+        return "\n".join(lines)
+
+    def metric_ontology(self, name: str) -> str:
+        """The full pre-query contract for ONE metric, returned by the `show_metric_ontology` tool.
+
+        Deeper than `metric_brief`: the FULL definition (which carries the usage example and the
+        semantic rules — semi-additive counting, cohort-vs-running — written into the description),
+        the arguments the metric accepts, and its segment dimensions with governed values and the
+        refuse-if-absent rule. Delivered BEFORE the query, so the agent picks the right filter, grain
+        and measure on the first call rather than being corrected after. The lean catalogue in the
+        prompt names the metric; this is where its filters and values live."""
+        obj = {m.name: m for m in self._engine.list_metrics()}.get(name)
+        if obj is None:
+            return ""
+        own = self._own_entity(obj)
+        members = self.dimension_members()
+        descs = self._dim_descriptions()
+        full_desc = " ".join((self.metrics.get(name, {}).get("description") or "").split())
+        from warehouse.config import NAMED_PERIODS
+        lines = [f"metric `{name}`",
+                 f"  definition: {full_desc}",
+                 "  arguments: filters={'entity__dimension': value} (equality on a governed value), "
+                 "group_by=['entity__dimension'], time_grain=" + "|".join(TIME_GRAINS) + ", "
+                 "period=<one of " + ", ".join(NAMED_PERIODS) + ", or YYYY-MM, or YYYY-Qn> "
+                 "(omit period for the current value)."]
+        segs = [d for d in sorted(self.allowed_filters(name))
+                if d.split("__", 1)[0] == own and members.get(d)]
+        joined = [d for d in sorted(self.allowed_filters(name))
+                  if d.split("__", 1)[0] != own and not d.startswith("metric_time")
+                  and members.get(d)]
+        if segs:
+            lines.append("  segments this metric can isolate (filter or group by):")
+            for d in segs:
+                lines.append(f"    {d} ({', '.join(members[d])}) — the ONLY governed values; any "
+                             f"other is not in this data, so refuse, do not approximate.")
+                if descs.get(d):
+                    lines.append(f"        {descs[d]}")
+        if joined:
+            lines.append("  also filterable across a join:")
+            for d in joined:
+                lines.append(f"    {d} ({', '.join(members[d])})")
+        if not segs and not joined:
+            lines.append("  this metric takes no segment filters — only a period and a grain.")
+        return "\n".join(lines) + "\n"
+
+    def metric_brief(self, name: str, applied: dict | None = None) -> str:
+        """The focused contract for ONE metric, prepended to that metric's own query result under
+        the `metric_brief` arm. It rides on a result the agent already reads, so it costs no model
+        turn, and the lean catalogue in the system prompt is unchanged.
+
+        Own-entity dimensions ONLY, with their governed values and a line naming those as the only
+        ones (so a value the layer lacks reads as absent and the agent refuses rather than
+        approximates — the pile-B legibility the dense `hybrid` catalogue lost), plus a mark on the
+        dimensions THIS call filtered by. The mark is the adjacency signal at the decision point: an
+        all-channel total for a paid-search question shows `channel` present and unmarked."""
+        obj = {m.name: m for m in self._engine.list_metrics()}.get(name)
+        if obj is None:
+            return ""
+        own = self._own_entity(obj)
+        members = self.dimension_members()
+        descs = self._dim_descriptions()
+        applied_leaves = {str(k).split("__")[-1] for k in (applied or {})}
+        desc0 = (self.metrics.get(name, {}).get("description") or "").strip().split(". ")[0]
+        lines = [f"metric `{name}` — {desc0}."]
+        # SEGMENT dimensions only — those with a governed value list. Time dimensions are excluded:
+        # they are restricted with period=/time_grain=, not with a filter, and listing spend_date
+        # here led the agent to filter BY the date (a malformed call) instead of scoping the period.
+        own_dims = [d for d in sorted(self.allowed_filters(name))
+                    if own and d.split("__", 1)[0] == own and members.get(d)]
+        if own_dims:
+            lines.append(f"  filter/group by a specific segment, as {own}__<dimension>:")
+            for d in own_dims:
+                mark = "   <= applied on this call" if d.split("__")[-1] in applied_leaves else ""
+                lines.append(f"    {d} ({', '.join(members[d])}) — the ONLY governed values; any "
+                             f"other is not in this data, so refuse, do not approximate.{mark}")
+                if descs.get(d):
+                    lines.append(f"        {descs[d]}")
+        return "\n".join(lines) + "\n"
+
     def list_metrics_text(self) -> str:
         """The catalogue, rendered from everything MetricFlow actually exposes.
 
@@ -233,17 +347,15 @@ class MetricFlowLayer:
         # the study measures whether that adjacency helps net, or whether the added density hurts.
         minimal = self.catalogue == "minimal"
         normalised = self.catalogue == "normalised"
+        # `hybrid`: the schema explanation and the shared block of `normalised`, but each metric's
+        # OWN-entity dimensions rendered inline with values — so the segment values a metric filters
+        # by sit beside it (fixing the direct-filter cases the dedup moved away, e.g. paid_search),
+        # while JOINED dimensions stay deduplicated in the shared block. Both the rule and the values.
+        hybrid = self.catalogue == "hybrid"
         inline = self.catalogue in ("inline", "values")
-        show_desc = self.catalogue == "inline" or normalised
-        members = self.dimension_members() if (inline or normalised) else {}
-        descs: dict = {}
-        if show_desc:
-            for sm in self._manifest.semantic_models:
-                entity = next((e.name for e in sm.entities), None)
-                for d in sm.dimensions:
-                    if d.description:
-                        key = f"{entity}__{d.name}" if entity else d.name
-                        descs[key] = " ".join(d.description.split())
+        show_desc = self.catalogue == "inline" or normalised or hybrid
+        members = self.dimension_members() if (inline or normalised or hybrid) else {}
+        descs = self._dim_descriptions() if show_desc else {}
         entity_dims: dict = {}     # normalised: entity -> its dimensions, listed once below
         detail: list = []
         if compact:
@@ -262,18 +374,32 @@ class MetricFlowLayer:
                     lines.append(f"    also called: {m.label}")
             dims = sorted(d.granularity_free_dunder_name
                           for d in self._engine.simple_dimensions_for_metrics([m.name]))
-            if normalised:
+            if normalised or hybrid:
                 # NORMALISED: each metric names the ENTITY it counts, and every entity's dimensions
                 # are listed ONCE in a shared block below — no per-metric repetition. The system
                 # prompt explains the schema (a metric's filters are its entity's dimensions), so
                 # the agent composes `filters={'entity__dimension': value}` from the structure
                 # rather than from a value repeated under every metric. Tests whether teaching the
                 # shape once beats denormalising it into each block.
+                #
+                # HYBRID keeps the schema explanation and the shared block, but renders the metric's
+                # OWN-entity dimensions inline with values (only the JOINED dimensions dedup into the
+                # shared block). The dedup otherwise moves a metric's own segment values a lookup
+                # away, which cost the direct-filter cases (e.g. paid_search); this puts them back
+                # beside the metric while still teaching the shape once.
                 own = self._own_entity(m)
                 if own:
                     lines[-1] += f"  — counts the `{own}` entity"
                 for prefix, group in _by_entity(dims):
-                    if prefix != "metric_time":
+                    if prefix == "metric_time":
+                        continue
+                    if hybrid and prefix == own:
+                        lines.append(f"    by {prefix} (what this metric counts):")
+                        for d in group:
+                            vals = f" ({'/'.join(members[d])})" if members.get(d) else ""
+                            desc = f" — {descs[d]}" if descs.get(d) else ""
+                            lines.append(f"        {d}{vals}{desc}")
+                    else:
                         entity_dims.setdefault(prefix, set()).update(group)
                 continue
             if dims and not minimal:      # `minimal` shows name + description only, no dimensions
@@ -316,7 +442,7 @@ class MetricFlowLayer:
                          f"(time_grain={'|'.join(TIME_GRAINS)})")
         lines += detail
 
-        if normalised and entity_dims:
+        if (normalised or hybrid) and entity_dims:
             # The shared dimension block: every entity's dimensions ONCE, with categories and
             # description. A metric filters by any dimension of the entity it counts, spelled
             # entity__dimension — the system prompt says so; this is the reference it points at.
@@ -338,7 +464,7 @@ class MetricFlowLayer:
         # Dimension values. Time dimensions are skipped: their domain is every date, which is
         # noise rather than a governed vocabulary.
         values = [f"- {d}: {', '.join(v)}" for d, v in sorted(self.dimension_members().items())]
-        if values and not inline and not minimal and not normalised:   # inline/normalised place them elsewhere
+        if values and not inline and not minimal and not normalised and not hybrid:   # inline/normalised/hybrid place them elsewhere
             lines.append("\nGoverned dimension values (any other value is refused, "
                          "not approximated):")
             lines += values
@@ -356,7 +482,7 @@ class MetricFlowLayer:
                 if d.description:
                     name = f"{entity}__{d.name}" if entity else d.name
                     described.append(f"- {name}: {' '.join(d.description.split())}")
-        if described and not inline and not minimal and not normalised:   # inline/normalised place them elsewhere
+        if described and not inline and not minimal and not normalised and not hybrid:   # inline/normalised/hybrid place them elsewhere
             lines.append("\nWhat the dimensions mean:")
             lines += described
         return "\n".join(lines)

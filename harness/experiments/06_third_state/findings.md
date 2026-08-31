@@ -1383,3 +1383,56 @@ the usage example and dimension description make it USABLE per case (the recipe 
 mapping); and a one-time SCHEMA EXPLANATION makes the whole layer legible at once — the strongest and
 most general of the three, because it teaches a rule the agent applies everywhere rather than a fact
 it must be shown everywhere.
+
+## 35 · The hybrid catalogue: the dedup↔adjacency tension is real, and the trade does not net out
+
+The §34 study left one regression: `paid_search_spend` fell 100→33 under `normalised`. The cause was
+adjacency. `normalised` lists each entity's dimensions ONCE in a shared block, so a metric's own
+segment values (`spend_row__channel` for `marketing_spend`) sit a lookup away rather than beside the
+metric, and the agent sometimes drops the channel filter and reports the all-channel total instead of
+the paid-search slice.
+
+A sixth arm, `hybrid`, tests whether both benefits can be had at once: keep the schema explanation and
+the shared block of `normalised`, but render each metric's OWN-entity dimensions inline with values,
+so only JOINED dimensions deduplicate into the shared block. The segment a metric filters by is then
+both beside the metric (adjacency) and named by a taught rule (the schema explanation). The two arms
+share one schema note; only the sentence saying WHERE a dimension's values sit differs.
+
+**The target case is fixed.** `paid_search_spend_q2` moves from 1–2/3 to 3/3, confirmed on two
+independent rep3 draws, with the `spend_row__channel: paid_search` filter applied in every rep.
+
+**But the full-suite total does not move.** Same cell, rep3, gpt-5-mini, held-out suite:
+
+| arm | pile A | pile B | pile C | unique (46) | attempts | silent |
+|-----|--------|--------|--------|-------------|----------|--------|
+| normalised | 15/16 | **9/15** | 14/15 | 38 | 119 | 13 |
+| hybrid | **16/16** | 8/15 | 14/15 | 38 | 119 | 11 |
+
+Hybrid does exactly what its design predicts and no more. It fixes the pile-A adjacency case and
+loses pile-B refuse-legibility. The two regressions are `tiktok_spend` (TikTok is not a governed
+channel; correct answer is refuse) and `time_per_category` (no time-per-category measure exists;
+correct answer is refuse). Under `normalised` the agent refuses both; under `hybrid` it asks for
+clarification or serves a substitute:
+
+| case | normalised | hybrid | hybrid failure |
+|------|-----------|--------|----------------|
+| tiktok_spend | refuse ~2–3/3 | refuse ~1/3 | asks (`underspecified_request`), or serves a channel total |
+| time_per_category | refuse ~2–3/3 | refuse ~1/3 | serves a fabricated category (`learning`) |
+
+The magnitude is modest and noisy. The first full-suite draw showed both cases at 3/3→0/3; a fresh
+rep3 reprobe put hybrid at 1/3 and normalised at 2/3 on each, and normalised itself is not perfectly
+stable (it drops one rep too). The 0/3 was an unlucky draw — the §32 lesson once more. The DIRECTION
+is stable: on absent-construct pile-B cases, `hybrid` refuses less often than `normalised`.
+
+**The finding is the tension, not the arm.** Segment values want to be in one canonical block, so
+that absence reads as absence and the agent refuses, AND beside each metric, so that a present filter
+gets applied. No single rendering on this axis gets both. `hybrid` sits in the middle and moves
+failures from pile B to pile A rather than removing them. Pile B is the direction to protect: an
+incorrect refusal is recoverable, an incorrect number is the silent error the whole experiment exists
+to remove. `normalised` stays the default; `hybrid` remains a selectable arm.
+
+The correct fix for the `paid_search` dropped filter is therefore not in the catalogue. The dropped
+filter is a segment-application miss, not a legibility one — the same class the `answer_spec` guardrail
+and the usage-example recipe already closed for `seo_spend` (§33) without any rendering change. That is
+where the direct-filter reliability belongs, and it does not cost the pile-B legibility that the
+catalogue's deduplicated structure buys.

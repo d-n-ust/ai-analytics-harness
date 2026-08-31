@@ -117,6 +117,18 @@ _LIST_METRICS = {
     "input_schema": {"type": "object", "properties": {}},
 }
 
+_SHOW_ONTOLOGY = {
+    "name": "show_metric_ontology",
+    "description": ("Show a governed metric's full ontology BEFORE querying it: its exact "
+                    "definition and rules, the arguments it accepts, its dimensions with their "
+                    "governed values, and a usage example. Call it to confirm a segment value "
+                    "exists before you filter by it; a value it does not list is not in the data."),
+    "input_schema": {"type": "object",
+                     "properties": {"metric": {"type": "string",
+                                    "description": "Metric name, from the governed metric list."}},
+                     "required": ["metric"]},
+}
+
 _QUERY_METRIC = {
     "name": "query_metric",
     "description": ("Compute a governed metric. Prefer this over raw SQL for defined "
@@ -312,6 +324,16 @@ def _list_metrics(tb, args) -> ToolResult:
     return ToolResult(tb.semantic.list_metrics_text())
 
 
+def _show_metric_ontology(tb, args) -> ToolResult:
+    # The handler behind the `ontology_tool` guardrail: the full per-metric contract, on demand.
+    name = args.get("metric")
+    if not name or not hasattr(tb.semantic, "metric_ontology"):
+        return ToolResult("show_metric_ontology needs a metric name", is_error=True)
+    text = tb.semantic.metric_ontology(name)
+    return ToolResult(text or f"no governed metric named {name!r}; see the metric list",
+                      is_error=not text)
+
+
 def _query_metric(tb, args) -> ToolResult:
     """The governed data path: compile the metric to SQL, run it, return the rows plus the typed
     measure values the AFTER guardrails read. The SQL travels with the result so DISCLOSURE can
@@ -320,7 +342,13 @@ def _query_metric(tb, args) -> ToolResult:
         args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
         time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),
         period=args.get("period"), resolve=tb.g.resolve, segment=args.get("segment"))
-    return ToolResult(_time_scope_line(args) + _fmt_rows(cols, rows),
+    # The `metric_brief` arm prepends the metric's focused contract to its own result — governed
+    # values, the refuse-if-absent rule, and a mark on the segments this call applied. It rides on a
+    # result the agent already reads, so it adds no model turn (loop.py's `applied_segment` is the
+    # enforcement half). Guarded on hasattr so engines without the block are unaffected.
+    brief = (tb.semantic.metric_brief(args["metric"], applied=args.get("filters"))
+             if getattr(tb.g, "metric_brief", False) and hasattr(tb.semantic, "metric_brief") else "")
+    return ToolResult(brief + _time_scope_line(args) + _fmt_rows(cols, rows),
                       sql=sql, **_labelled(_measure_values(cols, rows)))
 
 
@@ -466,6 +494,7 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool(_DESCRIBE_TABLE, _describe_table),
     Tool(_RUN_SQL, _run_sql),
     Tool(_LIST_METRICS, _list_metrics),
+    Tool(_SHOW_ONTOLOGY, _show_metric_ontology),
     Tool(_QUERY_METRIC, _query_metric),
     Tool(_CHECK_METRIC, _check_metric_exists),
     Tool(_CHECK_COVERAGE, _check_coverage),

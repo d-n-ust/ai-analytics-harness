@@ -33,7 +33,9 @@ def prompt_fingerprint() -> str:
     stored row can be flagged stale. Deliberately NOT shared with judge.py: rewording a classifier
     must not invalidate a verifier result, or the other way round."""
     surface = "|".join([_SCOPE_SYSTEM, _SCOPE_USER, json.dumps(_SCOPE_REPORT, sort_keys=True),
-                        _MEASURE_SYSTEM, _MEASURE_USER, json.dumps(_MEASURE_REPORT, sort_keys=True)])
+                        _MEASURE_SYSTEM, _MEASURE_USER, json.dumps(_MEASURE_REPORT, sort_keys=True),
+                        _SEGMENT_SYSTEM, _SEGMENT_USER, json.dumps(_SEGMENT_REPORT, sort_keys=True),
+                        _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -221,3 +223,175 @@ def answer_measures_asked(model, question: str, answer: str) -> tuple:
                 return "measures", "", served       # unverified claim of substitution -> serve
             return verdict, asked, served
     return "measures", "", ""
+
+
+# --- `metric_brief` self-check (segment slot): does the question name a governed segment the ----- #
+# --- serving call omitted? ---------------------------------------------------------------------- #
+#
+# The four-slots segment miss on the answer path: "spend on paid search" served the all-channel
+# total because the serving call carried no channel filter. `dropped_constraint` cannot see it —
+# nothing was dropped, the filter was never applied — so this reads the QUESTION. The division is
+# the one `ungrounded_candidates` draws: the MODEL judges which governed value the question restricts
+# to (relevance, and the synonym mapping — "paid search" -> `paid_search`, "SEO" -> `content_seo`,
+# using the descriptions), and the MECHANISM verifies that value EXISTS among the governed members
+# (`applied_segment` in loop.py does the membership check and the applied/omitted comparison).
+#
+# A segment the question names that is NOT governed — "TikTok", a channel the layer does not have —
+# is returned as none here: that is the refuse case, and forcing a filter for a value that does not
+# exist would be the opposite of the fix. Defaults to none on anything unexpected, the safe reading:
+# a judgement that did not arrive must not add a filter the agent did not ask for.
+_SEGMENT_SYSTEM = (
+    "You decide one thing about an analytics question: does it restrict the answer to ONE specific "
+    "value of a governed segment dimension?\n\n"
+    "You are given the governed dimensions and their allowed values. When the question restricts to "
+    "a segment, report: the exact PHRASE from the question that names it ('paid search', 'TikTok', "
+    "'the monthly plan'); the DIMENSION it belongs to, spelled entity__dimension, EVEN IF no listed "
+    "value matches; and the matching VALUE in exact governed spelling — mapping the wording onto it "
+    "('paid search' -> paid_search, 'the monthly plan' -> monthly, 'SEO' -> content_seo when a "
+    "value covers SEO).\n\n"
+    "Leave VALUE empty when the phrase clearly names a segment OF THAT DIMENSION but none of the "
+    "listed values matches it — a channel, plan, region, or platform the layer does not have "
+    "(e.g. 'TikTok' is a marketing channel, but not one of the listed channels: dimension "
+    "spend_row__channel, value empty). Do NOT map it onto the nearest different value.\n\n"
+    "Report restricts=false only when the question asks for the overall total with no such "
+    "restriction. Judge only the segment restriction, never the metric, period, or grouping.")
+
+_SEGMENT_USER = (
+    "Governed segment dimensions and their allowed values:\n{vocab}\n\n"
+    "Question: {question}\n\n"
+    "Does the question restrict the answer to one specific value of one of these dimensions?")
+
+_SEGMENT_REPORT = {
+    "name": "report_segment",
+    "description": "Report the governed segment the question restricts to, or none.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "restricts": {"type": "boolean",
+                          "description": "True if the question names one specific segment value "
+                                         "(governed or not); false for the overall total."},
+            "phrase": {"type": "string",
+                       "description": "The exact words from the question naming the segment, e.g. "
+                                      "'paid search', 'TikTok'. Empty when restricts is false."},
+            "dimension": {"type": "string",
+                          "description": "The governed dimension the phrase belongs to, spelled "
+                                         "entity__dimension, EVEN IF no listed value matches it."},
+            "value": {"type": "string",
+                      "description": "The matching governed value, exact spelling from the lists. "
+                                     "EMPTY when the phrase names a segment of that dimension but no "
+                                     "listed value matches (do not map onto a different value)."},
+        },
+        "required": ["restricts"],
+    },
+}
+
+
+def segment_named(model, question: str, vocab: dict) -> tuple:
+    """(restricts, phrase, dimension, value) for the segment the question restricts to.
+
+    Feeds two guards in loop.py: `segment_gate` (refuse when a named segment does not link) and
+    `applied_segment` (apply a linked segment the served call ignored). This is only the language
+    step; the anchoring and existence verification live in the caller.
+
+    `vocab` is {dimension -> [governed values]}. The model does the language step — is a segment
+    named, what phrase, which dimension, and which value if any — reporting the DIMENSION even when
+    no value matches, and an EMPTY value rather than the nearest different one. The CALLER verifies:
+    that `value` is really a member of `vocab[dimension]` (existence) and that it is lexically
+    anchored in `phrase` (so a substitution onto a real-but-wrong value is rejected). Relevance is
+    the model's, existence and anchoring are the machine's. Defaults to (False, '', '', '') on any
+    error, so the check never invents a restriction the question did not make.
+    """
+    if not vocab:
+        return False, "", "", ""
+    listing = "\n".join(f"  {d}: {', '.join(vals)}" for d, vals in sorted(vocab.items()))
+    user = _SEGMENT_USER.format(vocab=listing, question=question)
+    try:
+        turn = model.respond(Conversation.opening(_SEGMENT_SYSTEM, user), [_SEGMENT_REPORT],
+                             force_tool="report_segment", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return False, "", "", ""
+    for call in turn.tool_calls:
+        if call.name == "report_segment":
+            if not call.args.get("restricts"):
+                return False, "", "", ""
+            phrase = str(call.args.get("phrase") or "").strip()
+            dim = str(call.args.get("dimension") or "").strip()
+            value = str(call.args.get("value") or "").strip()
+            return True, phrase, dim, value
+    return False, "", "", ""
+
+
+# --- `segment_gate` grounding resolver: does every concept in the question ground to the -------- #
+# --- ontology? ---------------------------------------------------------------------------------- #
+#
+# The full-ontology answer to the substitution the narrow segment resolver could not handle. Given
+# the WHOLE ontology (metrics with definitions, segment dimensions with values), the model resolves
+# every concept the question names — by MEANING, its superpower: "platform not recorded" is the
+# `unknown` value, "real acquisition channels" is the `acquisition_spend` metric, "TikTok" is
+# nothing. The division is the project's standing one, applied correctly this time: the model owns
+# SEMANTIC FIT (which lexical rules kept getting wrong), the caller verifies only EXISTENCE (the
+# named grounding is real, or the NIL is genuinely absent). Defaults to answerable=true on any
+# doubt, so the gate refuses only what is clearly ungrounded and never a question it could not read.
+_GROUND_SYSTEM = (
+    "You resolve an analytics question against a governed ontology of metrics and segment "
+    "dimensions. Decide whether EVERY concept the question names has a referent in the ontology.\n\n"
+    "A concept is the measure or metric the question asks for, or a segment it restricts to — a "
+    "channel, plan, region, platform, status, and so on. Map each onto the ontology by MEANING, not "
+    "just wording: 'devices where the platform is not recorded' is the platform value 'unknown'; "
+    "'real acquisition channels' is the acquisition_spend metric; 'the monthly plan' is plan "
+    "'monthly'.\n\n"
+    "Report answerable=false ONLY when the question names a metric or a segment value the ontology "
+    "clearly does NOT contain — a channel it has no value for (TikTok, Facebook), a plan it lacks "
+    "(enterprise), a measure it does not define. Then name that ungrounded concept, and if it is a "
+    "segment, the dimension it would belong to.\n\n"
+    "When every concept grounds, or when you are unsure, report answerable=true. The default is to "
+    "let the agent proceed; refuse only what is clearly absent from the ontology.")
+
+_GROUND_USER = (
+    "{ontology}\n\n"
+    "Question: {question}\n\n"
+    "Does every concept the question names have a referent in this ontology?")
+
+_GROUND_REPORT = {
+    "name": "report_grounding",
+    "description": "Report whether every concept in the question grounds to the ontology.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "answerable": {"type": "boolean",
+                           "description": "True if every concept grounds, OR if you are unsure."},
+            "ungrounded_concept": {"type": "string",
+                                   "description": "The phrase from the question that has no referent "
+                                                  "in the ontology. Empty when answerable is true."},
+            "dimension": {"type": "string",
+                          "description": "If the ungrounded concept is a segment, the dimension it "
+                                         "would belong to, spelled entity__dimension. Empty for a "
+                                         "metric-level miss or when answerable."},
+        },
+        "required": ["answerable"],
+    },
+}
+
+
+def ground_question(model, question: str, ontology: str) -> tuple:
+    """(answerable, ungrounded_concept, dimension) — does every concept in the question ground to
+    the ontology?
+
+    The model does the semantic linking (its superpower), reporting an ungrounded concept by MEANING
+    rather than by spelling; the caller verifies EXISTENCE (the NIL is genuinely absent) but does not
+    re-judge the semantics. Defaults to (True, '', '') on any error, so a judgement that did not
+    arrive can never be the one that refuses an answerable question.
+    """
+    user = _GROUND_USER.format(ontology=ontology, question=question)
+    try:
+        turn = model.respond(Conversation.opening(_GROUND_SYSTEM, user), [_GROUND_REPORT],
+                             force_tool="report_grounding", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return True, "", ""
+    for call in turn.tool_calls:
+        if call.name == "report_grounding":
+            answerable = bool(call.args.get("answerable", True))
+            concept = str(call.args.get("ungrounded_concept") or "").strip()
+            dim = str(call.args.get("dimension") or "").strip()
+            return answerable, concept, dim
+    return True, "", ""

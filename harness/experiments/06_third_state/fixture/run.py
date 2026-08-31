@@ -42,19 +42,45 @@ MARTS = "wh_06"
 # agent can compose a filter from the structure rather than from a value repeated under every
 # metric. Added to the system prompt only for that arm — the other arms render the data denormalised
 # and need no schema note.
-SCHEMA_EXPLANATION = (
-    "HOW THIS SEMANTIC LAYER IS SHAPED (read once; it applies to every metric):\n"
-    "- Each governed metric COUNTS ONE ENTITY — active_users counts `activity`, mrr counts "
-    "`subscription`, marketing_spend counts `spend_row`. The catalogue names each metric's entity.\n"
-    "- A metric can be FILTERED or GROUPED by any dimension OF THE ENTITY IT COUNTS. Each entity's "
-    "dimensions are listed ONCE, under 'Entities and their dimensions', with their allowed values.\n"
-    "- To filter, pass filters={'entity__dimension': value} to query_metric — e.g. "
-    "{'activity__platform': 'ios'} for iOS, {'subscription__plan': 'monthly'} for the monthly plan, "
-    "{'spend_row__channel': 'content_seo'} for content-and-SEO spend. To break down, pass "
-    "group_by=['entity__dimension'].\n"
-    "- When a question names a SEGMENT — a platform, a plan, a channel, a region — find that "
-    "dimension under the metric's entity and apply it as a filter. Do NOT report the unfiltered "
-    "total as if it were the segment.")
+def _schema_explanation(where: str) -> str:
+    # The schema note shared by the `normalised` and `hybrid` arms. Only the sentence saying WHERE a
+    # dimension's allowed values sit differs between them: normalised lists every entity's dimensions
+    # once in the shared block; hybrid lists a metric's own dimensions inline and only joined ones in
+    # the shared block. Everything else — a metric counts one entity, filter by entity__dimension,
+    # apply the segment rather than the unfiltered total — is identical.
+    return (
+        "HOW THIS SEMANTIC LAYER IS SHAPED (read once; it applies to every metric):\n"
+        "- Each governed metric COUNTS ONE ENTITY — active_users counts `activity`, mrr counts "
+        "`subscription`, marketing_spend counts `spend_row`. The catalogue names each metric's entity.\n"
+        "- A metric can be FILTERED or GROUPED by any dimension OF THE ENTITY IT COUNTS. " + where + "\n"
+        "- To filter, pass filters={'entity__dimension': value} to query_metric — e.g. "
+        "{'activity__platform': 'ios'} for iOS, {'subscription__plan': 'monthly'} for the monthly plan, "
+        "{'spend_row__channel': 'content_seo'} for content-and-SEO spend. To break down, pass "
+        "group_by=['entity__dimension'].\n"
+        "- When a question names a SEGMENT — a platform, a plan, a channel, a region — find that "
+        "dimension under the metric's entity and apply it as a filter. Do NOT report the unfiltered "
+        "total as if it were the segment.")
+
+
+SCHEMA_EXPLANATION = _schema_explanation(
+    "Each entity's dimensions are listed ONCE, under 'Entities and their dimensions', with their "
+    "allowed values.")
+HYBRID_SCHEMA_EXPLANATION = _schema_explanation(
+    "A metric's own dimensions are listed beneath it with their allowed values; dimensions reached "
+    "through a join are listed once under 'Entities and their dimensions'.")
+
+
+# The `ontology_tool` arm. The lean metric list moves into the system prompt (so list_metrics costs
+# no turn) and a `show_metric_ontology(metric)` tool returns the full per-metric contract on demand.
+# The directive points the agent at the tool; the schema note tells it where a dimension's values are.
+ONTOLOGY_DIRECTIVE = (
+    "The governed metrics are listed below with a one-line description each. Before you query a "
+    "metric you have not inspected, call show_metric_ontology(metric) to get its full definition: "
+    "the arguments it accepts, its dimensions and their governed values, a usage example, and which "
+    "segments it can isolate. A list entry is only a summary; a value the ontology does not list is "
+    "not in the data, so refuse rather than approximate.")
+ONTOLOGY_SCHEMA_EXPLANATION = _schema_explanation(
+    "Call show_metric_ontology(metric) to see that metric's dimensions and their allowed values.")
 
 
 def scoped_cursor(con):
@@ -133,7 +159,7 @@ def main() -> None:
                     help="guardrail cell, e.g. R1 or R9. Default: the loop's own default set.")
     ap.add_argument("--variant", default=None,
                     help="a generated layer variant (see variants.py). Default: the shipped layer.")
-    ap.add_argument("--catalogue", default="normalised", choices=("full", "compact", "inline", "values", "minimal", "normalised"),
+    ap.add_argument("--catalogue", default="normalised", choices=("full", "compact", "inline", "values", "minimal", "normalised", "hybrid"),
                     help="how the metric list is laid out. `compact` puts every name and "
                          "description contiguous and the dimension detail in a second block — "
                          "same facts, different adjacency.")
@@ -208,6 +234,15 @@ def main() -> None:
             grounding.semantic.catalogue = args.catalogue
             if args.catalogue == "normalised":
                 grounding.system += "\n\n" + SCHEMA_EXPLANATION
+            elif args.catalogue == "hybrid":
+                grounding.system += "\n\n" + HYBRID_SCHEMA_EXPLANATION
+            # The ontology arm carries the lean list IN the prompt (no list_metrics turn) plus the
+            # directive to pull a metric's full contract on demand. Pair with `--catalogue minimal`
+            # so the in-prompt list and the list_metrics fallback render the same lean text.
+            if getattr(grounding.guardrails, "ontology_tool", False):
+                grounding.system += ("\n\n" + ONTOLOGY_DIRECTIVE + "\n\n"
+                                     + grounding.semantic.list_metrics_text()
+                                     + "\n\n" + ONTOLOGY_SCHEMA_EXPLANATION)
             with print_lock:
                 if not shown:
                     shown.add(True)

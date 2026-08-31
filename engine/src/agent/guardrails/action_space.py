@@ -80,6 +80,14 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
         if caps.semantic:
             offered += [schema("list_metrics"),
                         query_metric_schema(schema("query_metric"), guardrails, semantic, record)]
+            # `ontology_tool`: a pull tool for the full per-metric contract before a query — offered
+            # beside the lean catalogue so the deep detail is fetched for the metric in play rather
+            # than dumped for all of them. It spends the turn `list_metrics` used to cost (the lean
+            # list moves into the system prompt), not an added one.
+            if guardrails.ontology_tool and semantic is not None:
+                offered.append(schema("show_metric_ontology"))
+                note(record, "ontology_tool", Position.ACTION_SPACE, "offered",
+                     "show_metric_ontology — full per-metric contract on demand")
         if caps.tree:
             offered += [schema("get_metric_tree"),
                         decompose_schema(schema("decompose_change"), guardrails, tree, record)]
