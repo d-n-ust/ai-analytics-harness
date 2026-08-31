@@ -311,9 +311,21 @@ class _Run:
 
         This is where the raw-SQL escape is closed: retention has no governed metric, so a served
         retention figure is `computable` (or `uninstrumented`), and the gate refuses or requires
-        disclosure rather than let an invented definition ship as fact."""
+        disclosure rather than let an invented definition ship as fact.
+
+        SCOPED TO RAW-SQL PROVENANCE. The gate guards ONE boundary — a number computed via run_sql
+        for a measure with no governed home. A number composed from governed metric calls (a ratio
+        of governed metrics like spend_per_signup = marketing_spend / new_signups) is already
+        grounded in governance and is left alone; a governed-call substitution is grounded_measure's
+        to catch, not this. So the answerability judgement runs only when the answer used run_sql —
+        which is a FACT in the trace, not a model judgement, and which is why it does not flicker on
+        a contested ratio the way a semantic classification did."""
         g = self.grounding.guardrails
         if exit_call.name != "answer" or not getattr(g, "answerability_gate", False):
+            return None
+        # Provenance scope: only a number that came from raw SQL bypassed governance. If the run made
+        # no run_sql call, the figure was composed from governed metrics — nothing for this gate.
+        if not any(step.get("tool") == "run_sql" and not step.get("blocked_by") for step in self.steps):
             return None
         semantic = self.grounding.semantic
         if semantic is None or not hasattr(semantic, "ontology_text"):
