@@ -720,12 +720,40 @@ class _Run:
             chose, quote = _classify.question_chose_scope(
                 self.model, self.question, metric, self._describe(metric),
                 rival.name, self._describe(rival.name), rival.discriminator)
+            # Mechanical off-axis guard: a `chose` whose quote is a segment value on a DIFFERENT axis
+            # than the discriminator narrows WHICH rows are counted, not WHICH definition counts them.
+            # "organic acquisition" resolves nothing about is_internal, and the model cannot be talked
+            # out of citing it — so the machine, not the prompt, rejects it. The model still owns the
+            # judgement; this only refuses a citation that provably cannot resolve THIS contest.
+            off_axis = chose and self._quote_off_axis(quote, rival.discriminator)
+            if off_axis:
+                chose, quote = False, f"off-axis segment {quote!r}"
             self._scope_verdict = (chose, quote)
             self.acts.append(Act("scope_classifier", str(Position.REPAIR),
                                  "stood down" if chose else "applied",
                                  f"the request {'named' if chose else 'did not name'} which reading"
                                  + (f": {quote!r}" if quote else "")).as_dict())
         return self._scope_verdict[0]
+
+    def _quote_off_axis(self, quote: str, discriminator: str) -> bool:
+        """True when the scope quote is explained by a governed segment value on a dimension OTHER
+        than the discriminator's — a narrowing of a different axis, which cannot choose between the
+        two definitions. The discriminator's own axis is exempt (if two metrics differed BY channel,
+        a channel value WOULD be the choosing phrase). Verifies a citation cannot resolve the
+        contest; it does not judge one that can."""
+        semantic = self.grounding.semantic
+        if not quote or semantic is None or not hasattr(semantic, "segment_vocabulary"):
+            return False
+        disc_leaf = re.split(r"[ =<>!]", str(discriminator).strip(), maxsplit=1)[0].split("__")[-1].lower()
+        qtoks = set(re.findall(r"[a-z0-9]+", quote.lower()))
+        for dim, vals in semantic.segment_vocabulary().items():
+            if dim.split("__")[-1].lower() == disc_leaf:
+                continue                                          # same axis as the discriminator
+            for v in vals:
+                vtoks = set(re.findall(r"[a-z0-9]+", str(v).replace("_", " ").lower()))
+                if vtoks and vtoks <= qtoks:                      # the value appears in the quote
+                    return True
+        return False
 
     def _describe(self, metric: str) -> str:
         """The metric's own catalogue description — where this layer records EXCLUDING or INCLUDING
