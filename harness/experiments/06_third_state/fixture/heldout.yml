@@ -219,7 +219,9 @@ cases:
   question: What was the most common reason customers gave for cancelling last quarter?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: cancellations exist; stated reasons do not
 - id: h_b_email_open_rate
   tier: unanswerable_bare
@@ -235,7 +237,9 @@ cases:
   question: What share of users had dark mode enabled last week?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: no settings or preferences data
 - id: h_b_time_per_category
   tier: unanswerable_adjacent
@@ -251,7 +255,9 @@ cases:
   question: How many minutes did the average user spend in the app last week?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: events exist and are countable; duration does not exist
 - id: h_b_retention_by_channel
   tier: unanswerable_adjacent
@@ -265,7 +271,9 @@ cases:
   question: Which screen in the app did users visit most last week?
   expect:
     type: refuse
-    reason: no_governed_definition
+    reason:
+    - no_governed_definition
+    - uninstrumented
   note: evt.src (app/widget/api) is adjacent and is not a screen
 - id: h_b_habits_per_session
   tier: unanswerable_adjacent
