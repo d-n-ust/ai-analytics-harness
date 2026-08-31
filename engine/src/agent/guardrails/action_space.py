@@ -49,7 +49,7 @@ def with_purpose(base: dict) -> dict:
 
 def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
           *, protocol: Protocol | None = None, terminal_only: bool = False,
-          record=None) -> list[dict]:
+          record=None, ontology=None) -> list[dict]:
     """The tool schemas this configuration offers the model.
 
     Three axes decide it, and they are not the same thing: `rung` is grounding — what the agent
@@ -97,6 +97,10 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
             from semantic import tools_unavailable
             gone = tools_unavailable(semantic.capabilities)
             names = [n for n in _CHECK_TOOLS if n not in gone]
+            # graph_grounding replaces the name-match check_metric_exists with check_answerability
+            # (offered below); drop it here so the agent is not handed both for the same question.
+            if guardrails.graph_grounding and ontology is not None:
+                names = [n for n in names if n != "check_metric_exists"]
             offered += [schema(name) for name in names]
             note(record, "check_tools", Position.ACTION_SPACE, "applied",
                  f"offered {len(names)} answerability lookups")
@@ -104,6 +108,13 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
                 note(record, "check_tools", Position.ACTION_SPACE, "withdrew",
                      f"{', '.join(sorted(gone))} — the {semantic.capabilities.name} engine "
                      "cannot answer it")
+        # graph_grounding: the marts graph as the agent's answerability SURFACE, consulted upfront.
+        # check_answerability returns the complete closed-world graph and the reason code each verdict
+        # implies, in place of the name-match check_metric_exists dropped above.
+        if guardrails.graph_grounding and ontology is not None:
+            offered.append(schema("check_answerability"))
+            note(record, "graph_grounding", Position.ACTION_SPACE, "offered",
+                 "check_answerability — three-way answerability from the marts graph")
     offered.append(answer_schema(schema("answer"), guardrails, semantic, protocol, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))

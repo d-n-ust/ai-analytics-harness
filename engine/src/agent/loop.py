@@ -1070,6 +1070,7 @@ class _Run:
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
               record_context: bool = False) -> Answer:
     run = _Run(question, grounding, model, verifier_model)
+    grounding.toolbox.model = model      # so check_answerability can decompose against the graph
     convo = Conversation.opening(grounding.system, question)
 
     def done(answer: Answer) -> Answer:

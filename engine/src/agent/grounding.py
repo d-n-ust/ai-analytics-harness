@@ -152,4 +152,4 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
                      ontology=ontology,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p,
-                                     schema=schema))
+                                     schema=schema, ontology=ontology))
