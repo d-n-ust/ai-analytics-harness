@@ -37,6 +37,7 @@ def prompt_fingerprint() -> str:
                         _SEGMENT_SYSTEM, _SEGMENT_USER, json.dumps(_SEGMENT_REPORT, sort_keys=True),
                         _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True),
                         _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
+                        _RESOLVE_SYSTEM, _RESOLVE_USER, json.dumps(_RESOLVE_REPORT, sort_keys=True),
                         _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
@@ -486,6 +487,116 @@ def classify_answerability(model, question: str, ontology: str, schema: str) -> 
                     "basis": str(call.args.get("basis") or "").strip(),
                     "missing": str(call.args.get("missing") or "").strip()}
     return {"verdict": "uninstrumented", "measure": "", "missing": ""}
+
+
+# --- graph-based answerability: the model decomposes, the ontology VERIFIES ---------------------- #
+#
+# The successor to classify_answerability. There, one model call judged BOTH interpretation AND
+# existence, reading existence off a schema text that carried hand-written absences ("no screen",
+# "no duration") — a model judgement of a fact, over an enumerated complement. Here the model does
+# ONLY interpretation: it decomposes the measure into ingredient nodes against the closed-world marts
+# graph, and MartsOntology.verify() decides existence and joinability deterministically. The model
+# can no longer call a measure computable from data that is not there, nor uninstrumented from data
+# that is; a decomposition that names a node the graph lacks is refused rather than believed.
+_RESOLVE_SYSTEM = (
+    "You resolve an analytics question against a CLOSED-WORLD marts ontology that lists everything "
+    "the warehouse captures. Decide how the MEASURE the question asks for is answered, IN THIS "
+    "ORDER, and cite the graph.\n\n"
+    "Judge ONLY the measure — the quantity — NOT its segment (channel, plan, region, platform, "
+    "status) or its time period. A governed metric stays GOVERNED when the question filters or dates "
+    "it: 'active users in APAC' is metric.active_users, 'paying users on the monthly plan' is "
+    "metric.paying_users, 'paid search spend' is metric.marketing_spend, 'MRR this year' is "
+    "metric.mrr. Do NOT look for a segment value as a node, and do NOT decompose a measure a governed "
+    "metric already covers — whether a named segment value exists is a different question, not yours.\n\n"
+    "1. governed — a governed metric fits the measure directly, OR the measure is a RATIO or per-unit "
+    "COMBINATION of governed metrics ('habits per active user' is value_moments per active_users, "
+    "'spend per signup' is marketing_spend per new_signups). Report kind='governed' and "
+    "metric=metric.<name>. Prefer this whenever a governed metric — alone, filtered, or as a ratio — "
+    "covers the measure.\n"
+    "2. computable — no governed metric fits, but the measure can be DERIVED from attributes and "
+    "measures IN the graph, joined via the relationships. DECOMPOSE it and list the ingredient nodes "
+    "(entity.attribute / entity.measure); you may cite join keys, they are real columns. List each "
+    "ingredient as the BARE node id (e.g. user.signup_date), nothing after it. Example: 90-day "
+    "retention decomposes to user.signup_date, activity.active_date, user.channel.\n"
+    "3. uninstrumented — the measure needs an ingredient NOT in this complete graph. Because the "
+    "graph is complete, a concept absent from it does not exist: 'minutes in app' needs a duration "
+    "measure and there is none (only event counts); 'top screen' needs a screen attribute and there "
+    "is none; 'revenue per employee' needs a headcount and there is no employee entity. Name the "
+    "absent thing in `missing`.\n\n"
+    "Interpretation is yours; only real nodes count — every ingredient is checked against the graph.")
+
+_RESOLVE_USER = (
+    "{ontology}\n\n"
+    "Question: {question}\n\n"
+    "How is the measure this question asks for answered? Cite the graph.")
+
+_RESOLVE_REPORT = {
+    "name": "resolve",
+    "description": "Decompose the question's measure against the ontology.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "kind": {"type": "string", "enum": ["governed", "computable", "uninstrumented"]},
+            "measure": {"type": "string",
+                        "description": "The measure/quantity the question asks for, in a few words."},
+            "metric": {"type": "string",
+                       "description": "The governed metric it maps to, metric.<name>. Only when "
+                                      "kind is `governed`."},
+            "ingredients": {"type": "array", "items": {"type": "string"},
+                            "description": "The graph nodes (entity.attribute / entity.measure) the "
+                                           "measure is derived from. Only when kind is `computable`."},
+            "missing": {"type": "string",
+                        "description": "The concept absent from the graph. Only when kind is "
+                                       "`uninstrumented`."},
+        },
+        "required": ["kind"],
+    },
+}
+
+
+def resolve_measure(model, question: str, ontology_render: str) -> dict:
+    """{kind, measure, metric, ingredients, missing} — the model's DECOMPOSITION of the question's
+    measure against the closed-world graph. The model does only the interpretation; the caller hands
+    kind/metric/ingredients to MartsOntology.verify(), which decides the verdict. Defaults to
+    kind='uninstrumented' on any error — a decomposition that did not arrive must not license a
+    served number.
+    """
+    user = _RESOLVE_USER.format(ontology=ontology_render, question=question)
+    try:
+        turn = model.respond(Conversation.opening(_RESOLVE_SYSTEM, user), [_RESOLVE_REPORT],
+                             force_tool="resolve", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return {"kind": "uninstrumented", "measure": "", "metric": "", "ingredients": [],
+                "missing": "(resolver error)"}
+    for call in turn.tool_calls:
+        if call.name == "resolve":
+            kind = str(call.args.get("kind") or "uninstrumented").strip().lower()
+            if kind not in ("governed", "computable", "uninstrumented"):
+                kind = "uninstrumented"
+            return {"kind": kind,
+                    "measure": str(call.args.get("measure") or "").strip(),
+                    "metric": str(call.args.get("metric") or "").strip(),
+                    "ingredients": [str(i).strip() for i in (call.args.get("ingredients") or [])],
+                    "missing": str(call.args.get("missing") or "").strip()}
+    return {"kind": "uninstrumented", "measure": "", "metric": "", "ingredients": [], "missing": ""}
+
+
+def answerability_via_graph(model, question: str, ontology) -> dict:
+    """classify_answerability's SHAPE, decided by the graph: {verdict, measure, governed_metric,
+    basis, missing}. The model decomposes (resolve_measure); the ontology's verify() decides the
+    verdict; the two vocabularies are reconciled here (`instrumented` -> `governed`) so this is a
+    drop-in for classify_answerability wherever a graph is available. `ontology` is any object with
+    render() and verify() — no import of the ontology package is needed here.
+    """
+    r = resolve_measure(model, question, ontology.render())
+    verdict, detail = ontology.verify(r["kind"], metric=r["metric"], ingredients=r["ingredients"])
+    mapped = {"instrumented": "governed", "computable": "computable",
+              "uninstrumented": "uninstrumented"}[verdict]
+    return {"verdict": mapped,
+            "measure": r["measure"],
+            "governed_metric": r["metric"] if mapped == "governed" else "",
+            "basis": detail if mapped == "computable" else "",
+            "missing": r["missing"] or (detail if mapped == "uninstrumented" else "")}
 
 
 # --- disclosure of a computed non-governed metric (transparent policy) --------------------------- #

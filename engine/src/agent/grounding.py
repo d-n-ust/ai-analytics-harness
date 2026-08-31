@@ -11,8 +11,12 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from semantic import MetricTree, SemanticLayer, check_compatible
+
+if TYPE_CHECKING:
+    from ontology import MartsOntology
 
 from .guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
@@ -31,6 +35,11 @@ class Grounding:
     toolbox: Toolbox
     guardrails: GuardrailSet | None = None
     semantic: SemanticLayer | None = None
+    # The complete marts graph, for deciding answerability by traversal rather than by a schema-text
+    # judgement. Built once here when the layer can produce a source; None when it cannot or the build
+    # failed, in which case the answerability gate falls back to the schema-text classifier. It does
+    # NOT enter fingerprint(): nothing shows it to the model until the gate is flipped to use it.
+    ontology: MartsOntology | None = None
     protocol: Protocol = field(default_factory=Protocol)
 
     def fingerprint(self) -> str:
@@ -131,6 +140,16 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
     if semantic is not None:
         check_compatible(semantic.capabilities, g, f"rung {rung} / {g.label()}")
     tree = MetricTree(semantic) if caps.tree else None
+    # The marts graph, built once from the manifest + information_schema. Guarded so it can never
+    # break grounding assembly: any failure leaves ontology=None and the gate keeps its old path.
+    ontology = None
+    if semantic is not None and schema and hasattr(semantic, "ontology_source"):
+        try:
+            from ontology import MartsOntology
+            ontology = MartsOntology.build_marts(con, schema, semantic.ontology_source())
+        except Exception:                                                  # noqa: BLE001
+            ontology = None
     return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
+                     ontology=ontology,
                      toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p,
                                      schema=schema))

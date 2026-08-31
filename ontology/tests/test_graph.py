@@ -175,6 +175,17 @@ def test_computable_rejects_unjoinable_entities():
     assert v == UNINSTRUMENTED and "not related" in why
 
 
+def test_verify_tolerates_the_models_surface_formatting():
+    """The model may wrap a node in a parenthetical or a description; existence is a property of the
+    reference, not the exact string, so verify extracts the entity.column token before checking. An
+    exact-string match would false-refuse a real node over an added space — the brittleness fixed."""
+    ont = _ont()
+    v, _ = ont.verify("computable",
+                      ingredients=["user.signup_date (the signup date)", "activity.active_date"])
+    assert v == COMPUTABLE
+    assert ont.verify("governed", metric="metric.active_users (the active users metric)")[0] == INSTRUMENTED
+
+
 def test_computable_rejects_a_claim_with_no_ingredients():
     """A `computable` verdict with nothing to verify must not pass vacuously — the model has to name
     the graph nodes it would derive from."""

@@ -27,7 +27,20 @@ gives by construction, and which fingerprint() (over the whole rendered surface)
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass
+
+# A node reference is `entity.column` (or `metric.<name>`). The model may wrap it in a description or
+# a parenthetical restatement ("user.signup_date (the signup date)"); existence is a property of the
+# REFERENCE, not of the model's surface formatting, so the token is extracted before it is checked.
+# Matching the raw string would refuse a real node over an added space — the brittleness this avoids.
+_NODE_REF = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\.[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _node_ref(text: str) -> str:
+    """The canonical `entity.column` (or `metric.<name>`) token the model intended, or '' if none."""
+    m = _NODE_REF.search(text or "")
+    return m.group(0) if m else ""
 
 # The verdict vocabulary, defined once. The agent maps these to its reason codes; keeping the
 # strings here (not spread across call sites) means the mapping has one place to read them from.
@@ -181,18 +194,18 @@ class MartsOntology:
         absence gap; joinability closes the fan/chasm gap a node-only check would miss.
         """
         if kind == "governed":
-            name = metric.replace("metric.", "").strip()
+            name = (_node_ref(metric) or metric).replace("metric.", "").strip()
             if f"metric.{name}" in self.nodes:
                 return INSTRUMENTED, f"governed metric `{name}`"
             return UNINSTRUMENTED, f"claimed governed metric `{name}` is not in the graph"
         if kind == "computable":
-            needed = [str(i).strip() for i in ingredients if "." in str(i)]
+            needed = [r for r in (_node_ref(i) for i in ingredients) if r]
             if not needed:
                 return UNINSTRUMENTED, "computable claim cited no graph ingredients"
-            absent = [i for i in needed if i not in self.nodes]
+            absent = [r for r in needed if r not in self.nodes]
             if absent:
                 return UNINSTRUMENTED, f"required ingredient(s) absent from the graph: {absent}"
-            touched = {i.split(".", 1)[0] for i in needed}
+            touched = {r.split(".", 1)[0] for r in needed}
             if not joinable(self.edges, touched):
                 return UNINSTRUMENTED, f"entities {sorted(touched)} are not related — cannot be joined"
             return COMPUTABLE, f"ingredients exist and join: {needed}"
