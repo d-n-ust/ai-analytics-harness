@@ -427,12 +427,12 @@ class _Run:
         such channel — is left alone: that is the refuse case, carried by the brief's own "refuse if
         absent" line, not turned into a filter for a value the layer lacks.
 
-        Paired with the `metric_brief` block, which rides on the query result and so adds no turn:
-        the block is the context to fix the miss, this is the enforcement that a miss is fixed. Fires
-        only when the question names a real governed segment AND the number served ignored it.
+        Its own guardrail (`applied_segment`): the enforcement that a named segment was applied,
+        independent of whether the `metric_brief` block is delivering context. Fires only when the
+        question names a real governed segment AND the number served ignored it.
         """
         g = self.grounding.guardrails
-        if exit_call.name != "answer" or not getattr(g, "metric_brief", False):
+        if exit_call.name != "answer" or not getattr(g, "applied_segment", False):
             return None
         r = self._resolve_segment()
         # Only a LINKED segment (a real member, lexically anchored) can be one the answer should

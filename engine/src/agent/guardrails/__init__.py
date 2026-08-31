@@ -254,6 +254,15 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "back when the question names a governed segment the served number did not filter by, "
               "rather than serve the unfiltered total as if it were the segment",
               ("tools.py", "guardrails/classify.py", "loop.py"), in_ladder=False),
+    # The enforcement half of the segment slot, decoupled from the metric_brief block so it can run on
+    # its own: the model names the segment the question restricts to, the mechanism verifies it grounds
+    # AND that the served call carried the filter, and hands back an answer that dropped it (organic
+    # active users served as the all-channel total). Complements segment_gate — that refuses an
+    # ungrounded segment, this applies a grounded one the answer ignored.
+    Guardrail("applied_segment", Position.REPAIR,
+              "hands an answer back when the question names a governed segment the served call did "
+              "not filter by, so a named slice is not answered with the unfiltered total",
+              ("guardrails/classify.py", "loop.py"), in_ladder=False),
     # The pull-tool alternative to `metric_brief`'s pushed block: the lean metric list moves into the
     # system prompt (so `list_metrics` costs no turn) and `show_metric_ontology(metric)` returns the
     # full per-metric contract on demand — arguments, dimensions with governed values, the example,
@@ -386,6 +395,7 @@ class GuardrailSet:
     grounded_measure: bool = False
     answer_spec: bool = False
     metric_brief: bool = False
+    applied_segment: bool = False
     ontology_tool: bool = False
     segment_gate: bool = False
     answerability_gate: bool = False
