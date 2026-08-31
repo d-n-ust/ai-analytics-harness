@@ -1578,3 +1578,54 @@ The mechanism is the finding: the governance boundary an analytics agent must ho
 compute the ungoverned" but "never serve a computed figure whose definition the reader cannot see",
 and the data schema is a rich enough ontology to tell the agent which of the three places a measure
 sits in.
+
+## 38 · The silent-error campaign: 13 to 3, by closing one failure class at a time
+
+Starting from the normalised baseline (silent 13 on the held-out suite), a sequence of mechanisms
+took the confident-wrong count down by closing one class each. The number that moved is silent wrong
+numbers — a served figure the reader cannot tell is wrong — measured at rep-3 on the 46-question
+held-out suite.
+
+| step | mechanism | class closed | silent |
+|------|-----------|--------------|--------|
+| baseline | normalised catalogue | — | 13 |
+| segment grounding | `segment_gate` + grounding resolver | ungrounded segment (TikTok as a channel) | 5 |
+| answerability | `answerability_gate` (three-way) | raw-SQL escape (retention invented + served) | 4 |
+| usage examples | value_moments / app_opens examples | EMEA segment drop + manual summation | 3 |
+| applied_segment | decoupled, enforced | dropped filter under a correct disclosure | 3 |
+| governed growth | `active_users_growth` derived metric | period-over-period arithmetic done by hand | ~2 |
+
+Each mechanism is an instance of one principle, and the principle is the finding: **verify facts with
+the mechanism, put durable logic in the semantic layer, and trust semantic fit to the model.**
+
+- The GROUNDING RESOLVER (`ground_question`, `classify_answerability`) lets the model do the semantic
+  step — does this concept map to a governed metric, a computable measure, or nothing — over the
+  governed ontology AND the data schema, which states its own grains and absences. The mechanism
+  verifies existence, never semantic fit. A lexical anchor check that tried to verify fit itself
+  false-refused correct synonyms ("platform not recorded" -> `unknown`) and was removed.
+- The ENFORCEMENT GATES read FACTS, not prose: `applied_segment` checks the filter actually carried
+  in the governed call against the segment the question named; `segment_gate` checks the concept
+  grounds; the `scope_classifier` off-axis guard rejects a resolving quote that names a segment on a
+  different axis than the discriminator (organic cannot resolve an internal-vs-all contest). Facts in
+  the trace cannot be talked around.
+- DURABLE LOGIC BELONGS IN THE LAYER. A period-over-period change is a derived metric with an offset
+  window; governing it makes the engine compute the delta, so the model cannot botch the arithmetic.
+  A ratio of governed metrics is the same shape. This is the semantic layer doing what it exists for,
+  not a prompt asking the model to be careful.
+- USAGE EXAMPLES remain the lever for a metric's correct USAGE (§28, §33): app_opens gained "read the
+  period directly, do not sum sub-periods"; value_moments gained a region-filter example. Both cases
+  went 2/3 to 3/3 by teaching usage, not by adding a mechanism.
+
+Two honest caveats recorded for the write-up.
+
+INFRASTRUCTURE, NOT BEHAVIOUR. Each answer-boundary gate makes a classifier call, and the disclosure
+check another; three gates plus disclosure is roughly five model calls per answer. Run at concurrency
+8 over 46 questions this hit provider rate limits, the process hung, and every stable case collapsed
+to serving an unfiltered total — a silent-error count of 21 that was pure infrastructure. The same
+cell at concurrency 2 produced zero tool errors and the correct answers. The lesson is a real one:
+stacked LLM gates multiply API load; run them at low concurrency or consolidate the classifiers into
+one call. A measurement taken through a rate-limited run measures the limiter, not the agent.
+
+SAMPLE DISCIPLINE. The remaining silent errors are one or two flaky reps on 2/3 cases, at the noise
+floor for rep-3 (§32). They are not a headline; the durable claim is the 13-to-3 reduction and the
+classes closed, not the last rep.
