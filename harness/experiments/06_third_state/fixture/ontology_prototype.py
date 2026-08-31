@@ -79,7 +79,7 @@ def main():
     cur = scoped_cursor(con)
     sem = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow",
                           semantic_layer=True, guardrails=None, schema=MARTS).semantic
-    ont = MartsOntology.build(cur, MARTS, sem.ontology_source())   # source READ from the manifest
+    ont = MartsOntology.build_marts(cur, MARTS, sem.ontology_source())   # COMPLETE graph: all tables, curated joins
     model = get_model("gpt-5-mini")
     print(f"MartsOntology: {len(ont.entities)} entities "
           f"({', '.join(sorted(ont.entities))}), {len(ont.nodes)} nodes, {ont.fingerprint()}\n")

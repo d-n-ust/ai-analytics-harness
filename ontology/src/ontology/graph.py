@@ -4,12 +4,14 @@ Design: a functional core with an imperative shell.
 
   PURE CORE (no I/O — a function of plain data, so it tests without a database):
     from_source(source, columns_by_table) -> MartsOntology   assemble the graph
+    island_source(manifest_source, all_tables) -> source     extend to the complete present (islands)
     joinable(edges, entities) -> bool                         can these entities be joined
     ontology.render() -> str                                  the text the model reads
     ontology.verify(kind, ...) -> (verdict, detail)           decide existence AND joinability
     ontology.fingerprint() -> str                             digest of everything the model reads
   IMPERATIVE SHELL (the only side effect is reading information_schema):
-    build(cursor, schema, source) -> MartsOntology            fetch columns, then from_source
+    build(cursor, schema, source) -> MartsOntology           fetch columns, then from_source
+    build_marts(cursor, schema, manifest_source)             scan all tables, then build (complete graph)
 
 Two halves are kept apart on purpose. The GRAPH (this module, deterministic) holds every entity —
 with its grain — every attribute, measure and RELATIONSHIP the warehouse captures, generated from a
@@ -51,6 +53,35 @@ def joinable(edges: frozenset, entities) -> bool:
             if node in edge:
                 frontier |= (edge - seen)
     return entities <= seen
+
+
+def _entity_name(table: str, taken) -> str:
+    """A readable entity name for an unmodeled table: drop a `dim_`/`fct_` prefix, unless the result
+    is empty or already taken, in which case keep the raw table name. Deterministic, not a heuristic —
+    it only renames for the model's reading; the table it points at is unchanged."""
+    stripped = table.split("_", 1)[1] if table.startswith(("dim_", "fct_")) else table
+    return stripped if stripped and stripped not in taken else table
+
+
+def island_source(manifest_source: dict, all_tables) -> dict:
+    """PURE. Extend a manifest-read source to the COMPLETE present: every marts table becomes an
+    entity, so absence is derivable over the whole warehouse. A table the manifest already models
+    passes through unchanged (its curated grain, measures and relationships kept); a table it does
+    NOT model becomes an ISLAND — its columns will be nodes, but it has no relationships, so it cannot
+    be joined until one is curated in the manifest. This is why an incomplete graph can only
+    under-claim a join, never invent one.
+    """
+    entities = dict(manifest_source["entities"])
+    modeled = {spec["table"] for spec in entities.values()}
+    taken = set(entities)
+    for table in all_tables:
+        if table in modeled:
+            continue
+        name = _entity_name(table, taken)
+        taken.add(name)
+        entities[name] = {"table": table, "grain": f"one row per {name}",
+                          "measures": (), "relationships": ()}
+    return {**manifest_source, "entities": entities}
 
 
 @dataclass(frozen=True)
@@ -101,6 +132,16 @@ class MartsOntology:
         tables = {spec["table"] for spec in source["entities"].values()}
         columns_by_table = {t: _fetch_columns(cursor, schema, t) for t in tables}
         return cls.from_source(source, columns_by_table, measure_semantics)
+
+    @classmethod
+    def build_marts(cls, cursor, schema: str, manifest_source: dict, measure_semantics=None) -> "MartsOntology":
+        """Build the COMPLETE marts graph under hybrid completeness: scan EVERY table in the schema so
+        the present is complete (absence is derivable), but keep relationships only where the manifest
+        curates them — an unmodeled table is an island. This is the graph the agent makes authoritative
+        on `uninstrumented`: it can under-claim a join (a not-yet-curated island reads as unjoinable),
+        never invent one. `manifest_source` is what the semantic layer's ontology_source() returns."""
+        full = island_source(manifest_source, _scan_tables(cursor, schema))
+        return cls.build(cursor, schema, full, measure_semantics)
 
     # ── the model's view: pure ─────────────────────────────────────────────────────────────────
     def render(self, metric_desc_chars: int = 120) -> str:
@@ -166,9 +207,17 @@ class MartsOntology:
 
 
 def _fetch_columns(cursor, schema: str, table: str) -> tuple:
-    """The module's sole I/O: the ordered column names of one marts table."""
+    """I/O: the ordered column names of one marts table."""
     rows = cursor.execute(
         "select column_name from information_schema.columns "
         "where table_schema = ? and table_name = ? order by ordinal_position",
         [schema, table]).fetchall()
+    return tuple(r[0] for r in rows)
+
+
+def _scan_tables(cursor, schema: str) -> tuple:
+    """I/O: every table name in the marts schema, so completeness can be taken over the real present."""
+    rows = cursor.execute(
+        "select table_name from information_schema.tables "
+        "where table_schema = ? order by table_name", [schema]).fetchall()
     return tuple(r[0] for r in rows)

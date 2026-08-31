@@ -14,7 +14,8 @@ from __future__ import annotations
 
 import duckdb
 
-from ontology.graph import COMPUTABLE, INSTRUMENTED, UNINSTRUMENTED, MartsOntology, joinable
+from ontology.graph import (COMPUTABLE, INSTRUMENTED, UNINSTRUMENTED, MartsOntology, island_source,
+                            joinable)
 
 # A `source` shaped like what the semantic layer's ontology_source() returns, and the columns each
 # table would report. `spend` exists but is related to nothing — the case a node-only existence
@@ -238,6 +239,43 @@ def test_build_rejects_a_measure_that_is_not_a_column():
     except ValueError:
         return
     raise AssertionError("build should reject a measure that is not a column")
+
+
+# ── island_source + build_marts: hybrid completeness ─────────────────────────────────────────
+def test_island_source_adds_unmodeled_tables_as_islands():
+    """Every marts table must become an entity so absence is derivable over the whole warehouse; a
+    table the manifest does not model becomes an island with no relationships, so it can never be
+    joined by inference."""
+    all_tables = [d["table"] for d in SOURCE["entities"].values()] + ["fct_referrals", "dim_channel"]
+    full = island_source(SOURCE, all_tables)
+    assert set(full["entities"]) == {"user", "activity", "spend", "referrals", "channel"}
+    assert full["entities"]["referrals"] == {"table": "fct_referrals", "grain": "one row per referrals",
+                                             "measures": (), "relationships": ()}
+    assert full["entities"]["user"] == SOURCE["entities"]["user"]          # modeled entity untouched
+    assert full["metrics"] == SOURCE["metrics"]                            # metrics preserved
+
+
+def test_island_source_keeps_the_table_name_on_a_prefix_collision():
+    """Stripping dim_/fct_ is only for readability; if it would collide with a modeled entity name,
+    keep the unambiguous table name rather than merge two entities into one."""
+    src = {"entities": {"user": {"table": "dim_x", "measures": (), "relationships": ()}}, "metrics": {}}
+    full = island_source(src, ["dim_x", "dim_user"])     # 'dim_user' strips to 'user', already taken
+    assert full["entities"]["dim_user"]["table"] == "dim_user"
+
+
+def test_build_marts_is_complete_and_islands_do_not_join():
+    """The graph the agent trusts: an unmodeled table's columns EXIST (its own concepts resolve), but
+    a derivation joining it to a modeled entity is refused until a relationship is curated — the
+    under-claim that makes an incomplete graph safe rather than wrong."""
+    con = _con()
+    con.execute("create table m.fct_referrals(referral_id int, user_id int, referred_at date)")
+    ont = MartsOntology.build_marts(con, "m", SOURCE)
+    assert "referrals" in ont.entities and "referrals.referred_at" in ont.nodes         # island exists
+    assert ont.verify("computable", ingredients=["referrals.referred_at"])[0] == COMPUTABLE
+    v, why = ont.verify("computable", ingredients=["user.signup_date", "referrals.referred_at"])
+    assert v == UNINSTRUMENTED and "not related" in why                                 # island won't join
+    assert ont.verify("computable",                                                     # modeled join holds
+                      ingredients=["user.signup_date", "activity.active_date"])[0] == COMPUTABLE
 
 
 if __name__ == "__main__":
