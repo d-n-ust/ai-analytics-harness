@@ -1436,3 +1436,84 @@ filter is a segment-application miss, not a legibility one — the same class th
 and the usage-example recipe already closed for `seo_spend` (§33) without any rendering change. That is
 where the direct-filter reliability belongs, and it does not cost the pile-B legibility that the
 catalogue's deduplicated structure buys.
+
+## 36 · The ungrounded-segment substitution, and grounding as the model's job
+
+The catalogue arms (§34, §35) delivered per-metric context but left one failure open: a question
+that names a segment the layer does NOT have. "How much did we spend on TikTok ads in Q2" was
+served `36,875.98` — the `paid_search` figure — because the agent mapped an ungoverned channel onto
+the nearest governed one. This is the worst class in the whole experiment: a confident wrong number,
+in the right unit, from a real metric, for a question that has no answer. TikTok is not a channel at
+any layer — not in the governed values (`content_seo`, `paid_search`, `partnerships`, `referral`),
+not even in the raw source, whose only paid channel is search (`ppc`).
+
+**Three things did not catch it, and the reason each failed is the finding.**
+
+| mechanism | why it did not catch the substitution |
+|-----------|----------------------------------------|
+| `check_segment_defined` | a constant `False` on MetricFlow (no named segments): it returns the same NO for `TikTok` and for `monthly`, so it carries no information and the agent correctly ignored it |
+| the ontology tool (§ontology arm) | it SHOWED the closed channel list, but context is advisory; the agent read it and substituted anyway |
+| `grounded_measure` | it judges the MEASURE — spend is spend — so a mismatch in the SEGMENT passes it |
+
+**A deterministic segment resolver made it worse.** The first gate resolved the question's segment
+to a governed value and verified the link with a lexical ANCHOR (a shared token between the phrase
+and the value). On the held-out suite it dropped coverage from 1.00 to 0.92 by REFUSING answerable
+questions:
+
+| case | question phrase | why the anchor check false-refused |
+|------|-----------------|------------------------------------|
+| `active_users_unknown_plat` | "platform is not recorded" | correctly links to the value `unknown`, but shares no token with it, so the lexical rule rejected a right answer |
+| `acquisition_spend_q2_stated` | "real acquisition channels" | is the `acquisition_spend` METRIC, not a channel value; a segment-only resolver could not see it |
+
+The principle these violations name:
+
+> **Verify existence with the mechanism; trust semantic fit to the model.**
+
+Existence — does `unknown` exist as a member, does `acquisition_spend` exist as a metric — is
+deterministic and the machine owns it. Semantic fit — does "not recorded" MEAN `unknown`, is "real
+acquisition channels" the `acquisition_spend` metric, does "TikTok" correspond to anything — is the
+model's superpower, and a lexical rule that overrules it breaks on synonymy every time. The anchor
+check was doing the model's job badly.
+
+**The grounding gate.** `classify.ground_question` gives the model the whole ontology — every metric
+with its definition, every segment dimension with its values — and asks whether every concept the
+question names has a referent, resolving by MEANING. The model reports the ungrounded concept and its
+dimension; the mechanism verifies only that the concept is genuinely absent before refusing on its
+word. Directly, with the real model:
+
+| question | resolver verdict |
+|----------|------------------|
+| "platform is not recorded" | answerable — grounds to `unknown` |
+| "real acquisition channels" | answerable — grounds to the `acquisition_spend` metric |
+| "TikTok ads" | unanswerable — ungrounded, dimension `spend_row__channel` |
+| "enterprise plan" | unanswerable — ungrounded, dimension `subscription__plan` |
+
+Scoped to VALUE-level misses: the gate fires only when the ungrounded concept belongs to a real
+segment dimension (`spend_row__channel` for TikTok), so `ungoverned_dimension_value` is the right
+reason. An ungrounded METRIC or MEASURE returns an empty dimension ("time per category", "CSAT") and
+is left to `grounded_measure`, which refuses it as `uninstrumented`. Without this scope the gate
+mis-typed a correct absent-measure refusal.
+
+`check_segment_defined` is withdrawn on MetricFlow (via `TOOL_NEEDS`, so an engine with real named
+segments keeps it): it was noise the agent wasted a call on, and removing it also reduced the
+flailing on ungrounded questions (a `max_iterations` loop disappeared).
+
+**What is measured, stated honestly.**
+
+- On the five target cases at rep-3: 15/15 correct, coverage 1.00, zero silent wrong numbers, zero
+  false refusals, and three live catches — the agent computed the substitute number, was about to
+  serve it, and the gate converted it to a clean refuse with the right reason.
+- On the full held-out suite at rep-3: the gate caused ZERO false refusals (the anchor version caused
+  four), which is the property that matters. But it fired only twice in 46 questions, and five of the
+  six aggregate flips never touched it. The suite has essentially two cases the gate can act on
+  (TikTok, enterprise), and the substitution fires intermittently, so the headline moved only within
+  the rep-3 noise band (§32): 119 to 123 attempts up, 38 to 34 majority cases down — the two
+  directions disagree, which is the signature of noise, not signal.
+
+The gate's value is therefore the FAILURE MODE it closes, not an aggregate gain. A single served
+"TikTok spend = 36,875.98" is exactly the confident-wrong the programme exists to prevent, and the
+gate closes it without costing coverage. Claiming the gate raised the suite score would be marketing;
+the honest claim is that it is safe and it removes a class of confident-wrong answer, demonstrated by
+direct catches rather than by the headline. To measure it on aggregate would need more
+ungrounded-segment questions in the suite — authored carefully, since the mechanism now handles them,
+to avoid grading its own homework.

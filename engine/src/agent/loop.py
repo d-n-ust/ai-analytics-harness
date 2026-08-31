@@ -320,7 +320,15 @@ class _Run:
             self.model, self.question, semantic.ontology_text())
         if answerable or not concept or self._grounds_literally(concept, semantic):
             return None
-        members = list(semantic.segment_vocabulary().get(dim, ())) if dim else []
+        # Scope to a VALUE-level miss: the concept names a value of a real segment dimension the
+        # layer lacks (TikTok as a channel), which `ungoverned_dimension_value` describes. An
+        # ungrounded METRIC or MEASURE (dim empty — "time per category", "CSAT") is an absent-measure
+        # miss that `grounded_measure` owns and refuses as `uninstrumented`; the gate steering it to
+        # `ungoverned_dimension_value` only mis-types a refusal that is already correct.
+        vocab = semantic.segment_vocabulary()
+        if dim not in vocab:
+            return None
+        members = list(vocab.get(dim, ()))
         sibling = (f" The governed values of {dim} are: {', '.join(members)}." if members else "")
         self.repairs.append({"ungrounded_concept": {"concept": concept, "dim": dim}})
         self.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
