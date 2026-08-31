@@ -17,6 +17,7 @@ authors = [{ name = "Dmitry Ustimov" }]
 dependencies = [
     "ai-analytics-engine",
     "ai-analytics-harness",
+    "ai-analytics-ontology",
     "ai-analytics-semantic",
     "ai-analytics-warehouse",
 ]
@@ -26,7 +27,7 @@ dependencies = [
 package = false
 
 [tool.uv.workspace]
-members = ["engine", "harness", "warehouse", "semantic"]
+members = ["engine", "harness", "warehouse", "semantic", "ontology"]
 # troodos/ is excluded: a standalone package with a heavier dependency closure that must not land in
 # the shared engine+harness environment. (preflight was extracted to its own repo,
 # github.com/d-n-ust/preflight-analytics; install it from there where an experiment needs it.)
@@ -35,6 +36,7 @@ exclude = ["troodos"]
 [tool.uv.sources]
 ai-analytics-engine = { workspace = true }
 ai-analytics-harness = { workspace = true }
+ai-analytics-ontology = { workspace = true }
 ai-analytics-semantic = { workspace = true }
 ai-analytics-warehouse = { workspace = true }
 

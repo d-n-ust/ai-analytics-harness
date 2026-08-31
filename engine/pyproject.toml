@@ -23,7 +23,8 @@ authors = [{ name = "Dmitry Ustimov" }]
 # never touches how a run row is serialised to disk. A fast Rust core, and already in the resolved
 # lockfile transitively — so this makes a real dependency explicit rather than adding a new one.
 dependencies = [
-    "ai-analytics-semantic",    # the governed layer + compiler, extracted to its own package
+    "ai-analytics-semantic",
+    "ai-analytics-ontology",   # the marts ontology: closed-world answerability graph
     "ai-analytics-warehouse",   # the star warehouse, extracted to its own leaf package
     "duckdb>=1.1",
     "pydantic>=2.11",
