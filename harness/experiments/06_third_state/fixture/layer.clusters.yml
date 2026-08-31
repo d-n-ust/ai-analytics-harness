@@ -13,7 +13,7 @@ generated:
   gate: lexical
   at: '2026-08-27T20:26:51Z'
 source:
-  fingerprint: sha256:cf7c1d277e92fff045d1dd2e0dcbfe2635e090c70aa641cc5a415780b286d8e7
+  fingerprint: sha256:0d7efe32007b2bef7ff228a95395b92fcabaca437c37a7e75d0d0a695407d8c9
   files:
   - layer/project.yaml
   - layer/semantic_models.yml
@@ -45,6 +45,8 @@ names:
       scope_delta:
       - is_internal = false
   active_subscriptions:
+    competes_with: []
+  active_users_growth:
     competes_with: []
   active_users:
     competes_with:

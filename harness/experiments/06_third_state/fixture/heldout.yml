@@ -175,21 +175,21 @@ cases:
   expect:
     type: metric_answer
     tolerance: 0.005
-    no_governed_metric: true
+    metric: active_users_growth
     gold_sql: SELECT (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
       CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email)
       LIKE '%@internal-test.com'))) - (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid
       = e.uid WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-06-29' AND NOT ((coalesce(u.internal,0)=1)
       OR (lower(u.email) LIKE '%@internal-test.com')))
-  note: built on a contested metric; the internal population is stable so the DIFFERENCE is identical under both
-    readings
+  note: growth is now a GOVERNED derived metric (active_users_growth); the internal population is stable so the
+    difference is identical under either base reading, which is why one growth definition is unambiguous
 - id: h_a_active_users_growth_web
   tier: answerable_cancel
   question: By how many did active users on the web platform grow last week compared with the week before?
   expect:
     type: metric_answer
     tolerance: 0.005
-    no_governed_metric: true
+    metric: active_users_growth
     gold_sql: SELECT (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
       CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06' AND lower(coalesce(u.plat,''))='web' AND NOT ((coalesce(u.internal,0)=1)
       OR (lower(u.email) LIKE '%@internal-test.com'))) - (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN

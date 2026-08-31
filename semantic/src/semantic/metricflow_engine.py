@@ -873,7 +873,14 @@ class MetricFlowLayer:
             try:
                 self.query_with_sql(name, resolve=False)
             except Exception as exc:                                        # noqa: BLE001
-                broken[name] = f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}"
+                # A derived metric with a time offset cannot run on a bare probe — MetricFlow needs
+                # metric_time in the group by. That is a required call shape, not a broken metric, so
+                # retry with the grouping before declaring it dead.
+                try:
+                    self.query_with_sql(name, group_by=["metric_time"], time_grain="week",
+                                        resolve=False)
+                except Exception:                                           # noqa: BLE001
+                    broken[name] = f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}"
         return broken
 
     def dimension_members(self) -> dict:

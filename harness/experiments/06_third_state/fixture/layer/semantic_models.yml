@@ -111,6 +111,25 @@ metric:
   filter: "{{ Dimension('activity__is_internal') }} = false"
 ---
 metric:
+  name: active_users_growth
+  description: >-
+    The change in active_users from the prior period to this one — this period's active_users minus
+    the prior period's. A GOVERNED derived metric, so the LAYER computes the delta; do not query two
+    periods and subtract by hand. It is a period-over-period offset, so query it GROUPED BY TIME:
+    query_metric(active_users_growth, group_by=['metric_time'], time_grain='week', period='last_week')
+    returns the single week-over-week change (last week's active_users minus the week before's).
+    Excludes internal and test accounts, like active_users.
+  type: derived
+  type_params:
+    expr: "this_period - prior_period"
+    metrics:
+      - name: active_users
+        alias: this_period
+      - name: active_users
+        alias: prior_period
+        offset_window: 1 week
+---
+metric:
   name: active_accounts
   description: >-
     Distinct accounts with any product activity in the period, INCLUDING internal and test
