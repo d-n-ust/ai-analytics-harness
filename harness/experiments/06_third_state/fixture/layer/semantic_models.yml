@@ -125,8 +125,11 @@ metric:
 metric:
   name: value_moments
   description: >-
-    Completed habits in the period, EXCLUDING internal and test accounts. Owned by Product. Used by
-    the engagement review and the North Star metric tree.
+    Completed habits in the period, EXCLUDING internal and test accounts — that filter is built in,
+    so do not add it yourself. Owned by Product. Used by the engagement review and the North Star
+    metric tree. Filter by a segment for a slice: query_metric(value_moments,
+    filters={'activity__region': 'EMEA'}, period='2026-06') is habit completions in EMEA in June;
+    the regions are Americas, EMEA, APAC.
   type: simple
   type_params: {measure: value_moment_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
@@ -141,7 +144,11 @@ metric:
 ---
 metric:
   name: app_opens
-  description: "App opens in the period, excluding internal and test accounts."
+  description: >-
+    App opens in the period, excluding internal and test accounts (built in). An additive count, so
+    read a whole period DIRECTLY rather than summing sub-periods: query_metric(app_opens,
+    filters={'activity__region': 'EMEA'}, period='2026-H1') is EMEA app opens across the first half
+    of 2026 — do not query each month and add them up.
   type: simple
   type_params: {measure: app_open_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
