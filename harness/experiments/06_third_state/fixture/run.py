@@ -133,7 +133,7 @@ def main() -> None:
                     help="guardrail cell, e.g. R1 or R9. Default: the loop's own default set.")
     ap.add_argument("--variant", default=None,
                     help="a generated layer variant (see variants.py). Default: the shipped layer.")
-    ap.add_argument("--catalogue", default="inline", choices=("full", "compact", "inline", "values", "minimal", "normalised"),
+    ap.add_argument("--catalogue", default="normalised", choices=("full", "compact", "inline", "values", "minimal", "normalised"),
                     help="how the metric list is laid out. `compact` puts every name and "
                          "description contiguous and the dimension detail in a second block — "
                          "same facts, different adjacency.")

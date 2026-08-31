@@ -1337,3 +1337,49 @@ description make it USABLE — the recipe (filter by plan, here is how) and the 
 the time; a self-contained one is a read. And documentation is the correct lever for the segment slot
 specifically, because the requirement is in the question and not the evidence, so there is nothing to
 enforce — only to make legible.
+
+## 34 · The catalogue-rendering study: layout is a wash, a schema explanation is the lever
+
+The catalogue rendering had been a treatment surface all along (inline-values fixed ios_opens,
+inline-descriptions fixed seo_spend), so it earned a controlled study — five arms over the
+rendering-sensitive cases, rep3, then the winner confirmed on the full held-out suite.
+
+| arm | what it shows | rep3 (10 cases) |
+|-----|---------------|-----------------|
+| minimal | name + description only | 24/30 |
+| values | dimensions + categories inline | 26/30 |
+| inline | dimensions + categories + descriptions | 24/30 |
+| full | the sectioned layout | 23/30 |
+| normalised | each entity's dimensions ONCE + a schema explanation in the system prompt | 28/30 |
+
+**Layout is a wash.** minimal/values/inline/full sit at 23–26, inside the rep3 band, and they TRADE
+cases rather than dominating — each has a 1/3 or 0/3 dropout somewhere (inline on monthly_paying,
+full on ios_opens and paid_search, values on seo_spend, minimal on habits_emea). The rep1 ranking
+had inline first at 10/10; rep3 reversed it. That reversal is the §32 lesson once more: a rendering
+difference of a few cases is not resolvable against the rep1 draw.
+
+**Teaching the schema is the lever.** `normalised` is the best and the only arm with no catastrophic
+case (worst 2/3). It differs from the others in one thing: the system prompt explains the shape —
+each metric counts an entity, a metric filters by its entity's dimensions spelled
+`entity__dimension`, and "when a question names a segment, apply it as a filter; do not report the
+unfiltered total as if it were the segment." On the FULL held-out suite it holds and widens:
+
+| | correct | silent | coverage |
+|-|---------|--------|----------|
+| inline (default until now) | 113/138 | 17 | 1.0 |
+| normalised | **119/136** | **13** | 1.0 |
+
+It improved all three piles — answerable 40→43, contested 38→41, and unanswerable 21→**29**. The
+biggest gains are on pile B, and they are not filter application: `time_per_category` 0→100%,
+`enterprise_plan` 33→100%, `churn_reasons` 33→100% — the substitution and refuse cases. Teaching the
+entity structure makes not only what CAN be filtered legible but what has no entity or dimension to
+stand on, so the agent refuses instead of substituting. One case regressed (`paid_search_spend`
+100→33). And 119 broke the ~115 plateau every other config had sat inside all session — the first
+lever to move the aggregate beyond the noise band, because it is structural and meta rather than
+per-case. `normalised` is now the default.
+
+The synthesis across §30–§34: the catalogue makes a dimension VISIBLE (adjacency, a wash on net);
+the usage example and dimension description make it USABLE per case (the recipe and the value
+mapping); and a one-time SCHEMA EXPLANATION makes the whole layer legible at once — the strongest and
+most general of the three, because it teaches a rule the agent applies everywhere rather than a fact
+it must be shown everywhere.
