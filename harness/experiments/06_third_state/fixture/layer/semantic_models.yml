@@ -27,11 +27,11 @@ semantic_model:
     - {name: user, type: foreign, expr: user_id}
   dimensions:
     - {name: active_date, type: time, type_params: {time_granularity: day}}
-    - {name: is_internal, type: categorical}
-    - {name: region, type: categorical}
-    - {name: country, type: categorical}
-    - {name: platform, type: categorical}
-    - {name: channel, type: categorical}
+    - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
+    - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
+    - {name: country, type: categorical, description: "The account country, as an ISO code: US, BR, GB, DE, FR, PH, ID, IN."}
+    - {name: platform, type: categorical, description: "The registered client platform: android, ios, web, or unknown."}
+    - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
   measures:
     - {name: active_account_count, agg: count_distinct, expr: user_id}
     - {name: value_moment_count, agg: sum, expr: value_moments}
@@ -45,9 +45,9 @@ semantic_model:
   entities: [{name: user, type: primary, expr: user_id}]
   dimensions:
     - {name: signup_date, type: time, type_params: {time_granularity: day}}
-    - {name: is_internal, type: categorical}
-    - {name: channel, type: categorical}
-    - {name: region, type: categorical}
+    - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
+    - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
+    - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
   measures:
     - {name: signup_count, agg: count, expr: user_id}
 ---
@@ -63,9 +63,9 @@ semantic_model:
        description: "The month a term STARTED, as YYYY-MM. Filter this for a cohort question — how
          much recurring revenue comes from terms that began in a given month — as a first-class
          equality that composes with plan. It is a different question from the current book."}
-    - {name: plan, type: categorical}
-    - {name: is_active, type: categorical}
-    - {name: status, type: categorical}
+    - {name: plan, type: categorical, description: "The billing interval of the subscription term: annual or monthly. There is no enterprise, team, or per-seat plan."}
+    - {name: is_active, type: categorical, description: "TRUE when the subscription term is currently active."}
+    - {name: status, type: categorical, description: "The subscription term status: active, canceled, paused, or refunded. active is the current paying book."}
   measures:
     - name: mrr_amount
       agg: sum

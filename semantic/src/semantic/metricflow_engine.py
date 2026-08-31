@@ -225,20 +225,26 @@ class MetricFlowLayer:
         # reference. Tests whether the ergonomics, not the information, are why a segment filter
         # goes unapplied ("iOS app opens" answered as all-platform, the dimension and value both
         # present but a lookup apart).
-        inline = self.catalogue == "inline"
-        members = self.dimension_members() if inline else {}
-        # Under `inline`, each dimension carries BOTH its categories and its description beside the
-        # metric, so the block is self-contained: nothing about a filterable dimension lives in a
-        # section the agent must cross-reference. `content_seo` is shown, and next to it that it
-        # means "content and SEO", where the question's phrasing and the value token diverge.
+        # Rendering arms for the context-format study (each varies WHAT the agent is shown, not the
+        # facts): `minimal` = name + description, no dimension list; `values` = dimensions and their
+        # categories inline; `inline` = dimensions, categories AND descriptions inline (the
+        # self-contained block); `full`/`compact` = the sectioned layouts. `inline` shows
+        # `content_seo (content and SEO)` beside the metric where phrasing and value token diverge;
+        # the study measures whether that adjacency helps net, or whether the added density hurts.
+        minimal = self.catalogue == "minimal"
+        normalised = self.catalogue == "normalised"
+        inline = self.catalogue in ("inline", "values")
+        show_desc = self.catalogue == "inline" or normalised
+        members = self.dimension_members() if (inline or normalised) else {}
         descs: dict = {}
-        if inline:
+        if show_desc:
             for sm in self._manifest.semantic_models:
                 entity = next((e.name for e in sm.entities), None)
                 for d in sm.dimensions:
                     if d.description:
                         key = f"{entity}__{d.name}" if entity else d.name
                         descs[key] = " ".join(d.description.split())
+        entity_dims: dict = {}     # normalised: entity -> its dimensions, listed once below
         detail: list = []
         if compact:
             for m in ordered:
@@ -256,7 +262,21 @@ class MetricFlowLayer:
                     lines.append(f"    also called: {m.label}")
             dims = sorted(d.granularity_free_dunder_name
                           for d in self._engine.simple_dimensions_for_metrics([m.name]))
-            if dims:
+            if normalised:
+                # NORMALISED: each metric names the ENTITY it counts, and every entity's dimensions
+                # are listed ONCE in a shared block below — no per-metric repetition. The system
+                # prompt explains the schema (a metric's filters are its entity's dimensions), so
+                # the agent composes `filters={'entity__dimension': value}` from the structure
+                # rather than from a value repeated under every metric. Tests whether teaching the
+                # shape once beats denormalising it into each block.
+                own = self._own_entity(m)
+                if own:
+                    lines[-1] += f"  — counts the `{own}` entity"
+                for prefix, group in _by_entity(dims):
+                    if prefix != "metric_time":
+                        entity_dims.setdefault(prefix, set()).update(group)
+                continue
+            if dims and not minimal:      # `minimal` shows name + description only, no dimensions
                 # GROUPED BY THE ENTITY THEY BELONG TO, not printed as one sorted list.
                 #
                 # A flat line hides the join graph. `people_with_habits` offers ten dimensions and
@@ -296,6 +316,21 @@ class MetricFlowLayer:
                          f"(time_grain={'|'.join(TIME_GRAINS)})")
         lines += detail
 
+        if normalised and entity_dims:
+            # The shared dimension block: every entity's dimensions ONCE, with categories and
+            # description. A metric filters by any dimension of the entity it counts, spelled
+            # entity__dimension — the system prompt says so; this is the reference it points at.
+            lines.append("\nEntities and their dimensions (filter/group a metric by any dimension "
+                         "of the entity it counts, as entity__dimension):")
+            for prefix in sorted(entity_dims):
+                lines.append(f"  {prefix}:")
+                for d in sorted(entity_dims[prefix]):
+                    vals = f" ({'/'.join(members[d])})" if members.get(d) else ""
+                    desc = f" — {descs[d]}" if descs.get(d) else ""
+                    lines.append(f"      {d}{vals}{desc}")
+            lines.append("  every metric is time-filterable (period=…) and grainable "
+                         f"(time_grain={'|'.join(TIME_GRAINS)}).")
+
         from warehouse.config import NAMED_PERIODS
         lines.append(f"\nNamed periods: {', '.join(NAMED_PERIODS)} "
                      "(or pass explicit start/end 'YYYY-MM-DD').")
@@ -303,7 +338,7 @@ class MetricFlowLayer:
         # Dimension values. Time dimensions are skipped: their domain is every date, which is
         # noise rather than a governed vocabulary.
         values = [f"- {d}: {', '.join(v)}" for d, v in sorted(self.dimension_members().items())]
-        if values and not inline:      # under `inline` the values already sit beside each metric
+        if values and not inline and not minimal and not normalised:   # inline/normalised place them elsewhere
             lines.append("\nGoverned dimension values (any other value is refused, "
                          "not approximated):")
             lines += values
@@ -321,7 +356,7 @@ class MetricFlowLayer:
                 if d.description:
                     name = f"{entity}__{d.name}" if entity else d.name
                     described.append(f"- {name}: {' '.join(d.description.split())}")
-        if described and not inline:   # under `inline` the descriptions already sit beside each metric
+        if described and not inline and not minimal and not normalised:   # inline/normalised place them elsewhere
             lines.append("\nWhat the dimensions mean:")
             lines += described
         return "\n".join(lines)

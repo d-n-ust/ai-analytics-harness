@@ -37,6 +37,25 @@ from warehouse.warehouse import cursor as _shared_cursor
 
 MARTS = "wh_06"
 
+# The schema explanation for the `normalised` catalogue arm. The normalised catalogue lists each
+# metric with the ENTITY it counts and each entity's dimensions ONCE; this teaches the shape so the
+# agent can compose a filter from the structure rather than from a value repeated under every
+# metric. Added to the system prompt only for that arm — the other arms render the data denormalised
+# and need no schema note.
+SCHEMA_EXPLANATION = (
+    "HOW THIS SEMANTIC LAYER IS SHAPED (read once; it applies to every metric):\n"
+    "- Each governed metric COUNTS ONE ENTITY — active_users counts `activity`, mrr counts "
+    "`subscription`, marketing_spend counts `spend_row`. The catalogue names each metric's entity.\n"
+    "- A metric can be FILTERED or GROUPED by any dimension OF THE ENTITY IT COUNTS. Each entity's "
+    "dimensions are listed ONCE, under 'Entities and their dimensions', with their allowed values.\n"
+    "- To filter, pass filters={'entity__dimension': value} to query_metric — e.g. "
+    "{'activity__platform': 'ios'} for iOS, {'subscription__plan': 'monthly'} for the monthly plan, "
+    "{'spend_row__channel': 'content_seo'} for content-and-SEO spend. To break down, pass "
+    "group_by=['entity__dimension'].\n"
+    "- When a question names a SEGMENT — a platform, a plan, a channel, a region — find that "
+    "dimension under the metric's entity and apply it as a filter. Do NOT report the unfiltered "
+    "total as if it were the segment.")
+
 
 def scoped_cursor(con):
     """The handle the agent's tools get: search_path is the MARTS schema alone. `_source`, `_star`
@@ -114,7 +133,7 @@ def main() -> None:
                     help="guardrail cell, e.g. R1 or R9. Default: the loop's own default set.")
     ap.add_argument("--variant", default=None,
                     help="a generated layer variant (see variants.py). Default: the shipped layer.")
-    ap.add_argument("--catalogue", default="inline", choices=("full", "compact", "inline"),
+    ap.add_argument("--catalogue", default="inline", choices=("full", "compact", "inline", "values", "minimal", "normalised"),
                     help="how the metric list is laid out. `compact` puts every name and "
                          "description contiguous and the dimension detail in a second block — "
                          "same facts, different adjacency.")
@@ -187,6 +206,8 @@ def main() -> None:
             grounding = build_grounding(cur, rung=RUNG, spec_path=layer, engine="metricflow",
                                         semantic_layer=True, guardrails=guardrails, schema=MARTS)
             grounding.semantic.catalogue = args.catalogue
+            if args.catalogue == "normalised":
+                grounding.system += "\n\n" + SCHEMA_EXPLANATION
             with print_lock:
                 if not shown:
                     shown.add(True)
