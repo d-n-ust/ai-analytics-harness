@@ -257,7 +257,8 @@ class _Run:
         return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
                 or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call)
                 or self.substituted_measure(exit_call) or self.direction_vs_evidence(exit_call)
-                or self.segment_gate(exit_call) or self.applied_segment(exit_call))
+                or self.segment_gate(exit_call) or self.applied_segment(exit_call)
+                or self.answerability_gate(exit_call))
 
     def _resolve_segment(self):
         """The shared segment resolver behind `segment_gate` and `applied_segment`.
@@ -294,6 +295,77 @@ class _Run:
         pools = [str(v).replace("_", " ") for vals in semantic.segment_vocabulary().values()
                  for v in vals] + [m.replace("_", " ") for m in semantic.metrics]
         return any(toks & set(re.findall(r"[a-z0-9]+", pool.lower())) for pool in pools)
+
+    def answerability_gate(self, exit_call):
+        """Governance policy on the MEASURE: route a served answer by whether its measure is a
+        governed metric, computable from the data, or uninstrumented (classify.classify_answerability
+        over the governed ontology AND the data schema).
+
+        - `governed`  -> serve (the semantic layer answered it).
+        - `uninstrumented` -> refuse: the data does not capture it, under either policy.
+        - `computable` -> STRICT refuses `no_governed_definition` (a figure with no governed
+          definition is not authoritative); TRANSPARENT lets it stand IF the answer states the
+          definition it computed by (else hands back to disclose or clarify). The transparent policy
+          is the useful one — the agent may compute the long tail — made safe by the disclosure the
+          number's trust rests on.
+
+        This is where the raw-SQL escape is closed: retention has no governed metric, so a served
+        retention figure is `computable` (or `uninstrumented`), and the gate refuses or requires
+        disclosure rather than let an invented definition ship as fact."""
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "answerability_gate", False):
+            return None
+        semantic = self.grounding.semantic
+        if semantic is None or not hasattr(semantic, "ontology_text"):
+            return None
+        parsed = AnswerArgs.of(exit_call.args)
+        served = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
+        if not served:
+            return None
+        from warehouse import schema_text
+        from .rungs import capabilities
+        con = getattr(self.grounding.toolbox, "con", None)
+        sch = (schema_text(con, capabilities(self.grounding.rung).star, getattr(self.grounding.toolbox, "schema", None))
+               if con is not None else "")
+        v = _classify.classify_answerability(self.model, self.question, semantic.ontology_text(), sch)
+        verdict, measure = v["verdict"], (v.get("measure") or "this quantity")
+        if verdict == "governed":
+            return None
+        transparent = getattr(g, "transparent_compute", False)
+
+        def act(outcome, detail):
+            self.acts.append(Act("answerability_gate", str(Position.REPAIR), outcome,
+                                 f"measure {measure!r} is {verdict}, policy="
+                                 f"{'transparent' if transparent else 'strict'}: {detail}").as_dict())
+
+        if verdict == "uninstrumented":
+            act("handed back", "refuse uninstrumented")
+            self.repairs.append({"answerability": {"verdict": verdict, "measure": measure}})
+            miss = v.get("missing") or "data the warehouse does not have"
+            return ToolResult(
+                "Your answer was not accepted: the measure it reports is not captured in this data.\n"
+                f"{measure} needs {miss}, which the warehouse does not have. `refuse` with reason "
+                f"`uninstrumented`.", is_error=True)
+        # verdict == computable
+        if not transparent:
+            act("handed back", "refuse no_governed_definition")
+            self.repairs.append({"answerability": {"verdict": verdict, "measure": measure}})
+            return ToolResult(
+                "Your answer was not accepted: it reports a measure with no governed definition.\n"
+                f"{measure} can be computed from the data, but no GOVERNED metric defines it, so a "
+                f"single figure is not authoritative. `refuse` with reason `no_governed_definition`.",
+                is_error=True)
+        if _classify.answer_discloses_definition(self.model, self.question, served):
+            act("stood down", "computed and disclosed")
+            return None
+        act("handed back", "computed but did not disclose the definition")
+        self.repairs.append({"answerability": {"verdict": verdict, "measure": measure}})
+        return ToolResult(
+            "Your answer was not accepted: it computed a measure with no governed definition "
+            f"({measure}) but did not state the definition it used.\n"
+            "Answer again STATING the definition and how you computed it — and note the margin if a "
+            "leading value is close to the next — or `clarify` which definition is wanted.",
+            is_error=True)
 
     def segment_gate(self, exit_call):
         """Refuse an answer whose question names a concept the ONTOLOGY does not contain.

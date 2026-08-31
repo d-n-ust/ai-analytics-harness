@@ -83,6 +83,19 @@ ONTOLOGY_SCHEMA_EXPLANATION = _schema_explanation(
     "Call show_metric_ontology(metric) to see that metric's dimensions and their allowed values.")
 
 
+# The transparent-governance contract, injected when `transparent_compute` is on. It tells the agent
+# it MAY compute a measure that has no governed metric, provided it discloses the definition — the
+# behaviour the answerability_gate then enforces.
+TRANSPARENT_PROTOCOL = (
+    "GOVERNANCE POLICY (transparent): a question may ask for a measure that has NO governed metric. "
+    "First prefer a governed metric. If none fits but the DATA can compute the measure (via run_sql), "
+    "you MAY compute it — but you MUST state the definition you used and how you computed it, and note "
+    "the margin when a leading value is close to the next; or `clarify` which definition is wanted if "
+    "the choice changes the answer. If the data does not capture the measure at all, `refuse` with "
+    "reason `uninstrumented`. Never serve a computed figure for a non-governed measure without its "
+    "definition.")
+
+
 def scoped_cursor(con):
     """The handle the agent's tools get: search_path is the MARTS schema alone. `_source`, `_star`
     and the `_stg` staging schema are all absent, so an unqualified reference to anything but a
@@ -243,6 +256,8 @@ def main() -> None:
                 grounding.system += ("\n\n" + ONTOLOGY_DIRECTIVE + "\n\n"
                                      + grounding.semantic.list_metrics_text()
                                      + "\n\n" + ONTOLOGY_SCHEMA_EXPLANATION)
+            if getattr(grounding.guardrails, "transparent_compute", False):
+                grounding.system += "\n\n" + TRANSPARENT_PROTOCOL
             with print_lock:
                 if not shown:
                     shown.add(True)

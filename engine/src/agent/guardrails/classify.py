@@ -35,7 +35,9 @@ def prompt_fingerprint() -> str:
     surface = "|".join([_SCOPE_SYSTEM, _SCOPE_USER, json.dumps(_SCOPE_REPORT, sort_keys=True),
                         _MEASURE_SYSTEM, _MEASURE_USER, json.dumps(_MEASURE_REPORT, sort_keys=True),
                         _SEGMENT_SYSTEM, _SEGMENT_USER, json.dumps(_SEGMENT_REPORT, sort_keys=True),
-                        _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True)])
+                        _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True),
+                        _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
+                        _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -395,3 +397,137 @@ def ground_question(model, question: str, ontology: str) -> tuple:
             dim = str(call.args.get("dimension") or "").strip()
             return answerable, concept, dim
     return True, "", ""
+
+
+# --- three-way answerability (transparent policy): governed / computable / uninstrumented ------- #
+#
+# The measure the question asks for can stand in three places, and the right behaviour differs for
+# each: a GOVERNED metric is answered from the semantic layer; a measure with no governed metric but
+# the DATA to compute it is computed and its definition disclosed (or clarified); a measure the data
+# does not capture is refused as uninstrumented. The model does the semantic mapping over BOTH the
+# governed metrics and the data schema — the schema states its own grains and its own absences ("no
+# screen taxonomy", "no duration") — and names the basis or the gap so the mechanism can act on it.
+_ANSWERABILITY_SYSTEM = (
+    "You classify how an analytics question's MEASURE can be answered, given a semantic layer of "
+    "GOVERNED METRICS and the DATA SCHEMA beneath it. Judge the measure the question asks for (the "
+    "quantity), not its segment or period.\n\n"
+    "Report one of:\n"
+    "- `governed`: the measure maps, by meaning, to one of the governed metrics (name it). Prefer "
+    "this whenever a governed metric answers the question.\n"
+    "- `computable`: NO governed metric fits, but the data schema has the tables and columns to "
+    "compute the measure (name the basis — the tables/columns). Retention from signup cohorts and "
+    "activity, a ratio of two existing measures, and so on.\n"
+    "- `uninstrumented`: NO governed metric AND the schema lacks the data — a measure the tables do "
+    "not capture (duration when only counts exist, a screen when there is no screen taxonomy, "
+    "headcount when there is no employee table). Name what is missing.\n\n"
+    "The schema states its own grains and its own ABSENCES; trust them. When a governed metric fits, "
+    "answer `governed`; when unsure between computable and uninstrumented, prefer `uninstrumented` "
+    "(do not claim data that is not shown).")
+
+_ANSWERABILITY_USER = (
+    "GOVERNED METRICS:\n{ontology}\n\n"
+    "DATA SCHEMA (the tables beneath the metrics, with their grains and what they capture):\n"
+    "{schema}\n\n"
+    "Question: {question}\n\n"
+    "How can the measure this question asks for be answered?")
+
+_ANSWERABILITY_REPORT = {
+    "name": "report_answerability",
+    "description": "Classify how the question's measure can be answered.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "verdict": {"type": "string", "enum": ["governed", "computable", "uninstrumented"]},
+            "measure": {"type": "string",
+                        "description": "The measure/quantity the question asks for, in a few words."},
+            "governed_metric": {"type": "string",
+                                "description": "The governed metric it maps to. Only when verdict "
+                                               "is `governed`."},
+            "basis": {"type": "string",
+                      "description": "The tables/columns that support computing it, and in one "
+                                     "phrase how. Only when verdict is `computable`."},
+            "missing": {"type": "string",
+                        "description": "The data the schema lacks. Only when verdict is "
+                                       "`uninstrumented`."},
+        },
+        "required": ["verdict"],
+    },
+}
+
+
+def classify_answerability(model, question: str, ontology: str, schema: str) -> dict:
+    # The judgement behind the `answerability_gate` guardrail (loop.py routes on the verdict).
+    """{verdict, measure, governed_metric, basis, missing} — is the question's measure governed,
+    computable from the data, or uninstrumented?
+
+    The model maps the measure by meaning over the governed metrics AND the data schema (which
+    carries its own grains and absences); the caller acts on the verdict — answer, compute-and-
+    disclose or clarify, or refuse. Defaults to `uninstrumented` on any error, the safe reading: a
+    judgement that did not arrive must not license computing a number the data may not support.
+    """
+    user = _ANSWERABILITY_USER.format(ontology=ontology, schema=schema, question=question)
+    try:
+        turn = model.respond(Conversation.opening(_ANSWERABILITY_SYSTEM, user),
+                             [_ANSWERABILITY_REPORT], force_tool="report_answerability", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return {"verdict": "uninstrumented", "measure": "", "missing": "(classifier error)"}
+    for call in turn.tool_calls:
+        if call.name == "report_answerability":
+            v = str(call.args.get("verdict") or "uninstrumented").strip().lower()
+            if v not in ("governed", "computable", "uninstrumented"):
+                v = "uninstrumented"
+            return {"verdict": v,
+                    "measure": str(call.args.get("measure") or "").strip(),
+                    "governed_metric": str(call.args.get("governed_metric") or "").strip(),
+                    "basis": str(call.args.get("basis") or "").strip(),
+                    "missing": str(call.args.get("missing") or "").strip()}
+    return {"verdict": "uninstrumented", "measure": "", "missing": ""}
+
+
+# --- disclosure of a computed non-governed metric (transparent policy) --------------------------- #
+#
+# The transparent policy lets the agent COMPUTE a measure that has no governed metric — retention,
+# a custom ratio — but only if it says so: the number is trustworthy exactly to the extent the
+# reader can see the definition it rests on. This is the single check the disclosure requirement
+# rests on: did the answer STATE how it computed the number, or did it serve a bare result. It does
+# not judge whether the definition is the RIGHT one (that is the reader's, or a clarify's) — only
+# whether one is shown. Defaults to disclosed=true, so a judgement that did not arrive never
+# suppresses an answer the reader could have used; the gate only hands back a CLEARLY bare number.
+_DISCLOSE_SYSTEM = (
+    "You check ONE thing about an analytics answer that computed a measure with no governed "
+    "metric: does it STATE THE DEFINITION it used — how the number was arrived at, in plain terms "
+    "(e.g. 'retention here means a cohort active on or after day 90, excluding internal accounts')?"
+    "\n\nReport disclosed=true when the answer states the definition or method it computed by, "
+    "even briefly. Report disclosed=false only when it gives a bare number or a bare result (a "
+    "channel, a figure) with NO statement of how it was defined or computed. Judge only whether a "
+    "definition is shown, not whether it is the right one.")
+
+_DISCLOSE_USER = (
+    "Question: {question}\n\n"
+    "The answer given: {answer}\n\n"
+    "Does the answer state the definition or method it used to compute the number?")
+
+_DISCLOSE_REPORT = {
+    "name": "report_disclosure",
+    "description": "Report whether the answer states the definition it computed by.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"disclosed": {"type": "boolean"}},
+        "required": ["disclosed"],
+    },
+}
+
+
+def answer_discloses_definition(model, question: str, answer: str) -> bool:
+    """Did the answer state the definition it computed a non-governed measure by? Defaults to True
+    on any error, so the disclosure gate refuses only a clearly bare result."""
+    user = _DISCLOSE_USER.format(question=question, answer=answer or "(no text)")
+    try:
+        turn = model.respond(Conversation.opening(_DISCLOSE_SYSTEM, user), [_DISCLOSE_REPORT],
+                             force_tool="report_disclosure", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return True
+    for call in turn.tool_calls:
+        if call.name == "report_disclosure":
+            return bool(call.args.get("disclosed", True))
+    return True

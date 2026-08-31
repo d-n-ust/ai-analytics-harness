@@ -1517,3 +1517,64 @@ the honest claim is that it is safe and it removes a class of confident-wrong an
 direct catches rather than by the headline. To measure it on aggregate would need more
 ungrounded-segment questions in the suite — authored carefully, since the mechanism now handles them,
 to avoid grading its own homework.
+
+## 37 · The raw-SQL escape, and computing the long tail with governance
+
+`retention_by_channel` was the last confident-wrong the earlier work left standing, and it exposed a
+class the segment and measure checks did not cover. "Which acquisition channel gives us the best
+90-day retention" has no governed retention metric, but IS computable from the data (signup cohorts
+in `dim_users` + activity in `fct_user_days` + channel). At R3 `run_sql` is available, so the agent
+wrote its own SQL, invented a retention definition — "active EXACTLY on day 90", which is why every
+channel came out near 11% — and served **organic** as the winner. organic beat referral by 0.04
+points; the winner was noise, the definition was arbitrary, and neither was disclosed.
+
+Why nothing caught it: `grounded_measure` judges whether the number measures the asked quantity, and
+the agent DID compute retention, so it passed. `segment_gate` is scoped to segment-value misses, and
+retention is a measure-level miss. `check_metric_exists` returned the correct NO — and the agent
+overrode it by computing anyway. The tool is also brittle by construction (`term in self.metrics`, an
+exact string match): it cannot map "active user count" onto `active_users`, so it is unreliable in
+the other direction too.
+
+**The reframe: an ungoverned measure is not automatically a refusal.** It sits in one of three
+places, and the schema itself says which — the marts carry their own grains and their own absences
+("no product-feature or screen taxonomy", "no paid-social or tiktok channel", counts but no
+duration):
+
+| the measure | example | correct behaviour |
+|-------------|---------|-------------------|
+| governed | active users, marketing spend | answer from the governed metric |
+| computable (no metric, data present) | 90-day retention | compute AND disclose the definition, or clarify |
+| uninstrumented (no data) | revenue per employee, minutes in app, top screen | refuse `uninstrumented` |
+
+`classify.classify_answerability` makes this a model judgement over BOTH the governed ontology AND
+the data schema, verified against the schema's own statements of what it holds. It sorts every case
+correctly, and as a by-product it derives the refusal reason the earlier gold could not keep straight
+(§36): data present but no metric is `no_governed_definition`; data absent is `uninstrumented`.
+
+**The policy is configurable, because governance strictness is a deployment choice.** A board pack
+wants a refusal on any ungoverned measure; an exploratory analyst wants the long tail computed, as
+long as the definition is visible. `answerability_gate` routes a served answer on the verdict:
+uninstrumented refuses under either policy; a computable measure refuses `no_governed_definition`
+under STRICT, or — under TRANSPARENT (`transparent_compute`) — is allowed to stand IF the answer
+states the definition it computed by (`answer_discloses_definition`), and otherwise is handed back to
+disclose or clarify. The number is trusted exactly to the extent the reader can see the definition it
+rests on, which is the whole point.
+
+End-to-end, both policies behave as designed. Under STRICT the served "organic" becomes a refusal —
+the confident-wrong is gone. Under TRANSPARENT the agent computes retention, states the definition
+("share of non-internal users active on day 90, joining dim_users to fct_user_days"), and the gate
+stands down on the disclosure — the useful answer, made safe.
+
+Two pieces remain before the transparent arm can be scored, and both are deliberate:
+
+- MARGIN HONESTY. A disclosed computation that still crowns a noise-level winner (organic 11.2% over
+  referral 11.2%) is disclosed but misleading. Per the spec this is a GRADING check — a good answer
+  reports the breakdown and does not declare a winner inside the noise — not an enforced handback.
+- The TRANSPARENT ARM'S GOLD. The strict suite grades `refuse` correct for these cases; the
+  transparent arm needs its own gold that accepts a disclosed-and-margin-honest computation OR a
+  clarify. It is a separate arm, not a change to the strict gold.
+
+The mechanism is the finding: the governance boundary an analytics agent must hold is not "never
+compute the ungoverned" but "never serve a computed figure whose definition the reader cannot see",
+and the data schema is a rich enough ontology to tell the agent which of the three places a measure
+sits in.

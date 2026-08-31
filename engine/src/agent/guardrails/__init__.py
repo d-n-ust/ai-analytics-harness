@@ -273,6 +273,22 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "concept with no referent (TikTok as a channel, enterprise as a plan), naming the "
               "governed siblings, rather than serve a number computed for a different concept",
               ("guardrails/classify.py", "loop.py"), in_ladder=False),
+    # Governance policy on the MEASURE. Classifies a served answer's measure as governed / computable
+    # from the data / uninstrumented, over the governed ontology AND the data schema, and routes it:
+    # uninstrumented -> refuse; computable -> refuse `no_governed_definition` under strict policy, or
+    # (with `transparent_compute`) stand if the answer discloses the definition it computed by. Closes
+    # the raw-SQL escape — an invented retention definition no longer ships as fact.
+    Guardrail("answerability_gate", Position.REPAIR,
+              "routes a served answer by whether its measure is governed, computable from the data, "
+              "or uninstrumented; refuses the uninstrumented and (strict) the ungoverned, or (with "
+              "transparent_compute) requires a computed non-governed figure to disclose its definition",
+              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+    # The policy lean read by answerability_gate: transparent lets the agent compute the long tail
+    # (with disclosure); off, the gate refuses any measure with no governed definition.
+    Guardrail("transparent_compute", Position.REPAIR,
+              "the policy lean for answerability_gate: allow a non-governed measure to be computed "
+              "and served when its definition is disclosed, instead of refusing it",
+              ("loop.py",), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -372,6 +388,8 @@ class GuardrailSet:
     metric_brief: bool = False
     ontology_tool: bool = False
     segment_gate: bool = False
+    answerability_gate: bool = False
+    transparent_compute: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False
