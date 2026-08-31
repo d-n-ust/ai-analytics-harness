@@ -321,7 +321,15 @@ class _Run:
         which is a FACT in the trace, not a model judgement, and which is why it does not flicker on
         a contested ratio the way a semantic classification did."""
         g = self.grounding.guardrails
-        if exit_call.name != "answer" or not getattr(g, "answerability_gate", False):
+        if not getattr(g, "answerability_gate", False):
+            return None
+        # Two boundaries, one gate. A SERVED number that bypassed governance is the raw-SQL escape
+        # (below). A REFUSAL that claims the data is not captured is the other half: when the graph
+        # can prove the measure computable, `uninstrumented` is the wrong reason. The refusal path
+        # needs no run_sql scope — retention refuses without ever computing.
+        if exit_call.name == "refuse":
+            return self._answerability_refusal(exit_call, g)
+        if exit_call.name != "answer":
             return None
         # Provenance scope: only a number that came from raw SQL bypassed governance. If the run made
         # no run_sql call, the figure was composed from governed metrics — nothing for this gate.
@@ -385,6 +393,48 @@ class _Run:
             f"({measure}) but did not state the definition it used.\n"
             "Answer again STATING the definition and how you computed it — and note the margin if a "
             "leading value is close to the next — or `clarify` which definition is wanted.",
+            is_error=True)
+
+    def _answerability_refusal(self, exit_call, g):
+        """The refusal-reason boundary. A refusal with reason `uninstrumented` asserts the warehouse
+        does NOT capture the measure — a CLOSURE claim. When graph_answerability is on and the graph
+        can PROVE the measure computable (real nodes that join), that claim is wrong: the data is
+        captured, there is simply no governed metric, so the correct reason is `no_governed_definition`.
+        The graph's closed-world fact overrides the model's open-world guess ('found no metric, so
+        assume no data'); the collapse of computable into uninstrumented is the retention bug this
+        closes.
+
+        Fires ONLY on reason `uninstrumented`, ONLY under graph_answerability with an ontology, and
+        ONLY when the graph returns `computable` — a positive proof. A graph `uninstrumented`
+        (genuinely absent, or an island whose join is not curated) leaves the refusal untouched, so a
+        genuinely uncaptured measure (csat, dark mode, minutes) is not disturbed. The verdict is
+        verify()'s, not a second model judgement; the POLICY (strict reason-fix vs transparent
+        compute) is read separately."""
+        if not (getattr(g, "graph_answerability", False) and self.grounding.ontology is not None):
+            return None
+        if str(RefuseArgs.of(exit_call.args).reason or "").strip() != "uninstrumented":
+            return None
+        v = _classify.answerability_via_graph(self.model, self.question, self.grounding.ontology)
+        if v["verdict"] != "computable":
+            return None                       # the graph agrees it is not captured — refusal stands
+        measure = v.get("measure") or "this measure"
+        basis = v.get("basis") or "attributes the warehouse captures"
+        transparent = getattr(g, "transparent_compute", False)
+        self.repairs.append({"answerability_refusal": {"measure": measure, "verdict": "computable"}})
+        self.acts.append(Act("answerability_gate", str(Position.REPAIR), "handed back",
+                             f"refusal reason `uninstrumented` is wrong: {measure!r} is computable "
+                             f"({basis}); policy={'transparent' if transparent else 'strict'}; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        if transparent:
+            return ToolResult(
+                "Your refusal used the wrong reason: this measure IS captured by the data.\n"
+                f"{measure} can be COMPUTED from {basis} — it has no governed metric, but the data is "
+                f"there. Do not refuse `uninstrumented`. Either compute it and STATE the definition "
+                f"you used, or `refuse` with reason `no_governed_definition`.", is_error=True)
+        return ToolResult(
+            "Your refusal used the wrong reason: this measure IS captured by the data.\n"
+            f"{measure} can be computed from {basis}; it has no GOVERNED metric, but the warehouse "
+            f"does capture it. `refuse` with reason `no_governed_definition`, not `uninstrumented`.",
             is_error=True)
 
     def segment_gate(self, exit_call):
