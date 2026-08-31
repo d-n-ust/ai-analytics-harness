@@ -334,12 +334,20 @@ class _Run:
         served = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
         if not served:
             return None
-        from warehouse import schema_text
-        from .rungs import capabilities
-        con = getattr(self.grounding.toolbox, "con", None)
-        sch = (schema_text(con, capabilities(self.grounding.rung).star, getattr(self.grounding.toolbox, "schema", None))
-               if con is not None else "")
-        v = _classify.classify_answerability(self.model, self.question, semantic.ontology_text(), sch)
+        # Where the verdict comes from. With graph_answerability, the model decomposes the measure
+        # against the complete marts graph and MartsOntology.verify() decides existence and
+        # joinability deterministically; otherwise the schema-text classifier judges it. The graph
+        # path needs an ontology on the grounding — absent (build failed, or a non-MetricFlow layer),
+        # it falls back, so the flag never breaks a run.
+        if getattr(g, "graph_answerability", False) and self.grounding.ontology is not None:
+            v = _classify.answerability_via_graph(self.model, self.question, self.grounding.ontology)
+        else:
+            from warehouse import schema_text
+            from .rungs import capabilities
+            con = getattr(self.grounding.toolbox, "con", None)
+            sch = (schema_text(con, capabilities(self.grounding.rung).star,
+                               getattr(self.grounding.toolbox, "schema", None)) if con is not None else "")
+            v = _classify.classify_answerability(self.model, self.question, semantic.ontology_text(), sch)
         verdict, measure = v["verdict"], (v.get("measure") or "this quantity")
         if verdict == "governed":
             return None

@@ -298,6 +298,15 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "the policy lean for answerability_gate: allow a non-governed measure to be computed "
               "and served when its definition is disclosed, instead of refusing it",
               ("loop.py",), in_ladder=False),
+    # Where answerability_gate reads its verdict from. With graph_answerability the model decomposes
+    # the measure against the COMPLETE marts graph and MartsOntology.verify() decides existence and
+    # joinability deterministically; off, the gate keeps the schema-text classifier. Requires the
+    # grounding to carry an ontology (a MetricFlow layer builds one); the gate falls back to the
+    # classifier when it does not, so the flag is safe to switch on for any arm.
+    Guardrail("graph_answerability", Position.REPAIR,
+              "answerability_gate decides existence by traversing the closed-world marts graph "
+              "(the model decomposes, the graph verifies) instead of judging it from the schema text",
+              ("guardrails/classify.py", "loop.py", "ontology"), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -400,6 +409,7 @@ class GuardrailSet:
     segment_gate: bool = False
     answerability_gate: bool = False
     transparent_compute: bool = False
+    graph_answerability: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False
