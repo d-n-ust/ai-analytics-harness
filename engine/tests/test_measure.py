@@ -12,7 +12,7 @@ here; this module only owns completeness.
 """
 from __future__ import annotations
 
-from agent.measure import Scope, Spec, applied_segments, bind_scope, ground, periods
+from agent.measure import Scope, Spec, applied_segments, bind_scope, coherent, ground, periods
 from ontology.graph import MartsOntology
 
 # A closed-world graph built PURELY (no DB) — user⋈activity are related, spend is an island. Enough
@@ -211,6 +211,52 @@ def test_ground_raw_spec_is_raw():
     """Bespoke SQL the graph cannot decompose is named `raw` — grounded by disclosure and the
     adversary, not forced to a graph verdict it cannot earn."""
     assert ground(Spec.raw(sql="select 1", definition="x"), _ONT)[0] == "raw"
+
+
+# ── coherent: reject an invalid definition before it computes ───────────────────────────────────
+def test_coherent_accepts_well_formed_specs():
+    """A governed metric, a well-formed query, and a ratio of metrics are all valid definitions —
+    coherence must not false-flag the normal cases."""
+    assert coherent(Spec.metric("active_users")) == ()
+    assert coherent(Spec.query(source="activity", measure="value_moments", agg="sum")) == ()
+    assert coherent(Spec.derived("ratio", inputs=[Spec.metric("marketing_spend"),
+                                                  Spec.metric("new_signups")])) == ()
+
+
+def test_coherent_flags_structural_holes():
+    """A spec missing its load-bearing parts is not a definition — caught here, not as a cryptic
+    engine error at execution."""
+    assert coherent(Spec.query(source="", measure="", agg="sum"))          # no source/measure
+    assert coherent(Spec.query(source="activity", measure="x", agg="totalize"))  # bad agg
+    assert coherent(Spec.derived("blend", inputs=[Spec.metric("a")]))      # bad op
+    assert coherent(Spec.derived("ratio", inputs=[]))                      # no inputs
+    assert coherent(Spec.raw(sql="select 1", definition=""))               # raw needs a definition
+
+
+def test_coherent_rejects_summing_a_semi_additive_across_periods():
+    """Distinct counts do not add over time — someone active in both weeks is counted twice. A SUM of
+    a count_distinct query across two periods is the Kimball trap, rejected before it computes."""
+    wk1 = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W1")
+    wk2 = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W2")
+    viol = coherent(Spec.derived("sum", inputs=[wk1, wk2]))
+    assert any(k == "additivity" for k, _ in viol)
+
+
+def test_coherent_allows_a_change_of_a_semi_additive_across_periods():
+    """A DIFFERENCE of a semi-additive across periods is a period-over-period change, computed at each
+    period's own grain — valid, and must NOT be flagged (this is active_users_growth's shape)."""
+    wk1 = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W1")
+    wk2 = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W2")
+    assert coherent(Spec.derived("difference", inputs=[wk2, wk1])) == ()
+
+
+def test_coherent_allows_summing_a_semi_additive_within_one_period():
+    """Summing across a segment WITHIN one period is fine — the trap is summing across TIME, so a
+    single-period sum of a semi-additive is not flagged."""
+    a = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W1")
+    b = Spec.query(source="activity", measure="user_id", agg="count_distinct", period="2026-W1")
+    add = [k for k, _ in coherent(Spec.derived("sum", inputs=[a, b])) if k == "additivity"]
+    assert add == []
 
 
 if __name__ == "__main__":

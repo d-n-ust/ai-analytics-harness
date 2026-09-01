@@ -143,6 +143,67 @@ def addressed_qualifiers(spec: Spec) -> set:
     return out
 
 
+# Additivity is a property of the AGGREGATE, never a per-spec annotation (semantic-modelling). A
+# distinct count or a stock is semi-additive (not summable over time); a ratio or average is
+# non-additive. Summing either across periods double-counts — the Kimball trap coherence rejects.
+_ADDITIVE = {"sum", "count"}
+_SEMI_ADDITIVE = {"count_distinct", "distinct", "min", "max", "median"}
+_NON_ADDITIVE = {"average", "avg", "ratio"}
+_OPS_OK = {"ratio", "difference", "sum", "product"}
+
+
+def _additivity(agg: str) -> str:
+    a = str(agg).strip().lower()
+    if a in _SEMI_ADDITIVE:
+        return "semi_additive"
+    if a in _NON_ADDITIVE:
+        return "non_additive"
+    if a in _ADDITIVE:
+        return "additive"
+    return "unknown"
+
+
+def coherent(spec: Spec) -> tuple:
+    """PURE. Ways the spec is an INVALID DEFINITION — checked before execution, so a malformed or
+    Kimball-illegal spec is refused AS A DEFINITION rather than producing a cryptic engine error or a
+    plausible wrong number. Returns a tuple of (kind, detail); empty means coherent.
+
+    Two classes: STRUCTURAL (a kind missing its load-bearing parts, an unrecognised aggregation or
+    op) and ADDITIVITY (summing a semi-additive/non-additive measure across periods double-counts —
+    the classic distinct-count-over-time trap). A DIFFERENCE of a semi-additive across periods is a
+    change and is fine; only a SUM across periods is rejected. Recurses through a derived spec."""
+    v = []
+    if spec.kind == "metric":
+        if not spec.metric:
+            v.append(("metric", "a metric spec needs a name"))
+    elif spec.kind == "query":
+        if not spec.source or not spec.measure:
+            v.append(("query", "a query spec needs a source and a measure"))
+        if _additivity(spec.agg) == "unknown":
+            v.append(("agg", f"unrecognised aggregation {spec.agg!r}"))
+    elif spec.kind == "derived":
+        if spec.op not in _OPS_OK:
+            v.append(("op", f"unrecognised op {spec.op!r}"))
+        if not spec.inputs:
+            v.append(("derived", "a derived spec needs at least one input"))
+        if spec.op == "sum":
+            semi = any(s.kind == "query" and _additivity(s.agg) in ("semi_additive", "non_additive")
+                       for s in spec.inputs)
+            spans_periods = len({p for s in spec.inputs for p in periods(s)}) > 1
+            if semi and spans_periods:
+                v.append(("additivity", "summing a semi-additive or non-additive measure across "
+                          "periods double-counts; aggregate at the period grain, or take a change "
+                          "(difference), not a sum"))
+        for sub in spec.inputs:
+            v.extend(coherent(sub))
+    elif spec.kind == "raw":
+        if not spec.sql or not spec.definition:
+            v.append(("raw", "a raw spec needs both the SQL and a stated definition"))
+    else:
+        v.append(("kind", f"unknown spec kind {spec.kind!r}"))
+    return tuple(v)
+
+
 def ground(spec: Spec, ontology) -> tuple:
     """PURE. Is the spec grounded in the closed-world marts graph — does every part EXIST and JOIN?
     Returns (verdict, detail) with verdict in {'instrumented', 'computable', 'uninstrumented', 'raw'}.
