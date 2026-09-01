@@ -118,6 +118,11 @@ metric:
     periods and subtract by hand. It is a period-over-period offset, so query it GROUPED BY TIME:
     query_metric(active_users_growth, group_by=['metric_time'], time_grain='week', period='last_week')
     returns the single week-over-week change (last week's active_users minus the week before's).
+    It is SLICEABLE by a segment — the change on one platform, region or channel — but you must
+    FILTER, not group_by (a period-over-period offset cannot be grouped by a non-time dimension). The
+    growth of active users on web last week: query_metric(active_users_growth,
+    filters={'activity__platform': 'web'}, group_by=['metric_time'], time_grain='week',
+    period='last_week'); the filter applies to both periods.
     Excludes internal and test accounts, like active_users.
   type: derived
   type_params:

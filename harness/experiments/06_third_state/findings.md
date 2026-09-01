@@ -1780,3 +1780,59 @@ rep-3 noise floor (§32): the remaining silents (`active_users_growth_web`, `gro
 none touched by this fix, and they shuffle run to run. The durable, attributable claim is narrow and
 real: the false directional premise now lands reliably on the useful answer, gate-enforced, and the
 mechanism divides cleanly across LLM / deterministic / protocol with no fragile prose-matching.
+
+## 41 · The dropped segment on a governed metric: the mechanism applies what the model identified
+
+"By how many did active users on the WEB platform grow last week?" The agent selects the right
+metric (`active_users_growth`) and the right segment ("web" -> `platform=web`), then serves the
+UNFILTERED total (50, all platforms) while its prose claims "web". A named, grounded segment was
+identified and then dropped from the query.
+
+WHY THE EXISTING GATE WAS NOT ENOUGH. `applied_segment` detected the drop and handed back the right
+instruction — "re-query with filters={activity__platform:'web'}" — TWICE, and the agent re-served
+the same total each time without issuing a filtered query, exhausted MAX_CORRECTIONS, and the
+unfiltered 50 shipped, mislabelled. The gate could DETECT but not COMPEL, and on cap-exhaustion it
+served the number it knew was mis-scoped.
+
+TWO WRONG FIXES, both rejected. Serving the unfiltered total on cap-exhaustion is the silent error.
+Refusing the answer is OVER-RIGID — the web slice IS computable (6), so a refuse declines a value
+the data holds, the same mistake §40 removed for the false premise. The useful outcome is the web
+number, and it is recoverable.
+
+THE ALLOCATION. Each sub-decision to the tool whose strength it is, and the anti-pattern is trusting
+the model with a step that is mechanical.
+
+| sub-decision | tool | note |
+|--------------|------|------|
+| "web platform" -> segment `platform=web`; "grow" -> `active_users_growth` | LLM (language) | its superpower; done reliably |
+| does the served call carry that grounded segment | deterministic | a lookup over the governed call's filters |
+| APPLY the grounded segment to the metric | deterministic | re-run the served call with the filter, read the value — the mechanical step the model dropped |
+| the derived metric IS filterable (filter, not group_by) | protocol / metadata | a usage example; teaches the model so the drop happens less |
+
+MECHANISM. `applied_segment`, on a grounded segment the served call dropped, no longer just instructs
+— it INSERTS the filter into the served governed call, recomputes the value (`_segment_value` via
+`value_of`), and hands back the exact slice: "the 'web' slice is 6; answer with 6." The model already
+did the language (identify web); the mechanism does the mechanics (apply web). Not a refuse (the
+value is computable), not the unfiltered total (silent). This is the direction_vs_evidence pattern
+extended from READING a fact to APPLYING an identified slot, and it generalises to every dropped
+grounded segment.
+
+The derived-metric wrinkle, taught in the usage example: a period-over-period offset metric
+(`active_users_growth`) can be FILTERED by a segment (the filter applies to both periods) but cannot
+be GROUPED BY a non-time dimension (MetricFlow rejects it). Conflating the two sends the agent to a
+`group_by` that errors, after which it falls back to the unfiltered total.
+
+RESULT (rep-3, 46-question held-out suite, R3 cell). The three dropped-segment cases — 
+`active_users_growth_web`, `paid_search_spend_q2`, `seo_signups_q1` — all went to 3/3. With the usage
+example in place the agent usually applies the filter first try (web -> 6.0 unaided); when it still
+drops, the mechanism supplies the slice. `applied_segment` fired 3 times, each supplying a correct
+value.
+
+HONEST CAVEATS. The headline totals held at the rep-3 noise floor (correct 129/138, silent 3): the
+correct dip versus the prior arm is variance — five flaky cases refused instead of answering this
+run — and the one new silent (`spend_per_signup_q2`) is an ORTHOGONAL contested-ratio miss
+(marketing_spend vs acquisition_spend, disclosure), on which `applied_segment` did not fire. The
+durable, attributable win is the three dropped-segment cases at 3/3 and the clean allocation. One
+limit: the hand-back supplies the exact value (compliance is now trivial — state it, no re-query),
+which steers hard but is not absolute; the absolute form is value SUBSTITUTION, which overrides the
+answer text and was judged too heavy for the gain.

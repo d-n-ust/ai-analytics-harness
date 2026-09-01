@@ -511,20 +511,54 @@ class _Run:
             return None
         dim, value = r["dim"], r["value"]
         leaf, want = dim.split("__")[-1], str(value).lower()
-        for _metric, args in self._governed_calls():
+        served = None
+        for metric, args in self._governed_calls():
+            served = served or (metric, args)             # a call to correct if none carries it
             for k, v in (args.get("filters") or {}).items():
                 if str(k).split("__")[-1] == leaf and str(v).lower() == want:
                     return None                                   # the segment was applied -> serve
         self.repairs.append({"applied_segment": {"dimension": dim, "value": value}})
+        # The LLM already IDENTIFIED the segment (language) and it grounds to a real member;
+        # APPLYING it to the governed call is mechanical, so the mechanism does it rather than trust
+        # the model to re-query — it dropped the filter once and, told to re-query, re-served the
+        # same total. Insert the grounded filter into the served call and recompute the governed
+        # value, and hand that exact number back to state. Refusing would decline a value that IS
+        # computable (the false-premise lesson); serving the unfiltered total is the silent error.
+        corrected = self._segment_value(served, dim, value) if served else None
         self.acts.append(Act("metric_brief", str(Position.REPAIR), "handed back",
-                             f"question restricts to {dim}={value!r} but the served number applied "
-                             f"no such filter; correction {self.claim_retries} of 2").as_dict())
-        return ToolResult(
+                             f"question restricts to {dim}={value!r}, served number applied no such "
+                             f"filter; supplied the {value!r} slice = {corrected}; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        if corrected is not None:
+            return ToolResult(
+                f"Your answer was not accepted: the question restricts to {value!r} ({dim}), but the "
+                f"number you served is the UNFILTERED total across all values. Applying that governed "
+                f"segment filter, the {value!r} slice of the metric is {corrected}. Answer with "
+                f"{corrected} for the {value!r} segment.", is_error=True)
+        return ToolResult(   # could not recompute the slice -> the plain instruction, or refuse
             "Your answer was not accepted: the question restricts to a specific segment.\n"
             f"The question names {value!r} ({dim}, a governed value), but the number you served came "
             f"from a call with no such filter — it reports the unfiltered total across all values. "
             f"Re-query with filters={{'{dim}': '{value}'}} and answer that slice, or `refuse` if the "
             f"segment truly cannot be isolated.", is_error=True)
+
+    def _segment_value(self, served, dim, value):
+        """The governed metric's value with the grounded segment filter APPLIED — the mechanical step
+        the model dropped. Re-runs the served call with filters[dim]=value and returns the scalar, or
+        None if it does not recompute to a single number (the mechanism supplies a fact or steps
+        back, never a guess). Rounded like a served figure so the handed-back number reads cleanly."""
+        metric, args = served
+        filtered = dict(args)
+        filtered["filters"] = {**(args.get("filters") or {}), dim: value}
+        try:
+            vals = before.value_of(self.grounding.semantic, filtered, metric)
+        except Exception:                                                   # noqa: BLE001
+            return None
+        if isinstance(vals, dict) and len(vals) == 1:
+            (v,) = vals.values()
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                return round(v, 4)
+        return None
 
     def direction_vs_evidence(self, exit_call):
         """Hand back an answer that treats a measure as rising or falling in a direction the run's
