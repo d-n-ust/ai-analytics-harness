@@ -44,8 +44,12 @@ _SYSTEM = (
     "inputs=[{kind:'metric',metric:...}, ...]. Use for a ratio or a change of governed metrics.\n"
     "  kind='query': no governed metric, but the graph has the columns to compute it. Set source "
     "(entity), measure (column), agg (sum/count_distinct/average/min/max), and any grain.\n"
-    "  kind='raw': genuinely bespoke (a cohort/retention curve, custom windowing). Set sql (over the "
-    "marts tables) and a one-line definition of what it computes.\n\n"
+    "  kind='raw': genuinely bespoke (a cohort/retention curve, custom windowing). Set sql and a "
+    "one-line definition of what it computes. Follow dbt modelling practice: build it in CTEs "
+    "(cohort -> observation -> rate), STATE THE GRAIN in the definition ('one row is one channel'), "
+    "return EXACTLY the grouping the question asks for, and guard division with nullif. Use ONLY the "
+    "tables and columns listed under AVAILABLE TABLES, in the stated SQL dialect. A retention or "
+    "cohort measure is the canonical kind='raw' case.\n\n"
     "PREFER GOVERNED METRICS, but do not force them. If a governed metric names the quantity — or a "
     "ratio 'X per Y' of two governed metrics does (acquisition_spend per new_signups) — use "
     "kind='metric' or kind='derived' with those metrics as inputs, and do NOT reconstruct a governed "
@@ -128,6 +132,26 @@ class Defined:
 _PSEUDO_SEGMENT = {"all", "any", "*", "none", "", "every", "each", "total"}
 
 
+def warehouse_context(ontology) -> str:
+    """The table catalogue and SQL dialect a `raw` spec must be written against — rendered from the
+    ontology (real table names + their columns), so the model authoring bespoke SQL is not blind to
+    what exists or to the dialect. Context engineering: give the agent the schema, like a coding
+    agent gets the codebase. Cheap and always included — it also helps a query spec name real
+    columns."""
+    lines = ["AVAILABLE TABLES (refer to them by these exact names; columns in parentheses):"]
+    for _ent, d in ontology.entities.items():
+        cols = ", ".join(list(d["attributes"]) + list(d["measures"]))
+        lines.append(f"  {d['table']}({cols})")
+    lines += [
+        "",
+        "SQL DIALECT — DuckDB (NOT BigQuery or Snowflake):",
+        "  - date arithmetic: signup_date + INTERVAL 90 DAY   (no DATE_ADD, no DATEADD)",
+        "  - safe division: numerator / nullif(denominator, 0)   (no SAFE_DIVIDE)",
+        "  - the marts schema is already on the search path — use the bare table names above.",
+    ]
+    return "\n".join(lines)
+
+
 def _parse_scope(d: dict) -> Scope:
     d = d or {}
     segs = tuple((str(s[0]), str(s[1])) for s in (d.get("segments") or [])
@@ -176,8 +200,8 @@ def _disclose(scope: Scope, spec: Spec, res, tier: str) -> str:
     return f"You asked for {asked}. Computed via {res.definition} = {val}. [{note}]"
 
 
-def _author(model, question: str, ontology_render: str, feedback: str) -> dict:
-    user = f"{ontology_render}\n\nQuestion: {question}"
+def _author(model, question: str, ontology_render: str, wh_context: str, feedback: str) -> dict:
+    user = f"{ontology_render}\n\n{wh_context}\n\nQuestion: {question}"
     if feedback:
         user += f"\n\nYour previous definition was REJECTED — {feedback}\nAuthor a corrected definition."
     turn = model.respond(Conversation.opening(_SYSTEM, user), [_DEFINE_TOOL],
@@ -191,8 +215,9 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2) -
     The one model call authors {scope, spec}; the deterministic pipeline decides the rest, handing back
     a specific failure for the model to fix, bounded by max_tries."""
     feedback, scope, spec = "", Scope(), Spec(kind="unknown")
+    wh_context = warehouse_context(ontology)
     for attempt in range(max_tries + 1):
-        args = _author(model, question, ontology.render(), feedback)
+        args = _author(model, question, ontology.render(), wh_context, feedback)
         scope, spec = _parse_scope(args.get("scope")), _parse_spec(args.get("spec"))
 
         viol = coherent(spec)
