@@ -1886,3 +1886,70 @@ attributable win is `spend_per_signup` and the op-agnostic mechanism. The run al
 `mrr_q2_starts` (the campaign's flakiest cohort case) over-exploring under the answerability gate, no
 composition-repair fired; the new silent is a garbled growth computation. The composition check fired
 only where intended.
+
+## 43 · The measure definition as a first-class artifact: author, verify, challenge, disclose
+
+The spec-first architecture (board-designed, §40–42 were its precursors). When no governed metric
+answers a question, the agent's job is not to produce a NUMBER — it is to AUTHOR A DEFINITION, have
+it verified and challenged, compute from it, and disclose it. The number is a consequence of the
+definition, not the thing produced. A governed metric is the trivial definition, so governed and
+ad-hoc flow through one shape. It is coverage-independent: the agent defines the long tail on demand
+rather than requiring the layer to already cover it.
+
+THE PIPELINE, each layer at its right tool (LLM / deterministic / protocol), built and tested one at
+a time.
+
+| layer | function | tool | guarantee |
+|-------|----------|------|-----------|
+| author | LLM writes {scope, spec} as structured output | LLM (language) | interpretation |
+| coherent | valid definition (additivity/structure) | deterministic | not a Kimball-illegal spec |
+| ground | every part exists and joins in the marts graph | deterministic (ontology) | existence |
+| bind_scope | every scope component (segment/period/qualifier) is bound | deterministic | COMPLETENESS |
+| run_ephemeral | compute the value | imperative shell | execution-BY-CONSTRUCTION |
+| challenge_aptness | is this the RIGHT definition? | adversary (validated judge) | APTNESS |
+| disclose | the spec IS the account | — | transparency |
+
+Aptness = completeness + interpretation. bind_scope decides completeness deterministically (a
+segment/period/qualifier the question named is present, or reported unbound — the silent-drop class
+of §41 generalised to the whole scope). Interpretation — is a grounded, bound, executing definition
+the one the question MEANS — is the adversary's, the residual no deterministic check reaches.
+
+THE TWO ARTIFACT KINDS follow dbt Semantic Layer practice: a MetricFlow-expressible measure is
+authored as a metric (governed / ratio / derived); a genuinely bespoke one (cohort, retention,
+custom windowing) as a raw dbt SQL model. Both are verifiable by construction: MetricFlow compiles
+and runs the metric; the SQL model materialises and runs. Verification-as-construction — the number
+is PRODUCED BY the definition, so it cannot drift; no "does the number match the spec" check exists
+to get wrong. The raw author is given the warehouse catalogue + the DuckDB dialect + dbt idioms
+(context engineering), which took retention from "gives up" to a reliable, correctly-grained model
+(5/5 reps: answer, raw, within-90-days, 5 by-channel rows).
+
+THE ADVERSARY WAS VALIDATED BEFORE IT GATED. A first cut ("refute if you can") flagged everything —
+1/6 on a labelled aptness set, useless as a discriminator. Refocused to defect-hunting with governed
+metrics treated as authoritative: 5-6/6, the lone disagreement retention within-90 vs at-day-90, a
+genuinely debatable definition. It is wired to DISCLOSE the concern (not hard-refuse), the safe use
+of a judge validated on a small set; apt_validate.py is the committed held-out check, asserting the
+discriminator still holds.
+
+THE A/B (matched transparent policy, rep-2 held-out): arm A computes the tail with hand-rolled
+run_sql, arm B via define_measure. Both answer the tail, so the refuse-gold policy mismatch cancels
+and the measured question is safety.
+
+| arm | correct | silent | run_sql used | define_measure used |
+|-----|---------|--------|--------------|---------------------|
+| A hand-rolled | 85/92 | 0 | 4 | 0 |
+| B +spec_authoring | 86/92 | 2 | 0 | 2 |
+
+The durable claim is SAFETY: define_measure introduced NO silent error. B's two silent errors are
+orthogonal contested-metric cases (active_users_organic, spend_per_signup) hand-served via
+query_metric with no define_measure in their traces — the same rep-variance seen throughout; where
+define_measure WAS used (retention, both reps) it served a verified, disclosed definition with no
+silent error, and hand-rolled run_sql dropped 4->0.
+
+HONEST LIMITS. The held-out gold encodes a STRICT-REFUSE policy for ungoverned measures (retention's
+gold is refuse no_governed_definition), so a computed-and-disclosed answer grades correct=False
+however sound — the suite cannot score a compute-and-disclose policy, only its safety. define_measure
+was used sparingly (2/92): the agent mostly refused the tail upstream, a prompting/usage matter, not
+a safety one. rep-2 is directional. The point proven is architectural and safety-shaped: computing
+the long tail can be made reliable — grounded, executed-by-construction, aptness-challenged, disclosed
+— and every measure so defined is a promotable dbt/MetricFlow artifact. Promotion (spec -> PR into
+the layer) and query-leaf execution remain.
