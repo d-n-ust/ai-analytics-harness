@@ -115,6 +115,11 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
             offered.append(schema("check_answerability"))
             note(record, "graph_grounding", Position.ACTION_SPACE, "offered",
                  "check_answerability — three-way answerability from the marts graph")
+        # spec_authoring: define_measure, the verified compute-the-tail path (needs the graph).
+        if guardrails.spec_authoring and ontology is not None:
+            offered.append(schema("define_measure"))
+            note(record, "spec_authoring", Position.ACTION_SPACE, "offered",
+                 "define_measure — author + verify + compute a definition for an ungoverned measure")
     offered.append(answer_schema(schema("answer"), guardrails, semantic, protocol, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))

@@ -316,6 +316,14 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "offers check_answerability (three-way answerability from the marts graph, with the "
               "reason code it implies) in place of the name-match check_metric_exists",
               ("guardrails/action_space.py",), in_ladder=False),
+    # Offers define_measure: the agent AUTHORS a verified measure definition (a spec) for an
+    # ungoverned measure — grounded, coherence-checked, executed by construction, and
+    # adversarially challenged for aptness — instead of hand-writing run_sql. The compute-the-tail
+    # path made reliable: the served number is produced by a disclosed, verified definition.
+    Guardrail("spec_authoring", Position.ACTION_SPACE,
+              "offers define_measure, which authors a verified, disclosed definition (metric / "
+              "derived / query / raw dbt model) for an ungoverned measure instead of raw SQL",
+              ("guardrails/action_space.py", "define.py"), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -420,6 +428,7 @@ class GuardrailSet:
     transparent_compute: bool = False
     graph_answerability: bool = False
     graph_grounding: bool = False
+    spec_authoring: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False

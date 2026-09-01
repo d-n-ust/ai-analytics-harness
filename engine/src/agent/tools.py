@@ -196,6 +196,20 @@ _CHECK_ANSWERABILITY = {
         "required": ["measure"]},
 }
 
+_DEFINE_MEASURE = {
+    "name": "define_measure",
+    "description": "Author a VERIFIED definition for a measure that has no governed metric, and "
+                   "compute it. The definition is grounded in the graph, checked for validity, "
+                   "executed by construction, and challenged for aptness; the result comes back with "
+                   "the definition disclosed. Use this instead of raw SQL for an ungoverned measure "
+                   "(a retention/cohort calculation, a custom ratio).",
+    "input_schema": {"type": "object", "properties": {
+        "measure": {"type": "string",
+                    "description": "The measure to define and compute, in the question's own words "
+                                   "(e.g. '90-day retention by acquisition channel')."}},
+        "required": ["measure"]},
+}
+
 _CHECK_COVERAGE = {
     "name": "check_coverage",
     "description": "Check whether data coverage exists for a period, optionally for one region "
@@ -392,6 +406,28 @@ def _check_metric_exists(tb, args) -> ToolResult:
     return ToolResult(_verdict(*tb.semantic.metric_exists(args["term"])))
 
 
+def _define_measure(tb, args) -> ToolResult:
+    """Author + verify + compute a definition for an ungoverned measure (agent/define.py). Returns the
+    computed value with its definition disclosed, an uninstrumented refusal, or a could-not-define —
+    the agent then serves the value (stating the definition) or refuses."""
+    ont, model = getattr(tb, "ontology", None), getattr(tb, "model", None)
+    if ont is None or model is None:
+        return ToolResult("UNKNOWN — define_measure is unavailable in this configuration.")
+    from .define import define_measure
+    d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic)
+    if d.outcome == "refuse":
+        return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")
+    if d.outcome == "gave_up":
+        return ToolResult(f"COULD NOT DEFINE — {d.disclosure} Consider `clarify` or `refuse`.")
+    val = d.value if d.value is not None else f"{len(d.rows)} rows: {list(d.rows)[:8]}"
+    msg = f"COMPUTED (tier={d.tier}). value = {val}\nDEFINITION: {d.disclosure}"
+    if d.aptness and d.aptness != "apt":
+        msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note} — disclose this alternative reading, "
+                f"or `clarify` if it changes the answer.")
+    msg += "\nServe this via `answer`, STATING the definition; the number rests on it."
+    return ToolResult(msg)
+
+
 def _check_answerability(tb, args) -> ToolResult:
     """Ground a measure against the closed-world marts graph and return the THREE-WAY verdict with the
     reason code it implies — concise and definitive, not the raw graph.
@@ -546,6 +582,7 @@ TOOLS: dict[str, Tool] = {t.name: t for t in [
     Tool(_QUERY_METRIC, _query_metric),
     Tool(_CHECK_METRIC, _check_metric_exists),
     Tool(_CHECK_ANSWERABILITY, _check_answerability),
+    Tool(_DEFINE_MEASURE, _define_measure),
     Tool(_CHECK_COVERAGE, _check_coverage),
     Tool(_CHECK_SEGMENT, _check_segment_defined),
     Tool(_CHECK_CAUSAL, _check_causal_evidence),
