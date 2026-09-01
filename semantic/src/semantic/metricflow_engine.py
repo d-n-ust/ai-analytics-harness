@@ -647,6 +647,18 @@ class MetricFlowLayer:
                      f"no governed metric named {term!r}; available: "
                      + ", ".join(sorted(self.metrics)))
 
+    def is_change_metric(self, name: str) -> bool:
+        """True if `name` is a period-over-period CHANGE metric — a derived metric one of whose input
+        metrics carries a time offset (active_users_growth). Its value is a SIGNED delta, so its sign
+        IS the direction: positive rose, negative fell. This lets a direction be read from the metric
+        the layer already governs, rather than reconstructed from a hand-built before/after pair."""
+        m = next((x for x in self._manifest.metrics if x.name == name), None)
+        if m is None or not str(getattr(m, "type", "")).upper().endswith("DERIVED"):
+            return False
+        params = getattr(m, "type_params", None)
+        inputs = (getattr(params, "metrics", None) or []) if params else []
+        return any(getattr(im, "offset_window", None) is not None for im in inputs)
+
     # -- coverage: what period this layer actually holds ---------------------- #
     #
     # WHY THIS EXISTS. `E_enforced` answered both out-of-coverage questions wrong, three times each,

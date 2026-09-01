@@ -38,6 +38,7 @@ def prompt_fingerprint() -> str:
                         _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True),
                         _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
                         _RESOLVE_SYSTEM, _RESOLVE_USER, json.dumps(_RESOLVE_REPORT, sort_keys=True),
+                        _PRESUP_SYSTEM, _PRESUP_USER, json.dumps(_PRESUP_REPORT, sort_keys=True),
                         _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
@@ -646,3 +647,53 @@ def answer_discloses_definition(model, question: str, answer: str) -> bool:
         if call.name == "report_disclosure":
             return bool(call.args.get("disclosed", True))
     return True
+
+
+# --- presupposed direction: a loaded question's own directional CLAIM ---------------------------- #
+#
+# A question can PRESUPPOSE a trend rather than ask about one: "by how much did active users fall?"
+# takes the fall for granted. The failure this catches is confirming that trend when the data
+# contradicts it — served neutrally ("50") or as the false direction ("50 fewer"). The model reads
+# the presupposition (a language judgement); `direction_vs_evidence` verifies it against the SIGN of
+# the governed change, which is the fact. This is the trigger the DECLARED direction could not be: a
+# bare number declares no direction and so dodges a declared-direction check.
+_PRESUP_SYSTEM = (
+    "You read an analytics question and decide whether it PRESUPPOSES that some measure went UP or "
+    "DOWN over time — a directional change it takes for granted rather than asks about.\n\n"
+    "'By how much did active users fall?' presupposes a FALL. 'Why did revenue drop last quarter?' "
+    "presupposes a DROP. 'How much did signups grow?' presupposes a RISE. In contrast, 'Did active "
+    "users grow?' ASKS (no presupposition); 'How many active users last week?' has no direction; "
+    "'What was the change in active users?' asks for a signed change without presupposing its sign.\n\n"
+    "Report the presupposed direction — rose or fell — only when the question clearly takes it for "
+    "granted. When it merely asks, or has no direction, report none.")
+_PRESUP_USER = ("Question: {question}\n\n"
+                "Does this question presuppose that a measure ROSE or FELL?")
+_PRESUP_REPORT = {
+    "name": "report_presupposition",
+    "description": "Report the directional change the question takes for granted, if any.",
+    "input_schema": {"type": "object", "properties": {
+        "direction": {"type": "string", "enum": ["rose", "fell", "none"],
+                      "description": "The trend the question PRESUPPOSES (takes for granted), or none "
+                                     "if it merely asks or has no direction."}},
+        "required": ["direction"]},
+}
+
+
+def question_presupposes_direction(model, question: str) -> str:
+    """'rose' | 'fell' | '' — the trend the question takes for granted (NOT what it asks about).
+
+    The model does the language judgement; the caller (direction_vs_evidence) verifies it against the
+    governed change's sign and acts only on a contradiction. Defaults to '' on any error or on 'none',
+    so a false-premise correction needs a CLEAR presupposition — an honest directional question ('did
+    it grow?') is never treated as a loaded one."""
+    user = _PRESUP_USER.format(question=question)
+    try:
+        turn = model.respond(Conversation.opening(_PRESUP_SYSTEM, user), [_PRESUP_REPORT],
+                             force_tool="report_presupposition", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return ""
+    for call in turn.tool_calls:
+        if call.name == "report_presupposition":
+            d = str(call.args.get("direction") or "none").strip().lower()
+            return d if d in ("rose", "fell") else ""
+    return ""

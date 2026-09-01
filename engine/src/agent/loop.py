@@ -527,55 +527,96 @@ class _Run:
             f"segment truly cannot be isolated.", is_error=True)
 
     def direction_vs_evidence(self, exit_call):
-        """Hand back an answer whose declared DIRECTION contradicts the values its OWN queries
-        returned — read from the governed calls, not from what the model declares in the answer.
+        """Hand back an answer that treats a measure as rising or falling in a direction the run's
+        OWN governed calls contradict — the false-premise defect on the answer path.
 
-        The false-premise defect on the answer path: "active users fell last week — by how much?"
-        answered "fell" while the model's two queries returned 836 (prev_week) then 886 (last_week)
-        — a rise. Checking the direction against the model's SELF-DECLARED levels does not hold: an
-        anchored model, told 836->886 is a rise, keeps "fell" by FLIPPING the levels it declares
-        (value_before=886, value_after=836). The label ordering is the model's to fabricate.
+        "Active users fell last week — by how much?" presupposes a fall; the data show a rise (a
+        governed `active_users_growth` of +50, or `active_users` 836 then 886). Two things are read
+        from evidence the model cannot flip, and that is the whole design:
 
-        The evidence binding it cannot fabricate is which QUERY returned which value: it asked
-        `active_users` for prev_week and got 836, for last_week and got 886, and those bindings sit
-        in the trace (`_governed_calls`), each value recomputed deterministically by `value_of`.
-        Ordering the two by their period and comparing the values gives the true direction, which
-        the model cannot flip because it did not author the query->period binding. This is the R7
-        transparency guarantee — a measurement written from the evidence — obtained at R3 by
-        reading the run's own governed calls rather than rendering them.
+        - the TRUE direction (`_true_direction`): the query->period binding of a before/after pair,
+          or a governed change metric's own signed value. The model authored neither.
+        - the direction the answer COMMITS to: its declared `direction` field when set, else the
+          direction the QUESTION presupposes (`classify.question_presupposes_direction`). Keying only
+          on the declared field is dodgeable — a bare "50" declares nothing yet still confirms the
+          loaded premise — so a presupposed direction is read when the field is neutral.
 
-        Scoped tight: fires only when the model committed to rose/fell AND its calls include a
-        metric queried at two orderable time windows with the same non-time arguments (a genuine
-        before/after of the same thing). A grouped or single-window answer is untouched.
+        Fires only when the committed/presupposed direction CONTRADICTS the evidence. An honest
+        directional question whose premise holds ("did it grow?", and it did) is untouched, and a run
+        with no before/after and no change metric yields no evidence and is left alone. The correct
+        response is the true direction stated from the evidence, or `refuse false_premise`; the
+        grader accepts both.
         """
         g = self.grounding.guardrails
         if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
             return None
-        direction = str(exit_call.args.get("direction") or "").strip().lower()
-        if direction not in ("rose", "fell"):
-            return None
         semantic = self.grounding.semantic
         if semantic is None:
             return None
-        pair = self._before_after_from_calls(semantic)
-        if pair is None:
+        ev = self._true_direction(semantic)
+        if ev is None:
             return None
-        metric, v0, v1 = pair
-        actual = "rose" if v1 > v0 else "fell" if v1 < v0 else "unchanged"
-        if direction == actual:
+        metric, actual, evidence, short = ev
+        if actual == "unchanged":
+            return None
+        declared = str(exit_call.args.get("direction") or "").strip().lower()
+        claimed = declared if declared in ("rose", "fell") else \
+            _classify.question_presupposes_direction(self.model, self.question)
+        if claimed not in ("rose", "fell") or claimed == actual:
             return None
         self.repairs.append({"direction_vs_evidence":
-                             {"said": direction, "earlier": v0, "later": v1, "metric": metric}})
+                             {"claimed": claimed, "actual": actual, "metric": metric}})
         self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
-                             f"direction={direction} but {metric} {v0}->{v1} is {actual}; "
+                             f"claimed {claimed} but {short} is {actual}; "
                              f"correction {self.claim_retries} of 2").as_dict())
         return ToolResult(
-            f"Your answer was not accepted: you declared direction={direction!r}, but the values "
-            f"YOUR OWN queries returned for {metric} are {round(v0, 4)} for the earlier window then "
-            f"{round(v1, 4)} for the later one — that is {actual!r}, not {direction!r}. This is "
-            f"read from your query_metric calls, not from how the question was phrased: the "
-            f"question presumed the wrong direction. Re-answer with {actual!r}, and state it "
-            f"plainly in the text.", is_error=True)
+            f"Your answer was not accepted: it treats {metric} as having {claimed!r}, but {evidence} "
+            f"— that is {actual!r}, not {claimed!r}. This is read from your query_metric calls, not "
+            f"from how the question was phrased: the question presumed the wrong direction. Answer "
+            f"that it {actual} and by how much, or `refuse` with reason `false_premise`.",
+            is_error=True)
+
+    def _true_direction(self, semantic):
+        """(metric, actual, evidence_phrase, short) — the direction the run's own governed calls
+        establish, or None when there is no before/after pair and no change metric to read. `actual`
+        is 'rose' / 'fell' / 'unchanged'. Two bindings the model cannot flip: a two-window pair, or a
+        governed change metric's signed value."""
+        pair = self._before_after_from_calls(semantic)
+        if pair is not None:
+            metric, v0, v1 = pair
+            actual = "rose" if v1 > v0 else "fell" if v1 < v0 else "unchanged"
+            return (metric, actual,
+                    f"the values YOUR OWN queries returned for {metric} are {round(v0, 4)} for the "
+                    f"earlier window then {round(v1, 4)} for the later one", f"{metric} {v0}->{v1}")
+        change = self._change_from_calls(semantic)
+        if change is not None:
+            metric, delta = change
+            actual = "rose" if delta > 0 else "fell" if delta < 0 else "unchanged"
+            return (metric, actual,
+                    f"the governed change metric {metric} YOUR OWN query returned is {round(delta, 4)} "
+                    f"(positive is a rise, negative a fall)", f"{metric}={delta}")
+        return None
+
+    def _change_from_calls(self, semantic):
+        """A governed CHANGE metric this run queried, and its signed scalar value, or None.
+
+        A period-over-period change metric (a derived metric with a time offset) returns a delta
+        whose SIGN is the direction — the model cannot flip it, it is the governed metric's own
+        value. Complements `_before_after_from_calls`: that reads a hand-built two-window pair, this
+        reads a single derived-offset metric such as `active_users_growth`. Scalar only: a change
+        grouped into several rows is a set of directions, not one, and is left alone."""
+        is_change = getattr(semantic, "is_change_metric", None)
+        if is_change is None:
+            return None
+        for metric, args in self._governed_calls():
+            if not is_change(metric):
+                continue
+            values = before.value_of(semantic, args, metric)
+            if isinstance(values, dict) and len(values) == 1:
+                (v,) = values.values()
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    return metric, v
+        return None
 
     def _before_after_from_calls(self, semantic):
         """The earlier and later value of one metric this run queried at two time windows, or None.
