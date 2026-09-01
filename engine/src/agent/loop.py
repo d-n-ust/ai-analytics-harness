@@ -83,6 +83,19 @@ def _reported(served: list, value: float) -> bool:
     return any(abs(n - value) <= 0.005 * abs(value) for n in served)
 
 
+# The binary compositions a derived value can be: two governed-metric readings mapped to one. A
+# contest in either input propagates THROUGH the composition, and `_composition_contest` recovers
+# which op was used by matching the served figure to op(x, y). Op-agnostic on purpose — the same
+# propagation rule covers a ratio (spend_per_signup), a difference (a hand-computed change), and any
+# other binary combination, so the mechanism is not ratio-specific.
+_COMPOSE = {
+    "ratio":      lambda a, b: (a / b) if b else None,
+    "difference": lambda a, b: a - b,
+    "sum":        lambda a, b: a + b,
+    "product":    lambda a, b: a * b,
+}
+
+
 
 def _leaf(name) -> str:
     """The last segment of a dimension name: `activity__platform` and `platform` are one thing."""
@@ -907,7 +920,28 @@ class _Run:
                     missing.append((metric, rival, mine, theirs,
                                     {k: differences[k] for k in absent}))
         if not missing:
-            return None
+            # The flat check watches the RAW metric figures; a served RATIO reports the composed
+            # value, not the raw numerator, so a contest that passes THROUGH the ratio slips it. The
+            # composition check recomputes the ratio with a contested input's rival substituted and
+            # requires both READINGS when they diverge (§41; the spend_per_signup case).
+            rc = self._composition_contest(served)
+            if rc is None:
+                return None
+            base_m, rival, op, reading, alt = rc
+            if g.scope_classifier and self._request_chose([(base_m, rival)]):
+                return None
+            self.repairs.append({"undisclosed_composition": {"op": op, "base": base_m,
+                                                            "rival": rival.name,
+                                                            "reading": reading, "alt": alt}})
+            self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",
+                                 f"{op} reading {reading} via {base_m}, but {rival.name} gives {alt}; "
+                                 f"correction {self.claim_retries} of 2").as_dict())
+            return ToolResult(
+                f"Your answer reports one reading of a CONTESTED derived value (a {op}). It is built "
+                f"on {base_m}, which has a governed rival {rival.name} "
+                f"({rival.discriminator or 'a different scope'}), and the value differs by which one "
+                f"you use: {reading} with {base_m}, {alt} with {rival.name}. Give BOTH figures and "
+                f"what separates them, or `clarify` which was meant.", is_error=True)
         if g.scope_classifier and self._request_chose(missing):
             return None
         self.repairs.append({"undisclosed": [r.name for _m, r, *_ in missing]})
@@ -924,6 +958,66 @@ class _Run:
                              f"{sum(len(a) for *_, a in missing)} contested figure(s) omitted; "
                              f"correction {self.claim_retries} of 2").as_dict())
         return ToolResult("\n".join(lines), is_error=True)
+
+    def _composition_contest(self, served):
+        """A served figure that is a COMPOSITION op(x, y) of two governed-metric readings inherits
+        its inputs' contests — the contest the flat rival check misses, because the COMPOSED value is
+        served, not the raw metric. General over the binary ops a derived value uses (`_COMPOSE`:
+        ratio, difference, sum, product), not ratio-specific.
+
+        Deterministic and composition-recovering: the INPUTS are the run's governed calls, and which
+        op composed them is recovered by matching the served figure to op(x, y) — no model call. For
+        each contested input (either side), recompute the composition with the rival substituted;
+        return (base_metric, rival, op, this_reading, alt_reading) for the first reading that
+        materially diverges (a distinct value by the 0.5% slack `_reported` uses) and is NOT already
+        disclosed, or None.
+
+        A GOVERNED derived metric served as a single call (active_users_growth) is the same shape once
+        expanded through its `type_params` into op(x, y) over its input metrics — the extension point.
+        It does not surface for the current layer because a constant base contest cancels in the
+        offset difference (§41 prototype)."""
+        sem = self.grounding.semantic
+        if getattr(sem, "clusters", None) is None:
+            return None
+
+        def scal(v):
+            if isinstance(v, dict) and len(v) == 1:
+                (x,) = v.values()
+                return x if isinstance(x, (int, float)) and not isinstance(x, bool) else None
+            return None
+
+        def rivals(metric):
+            try:
+                return sem.clusters.competitors(metric)
+            except Exception:                                               # noqa: BLE001
+                return ()
+
+        calls = self._governed_calls()
+        for i in range(len(calls)):
+            for j in range(len(calls)):
+                if i == j:
+                    continue
+                (xm, xa), (ym, ya) = calls[i], calls[j]
+                xv, yv = scal(before.value_of(sem, xa, xm)), scal(before.value_of(sem, ya, ym))
+                if xv is None or yv is None:
+                    continue
+                for opname, op in _COMPOSE.items():
+                    base = op(xv, yv)
+                    if base is None or not _reported(served, base):
+                        continue                              # the served figure is not this op(x,y)
+                    # A contest in EITHER input propagates; recompute op with that input's rival.
+                    for base_m, base_args, with_rival in (
+                            (xm, xa, lambda rv: op(rv, yv)), (ym, ya, lambda rv: op(xv, rv))):
+                        for rival in rivals(base_m):
+                            rv = scal(before.value_of(sem, base_args, rival.name))
+                            if rv is None:
+                                continue
+                            alt = with_rival(rv)
+                            if alt is None:
+                                continue
+                            if not _reported([base], alt) and not _reported(served, alt):
+                                return base_m, rival, opname, round(base, 4), round(alt, 4)
+        return None
 
     def _request_chose(self, missing) -> bool:
         """Did the question itself already pick a reading? One focused model call, cached per run.

@@ -1836,3 +1836,53 @@ durable, attributable win is the three dropped-segment cases at 3/3 and the clea
 limit: the hand-back supplies the exact value (compliance is now trivial — state it, no re-query),
 which steers hard but is not absolute; the absolute form is value SUBSTITUTION, which overrides the
 answer text and was judged too heavy for the gain.
+
+## 42 · Contest propagation through a derived metric: disclose every reading, op-agnostic
+
+A DERIVED value inherits its inputs' contests. If `D = op(x, y)` and an input has a governed rival
+(a SCOPE_TRAP in the cluster index — same measure, different scope), then `D` has two governed
+readings, `op(x, y)` and `op(rival, y)`, and the divergence PASSES THROUGH the composition. The flat
+rival check (`undisclosed_rival`) watches the RAW metric figure, so a served COMPOSITION slips it —
+`spend_per_signup` served 50.45 (marketing_spend / new_signups) and mentioned both raw totals, so the
+flat check saw "both disclosed" while the reader got only one of the two RATIOS (50.44 vs 43.69).
+
+THE GENERAL MECHANISM (`_composition_contest`), not ratio-specific. A served figure that equals
+`op(x, y)` for two governed calls, for any op in a small registry (`ratio, difference, sum, product`),
+inherits x's and y's contests. Which op composed the inputs is RECOVERED by matching the served
+value to `op(x, y)` — a deterministic lookup over the run's governed calls, no model call. For each
+contested input, recompute the composition with the rival substituted; require both READINGS when
+they materially diverge and one is undisclosed.
+
+| step | tool | note |
+|------|------|------|
+| the inputs `x, y` | trace | the run's governed calls (a fact) |
+| the op | deterministic recovery | the served value matches exactly one `op(x, y)` |
+| which input is contested | deterministic | cluster-index `competitors` |
+| the alternate reading | deterministic | recompute `op` with the rival's value |
+| disclose both / clarify | protocol steer + deterministic verify | both composed figures in the served text |
+
+The generality is the point: the SAME rule covers a ratio (`spend_per_signup`) and a difference (a
+hand-computed change), verified — served 50.45 -> flags ratio 50.44 vs 43.69; served 60019
+(61233-1214) -> flags difference 60019 vs 51828; served both -> nothing owed.
+
+THE PROTOTYPE'S KEY FINDING, and why the check must be on the COMPOSED reading, not the input. A
+ratio PROPAGATES the numerator contest (marketing_spend 61233 vs acquisition_spend 53042 -> 50.44 vs
+43.69, 13.4%). A difference CANCELS a constant base contest: `active_users_growth = active_users(t) -
+active_users(t-1)` with the internal/test offset constant week to week gives the SAME +50 whether the
+base is `active_users` or `active_accounts` -> no divergence, nothing to disclose. A naive "an input
+is contested -> flag" rule would wrongly flag the growth; recomputing the composed readings gets both
+right.
+
+A GOVERNED derived metric served as a single call (`active_users_growth`) is the same shape once
+expanded through its `type_params` into `op(x, y)` over its input metrics — the extension point. It
+does not surface for the current layer (the offset cancels), so the fired path is the hand-composed
+one.
+
+RESULT (rep-3, 46-question held-out suite, R3 cell). `spend_per_signup_q2` went 2/3 -> 3/3, the
+disclosure now firing on the ratio's numerator contest; silent fell 3 -> 1, the lowest of the
+campaign. HONEST CAVEATS: at the noise floor, most of that fall is the silent cases shuffling — the
+attributable win is `spend_per_signup` and the op-agnostic mechanism. The run also showed 2
+`max_iterations` errors and one new silent (`active_users_growth`), both ORTHOGONAL: the errors are
+`mrr_q2_starts` (the campaign's flakiest cohort case) over-exploring under the answerability gate, no
+composition-repair fired; the new silent is a garbled growth computation. The composition check fired
+only where intended.
