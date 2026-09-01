@@ -186,6 +186,9 @@ class Answer:
     candidates: tuple = ()
     source_metric: SkipValidation[str | None] = None  # answer only: the governed metric the value came from
     declared_value: float | None = None  # answer only: the served number (None = prose)
+    # answer only: the typed direction slot (rose/fell/unchanged/not_a_change). Persisted so the
+    # false-premise grader scores this TYPED outcome instead of keyword-scanning prose for a rebuttal.
+    direction: SkipValidation[str | None] = None
     # The handle(s) of the governed result(s) the answer reports. A list because a comparison
     # has two operands. Stored rows written before this was plural carry `source_result`, a
     # single string; readers of archived runs accept both, the way DECOMPOSE_TOOLS does.

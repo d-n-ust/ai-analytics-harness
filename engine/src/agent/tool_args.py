@@ -70,6 +70,10 @@ class AnswerArgs(_ExitArgs):
     value: Any = None             # the served number, or prose — loop._as_number decides
     sources: Any = None           # result handle(s) — declared_handles extracts them
     claims: Any = None            # list of raw claim dicts — fed to the audit verbatim
+    # The typed direction slot (answer_spec): rose/fell/unchanged/not_a_change. Kept raw — a model
+    # may send garbage — and persisted so the grader can score the SLOT (a typed outcome) rather
+    # than keyword-scan the prose for a rebuttal.
+    direction: Any = None
 
     @field_validator("answer", "explanation", mode="before")
     @classmethod

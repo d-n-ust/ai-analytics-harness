@@ -95,6 +95,17 @@ TRANSPARENT_PROTOCOL = (
     "reason `uninstrumented`. Never serve a computed figure for a non-governed measure without its "
     "definition.")
 
+# Paired with `answer_spec` (which adds the typed `direction` slot). The steer that makes a loaded
+# question USEFUL rather than merely correct: a bare refuse of a false premise is defensible but
+# unhelpful — the useful reply corrects it AND gives the number.
+FALSE_PREMISE_POLICY = (
+    "USEFULNESS ON A FALSE PREMISE: if a question presumes a trend your data contradict — it asks "
+    "'by how much did X fall' and X actually rose — do NOT refuse. A refuse is correct but not "
+    "useful. ANSWER, correcting the premise: state the true direction and the governed change value "
+    "(e.g. 'active users did not fall last week; they rose by 50'), and set the typed `direction` to "
+    "what YOUR OWN numbers show, not what the question presumed. Refuse `false_premise` only when the "
+    "true value genuinely cannot be recovered.")
+
 
 def scoped_cursor(con):
     """The handle the agent's tools get: search_path is the MARTS schema alone. `_source`, `_star`
@@ -258,6 +269,8 @@ def main() -> None:
                                      + "\n\n" + ONTOLOGY_SCHEMA_EXPLANATION)
             if getattr(grounding.guardrails, "transparent_compute", False):
                 grounding.system += "\n\n" + TRANSPARENT_PROTOCOL
+            if getattr(grounding.guardrails, "answer_spec", False):
+                grounding.system += "\n\n" + FALSE_PREMISE_POLICY
             with print_lock:
                 if not shown:
                     shown.add(True)
@@ -305,6 +318,9 @@ def main() -> None:
                           # that made a laundered clarify look reason-less until it was stored.
                           "candidates": list(getattr(answer, "candidates", ()) or ()),
                           "source_metric": answer.source_metric,
+                          # The typed direction slot, so direction_vs_evidence's effect is
+                          # inspectable in the stored row (the grader reads it off the Answer).
+                          "direction": getattr(answer, "direction", None),
                           "tool_calls": len(answer.steps),
                           "tool_errors": sum(1 for s in answer.steps if s.get("error")),
                           "handbacks": len(answer.repairs),

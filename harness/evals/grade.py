@@ -302,8 +302,15 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         # that fabricated a causal story for a decline that never happened was not distinguishable
         # from the four that rebutted correctly. The contradiction is decidable from the case's own
         # word list, so it is decided here rather than deferred to a model that is not called.
-        correct = grade_keywords(f"{answer.answer or ''} {answer.explanation or ''}",
-                                 expect["rebuttal"])["correct"]
+        # Score the TYPED `direction` slot first (a structured outcome), then fall back to prose. An
+        # answer that set direction=rose has rebutted the "fell" premise whatever words it chose, so
+        # a bare "+50" with the right typed direction is not a silent error — scoring only the prose
+        # penalised phrasing over judgement. The prose scan stays for arms that offer no typed slot.
+        _RISE = {"rose", "grew", "grown", "increase", "increased", "higher", "up", "climbed", "gained"}
+        true_dir = "rose" if any(str(w).lower() in _RISE for w in expect["rebuttal"]) else "fell"
+        typed = str(getattr(answer, "direction", "") or "").strip().lower()
+        correct = (typed == true_dir) or grade_keywords(
+            f"{answer.answer or ''} {answer.explanation or ''}", expect["rebuttal"])["correct"]
         # Accepting a false premise and explaining it is the worst outcome the pile can produce:
         # a confident, fully reasoned account of an event that did not occur. It counts as a silent
         # error, which is what `confident_wrong` feeds.

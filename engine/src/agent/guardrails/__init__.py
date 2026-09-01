@@ -306,7 +306,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("graph_answerability", Position.REPAIR,
               "answerability_gate decides existence by traversing the closed-world marts graph "
               "(the model decomposes, the graph verifies) instead of judging it from the schema text",
-              ("guardrails/classify.py", "loop.py", "ontology"), in_ladder=False),
+              ("loop.py",), in_ladder=False),
     # The agent grounds answerability against the marts graph UPFRONT rather than only being corrected
     # after: check_answerability returns the complete closed-world graph plus the reason code each
     # verdict implies (computable -> no_governed_definition, not uninstrumented), in place of the
@@ -315,7 +315,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("graph_grounding", Position.ACTION_SPACE,
               "offers check_answerability (three-way answerability from the marts graph, with the "
               "reason code it implies) in place of the name-match check_metric_exists",
-              ("guardrails/action_space.py", "tools.py", "ontology"), in_ladder=False),
+              ("guardrails/action_space.py",), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against

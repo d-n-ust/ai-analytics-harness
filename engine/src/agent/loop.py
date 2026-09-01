@@ -536,16 +536,15 @@ class _Run:
 
         - the TRUE direction (`_true_direction`): the query->period binding of a before/after pair,
           or a governed change metric's own signed value. The model authored neither.
-        - the direction the answer COMMITS to: its declared `direction` field when set, else the
-          direction the QUESTION presupposes (`classify.question_presupposes_direction`). Keying only
-          on the declared field is dodgeable — a bare "50" declares nothing yet still confirms the
-          loaded premise — so a presupposed direction is read when the field is neutral.
+        - the direction the answer COMMITS to: its TYPED `direction` slot, which answer_spec requires
+          (rose/fell/unchanged/not_a_change). The claim is read from a field the model must fill, not
+          reverse-engineered from the question, so there is no neutral phrasing to dodge with.
 
-        Fires only when the committed/presupposed direction CONTRADICTS the evidence. An honest
-        directional question whose premise holds ("did it grow?", and it did) is untouched, and a run
-        with no before/after and no change metric yields no evidence and is left alone. The correct
-        response is the true direction stated from the evidence, or `refuse false_premise`; the
-        grader accepts both.
+        Fires only when that typed direction CONTRADICTS the evidence. An honest directional question
+        whose premise holds ("did it grow?", and it did) is untouched; a `not_a_change`/level answer
+        makes no directional claim; a run with no before/after and no change metric yields no evidence
+        and is left alone. The USEFUL response is the corrected ANSWER (true direction + amount) — a
+        refuse is reserved for when the value cannot be recovered.
         """
         g = self.grounding.guardrails
         if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
@@ -560,20 +559,23 @@ class _Run:
         if actual == "unchanged":
             return None
         declared = str(exit_call.args.get("direction") or "").strip().lower()
-        claimed = declared if declared in ("rose", "fell") else \
-            _classify.question_presupposes_direction(self.model, self.question)
-        if claimed not in ("rose", "fell") or claimed == actual:
+        # The claim is read from the TYPED `direction` slot answer_spec requires — a field the model
+        # must fill, so there is no neutral phrasing to dodge with and nothing to reverse-engineer
+        # from the question. Only a directional claim can contradict the evidence; `not_a_change` and
+        # a level answer make none and are left alone.
+        if declared not in ("rose", "fell", "unchanged") or declared == actual:
             return None
         self.repairs.append({"direction_vs_evidence":
-                             {"claimed": claimed, "actual": actual, "metric": metric}})
+                             {"claimed": declared, "actual": actual, "metric": metric}})
         self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
-                             f"claimed {claimed} but {short} is {actual}; "
+                             f"claimed {declared} but {short} is {actual}; "
                              f"correction {self.claim_retries} of 2").as_dict())
         return ToolResult(
-            f"Your answer was not accepted: it treats {metric} as having {claimed!r}, but {evidence} "
-            f"— that is {actual!r}, not {claimed!r}. This is read from your query_metric calls, not "
-            f"from how the question was phrased: the question presumed the wrong direction. Answer "
-            f"that it {actual} and by how much, or `refuse` with reason `false_premise`.",
+            f"Your answer was not accepted: its `direction` says {declared!r}, but {evidence} — that "
+            f"is {actual!r}. Read from your query_metric calls, not the question's phrasing: the "
+            f"question presumed the wrong direction. Answer the USEFUL correction — set "
+            f"direction={actual!r} and state plainly that {metric} {actual} by that amount. Do not "
+            f"refuse a change you can quantify; a refuse is only for a value you cannot recover.",
             is_error=True)
 
     def _true_direction(self, semantic):
@@ -1078,8 +1080,9 @@ class _Run:
         if not verdict.allowed:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
                                 reason=verdict.reason, missing=verdict.missing, abstained=True,
-                                refused_by=verdict.guardrail, iterations=iterations, **claims)
-        return self._record(answer=text, explanation=parsed.explanation,
+                                refused_by=verdict.guardrail, direction=parsed.direction,
+                                iterations=iterations, **claims)
+        return self._record(answer=text, explanation=parsed.explanation, direction=parsed.direction,
                             outcome="answer", iterations=iterations, **claims)
 
     # -- the two ways a run ends without an exit call ----------------------- #

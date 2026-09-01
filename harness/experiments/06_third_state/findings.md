@@ -1711,3 +1711,72 @@ as the agent's GROUNDING SURFACE — not a judgement the model makes per questio
 correction after it has already gone the wrong way. The graph earns its place on the boundary that
 actually decides the case: for retention, that was the refusal reason, reached by consulting the
 graph first.
+
+## 40 · The false directional premise: usefulness over formality, by the right tool at each layer
+
+A loaded question presupposes a trend — "active users fell last week, by how much?" — and the data
+contradict it: `active_users_growth` for last week is +50, a RISE. Three responses grade correct,
+and they are not equally useful.
+
+| response | correct? | useful? |
+|----------|----------|---------|
+| refuse `false_premise` | yes | LEAST — declines to say what happened |
+| answer "50" (neutral) | no — reads as "50 fell" | misleading |
+| answer "active users did not fall — they rose by 50" | yes | THE useful one: corrects AND informs |
+
+An analyst that refuses a question it can answer, on a technicality, is one leadership stops asking.
+So the target is the third response: correct the premise and give the number. A false premise whose
+truth is GOVERNED is a correct-AND-answer case, not a refuse; the refuse is reserved for a premise
+whose truth cannot be recovered.
+
+THE ALLOCATION IS THE FINDING. Each sub-decision goes to the tool whose strength it is, and the
+anti-pattern is using one tool to recover what another should simply provide.
+
+| sub-decision | tool | why |
+|--------------|------|-----|
+| does the question presuppose a direction | — | NOT NEEDED: the typed slot forces the model to commit, so there is nothing to reverse-engineer |
+| what direction did the answer commit to | protocol | the TYPED `direction` slot answer_spec requires (rose/fell/unchanged/not_a_change) — a field the model must fill, no neutral phrasing to hedge with |
+| the true direction | deterministic | the SIGN of the governed change metric (`active_users_growth` = +50 -> rose); the model cannot flip a governed value |
+| is the premise false | deterministic | typed direction vs the sign |
+| what to do about it | protocol | a fixed governance line steered into the prompt: correct-and-answer, do not refuse a change you can quantify |
+| phrase the correction | LLM | its one superpower here — language |
+| score it | grader reads the TYPED slot | a typed outcome, not a keyword scan of prose |
+
+A first cut broke this rule and was reverted: it added an LLM classifier to detect the question's
+presupposition, and the grader keyword-scanned the prose for "rose". Both are the wrong tool — the
+classifier is language-work standing in for a typed slot the protocol already requires, and the
+keyword grader is a deterministic matcher aimed at prose. The typed `direction` slot makes the
+classifier redundant, and scoring the slot makes the prose scan redundant. Deleting an LLM call and
+a prose-match, not adding them, was the clean move.
+
+THE ARC, and why the gate had to change.
+
+| arm | active_users_fell | dir-gate fired | what happened |
+|-----|-------------------|----------------|---------------|
+| baseline | 2/3 | 2 | the gate read a before/after PAIR (active_users at two windows) — the agent subtracted two queries |
+| + graph_grounding | 0/3 | 0 | REGRESSION: the agent adopted the governed change metric `active_users_growth` (a single signed delta, no pair), which the pair-only gate could not read — so the false "fell" stood |
+| + the fix | 3/3, all ANSWERED | 2 | the gate also reads a governed change metric's SIGN (`is_change_metric` + `_change_from_calls`); the false premise is caught and steered to the useful answer |
+
+The regression is the instructive part: making the semantic layer better (a governed
+period-over-period metric, §38) MOVED the agent off the pattern its guardrail knew, and blinded the
+guardrail. The fix is not a new check but the same check reading the new, better evidence — the
+metric's own sign. `active_users_growth = +50` encodes direction (sign) and magnitude (|value|)
+together; the useful answer is that signed value read back, not a bare magnitude.
+
+MECHANISM. `direction_vs_evidence` (answer_spec) reads the typed `direction` and the true direction
+(`_true_direction`: a before/after pair OR a governed change metric's sign). On a contradiction it
+hands the answer back steering to the CORRECTION ("set direction=rose, state it rose by 50; do not
+refuse a change you can quantify"), bounded by MAX_CORRECTIONS. The typed `direction` slot is
+persisted on the Answer and the row; the false-premise grader scores that slot, falling back to the
+prose only for an arm that offers no slot. `FALSE_PREMISE_POLICY` (paired with answer_spec) carries
+the correct-and-answer steer into the prompt.
+
+RESULT (rep-3, 46-question held-out suite, R3 cell). `active_users_fell` went 0/3 -> 3/3, every rep
+the useful ANSWER (outcome=answer, direction=rose, +50), the gate firing on 2 of 3 to enforce it.
+
+HONEST CAVEAT. The headline totals (correct 131/138, silent 3) sit at baseline level, within the
+rep-3 noise floor (§32): the remaining silents (`active_users_growth_web`, `gross_mrr_ytd_stated`,
+`mrr_q2_starts_agree`) are governed ANSWER cases with definitional/scope variance, none directional,
+none touched by this fix, and they shuffle run to run. The durable, attributable claim is narrow and
+real: the false directional premise now lands reliably on the useful answer, gate-enforced, and the
+mechanism divides cleanly across LLM / deterministic / protocol with no fragile prose-matching.
