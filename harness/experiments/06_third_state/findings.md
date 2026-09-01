@@ -1629,3 +1629,85 @@ one call. A measurement taken through a rate-limited run measures the limiter, n
 SAMPLE DISCIPLINE. The remaining silent errors are one or two flaky reps on 2/3 cases, at the noise
 floor for rep-3 (§32). They are not a headline; the durable claim is the 13-to-3 reduction and the
 classes closed, not the last rep.
+
+## 39 · The marts ontology as the grounding surface: answerability by traversal, consulted upfront
+
+§36–38 decided answerability with a per-question MODEL JUDGEMENT over the governed ontology text plus
+the data-schema text — and the schema text carried hand-written absences ("no screen taxonomy", "no
+duration"), an enumerated complement the model read to decide existence. §39 makes answerability a
+property of a closed-world GRAPH the model CONSULTS, decided by traversal, not judged each time.
+
+THE GRAPH. A new workspace package `ai-analytics-ontology` builds `MartsOntology` — a complete,
+closed-world graph of the marts, generated from the MetricFlow manifest (entities, grain, measures,
+relationships) plus `information_schema` (attributes). Closure is a STANCE, not a list: the graph
+states everything the warehouse captures and asserts completeness once, so absence is DERIVED (a
+concept not in the graph does not exist), never enumerated. `verify()` decides EXISTENCE and
+JOINABILITY deterministically. Hybrid completeness closes the coverage gap safely: every marts table
+becomes an entity so the present is complete, but relationships come only from the manifest, so an
+unmodeled table is an ISLAND — its columns exist as nodes, but it cannot be joined until a join is
+curated. An incomplete graph therefore only ever UNDER-claims a join; it never invents one.
+
+THE SEAM, UNCHANGED IN PRINCIPLE. The model does semantic fit (decompose the measure into ingredient
+nodes); the graph verifies existence. The one brittleness found and fixed: `verify` matched the raw
+ingredient string, so `user.signup_date (the signup date)` — a parenthetical the model added — read
+as absent and false-refused a real node. Existence is a property of the REFERENCE, so the token is
+extracted before the lookup. This is the same lesson as §38's removed lexical anchor check: the
+mechanism verifies existence, never surface form.
+
+THREE BOUNDARIES, ONE GRAPH. The graph verdict is applied wherever the instrumented/computable/
+uninstrumented distinction is asserted, not only once:
+
+| boundary | position | what it does |
+|----------|----------|--------------|
+| the gate | REPAIR | a SERVED run_sql number is routed by the graph verdict (`graph_answerability`) |
+| the refusal reason | REPAIR | a refusal claiming `uninstrumented` that the graph proves COMPUTABLE is corrected to `no_governed_definition` |
+| the grounding surface | ACTION_SPACE | `check_answerability` lets the agent consult the graph UPFRONT, replacing the name-match `check_metric_exists` (`graph_grounding`) |
+
+RETENTION, FIXED AT THE SOURCE. Retention has no governed metric but IS computable (signup cohort
+joined to activity). The failure had MOVED since §37: the agent no longer serves an invented
+retention number — it REFUSES — but with the wrong reason, `uninstrumented` ("not captured") when the
+gold is `no_governed_definition` ("captured, no governed metric"). The cause: `check_metric_exists`
+answers only "is there a governed metric NAMED this", which conflates "computable but ungoverned"
+with "not captured", so the agent guessed and scattered across `uninstrumented` / `other` /
+`underspecified`. The backstop corrected only the `uninstrumented` branch, and inconsistently.
+
+The fix was to move the graph UPFRONT. `check_answerability(measure)` returns the three-way verdict
+with the reason code it implies — "COMPUTABLE: no governed metric, data IS captured -> refuse
+`no_governed_definition`". A first cut returned the whole graph render for the model to read; the
+agent over-explored (list_metrics, run_sql, describe_table) and ran out of turns as ERROR rows. A
+CONCISE, deterministic verdict (the graph decides; the agent does not re-read the graph) took
+retention to 8/8 in isolation at 1.0 tool calls per run, and 0/3 -> 3/3 in-suite.
+
+THE A/B (rep-3, 46-question held-out suite, R3 cell).
+
+| arm | correct | silent | error rows | retention |
+|-----|---------|--------|-----------|-----------|
+| baseline (no graph) | 123/138 | 3 | 1 | 0/3 |
+| + `graph_answerability` (gate reads graph) | 123/138 | 4 | 2 | 0/3 |
+| + `graph_grounding` (consult upfront) | 125/138 | 4 | 0 | 3/3 |
+
+Upfront grounding fixed retention, removed the error rows, lifted `correct` by two, and left the
+answerability axis clean: all NINE genuinely-uninstrumented cases stayed 3/3 (the tool returned
+`UNINSTRUMENTED`, the agent refused `uninstrumented`), and `check_answerability` returned correct
+verdicts throughout.
+
+HONEST CAVEATS.
+
+THE HEADLINE SILENT COUNT DID NOT DROP (4 vs baseline 3, within the rep-3 noise floor of §32).
+Retention is a REFUSE case, so its fix shows in `correct` (+2), not in the silent-number metric,
+which counts served figures. The graph closes EXISTENCE and REASON errors, not the failure classes
+the silent metric is dominated by.
+
+THE REMAINING SILENT ERRORS ARE ORTHOGONAL TO ANSWERABILITY. `active_users_fell` (×3, the dominant
+source in every arm) is a FALSE-PREMISE + DIRECTION error: the question asserts active users fell;
+they rose by 50; the agent queries the governed `active_users_growth`, reads +50, and reports "50
+fewer" — accepting the false premise and inverting the direction. `check_answerability` is never
+called (the measure is governed). `seo_signups_q1` (×1) is a SEGMENT-DROP flake: the tool correctly
+said GOVERNED, the agent then queried `new_signups` without the channel filter (3987 vs 125). Neither
+is an answerability problem; they belong to premise-checking and segment robustness respectively.
+
+THE PRINCIPLE. Answerability is a property of a closed-world graph, decided by traversal and consulted
+as the agent's GROUNDING SURFACE — not a judgement the model makes per question, and not a late
+correction after it has already gone the wrong way. The graph earns its place on the boundary that
+actually decides the case: for retention, that was the refusal reason, reached by consulting the
+graph first.
