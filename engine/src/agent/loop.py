@@ -930,6 +930,12 @@ class _Run:
             base_m, rival, op, reading, alt = rc
             if g.scope_classifier and self._request_chose([(base_m, rival)]):
                 return None
+            note = (f"a {op} using {rival.name} ({rival.discriminator or 'a different scope'}) instead "
+                    f"of {base_m} gives {alt} (vs {reading})")
+            if getattr(g, "construct_disclosure", False):
+                return self._construct_disclosure(exit_call, [note],
+                                                  {"undisclosed_composition": {"op": op, "base": base_m,
+                                                   "rival": rival.name, "reading": reading, "alt": alt}})
             self.repairs.append({"undisclosed_composition": {"op": op, "base": base_m,
                                                             "rival": rival.name,
                                                             "reading": reading, "alt": alt}})
@@ -944,6 +950,12 @@ class _Run:
                 f"what separates them, or `clarify` which was meant.", is_error=True)
         if g.scope_classifier and self._request_chose(missing):
             return None
+        if getattr(g, "construct_disclosure", False):
+            notes = [f"{rival.name} ({rival.discriminator or 'a different scope'}) = "
+                     f"{round(theirs[key], 4)} (vs {round(mine[key], 4)})"
+                     for _metric, rival, mine, theirs, absent in missing for key in absent]
+            return self._construct_disclosure(exit_call, notes,
+                                              {"undisclosed": [r.name for _m, r, *_ in missing]})
         self.repairs.append({"undisclosed": [r.name for _m, r, *_ in missing]})
         lines = ["Your answer was not accepted: it reports one of two governed readings of the "
                  "question and does not give the reader the other one."]
@@ -1017,6 +1029,21 @@ class _Run:
                                 continue
                             if not _reported([base], alt) and not _reported(served, alt):
                                 return base_m, rival, opname, round(base, 4), round(alt, 4)
+        return None
+
+    def _construct_disclosure(self, exit_call, notes, repair):
+        """CONSTRUCT the missing rival reading(s) into the answer, and serve — rather than hand back
+        and rely on the agent to re-serve both. The mechanism has already computed the rival values
+        (value_of); it appends them to the answer's explanation so both readings reach the reader by
+        construction. The same move as applied_segment (§41) and contest propagation (§42): the
+        mechanism supplies the fact it detected, not the agent. Returns None (the augmented answer
+        serves)."""
+        note = "Both governed readings: " + "; ".join(notes) + "."
+        prior = str(exit_call.args.get("explanation") or "").strip()
+        exit_call.args["explanation"] = (prior + "  " + note).strip()
+        self.repairs.append({**repair, "constructed": True})
+        self.acts.append(Act("disclosure_check", str(Position.REPAIR), "constructed",
+                             f"appended the omitted governed reading(s): {'; '.join(notes)}").as_dict())
         return None
 
     def _request_chose(self, missing) -> bool:

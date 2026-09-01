@@ -323,7 +323,16 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("spec_authoring", Position.ACTION_SPACE,
               "offers define_measure, which authors a verified, disclosed definition (metric / "
               "derived / query / raw dbt model) for an ungoverned measure instead of raw SQL",
-              ("guardrails/action_space.py", "define.py"), in_ladder=False),
+              ("guardrails/action_space.py",), in_ladder=False),
+    # Turns the contested-disclosure gate from hand-back into CONSTRUCT: when a served figure omits a
+    # materially-divergent governed rival the question did not resolve, the mechanism computes the
+    # rival reading (value_of) and appends it to the served answer, rather than handing back and
+    # relying on the agent to re-serve both. Verification-as-construction — the both-readings answer
+    # no longer depends on the agent complying (§43; the active_users_organic case).
+    Guardrail("construct_disclosure", Position.REPAIR,
+              "the contested-disclosure gate CONSTRUCTS the missing rival reading into the answer "
+              "(mechanism computes it) instead of handing back for the agent to re-serve",
+              ("loop.py",), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -429,6 +438,7 @@ class GuardrailSet:
     graph_answerability: bool = False
     graph_grounding: bool = False
     spec_authoring: bool = False
+    construct_disclosure: bool = False
     ambiguity_check: bool = False
     scope_declaration: bool = False
     ambiguity_disclosure: bool = False
