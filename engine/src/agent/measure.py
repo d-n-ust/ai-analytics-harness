@@ -40,6 +40,16 @@ def _norm(text: str) -> str:
     return " ".join(str(text or "").split()).lower()
 
 
+def _dim_node(dimension: str, source: str) -> str:
+    """The `entity.column` node a filter dimension refers to. `user__channel` names the user entity
+    (-> user.channel); a bare `channel` belongs to the query's source entity (-> source.channel)."""
+    d = str(dimension).strip()
+    if "__" in d:
+        entity, col = d.split("__", 1)
+        return f"{entity}.{col}"
+    return f"{source}.{d}"
+
+
 @dataclass(frozen=True)
 class Scope:
     """What the question asks for, as the components an answer must cover. Authored by the model from
@@ -131,6 +141,48 @@ def addressed_qualifiers(spec: Spec) -> set:
     for sub in spec.inputs:
         out |= addressed_qualifiers(sub)
     return out
+
+
+def ground(spec: Spec, ontology) -> tuple:
+    """PURE. Is the spec grounded in the closed-world marts graph — does every part EXIST and JOIN?
+    Returns (verdict, detail) with verdict in {'instrumented', 'computable', 'uninstrumented', 'raw'}.
+
+    The spec's kind maps to a decomposition the graph decides, delegating to `ontology.verify`
+    (duck-typed: anything with the MartsOntology `verify(kind, metric, ingredients)` surface, so this
+    module needs no import of the ontology package):
+
+      metric  -> verify('governed', metric=…)         a governed metric must be a node.
+      query   -> verify('computable', ingredients=…)  source.measure and each filter dimension must be
+                 nodes that join — the same existence+joinability check retention rests on.
+      derived -> every input grounds (recursively); the derived value exists iff its parts do.
+      raw     -> ('raw', …): bespoke SQL the graph cannot decompose, grounded by DISCLOSURE and the
+                 adversary rather than by the closed world. Named honestly, not forced to a verdict.
+
+    This is the grounding half of the spec's verification; execution (does it run) and aptness (is it
+    the right definition) are separate phases. `uninstrumented` means the spec names something the
+    warehouse does not capture — refuse, do not compute."""
+    if spec.kind == "metric":
+        return ontology.verify("governed", metric=spec.metric)
+    if spec.kind == "query":
+        # A filter dimension names its OWN entity (`user__channel` -> user.channel); a bare name
+        # belongs to the source. Getting this wrong sends the join check to the wrong entity.
+        ingredients = [f"{spec.source}.{spec.measure}"] + \
+                      [_dim_node(d, spec.source) for d, _v in spec.filters]
+        return ontology.verify("computable", ingredients=ingredients)
+    if spec.kind == "derived":
+        if not spec.inputs:
+            return "uninstrumented", "derived spec has no inputs"
+        for sub in spec.inputs:
+            verdict, detail = ground(sub, ontology)
+            if verdict == "uninstrumented":
+                return "uninstrumented", f"input not grounded: {detail}"
+        # every input grounds; the strongest joint verdict is `computable` unless all are governed.
+        joint = "instrumented" if all(ground(s, ontology)[0] == "instrumented"
+                                      for s in spec.inputs) else "computable"
+        return joint, f"derived {spec.op} over {len(spec.inputs)} grounded inputs"
+    if spec.kind == "raw":
+        return "raw", "bespoke SQL, grounded by disclosure rather than the graph"
+    return "uninstrumented", f"unknown spec kind {spec.kind!r}"
 
 
 def bind_scope(scope: Scope, spec: Spec) -> tuple:

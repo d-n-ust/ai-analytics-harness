@@ -12,7 +12,26 @@ here; this module only owns completeness.
 """
 from __future__ import annotations
 
-from agent.measure import Scope, Spec, applied_segments, bind_scope, periods
+from agent.measure import Scope, Spec, applied_segments, bind_scope, ground, periods
+from ontology.graph import MartsOntology
+
+# A closed-world graph built PURELY (no DB) — user⋈activity are related, spend is an island. Enough
+# to exercise grounding: a governed metric, computable ingredients that join, and an unjoinable pair.
+_SOURCE = {
+    "entities": {
+        "user": {"table": "dim_users", "measures": (), "relationships": ()},
+        "activity": {"table": "fct_user_days", "measures": ("value_moments",),
+                     "relationships": [("user", "user_id")]},
+        "spend": {"table": "fct_marketing_spend", "measures": ("spend",), "relationships": ()},
+    },
+    "metrics": {"active_users": "distinct active accounts", "new_signups": "accounts created"},
+}
+_COLUMNS = {
+    "dim_users": ("user_id", "signup_date", "channel"),
+    "fct_user_days": ("user_id", "active_date", "value_moments"),
+    "fct_marketing_spend": ("channel", "spend_date", "spend"),
+}
+_ONT = MartsOntology.from_source(_SOURCE, _COLUMNS)
 
 
 # ── constructors + the uniform surface ────────────────────────────────────────────────────────
@@ -135,6 +154,63 @@ def test_empty_scope_binds_against_anything():
     bind, whatever the spec is — the check never invents a requirement the question did not state."""
     assert bind_scope(Scope(measure="active users"), Spec.metric("active_users")) == ()
     assert bind_scope(Scope(), Spec.raw(sql="select 1", definition="x")) == ()
+
+
+# ── ground: the spec against the closed-world graph ─────────────────────────────────────────────
+def test_ground_metric_spec():
+    """A governed metric spec grounds as instrumented; a metric the graph lacks is uninstrumented —
+    a spec cannot claim a metric the warehouse does not define."""
+    assert ground(Spec.metric("active_users"), _ONT)[0] == "instrumented"
+    assert ground(Spec.metric("retention"), _ONT)[0] == "uninstrumented"
+
+
+def test_ground_query_spec_computable_when_parts_exist_and_join():
+    """An ad-hoc query over a real measure of a real entity grounds as computable — the same
+    existence+join check retention rests on."""
+    spec = Spec.query(source="activity", measure="value_moments", agg="sum",
+                      filters=[("user__channel", "organic")])
+    assert ground(spec, _ONT)[0] == "computable"
+
+
+def test_ground_query_spec_uninstrumented_when_a_part_is_absent():
+    """A query naming a column the graph does not hold is uninstrumented, not computable — the spec
+    is refused rather than believed."""
+    spec = Spec.query(source="activity", measure="duration", agg="sum")   # no such column
+    assert ground(spec, _ONT)[0] == "uninstrumented"
+
+
+def test_ground_query_spec_uninstrumented_when_entities_do_not_join():
+    """A query whose filter dimension lives on an entity that cannot be joined to the source is
+    uninstrumented — the joinability guard a node-only check would miss."""
+    spec = Spec.query(source="spend", measure="spend", agg="sum",
+                      filters=[("user__channel", "organic")])   # spend is an island; user won't join
+    assert ground(spec, _ONT)[0] == "uninstrumented"
+
+
+def test_ground_derived_spec_instrumented_when_all_inputs_governed():
+    """A ratio of two governed metrics is itself instrumented — the derived value grounds iff its
+    parts do, and both parts here are governed."""
+    ratio = Spec.derived("ratio", inputs=[Spec.metric("active_users"), Spec.metric("new_signups")])
+    assert ground(ratio, _ONT)[0] == "instrumented"
+
+
+def test_ground_derived_spec_fails_when_an_input_is_ungrounded():
+    """One ungrounded input makes the whole derived value uninstrumented — a composition cannot be
+    stronger than its weakest part."""
+    ratio = Spec.derived("ratio", inputs=[Spec.metric("active_users"), Spec.metric("no_such_metric")])
+    assert ground(ratio, _ONT)[0] == "uninstrumented"
+
+
+def test_ground_derived_spec_with_no_inputs_is_uninstrumented():
+    """A derived spec with nothing to combine grounds to nothing — a malformed spec is refused, not
+    silently passed."""
+    assert ground(Spec.derived("ratio", inputs=[]), _ONT)[0] == "uninstrumented"
+
+
+def test_ground_raw_spec_is_raw():
+    """Bespoke SQL the graph cannot decompose is named `raw` — grounded by disclosure and the
+    adversary, not forced to a graph verdict it cannot earn."""
+    assert ground(Spec.raw(sql="select 1", definition="x"), _ONT)[0] == "raw"
 
 
 if __name__ == "__main__":
