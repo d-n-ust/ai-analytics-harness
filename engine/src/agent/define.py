@@ -22,6 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .conversation import Conversation
+from .guardrails import classify as _classify
 from .measure import Scope, Spec, bind_scope, coherent, ground
 from .measure_exec import run_ephemeral
 
@@ -124,6 +125,8 @@ class Defined:
     reason: str = ""
     tries: int = 0
     error: str = ""
+    aptness: str = ""              # the adversary's verdict on an ad-hoc spec: apt | contested | wrong
+    aptness_note: str = ""         # the alternative reading or defect it named, when not apt
 
 
 # A "segment" whose value is one of these is a breakdown or a non-restriction, not a real filter —
@@ -210,7 +213,8 @@ def _author(model, question: str, ontology_render: str, wh_context: str, feedbac
     return call.args if call else {}
 
 
-def define_measure(model, question: str, ontology, engine, max_tries: int = 2) -> Defined:
+def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
+                   challenge: bool = True) -> Defined:
     """Author a definition for the question's measure, verify it deterministically, compute, disclose.
     The one model call authors {scope, spec}; the deterministic pipeline decides the rest, handing back
     a specific failure for the model to fix, bounded by max_tries."""
@@ -244,8 +248,22 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2) -
             continue
 
         tier = {"instrumented": "governed", "computable": "computed", "raw": "raw"}.get(verdict, "computed")
-        return Defined("answer", scope, spec, verdict=verdict, tier=tier, value=res.value,
-                       rows=res.rows, tries=attempt, disclosure=_disclose(scope, spec, res, tier))
+        d = Defined("answer", scope, spec, verdict=verdict, tier=tier, value=res.value,
+                    rows=res.rows, tries=attempt, disclosure=_disclose(scope, spec, res, tier))
+
+        # APTNESS (the adversary). A governed metric is authoritative for its concept — skip it; an
+        # AD-HOC spec (derived/query/raw) is where the definition could be the wrong one, so an
+        # independent reviewer challenges it. Validated as a discriminator, not yet a hard gate: a
+        # not-apt verdict is DISCLOSED (the reader sees the alternative), not silently served and not
+        # refused, which is the safe use of a judge validated on a small set.
+        if challenge and spec.kind != "metric":
+            defn = res.definition + (f"\nSQL:\n{spec.sql}" if spec.kind == "raw" else "")
+            apt = _classify.challenge_aptness(model, question, defn)
+            d.aptness, d.aptness_note = apt["verdict"], (apt.get("alternative") or apt.get("why") or "")
+            if apt["verdict"] != "apt":
+                d.disclosure += (f"  NOTE ({apt['verdict']}): a competent analyst might read this "
+                                 f"differently — {d.aptness_note}")
+        return d
 
     return Defined("gave_up", scope, spec, tries=max_tries, error=feedback,
                    disclosure=f"could not author a valid definition for {scope.measure!r}: {feedback}")

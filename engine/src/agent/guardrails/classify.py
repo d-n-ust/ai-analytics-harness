@@ -38,7 +38,8 @@ def prompt_fingerprint() -> str:
                         _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True),
                         _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
                         _RESOLVE_SYSTEM, _RESOLVE_USER, json.dumps(_RESOLVE_REPORT, sort_keys=True),
-                        _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True)])
+                        _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True),
+                        _APT_SYSTEM, _APT_USER, json.dumps(_APT_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -647,3 +648,68 @@ def answer_discloses_definition(model, question: str, answer: str) -> bool:
             return bool(call.args.get("disclosed", True))
     return True
 
+
+
+# --- adversarial APTNESS challenge: is this DEFINITION the right one for the question? ------------ #
+#
+# The residual the deterministic pipeline cannot reach. Grounding proves the spec EXISTS and joins,
+# coherence that it is a valid definition, bind_scope that it covers every component the question
+# named, execution that it runs. None of those judge whether the definition MEANS what the question
+# asked — retention "within 90 days" vs "at day 90", cost per signup on marketing_spend vs
+# acquisition_spend. Aptness is the selection error nl-to-sql names, and it is challengeable where a
+# number is not: give an INDEPENDENT reviewer the DEFINITION (not the figure) and ask it to REFUTE.
+#
+# This is a JUDGE. Per the architecture it is VALIDATED against held-out human aptness labels before
+# it gates, and it critiques the artifact, never re-derives the answer. Default 'apt' on error, so a
+# judgement that did not arrive does not block a served answer.
+_APT_SYSTEM = (
+    "You review an analytics DEFINITION for a DEFECT — a way it does not answer the question as "
+    "asked. You are given a QUESTION and the DEFINITION an analyst used. Judge the definition against "
+    "the question's meaning; never compute or re-derive a number.\n\n"
+    "DEFAULT TO 'apt'. Most definitions are fine. Flag a problem ONLY when a competent analyst would "
+    "call it a real mistake, not merely one of several phrasings. A pedantic or strained "
+    "reinterpretation of a clearly-worded term is NOT a defect. A GOVERNED metric is AUTHORITATIVE "
+    "for its own concept — do not refute it by inventing a different population or aggregation unless "
+    "the QUESTION explicitly demands one the metric does not provide.\n\n"
+    "Report one verdict:\n"
+    "- apt: the definition faithfully answers the question. This is the common case.\n"
+    "- wrong: a real DEFECT — the wrong population for what the question asks (counting internal "
+    "accounts when it means customers), a missing or incorrect time window (no 90-day bound on '90-"
+    "day retention'), a proxy measuring a different quantity, or the wrong grain. Name the defect.\n"
+    "- contested: ONLY when TWO NAMED governed metrics genuinely both fit the question and differ "
+    "materially, and the definition silently picked one. Rare — most single-reading definitions are "
+    "apt, not contested.\n\n"
+    "Name a defect concretely or return apt. A doubt you cannot name is not a defect.")
+_APT_USER = ("QUESTION: {question}\n\nDEFINITION the analyst used:\n{definition}\n\n"
+             "Refute it if you can: is there a materially different, defensible reading this "
+             "definition misses?")
+_APT_REPORT = {
+    "name": "report_aptness",
+    "description": "Adversarial verdict on whether the definition matches the question.",
+    "input_schema": {"type": "object", "properties": {
+        "verdict": {"type": "string", "enum": ["apt", "contested", "wrong"]},
+        "alternative": {"type": "string", "description": "The material alternative reading (contested) "
+                        "or the defect (wrong). Empty when apt."},
+        "why": {"type": "string", "description": "One line: why it differs materially."}},
+        "required": ["verdict"]},
+}
+
+
+def challenge_aptness(model, question: str, definition: str) -> dict:
+    """{verdict, alternative, why} — an independent adversary's judgement of whether the DEFINITION is
+    the right one for the question. Prompted to refute; critiques the definition, not the number.
+    Defaults to apt on any error (a judgement that did not arrive must not block a served answer)."""
+    user = _APT_USER.format(question=question, definition=definition or "(no definition)")
+    try:
+        turn = model.respond(Conversation.opening(_APT_SYSTEM, user), [_APT_REPORT],
+                             force_tool="report_aptness", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return {"verdict": "apt", "alternative": "", "why": "(challenger error)"}
+    for call in turn.tool_calls:
+        if call.name == "report_aptness":
+            v = str(call.args.get("verdict") or "apt").strip().lower()
+            if v not in ("apt", "contested", "wrong"):
+                v = "apt"
+            return {"verdict": v, "alternative": str(call.args.get("alternative") or "").strip(),
+                    "why": str(call.args.get("why") or "").strip()}
+    return {"verdict": "apt", "alternative": "", "why": ""}
