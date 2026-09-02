@@ -497,6 +497,16 @@ def _check_answerability(tb, args) -> ToolResult:
                           "Answer with it (apply any segment or period as a filter).")
     if v["verdict"] == "computable":
         basis = v.get("basis") or "attributes and measures the graph captures"
+        # ROUTE to define_measure when it is offered: a computable measure needs a DEFINITION, and
+        # authoring one (grounded, executed by construction, aptness-challenged, disclosed) is more
+        # reliable than hand-rolling run_sql — which is how a computable measure came to be served as
+        # a raw metric total. The deterministic verdict steers the agent to the authoring tool.
+        if getattr(tb.g, "spec_authoring", False) and getattr(tb, "model", None) is not None:
+            return ToolResult(
+                f"COMPUTABLE — {measure!r} has NO governed metric, but the data IS captured ({basis}). "
+                f"Call define_measure(measure={measure!r}) to author a VERIFIED definition and compute "
+                f"it — do NOT hand-roll run_sql and do NOT serve a raw metric total. If it still "
+                f"cannot be defined, `refuse` with reason `no_governed_definition`.")
         return ToolResult(f"COMPUTABLE — {measure!r} has NO governed metric, but the data IS captured "
                           f"({basis}). There is no governed definition. Under strict governance, "
                           "`refuse` with reason `no_governed_definition` — NOT `uninstrumented` (the "
