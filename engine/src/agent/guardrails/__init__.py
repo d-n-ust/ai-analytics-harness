@@ -20,6 +20,7 @@ ablation cell are both just a set, so every cell is expressible and self-describ
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, fields, replace
 from enum import StrEnum
 
@@ -29,7 +30,7 @@ from enum import StrEnum
 from pydantic.dataclasses import dataclass as validated_dataclass
 
 __all__ = ["ALL_GUARDRAILS", "DECOMPOSE_TOOLS", "GOVERNED_TOOLS", "GUARDRAILS", "LADDER",
-           "LADDER_ORDER",
+           "LADDER_ORDER", "NAMED_CELLS",
            "GuardrailSet", "Position", "Verdict", "incoherent", "parse_cell"]
 
 # The tree-decomposition tool, current name first. `explain_change` was renamed because "explain"
@@ -494,11 +495,26 @@ _LAYER_INDEPENDENT = frozenset({"abstain", "clarify", "typed_clarify",
 # semantic layer genuinely cannot run it.
 
 
+# Named configurations, so the current-best cell is ONE version-controlled constant instead of a
+# ~15-flag string reconstructed on every run (where a dropped flag is a silent treatment change).
+# A named cell is a base you can still ablate: `current_best`, `current_best+spec_authoring`,
+# `current_best-answer_spec`. When the standard configuration changes, it changes HERE, and the
+# runner and the findings both reference the name.
+NAMED_CELLS = {
+    "current_best": (
+        "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary"
+        "+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate"
+        "+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure"),
+}
+
+
 def parse_cell(spec: str) -> GuardrailSet:
     """Parse an ablation-cell name into a GuardrailSet:
       'R9'                      -> the full preset;
       'R9-resolve'              -> R9 minus member resolution ('R9-resolve-coverage_check' minus both);
       'R3+typed_clarify'        -> R3 plus one guardrail the ladder does not switch on;
+      'current_best'            -> a NAMED_CELLS preset (the standard configuration), ablatable as
+                                   'current_best+spec_authoring' / 'current_best-answer_spec';
       'coverage_check+governed_numbers+...'  -> exactly those on (an explicit set, for Shapley cells).
     Used by the runner's --cells.
 
@@ -518,6 +534,13 @@ def parse_cell(spec: str) -> GuardrailSet:
         return name
 
     head = spec.split("+")[0].split("-")[0]
+    if head in NAMED_CELLS:
+        # Expand the named base, then apply any +add / -remove modifiers as field toggles, so a named
+        # cell composes with the ablation syntax exactly like a preset does.
+        base = parse_cell(NAMED_CELLS[head])
+        toggles = {known(name): (sign == "+")
+                   for sign, name in re.findall(r"([+-])([A-Za-z_]+)", spec[len(head):])}
+        return replace(base, **toggles) if toggles else base
     is_preset = head.startswith("R") and head[1:].isdigit() and int(head[1:]) in LADDER
     if not is_preset:                                    # explicit set of ON guardrails
         names = [known(n) for n in spec.split("+")]

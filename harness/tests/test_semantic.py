@@ -1368,3 +1368,17 @@ def test_a_refusal_names_the_failure_it_found_not_the_one_it_knows():
                              run_governed_numbers=True, run_output_validation=False,
                              served_answer="prose")
     assert not composed.allowed and "composed from different metrics" in composed.detail
+
+
+def test_named_cells_are_a_single_source_of_truth():
+    """The standard configuration is a NAMED constant, not a 15-flag string retyped per run where a
+    dropped flag is a silent treatment change. A named cell expands to its set and still ablates."""
+    from agent.guardrails import NAMED_CELLS, parse_cell, incoherent
+
+    cb = parse_cell("current_best")
+    assert cb == parse_cell(NAMED_CELLS["current_best"])          # the name IS the string
+    assert incoherent(cb, rung=3) is None                         # and it is a coherent configuration
+    # composes with the ablation syntax like a preset
+    assert parse_cell("current_best+spec_authoring").spec_authoring
+    assert not parse_cell("current_best-answer_spec").answer_spec
+    assert parse_cell("current_best-answer_spec").construct_disclosure   # other flags untouched
