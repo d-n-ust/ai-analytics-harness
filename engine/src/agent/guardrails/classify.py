@@ -27,20 +27,42 @@ import json
 from ..conversation import Conversation
 
 
+# Every classifier's behaviour-defining surface, registered AT DECLARATION (each classifier calls
+# `_register` beside its function), so the fingerprint can never silently miss one — the
+# hand-maintained list this replaces did exactly that once.
+SURFACES: list = []
+
+
+def _register(system: str, user: str, report: dict) -> None:
+    SURFACES.append((system, user, report))
+
+
+def _ask(model, system: str, user: str, report: dict):
+    """One judgement's TRANSPORT, shared by every classifier in this module: open a fresh
+    conversation, force the report tool at temperature 0, return the report's args — or None on a
+    provider error or a turn that emitted no report. The caller owns the default and the
+    verification; this owns nothing but the wire. Nine hand-rolled copies of this scaffold lived
+    here before; a classifier that bypasses it also bypasses the registry, so the shared transport
+    is what makes "nothing forgotten" enforceable."""
+    try:
+        turn = model.respond(Conversation.opening(system, user), [report],
+                             force_tool=report["name"], temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return None
+    for call in turn.tool_calls:
+        if call.name == report["name"]:
+            return call.args
+    return None
+
+
 def prompt_fingerprint() -> str:
     """A short, stable hash of every behaviour-defining surface in this module — system prompts,
-    user templates, and the whole report schemas. It changes iff a classifier's spec changes, so a
-    stored row can be flagged stale. Deliberately NOT shared with judge.py: rewording a classifier
-    must not invalidate a verifier result, or the other way round."""
-    surface = "|".join([_SCOPE_SYSTEM, _SCOPE_USER, json.dumps(_SCOPE_REPORT, sort_keys=True),
-                        _MEASURE_SYSTEM, _MEASURE_USER, json.dumps(_MEASURE_REPORT, sort_keys=True),
-                        _SEGMENT_SYSTEM, _SEGMENT_USER, json.dumps(_SEGMENT_REPORT, sort_keys=True),
-                        _GROUND_SYSTEM, _GROUND_USER, json.dumps(_GROUND_REPORT, sort_keys=True),
-                        _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
-                        _RESOLVE_SYSTEM, _RESOLVE_USER, json.dumps(_RESOLVE_REPORT, sort_keys=True),
-                        _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True),
-                        _APT_SYSTEM, _APT_USER, json.dumps(_APT_REPORT, sort_keys=True),
-                        _TEXT_DIR_SYSTEM, _TEXT_DIR_USER, json.dumps(_TEXT_DIR_REPORT, sort_keys=True)])
+    user templates, and the whole report schemas — iterated from the registry in declaration
+    order. It changes iff a classifier's spec changes, so a stored row can be flagged stale.
+    Deliberately NOT shared with judge.py: rewording a classifier must not invalidate a verifier
+    result, or the other way round."""
+    surface = "|".join(x for s, u, r in SURFACES
+                       for x in (s, u, json.dumps(r, sort_keys=True)))
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -131,6 +153,9 @@ def _quoted_from(question: str, quote: str) -> bool:
     return qw <= 0.8 * ww
 
 
+_register(_SCOPE_SYSTEM, _SCOPE_USER, _SCOPE_REPORT)
+
+
 def question_chose_scope(model, question: str, mine: str, mine_desc: str,
                          theirs: str, theirs_desc: str, discriminator: str) -> tuple:
     """(chose, which, quote) — did the request pick one of two governed readings, and WHICH?
@@ -147,64 +172,16 @@ def question_chose_scope(model, question: str, mine: str, mine_desc: str,
     user = _SCOPE_USER.format(question=question, mine=mine, mine_desc=mine_desc or "(no description)",
                               theirs=theirs, theirs_desc=theirs_desc or "(no description)",
                               discriminator=discriminator or "their scope")
-    try:
-        turn = model.respond(Conversation.opening(_SCOPE_SYSTEM, user), [_SCOPE_REPORT],
-                             force_tool="report_scope", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _SCOPE_SYSTEM, user, _SCOPE_REPORT)
+    if args is None:
         return False, "", ""
-    for call in turn.tool_calls:
-        if call.name == "report_scope":
-            quote = str(call.args.get("quote") or "").strip()
-            chose = str(call.args.get("chose")).strip().lower() == "yes"
-            side = str(call.args.get("which") or "").strip().lower()
-            which = {"first": mine, "second": theirs}.get(side, "")
-            if chose and not _quoted_from(question, quote):
-                return False, "", f"unverified quote {quote!r}"
-            return chose, which, quote
-    return False, "", ""
-
-
-# --- direction assertion: does the served TEXT claim the measure rose or fell? ----------------- #
-#
-# The typed `direction` slot is a self-report, and the frozen suite dodged the direction gate with
-# it (`not_a_change` declared, a drop asserted in prose). Reading prose is language — the model's
-# job — so this classifier does only that one reading; whether the asserted direction contradicts
-# the evidence stays deterministic in the gate. Defaults to `none` on anything unexpected, so a
-# missing judgement never blocks an answer.
-_TEXT_DIR_SYSTEM = (
-    "You read the text of an analytics answer and report ONE thing: does the text ASSERT that the "
-    "measure rose, or that it fell?\n\n"
-    "Report `rose` or `fell` only for an explicit claim about the direction of change — 'fell by "
-    "2,000', 'a drop of 15%', 'grew from 100 to 150', 'the decline is concentrated in EMEA'. A "
-    "level with no change claim, a comparison the text refuses to make, or a text that says the "
-    "premise is wrong, is `none`.")
-
-_TEXT_DIR_USER = "Answer text:\n{text}\n\nDoes this text assert a direction of change?"
-
-_TEXT_DIR_REPORT = {
-    "name": "report_text_direction",
-    "description": "Report whether the answer text asserts a direction of change.",
-    "input_schema": {
-        "type": "object",
-        "properties": {"asserts": {"type": "string", "enum": ["rose", "fell", "none"]}},
-        "required": ["asserts"],
-    },
-}
-
-
-def text_asserts_direction(model, text: str) -> str:
-    """'rose' | 'fell' | 'none' — the direction the served text itself claims."""
-    try:
-        turn = model.respond(Conversation.opening(_TEXT_DIR_SYSTEM,
-                                                  _TEXT_DIR_USER.format(text=text[:2000])),
-                             [_TEXT_DIR_REPORT], force_tool="report_text_direction", temperature=0)
-    except Exception:                                                       # noqa: BLE001
-        return "none"
-    for call in turn.tool_calls:
-        if call.name == "report_text_direction":
-            v = str(call.args.get("asserts") or "").strip().lower()
-            return v if v in ("rose", "fell") else "none"
-    return "none"
+    quote = str(args.get("quote") or "").strip()
+    chose = str(args.get("chose")).strip().lower() == "yes"
+    side = str(args.get("which") or "").strip().lower()
+    which = {"first": mine, "second": theirs}.get(side, "")
+    if chose and not _quoted_from(question, quote):
+        return False, "", f"unverified quote {quote!r}"
+    return chose, which, quote
 
 
 # --- measure check (the `grounded_measure` guardrail): did the served number measure the -------- #
@@ -261,6 +238,9 @@ _MEASURE_REPORT = {
 }
 
 
+_register(_MEASURE_SYSTEM, _MEASURE_USER, _MEASURE_REPORT)
+
+
 def answer_measures_asked(model, question: str, answer: str) -> tuple:
     """(verdict, asked, served) — did the served number measure the quantity the question asked
     for, a proxy for it, or something the data does not capture?
@@ -271,20 +251,15 @@ def answer_measures_asked(model, question: str, answer: str) -> tuple:
     judgement, the mechanism decides whether to believe it, and the safe default is to serve.
     """
     user = _MEASURE_USER.format(question=question, answer=answer or "(no text)")
-    try:
-        turn = model.respond(Conversation.opening(_MEASURE_SYSTEM, user), [_MEASURE_REPORT],
-                             force_tool="report_measure", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _MEASURE_SYSTEM, user, _MEASURE_REPORT)
+    if args is None:
         return "measures", "", ""
-    for call in turn.tool_calls:
-        if call.name == "report_measure":
-            verdict = str(call.args.get("verdict") or "measures").strip().lower()
-            asked = str(call.args.get("asked") or "").strip()
-            served = str(call.args.get("served") or "").strip()
-            if verdict in ("proxy", "unmeasured") and not _quoted_from(question, asked):
-                return "measures", "", served       # unverified claim of substitution -> serve
-            return verdict, asked, served
-    return "measures", "", ""
+    verdict = str(args.get("verdict") or "measures").strip().lower()
+    asked = str(args.get("asked") or "").strip()
+    served = str(args.get("served") or "").strip()
+    if verdict in ("proxy", "unmeasured") and not _quoted_from(question, asked):
+        return "measures", "", served               # unverified claim of substitution -> serve
+    return verdict, asked, served
 
 
 # --- `metric_brief` self-check (segment slot): does the question name a governed segment the ----- #
@@ -352,6 +327,9 @@ _SEGMENT_REPORT = {
 }
 
 
+_register(_SEGMENT_SYSTEM, _SEGMENT_USER, _SEGMENT_REPORT)
+
+
 def segment_named(model, question: str, vocab: dict) -> tuple:
     """(restricts, phrase, dimension, value) for the segment the question restricts to.
 
@@ -371,20 +349,13 @@ def segment_named(model, question: str, vocab: dict) -> tuple:
         return False, "", "", ""
     listing = "\n".join(f"  {d}: {', '.join(vals)}" for d, vals in sorted(vocab.items()))
     user = _SEGMENT_USER.format(vocab=listing, question=question)
-    try:
-        turn = model.respond(Conversation.opening(_SEGMENT_SYSTEM, user), [_SEGMENT_REPORT],
-                             force_tool="report_segment", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _SEGMENT_SYSTEM, user, _SEGMENT_REPORT)
+    if args is None or not args.get("restricts"):
         return False, "", "", ""
-    for call in turn.tool_calls:
-        if call.name == "report_segment":
-            if not call.args.get("restricts"):
-                return False, "", "", ""
-            phrase = str(call.args.get("phrase") or "").strip()
-            dim = str(call.args.get("dimension") or "").strip()
-            value = str(call.args.get("value") or "").strip()
-            return True, phrase, dim, value
-    return False, "", "", ""
+    phrase = str(args.get("phrase") or "").strip()
+    dim = str(args.get("dimension") or "").strip()
+    value = str(args.get("value") or "").strip()
+    return True, phrase, dim, value
 
 
 # --- `segment_gate` grounding resolver: does every concept in the question ground to the -------- #
@@ -439,6 +410,9 @@ _GROUND_REPORT = {
 }
 
 
+_register(_GROUND_SYSTEM, _GROUND_USER, _GROUND_REPORT)
+
+
 def ground_question(model, question: str, ontology: str) -> tuple:
     """(answerable, ungrounded_concept, dimension) — does every concept in the question ground to
     the ontology?
@@ -449,18 +423,13 @@ def ground_question(model, question: str, ontology: str) -> tuple:
     arrive can never be the one that refuses an answerable question.
     """
     user = _GROUND_USER.format(ontology=ontology, question=question)
-    try:
-        turn = model.respond(Conversation.opening(_GROUND_SYSTEM, user), [_GROUND_REPORT],
-                             force_tool="report_grounding", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _GROUND_SYSTEM, user, _GROUND_REPORT)
+    if args is None:
         return True, "", ""
-    for call in turn.tool_calls:
-        if call.name == "report_grounding":
-            answerable = bool(call.args.get("answerable", True))
-            concept = str(call.args.get("ungrounded_concept") or "").strip()
-            dim = str(call.args.get("dimension") or "").strip()
-            return answerable, concept, dim
-    return True, "", ""
+    answerable = bool(args.get("answerable", True))
+    concept = str(args.get("ungrounded_concept") or "").strip()
+    dim = str(args.get("dimension") or "").strip()
+    return answerable, concept, dim
 
 
 # --- three-way answerability (transparent policy): governed / computable / uninstrumented ------- #
@@ -525,6 +494,9 @@ _ANSWERABILITY_REPORT = {
 }
 
 
+_register(_ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, _ANSWERABILITY_REPORT)
+
+
 def classify_answerability(model, question: str, ontology: str, schema: str) -> dict:
     # The judgement behind the `answerability_gate` guardrail (loop.py routes on the verdict).
     """{verdict, measure, governed_metric, basis, missing} — is the question's measure governed,
@@ -536,22 +508,17 @@ def classify_answerability(model, question: str, ontology: str, schema: str) -> 
     judgement that did not arrive must not license computing a number the data may not support.
     """
     user = _ANSWERABILITY_USER.format(ontology=ontology, schema=schema, question=question)
-    try:
-        turn = model.respond(Conversation.opening(_ANSWERABILITY_SYSTEM, user),
-                             [_ANSWERABILITY_REPORT], force_tool="report_answerability", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _ANSWERABILITY_SYSTEM, user, _ANSWERABILITY_REPORT)
+    if args is None:
         return {"verdict": "uninstrumented", "measure": "", "missing": "(classifier error)"}
-    for call in turn.tool_calls:
-        if call.name == "report_answerability":
-            v = str(call.args.get("verdict") or "uninstrumented").strip().lower()
-            if v not in ("governed", "computable", "uninstrumented"):
-                v = "uninstrumented"
-            return {"verdict": v,
-                    "measure": str(call.args.get("measure") or "").strip(),
-                    "governed_metric": str(call.args.get("governed_metric") or "").strip(),
-                    "basis": str(call.args.get("basis") or "").strip(),
-                    "missing": str(call.args.get("missing") or "").strip()}
-    return {"verdict": "uninstrumented", "measure": "", "missing": ""}
+    v = str(args.get("verdict") or "uninstrumented").strip().lower()
+    if v not in ("governed", "computable", "uninstrumented"):
+        v = "uninstrumented"
+    return {"verdict": v,
+            "measure": str(args.get("measure") or "").strip(),
+            "governed_metric": str(args.get("governed_metric") or "").strip(),
+            "basis": str(args.get("basis") or "").strip(),
+            "missing": str(args.get("missing") or "").strip()}
 
 
 # --- graph-based answerability: the model decomposes, the ontology VERIFIES ---------------------- #
@@ -633,6 +600,9 @@ _RESOLVE_REPORT = {
 }
 
 
+_register(_RESOLVE_SYSTEM, _RESOLVE_USER, _RESOLVE_REPORT)
+
+
 def resolve_measure(model, question: str, ontology_render: str) -> dict:
     """{kind, measure, metric, ingredients, missing} — the model's DECOMPOSITION of the question's
     measure against the closed-world graph. The model does only the interpretation; the caller hands
@@ -641,23 +611,18 @@ def resolve_measure(model, question: str, ontology_render: str) -> dict:
     served number.
     """
     user = _RESOLVE_USER.format(ontology=ontology_render, question=question)
-    try:
-        turn = model.respond(Conversation.opening(_RESOLVE_SYSTEM, user), [_RESOLVE_REPORT],
-                             force_tool="resolve", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _RESOLVE_SYSTEM, user, _RESOLVE_REPORT)
+    if args is None:
         return {"kind": "uninstrumented", "measure": "", "metric": "", "ingredients": [],
                 "missing": "(resolver error)"}
-    for call in turn.tool_calls:
-        if call.name == "resolve":
-            kind = str(call.args.get("kind") or "uninstrumented").strip().lower()
-            if kind not in ("governed", "computable", "uninstrumented"):
-                kind = "uninstrumented"
-            return {"kind": kind,
-                    "measure": str(call.args.get("measure") or "").strip(),
-                    "metric": str(call.args.get("metric") or "").strip(),
-                    "ingredients": [str(i).strip() for i in (call.args.get("ingredients") or [])],
-                    "missing": str(call.args.get("missing") or "").strip()}
-    return {"kind": "uninstrumented", "measure": "", "metric": "", "ingredients": [], "missing": ""}
+    kind = str(args.get("kind") or "uninstrumented").strip().lower()
+    if kind not in ("governed", "computable", "uninstrumented"):
+        kind = "uninstrumented"
+    return {"kind": kind,
+            "measure": str(args.get("measure") or "").strip(),
+            "metric": str(args.get("metric") or "").strip(),
+            "ingredients": [str(i).strip() for i in (args.get("ingredients") or [])],
+            "missing": str(args.get("missing") or "").strip()}
 
 
 def answerability_via_graph(model, question: str, ontology) -> dict:
@@ -712,19 +677,17 @@ _DISCLOSE_REPORT = {
 }
 
 
+_register(_DISCLOSE_SYSTEM, _DISCLOSE_USER, _DISCLOSE_REPORT)
+
+
 def answer_discloses_definition(model, question: str, answer: str) -> bool:
     """Did the answer state the definition it computed a non-governed measure by? Defaults to True
     on any error, so the disclosure gate refuses only a clearly bare result."""
     user = _DISCLOSE_USER.format(question=question, answer=answer or "(no text)")
-    try:
-        turn = model.respond(Conversation.opening(_DISCLOSE_SYSTEM, user), [_DISCLOSE_REPORT],
-                             force_tool="report_disclosure", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _DISCLOSE_SYSTEM, user, _DISCLOSE_REPORT)
+    if args is None:
         return True
-    for call in turn.tool_calls:
-        if call.name == "report_disclosure":
-            return bool(call.args.get("disclosed", True))
-    return True
+    return bool(args.get("disclosed", True))
 
 
 
@@ -773,21 +736,60 @@ _APT_REPORT = {
 }
 
 
+_register(_APT_SYSTEM, _APT_USER, _APT_REPORT)
+
+
 def challenge_aptness(model, question: str, definition: str) -> dict:
     """{verdict, alternative, why} — an independent adversary's judgement of whether the DEFINITION is
     the right one for the question. Prompted to refute; critiques the definition, not the number.
     Defaults to apt on any error (a judgement that did not arrive must not block a served answer)."""
     user = _APT_USER.format(question=question, definition=definition or "(no definition)")
-    try:
-        turn = model.respond(Conversation.opening(_APT_SYSTEM, user), [_APT_REPORT],
-                             force_tool="report_aptness", temperature=0)
-    except Exception:                                                       # noqa: BLE001
+    args = _ask(model, _APT_SYSTEM, user, _APT_REPORT)
+    if args is None:
         return {"verdict": "apt", "alternative": "", "why": "(challenger error)"}
-    for call in turn.tool_calls:
-        if call.name == "report_aptness":
-            v = str(call.args.get("verdict") or "apt").strip().lower()
-            if v not in ("apt", "contested", "wrong"):
-                v = "apt"
-            return {"verdict": v, "alternative": str(call.args.get("alternative") or "").strip(),
-                    "why": str(call.args.get("why") or "").strip()}
-    return {"verdict": "apt", "alternative": "", "why": ""}
+    v = str(args.get("verdict") or "apt").strip().lower()
+    if v not in ("apt", "contested", "wrong"):
+        v = "apt"
+    return {"verdict": v, "alternative": str(args.get("alternative") or "").strip(),
+            "why": str(args.get("why") or "").strip()}
+
+
+# --- direction assertion: does the served TEXT claim the measure rose or fell? ----------------- #
+#
+# The typed `direction` slot is a self-report, and the frozen suite dodged the direction gate with
+# it (`not_a_change` declared, a drop asserted in prose). Reading prose is language — the model's
+# job — so this classifier does only that one reading; whether the asserted direction contradicts
+# the evidence stays deterministic in the gate. Defaults to `none` on anything unexpected, so a
+# missing judgement never blocks an answer.
+_TEXT_DIR_SYSTEM = (
+    "You read the text of an analytics answer and report ONE thing: does the text ASSERT that the "
+    "measure rose, or that it fell?\n\n"
+    "Report `rose` or `fell` only for an explicit claim about the direction of change — 'fell by "
+    "2,000', 'a drop of 15%', 'grew from 100 to 150', 'the decline is concentrated in EMEA'. A "
+    "level with no change claim, a comparison the text refuses to make, or a text that says the "
+    "premise is wrong, is `none`.")
+
+_TEXT_DIR_USER = "Answer text:\n{text}\n\nDoes this text assert a direction of change?"
+
+_TEXT_DIR_REPORT = {
+    "name": "report_text_direction",
+    "description": "Report whether the answer text asserts a direction of change.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"asserts": {"type": "string", "enum": ["rose", "fell", "none"]}},
+        "required": ["asserts"],
+    },
+}
+
+
+_register(_TEXT_DIR_SYSTEM, _TEXT_DIR_USER, _TEXT_DIR_REPORT)
+
+
+def text_asserts_direction(model, text: str) -> str:
+    """'rose' | 'fell' | 'none' — the direction the served text itself claims."""
+    args = _ask(model, _TEXT_DIR_SYSTEM, _TEXT_DIR_USER.format(text=text[:2000]),
+                _TEXT_DIR_REPORT)
+    if args is None:
+        return "none"
+    v = str(args.get("asserts") or "").strip().lower()
+    return v if v in ("rose", "fell") else "none"
