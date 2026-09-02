@@ -511,10 +511,15 @@ _LAYER_INDEPENDENT = frozenset({"abstain", "clarify", "typed_clarify",
 # `current_best-answer_spec`. When the standard configuration changes, it changes HERE, and the
 # runner and the findings both reference the name.
 NAMED_CELLS = {
+    # spec_authoring joined after the §61 sprint (32/36, 0 silent on the tail A/B). Under this
+    # cell's STRICT policy the exit gate still refuses computables, so on the standard suite the
+    # capability is availability, not a policy flip — its measured value lives in the transparent
+    # arm (§60-61), and promotion (spec -> PR) remains its own experiment.
     "current_best": (
         "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary"
         "+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate"
-        "+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure"),
+        "+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure"
+        "+spec_authoring"),
 }
 
 

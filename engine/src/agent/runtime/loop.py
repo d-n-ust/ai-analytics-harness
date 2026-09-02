@@ -635,6 +635,24 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                 convo.observe([correction.for_call(turn.exit_call)])
                 continue
             if correction is not None:
+                # POLICY vs VERIFICATION at the cap. A verification dispute (a figure the checks
+                # could not confirm) serves WITH a caveat — the reader decides. A [policy]-marked
+                # correction is different in kind: the answer is not unverified, it is ILLEGAL
+                # under the cell's governance, and a model that stonewalls through the budget must
+                # not be able to serve it — the cap CONVERTS the exit to the refusal the policy
+                # names. (The wired spec_authoring's first full-suite run produced exactly this:
+                # an authored computable served-with-caveat under strict governance.)
+                if str(correction.content or "").startswith("[policy]"):
+                    refusal = ToolCall(turn.exit_call.id, "refuse", {
+                        "reason": "no_governed_definition",
+                        "missing": "a governed definition for the computed measure",
+                        "explanation": "Converted at the correction cap: the served figure was "
+                                       "computable but has no governed definition, and this "
+                                       "configuration's policy is strict governance."})
+                    run.acts.append(Act("answerability_gate", str(Position.REPAIR), "converted",
+                                         "policy violation at the cap: the answer became the "
+                                         "refusal the policy names").as_dict())
+                    return done(run.finish(refusal, it + 1))
                 run.cap_caveat(turn.exit_call, correction)
             return done(run.finish(turn.exit_call, it + 1))
         if results:

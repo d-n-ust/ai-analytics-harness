@@ -158,8 +158,20 @@ def answerability_gate(run, exit_call):
     if exit_call.name != "answer":
         return None
     # Provenance scope: only a number that came from raw SQL bypassed governance. If the run made
-    # no run_sql call, the figure was composed from governed metrics — nothing for this gate.
-    if not any(step.get("tool") == "run_sql" and not step.get("blocked_by") for step in run.steps):
+    # PROVENANCE: raw SQL, or a define-authored spec whose leaves include raw SQL. The trigger
+    # was originally "used run_sql", and wiring spec_authoring into the strict cell exposed the
+    # bypass on its first full-suite run: define computes through its own guarded runner, not
+    # run_sql, so an authored computable SERVED under strict governance — author-then-serve where
+    # the policy says refuse. A raw evidence record on a define step is the same provenance fact,
+    # read from the same trace. A spec composed purely of governed metrics stays out, as before.
+    def _raw_provenance(step):
+        if step.get("blocked_by"):
+            return False
+        if step.get("tool") == "run_sql":
+            return True
+        return step.get("tool") == "define_measure" and any(
+            e.get("kind") == "raw" for e in step.get("evidence") or ())
+    if not any(_raw_provenance(step) for step in run.steps):
         return None
     semantic = run.grounding.semantic
     if semantic is None or not hasattr(semantic, "ontology_text"):
@@ -205,7 +217,7 @@ def answerability_gate(run, exit_call):
         act("handed back", "refuse no_governed_definition")
         run.repairs.append({"answerability": {"verdict": verdict, "measure": measure}})
         return ToolResult(
-            "Your answer was not accepted: it reports a measure with no governed definition.\n"
+            "[policy] Your answer was not accepted: it reports a measure with no governed definition.\n"
             f"{measure} can be computed from the data, but no GOVERNED metric defines it, so a "
             f"single figure is not authoritative. `refuse` with reason `no_governed_definition`.",
             is_error=True)

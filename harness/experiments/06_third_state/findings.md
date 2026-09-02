@@ -2662,3 +2662,44 @@ suites green. The sprint's shape is the campaign's shape in miniature: the hones
 the mechanism look worse before it could get better, and the wins came from deterministic repairs
 at the exact points where prose leaked back in — a table for an entity, a table for a number, a
 join bug wearing a clean ratio.
+
+## 62 · Wiring spec-authoring into the standard cell: the bypass, the conversion, the smoke lesson
+
+`spec_authoring` joined `current_best` after the §61 sprint — as CAPABILITY, not policy: the cell
+stays strict, so on the standard suite the exit gate still owns the computable tail, and the
+mechanism's measured value continues to live in the transparent arm. The wiring took three rounds
+to certify, and each round earned a finding.
+
+THE BYPASS. The first wired full-suite run served five computed numbers on the two pile-B
+questions the rehabilitated resolver now correctly classifies computable (time-to-first-habit
+3/3, habit-streaks 2/3). The strict gate never fired because its provenance trigger was the
+literal fact "the answer used run_sql" — and a define-authored spec computes through its own
+guarded runner. Author-then-serve where the policy says author-then-refuse. The trigger now reads
+provenance from the trace contract instead of a tool name: raw SQL, or a define step whose
+evidence records carry a raw leaf. A spec composed purely of governed metrics stays out, as
+designed.
+
+POLICY IS NOT VERIFICATION AT THE CAP. Closing the bypass exposed the next layer: a model that
+stonewalled through the correction budget served the computed figure WITH the cap caveat —
+correct behaviour for a verification dispute, wrong in kind for a policy violation. An answer the
+cell's governance forbids is not "unverified", it is not servable; the cap now distinguishes the
+two: a [policy]-marked correction converts the exit into the refusal the policy names
+(reason `no_governed_definition`), where a verification correction still serves with its caveat.
+Probe: 6/6 with zero silents, the interval case refusing 3/3.
+
+THE SMOKE LESSON, recorded against ourselves. The first wired run went straight to the full suite
+— skipping the probe-first gate every code change in this experiment had observed — and spent a
+full-suite run discovering what a 90-second smoke on two already-identified questions would have
+found: the exact questions were sitting in the §60 A/B. The discipline now states plainly:
+CONFIGURATION PROMOTIONS GET THE SAME PROBE GATE AS CODE CHANGES. The certified sequence became
+smoke (4 questions, one per touched surface: both computable hot paths showing
+check_answerability -> define -> gate hand-back, a governed control, a contested control; 4/4
+with the intended acts) and only then the suite.
+
+THE CERTIFICATION. Full rep-3 with the wired cell: silent 0.0072 (one known premise-family
+rep-flake, untouched by spec machinery), pile A 48 right and 0 wrong, pile B 44/45 with every
+computable refused, pile C 42/42 handled, balanced 0.973 — the §59 clean baseline within rep-3
+noise. define fired 9 times on the standard suite (the capability is reachable; the zero-forever
+era ends) and zero policy-cap conversions were needed — the gate's ordinary hand-backs sufficed,
+with the conversion standing as the proven backstop. Promotion (spec -> PR into the layer)
+remains deliberately unbuilt — its own experiment.
