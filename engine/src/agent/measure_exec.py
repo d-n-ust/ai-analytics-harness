@@ -93,10 +93,15 @@ def run_ephemeral(spec, engine) -> Result:
                       definition=f"{spec.op} of [{', '.join(defs)}]")
 
     if spec.kind == "raw":
+        # Agent-authored SQL runs through the SAME guarded runner the agent's run_sql uses —
+        # read-only enforced by the DuckDB PARSER (SELECT/WITH only; INSERT/UPDATE/DELETE/CREATE/COPY/
+        # ATTACH blocked even behind a comment or CTE), single-statement, and scoped to the arm's
+        # schema — never a bare con.execute of whatever the model wrote. This is the sandbox the raw
+        # tier needs: a definition can read, never mutate.
+        from warehouse import run_query
         try:
-            cur = engine.con.execute(spec.sql)
-            cols = tuple(d[0] for d in (cur.description or ()))
-            rows = tuple(cur.fetchall())
+            cols, rows = run_query(engine.con, spec.sql, schema=getattr(engine, "schema", None))
+            cols, rows = tuple(cols), tuple(rows)
         except Exception as exc:                                            # noqa: BLE001
             return Result(value=None, error=f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}")
         # A single-cell result is a scalar; anything wider/taller is a grouped result the caller reads.

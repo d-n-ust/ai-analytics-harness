@@ -4,12 +4,15 @@
     uv run python apt_validate.py
 
 The architecture forbids an unvalidated judge gating behaviour (the repo's original sin). This is the
-held-out check: labelled (question, definition, expected) cases, clear-cut by construction, measuring
-whether the challenger discriminates an APT definition from a DEFECT. A first cut that flagged
-everything ('refute if you can') scored 1/6; the refocused defect-hunting prompt scores 5/6, the one
-disagreement being retention within-90 vs at-day-90 — a genuinely debatable analytics definition,
-where a challenger that flags the ambiguity is defensible. Small set: a discriminator signal, not a
-production gate — which is why the challenger is wired to DISCLOSE, not hard-refuse.
+held-out check: 14 labelled (question, definition, expected) cases, clear-cut by construction,
+measuring whether the challenger discriminates an APT definition from a DEFECT (wrong population,
+missing/wrong window, a proxy for a different quantity, a semi-additive summed over time, a count
+served as a rate). A first cut that flagged everything ('refute if you can') scored 1/6; the
+refocused defect-hunting prompt scores 13/14 exact and 14/14 apt-vs-flagged — the one non-exact is a
+contested case flagged as `wrong` (still flagged, a defensible call). The `assert flagged >= 0.85*n`
+guards the discriminator so a regression cannot silently make it gate on noise. Still validated on a
+curated set, not production traffic — which is why the challenger is wired to DISCLOSE, not
+hard-refuse.
 """
 import sys
 sys.path.insert(0, "."); sys.path.insert(0, "../../..")
@@ -36,6 +39,31 @@ CASES = [
     ("Which acquisition channel gives us the best 90-day retention?",
      "raw SQL: share of each channel's signup cohort with at least one activity WITHIN 90 days of signup, by channel",
      "apt", "the standard within-90-days cohort-retention reading (debatable — see header)"),
+    # apt: governed metrics answering their own concept, with a filter or period applied
+    ("How many people signed up in the first quarter of 2026?",
+     "governed metric new_signups for 2026-Q1", "apt", "a governed metric with a period"),
+    ("How much did we spend on paid search advertising?",
+     "governed metric marketing_spend filtered to channel = paid_search",
+     "apt", "a governed metric with a governed segment filter"),
+    ("What is our monthly recurring revenue right now?",
+     "governed metric mrr, the running figure with no period", "apt", "the governed running figure"),
+    # wrong: a defect a competent analyst would name
+    ("What was our revenue per employee last quarter?",
+     "total mrr divided by the number of active users last quarter",
+     "wrong", "active users are not employees — wrong denominator, a different quantity"),
+    ("How many active users did we have last week?",
+     "raw SQL: SUM of the daily active_users counts over the seven days of last week",
+     "wrong", "summing a distinct count over time double-counts — semi-additive violation"),
+    ("What was our subscription churn RATE last quarter?",
+     "governed metric: the COUNT of subscriptions with status = canceled last quarter",
+     "wrong", "a count, not a rate — the denominator (subscriptions at risk) is missing"),
+    ("What was the average order value last month?",
+     "ratio: total marketing_spend divided by new_signups last month",
+     "wrong", "measures marketing cost per signup, not order value — a proxy for a different quantity"),
+    # contested: two named governed metrics genuinely both fit (rare)
+    ("How much recurring revenue do we have, counting terms later refunded?",
+     "governed metric mrr (net of refunds)",
+     "contested", "gross_mrr (gross of refunds) is the reading the phrase 'counting refunded' names"),
 ]
 
 
@@ -52,7 +80,7 @@ def main() -> None:
         print(f"{exp:10} {pred:10} {'OK' if pred == exp else 'xx':4}  {note[:56]}")
     n = len(CASES)
     print(f"\nexact verdict: {exact}/{n}   apt-vs-flagged: {flagged}/{n}")
-    assert flagged >= 5, "challenger no longer discriminates apt from defect — do not let it gate"
+    assert flagged >= 0.85 * n, "challenger no longer discriminates apt from defect — do not let it gate"
 
 
 if __name__ == "__main__":
