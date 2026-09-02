@@ -901,6 +901,15 @@ class _Run:
         if getattr(semantic, "clusters", None) is None:
             return None
         served = parse_numbers(after.served_text(exit_call.args))
+        # Composition-contest takes PRECEDENCE over the flat raw-metric check. When the served figure
+        # is a ratio/derived, its contest passes THROUGH the numerator, so the alternative that
+        # matters is the RATIO recomputed with the rival — not the raw numerator total the flat check
+        # would surface. (spend_per_signup served 50.44; the flat check would disclose the raw
+        # acquisition_spend 53041, but the alternative ANSWER is 43.69/signup — the ratio.) Try
+        # composition first; fall to the flat check only when the served figure is not a composition.
+        tag, result = self._composition_disclosure(exit_call, g, served)
+        if tag == "handled":
+            return result
         missing = []
         for metric, args in self._governed_calls():
             try:
@@ -920,34 +929,7 @@ class _Run:
                     missing.append((metric, rival, mine, theirs,
                                     {k: differences[k] for k in absent}))
         if not missing:
-            # The flat check watches the RAW metric figures; a served RATIO reports the composed
-            # value, not the raw numerator, so a contest that passes THROUGH the ratio slips it. The
-            # composition check recomputes the ratio with a contested input's rival substituted and
-            # requires both READINGS when they diverge (§41; the spend_per_signup case).
-            rc = self._composition_contest(served)
-            if rc is None:
-                return None
-            base_m, rival, op, reading, alt = rc
-            if g.scope_classifier and self._request_chose([(base_m, rival)]):
-                return None
-            note = (f"a {op} using {rival.name} ({rival.discriminator or 'a different scope'}) instead "
-                    f"of {base_m} gives {alt} (vs {reading})")
-            if getattr(g, "construct_disclosure", False):
-                return self._construct_disclosure(exit_call, [note],
-                                                  {"undisclosed_composition": {"op": op, "base": base_m,
-                                                   "rival": rival.name, "reading": reading, "alt": alt}})
-            self.repairs.append({"undisclosed_composition": {"op": op, "base": base_m,
-                                                            "rival": rival.name,
-                                                            "reading": reading, "alt": alt}})
-            self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",
-                                 f"{op} reading {reading} via {base_m}, but {rival.name} gives {alt}; "
-                                 f"correction {self.claim_retries} of 2").as_dict())
-            return ToolResult(
-                f"Your answer reports one reading of a CONTESTED derived value (a {op}). It is built "
-                f"on {base_m}, which has a governed rival {rival.name} "
-                f"({rival.discriminator or 'a different scope'}), and the value differs by which one "
-                f"you use: {reading} with {base_m}, {alt} with {rival.name}. Give BOTH figures and "
-                f"what separates them, or `clarify` which was meant.", is_error=True)
+            return None
         if g.scope_classifier and self._request_chose(missing):
             return None
         if getattr(g, "construct_disclosure", False):
@@ -1030,6 +1012,35 @@ class _Run:
                             if not _reported([base], alt) and not _reported(served, alt):
                                 return base_m, rival, opname, round(base, 4), round(alt, 4)
         return None
+
+    def _composition_disclosure(self, exit_call, g, served):
+        """The contested-DERIVED path, tried BEFORE the flat raw-metric check. A served ratio's
+        contest is the RATIO recomputed with the rival (43.69/signup), not the raw numerator total —
+        so this owns a served composition. Returns ('handled', <ToolResult or None>) when the served
+        figure is a composition with a contested input (constructed, handed back, or scope already
+        chose), else ('none', None) to fall through to the flat check."""
+        rc = self._composition_contest(served)
+        if rc is None:
+            return "none", None
+        base_m, rival, op, reading, alt = rc
+        if g.scope_classifier and self._request_chose([(base_m, rival)]):
+            return "handled", None
+        repair = {"undisclosed_composition": {"op": op, "base": base_m, "rival": rival.name,
+                                              "reading": reading, "alt": alt}}
+        if getattr(g, "construct_disclosure", False):
+            note = (f"a {op} using {rival.name} ({rival.discriminator or 'a different scope'}) instead "
+                    f"of {base_m} gives {alt} (vs {reading})")
+            return "handled", self._construct_disclosure(exit_call, [note], repair)
+        self.repairs.append(repair)
+        self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",
+                             f"{op} reading {reading} via {base_m}, but {rival.name} gives {alt}; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        return "handled", ToolResult(
+            f"Your answer reports one reading of a CONTESTED derived value (a {op}). It is built on "
+            f"{base_m}, which has a governed rival {rival.name} "
+            f"({rival.discriminator or 'a different scope'}): the value differs by which one you use — "
+            f"{reading} with {base_m}, {alt} with {rival.name}. Give BOTH figures and what separates "
+            f"them, or `clarify` which was meant.", is_error=True)
 
     def _construct_disclosure(self, exit_call, notes, repair):
         """CONSTRUCT the missing rival reading(s) into the answer, and serve — rather than hand back
