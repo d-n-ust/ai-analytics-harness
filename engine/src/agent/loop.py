@@ -24,6 +24,7 @@ from dataclasses import dataclass, field, replace
 
 import evidence as claim_audit
 
+from .core import trace
 from .conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from .guardrails import Act, Position, after, before
 from .guardrails import classify as _classify
@@ -77,64 +78,19 @@ def _citable(handle: str, result) -> str:
     return f"\n[cite] {shown}{more}"
 
 
-def _reported(served: list, value: float) -> bool:
-    """Is this figure in the text the reader receives? Half a percent of slack, so a rounded
-    rendering of the same number still counts as having been reported."""
-    return any(abs(n - value) <= 0.005 * abs(value) for n in served)
-
-
-def _scalar(values):
-    """The single number in a value_of result ({label: value}), or None when it is not one row."""
-    if isinstance(values, dict) and len(values) == 1:
-        (v,) = values.values()
-        if isinstance(v, (int, float)) and not isinstance(v, bool):
-            return v
-    return None
-
-
-# The binary compositions a derived value can be: two governed-metric readings mapped to one. A
-# contest in either input propagates THROUGH the composition, and `_composition_contest` recovers
-# which op was used by matching the served figure to op(x, y). Op-agnostic on purpose — the same
-# propagation rule covers a ratio (spend_per_signup), a difference (a hand-computed change), and any
-# other binary combination, so the mechanism is not ratio-specific.
 # One grace turn, and the shared correction budget every output gate draws on. Module-level so
 # the gates themselves (the binding check constructs instead of handing back once the budget is
 # spent) read the same number the loop enforces.
 GRACE, MAX_CORRECTIONS = 1, 2
 
-_COMPOSE = {
-    "ratio":      lambda a, b: (a / b) if b else None,
-    "difference": lambda a, b: a - b,
-    "sum":        lambda a, b: a + b,
-    "product":    lambda a, b: a * b,
-}
+# Moved to core/trace.py (Phase 1 of the complexity refactor); aliased so every existing call
+# site and test keeps its name. The trace's key names and pure readers live in ONE module now.
+_COMPOSE = trace.COMPOSE
+_leaf = trace.leaf
+_as_number = trace.as_number
+_reported = trace.reported
+_scalar = trace.scalar
 
-
-
-def _leaf(name) -> str:
-    """The last segment of a dimension name: `activity__platform` and `platform` are one thing."""
-    return str(name).strip().rsplit("__", 1)[-1].lower()
-
-
-def _as_number(value):
-    """The declared `value`, as a number — or None when it is not one.
-
-    The answer tool declares `value` as `"type": "number"` and a model can still put a string
-    there. Nothing downstream expected that: num_match compares it against governed results, and
-    both `round(str, k)` and `isclose(str, x)` raise `TypeError: must be real number, not str`,
-    which kills the run. Two of 4,104 rows in the Shapley lattice died that way — a crash where
-    there should have been a measurement, and the failure is silent about which.
-
-    A string that parses is the number the model meant; one that does not is prose, and prose
-    leaves `value` unset by design, so the numeric checks stand down rather than blow up.
-    """
-    if value is None or isinstance(value, bool):
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        _log.info("answer declared a non-numeric `value` (%r); treating it as prose", value)
-        return None
 
 
 class _MeteredModel:
@@ -772,106 +728,24 @@ class _Run:
         return None
 
     def _series_from_calls(self, semantic):
-        """(metric, prev, last) from a single time-grouped governed call, or None. A series is a
-        before/after pair the run already holds — the frozen suite asserted "signups fell" against
-        its own quarterly series, and no pair-shaped evidence existed because the two values
-        arrived in ONE grouped call rather than two scalar ones."""
-        for metric, args in self._governed_calls():
-            group_by = args.get("group_by") or ()
-            if not any("metric_time" in str(gb) for gb in group_by):
-                continue
-            keyed = before.value_of(semantic, args, metric)
-            if not isinstance(keyed, dict) or len(keyed) < 2:
-                continue
-            try:
-                ordered = [keyed[k] for k in sorted(keyed)]
-            except TypeError:
-                continue
-            v0, v1 = ordered[-2], ordered[-1]
-            if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (v0, v1)):
-                return metric, v0, v1
-        return None
+        """core.trace.series_from_calls — a time-grouped call read as a before/after pair."""
+        return trace.series_from_calls(
+            self.steps, lambda args, metric: before.value_of(semantic, args, metric))
 
     def _change_from_calls(self, semantic):
-        """A governed CHANGE metric this run queried, and its signed scalar value, or None.
-
-        A period-over-period change metric (a derived metric with a time offset) returns a delta
-        whose SIGN is the direction — the model cannot flip it, it is the governed metric's own
-        value. Complements `_before_after_from_calls`: that reads a hand-built two-window pair, this
-        reads a single derived-offset metric such as `active_users_growth`. Scalar only: a change
-        grouped into several rows is a set of directions, not one, and is left alone."""
-        is_change = getattr(semantic, "is_change_metric", None)
-        if is_change is None:
-            return None
-        for metric, args in self._governed_calls():
-            if not is_change(metric):
-                continue
-            values = before.value_of(semantic, args, metric)
-            if isinstance(values, dict) and len(values) == 1:
-                (v,) = values.values()
-                if isinstance(v, (int, float)) and not isinstance(v, bool):
-                    return metric, v
-        return None
+        """core.trace.change_from_calls — a governed change metric's signed scalar."""
+        return trace.change_from_calls(
+            self.steps, lambda args, metric: before.value_of(semantic, args, metric),
+            getattr(semantic, "is_change_metric", None))
 
     def _period_pairs(self, semantic):
-        """(metric, earlier_args, later_args) for every metric this run queried at two orderable
-        windows with otherwise-identical arguments — the before/after shape, read off the trace.
-
-        The shared basis for reading a period-over-period change: `_before_after_from_calls` takes
-        the two VALUES of the base metric from it, and `_change_disclosure` takes the two WINDOWS so
-        a governed rival can be evaluated at the same pair. Grouping only — it makes no warehouse
-        calls itself, so each caller reads the values for the pairs it can use.
-        """
-        from collections import defaultdict
-
-        from warehouse.config import resolve_period
-        _TIME = {"period", "start", "end", "time_grain", "metric"}
-
-        def _sig(args):
-            return tuple(sorted((k, str(v)) for k, v in args.items() if k not in _TIME))
-
-        def _start(args):
-            if args.get("period"):
-                try:
-                    return str(resolve_period(args["period"])[0])
-                except Exception:                                           # noqa: BLE001
-                    return None
-            return str(args["start"]) if args.get("start") else None
-
-        groups = defaultdict(dict)                     # (metric, sig) -> {start_date: args}
-        for metric, args in self._governed_calls():
-            start = _start(args)
-            if start is not None:
-                groups[(metric, _sig(args))].setdefault(start, args)
-        pairs = []
-        for (metric, _s), by_time in groups.items():
-            if len(by_time) < 2:
-                continue
-            times = sorted(by_time)
-            pairs.append((metric, by_time[times[0]], by_time[times[-1]]))
-        return pairs
+        """core.trace.period_pairs — the before/after window pairs on the trace."""
+        return trace.period_pairs(self.steps)
 
     def _before_after_from_calls(self, semantic):
-        """The earlier and later value of one metric this run queried at two time windows, or None.
-
-        A comparison pair is two governed calls with the SAME metric and the SAME non-time
-        arguments (filters, group_by) but DIFFERENT, orderable time windows — a before and an after
-        of the same thing. Both must be SCALAR (one number): a grouped result is a set of
-        comparisons, not one, and forcing a single direction on it would be the wrong question. The
-        windows come from `_period_pairs`, shared with `_change_disclosure`.
-        """
-        for metric, early, late in self._period_pairs(semantic):
-            v0 = _scalar(before.value_of(semantic, early, metric))
-            v1 = _scalar(before.value_of(semantic, late, metric))
-            if v0 is not None and v1 is not None:
-                return metric, v0, v1
-        return None
-
-    # Which way the proxy case leans: "disclose" serves the proxy with the gap stated, "refuse"
-    # pushes the substitution back to a decline. The dial the experiment turns — a module constant
-    # so the A/B is one edit, not a schema change. `unmeasured` always leans refuse: a quantity the
-    # data does not capture has no honest proxy to disclose.
-    MEASURE_PROXY_LEAN = "disclose"
+        """core.trace.before_after_from_calls — scalar earlier/later values of one metric."""
+        return trace.before_after_from_calls(
+            self.steps, lambda args, metric: before.value_of(semantic, args, metric))
 
     def substituted_measure(self, exit_call):
         """Hand back an answer whose number measures a DIFFERENT quantity than the question asked
@@ -1093,15 +967,8 @@ class _Run:
         return None
 
     def _evidence_scalars(self):
-        """Every number the run's successful calls returned, off the recorded step values."""
-        out = []
-        for step in self.steps:
-            if step.get("blocked_by") or step.get("error"):
-                continue
-            for v in step.get("result_values") or ():
-                if isinstance(v, (int, float)) and not isinstance(v, bool):
-                    out.append(float(v))
-        return out
+        """core.trace.evidence_scalars — every number the run's calls returned."""
+        return trace.evidence_scalars(self.steps)
 
     def underived_figure(self, exit_call):
         """Hand back a served headline figure that matches NOTHING the run's own calls returned —
@@ -1588,24 +1455,8 @@ class _Run:
         return str(entry.get("description") or "") if isinstance(entry, dict) else str(entry)
 
     def _governed_calls(self):
-        """(metric, args) for every governed query this run actually made — what the answer stands
-        on. Read off the trace rather than off the model's `source_metric`, which is optional and
-        which a wrong answer has no reason to fill in correctly."""
-        seen = []
-        for step in self.steps:
-            if step.get("blocked_by"):
-                continue
-            args = step.get("args") or {}
-            metric = args.get("metric")
-            if step.get("tool") == "query_metric" and metric:
-                seen.append((metric, args))
-            # A define-authored spec's governed leaves ARE governed calls — recorded on the step
-            # as typed evidence, read here so contest disclosure, applied segment, direction and
-            # the change checks treat a spec-computed number exactly like a queried one.
-            for e in step.get("evidence") or ():
-                if e.get("kind") == "governed" and e.get("metric"):
-                    seen.append((e["metric"], dict(e.get("args") or {})))
-        return seen
+        """core.trace.governed_calls — every governed evaluation on the trace."""
+        return trace.governed_calls(self.steps)
 
     def _why_unresolved(self, ref: str) -> str:
         handle = str(ref).strip().strip("[]").partition(":")[0]
