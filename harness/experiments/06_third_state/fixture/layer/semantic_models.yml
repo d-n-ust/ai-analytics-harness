@@ -193,7 +193,7 @@ metric:
     not the running figure on that date. An annual term counts as one twelfth. Example:
     query_metric(metric='mrr', filters={'subscription__plan': 'monthly'}) is the monthly-plan figure
     today, and query_metric(metric='mrr', filters={'subscription__cohort_month': '2026-06'}) is the
-    revenue from terms that started in June — a cohort, not the current book. Owned by Finance. Used
+    revenue from terms that started in June — a cohort, not the current book. For a QUARTER or any multi-month cohort, use the period: query_metric(metric='mrr', period='2026-Q2') is the revenue from terms that started in Q2. cohort_month is MONTHLY ('2026-06') only; do NOT filter it by a quarter like '2026-Q2' — that value does not exist and matches nothing, returning an empty result. Owned by Finance. Used
     by the board pack and the revenue forecast.
   type: simple
   type_params: {measure: mrr_amount}
