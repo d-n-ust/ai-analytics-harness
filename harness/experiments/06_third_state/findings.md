@@ -2107,3 +2107,30 @@ was caused by the anchor or the guard. Headline correct 132/138, silent 3 — at
 the set rotating (mrr_q2 out, active_users_ios contested-disclosure and gross_mrr_ytd period-scope in),
 both orthogonal to this work. mrr_q2 joins the closed classes; the durable claim stays the classes and
 the architecture, not the last rep.
+
+## 47 · Grading a contested question: disclosing both readings is a correct handling, not a miss
+
+`grade.py` already scores the FOURTH ACTION correct: an answer that puts every candidate's figure in
+front of the reader (`_disclosed_both`) is `bucket="right"`, because the reader holds both numbers and
+can pick — it costs one sentence where a clarification costs a round trip. The scorer did not follow.
+`balanced_accuracy` credited pile C only for a literal `clarify` OUTCOME, so a run that resolves every
+contested question by disclosing both readings scored pile-C accuracy 0 and read `balanced_accuracy`
+0.667, while the operational board showed the contested class handled and `silent_error` at its floor.
+The two numbers described different things, and the lower one described the SCORER, not the agent.
+
+The fix makes pile-C accuracy the count of contested questions handled correctly, by EITHER route:
+
+| pile-C outcome | reader can tell? | credited |
+|----------------|------------------|----------|
+| clarified (asked which reading) | yes | correct |
+| disclosed both readings' figures | yes | correct |
+| served ONE reading silently | no | the silent error (unchanged) |
+| refused a question that had two answers | yes (over-refusal) | not correct |
+
+`contested_disclosed` reads the grader's `correct` on a contested answer row, so the definition of
+"handled" lives in ONE place (`grade.py`), not restated in the scorer. `silent_error` is untouched:
+serving one reading silently is still the only pile-C failure it counts. On the same rep-3 rows this
+moved `balanced_accuracy` 0.667 -> 0.992 with no change to `silent_error`. Two stale docstrings that
+still read "only asking is correct" — in `selective.py` and the `grade.py` header, both contradicting
+the fourth-action code beneath them — were corrected. A `test_report.py` case pins it: a disclosed
+answer and a clarification score alike, a single reading served silently does not.

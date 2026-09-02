@@ -354,7 +354,8 @@ def main() -> None:
     print(f"  pile B  unanswerable n={score['unanswerable_n']:<3} refused={score['unanswerable_refused']:<3} "
           f"served={score['unanswerable_served']}")
     print(f"  pile C  contested    n={score['contested_n']:<3} clarified={score['contested_clarified']:<3} "
-          f"served={score['contested_served']:<3} refused={score['contested_refused']}")
+          f"disclosed={score['contested_disclosed']:<3} served={score['contested_served']:<3} "
+          f"refused={score['contested_refused']}")
     print(f"\n  coverage {score['coverage']}   silent_error {score['silent_error']}   "
           f"balanced_accuracy {score['balanced_accuracy']}")
     # Summing-occurrence counter: the semi-additive roll-up (a run_sql that SUMs alongside a

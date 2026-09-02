@@ -11,10 +11,11 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   because the question names an undefined term with more than one plausible
                   governed reading, and picking one silently is the failure. Serving a number
                   is still a miss, so the trap the case sets is unchanged.
-  contested       a clarifying question, and only that. Two or more GOVERNED definitions answer
-                  the question and every one of them is defensible, so refusing is an
-                  over-refusal — something does answer it, in fact two things do — and serving
-                  one number without disclosure is the silent error. This is the one expectation
+  contested       a clarifying question, OR an answer that discloses every reading's figure
+                  (`_disclosed_both`). Two or more GOVERNED definitions answer the question and
+                  every one is defensible, so refusing is an over-refusal — something does answer
+                  it, in fact two things do — and serving one number without disclosure is the
+                  silent error. This is the one expectation
                   where the failure leaves no signature: the served figure is a real governed
                   result of a real metric, so provenance, unit validation and the judge all pass.
 

@@ -12,11 +12,11 @@ Questions come in three piles, and the pile is a property of the QUESTION, fixed
     pile B   no answer exists           `expected_action` is "refuse"
     pile C   two or more answers exist  `expected_action` is "clarify"
 
-Pile C is not coverage work. Answering there is not attempting the question; it is picking one of
-two governed readings and not saying so, which is the one failure in this suite that leaves no
-signature — the figure is a real result of a real metric, so provenance, unit validation and the
-judge all pass. Refusing there is an over-refusal, because something does answer it. Only asking
-is correct.
+Pile C is not coverage work. It is handled correctly two ways: by ASKING which reading is meant,
+or by ANSWERING with every reading's figure disclosed, so the reader holds both numbers and picks.
+The one failure is serving ONE reading and not saying so — the figure is a real result of a real
+metric, so provenance, unit validation and the judge all pass, and nothing marks it. Refusing
+there is an over-refusal, because something does answer it.
 
     coverage           of pile A, how much did it attempt?          higher is better
     silent_error       of everything, how often was it confidently  lower is better
@@ -104,6 +104,11 @@ class Selective:
 
     contested: int          # pile C
     clarified: int          # …of which it correctly asked which reading was meant
+    # The FOURTH ACTION: answered with EVERY reading's figure disclosed. The grader scores this
+    # `correct` (grade.py `_disclosed_both`), because the reader holds both numbers and can pick —
+    # it costs one sentence where a clarification costs a round trip. Correct handling of a
+    # contested question is therefore `clarified + contested_disclosed`, not `clarified` alone.
+    contested_disclosed: int
     contested_served: int   # …of which it served one reading silently  ← invisible failure
     contested_refused: int  # …of which it declined a question that had two answers
 
@@ -142,10 +147,13 @@ class Selective:
         would return NaN for every run stored before pile C and a systematically low number for any
         suite that omits a pile, which describes the suite rather than the agent — the same defect
         the averaging was introduced to remove.
+
+        Pile C credits BOTH correct handlings — a clarification and an answer that discloses
+        every reading — against the one failure `silent_error` counts: a reading served silently.
         """
         per_pile = ((self.right, self.answerable),
                     (self.refused, self.unanswerable),
-                    (self.clarified, self.contested))
+                    (self.clarified + self.contested_disclosed, self.contested))
         scored = [n / d for n, d in per_pile if d]
         return sum(scored) / len(scored) if scored else float("nan")
 
@@ -192,6 +200,7 @@ class Selective:
                 "unanswerable_n": self.unanswerable, "unanswerable_refused": self.refused,
                 "unanswerable_served": self.served,
                 "contested_n": self.contested, "contested_clarified": self.clarified,
+                "contested_disclosed": self.contested_disclosed,
                 "contested_served": self.contested_served,
                 "contested_refused": self.contested_refused,
                 "clarification_rate": round(_rate(self.clarified, self.contested), 4),
@@ -246,6 +255,10 @@ def selective(rows: list[dict]) -> Selective:
         over_clarified=sum(1 for r in a if r["outcome"] == "clarify"),
         unanswerable=len(b), refused=len(b) - served, served=served,
         contested=len(c), clarified=sum(1 for r in c if r["outcome"] == "clarify"),
+        # Served an answer the grader accepted (disclosed every reading — grade.py's fourth
+        # action). Read from the grader's `correct` so the definition lives in one place: on a
+        # contested row `correct` is set only for a clarification or a disclosed-both answer.
+        contested_disclosed=sum(1 for r in c if r["outcome"] == "answer" and r.get("correct")),
         contested_served=contested_served,
         contested_refused=sum(1 for r in c if r["outcome"] == "refuse"),
         audited=len(audited), checkable=checkable)
