@@ -1991,3 +1991,69 @@ the rotating cohort-scope flake, not construct-caused). The mechanism now constr
 for a contested level metric (active_accounts vs active_users) AND a contested ratio (acquisition vs
 marketing per signup), online, without depending on the agent to comply. construct_disclosure is
 folded into the standard cell going forward.
+
+## 45 · Campaign synthesis: from 13 silent errors to 1, and the architecture that got there
+
+This section ties §35–44 together — the development, the one principle underneath it, and the impact
+— so the arc reads as a whole rather than a sequence of patches.
+
+THE SCOREBOARD (silent wrong numbers, rep-3, 46-question held-out suite; the number that matters is
+confident-wrong, not accuracy).
+
+| stage | mechanism added | failure class closed | silent |
+|-------|-----------------|----------------------|--------|
+| baseline (§35) | normalised catalogue | — | 13 |
+| grounding (§36) | segment_gate + grounding resolver | ungrounded segment (TikTok as a channel) | 5 |
+| answerability (§37) | answerability_gate (three-way) | raw-SQL escape (invented retention served) | 4 |
+| usage/segment (§38) | usage examples, applied_segment, governed growth | dropped filter, manual summation, hand arithmetic | 3 |
+| ontology (§39) | closed-world graph + check_answerability | answerability judged, not looked up | 3 |
+| false premise (§40) | direction from the governed change sign | a false trend confirmed ("fell" when it rose) | 3 |
+| dropped segment (§41) | applied_segment APPLIES the filter | a named segment silently dropped | 3 |
+| contested ratio (§42) | contest propagation through a composition | a ratio's numerator contest slipping the flat check | 3 |
+| spec-first (§43) | define_measure (author/verify/challenge/disclose) | the ungoverned long tail computed unverifiably | 1* |
+| construct (§44) | construct_disclosure + composition precedence | contested reading dropped on agent non-compliance | 1 |
+
+*correct rose to a campaign-high 133/138 at §44. The lone remaining silent is a filter-VALUE
+grounding error (mrr filtered by cohort_month='2026-Q2' when that dimension holds monthly values ->
+zero rows -> a confident £0), orthogonal to every mechanism above and rotating with rep variance —
+filter_vocabulary closes dimension NAMES to the layer, not VALUES, which is the open gap.
+
+THE ONE PRINCIPLE. Every mechanism is an instance of the same move, applied at a different surface:
+the LLM does semantic FIT (interpretation, language — its superpower); a deterministic mechanism
+verifies or SUPPLIES the structural fact; the protocol forces the structure into existence so there
+is a fact to verify. The failures were all a MISALLOCATION — the agent asked to do something
+mechanical (apply a filter, recompute a rival, pick a direction), and left to remember it. The fix
+was never a better prompt; it was to stop asking and have the mechanism do the mechanical part:
+
+- verify FACTS, not prose: the applied filter in the trace, the sign of the governed change, the
+  compiled SQL — never the model's account of what it did.
+- SUPPLY, don't hand back: applied_segment (§41) inserts the grounded filter and recomputes;
+  contest propagation (§42) computes both ratio readings; construct_disclosure (§44) appends the
+  rival reading. The both/right answer no longer depends on the agent complying — the pattern that
+  fixed the flaky contested tier (contested_level 36/36).
+- durable logic in the LAYER: a period-over-period change is a governed derived metric; a ratio is a
+  governed ratio; a contest is precomputed offline in the cluster index. The runtime looks a fact
+  up, it does not infer it.
+
+THE GENERALIZATION (§43, the spec-first architecture). The end state of the principle: when no
+governed metric answers a question, the agent AUTHORS A DEFINITION (a verifiable artifact — a
+MetricFlow metric or a dbt SQL model), the deterministic layers guarantee completeness (bind_scope),
+existence (ground), validity (coherent) and execution (run_ephemeral, by construction), an
+independent VALIDATED adversary challenges aptness, and the result is disclosed. Coverage-independent:
+the long tail is DEFINED on demand, not required to be governed in advance — the realistic condition,
+since no production layer is ever complete. Every definition it produces is a promotable dbt artifact.
+
+IMPACT, stated honestly.
+- Silent wrong numbers 13 -> 1 on the frozen held-out suite; correct at a campaign-high 133/138.
+- The durable claims are the CLASSES closed and the architecture, not the last rep: the remaining
+  silent rotates with variance at the rep-3 noise floor (§32), and the exact figure is a direction,
+  not a headline.
+- New capabilities that outlast the numbers: a closed-world answerability graph; verified
+  compute-the-tail (define_measure); an adversary validated before it gates; and the online handling
+  of residual ambiguity by construction — none of which assume the layer is fully governed, which is
+  the point.
+
+OPEN THREADS. The filter-value grounding gap (the remaining silent); define_measure usage/routing
+(it fires only when the agent reaches for it); promotion (spec -> PR into the layer); the query-leaf
+executor; and the offline-vs-online split (fix what you can offline; handle the residual online) as a
+standing policy rather than a per-case choice.
