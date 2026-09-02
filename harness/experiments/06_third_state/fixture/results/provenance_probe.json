@@ -1,0 +1,691 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "No governed metric or warehouse columns directly compute '90-day retention' by acquisition channel; activity and user tables record activity and signup dates but the semantic layer has no governed retention metric or grounding for a 90-day cohort retention by activity__channel or user__channel.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalogue contains new_signups and active_users but no governed retention metric or ready-made definition for 90-day retention; without a governed definition I cannot reliably compute and certify a channel-level 90-day retention.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing_spend divided by new_signups (total marketing spend per signup) and acquisition_spend divided by new_signups (marketing excluding partnerships per signup) \u2014 both are spend per signup but new_signups counts all accounts while governed metric may exclude internal/test accounts. for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.45 (marketing_spend) / \u00a343.67 (acquisition_spend)",
+    "explanation": "Marketing cost per signup in 2026 Q2 = total marketing_spend (sum of spend_row rows) divided by new_signups (accounts created in the period). marketing_spend for 2026-Q2 = \u00a361,233.32; new_signups in 2026-Q2 = 1,214. Also reporting acquisition_spend (excludes partnerships) = \u00a353,042.00, which gives \u00a343.67 per signup. Both figures are per-signup for Q2 2026 and exclude internal/test accounts only where the governed metric does so (new_signups counts all accounts).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_per_active_user",
+    "error": null,
+    "question": "How many habits did the average active user complete last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": 4.110609480812641,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Average completed habits per active user for asked How many habits did the average active user complete last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4.110609480812641",
+    "explanation": "Average completed habits per active user in the week 2026-07-06 to 2026-07-12 (habits_per_active_user, weekly grain; numerator and denominator exclude internal/test accounts).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(4.110609480812641,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "No governed metric, table, or column captures '90-day retention' for signup cohorts or links signups to activity/subscription 90 days later.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalogue contains active_users, new_signups, and subscription metrics but no governed retention definition or join to compute cohort retention at day 90; cannot compute reliably from available governed objects.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-04-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing_spend per new_signups (cost per signup) for asked What did it cost us in marketing for each person who signed up in the second quarter of 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.43 per signup (marketing_spend) \u2014 and \u00a343.68 per signup (acquisition_spend) [alternate reading]",
+    "explanation": "Computed as total marketing_spend in Q2 2026 (\u00a361,233.32) divided by new_signups in Q2 2026 (1,214) = \u00a350.425\u2026 \u2192 \u00a350.43 per signup. Alternate governed metric acquisition_spend excludes the internal test channel partnerships and yields \u00a353,042 / 1,214 = \u00a343.684\u2026 \u2192 \u00a343.68 per signup; the two differ because acquisition_spend excludes spend booked to the partnerships channel.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_c_habits_per_active_user",
+    "error": null,
+    "question": "How many habits did the average active user complete last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": null,
+    "reason": "dimension_not_supported",
+    "missing": "the dimension subscription__status cannot be applied to the habits_per_active_user metric (the metric's entity is activity and its allowed filter dimensions are activity__*, user__*); therefore the requested 'active' subscription segment cannot be isolated",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served average completed habits per active user for asked How many habits did the average active user complete last week? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "metric_brief",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "question restricts to subscription__status='active' but the served number applied no such filter; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "habits_per_active_user for last_week (2026-07-06 to 2026-07-12) exists overall but cannot be filtered by subscription__status, so we cannot compute the average for subscription status='active'.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(4.110609480812641,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "last_week",
+          "filters": {
+            "subscription__status": "active"
+          }
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Got error(s) during query resolution. Error #1: Message: The given input does not match any of the available group-by-items for SimpleMetric('value_moments'). Common issues are: * Incorrect names. * No valid join paths exist from the measure to the group-by-item. (fan-out join support is pend"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "active (subscription__status)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named 'active (subscription__status)'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moment"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "No governed metric or raw table column exposed in the governed layer provides the cohort link needed to compute 90-day retention; there is no '90-day retention' metric and the layer does not expose a ready cohort activity mapping to compute it.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalog lacks any governed 90-day retention metric and does not expose the necessary precomputed join of signup date to activity on day 90; per rules I must refuse when uninstrumented.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing cost per signup (marketing_spend \u00f7 new_signups) and acquisition_spend per signup (acquisition_spend \u00f7 new_signups) for asked cost us in marketing for each person who signed up in the second quarter of 2026 [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.45 (marketing_spend) or \u00a343.69 (acquisition_spend)",
+    "explanation": "Marketing spend divided by new_signups in 2026 Q2. marketing_spend = \u00a361,233.32; new_signups = 1,214 \u2192 \u00a361,233.32 / 1,214 = \u00a350.45 per signup. The acquisition_spend (excludes 'partnerships') = \u00a353,042 \u2192 \u00a353,042 / 1,214 = \u00a343.69 per signup. Both cover 2026-04-01..2026-06-30; they differ because acquisition_spend excludes spend on the internal 'partnerships' channel.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_per_active_user",
+    "error": null,
+    "question": "How many habits did the average active user complete last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": 4.110609480812641,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Average completed habits per active user for asked How many habits did the average active user complete last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4.110609480812641",
+    "explanation": "Average completed habits per active user in the week 2026-07-06 to 2026-07-12 (metric: habits_per_active_user; both numerator and denominator exclude internal and test accounts).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(4.110609480812641,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

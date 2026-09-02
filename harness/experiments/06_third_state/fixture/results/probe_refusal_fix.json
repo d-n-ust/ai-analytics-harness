@@ -1,0 +1,259 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_dark_mode_adoption",
+    "error": null,
+    "question": "What share of users had dark mode enabled last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 0,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "dark mode setting / feature is not a governed metric or dimension in the semantic layer (no metric or column records whether a user has dark mode enabled)",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "There is no governed metric or table column capturing a 'dark mode enabled' flag; dim_users and facts do not include a feature-setting dimension, so the share cannot be computed from available data.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "dark mode"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named 'dark mode'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014 cite t"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-07-06",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-07-06..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT COUNT(*) FILTER (WHERE platform IS NOT NULL) AS total_users, COUNT(*) FILTER (WHERE platform='unknown') AS unknown_platforms FROM dim_users LIMIT 5;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] columns: total_users, unknown_platforms\n(2500, 72)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT column_name FROM information_schema.columns WHERE table_name='dim_users';"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: This query names information_schema, which is outside this environment. Use the tables listed by get_schema, unqualified."
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "dark"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] NO \u2014 no governed metric named 'dark'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r6 \u2014 cite this w"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_minutes_in_app",
+    "error": null,
+    "question": "How many minutes did the average user spend in the app last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "time-in-app or session-duration is not recorded anywhere. The warehouse only stores app opens (fct_app_opens) and counts of opens per user-day (fct_user_days.app_opens); there is no session or duration column or a governed 'time in app' metric.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "There is no instrumentation or governed metric for minutes-in-app (check_metric_exists returned no metric for time in app; schema and facts show only app opens and completions but no session duration), so average minutes per user cannot be computed from the available data.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-07-06",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-07-06..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r3] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "time in app"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] NO \u2014 no governed metric named 'time in app'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r4 \u2014 cite"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT COUNT(*) AS opens, COUNT(DISTINCT user_id) AS users\nFROM fct_app_opens\nWHERE opened_date BETWEEN '2026-07-06' AND '2026-07-12';"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] columns: opens, users\n(6311, 919)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 0,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric named '90-day retention' exists; while underlying tables capture signups and activity, the governed semantic layer does not define a retained-at-90-days metric to ensure standardized cohort logic.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metrics list contains new_signups and active_users but no defined 90-day retention metric; without a governed definition the platform cannot return an authoritative channel-level 90-day retention figure.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  }
+]

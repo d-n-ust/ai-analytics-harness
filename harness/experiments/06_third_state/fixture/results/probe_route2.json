@@ -1,0 +1,256 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served percent of users who signed up and had any activity within 90 days of signup for asked 90-day retention [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "partnerships",
+    "explanation": "90-day retention by acquisition channel \u2014 percent of users who signed up and had any activity within 90 days of signup. Computed per channel: partnerships 0.8893 (434 retained of 488 total), content_seo 0.8600 (436/507), paid_search 0.8563 (435/508), organic 0.8524 (439/515), referral 0.8382 (404/482). Source: verified computed definition '90-day retention by acquisition channel'.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by acquisition channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']). Call define_measure(measure='90-day retention by acquisition channel') to author a VERIFIED definit"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nresult rows (5, in the definition's order):\n  content_seo, 436, 507, 0.8599605522682445\n  organic, 439, 515, 0.8524271844660194\n  referral, 404, 482, 0.8381742738"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 7,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served fraction of users in each signup cohort who had any activity exactly 90 days after signup (averaged over signup dates) \u2014 i.e., 'activity exactly on day 90' rather than 'retention during first 90 days or still active at day 90' for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "measure '90-day retention' is computable, policy=transparent: computed and disclosed"
+      }
+    ],
+    "answer_text": "organic",
+    "explanation": "90-day retention rate = fraction of users in each signup cohort who had any activity exactly 90 days after signup; averaged over signup dates and grouped by dim_users.channel, period covered 2025-09-01..2026-07-12. Organic = 0.083 (8.3%), Referral = 0.081 (8.1%), Content_seo = 0.065 (6.5%), Partnerships = 0.059 (5.9%), Paid_search = 0.051 (5.1%).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']). Call define_measure(measure='90-day retention by channel') to author a VERIFIED definition and compute it \u2014 do "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nresult rows (1089, in the definition's order):\n  paid_search, 2025-10-30, 1, 1, 1.0\n  partnerships, 2026-07-06, 3, 0, 0.0\n  organic, 2026-05-17, 4, 0, 0.0\n  organ"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retained)::numeric,4) AS retention_90\nFROM (\n  SELECT user.channel AS channel, user.signup_date,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM activity a WHERE a.user_id = user.user_id AND a.active_date = user.signup_date + INTERVAL '90 days'\n    ) THEN 1 ELSE 0 END AS retained\n  FROM \"user\"\n) t\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name user does not exist!\nDid you mean \"fct_user_days\"?\n\nLINE 7:   FROM \"user\"\n               ^"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retained)::numeric,4) AS retention_90\nFROM (\n  SELECT u.channel AS channel, u.signup_date,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM fct_activity a WHERE a.user_id = u.user_id AND a.active_date = u.signup_date + 90\n    ) THEN 1 ELSE 0 END AS retained\n  FROM dim_users u\n) t\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_activity does not exist!\nDid you mean \"fct_subscriptions\"?\n\nLINE 5:       SELECT 1 FROM fct_activity a WHERE a.user_id = u.user_id AND a.active_date...\n                            ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r3] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retention_90)::numeric,4) AS retention_90\nFROM (\n  SELECT channel, signup_date, retained::int AS retention_90\n  FROM (\n    SELECT channel, signup_date, CASE WHEN EXISTS(\n      SELECT 1 FROM fct_user_days d WHERE d.user_id=u.user_id AND d.active_date = u.signup_date + 90\n    ) THEN 1 ELSE 0 END AS retained\n    FROM dim_users u\n  ) s\n) t\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] columns: channel, retention_90\n('organic', Decimal('0.083'))\n('referral', Decimal('0.081'))\n('content_seo', Decimal('0.065'))\n('partnerships', Decimal('0.059'))\n('paid_search', Decimal('0.051'))\n[cite] r4 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2025-09-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] YES \u2014 period 2025-09-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r5 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": true,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served fraction of users (by acquisition channel) who had any product activity within 90 days of signup for asked 90-day retention [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "partnerships \u2014 88.93% 90-day retention",
+    "explanation": "90-day retention = fraction of users (by acquisition channel) who had any product activity within 90 days of signup. Grain: per acquisition channel; Units: proportion. Source: computed definition that joined user.signup_date and activity.active_date and grouped by user.channel (see computed definition).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by acquisition channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.channel']). Call define_measure(measure='90-day retention by acquisition channel') to author a VERIFIED definit"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nresult rows (5, in the definition's order):\n  content_seo, 507, 436, 0.8599605522682445\n  organic, 515, 439, 0.8524271844660194\n  paid_search, 508, 435, 0.8562992"
+      }
+    ]
+  }
+]

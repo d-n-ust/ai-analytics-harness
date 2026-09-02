@@ -1,0 +1,633 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 0,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference in active users (last week minus prior week) = 50 accounts for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "active_users_growth (week grain) for last_week (2026-07-06 to 2026-07-12) = 50, i.e. last week\u2019s active_users minus the prior week\u2019s active_users = 50 accounts.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 1,
+    "declared": null,
+    "reason": "false_premise",
+    "missing": "active_users did not fall last week; the governed metric active_users_growth for last_week returned +50.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served change in weekly active_users versus the prior week (reported as +50 meaning a fall of 50) for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The user's premise ('Active users fell last week') is false according to the governed metric active_users_growth (period 2026-07-06 to 2026-07-12), which shows active users rose by 50.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served change in distinct active accounts (last week's active users minus the week before's) for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference in distinct active accounts between last week and prior week (active_users_growth) for asked Active users fell last week. By how much did they fall? [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "The premise is false \u2014 active users rose by 50 last week, not fell.",
+    "explanation": "active_users_growth (weekly grain) for last_week (2026-07-06 to 2026-07-12) returned +50, meaning last week's distinct active accounts exceeded the prior week's by 50.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 3,
+    "declared": null,
+    "reason": "false_premise",
+    "missing": "active_users did not fall last week; active_users_growth for 2026-07-06..2026-07-12 is +50",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The user's question assumes active users fell, but the governed metric active_users_growth shows a rise of 50, so the premise is false.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 4,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 1,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference in active users between this week and prior week (active_users_growth) for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served week-over-week change in distinct active user accounts (reported as +50) for asked (same) [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "They rose by 50 active users",
+    "explanation": "active_users_growth (this week's active_users minus prior week's) for the week 2026-07-06..2026-07-12 is +50 active users (distinct accounts), weekly grain, excludes internal/test accounts.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Got error(s) during query resolution. Error #1: Message: The query includes a metric 'active_users_growth' that specifies a time offset in input metrics: (PydanticMetricInput(name='active_users', filter=None, alias='this_period', offset_window=None, offset_to_grain=None), PydanticMetricInput("
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 5,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served week-over-week change in active_users computed as last week's active_users minus the prior week's (value = 50 active users) for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served week-over-week change in active_users (computed as last week's active_users minus the prior week's), reported as +50 active users (indicating a rise) for asked (same) [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "+50",
+    "explanation": "active_users_growth: the governed week-over-week change in active_users for last week (2026-07-06 to 2026-07-12), computed by the semantic layer as last week's active_users minus the prior week's; value = +50 active users (so active users rose by 50).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 6,
+    "declared": null,
+    "reason": "false_premise",
+    "missing": "active_users did not fall last week; active_users_growth for last_week (2026-07-06..2026-07-12) is +50, meaning active users rose by 50.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served week-over-week change in distinct active accounts (active_users_growth) for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The user's premise that active users fell is false according to the governed metric active_users_growth, which shows a positive change of 50 for last week.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding",
+    "rep": 7,
+    "declared": null,
+    "reason": "false_premise",
+    "missing": "active_users did not fall last week; governed metric active_users_growth (2026-07-06..2026-07-12) is +50",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference in active_users between last week and prior week (active_users_growth) \u2014 reported as +50 which actually indicates an increase, not a fall for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "direction=fell but active_users_growth=50 is rose; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The question's premise is false: the governed weekly change metric shows active users rose by 50 between 2026-06-29..2026-07-05 and 2026-07-06..2026-07-12, not fell.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  }
+]

@@ -1,0 +1,756 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 0,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "90-day retention is not a governed metric; no metric named '90-day retention' exists",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "the semantic layer has no governed definition for '90-day retention'; we can compute it from user and activity tables but it's not a governed metric",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-14",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-14..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_activity"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] Error: unknown table 'fct_activity'. Available: dim_channel, dim_date, dim_habit, dim_users, fct_app_opens, fct_marketing_spend, fct_referrals, fct_reminders, fct_subscriptions, fct_user_days, fct_value_moments\n[cite] r4 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_user_days"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] fct_user_days\ncolumns: user_id (bigint), active_date (date), week (date), value_moments (bigint), app_opens (bigint), is_internal (boolean), region (varchar), country (varchar), platform (varchar), channel (varchar)\nsample rows:\n(2287, datetime.date(2025, 12, 31), datetime.date(2025, 12, 29), 3"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "-- compute 90-day retention by acquisition channel (user__channel = channel at signup). Assume channel in dim_users.user_channel. We need signups and retention at day 90: from fct_user_days and dim_users\nWITH signups AS (\n  SELECT u.user_id, u.user_channel AS channel, u.signup_date::date AS signup_date\n  FROM dim_users u\n  WHERE u.user_is_internal = FALSE\n),\nactivity90 AS (\n  SELECT s.channel, s.user_id\n  FROM signups s\n  JOIN fct_user_days d ON d.user_id = s.user_id\n  WHERE d.active_date = s.signup_date + INTERVAL '90 day'\n    AND d.is_internal = FALSE\n),\ncohort_sizes AS (\n  SELECT channel, COUNT(DISTINCT user_id) AS cohort_size\n  FROM signups\n  GROUP BY channel\n),\nretained90 AS (\n  SELECT channel, COUNT(DISTINCT user_id) AS retained\n  FROM activity90\n  GROUP BY channel\n)\nSELECT c.channel, c.cohort_size, COALESCE(r.retained,0) AS retained, CASE WHEN c.cohort_size=0 THEN NULL ELSE retained::double / c.cohort_size END AS retention_90\nFROM cohort_sizes c\nLEFT JOIN retained90 r USING (channel)\nORDER BY retention_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Binder Error: Values list \"u\" does not have a column named \"user_is_internal\"\n\nLINE 5:   WHERE u.user_is_internal = FALSE\n                ^"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "dim_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] dim_users\ncolumns: user_id (bigint), signup_ts (timestamp), signup_date (date), is_internal (boolean), platform (varchar), country (varchar), region (varchar), channel (varchar)\nsample rows:\n(115, datetime.datetime(2026, 5, 17, 14, 37), datetime.date(2026, 5, 17), False, 'web', 'BR', 'Americas'"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 1,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "There is no governed metric named '90-day retention' and the semantic layer does not define retention/cohort metrics to compute day-90 retention by acquisition channel.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse captures signup and activity dates but the governed layer lacks a defined, approved retention metric; per governance rules we must refuse with 'no_governed_definition'.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-04-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 2,
+    "declared": null,
+    "reason": "other",
+    "missing": "need to compute 90-day retention from signups and activity but governed metric not defined",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 3,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "No governed metric for '90-day retention' exists; must compute from event tables but initial SQL failed due to table names \u2014 will rerun with correct tables.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-13",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-13..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "group_by": [
+            "user__channel",
+            "user__signup_date"
+          ],
+          "start": "2026-04-13",
+          "end": "2026-07-12"
+        },
+        "error": true,
+        "blocked": true,
+        "result": "BLOCKED by governance \u2014 the period ends 2026-07-12, after data ends 2026-07-11 for 'new_signups'. This request is outside data coverage and cannot be served; refuse (out_of_coverage) or query within coverage. Asking for the same scope as a breakdown does not make it available."
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "group_by": [
+            "user__channel",
+            "user__signup_date"
+          ],
+          "start": "2026-04-13",
+          "end": "2026-07-11"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: 2026-04-13..2026-07-11\ncolumns: user__signup_date__day, user__channel, value\n(datetime.datetime(2026, 5, 23, 0, 0), 'paid_search', 7)\n(datetime.datetime(2026, 6, 29, 0, 0), 'paid_search', 5)\n(datetime.datetime(2026, 5, 30, 0, 0), 'partnerships', 3)\n(datetime.datetime(2026, 6, 23, 0,"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "WITH signups AS (\n  SELECT user_id, user__channel AS channel, DATE(user__signup_date) AS signup_date\n  FROM fct_users\n  WHERE DATE(user__signup_date) BETWEEN DATE('2026-04-13') AND DATE('2026-07-11')\n), retained AS (\n  SELECT s.channel, s.user_id\n  FROM signups s\n  JOIN (\n    SELECT DISTINCT activity__user_id AS user_id\n    FROM fct_activity\n    WHERE DATE(activity__active_date) BETWEEN DATE('2026-07-12','-89 days') AND DATE('2026-07-11')\n  ) a ON s.user_id = a.user_id\n)\nSELECT channel, COUNT(DISTINCT user_id) AS retained, \n  (SELECT COUNT(DISTINCT user_id) FROM signups WHERE channel = s.channel) AS cohort_size,\n  COUNT(DISTINCT user_id)::double / NULLIF((SELECT COUNT(DISTINCT user_id) FROM signups WHERE channel = s.channel),0) AS retention\nFROM retained r\nJOIN signups s ON r.user_id = s.user_id AND r.channel = s.channel\nGROUP BY channel\nORDER BY retention DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Parser Error: Wrong number of arguments provided to DATE function"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "WITH signups AS (\n  SELECT id AS user_id, user__channel AS channel, DATE(user__signup_date) AS signup_date\n  FROM fct_users\n  WHERE DATE(user__signup_date) BETWEEN DATE('2026-04-13') AND DATE('2026-07-11')\n), retained_activity AS (\n  SELECT DISTINCT activity__user_id AS user_id\n  FROM fct_activity\n  WHERE DATE(activity__active_date) BETWEEN DATE('2026-04-14') AND DATE('2026-07-11')\n)\nSELECT s.channel, COUNT(DISTINCT r.user_id) AS retained, \n  COUNT(DISTINCT s.user_id) AS cohort_size,\n  COUNT(DISTINCT r.user_id)*1.0 / NULLIF(COUNT(DISTINCT s.user_id),0) AS retention\nFROM signups s\nLEFT JOIN retained_activity r ON s.user_id = r.user_id\nGROUP BY s.channel\nORDER BY retention DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_users does not exist!\nDid you mean \"fct_user_days\"?\n\nLINE 3:   FROM fct_users\n               ^"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 3,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "90-day retention (no governed metric with that name)",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served 90-day retention measured as share of a signup cohort still active exactly 90 days after signup (per user channel) for asked 90-day retention [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure '90-day retention' is computable, policy=strict: refuse no_governed_definition"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The semantic layer does not define a governed metric for '90-day retention'; while the warehouse tables (dim_users, fct_user_days) can compute it, there is no governed definition to return an authoritative figure.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "group_by": [
+            "user__channel"
+          ],
+          "start": "2026-03-14",
+          "end": "2026-03-20"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: 2026-03-14..2026-03-20\ncolumns: user__channel, value\n('referral', 7)\n('content_seo', 15)\n('organic', 12)\n('paid_search', 3)\n('partnerships', 5)\n[cite] r3:referral \u00b7 r3:content_seo \u00b7 r3:organic \u00b7 r3:paid_search \u00b7 r3:partnerships"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "WITH cohorts AS (\n SELECT user_id, MIN(signup_date) AS signup_date, user_channel\n FROM fct_users\n WHERE signup_date BETWEEN '2026-03-14' AND '2026-03-20'\n GROUP BY user_id, user_channel\n), retained AS (\n SELECT c.user_channel, COUNT(DISTINCT c.user_id) AS retained_90\n FROM cohorts c\n JOIN fct_activity a ON a.user_id = c.user_id\n WHERE a.active_date BETWEEN date_add('day',90,c.signup_date) AND date_add('day',90,c.signup_date)\n GROUP BY c.user_channel\n), cohort_size AS (\n SELECT user_channel, COUNT(DISTINCT user_id) AS cohort_size\n FROM cohorts\n GROUP BY user_channel\n)\nSELECT r.user_channel, r.retained_90, cs.cohort_size, 1.0*r.retained_90/cs.cohort_size AS retention\nFROM retained r JOIN cohort_size cs USING (user_channel);"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_users does not exist!\nDid you mean \"fct_user_days\"?\n\nLINE 3:  FROM fct_users\n              ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-03-14",
+          "end": "2026-06-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] YES \u2014 period 2026-03-14..2026-06-12 within coverage (2025-09-01..2026-07-12).\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "WITH cohorts AS (\n SELECT user_id, MIN(signup_date) AS signup_date, channel\n FROM dim_users\n WHERE signup_date BETWEEN '2026-03-14' AND '2026-03-20' AND is_internal=false\n GROUP BY user_id, channel\n), cohort_size AS (\n SELECT channel, COUNT(*) AS cohort_size\n FROM cohorts\n GROUP BY channel\n), retained AS (\n SELECT c.channel, COUNT(DISTINCT a.user_id) AS retained_90\n FROM cohorts c\n JOIN fct_user_days a ON a.user_id = c.user_id\n WHERE a.active_date = date_add('day',90,c.signup_date)\n GROUP BY c.channel\n)\nSELECT cs.channel, cs.cohort_size, COALESCE(r.retained_90,0) AS retained_90,\n CASE WHEN cs.cohort_size=0 THEN 0 ELSE 1.0*COALESCE(r.retained_90,0)/cs.cohort_size END AS retention\nFROM cohort_size cs\nLEFT JOIN retained r USING(channel)\nORDER BY retention DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Binder Error: Macro date_add() does not support the supplied arguments. You might need to add explicit type casts.\nCandidate macros:\n\tdate_add(date, interval)\n\nLINE 14:  WHERE a.active_date = date_add('day',90,c.signup_date)\n                                ^"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 4,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric named '90-day retention' exists; retention must be computed from base tables which are not exposed as governed metrics in the semantic layer.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metric catalog contains signup and activity metrics but not a defined 90-day retention metric; therefore there is no governed definition to return.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 5,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric defines '90-day retention'. While raw tables (fct_user_days, dim_users) contain activity and signup dates to compute retention, the semantic layer has no governed retention metric to answer the question directly.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metrics list includes new_signups and activity tables but no retained/cohort retention metric; governance requires a defined metric for a supported answer.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_activity"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] Error: unknown table 'fct_activity'. Available: dim_channel, dim_date, dim_habit, dim_users, fct_app_opens, fct_marketing_spend, fct_referrals, fct_reminders, fct_subscriptions, fct_user_days, fct_value_moments\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_user_days"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] fct_user_days\ncolumns: user_id (bigint), active_date (date), week (date), value_moments (bigint), app_opens (bigint), is_internal (boolean), region (varchar), country (varchar), platform (varchar), channel (varchar)\nsample rows:\n(2008, datetime.date(2026, 5, 24), datetime.date(2026, 5, 18), 3, "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 6,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "There is no governed metric named or defining '90-day retention' or any retention_rate; the semantic layer lists no retention metric and retention must be computed by joining user signup and activity data, which is not offered as a governed metric.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served clarification request instead of a retention number for asked 90-day retention [unmeasured]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalog contains new_signups and active_users but no governed retention or retained_users metric. The governed layer cannot return a standardized 90-day retention value without a defined metric.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 7,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "90-day retention is not a governed metric; there is no single metric named '90-day retention' in the catalogue",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The semantic layer does not define '90-day retention'. To compute it we need a clear governed metric or explicit specification (cohort window, retention definition).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-01..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014"
+      },
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "-- compute 90-day retention by acquisition channel\nwith signups as (\n  select user_id, min(signup_date) as signup_date, user_channel\n  from fct_users\n  where user_is_internal = false\n  group by user_id, user_channel\n),\nactivity as (\n  select distinct user_id, activity_date\n  from fct_activity\n  where activity_is_internal = false\n),\ncohorts as (\n  select s.user_id, s.user_channel, s.signup_date,\n    date(s.signup_date, '+89 day') as day90\n  from signups s\n  where s.signup_date between '2026-04-01' and '2026-07-12'\n)\nselect c.user_channel as channel,\n  count(distinct c.user_id) as cohort_size,\n  count(distinct case when a.user_id is not null and a.activity_date between c.signup_date and c.day90 then c.user_id end) as retained_90\nfrom cohorts c\nleft join (\n  select user_id, min(activity_date) as activity_date\n  from activity\n  group by user_id\n) a on a.user_id = c.user_id\ngroup by c.user_channel\norder by retained_90 desc;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Parser Error: Wrong number of arguments provided to DATE function"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_activity"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] Error: unknown table 'fct_activity'. Available: dim_channel, dim_date, dim_habit, dim_users, fct_app_opens, fct_marketing_spend, fct_referrals, fct_reminders, fct_subscriptions, fct_user_days, fct_value_moments\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "describe_table",
+        "args": {
+          "table": "fct_user_days"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] fct_user_days\ncolumns: user_id (bigint), active_date (date), week (date), value_moments (bigint), app_opens (bigint), is_internal (boolean), region (varchar), country (varchar), platform (varchar), channel (varchar)\nsample rows:\n(213, datetime.date(2026, 5, 29), datetime.date(2026, 5, 25), 2, 2"
+      }
+    ]
+  }
+]
