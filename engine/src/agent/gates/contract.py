@@ -96,14 +96,25 @@ def underived_figure(run, exit_call):
         return None
     ev = list(run._evidence_scalars())
     sums, counts = [], []
+    additivity = getattr(run.grounding.semantic, "additivity", None)
     for step in run.steps:
         if step.get("blocked_by") or step.get("error"):
             continue
         vals = [v for v in (step.get("result_values") or ())
                 if isinstance(v, (int, float)) and not isinstance(v, bool)]
         if vals:
-            sums.append(float(sum(vals)))
             counts.append(float(len(vals)))
+            # A stated total OF a breakdown is legitimate ONLY for an additive metric. Summing a
+            # semi-additive one (monthly DISTINCT counts -> 1,823 "quarterly actives") is the
+            # canonical roll-up error, and admitting per-step sums unconditionally legitimised
+            # it — caught by this rule's first full-suite exposure. Unknown additivity keeps the
+            # sum out: the safe default refuses to bless arithmetic the layer will not.
+            metric = (step.get("args") or {}).get("metric")
+            try:
+                if metric and additivity and additivity(metric) == "additive":
+                    sums.append(float(sum(vals)))
+            except Exception:                                               # noqa: BLE001
+                pass
         ev += [v for v in _figures(step.get("result")) if isinstance(v, float)]
     if not ev:
         return None

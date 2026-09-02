@@ -104,21 +104,24 @@ def test_binding_stands_down_when_served_equals_named_and_constructs_both_at_the
 
 
 def test_a_forced_swap_always_leaves_both_figures_with_the_reader():
-    """The inversion floor: when a binding hand-back FORCED the swap that produced this match,
-    the judgement behind it may have been wrong — so both readings reach the answer field. A
-    judge inversion then costs a redundant clause, never a silent number."""
+    """The inversion floor, with REALISTIC operands: after a forced swap the match has
+    served==named, so served_value and named_value are the SAME figure — the first pin passed
+    those two as different numbers and blessed a floor that never fired in production. The
+    figure the reader must also hold is the OTHER side's, passed explicitly."""
     obj = _stub()
-    obj.repairs = [{"binding_mismatch": {"named": "mrr", "served": "gross_mrr", "quote": "q"}}]
-    exit_call = NS(name="answer", args={"answer": "2685.08", "explanation": ""})
-    assert obj._binding_gate(exit_call, "mrr", "mrr", "counting refunded",
-                             "net of refunds", 2685.08, 2685.08) is None   # served==named values equal -> no other
-    # distinct values: the OTHER reading must be appended
+    obj.repairs = [{"binding_mismatch": {"named": "active_users", "served": "active_accounts",
+                                         "quote": "q"}}]
+    exit_call = NS(name="answer", args={"answer": "1683", "explanation": ""})
+    assert obj._binding_gate(exit_call, "active_accounts", "active_accounts",
+                             "not counting staff", "is_internal", 1683.0, 1683.0,
+                             other_value=1620.0) is None
+    assert "1620" in exit_call.args["answer"]              # the swapped-away reading appended
+    # no prior swap -> no append
     obj2 = _stub()
-    obj2.repairs = [{"binding_mismatch": {"named": "mrr", "served": "gross_mrr", "quote": "q"}}]
-    exit_call = NS(name="answer", args={"answer": "2685.08", "explanation": ""})
-    assert obj2._binding_gate(exit_call, "mrr", "mrr", "counting refunded",
-                              "net of refunds", 2754.0, 2685.08) is None
-    assert "2754" in exit_call.args["answer"]
+    exit_call = NS(name="answer", args={"answer": "1683", "explanation": ""})
+    assert obj2._binding_gate(exit_call, "active_accounts", "active_accounts", "q", "d",
+                              1683.0, 1683.0, other_value=1620.0) is None
+    assert exit_call.args["answer"] == "1683"
 
 
 def test_the_member_anchor_decides_over_predicates_and_stays_silent_on_language():
@@ -295,6 +298,8 @@ def test_a_figure_echoed_from_a_mechanism_written_result_line_is_derived():
 def test_a_stated_total_of_a_breakdown_derives_but_an_arbitrary_missum_does_not():
     cells = [195.0, 202.0, 240.0]
     obj = _stub([_step(cells, args={"metric": "new_signups"})])
+    obj.grounding = NS(semantic=NS(clusters=None, additivity=lambda m: "additive"),
+                       guardrails=NS(answer_spec=True))
     ok = NS(name="answer", args={"answer": "637 total across the quarter", "value": 637,
                                  "explanation": ""})
     assert obj.underived_figure(ok) is None              # sum of the step's own rows
@@ -308,3 +313,76 @@ def test_explanation_numbers_stay_advisory():
     exit_call = NS(name="answer", args={"answer": "100", "value": 100,
                                         "explanation": "context: back in 1999 we had 42 users"})
     assert obj.underived_figure(exit_call) is None
+
+
+def test_negated_polarity_words_are_not_read_as_inclusion():
+    from agent.gates.disclosure import member_anchor
+
+    FILTERS = {"active_users": ("{{ Dimension('activity__is_internal') }} = false",),
+               "active_accounts": ()}
+    MEMBERS = {"activity__is_internal": ["False", "True"]}
+    side, why = member_anchor("not counting staff or test users",
+                              "active_users", "active_accounts", FILTERS.get, MEMBERS.get)
+    assert side == "active_users", why       # "not counting" is exclusion, whatever it contains
+
+
+def test_a_semi_additive_step_sum_is_not_derivable():
+    obj = _stub([_step([600.0, 610.0, 613.0], args={"metric": "active_users"})])
+    obj.grounding = NS(semantic=NS(clusters=None, additivity=lambda m: "semi_additive"),
+                       guardrails=NS(answer_spec=True))
+    exit_call = NS(name="answer", args={"answer": "1,823", "value": 1823, "explanation": ""})
+    r = obj.underived_figure(exit_call)
+    assert r is not None and r.is_error      # summing distinct counts is the roll-up error
+    # the same sum over an ADDITIVE metric derives
+    obj2 = _stub([_step([600.0, 610.0, 613.0], args={"metric": "app_opens"})])
+    obj2.grounding = NS(semantic=NS(clusters=None, additivity=lambda m: "additive"),
+                        guardrails=NS(answer_spec=True))
+    exit_call = NS(name="answer", args={"answer": "1,823", "value": 1823, "explanation": ""})
+    assert obj2.underived_figure(exit_call) is None
+
+
+# ── the member license (Instagram / SEO / Google search) ──────────────────────────────────────
+CHANNELS = ["content_seo", "organic", "paid_search", "partnerships", "referral"]
+CH_DESC = ("The acquisition channel of the account. content_seo is content marketing and SEO; "
+           "organic is organic; paid_search is paid search; partnerships is an internal test "
+           "integration; referral is referrals.")
+
+
+def test_member_licenses_route_serve_contest_refuse():
+    from agent.core.members import licenses
+
+    assert licenses("Instagram", CHANNELS, CH_DESC) == []                 # no referent
+    assert licenses("SEO", CHANNELS, CH_DESC) == ["content_seo"]          # documentary license
+    assert licenses("Google search", CHANNELS, CH_DESC) == ["paid_search"]  # name license
+    assert licenses("referrals", CHANNELS, CH_DESC) == ["referral"]
+    assert licenses("the spend", CHANNELS, CH_DESC) == []                 # stopwords only
+
+
+def test_the_segment_gate_blocks_an_unlicensed_fold(monkeypatch):
+    import agent.gates.segments as gs
+
+    obj = _stub()
+    obj.grounding = NS(
+        semantic=NS(ontology_text=lambda: "x",
+                    segment_vocabulary=lambda: {"spend_row__channel": CHANNELS},
+                    dimension_descriptions=lambda: {"spend_row__channel": CH_DESC}),
+        guardrails=NS(segment_gate=True))
+    obj.model = None
+    obj.question = "How much did we spend on Instagram ads in June 2026?"
+    obj._scope_verdict = (False, "", "")
+    # the resolver reports the model's fold: Instagram mapped onto paid_search
+    monkeypatch.setattr(gs._classify, "segment_named",
+                        lambda m, q, v: (True, "Instagram", "spend_row__channel", "paid_search"))
+    exit_call = NS(name="answer", args={"answer": "12,786.81"})
+    r = obj.segment_gate(exit_call)
+    assert r is not None and r.is_error
+    assert "NO value" in r.content and "ungoverned_dimension_value" in r.content
+    # a licensed mapping passes through to the ground_question path untouched
+    obj2 = _stub()
+    obj2.grounding, obj2.model = obj.grounding, None
+    obj2._scope_verdict = (False, "", "")
+    obj2.question = "SEO spend in June?"
+    monkeypatch.setattr(gs._classify, "segment_named",
+                        lambda m, q, v: (True, "SEO", "spend_row__channel", "content_seo"))
+    monkeypatch.setattr(gs._classify, "ground_question", lambda m, q, o: (True, "", ""))
+    assert obj2.segment_gate(NS(name="answer", args={"answer": "1,858.95"})) is None

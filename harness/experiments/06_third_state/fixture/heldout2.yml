@@ -353,8 +353,11 @@ cases:
   question: How much did we spend on Instagram ads in June 2026?
   expect:
     type: refuse
-    reason: ungoverned_dimension_value
-  note: not a channel in this warehouse (proven absent from the spend data)
+    reason:
+    - ungoverned_dimension_value
+    - segment_undefined
+  note: not a channel in this warehouse (proven absent from the spend data). Either code names the
+    same defect — the term has no governed referent — matching the enterprise_plan precedent
 # ── pile C · contested level ─────────────────────────────────────────────────────────────────
 - id: h2_c_active_users_feb
   tier: contested_level

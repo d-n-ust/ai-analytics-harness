@@ -1,0 +1,721 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_active_june_stated",
+    "error": null,
+    "question": "How many customer accounts, not counting staff or test users, were active in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 1620.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 1620.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "member anchor confirms the judge: the quote's concept 'staff' is in active_accounts's scope of is_internal and not in active_users's; excl names active_users"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'not counting staff or test users'"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "binding holds: the question names active_users and the answer serves it"
+      }
+    ],
+    "answer_text": "1620",
+    "explanation": "active_users for June 2026: distinct customer accounts with any product activity in 2026-06 (excludes internal and test accounts).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(1620,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 1,620 against `active_accounts` 1,683, 3.89% apart. The two differ by is_internal = false. "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_active_users_q1",
+    "error": null,
+    "question": "How many active users did we have across the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 891.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 891.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'excluding internal and test accounts'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): active_accounts (is_internal = false) = 923 (vs 891)"
+      }
+    ],
+    "answer_text": "891",
+    "explanation": "active_users in 2026-Q1 (distinct customer accounts with any product activity during 2026-01-01..2026-03-31), weekly-grain query returned the quarter total: 891 active users (excludes internal/test accounts).  Both governed readings: active_accounts (is_internal = false) = 923 (vs 891).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(891,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 891 against `active_accounts` 923, 3.59% apart. The two differ by is_internal = false. If th"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_q4_2025",
+    "error": null,
+    "question": "What was our marketing spend in the fourth quarter of 2025?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 62312.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 62312.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      }
+    ],
+    "answer_text": "62312",
+    "explanation": "Total marketing_spend (sum of all marketing spend rows) in 2025-Q4 (2025-10-01 to 2025-12-31), excluding no rows \u2014 governed metric marketing_spend returned 62,312. Note: acquisition_spend (which excludes the internal 'partnerships' channel) was 54,026 for the same period \u2014 the two differ because acquisition_spend omits partnerships.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2025-Q4"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2025-Q4 -> 2025-10-01..2025-12-31\ncolumns: value\n(62312.000000000015,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 62,312 against `acquisition_spend` 54,026, 13.30% apart. The two differ "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_active_june_stated",
+    "error": null,
+    "question": "How many customer accounts, not counting staff or test users, were active in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 1620.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 1620.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "member anchor confirms the judge: the quote's concept 'staff' is in active_accounts's scope of is_internal and not in active_users's; excl names active_users"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'not counting staff or test users'"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "binding holds: the question names active_users and the answer serves it"
+      },
+      {
+        "guardrail": "metric_brief",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "segment phrase 'not counting staff or test users' is inside the scope quote that chose the metric \u2014 a definition discriminator, not a filter"
+      }
+    ],
+    "answer_text": "1620",
+    "explanation": "active_users in June 2026 \u2014 distinct customer accounts with any product activity during June 2026, excluding internal and test accounts (customer-facing definition).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(1620,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 1,620 against `active_accounts` 1,683, 3.89% apart. The two differ by is_internal = false. "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_active_users_q1",
+    "error": null,
+    "question": "How many active users did we have across the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 891.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 891.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'excluding internal and test accounts'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): active_accounts (is_internal = false) = 923 (vs 891)"
+      }
+    ],
+    "answer_text": "891",
+    "explanation": "active_users in 2026-Q1: 891 distinct customer accounts with any product activity during 2026-01-01..2026-03-31 (excludes internal/test accounts).  Both governed readings: active_accounts (is_internal = false) = 923 (vs 891).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(891,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 891 against `active_accounts` 923, 3.59% apart. The two differ by is_internal = false. If th"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_q4_2025",
+    "error": null,
+    "question": "What was our marketing spend in the fourth quarter of 2025?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 62312.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 62312.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'What was our marketing spend in the fourth quarter of 2025?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): acquisition_spend (channel cmp channel <> 'partnerships') = 54026.26 (vs 62312.0)"
+      }
+    ],
+    "answer_text": "62,312",
+    "explanation": "Total marketing_spend (sum of all marketing spend rows) in 2025-Q4 (period 2025-10-01 to 2025-12-31), excluding none \u2014 includes all channels and partnership spend.  Both governed readings: acquisition_spend (channel cmp channel <> 'partnerships') = 54026.26 (vs 62312.0).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2025-Q4"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2025-Q4 -> 2025-10-01..2025-12-31\ncolumns: value\n(62312.000000000015,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 62,312 against `acquisition_spend` 54,026, 13.30% apart. The two differ "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_active_june_stated",
+    "error": null,
+    "question": "How many customer accounts, not counting staff or test users, were active in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 1620.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 1620.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "member anchor confirms the judge: the quote's concept 'staff' is in active_accounts's scope of is_internal and not in active_users's; excl names active_users"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'not counting staff or test users'"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "binding holds: the question names active_users and the answer serves it"
+      },
+      {
+        "guardrail": "metric_brief",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "segment phrase 'not counting staff or test users' is inside the scope quote that chose the metric \u2014 a definition discriminator, not a filter"
+      }
+    ],
+    "answer_text": "1620",
+    "explanation": "Distinct customer accounts with any product activity in June 2026, excluding internal and test accounts (governed metric active_users for period 2026-06).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(1620,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 1,620 against `active_accounts` 1,683, 3.89% apart. The two differ by is_internal = false. "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_active_users_q1",
+    "error": null,
+    "question": "How many active users did we have across the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 891.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 891.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'EXCLUDING internal and test accounts.'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): active_accounts (is_internal = false) = 923 (vs 891)"
+      }
+    ],
+    "answer_text": "891",
+    "explanation": "Active users (distinct customer accounts with any product activity, excluding internal/test accounts) across the entirety of 2026-Q1 (2026-01-01 to 2026-03-31).  Both governed readings: active_accounts (is_internal = false) = 923 (vs 891).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "month",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(891,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 891 against `active_accounts` 923, 3.59% apart. The two differ by is_internal = false. If th"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_q4_2025",
+    "error": null,
+    "question": "What was our marketing spend in the fourth quarter of 2025?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 62312.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 62312.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      }
+    ],
+    "answer_text": "62,312",
+    "explanation": "Total marketing_spend (all channels, ledger spend rows) in 2025-Q4 (2025-10-01 to 2025-12-31) was 62,312. Note: acquisition_spend (which excludes the internal 'partnerships' channel) was 54,026 \u2014 a different governed reading because it omits partnerships.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2025-Q4"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2025-Q4 -> 2025-10-01..2025-12-31\ncolumns: value\n(62312.000000000015,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 62,312 against `acquisition_spend` 54,026, 13.30% apart. The two differ "
+      }
+    ]
+  }
+]

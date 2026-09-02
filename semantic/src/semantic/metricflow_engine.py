@@ -778,6 +778,21 @@ class MetricFlowLayer:
                 return (str(f),)
         return ()
 
+    def dimension_descriptions(self) -> dict:
+        """{entity__dimension -> its governed description}, verbatim from the manifest — the
+        licensing text for member mappings (core/members.py): the catalogue's own "content_seo is
+        content marketing and SEO" is what licenses the phrase "SEO" onto that member."""
+        out = {}
+        for sm in self._manifest.semantic_models:
+            entity = next((e.name for e in sm.entities
+                           if str(e.type).lower().endswith("primary")), sm.name)
+            for d in sm.dimensions:
+                desc = getattr(d, "description", None) or getattr(
+                    getattr(d, "metadata", None), "description", None)
+                if desc:
+                    out[f"{entity}__{d.name}"] = str(desc)
+        return out
+
     def coverage_window(self, metric: str | None = None) -> tuple:
         """The period this layer can answer for — narrowed to one metric when one is named.
 

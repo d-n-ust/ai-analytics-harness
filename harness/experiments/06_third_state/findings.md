@@ -2478,3 +2478,68 @@ The three-class ledger from §50's frozen measurement — the scope inversion, t
 the prose figure — is now closed: A by structure with a floor, B1 by a typed entry contract with
 steering, B2 by widening an existing deterministic gate to the reader's surface. Each carries a
 validation set or unit pins, and each was scrutinised on adversarial cases before being trusted.
+
+## 57 · The regression round: two of four fixes were this session's own bugs
+
+The full-suite run after closing classes A/B1/B2 read 4 silents — and the traces showed two of
+them were introduced BY the closing work, caught by their first full-suite exposure. Recorded
+plainly, because the mechanism that caught them is the finding:
+
+- POLARITY ORDERING: "not counting staff" matched "counting" in the include-word list, which was
+  checked first — the anchor read an exclusion as an inclusion and overrode a correct serve, and
+  the binding gate enforced the inversion 2/3. Exclusion is now checked first: a negated phrase
+  can never win as its own positive.
+- THE FLOOR THAT NEVER FIRED: the inversion floor compared served_value with named_value — equal
+  BY DEFINITION on a post-swap match — so the both-figures append was dead code, and its unit pin
+  had blessed it with unrealistic operands (two different values for the same side). The floor
+  now receives the OTHER side's value explicitly, and the pin uses the operands production
+  actually produces.
+- NAME-ONLY QUOTES: the scope judge accepted "marketing spend" — the metric's own name — as a
+  scope choice, violating its own instruction; a quote equal to either side's name is now
+  mechanically rejected as not-chosen.
+- ADDITIVITY-GATED SUMS: B2's per-step-sum rule legitimised the canonical roll-up error — three
+  monthly DISTINCT counts summed to 1,823 "quarterly actives". A stated total of a breakdown is
+  admitted only when the layer says the metric is ADDITIVE (`semantic.additivity`); unknown
+  additivity keeps the sum out.
+
+Targeted probe 9/9; the full board moved 4 -> 1, with every closed class staying closed and pile
+C at 42/42 disclosed. The remaining row was the Instagram substitution — §58's subject — whose
+trace also showed a BUDGET RACE: the one check that saw "Instagram grounds to nothing" was dodged
+by pivoting from clarify to answer, and a trivial dropped-date-filter quarrel then consumed the
+last correction, so the cap caveat quoted the wrong defect.
+
+## 58 · The member license: world knowledge proposes, documentation licenses
+
+The Instagram trace is the sharpest allocation lesson in the campaign. The model KNEW the channel
+list ("Instagram (a subset of paid_search)" is in its own probe text): more context could not
+have helped, because the failure was not ignorance but an UNLICENSED INFERENCE — world knowledge
+folding an unknown term into a plausible sibling. And the oracle it asked four times answered the
+measure axis truthfully each time ("ad spend is governed") while the defect lived on the member
+axis, one level below the ontology's closed-world floor.
+
+The fix extends the closed world one level down, with the licensing rule as its heart:
+
+    a mapping from a phrase to a dimension member is honoured only when the governed layer's
+    OWN TEXT licenses it — the member's name, or the member's clause of the dimension's
+    description ("content_seo is content marketing and SEO" licenses the phrase "SEO").
+    World knowledge may propose; only documentation may license.
+
+`core/members.licenses()` is the pure decision (deterministic token evidence against governed
+text); the license COUNT routes exactly as the metric level always has: one license serves with
+the mapping DISCLOSED, several is a member-level contest (each figure, or clarify), zero is the
+closed world speaking — refuse `ungoverned_dimension_value`, never fold. The check now runs at
+BOTH ends: `check_answerability` gained the member axis (the four probes that each licensed the
+substitution now each block it, or hand the model the licensed mapping to state), and
+`segment_gate` runs the license path FIRST — deterministic, ahead of the judge whose flicker let
+the fold through — and now LEADS the verifier phase, so a substitution can never again lose the
+correction budget to a citation quarrel.
+
+Scrutiny (rep 3, 9/9, zero silents): "Instagram ads" refused 3/3 with no folding; "SEO" served
+the content_seo slice 3/3 at 3,605.41 with the mapping stated — licensed by the documentation;
+"Google search ads" served paid_search 3/3 at 12,786.81 — licensed by the member name, and the
+organic reading correctly does NOT exist because the governed text never declares it. That last
+case is the doctrine in one line: synonymy is a governed, auditable artifact — wanting another
+reading is a YAML edit and a re-fingerprint, not a model behaviour. (Production layers declare
+`synonyms:` explicitly — Cortex-Analyst-style; the clause check is this fixture's version of the
+same registry.) One suite alignment: instagram_ads accepts `segment_undefined` as a synonymous
+refusal code, matching the enterprise_plan precedent.

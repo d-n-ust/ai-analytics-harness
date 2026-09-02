@@ -509,8 +509,8 @@ class _Run:
     def _request_chose(self, missing):
         return _g_disclosure._request_chose(self, missing)
 
-    def _binding_gate(self, exit_call, served_name, named, quote, discriminator, served_value, named_value):
-        return _g_disclosure._binding_gate(self, exit_call, served_name, named, quote, discriminator, served_value, named_value)
+    def _binding_gate(self, exit_call, served_name, named, quote, discriminator, served_value, named_value, other_value=None):
+        return _g_disclosure._binding_gate(self, exit_call, served_name, named, quote, discriminator, served_value, named_value, other_value)
 
     def _quote_off_axis(self, quote, discriminator):
         return _g_disclosure._quote_off_axis(self, quote, discriminator)

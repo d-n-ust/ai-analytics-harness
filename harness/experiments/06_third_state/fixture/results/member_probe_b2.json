@@ -1,0 +1,236 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_instagram_ads",
+    "error": null,
+    "question": "How much did we spend on Instagram ads in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "Instagram is not a governed marketing channel in the data (governed channels: content_seo, organic, paid_search, partnerships, referral).",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The marketing_spend metric exists and covers June 2026, but there is no 'Instagram' or paid-social channel in the spend data to filter \u2014 such spend is not instrumented under that name.",
+    "steps": [
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "Instagram ads spend in June 2026"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] GOVERNED \u2014 'Instagram ads spend in June 2026' maps to the governed metric `metric.marketing_spend`. Answer with it (apply any segment or period as a filter).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "time_grain": "month",
+          "period": "2026-06",
+          "group_by": [
+            "metric_time",
+            "spend_row__channel"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: metric_time__month, spend_row__channel, value\n(datetime.datetime(2026, 6, 1, 0, 0), 'partnerships', 2746.03)\n(datetime.datetime(2026, 6, 1, 0, 0), 'referral', 1874.9499999999998)\n(datetime.datetime(2026, 6, 1, 0, 0), 'paid_search', 1"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_instagram_ads",
+    "error": null,
+    "question": "How much did we spend on Instagram ads in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "There is no Instagram or any paid-social channel in the governed channel dimension; dim_channel lists only content_seo, organic, paid_search, partnerships, referral (no Instagram). The marketing_spend metric is only recorded by those channels, so 'Instagram' is not a governed channel and cannot be reported.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 4,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The warehouse does not contain any channel named 'Instagram' (see dim_channel); marketing spend is tracked only by the governed channels, so the requested breakdown by Instagram is not available.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(12786.809999999996,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "Instagram ads spend in June 2026"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] GOVERNED \u2014 'Instagram ads spend in June 2026' maps to the governed metric `metric.marketing_spend`. Answer with it (apply any segment or period as a filter).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "content_seo"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(3605.4100000000003,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_instagram_ads",
+    "error": null,
+    "question": "How much did we spend on Instagram ads in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "instagram",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 3,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The governed channel dimension (spend_row__channel) contains only content_seo, paid_search, partnerships, referral; 'instagram' is not a governed channel and cannot be filtered \u2014 spend on Instagram is not separately recorded in the governed data.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(12786.809999999996,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "Instagram ads spend in June 2026"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] GOVERNED \u2014 'Instagram ads spend in June 2026' maps to the governed metric `metric.marketing_spend`. Answer with it (apply any segment or period as a filter).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

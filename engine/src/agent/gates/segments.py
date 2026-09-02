@@ -101,6 +101,58 @@ def segment_gate(run, exit_call):
     semantic = run.grounding.semantic
     if semantic is None or not hasattr(semantic, "ontology_text"):
         return None
+    # THE LICENSE PATH FIRST — deterministic, and immune to the judge flicker that let
+    # "Instagram (a subset of paid_search)" through. The segment resolver names the phrase the
+    # question restricts by; the governed layer's own text then licenses it to members, or does
+    # not (core/members.py). Zero licenses is the closed world speaking: the term has no
+    # referent, and folding it into a sibling ("Instagram ~ paid_search") is the substitution
+    # this gate exists to stop. Several licenses is a member-level CONTEST — clarify, or both
+    # slices, never a silent pick.
+    seg = run._resolve_segment()
+    if seg and hasattr(semantic, "segment_vocabulary"):
+        from ..core.members import licenses as _licenses
+        descs = (semantic.dimension_descriptions()
+                 if hasattr(semantic, "dimension_descriptions") else {})
+        members = seg.get("members") or []
+        lic = _licenses(seg["phrase"], members, descs.get(seg["dim"], ""))
+        value = seg.get("value") or ""
+        if members and not lic and (not value or value not in lic):
+            run.repairs.append({"unlicensed_segment": {"phrase": seg["phrase"],
+                                                       "dim": seg["dim"], "mapped": value}})
+            run.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
+                                 f"{seg['phrase']!r} is licensed to NO member of {seg['dim']} "
+                                 f"by the governed text"
+                                 + (f"; mapping it onto {value!r} is an unlicensed fold"
+                                    if value else "")
+                                 + f"; correction {run.claim_retries} of 2").as_dict())
+            return ToolResult(
+                f"Your answer was not accepted: the question restricts by {seg['phrase']!r}, and "
+                f"the governed layer licenses that term to NO value of {seg['dim']} (the values "
+                f"are: {', '.join(members)}). Do not fold it into a different value"
+                + (f" — {value!r} answers a different question" if value else "")
+                + ". It is not in the data: `refuse` with reason `ungoverned_dimension_value`.",
+                is_error=True)
+        if len(lic) > 1 and value:
+            run.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
+                                 f"{seg['phrase']!r} is licensed to several members "
+                                 f"({', '.join(lic)}); a silent pick of {value!r} is a "
+                                 f"member-level contest; correction {run.claim_retries} of 2"
+                                 ).as_dict())
+            run.repairs.append({"contested_segment": {"phrase": seg["phrase"], "licensed": lic}})
+            return ToolResult(
+                f"Your answer was not accepted: {seg['phrase']!r} can mean more than one governed "
+                f"value of {seg['dim']} ({', '.join(lic)}). Give the figure for EACH licensed "
+                f"reading, stating which is which — or `clarify` which was meant.", is_error=True)
+        if len(lic) == 1 and value and value != lic[0]:
+            run.repairs.append({"unlicensed_fold": {"phrase": seg["phrase"], "mapped": value,
+                                                    "licensed": lic[0]}})
+            run.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
+                                 f"{seg['phrase']!r} is licensed to {lic[0]!r} but the mapping "
+                                 f"used {value!r}; correction {run.claim_retries} of 2").as_dict())
+            return ToolResult(
+                f"Your answer was not accepted: the governed text licenses {seg['phrase']!r} to "
+                f"{lic[0]!r}, not {value!r}. Serve the {lic[0]!r} slice, stating the mapping.",
+                is_error=True)
     answerable, concept, dim = _classify.ground_question(
         run.model, run.question, semantic.ontology_text())
     if answerable or not concept or run._grounds_literally(concept, semantic):

@@ -102,8 +102,36 @@ def _check_answerability(tb, args) -> ToolResult:
     resolution = ({"kind": "resolution", "verdict": v["verdict"],
                    "metric": v.get("governed_metric") or "", "measure": measure},)
     if v["verdict"] == "governed":
+        # THE MEMBER AXIS. The verdict above judges the MEASURE; a question can still restrict by
+        # a term the closed world does not contain ("Instagram ads" — the measure `ad spend` is
+        # governed, the channel is not a member). Four honest GOVERNED verdicts licensed exactly
+        # that substitution; now the same call checks the named segment term against the layer's
+        # member licenses (core/members.py) and blocks, contests, or discloses the mapping.
+        note = ""
+        if hasattr(tb.semantic, "segment_vocabulary"):
+            from ..core.members import licenses as _licenses
+            from ..guardrails.classify import segment_named
+            vocab = tb.semantic.segment_vocabulary()
+            restricts, phrase, dim, value = segment_named(model, measure, vocab)
+            if restricts and phrase and dim in vocab:
+                descs = (tb.semantic.dimension_descriptions()
+                         if hasattr(tb.semantic, "dimension_descriptions") else {})
+                lic = _licenses(phrase, list(vocab[dim]), descs.get(dim, ""))
+                if not lic:
+                    return ToolResult(
+                        f"UNGOVERNED VALUE — the measure maps to `{v['governed_metric']}`, but "
+                        f"{phrase!r} is licensed to NO value of {dim} (the governed values are: "
+                        f"{', '.join(vocab[dim])}). Do NOT fold it into a different value — it "
+                        f"is not in the data. `refuse` with reason `ungoverned_dimension_value`.",
+                        evidence=resolution)
+                if len(lic) > 1:
+                    note = (f"\nSEGMENT NOTE: {phrase!r} can mean {', '.join(lic)} — give the "
+                            f"figure for each, or `clarify` which was meant.")
+                else:
+                    note = (f"\nSEGMENT NOTE: read {phrase!r} as {dim}={lic[0]!r} (the governed "
+                            f"text licenses this mapping); STATE the mapping in your answer.")
         return ToolResult(f"GOVERNED — {measure!r} maps to the governed metric `{v['governed_metric']}`. "
-                          "Answer with it (apply any segment or period as a filter).",
+                          "Answer with it (apply any segment or period as a filter)." + note,
                           evidence=resolution)
     if v["verdict"] == "computable":
         basis = v.get("basis") or "attributes and measures the graph captures"

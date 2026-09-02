@@ -30,12 +30,15 @@ class Gate:
 
 PIPELINE = (
     Gate("missing_value_slot",   SUPPLY,    contract.missing_value_slot),
+    # segment_gate leads the verifiers: a silent value-substitution outranks a citation or
+    # constraint quarrel for the shared correction budget — the Instagram row lost exactly that
+    # race, and the cap caveat quoted a dropped date filter while the substitution shipped.
+    Gate("segment_gate",         VERIFY,    segments.segment_gate),
     Gate("malformed_claims",     VERIFY,    claims.malformed_claims),
     Gate("dropped_constraint",   VERIFY,    claims.dropped_constraint),
     Gate("ungrounded_candidates", VERIFY,   claims.ungrounded_candidates),
     Gate("direction_vs_evidence", VERIFY,   contract.direction_vs_evidence),
     Gate("underived_figure",     VERIFY,    contract.underived_figure),
-    Gate("segment_gate",         VERIFY,    segments.segment_gate),
     Gate("answerability_gate",   VERIFY,    measure.answerability_gate),
     Gate("substituted_measure",  VERIFY,    measure.substituted_measure),
     # Construct-capable gates LAST: undisclosed_rival can still hand back (the binding check),

@@ -111,8 +111,9 @@ def undisclosed_rival(run, exit_call):
         _chose, named, quote = run._scope_verdict
         named_value = ms if named == metric else ts if named == rival.name else None
         served_value = ms if served_name == metric else ts if served_name == rival.name else None
+        other_value = ts if named == metric else ms
         return run._binding_gate(exit_call, served_name, named, quote,
-                                  rival.discriminator, served_value, named_value)
+                                  rival.discriminator, served_value, named_value, other_value)
     if getattr(g, "construct_disclosure", False):
         notes = [f"{rival.name} ({rival.discriminator or 'a different scope'}) = "
                  f"{round(theirs[key], 4)} (vs {round(mine[key], 4)})"
@@ -348,8 +349,10 @@ def member_anchor(quote: str, mine: str, theirs: str, filters_of, members_of) ->
     enumerated, the concept matches no difference member, or the polarity keyword is absent —
     real language stays the judge's; the floor stays under both."""
     q = " " + quote.lower() + " "
-    polarity = ("incl" if any(w in q for w in _INCLUDE_WORDS)
-                else "excl" if any(w in q for w in _EXCLUDE_WORDS) else "")
+    # EXCLUSION FIRST: "not counting" contains "counting", so the include-check must never win
+    # on a negated phrase — the first full-suite exposure caught exactly that inversion.
+    polarity = ("excl" if any(w in q for w in _EXCLUDE_WORDS)
+                else "incl" if any(w in q for w in _INCLUDE_WORDS) else "")
     if not polarity:
         return "", "no polarity keyword"
     tokens = set(re.findall(r"[a-z]+", q)) - {
@@ -417,6 +420,14 @@ def _request_chose(run, missing) -> bool:
         # "organic acquisition" resolves nothing about is_internal, and the model cannot be talked
         # out of citing it — so the machine, not the prompt, rejects it. The model still owns the
         # judgement; this only refuses a citation that provably cannot resolve THIS contest.
+        # A quote that is just a reading's NAME does not choose between variants — the judge's
+        # own instruction ("the asker's words, not the metric's name"), enforced mechanically:
+        # "marketing spend" quotes the concept both variants share, and letting it stand served
+        # one contested reading silently.
+        name_only = chose and " ".join(str(quote).lower().split()) in (
+            metric.replace("_", " "), rival.name.replace("_", " "))
+        if name_only:
+            chose, which, quote = False, "", f"name-only quote {quote!r}"
         off_axis = chose and run._quote_off_axis(quote, rival.discriminator)
         if off_axis:
             chose, which, quote = False, "", f"off-axis segment {quote!r}"
@@ -448,7 +459,7 @@ def _request_chose(run, missing) -> bool:
 
 
 def _binding_gate(run, exit_call, served_name, named, quote, discriminator,
-                  served_value, named_value):
+                  served_value, named_value, other_value=None):
     """The equality the scope stand-down was missing: served reading == the reading the
     question's own words chose. The frozen suite's largest silent class (a question naming
     the gross reading, served the net one, 3/3) passed because `_request_chose` confirmed
@@ -470,9 +481,13 @@ def _binding_gate(run, exit_call, served_name, named, quote, discriminator,
             # inverted one leaves the correct number in the reader's hands. Appended to the
             # ANSWER field, which is what a reader (and the grader) treats as served.
             swapped = any("binding_mismatch" in r for r in run.repairs)
-            if swapped and served_value is not None and named_value is not None:
+            if swapped and other_value is not None and named_value is not None:
                 shown = parse_numbers(str(exit_call.args.get("answer") or ""))
-                other = served_value if abs(served_value - named_value) > 1e-9 else None
+                # THE OTHER SIDE'S value — on a post-swap match served==named, so the figure the
+                # reader must also hold is the reading the swap moved AWAY from. The first wiring
+                # compared served against named (equal by definition on a match) and the floor
+                # never fired; its unit pin had pinned unrealistic operands.
+                other = other_value if abs(other_value - named_value) > 1e-9 else None
                 if other is not None and not _reported(shown, other):
                     prior = str(exit_call.args.get("answer") or "").strip()
                     exit_call.args["answer"] = f"{prior} ({named} = {round(named_value, 4)}; "                                                f"the other governed reading = {round(other, 4)})"
