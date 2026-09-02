@@ -83,6 +83,15 @@ def _reported(served: list, value: float) -> bool:
     return any(abs(n - value) <= 0.005 * abs(value) for n in served)
 
 
+def _scalar(values):
+    """The single number in a value_of result ({label: value}), or None when it is not one row."""
+    if isinstance(values, dict) and len(values) == 1:
+        (v,) = values.values()
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return v
+    return None
+
+
 # The binary compositions a derived value can be: two governed-metric readings mapped to one. A
 # contest in either input propagates THROUGH the composition, and `_composition_contest` recovers
 # which op was used by matching the served figure to op(x, y). Op-agnostic on purpose — the same
@@ -671,13 +680,14 @@ class _Run:
                     return metric, v
         return None
 
-    def _before_after_from_calls(self, semantic):
-        """The earlier and later value of one metric this run queried at two time windows, or None.
+    def _period_pairs(self, semantic):
+        """(metric, earlier_args, later_args) for every metric this run queried at two orderable
+        windows with otherwise-identical arguments — the before/after shape, read off the trace.
 
-        A comparison pair is two governed calls with the SAME metric and the SAME non-time
-        arguments (filters, group_by) but DIFFERENT, orderable time windows — a before and an after
-        of the same thing. Both must be SCALAR (one number): a grouped result is a set of
-        comparisons, not one, and forcing a single direction on it would be the wrong question.
+        The shared basis for reading a period-over-period change: `_before_after_from_calls` takes
+        the two VALUES of the base metric from it, and `_change_disclosure` takes the two WINDOWS so
+        a governed rival can be evaluated at the same pair. Grouping only — it makes no warehouse
+        calls itself, so each caller reads the values for the pairs it can use.
         """
         from collections import defaultdict
 
@@ -695,23 +705,31 @@ class _Run:
                     return None
             return str(args["start"]) if args.get("start") else None
 
-        def _scalar(values):
-            if isinstance(values, dict) and len(values) == 1:
-                (v,) = values.values()
-                return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
-            return None
-
         groups = defaultdict(dict)                     # (metric, sig) -> {start_date: args}
         for metric, args in self._governed_calls():
             start = _start(args)
             if start is not None:
                 groups[(metric, _sig(args))].setdefault(start, args)
+        pairs = []
         for (metric, _s), by_time in groups.items():
             if len(by_time) < 2:
                 continue
             times = sorted(by_time)
-            v0 = _scalar(before.value_of(semantic, by_time[times[0]], metric))
-            v1 = _scalar(before.value_of(semantic, by_time[times[-1]], metric))
+            pairs.append((metric, by_time[times[0]], by_time[times[-1]]))
+        return pairs
+
+    def _before_after_from_calls(self, semantic):
+        """The earlier and later value of one metric this run queried at two time windows, or None.
+
+        A comparison pair is two governed calls with the SAME metric and the SAME non-time
+        arguments (filters, group_by) but DIFFERENT, orderable time windows — a before and an after
+        of the same thing. Both must be SCALAR (one number): a grouped result is a set of
+        comparisons, not one, and forcing a single direction on it would be the wrong question. The
+        windows come from `_period_pairs`, shared with `_change_disclosure`.
+        """
+        for metric, early, late in self._period_pairs(semantic):
+            v0 = _scalar(before.value_of(semantic, early, metric))
+            v1 = _scalar(before.value_of(semantic, late, metric))
             if v0 is not None and v1 is not None:
                 return metric, v0, v1
         return None
@@ -905,6 +923,14 @@ class _Run:
         if getattr(semantic, "clusters", None) is None:
             return None
         served = parse_numbers(after.served_text(exit_call.args))
+        # A period-over-period CHANGE of a contested metric is the most specific shape and is tried
+        # first: its delta is a difference of the SAME metric at two windows, which the composition
+        # contest reconstructs incorrectly (it substitutes a rival into one window only) and cannot
+        # rescue when the delta was mis-computed in prose. `_change_disclosure` owns it, computing
+        # both readings' deltas from the run's own two windows.
+        tag, result = self._change_disclosure(exit_call, g, served)
+        if tag == "handled":
+            return result
         # Composition-contest takes PRECEDENCE over the flat raw-metric check. When the served figure
         # is a ratio/derived, its contest passes THROUGH the numerator, so the alternative that
         # matters is the RATIO recomputed with the rival — not the raw numerator total the flat check
@@ -1045,6 +1071,78 @@ class _Run:
             f"({rival.discriminator or 'a different scope'}): the value differs by which one you use — "
             f"{reading} with {base_m}, {alt} with {rival.name}. Give BOTH figures and what separates "
             f"them, or `clarify` which was meant.", is_error=True)
+
+    def _change_disclosure(self, exit_call, g, served):
+        """The contested-CHANGE path, tried BEFORE the composition and flat checks.
+
+        A "by how many did X change from May to June" answer is a DIFFERENCE of one metric at two
+        windows. Two things make it its own case rather than the generic composition contest: the
+        composition contest substitutes a rival into ONE input, which for a same-metric difference
+        gives a mixed nonsense reading (rival@May - X@June); and it can only fire when the served
+        figure already equals the correct delta, so it cannot rescue a delta mis-computed in prose
+        (the run that wrote 15,329 - 11,640 = 1,689). Here the delta and the rival's delta are
+        computed from the run's OWN two windows and supplied by construction, so a wrong prose
+        subtraction is corrected and both governed readings reach the reader on every run.
+
+        Returns ('handled', <ToolResult or None>) when a contested before/after pair is found (the
+        answer is augmented, handed back, or the question already chose a reading), else ('none',
+        None) to fall through to the composition and flat checks.
+        """
+        sem = self.grounding.semantic
+        if getattr(sem, "clusters", None) is None:
+            return "none", None
+        for metric, early, late in self._period_pairs(sem):
+            v0 = _scalar(before.value_of(sem, early, metric))
+            v1 = _scalar(before.value_of(sem, late, metric))
+            if v0 is None or v1 is None:
+                continue
+            try:
+                rivals = sem.clusters.competitors(metric)
+            except Exception:                                               # noqa: BLE001
+                continue
+            delta = round(v1 - v0, 4)
+            readings = [(metric, delta, None)]             # (name, delta, competitor-or-None)
+            for rival in rivals:
+                r0 = _scalar(before.value_of(sem, early, rival.name))
+                r1 = _scalar(before.value_of(sem, late, rival.name))
+                if r0 is None or r1 is None:
+                    continue
+                rdelta = round(r1 - r0, 4)
+                # A rival is a CONTEST only if its delta differs materially — the same 0.5% slack the
+                # rest of the disclosure uses. A rival whose delta agrees is not a second reading.
+                if not _reported([delta], rdelta):
+                    readings.append((rival.name, rdelta, rival))
+            if len(readings) < 2:
+                continue                              # no divergent rival: not a contested change
+            if all(_reported(served, val) for _n, val, _r in readings):
+                return "handled", None                # both deltas already in front of the reader
+            if g.scope_classifier and self._request_chose(
+                    [(metric, r) for _n, _v, r in readings[1:]]):
+                return "handled", None                # the question itself picked a reading
+
+            def _dir(d):
+                return "rose" if d > 0 else "fell" if d < 0 else "did not change"
+
+            def _phrase(name, val, rival):
+                if rival is None:
+                    return f"the change in {name} is {val} ({_dir(val)})"
+                return (f"in {name} ({rival.discriminator or 'a different scope'}) it is "
+                        f"{val} ({_dir(val)})")
+
+            notes = [_phrase(*r) for r in readings]
+            repair = {"undisclosed_change": {"metric": metric,
+                                             "readings": {n: v for n, v, _r in readings}}}
+            if getattr(g, "construct_disclosure", False):
+                return "handled", self._construct_disclosure(exit_call, notes, repair)
+            self.repairs.append(repair)
+            self.acts.append(Act("disclosure_check", str(Position.REPAIR), "handed back",
+                                 f"change {delta} via {metric}, a governed rival differs; "
+                                 f"correction {self.claim_retries} of 2").as_dict())
+            return "handled", ToolResult(
+                "Your answer reports one reading of a CONTESTED change: the change differs by which "
+                "governed metric measures it — " + "; ".join(notes) + ". Give BOTH figures and what "
+                "separates them, or `clarify` which was meant.", is_error=True)
+        return "none", None
 
     def _construct_disclosure(self, exit_call, notes, repair):
         """CONSTRUCT the missing rival reading(s) into the answer, and serve — rather than hand back

@@ -2134,3 +2134,41 @@ moved `balanced_accuracy` 0.667 -> 0.992 with no change to `silent_error`. Two s
 still read "only asking is correct" — in `selective.py` and the `grade.py` header, both contradicting
 the fourth-action code beneath them — were corrected. A `test_report.py` case pins it: a disclosed
 answer and a clarification score alike, a single reading served silently does not.
+
+## 48 · The contested change: the delta is the layer's arithmetic, not the model's prose
+
+The last silent error was a contested CHANGE — "by how many did completed habits change from May to
+June?", answered by two governed metrics that do not cancel over the difference (`value_moments`
+excludes internal/test accounts, `total_value_moments` includes them). The model queried the two
+LEVELS by tool and then computed the difference in PROSE: one run wrote "15,329 - 11,640 = 1,689"
+where the delta is 3,689 — a wrong number, and only one of two readings. Flaky at 1 in 3.
+
+A hand-computed number in prose is a missing tool. The generic contest check (§42/§44) cannot own
+this shape: it substitutes a rival into ONE input, which for a difference of the SAME metric at two
+windows gives a mixed nonsense reading (`rival@May - metric@June`), and it only fires when the served
+figure already equals the correct delta — so it cannot rescue a delta mis-computed in prose.
+
+`_change_disclosure` owns the before/after shape. It reads the run's OWN two windows (`_period_pairs`,
+the grouping shared with the directional reader), computes the base delta AND the governed rival's
+delta, and supplies both by CONSTRUCTION — the same supply-don't-hand-back move as the applied segment
+(§41) and contest propagation (§44). The allocation is the recurring one:
+
+| sub-task | layer | before |
+|----------|-------|--------|
+| the subtraction (level_b - level_a) | deterministic, from the two governed calls | the model's prose |
+| which readings exist (the governed rival) | deterministic (the cluster index) | the model's prose |
+| the narrative around the numbers | the model | the model |
+
+No new flag: it extends `disclosure_check`/`construct_disclosure`, tried FIRST in the disclosure path
+ahead of the composition and flat checks. A mis-computed prose delta is corrected and both readings
+reach the reader on every run — the arithmetic and the disclosure both leave the model's prose.
+
+RESULT (rep-3, current-best). Target case 3/3 (and 6/6 at rep-6). Full board: `silent_error` 0.000,
+pile C 42/42 disclosed and 0 served, `balanced_accuracy` 1.000 (with §47), coverage 1.000, pile A
+51/51, pile B 0 served — no over-fire. A `test_change_disclosure.py` unit test pins the two paths
+deterministically: a wrong prose delta is replaced by both correct governed deltas, and an answer that
+already discloses both is left untouched.
+
+CAMPAIGN: 13 silent errors to 0. The durable claim stays the closed failure CLASSES and the
+allocation that closed them — LLM for language, deterministic mechanism for structure, protocol to
+force structure into existence — not the last rep of the last run.
