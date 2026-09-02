@@ -1,0 +1,61 @@
+# The TAIL SUITE — the C-lite measurement of findings §60: five computable questions with proven
+# oracles, graded under a TRANSPARENT policy where the gold IS the defined-and-disclosed figure.
+# This is the only suite shape on which spec-authoring's value is measurable at all: the standard
+# suite's gold refuses the tail, so the flagship's best contribution there is zero by design.
+# `no_governed_metric: true` declares the fact about the layer (gold.py's documented opt-out).
+# Definitional latitude is inherent to the tail; each case notes its canonical reading and grades
+# with a wider tolerance, and the transparent policy requires the DEFINITION to be disclosed.
+cases:
+- id: tail_jan_90d_activation
+  tier: computable_tail
+  question: What share of accounts created in January 2026 completed at least one habit within 90 days of signing up?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT round(count(DISTINCT CASE WHEN e.uid IS NOT NULL THEN u.uid END) * 1.0 / count(DISTINCT u.uid), 4)
+      FROM "_source".u LEFT JOIN "_source".evt e ON e.uid = u.uid AND e.etype = 2 AND e.ts >= u.created AND e.ts
+      < u.created + INTERVAL 90 DAY WHERE u.created >= DATE '2026-01-01' AND u.created < DATE '2026-02-01'
+  note: proven 0.9744 (97.44%)
+- id: tail_avg_days_to_first_habit
+  tier: computable_tail
+  question: On average, how many days pass between signup and the first completed habit, for accounts created in the first quarter of 2026?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.05
+    gold_sql: SELECT round(avg(date_diff('day', u.created, f.first_ts)), 2) FROM "_source".u JOIN (SELECT uid, min(ts)
+      first_ts FROM "_source".evt WHERE etype = 2 GROUP BY uid) f ON f.uid = u.uid WHERE u.created >= DATE '2026-01-01'
+      AND u.created < DATE '2026-04-01'
+  note: proven 14.79 days (among those who ever completed one)
+- id: tail_q1_subscription_conversion
+  tier: computable_tail
+  question: What share of accounts created in the first quarter of 2026 later started a subscription?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT round(count(DISTINCT s.uid) * 1.0 / count(DISTINCT u.uid), 4) FROM "_source".u LEFT JOIN "_source".subs
+      s ON s.uid = u.uid AND s."start" >= u.created WHERE u.created >= DATE '2026-01-01' AND u.created < DATE '2026-04-01'
+  note: proven 0.259 (25.9%)
+- id: tail_march_cohort_june_active
+  tier: computable_tail
+  question: How many accounts created in March 2026 were active in June 2026?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT count(DISTINCT u.uid) FROM "_source".u JOIN "_source".evt e ON e.uid = u.uid AND e.ts >= DATE
+      '2026-06-01' AND e.ts < DATE '2026-07-01' WHERE u.created >= DATE '2026-03-01' AND u.created < DATE '2026-04-01'
+  note: proven 191
+- id: tail_feb_first14_habits
+  tier: computable_tail
+  question: On average, how many habits did an account created in February 2026 complete in its first 14 days?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.05
+    gold_sql: SELECT round(count(e.eid) * 1.0 / count(DISTINCT u.uid), 2) FROM "_source".u LEFT JOIN "_source".evt
+      e ON e.uid = u.uid AND e.etype = 2 AND e.ts >= u.created AND e.ts < u.created + INTERVAL 14 DAY WHERE u.created
+      >= DATE '2026-02-01' AND u.created < DATE '2026-03-01'
+  note: proven 4.03 (averaged over the whole cohort)

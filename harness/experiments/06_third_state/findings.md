@@ -2577,3 +2577,60 @@ its scrutiny and this line).
 The standing caveat stands: this is the DEVELOPMENT suite, iterated against throughout. The
 publishable number is a fresh frozen heldout3 under the §17 protocol, authored blind and spent
 once.
+
+## 60 · Spec-authoring: the record corrected, the channel rehabilitated, and its first real number
+
+THE RECORD, PLAINLY. Every published board in this experiment — including §59's clean board — ran
+WITHOUT spec-authoring: the flag was never in the named standard cell, `define_measure` fired zero
+times in every measured run, and a smoke A/B (three target questions, both cells) showed the flag
+changes nothing because its trigger was dead — the resolver had stopped emitting COMPUTABLE at
+all. §45's scoreboard row credits validated-but-unmeasured machinery; this section replaces that
+credit with a measurement. The distinction that survives review: the runtime spec path was
+overclaimed; the PROMOTION half (spec -> dbt/MetricFlow artifact -> PR -> governed) was always
+listed as an open thread and remains unbuilt, not overclaimed.
+
+WHY THE TRIGGER DIED — the enum-coverage lesson. The COMPUTABLE verdict is a routing decision by
+a judge, and it was the one enum class with no validation coverage: aptness, scope and premise all
+had labelled sets; the three-way resolver did not. Every safety rule of the campaign (qualifier,
+event kind, prefer-uninstrumented) pushed mass out of the middle class, and nothing went red
+because the standard suite's gold applauds refusals. `resolve_validate.py` now pins all three
+classes (canonical computables, governed stay-put, uninstrumented traps).
+
+THE REHABILITATION, three deterministic fixes measured by that set (4/10 computable-class before,
+10/10 after):
+- the metric-as-entity BOUNCE: an ingredient citing a metric where an entity belongs is a
+  detectable contract violation, repaired with one bounded retry whose feedback names the owner
+  entity and its real attributes;
+- the COHORT-RELATION clause: a measure relating two events per account across time (conversion,
+  survival, time-between) is never a single governed stock metric — paying_users counts today's
+  payers, not a cohort's conversion;
+- KEY-EVIDENCE EDGES in the graph: a scanned mart table carrying another entity's key column by
+  the warehouse's own convention (user_id -> user) IS joined. "Entities are not related" had
+  shipped as a wrong refusal reason three times — the undeclared subscription FK (§57's lint) and
+  twice for scanned fact tables that carry user_id; the same structural evidence the lint accepts
+  is promoted into edge construction, still under-claiming outside the convention.
+
+THE FIRST REAL NUMBER. A five-question TAIL SUITE (computable measures with proven oracles;
+`no_governed_metric: true`; gold = the defined-and-disclosed figure — the only suite shape on
+which spec-authoring is measurable, since the standard suite's gold refuses the tail). A/B at
+rep 3 under the transparent policy:
+
+| cell | define / run_sql calls | right | silent |
+|------|-----------------------:|------:|-------:|
+| transparent_compute                 | 0 / 29 | 7/15  | 0.40 |
+| transparent_compute + spec_authoring | 17 / 0 | 11/15 | 0.13 |
+
+Authored-and-verified definitions replaced hand-rolled SQL entirely, and the worst hand-rolled
+class (a cohort-survival question, 3/3 silent) went 3/3 correct authored. The delta is causally
+attributable: same policy, same questions, the only change is who writes the definition — the
+model's prose SQL, or the typed spec pipeline with grounding, coherence, execution-by-construction
+and the aptness challenge. Residual: 2 silents remain under authoring (definitional-latitude
+misses on interval questions) — the aptness challenger's territory, and the honest price of the
+tail.
+
+WHAT THIS EARNS AND WHAT IT DOES NOT. Spec-authoring now has a measured claim: on the computable
+tail under a transparent policy it roughly triples correctness-per-silent against hand-rolled SQL.
+It has NO measured claim on the strict-governance suite, where its correct contribution is zero by
+design — the flag stays out of `current_best`, and a future promotion into any cell couples it to
+the transparent policy it serves. The promotion loop (spec -> PR -> governed next run) remains the
+real flagship and its own experiment.

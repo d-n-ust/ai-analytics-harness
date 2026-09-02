@@ -563,6 +563,12 @@ _RESOLVE_SYSTEM = (
     "notification opens, emails sent, page views — is NOT the count of a different event that "
     "happens to exist ('reminder notifications opened' is not app_opens; an app open is not a "
     "notification). If the event kind has no measure node, the measure is uninstrumented.\n"
+    "A measure that RELATES TWO EVENTS per account across time — conversion between states "
+    "('accounts created in Q1 that later subscribed'), cohort survival ('created in March, still "
+    "active in June'), time BETWEEN events ('signup to first habit') — is NOT any single governed "
+    "stock metric: paying_users counts today's payers, active_users counts a period's actives, and "
+    "neither is a cohort's conversion or survival. When the entities carry the two time "
+    "attributes, such a measure is COMPUTABLE; decompose it.\n"
     "2. computable — no governed metric fits, but the measure can be DERIVED from attributes and "
     "measures IN the graph, joined via the relationships. DECOMPOSE it and list the ingredient nodes "
     "(entity.attribute / entity.measure); you may cite join keys, they are real columns. List each "
@@ -607,7 +613,7 @@ _RESOLVE_REPORT = {
 _register(_RESOLVE_SYSTEM, _RESOLVE_USER, _RESOLVE_REPORT)
 
 
-def resolve_measure(model, question: str, ontology_render: str) -> dict:
+def resolve_measure(model, question: str, ontology_render: str, feedback: str = "") -> dict:
     """{kind, measure, metric, ingredients, missing} — the model's DECOMPOSITION of the question's
     measure against the closed-world graph. The model does only the interpretation; the caller hands
     kind/metric/ingredients to MartsOntology.verify(), which decides the verdict. Defaults to
@@ -615,6 +621,8 @@ def resolve_measure(model, question: str, ontology_render: str) -> dict:
     served number.
     """
     user = _RESOLVE_USER.format(ontology=ontology_render, question=question)
+    if feedback:
+        user += f"\n\nCORRECTION (your previous decomposition was rejected): {feedback}"
     args = _ask(model, _RESOLVE_SYSTEM, user, _RESOLVE_REPORT)
     if args is None:
         return {"kind": "uninstrumented", "measure": "", "metric": "", "ingredients": [],
@@ -637,6 +645,32 @@ def answerability_via_graph(model, question: str, ontology) -> dict:
     render() and verify() — no import of the ontology package is needed here.
     """
     r = resolve_measure(model, question, ontology.render())
+    # THE METRIC-AS-ENTITY BOUNCE. The resolver's contract says ingredients are entity.attribute;
+    # citing a METRIC as the entity ("value_moments.ts" for what activity carries) made verify
+    # honestly report "entities are not related" — a wrong refusal REASON shipped to a reader,
+    # and the collapse that left the COMPUTABLE channel unreachable (findings §60). The
+    # violation is mechanically detectable, and the repair names the exact fix: decompose to the
+    # entity that carries the measure. One bounded retry.
+    ents = set(getattr(ontology, "entities", {}) or {})
+    mets = set(getattr(ontology, "metrics", {}) or {})
+    if ents and mets:
+        bad = [i for i in r["ingredients"]
+               if i.split(".")[0] not in ents and i.split(".")[0].removeprefix("metric.") in mets]
+        if bad:
+            owner = {m: d.get("entity") for m, d in
+                     (getattr(ontology, "metric_dims", {}) or {}).items()}
+            def _hint(b):
+                name = b.split(".")[0].removeprefix("metric.")
+                ent = owner.get(name) or "see the graph"
+                attrs = ""
+                if ent in ents:
+                    attrs = ", ".join(list((getattr(ontology, "entities", {}).get(ent) or {})
+                                           .get("attributes") or ())[:10])
+                    attrs = f"; {ent} carries: {attrs}" if attrs else ""
+                return (f"{name} is a METRIC, not an entity — decompose to the entity that "
+                        f"carries it ({ent}{attrs})")
+            hints = "; ".join(_hint(b) for b in bad[:2])
+            r = resolve_measure(model, question, ontology.render(), feedback=hints)
     verdict, detail = ontology.verify(r["kind"], metric=r["metric"], ingredients=r["ingredients"])
     mapped = {"instrumented": "governed", "computable": "computable",
               "uninstrumented": "uninstrumented"}[verdict]

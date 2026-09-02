@@ -133,6 +133,21 @@ class MartsOntology:
             for to_ent, note in spec.get("relationships", ()):
                 edges.add(frozenset((ent, to_ent)))
                 edge_notes.append((ent, to_ent, note))
+        # KEY-EVIDENCE EDGES. The manifest's curated joins stay primary — but a table carrying
+        # another entity's key column by this warehouse's own convention (user_id -> user) IS
+        # joined, and calling it an island shipped wrong refusal reasons three times: the
+        # undeclared subscription FK (findings §57's lint), and twice as "entities are not
+        # related" for scanned fact tables that carry user_id (§60). The same structural evidence
+        # the lint accepts is promoted into edge construction: column name equals f"{entity}_id"
+        # of a MANIFEST-declared entity. Name-convention evidence, deterministic, and still
+        # under-claiming for any join outside the convention.
+        declared = set(source["entities"])
+        for ent, spec in entities.items():
+            for other in declared:
+                if other != ent and f"{other}_id" in columns_by_table[spec["table"]]:
+                    if frozenset((ent, other)) not in edges:
+                        edges.add(frozenset((ent, other)))
+                        edge_notes.append((ent, other, f"joined on {other}_id (key evidence)"))
         nodes.update(f"metric.{m}" for m in source["metrics"])
         sem = {**(source.get("measure_semantics") or {}), **(measure_semantics or {})}
         return cls(entities=entities, edges=frozenset(edges), edge_notes=tuple(edge_notes),
