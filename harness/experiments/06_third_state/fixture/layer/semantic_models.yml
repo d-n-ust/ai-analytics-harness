@@ -56,7 +56,13 @@ semantic_model:
   description: "One row is one subscription term."
   node_relation: {schema_name: wh_06, alias: fct_subscriptions}
   defaults: {agg_time_dimension: started_date}
-  entities: [{name: subscription, type: primary, expr: subscription_id}]
+  entities:
+    - {name: subscription, type: primary, expr: subscription_id}
+    # The account that holds the term. fct_subscriptions has always carried user_id (schema.yml:
+    # "every fact carries user_id", and paying_user_count counts it) — the relationship existed in
+    # the mart and was simply never declared, so the graph truthfully reported subscription and
+    # user as unjoinable and every cross-entity verdict inherited a wrong reason.
+    - {name: user, type: foreign, expr: user_id}
   dimensions:
     - {name: started_date, type: time, type_params: {time_granularity: day}}
     - {name: cohort_month, type: categorical, expr: "strftime(started_date, '%Y-%m')",

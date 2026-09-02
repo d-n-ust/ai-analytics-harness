@@ -734,6 +734,34 @@ class MetricFlowLayer:
                 self._windows[key] = (_as_date(lo), _as_date(hi))
         return self._windows[key]
 
+    def undeclared_join_keys(self) -> list:
+        """Join keys that exist in the marts but are not declared in the layer — the lint for a
+        whole defect class. A semantic model whose TABLE carries a column matching another model's
+        primary-entity expression, without declaring it as an entity, hides a real relationship
+        from every consumer of the manifest: the ontology graph truthfully reports the two
+        entities unjoinable, answerability verdicts inherit a wrong reason ("subscription and user
+        are not related" — while fct_subscriptions carried user_id all along), and a computable
+        cross-entity measure reads as uninstrumented. Returns [(model, column, entity)] findings;
+        empty means every join key the tables hold is declared."""
+        primaries = {}
+        for sm in self._manifest.semantic_models:
+            for e in sm.entities:
+                if str(e.type).lower().endswith("primary"):
+                    primaries[str(e.expr or e.name)] = e.name
+        findings = []
+        for sm in self._manifest.semantic_models:
+            rel = sm.node_relation
+            try:
+                cols = {r[0] for r in self.con.execute(
+                    f"DESCRIBE {rel.schema_name}.{rel.alias}").fetchall()}
+            except Exception:                                               # noqa: BLE001
+                continue
+            declared = {str(e.expr or e.name) for e in sm.entities}
+            for col, entity in primaries.items():
+                if col in cols and col not in declared and entity not in {e.name for e in sm.entities}:
+                    findings.append((sm.name, col, entity))
+        return findings
+
     def coverage_window(self, metric: str | None = None) -> tuple:
         """The period this layer can answer for — narrowed to one metric when one is named.
 
@@ -886,13 +914,30 @@ class MetricFlowLayer:
                 return []
         if start is None and end is None:
             return []                     # an all-time call asks for exactly what is there
+        # THE COVERAGE AUTHORITY, RECONCILED. Two windows exist: the layer's extraction window
+        # (what check_coverage reads) and a per-metric min/max(timestamp). The per-metric max
+        # CONFLATES two different facts — "this stream's extraction ended earlier" (missing data,
+        # must block: one fixture's completions stop 12 days before its habits) and "no events
+        # happened on the final day" (a true zero: no one signed up on the last extracted day,
+        # and blocking it contradicted check_coverage's YES for the same window, squeezing the
+        # agent into serving an earlier week as the asked one). No metadata distinguishes them,
+        # so the OVERSHOOT does: a request reaching at most one day past the metric's last row —
+        # while inside the extraction window — is a quiet tail and is served (the tail is simply
+        # zero); a larger overshoot reads as a stream that ended, and blocks.
         lo, hi = self.coverage_window(metric)
+        glo, ghi = self.coverage_window() if metric else (lo, hi)
         s, e = _as_date(start), _as_date(end)
         s, e = (s or e), (e or s)
         named = f" for {metric!r}" if metric else ""
-        if lo and s < lo:
+        import datetime as dt
+        slack = dt.timedelta(days=1)
+        if glo and s < glo:
+            return [(None, None, f"the period begins {s}, before data starts {glo}.")]
+        if lo and s < lo - slack:
             return [(None, None, f"the period begins {s}, before data starts {lo}{named}.")]
-        if hi and e > hi:
+        if ghi and e > ghi:
+            return [(None, None, f"the period ends {e}, after data ends {ghi}.")]
+        if hi and e > hi + slack:
             return [(None, None, f"the period ends {e}, after data ends {hi}{named}.")]
         return []
 

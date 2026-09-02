@@ -113,7 +113,9 @@ _RUN_SQL = {
 
 _LIST_METRICS = {
     "name": "list_metrics",
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your "
+                   "instructions under GOVERNED METRIC CATALOGUE — read it there; call this only "
+                   "if you genuinely need it re-printed.",
     "input_schema": {"type": "object", "properties": {}},
 }
 
@@ -212,9 +214,12 @@ _DEFINE_MEASURE = {
 
 _CHECK_COVERAGE = {
     "name": "check_coverage",
-    "description": "Check whether data coverage exists for a period, optionally for one region "
-                   "or country. Pass both start and end for a range; the whole period must be "
-                   "covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one "
+                   "region or country). Coverage is ALREADY ENFORCED on every query — an "
+                   "out-of-range query_metric is refused with the reason — so do NOT call this "
+                   "before an ordinary query. Call it only when you need coverage as evidence: "
+                   "before refusing out_of_coverage, or when a query was blocked and you are "
+                   "deciding what IS answerable.",
     "input_schema": {"type": "object", "properties": {
         "start": {"type": "string", "description": "YYYY-MM-DD"},
         "end": {"type": "string", "description": "YYYY-MM-DD (end of the range)"},
@@ -351,6 +356,8 @@ def _run_sql(tb, args) -> ToolResult:
 
 
 def _list_metrics(tb, args) -> ToolResult:
+    # The same text the system prompt preloads (grounding.py) — the tool stays for re-reading,
+    # but a run that starts by calling it is spending a turn on what it was already given.
     return ToolResult(tb.semantic.list_metrics_text())
 
 
@@ -453,6 +460,22 @@ def _check_metric_exists(tb, args) -> ToolResult:
     return ToolResult(_verdict(*tb.semantic.metric_exists(args["term"])))
 
 
+def _spec_evidence(spec) -> tuple:
+    """The typed evidence records a spec's leaves stand for. A metric/derived leaf IS a governed
+    evaluation — (metric, filters, period) — and registers as one, so every trace-reading gate
+    treats it exactly like a query_metric call. A raw leaf registers as raw SQL: visible to
+    provenance, never claiming governed status."""
+    if spec.kind == "metric":
+        return ({"kind": "governed", "metric": spec.metric,
+                 "args": {"filters": dict(spec.filters) or None,
+                          "period": spec.period or None}},)
+    if spec.kind == "derived":
+        return tuple(e for s in spec.inputs for e in _spec_evidence(s))
+    if spec.kind == "raw":
+        return ({"kind": "raw", "sql": spec.sql},)
+    return ()
+
+
 def _define_measure(tb, args) -> ToolResult:
     """Author + verify + compute a definition for an ungoverned measure (agent/define.py). Returns the
     computed value with its definition disclosed, an uninstrumented refusal, or a could-not-define —
@@ -480,7 +503,14 @@ def _define_measure(tb, args) -> ToolResult:
     if d.aptness and d.aptness != "apt":
         msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note} — disclose this alternative reading, "
                 f"or `clarify` if it changes the answer.")
-    return ToolResult(msg)
+    # The step carries WHAT was computed, typed: values for provenance/citation, evidence records
+    # for the trace-reading gates. Without these the define path was a second data path the
+    # repair chain could not see.
+    values = [d.value] if d.value is not None else [
+        c for r in d.rows[:50] for c in r if isinstance(c, (int, float)) and not isinstance(c, bool)]
+    return ToolResult(msg, values=values or None,
+                      labels=[""] * len(values) if values else None,
+                      evidence=_spec_evidence(d.spec))
 
 
 def _check_answerability(tb, args) -> ToolResult:
@@ -500,9 +530,16 @@ def _check_answerability(tb, args) -> ToolResult:
     from .guardrails.classify import answerability_via_graph
     measure = str(args.get("measure") or "").strip()
     v = answerability_via_graph(model, measure, ont)
+    # The verdict is a DECISION, recorded as typed evidence so downstream gates can read it
+    # deterministically: the measure-substitution judge stands down when the question's measure
+    # was already resolved to the metric the answer serves — one semantic judgement per fact,
+    # not two judges asked the same question in different words.
+    resolution = ({"kind": "resolution", "verdict": v["verdict"],
+                   "metric": v.get("governed_metric") or "", "measure": measure},)
     if v["verdict"] == "governed":
         return ToolResult(f"GOVERNED — {measure!r} maps to the governed metric `{v['governed_metric']}`. "
-                          "Answer with it (apply any segment or period as a filter).")
+                          "Answer with it (apply any segment or period as a filter).",
+                          evidence=resolution)
     if v["verdict"] == "computable":
         basis = v.get("basis") or "attributes and measures the graph captures"
         # ROUTE to define_measure when it is offered: a computable measure needs a DEFINITION, and
@@ -522,7 +559,7 @@ def _check_answerability(tb, args) -> ToolResult:
                           "STATE the definition you used.")
     miss = v.get("missing") or "the concept it needs is not captured by the warehouse"
     return ToolResult(f"UNINSTRUMENTED — {measure!r} is NOT captured: {miss}. `refuse` with reason "
-                      "`uninstrumented`.")
+                      "`uninstrumented`.", evidence=resolution)
 
 
 def _check_coverage(tb, args) -> ToolResult:

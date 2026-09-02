@@ -42,6 +42,36 @@ class Grounding:
     ontology: MartsOntology | None = None
     protocol: Protocol = field(default_factory=Protocol)
 
+    # The delimiter refresh_catalogue() splits on. Everything after it is the preloaded
+    # catalogue; everything before it is the assembled prompt proper.
+    _CATALOGUE_MARK = "\n\n## GOVERNED METRIC CATALOGUE"
+
+    def refresh_catalogue(self) -> None:
+        """(Re)append the rendered catalogue to the system prompt.
+
+        THE CATALOGUE IS PRELOADED, NOT FETCHED. It is small (~2k tokens), stable within a run,
+        and needed on essentially every question — the audit found the model spending its first
+        turn on list_metrics in 9 of 10 traces, a guaranteed round trip for text the prompt could
+        simply carry. Preloading is also cache-friendly: a static prefix hits the provider's
+        prompt cache where a per-run tool result cannot. The tool stays offered for re-reading.
+
+        Idempotent and variant-aware: run.py changes the catalogue RENDERING after grounding is
+        built (the rendering is a treatment), so this re-renders from the current variant rather
+        than freezing the one at build time. fingerprint() hashes the assembled system, so two
+        rendering arms hash differently, as they must."""
+        base = self.system.split(self._CATALOGUE_MARK)[0]
+        if self.semantic is None:
+            self.system = base
+            return
+        try:
+            text = self.semantic.list_metrics_text()
+        except Exception:                                                   # noqa: BLE001
+            self.system = base
+            return
+        self.system = (base + self._CATALOGUE_MARK
+                       + " (authoritative and complete — query these directly; you do not need "
+                         "list_metrics)\n\n" + text)
+
     def fingerprint(self) -> str:
         """A short, stable hash of everything the model is shown: the assembled system prompt, the
         exact tool specs (names, descriptions, enums, required fields), and the governed catalogue.
@@ -149,7 +179,9 @@ def build_grounding(con, rung: int, guardrails: GuardrailSet | None = None,
             ontology = MartsOntology.build_marts(con, schema, semantic.ontology_source())
         except Exception:                                                  # noqa: BLE001
             ontology = None
-    return Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
-                     ontology=ontology,
-                     toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p,
-                                     schema=schema, ontology=ontology))
+    grounding = Grounding(rung=rung, guardrails=g, protocol=p, system=system, semantic=semantic,
+                          ontology=ontology,
+                          toolbox=Toolbox(con, rung, semantic, tree, guardrails=g, protocol=p,
+                                          schema=schema, ontology=ontology))
+    grounding.refresh_catalogue()
+    return grounding

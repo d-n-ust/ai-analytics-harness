@@ -54,6 +54,13 @@ class ToolResult:
     reason: str = ""
     blocked_by: str = ""   # the guardrail that refused, when one did
     acts: tuple = ()       # what every guardrail did on this call, in order
+    # THE EVIDENCE UNION. Typed records of what this call actually computed, for the trace-reading
+    # gates: {"kind": "governed", "metric", "args"} for a governed-metric evaluation (including a
+    # spec's metric/derived leaves), {"kind": "raw", "sql"} for agent-authored SQL. The repair
+    # chain reads the trace, so a value that reaches the answer OUTSIDE these records is invisible
+    # to every gate — that was the define path's defect: prose only, and a number served through
+    # it bypassed contest disclosure, applied segment, direction and provenance alike.
+    evidence: tuple = ()
 
     def for_call(self, call: ToolCall) -> ToolResult:
         return replace(self, call_id=call.id)

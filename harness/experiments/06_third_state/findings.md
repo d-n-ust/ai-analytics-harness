@@ -2250,3 +2250,95 @@ Three readings, in order of importance:
    suite's own rotating flake (gross_mrr_ytd_stated): nothing deterministic yet verifies that a
    scope STATED in the question is bound to the served metric. That is a mechanism gap, now
    measured, not a mystery.
+
+## 51 · The trace contract: decisions become records, and the gates verify them
+
+The frozen-suite diagnosis (§50) reduced to one law: the repair chain is a trace-reader, so it can
+only guarantee what the trace represents. Every silent error was a value or a decision that reached
+the answer outside the typed trace. Four moves implement the law; each was verified live on the
+question that exposed its gap, mechanisms frozen only after the fix.
+
+1. THE EVIDENCE UNION. Every value-producing tool writes typed records onto its step —
+   {kind: governed, metric, args} for a governed evaluation (including a define-authored spec's
+   metric/derived leaves), {kind: raw, sql} for agent SQL — and `_governed_calls` reads the union.
+   The define path stops being a second data path the gates cannot see: a spec-computed number now
+   meets contest disclosure, applied segment, direction and provenance exactly as a queried one.
+
+2. THE BINDING CHECK. `question_chose_scope` now reports WHICH reading the question's words name
+   (with inclusion polarity: "counting X" names the reading whose scope contains X), and a
+   deterministic equality compares it with the served reading at every scope stand-down. Mismatch:
+   a bounded hand-back with the correct value SUPPLIED; at the cap, the named reading's figure is
+   constructed into the answer. Live proof on the 3/3 silent class: the model still picked `mrr`
+   first — the bias is untouched — and the gate handed back "question names gross_mrr"; the
+   re-serve declared 2,754.00. The wrong prior still fires; the verified decision no longer ships.
+
+3. SELF-REPORTS VERIFIED, ARITHMETIC OWNED. The direction gate no longer trusts the typed slot
+   alone: when the slot makes no claim but before/after evidence exists, one validated classifier
+   reads the served text and the sign test stays code (closing the not_a_change dodge). A served
+   headline must DERIVE from the run's own values — an evidence value, one binary composition of
+   two, a rendering x100/100, or a row count (`underived_figure`; the -60,015 row is its pinned
+   test). A window substitution after a governance block is disclosed by construction, read
+   entirely off the trace. A single time-grouped call now counts as before/after evidence.
+
+4. COMPOSITION LAW. Verifiers run before construct-capable checks and constructions attach to the
+   final serve, so a later hand-back can no longer destroy an earlier repair. Constructions no
+   longer spend the correction budget (`hand_backs`, not `claim_retries`). At the cap the checks
+   still run and an unresolved one is served WITH a mechanism caveat — the old cap skipped the
+   checks entirely and shipped the thing under repair unmarked. The substitution judge is narrowed
+   out of wrong-variant (the binding check's job, done deterministically). One coverage authority:
+   the per-metric max(timestamp) no longer masquerades as a coverage bound — a request reaching at
+   most one day past a metric's last row, inside the extraction window, is a quiet tail (a true
+   zero), not missing data; a larger overshoot still blocks (the exp-04 fixture's intent).
+
+Probe (3 diagnosed questions, rep 1): 3/3 correct, binding observed live, polarity clean, the
+false-premise row answered with the correct contradiction. Suites: 80 engine + 121 harness.
+
+## 52 · The mechanics audit, and the six findings it earned
+
+Ten fresh traces (rep 1, every question shape) were read end to end for unexpected, suboptimal or
+over-rigid behaviour. Outcome quality was clean — 10/10 handled, 0 silent — so the audit's yield
+is the six findings below, each addressed at its root.
+
+F1 — THE LAYER OMITTED A REAL RELATIONSHIP. A refusal cited "subscription and user are not
+related — cannot be joined" while fct_subscriptions has always carried user_id; only the YAML
+declaration was missing, and the graph truthfully propagated the gap into wrong refusal REASONS.
+Fixed three ways: the FK declared; a lint for the class (`undeclared_join_keys`: a table column
+matching another model's primary-entity expression, undeclared, is a finding); and — because the
+fix was verified, not assumed — a REGRESSION the new join exposed: with subscription→user
+joinable, the resolver mapped "free-trial conversions" onto plain `paying_users`, dropping the
+qualifier — a wrong-metric silent in waiting. A qualifier rule now binds both classifier paths: a
+measure restricted to a population the graph does not capture is uninstrumented, never the
+unrestricted metric. Verified 5/5: trial→uninstrumented (honest reason), paying-users-by-region→
+governed (the unlock kept), revenue-per-employee→uninstrumented (no over-application).
+
+F2 — COVERAGE RITUAL. Traces pre-checked coverage for windows trivially in range, once AFTER the
+query had already succeeded. Coverage is enforced at the data plane on every query; the agent-side
+tool exists to mint citable evidence for a refusal. The tool description now says so — the action
+space, not prompt prose, is the steering surface. Probe: zero ritual calls.
+
+F3 — THE CATALOGUE IS PRELOADED, NOT FETCHED. Nine of ten traces spent their first turn on
+list_metrics — a guaranteed round trip for ~2k tokens the prompt can simply carry (and a static
+prefix is prompt-cache-friendly where a per-run tool result is not). `refresh_catalogue()` appends
+the current rendering to the system prompt, variant-aware because the rendering is a treatment;
+the fingerprint covers it; the tool stays for re-reading. Probe: zero list_metrics calls; the
+plain lookup went from 3 tool calls to 1.
+
+F4 — PASSING GATES LEAVE RECORDS. The new checks stood down silently, so a stored trace could not
+distinguish "verified and passed" from "never engaged". Binding, derivability, text-direction and
+window checks now write an `allowed` act when they engage and pass.
+
+F5 — ONE SEMANTIC JUDGEMENT PER FACT. check_answerability's verdict is recorded as a typed
+`resolution` record on the step (the Decision record, live), and the measure-substitution judge
+stands down when the served figure is a value of the metric the question was already resolved to.
+Risk-tiered verification: the judge runs only where no resolution covered the serve.
+
+F6 — AND THE AUDIT CAUGHT ITS OWN AUTHOR. The value-slot contract was first implemented as a
+hand-back, which fought a habit the protocol already absorbs (outcomes.py recovers the number and
+records `value_recovered`) and burned three round trips per answer — the exact over-rigidity the
+audit exists to find, introduced while fixing it. Rewritten as a constructor: when the answer
+field states exactly one figure, the mechanism fills the empty slot itself. The probe also caught
+an off-by-one in the new hand-back budget (three corrections where the contract says two).
+
+Cost on the re-probed questions, before → after: tool calls 3→1, 2→1, 2→1, 4→2; model calls
+7→5, 6→5, 5→4, 8→5. The board held 4/4 with the contested ratio disclosed. The bundle now goes to
+a full dev-suite rep-3 before any frozen confirmation is spent.

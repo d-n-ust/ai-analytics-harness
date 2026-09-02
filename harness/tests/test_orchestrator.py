@@ -323,7 +323,12 @@ def test_a_run_that_never_fixes_its_citations_still_terminates():
     ans, model = _run([call("1", "query_metric", QM)], [call("2", "answer", bad)],
                       rrung=9, protocol="claims+repair", max_iters=4)
     assert ans.outcome == "answer", "it must still end through the typed protocol"
-    assert ans.claim_retries <= 2, f"corrections must be bounded, got {ans.claim_retries}"
+    # The cap no longer serves silently: the checks run once more on the final serve and the
+    # unresolved one is appended as a mechanism caveat. `claim_retries` (len(repairs)) therefore
+    # counts the two hand-backs PLUS the cap-detection and the caveat entry; the bound that
+    # matters — round trips and model calls — is pinned below, and the caveat must be present.
+    assert ans.claim_retries <= 4, f"repairs must stay bounded, got {ans.claim_retries}"
+    assert "[mechanism caveat]" in (ans.explanation or ""), "the cap must mark the served answer"
     assert ans.iterations <= 5, f"at most max_iters + 1 turns, got {ans.iterations}"
     assert model.n <= 6, "the model must not be called unboundedly"
 

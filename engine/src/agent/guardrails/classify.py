@@ -39,7 +39,8 @@ def prompt_fingerprint() -> str:
                         _ANSWERABILITY_SYSTEM, _ANSWERABILITY_USER, json.dumps(_ANSWERABILITY_REPORT, sort_keys=True),
                         _RESOLVE_SYSTEM, _RESOLVE_USER, json.dumps(_RESOLVE_REPORT, sort_keys=True),
                         _DISCLOSE_SYSTEM, _DISCLOSE_USER, json.dumps(_DISCLOSE_REPORT, sort_keys=True),
-                        _APT_SYSTEM, _APT_USER, json.dumps(_APT_REPORT, sort_keys=True)])
+                        _APT_SYSTEM, _APT_USER, json.dumps(_APT_REPORT, sort_keys=True),
+                        _TEXT_DIR_SYSTEM, _TEXT_DIR_USER, json.dumps(_TEXT_DIR_REPORT, sort_keys=True)])
     return hashlib.sha256(surface.encode()).hexdigest()[:12]
 
 
@@ -63,20 +64,24 @@ def prompt_fingerprint() -> str:
 # arrive must not be the one that suppresses a disclosure.
 _SCOPE_SYSTEM = (
     "You decide one thing about an analytics question: did the person asking already say which of "
-    "two governed definitions they wanted?\n\n"
+    "two governed definitions they wanted — and if so, WHICH ONE?\n\n"
     "Answer `yes` only when the question NAMES the distinction between them — in the asker's own "
     "words, not the metric's name. A question that merely mentions the concept, or that narrows "
     "something else (a platform, a period, a region), has NOT chosen.\n"
     "Answer `no` when the question is silent about the distinction, however specific it is in "
-    "other respects.")
+    "other respects.\n\n"
+    "When yes, also report WHICH definition the words name. Read the polarity carefully: a clause "
+    "saying 'counting X', 'including X', 'together with X' names the definition whose scope "
+    "CONTAINS X (the inclusive/gross reading); 'excluding X', 'not counting X', 'without X' names "
+    "the one whose scope leaves X out.")
 
 _SCOPE_USER = (
     "Question: {question}\n\n"
     "Two governed definitions both answer it:\n"
-    "  - {mine}: {mine_desc}\n"
-    "  - {theirs}: {theirs_desc}\n"
+    "  - FIRST  — {mine}: {mine_desc}\n"
+    "  - SECOND — {theirs}: {theirs_desc}\n"
     "What separates them: {discriminator}\n\n"
-    "Did the question already say which of the two it wanted?")
+    "Did the question already say which of the two it wanted — and if so, which?")
 
 _SCOPE_REPORT = {
     "name": "report_scope",
@@ -85,6 +90,9 @@ _SCOPE_REPORT = {
         "type": "object",
         "properties": {
             "chose": {"type": "string", "enum": ["yes", "no"]},
+            "which": {"type": "string", "enum": ["first", "second", ""],
+                      "description": "When yes, WHICH definition the question's words name: "
+                                     "`first` or `second` as listed. Empty when no."},
             "quote": {"type": "string",
                       "description": "When yes, the words FROM THE QUESTION that chose, copied "
                                      "exactly. Not the definition's wording and not the "
@@ -125,7 +133,12 @@ def _quoted_from(question: str, quote: str) -> bool:
 
 def question_chose_scope(model, question: str, mine: str, mine_desc: str,
                          theirs: str, theirs_desc: str, discriminator: str) -> tuple:
-    """(chose, quote) — did the request itself pick one of two governed readings?
+    """(chose, which, quote) — did the request pick one of two governed readings, and WHICH?
+
+    `which` is the metric NAME the question's own words select (`mine` or `theirs`), or "" when
+    the classifier could not tell the side. The name, not a boolean, is what makes the served
+    answer verifiable: "the question chose" alone let a request that named the gross reading be
+    served the net one — the check confirmed a precondition and never the binding.
 
     A `yes` survives only if its quote is verifiably in the question. That keeps the division the
     guardrail is built on: the model makes the judgement no mechanism can make, and a mechanism
@@ -138,15 +151,60 @@ def question_chose_scope(model, question: str, mine: str, mine_desc: str,
         turn = model.respond(Conversation.opening(_SCOPE_SYSTEM, user), [_SCOPE_REPORT],
                              force_tool="report_scope", temperature=0)
     except Exception:                                                       # noqa: BLE001
-        return False, ""
+        return False, "", ""
     for call in turn.tool_calls:
         if call.name == "report_scope":
             quote = str(call.args.get("quote") or "").strip()
             chose = str(call.args.get("chose")).strip().lower() == "yes"
+            side = str(call.args.get("which") or "").strip().lower()
+            which = {"first": mine, "second": theirs}.get(side, "")
             if chose and not _quoted_from(question, quote):
-                return False, f"unverified quote {quote!r}"
-            return chose, quote
-    return False, ""
+                return False, "", f"unverified quote {quote!r}"
+            return chose, which, quote
+    return False, "", ""
+
+
+# --- direction assertion: does the served TEXT claim the measure rose or fell? ----------------- #
+#
+# The typed `direction` slot is a self-report, and the frozen suite dodged the direction gate with
+# it (`not_a_change` declared, a drop asserted in prose). Reading prose is language — the model's
+# job — so this classifier does only that one reading; whether the asserted direction contradicts
+# the evidence stays deterministic in the gate. Defaults to `none` on anything unexpected, so a
+# missing judgement never blocks an answer.
+_TEXT_DIR_SYSTEM = (
+    "You read the text of an analytics answer and report ONE thing: does the text ASSERT that the "
+    "measure rose, or that it fell?\n\n"
+    "Report `rose` or `fell` only for an explicit claim about the direction of change — 'fell by "
+    "2,000', 'a drop of 15%', 'grew from 100 to 150', 'the decline is concentrated in EMEA'. A "
+    "level with no change claim, a comparison the text refuses to make, or a text that says the "
+    "premise is wrong, is `none`.")
+
+_TEXT_DIR_USER = "Answer text:\n{text}\n\nDoes this text assert a direction of change?"
+
+_TEXT_DIR_REPORT = {
+    "name": "report_text_direction",
+    "description": "Report whether the answer text asserts a direction of change.",
+    "input_schema": {
+        "type": "object",
+        "properties": {"asserts": {"type": "string", "enum": ["rose", "fell", "none"]}},
+        "required": ["asserts"],
+    },
+}
+
+
+def text_asserts_direction(model, text: str) -> str:
+    """'rose' | 'fell' | 'none' — the direction the served text itself claims."""
+    try:
+        turn = model.respond(Conversation.opening(_TEXT_DIR_SYSTEM,
+                                                  _TEXT_DIR_USER.format(text=text[:2000])),
+                             [_TEXT_DIR_REPORT], force_tool="report_text_direction", temperature=0)
+    except Exception:                                                       # noqa: BLE001
+        return "none"
+    for call in turn.tool_calls:
+        if call.name == "report_text_direction":
+            v = str(call.args.get("asserts") or "").strip().lower()
+            return v if v in ("rose", "fell") else "none"
+    return "none"
 
 
 # --- measure check (the `grounded_measure` guardrail): did the served number measure the -------- #
@@ -257,6 +315,10 @@ _SEGMENT_SYSTEM = (
     "listed values matches it — a channel, plan, region, or platform the layer does not have "
     "(e.g. 'TikTok' is a marketing channel, but not one of the listed channels: dimension "
     "spend_row__channel, value empty). Do NOT map it onto the nearest different value.\n\n"
+    "POLARITY: a clause saying INCLUDING X, counting X, or together with X states that X belongs "
+    "IN the total — it is NOT a restriction to X. 'Including the partnerships integration, how "
+    "much did we spend?' asks for the ALL-channel total (restricts=false), not the partnerships "
+    "slice. Only EXCLUDING X, only X, or X alone restricts.\n\n"
     "Report restricts=false only when the question asks for the overall total with no such "
     "restriction. Judge only the segment restriction, never the metric, period, or grouping.")
 
@@ -425,7 +487,9 @@ _ANSWERABILITY_SYSTEM = (
     "e.g. 90-day retention from signup cohorts joined to activity.\n"
     "- `uninstrumented`: NO governed metric AND the schema lacks the data — a measure the tables do "
     "not capture (duration when only counts exist, a screen when there is no screen taxonomy, "
-    "headcount when there is no employee table). Name what is missing.\n\n"
+    "headcount when there is no employee table). Name what is missing. A measure RESTRICTED to a "
+    "population or state the data does not capture (free-trial users, enterprise accounts) is NOT "
+    "the unrestricted metric — if the qualifier has no referent, the measure is uninstrumented.\n\n"
     "The schema states its own grains and its own ABSENCES; trust them. When a governed metric fits, "
     "answer `governed`; when unsure between computable and uninstrumented, prefer `uninstrumented` "
     "(do not claim data that is not shown).")
@@ -523,6 +587,11 @@ _RESOLVE_SYSTEM = (
     "person who signed up' is metric.marketing_spend / metric.new_signups). Report the whole ratio, "
     "NOT the X metric alone (marketing_spend by itself is the total, a different quantity), and NOT a "
     "per-entity attribution that would need a join the graph does not have.\n"
+    "A measure RESTRICTED to a population, state, or lifecycle stage the graph does not capture — "
+    "free-TRIAL users, ENTERPRISE accounts, users who churned FOR A REASON — is NOT the "
+    "unrestricted metric: mapping 'trial conversions' onto the plain paying-customer count answers "
+    "a different question. When the qualifying concept has no node in the graph, the measure is "
+    "uninstrumented; name the absent qualifier in `missing`.\n"
     "2. computable — no governed metric fits, but the measure can be DERIVED from attributes and "
     "measures IN the graph, joined via the relationships. DECOMPOSE it and list the ingredient nodes "
     "(entity.attribute / entity.measure); you may cite join keys, they are real columns. List each "

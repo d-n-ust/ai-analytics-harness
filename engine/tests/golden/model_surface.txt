@@ -198,8 +198,8 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint 5c9f3205d329 ===
-system: sha256=b3932ec88871 chars=951
+=== rung 3 · R0 · fingerprint d2d624ba0ed8 ===
+system: sha256=8772c40df969 chars=6647
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -240,7 +240,7 @@ system: sha256=b3932ec88871 chars=951
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -357,8 +357,8 @@ system: sha256=b3932ec88871 chars=951
   }
 ]
 
-=== rung 3 · R2 · fingerprint 7046edac38ec ===
-system: sha256=541a80869276 chars=1546
+=== rung 3 · R2 · fingerprint 5988a77e2ae1 ===
+system: sha256=9828af414511 chars=7242
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -399,7 +399,7 @@ system: sha256=541a80869276 chars=1546
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -493,7 +493,7 @@ system: sha256=541a80869276 chars=1546
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -632,8 +632,8 @@ system: sha256=541a80869276 chars=1546
   }
 ]
 
-=== rung 3 · R4 · fingerprint 827cd59e6e2c ===
-system: sha256=bcd41ca8653e chars=1861
+=== rung 3 · R4 · fingerprint 0208cb1d8b8f ===
+system: sha256=779f2dcd399a chars=7557
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -659,7 +659,7 @@ system: sha256=bcd41ca8653e chars=1861
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -772,7 +772,7 @@ system: sha256=bcd41ca8653e chars=1861
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -911,8 +911,8 @@ system: sha256=bcd41ca8653e chars=1861
   }
 ]
 
-=== rung 3 · R6 · fingerprint c4c8ca4b0f35 ===
-system: sha256=6a06892ba048 chars=2372
+=== rung 3 · R6 · fingerprint d864d4859def ===
+system: sha256=2859427d4ead chars=8068
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -938,7 +938,7 @@ system: sha256=6a06892ba048 chars=2372
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1051,7 +1051,7 @@ system: sha256=6a06892ba048 chars=2372
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -1190,8 +1190,8 @@ system: sha256=6a06892ba048 chars=2372
   }
 ]
 
-=== rung 3 · R9 · fingerprint 236e57e77f99 ===
-system: sha256=78da06e54edc chars=3834
+=== rung 3 · R9 · fingerprint 420acca60283 ===
+system: sha256=da0935c14ce4 chars=9530
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1217,7 +1217,7 @@ system: sha256=78da06e54edc chars=3834
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1330,7 +1330,7 @@ system: sha256=78da06e54edc chars=3834
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -1503,8 +1503,8 @@ system: sha256=78da06e54edc chars=3834
   }
 ]
 
-=== rung 6 · R0 · fingerprint 886206ffc460 ===
-system: sha256=10ce3dd5f275 chars=5862
+=== rung 6 · R0 · fingerprint d5a2b0483f1a ===
+system: sha256=35809e63a742 chars=11558
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1545,7 +1545,7 @@ system: sha256=10ce3dd5f275 chars=5862
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1712,8 +1712,8 @@ system: sha256=10ce3dd5f275 chars=5862
   }
 ]
 
-=== rung 6 · R2 · fingerprint fe30e2882f91 ===
-system: sha256=dd3f8d612279 chars=6457
+=== rung 6 · R2 · fingerprint 581a6a1570f6 ===
+system: sha256=addb8dd4ef1c chars=12153
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1754,7 +1754,7 @@ system: sha256=dd3f8d612279 chars=6457
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1898,7 +1898,7 @@ system: sha256=dd3f8d612279 chars=6457
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -2037,8 +2037,8 @@ system: sha256=dd3f8d612279 chars=6457
   }
 ]
 
-=== rung 6 · R4 · fingerprint 52d0d0b69d2d ===
-system: sha256=f5657c94f5ee chars=6772
+=== rung 6 · R4 · fingerprint b588fc1c9a39 ===
+system: sha256=7b38d3c8000d chars=12468
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2064,7 +2064,7 @@ system: sha256=f5657c94f5ee chars=6772
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2236,7 +2236,7 @@ system: sha256=f5657c94f5ee chars=6772
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -2375,8 +2375,8 @@ system: sha256=f5657c94f5ee chars=6772
   }
 ]
 
-=== rung 6 · R6 · fingerprint 4bde6194d754 ===
-system: sha256=0661873056fe chars=7283
+=== rung 6 · R6 · fingerprint c2ebb5d16c01 ===
+system: sha256=5fc18fbdbb89 chars=12979
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2402,7 +2402,7 @@ system: sha256=0661873056fe chars=7283
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2574,7 +2574,7 @@ system: sha256=0661873056fe chars=7283
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -2713,8 +2713,8 @@ system: sha256=0661873056fe chars=7283
   }
 ]
 
-=== rung 6 · R9 · fingerprint 8f419f3bc090 ===
-system: sha256=2b63dd316caf chars=8745
+=== rung 6 · R9 · fingerprint aee5d47d36c0 ===
+system: sha256=8da21963ab32 chars=14441
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2740,7 +2740,7 @@ system: sha256=2b63dd316caf chars=8745
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2912,7 +2912,7 @@ system: sha256=2b63dd316caf chars=8745
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3085,8 +3085,8 @@ system: sha256=2b63dd316caf chars=8745
   }
 ]
 
-=== rung 7 · R0 · fingerprint 5116fb44a2bd ===
-system: sha256=4ccdadfd4322 chars=1329
+=== rung 7 · R0 · fingerprint 4bc604b0afbf ===
+system: sha256=52d1e0c76690 chars=7025
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3127,7 +3127,7 @@ system: sha256=4ccdadfd4322 chars=1329
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3294,8 +3294,8 @@ system: sha256=4ccdadfd4322 chars=1329
   }
 ]
 
-=== rung 7 · R2 · fingerprint 90559aa89c27 ===
-system: sha256=21c611aa1778 chars=1924
+=== rung 7 · R2 · fingerprint d5bf0b5415ce ===
+system: sha256=52c741e82c5f chars=7620
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3336,7 +3336,7 @@ system: sha256=21c611aa1778 chars=1924
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3480,7 +3480,7 @@ system: sha256=21c611aa1778 chars=1924
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3619,8 +3619,8 @@ system: sha256=21c611aa1778 chars=1924
   }
 ]
 
-=== rung 7 · R4 · fingerprint 5f7e5b6c6f30 ===
-system: sha256=f6fa332612c3 chars=2239
+=== rung 7 · R4 · fingerprint fe6500ac5179 ===
+system: sha256=39a837edddba chars=7935
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3646,7 +3646,7 @@ system: sha256=f6fa332612c3 chars=2239
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3818,7 +3818,7 @@ system: sha256=f6fa332612c3 chars=2239
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3957,8 +3957,8 @@ system: sha256=f6fa332612c3 chars=2239
   }
 ]
 
-=== rung 7 · R6 · fingerprint ebff3e6af6ba ===
-system: sha256=4fcfa635ca94 chars=2750
+=== rung 7 · R6 · fingerprint 864bef24dee1 ===
+system: sha256=6fe600443d81 chars=8446
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3984,7 +3984,7 @@ system: sha256=4fcfa635ca94 chars=2750
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4156,7 +4156,7 @@ system: sha256=4fcfa635ca94 chars=2750
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -4295,8 +4295,8 @@ system: sha256=4fcfa635ca94 chars=2750
   }
 ]
 
-=== rung 7 · R9 · fingerprint 785ea0e21b9c ===
-system: sha256=bc9a5349fe29 chars=4212
+=== rung 7 · R9 · fingerprint d1ae61c19329 ===
+system: sha256=acb15b955570 chars=9908
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -4322,7 +4322,7 @@ system: sha256=bc9a5349fe29 chars=4212
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4494,7 +4494,7 @@ system: sha256=bc9a5349fe29 chars=4212
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -4667,8 +4667,8 @@ system: sha256=bc9a5349fe29 chars=4212
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint b81da35ff7d4 ===
-system: sha256=f58f8e6082be chars=4586
+=== rung 7 · R9/purpose · fingerprint 9578464a20ea ===
+system: sha256=2892b0be5490 chars=10282
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -4694,7 +4694,7 @@ system: sha256=f58f8e6082be chars=4586
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4874,7 +4874,7 @@ system: sha256=f58f8e6082be chars=4586
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -5047,8 +5047,8 @@ system: sha256=f58f8e6082be chars=4586
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint c75cf997fc79 ===
-system: sha256=68cafd4271e5 chars=4916
+=== rung 7 · R9/claims · fingerprint c9d509d462c6 ===
+system: sha256=f00585083b6e chars=10612
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5074,7 +5074,7 @@ system: sha256=68cafd4271e5 chars=4916
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -5246,7 +5246,7 @@ system: sha256=68cafd4271e5 chars=4916
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -5454,8 +5454,8 @@ system: sha256=68cafd4271e5 chars=4916
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint 391557d09234 ===
-system: sha256=eea8b0e9a393 chars=5122
+=== rung 7 · R9/claims+repair · fingerprint ef4bd6c09973 ===
+system: sha256=f15e2615f93c chars=10818
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5481,7 +5481,7 @@ system: sha256=eea8b0e9a393 chars=5122
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -5653,7 +5653,7 @@ system: sha256=eea8b0e9a393 chars=5122
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -5861,8 +5861,8 @@ system: sha256=eea8b0e9a393 chars=5122
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint 3ac42fae76fa ===
-system: sha256=8c766050a8fe chars=5496
+=== rung 7 · R9/purpose+claims+repair · fingerprint 2b921f5d1555 ===
+system: sha256=8e605ec45993 chars=11192
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5888,7 +5888,7 @@ system: sha256=8c766050a8fe chars=5496
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -6068,7 +6068,7 @@ system: sha256=8c766050a8fe chars=5496
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -6276,8 +6276,8 @@ system: sha256=8c766050a8fe chars=5496
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint 59e1dbd3e1a1 ===
-system: sha256=47984fc1fb8e chars=6315
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint dde4bb42c962 ===
+system: sha256=7da0cf61d104 chars=12011
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -6303,7 +6303,7 @@ system: sha256=47984fc1fb8e chars=6315
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -6483,7 +6483,7 @@ system: sha256=47984fc1fb8e chars=6315
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -6691,8 +6691,8 @@ system: sha256=47984fc1fb8e chars=6315
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint e9ad9157c054 ===
-system: sha256=1e342c97f77d chars=7337
+=== rung 5 · R5/claims · fingerprint 034eb256251d ===
+system: sha256=85b29e5dab0a chars=13033
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -6718,7 +6718,7 @@ system: sha256=1e342c97f77d chars=7337
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -6831,7 +6831,7 @@ system: sha256=1e342c97f77d chars=7337
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -7005,8 +7005,8 @@ system: sha256=1e342c97f77d chars=7337
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint 7b479fa94716 ===
-system: sha256=e8e9c0005054 chars=8158
+=== rung 5 · R5/claims+role · fingerprint a6a73c6c6e19 ===
+system: sha256=4f8d4e3079a4 chars=13854
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -7032,7 +7032,7 @@ system: sha256=e8e9c0005054 chars=8158
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -7145,7 +7145,7 @@ system: sha256=e8e9c0005054 chars=8158
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {

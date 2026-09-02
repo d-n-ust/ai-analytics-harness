@@ -97,6 +97,11 @@ def _scalar(values):
 # which op was used by matching the served figure to op(x, y). Op-agnostic on purpose — the same
 # propagation rule covers a ratio (spend_per_signup), a difference (a hand-computed change), and any
 # other binary combination, so the mechanism is not ratio-specific.
+# One grace turn, and the shared correction budget every output gate draws on. Module-level so
+# the gates themselves (the binding check constructs instead of handing back once the budget is
+# spent) read the same number the loop enforces.
+GRACE, MAX_CORRECTIONS = 1, 2
+
 _COMPOSE = {
     "ratio":      lambda a, b: (a / b) if b else None,
     "difference": lambda a, b: a - b,
@@ -201,6 +206,14 @@ class _Run:
         The name stays because it is the published field on every archived row."""
         return len(self.repairs)
 
+    @property
+    def hand_backs(self) -> int:
+        """Corrections that actually cost a round trip. A CONSTRUCTION (the mechanism supplying a
+        fact into the answer) is a repair entry but not a hand-back, and must not consume the
+        correction budget — otherwise one constructed disclosure spends a correction the binding
+        check later needs."""
+        return sum(1 for r in self.repairs if not r.get("constructed"))
+
     def execute(self, calls) -> list:
         """Run this turn's tool calls, record the trace, and return the results to send back.
         Errors come back as results, not exceptions — being told what went wrong is what lets
@@ -239,6 +252,7 @@ class _Run:
                                    result.content.encode()).hexdigest()[:12],
                                "result_values": result.values,
                                "result_labels": result.labels,
+                               "evidence": [dict(e) for e in (result.evidence or ())],
                                "blocked_reason": result.reason,
                                "blocked_by": result.blocked_by,
                                "acts": [a.as_dict() for a in result.acts],
@@ -303,11 +317,18 @@ class _Run:
         only that one is broken in the other direction: nothing about it is malformed, and the
         reader is the one who cannot tell.
         """
-        return (self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
-                or self.undisclosed_rival(exit_call) or self.ungrounded_candidates(exit_call)
-                or self.substituted_measure(exit_call) or self.direction_vs_evidence(exit_call)
-                or self.segment_gate(exit_call) or self.applied_segment(exit_call)
-                or self.answerability_gate(exit_call))
+        # ORDER IS AN INVARIANT: verifiers (which hand back) run BEFORE the construct-capable
+        # checks, and constructions attach to the FINAL serve — so a later gate can never discard
+        # an earlier gate's construction. The frozen suite caught exactly that: a constructed
+        # disclosure was destroyed by a later grounded_measure hand-back and the re-serve lost it.
+        return (self.missing_value_slot(exit_call)
+                or self.malformed_claims(exit_call) or self.dropped_constraint(exit_call)
+                or self.ungrounded_candidates(exit_call)
+                or self.direction_vs_evidence(exit_call) or self.underived_figure(exit_call)
+                or self.segment_gate(exit_call) or self.answerability_gate(exit_call)
+                or self.substituted_measure(exit_call)
+                or self.undisclosed_rival(exit_call) or self.applied_segment(exit_call)
+                or self.substituted_window(exit_call))
 
     def _resolve_segment(self):
         """The shared segment resolver behind `segment_gate` and `applied_segment`.
@@ -642,11 +663,35 @@ class _Run:
         if actual == "unchanged":
             return None
         declared = str(exit_call.args.get("direction") or "").strip().lower()
-        # The claim is read from the TYPED `direction` slot answer_spec requires — a field the model
-        # must fill, so there is no neutral phrasing to dodge with and nothing to reverse-engineer
-        # from the question. Only a directional claim can contradict the evidence; `not_a_change` and
-        # a level answer make none and are left alone.
-        if declared not in ("rose", "fell", "unchanged") or declared == actual:
+        # The claim is read from the TYPED `direction` slot answer_spec requires. A slot is a
+        # SELF-REPORT, though, and the frozen suite dodged the gate with it: `not_a_change`
+        # declared while the prose asserted a drop of -60,015. So when the slot makes no
+        # directional claim but evidence exists, ONE focused classifier reads the served text —
+        # language is the model's job — and the contradiction test against the evidence sign
+        # stays code. A text that asserts nothing directional is left alone, as before.
+        if declared not in ("rose", "fell", "unchanged"):
+            parsed = AnswerArgs.of(exit_call.args)
+            text = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
+            asserted = _classify.text_asserts_direction(self.model, text) if text else "none"
+            if asserted not in ("rose", "fell") or asserted == actual:
+                if text:
+                    self.acts.append(Act("answer_spec", str(Position.REPAIR), "allowed",
+                                         f"text asserts {asserted}; evidence says {actual}; "
+                                         f"consistent").as_dict())
+                return None
+            self.repairs.append({"direction_vs_evidence":
+                                 {"claimed": f"text:{asserted}", "actual": actual,
+                                  "metric": metric}})
+            self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
+                                 f"text asserts {asserted} (slot says {declared or 'nothing'}) "
+                                 f"but {short} is {actual}; correction {self.claim_retries} of 2"
+                                 ).as_dict())
+            return ToolResult(
+                f"Your answer was not accepted: its text asserts the measure {asserted}, but "
+                f"{evidence} — that is {actual!r}. Set direction={actual!r} and state plainly "
+                f"that {metric} {actual} by that amount, with the figure taken from your own "
+                f"calls.", is_error=True)
+        if declared == actual:
             return None
         self.repairs.append({"direction_vs_evidence":
                              {"claimed": declared, "actual": actual, "metric": metric}})
@@ -680,6 +725,34 @@ class _Run:
             return (metric, actual,
                     f"the governed change metric {metric} YOUR OWN query returned is {round(delta, 4)} "
                     f"(positive is a rise, negative a fall)", f"{metric}={delta}")
+        series = self._series_from_calls(semantic)
+        if series is not None:
+            metric, v0, v1 = series
+            actual = "rose" if v1 > v0 else "fell" if v1 < v0 else "unchanged"
+            return (metric, actual,
+                    f"the time series YOUR OWN query returned for {metric} ends "
+                    f"{round(v0, 4)} then {round(v1, 4)}", f"{metric} series {v0}->{v1}")
+        return None
+
+    def _series_from_calls(self, semantic):
+        """(metric, prev, last) from a single time-grouped governed call, or None. A series is a
+        before/after pair the run already holds — the frozen suite asserted "signups fell" against
+        its own quarterly series, and no pair-shaped evidence existed because the two values
+        arrived in ONE grouped call rather than two scalar ones."""
+        for metric, args in self._governed_calls():
+            group_by = args.get("group_by") or ()
+            if not any("metric_time" in str(gb) for gb in group_by):
+                continue
+            keyed = before.value_of(semantic, args, metric)
+            if not isinstance(keyed, dict) or len(keyed) < 2:
+                continue
+            try:
+                ordered = [keyed[k] for k in sorted(keyed)]
+            except TypeError:
+                continue
+            v0, v1 = ordered[-2], ordered[-1]
+            if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (v0, v1)):
+                return metric, v0, v1
         return None
 
     def _change_from_calls(self, semantic):
@@ -785,6 +858,47 @@ class _Run:
         text = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
         if not text:
             return None
+        # ONE SEMANTIC JUDGEMENT PER FACT. When the run's own check_answerability already resolved
+        # this question's measure to metric M (a typed `resolution` record on the trace) and the
+        # served figure IS a value M returned, the question->metric fit has been judged once —
+        # graph-grounded and recorded. Running this judge again asks the same question in
+        # different words, at a model call per answer; the audit found it costing 1-2 calls on
+        # zero-risk serves. Risk-tiered verification: the judge runs only where no resolution
+        # covered the serve.
+        resolved = {e.get("metric") for s in self.steps if not s.get("blocked_by")
+                    for e in (s.get("evidence") or ())
+                    if e.get("kind") == "resolution" and e.get("verdict") == "governed"}
+        if resolved:
+            served_nums = parse_numbers(after.served_text(exit_call.args))
+            for step in self.steps:
+                if step.get("blocked_by") or step.get("tool") != "query_metric":
+                    continue
+                if (step.get("args") or {}).get("metric") in resolved and any(
+                        isinstance(v, (int, float)) and not isinstance(v, bool)
+                        and _reported(served_nums, v)
+                        for v in step.get("result_values") or ()):
+                    self.acts.append(Act("grounded_measure", str(Position.REPAIR), "allowed",
+                                         "resolution dedupe: the measure was graph-resolved to "
+                                         f"{(step.get('args') or {}).get('metric')!r} and its "
+                                         "value is what the answer serves").as_dict())
+                    return None
+        # NARROWED: a served figure that IS a queried contested-cluster reading is never a measure
+        # substitution — which VARIANT it should be is the binding check's question, answered
+        # deterministically. This judge kept "seeing" the variant mismatch, having no verdict for
+        # it, and passing it as `measures`; wrong-variant is out of its jurisdiction now.
+        sem = self.grounding.semantic
+        if getattr(sem, "clusters", None) is not None:
+            served_nums = parse_numbers(after.served_text(exit_call.args))
+            for metric, args in self._governed_calls():
+                try:
+                    rivals = sem.clusters.competitors(metric)
+                except Exception:                                           # noqa: BLE001
+                    continue
+                if not rivals:
+                    continue
+                v = _scalar(before.value_of(sem, args, metric))
+                if v is not None and _reported(served_nums, v):
+                    return None
         verdict, asked, served = _classify.answer_measures_asked(self.model, self.question, text)
         self.acts.append(Act("grounded_measure", str(Position.REPAIR),
                              "stood down" if verdict == "measures" else "handed back",
@@ -914,6 +1028,143 @@ class _Run:
               "from that result. If the layer genuinely cannot express it, `refuse` instead of "
               "widening.", is_error=True)
 
+    def missing_value_slot(self, exit_call):
+        """An answer that states one unambiguous figure gets its typed `value` slot FILLED by the
+        mechanism — supplied, never asked for.
+
+        The slot is the contract every downstream reader leans on — grading, the derivability
+        check, the window check — and the audit found a served ratio with `value` empty, pushing
+        every one of them back to parsing prose. The first cut of this check handed the answer
+        back, which fought a habit the protocol already absorbs (outcomes.py recovers the number
+        and records `value_recovered`) and burned three round trips per answer for it. The number
+        is already stated; copying it into the slot is structure, and structure is the
+        mechanism's job. Fills only when the answer field parses to EXACTLY one number — an
+        ambiguous multi-figure answer stays prose, as designed. Runs first so every later gate
+        reads the filled slot; idempotent, and never returns a correction."""
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
+            return None
+        if _as_number(exit_call.args.get("value")) is not None:
+            return None
+        stated = parse_numbers(str(exit_call.args.get("answer") or ""))
+        if len(stated) != 1:
+            return None
+        exit_call.args["value"] = stated[0]
+        self.acts.append(Act("answer_spec", str(Position.REPAIR), "constructed",
+                             f"filled the empty `value` slot with the answer's own figure "
+                             f"{stated[0]}").as_dict())
+        return None
+
+    def _evidence_scalars(self):
+        """Every number the run's successful calls returned, off the recorded step values."""
+        out = []
+        for step in self.steps:
+            if step.get("blocked_by") or step.get("error"):
+                continue
+            for v in step.get("result_values") or ():
+                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                    out.append(float(v))
+        return out
+
+    def underived_figure(self, exit_call):
+        """Hand back a served headline figure that matches NOTHING the run's own calls returned —
+        not a value, not a single binary composition of two values, not a count of rows.
+
+        The frozen suite served a "drop" of -60,015 where the run's own two calls gave 19,173 and
+        25,188 (a rise of 6,015): arithmetic done in prose, unverified because the delta check was
+        scoped to contested metrics. This is the general form: a headline number must be DERIVABLE
+        from the evidence. One binary op of two evidence values (and a x100/100 rendering for
+        rates) is accepted; a longer derivation is rare and costs one hand-back to restate through
+        the tools. Bounded like every gate; the cap serves with a caveat rather than silently."""
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
+            return None
+        declared = _as_number(exit_call.args.get("value"))
+        if declared is None:
+            return None
+        ev = self._evidence_scalars()
+        if not ev:
+            return None
+        counts = [float(len(step.get("result_values") or ()))
+                  for step in self.steps if step.get("result_values")]
+        candidates = list(ev) + counts
+        for i, a in enumerate(ev):
+            for b in ev[i:]:
+                candidates += [a - b, b - a, a + b, a * b]
+                if b:
+                    candidates.append(a / b)
+                if a:
+                    candidates.append(b / a)
+        for c in list(candidates):
+            candidates += [c * 100, c / 100]
+        if any(abs(declared - c) <= 0.005 * max(abs(declared), 1e-9) for c in candidates):
+            self.acts.append(Act("answer_spec", str(Position.REPAIR), "allowed",
+                                 f"figure {declared} derives from the run's own values").as_dict())
+            return None
+        self.repairs.append({"underived_figure": {"declared": declared}})
+        self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
+                             f"served {declared} derives from none of the run's own values; "
+                             f"correction {self.claim_retries} of 2").as_dict())
+        shown = ", ".join(str(round(v, 4)) for v in ev[:12])
+        return ToolResult(
+            f"Your answer was not accepted: the figure {declared} matches none of the values your "
+            f"own calls returned ({shown}{'…' if len(ev) > 12 else ''}) nor any single "
+            f"difference, sum, ratio or product of two of them. Recompute through the tools and "
+            f"serve a figure your calls support — do not do arithmetic in prose.", is_error=True)
+
+    def substituted_window(self, exit_call):
+        """CONSTRUCT the disclosure when the served figure comes from a different time window than
+        the one the question's request was refused for — read entirely off the trace.
+
+        The frozen suite answered "last week" with the PRIOR week after governance blocked the
+        asked window, and nothing said so. The pattern is deterministic: a BLOCKED query at window
+        P, then a served scalar traceable to a successful call at window W != P. The mechanism
+        appends the fact; the reader decides what the substitution is worth."""
+        g = self.grounding.guardrails
+        if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
+            return None
+        declared = _as_number(exit_call.args.get("value"))
+        if declared is None:
+            return None
+
+        def window(args):
+            if args.get("period"):
+                return str(args["period"])
+            if args.get("start") or args.get("end"):
+                return f"{args.get('start') or '…'}..{args.get('end') or '…'}"
+            return ""
+
+        blocked = [(window(s.get("args") or {}), s.get("blocked_reason") or "")
+                   for s in self.steps
+                   if s.get("blocked_by") and s.get("tool") == "query_metric"
+                   and window(s.get("args") or {})]
+        if not blocked:
+            return None
+        for step in self.steps:
+            if step.get("blocked_by") or step.get("tool") != "query_metric":
+                continue
+            vals = [v for v in (step.get("result_values") or ())
+                    if isinstance(v, (int, float)) and not isinstance(v, bool)]
+            if not any(abs(declared - v) <= 0.005 * max(abs(v), 1e-9) for v in vals):
+                continue
+            w = window(step.get("args") or {})
+            asked, reason = blocked[0]
+            if w and w == asked:
+                self.acts.append(Act("answer_spec", str(Position.REPAIR), "allowed",
+                                     f"served figure comes from the asked window {asked}").as_dict())
+            if w and w != asked:
+                note = (f"the requested window ({asked}) was refused by governance"
+                        + (f" ({reason})" if reason else "")
+                        + f"; the figure reported is for {w}")
+                self.repairs.append({"substituted_window":
+                                     {"asked": asked, "served": w, "constructed": True}})
+                self.acts.append(Act("answer_spec", str(Position.REPAIR), "constructed",
+                                     f"window substitution disclosed: {note}").as_dict())
+                prior = str(exit_call.args.get("explanation") or "").strip()
+                exit_call.args["explanation"] = (prior + f"  Note: {note}.").strip()
+            return None
+        return None
+
     def undisclosed_rival(self, exit_call):
         """Hand back an answer that reported one contested reading and omitted the other.
 
@@ -984,7 +1235,20 @@ class _Run:
         if not missing:
             return None
         if g.scope_classifier and self._request_chose(missing):
-            return None
+            # The question chose a reading — now verify the SERVED reading is that one. Scalars
+            # only: which side the answer reports is decided by the figure in the text.
+            metric, rival, mine, theirs, _absent = missing[0]
+            ms, ts = _scalar(mine), _scalar(theirs)
+            served_name = None
+            if ms is not None and _reported(served, ms):
+                served_name = metric
+            elif ts is not None and _reported(served, ts):
+                served_name = rival.name
+            _chose, named, quote = self._scope_verdict
+            named_value = ms if named == metric else ts if named == rival.name else None
+            served_value = ms if served_name == metric else ts if served_name == rival.name else None
+            return self._binding_gate(exit_call, served_name, named, quote,
+                                      rival.discriminator, served_value, named_value)
         if getattr(g, "construct_disclosure", False):
             notes = [f"{rival.name} ({rival.discriminator or 'a different scope'}) = "
                      f"{round(theirs[key], 4)} (vs {round(mine[key], 4)})"
@@ -1077,7 +1341,10 @@ class _Run:
             return "none", None
         base_m, rival, op, reading, alt = rc
         if g.scope_classifier and self._request_chose([(base_m, rival)]):
-            return "handled", None
+            _chose, named, quote = self._scope_verdict
+            named_value = reading if named == base_m else alt if named == rival.name else None
+            return "handled", self._binding_gate(exit_call, base_m, named, quote,
+                                                 rival.discriminator, reading, named_value)
         repair = {"undisclosed_composition": {"op": op, "base": base_m, "rival": rival.name,
                                               "reading": reading, "alt": alt}}
         if getattr(g, "construct_disclosure", False):
@@ -1141,7 +1408,12 @@ class _Run:
                 return "handled", None                # both deltas already in front of the reader
             if g.scope_classifier and self._request_chose(
                     [(metric, r) for _n, _v, r in readings[1:]]):
-                return "handled", None                # the question itself picked a reading
+                _chose, named, quote = self._scope_verdict
+                by_name = {n: v for n, v, _r in readings}
+                riv = readings[1][2]
+                return "handled", self._binding_gate(
+                    exit_call, metric, named, quote, riv.discriminator,
+                    by_name.get(metric), by_name.get(named))
 
             def _dir(d):
                 return "rose" if d > 0 else "fell" if d < 0 else "did not change"
@@ -1193,7 +1465,7 @@ class _Run:
         """
         if self._scope_verdict is None:
             metric, rival = missing[0][0], missing[0][1]
-            chose, quote = _classify.question_chose_scope(
+            chose, which, quote = _classify.question_chose_scope(
                 self.model, self.question, metric, self._describe(metric),
                 rival.name, self._describe(rival.name), rival.discriminator)
             # Mechanical off-axis guard: a `chose` whose quote is a segment value on a DIFFERENT axis
@@ -1203,13 +1475,54 @@ class _Run:
             # judgement; this only refuses a citation that provably cannot resolve THIS contest.
             off_axis = chose and self._quote_off_axis(quote, rival.discriminator)
             if off_axis:
-                chose, quote = False, f"off-axis segment {quote!r}"
-            self._scope_verdict = (chose, quote)
+                chose, which, quote = False, "", f"off-axis segment {quote!r}"
+            self._scope_verdict = (chose, which, quote)
             self.acts.append(Act("scope_classifier", str(Position.REPAIR),
                                  "stood down" if chose else "applied",
                                  f"the request {'named' if chose else 'did not name'} which reading"
                                  + (f": {quote!r}" if quote else "")).as_dict())
         return self._scope_verdict[0]
+
+    def _binding_gate(self, exit_call, served_name, named, quote, discriminator,
+                      served_value, named_value):
+        """The equality the scope stand-down was missing: served reading == the reading the
+        question's own words chose. The frozen suite's largest silent class (a question naming
+        the gross reading, served the net one, 3/3) passed because `_request_chose` confirmed
+        THAT a reading was chosen and nothing compared WHICH with what was served.
+
+        The named side comes from the validated scope classifier (language); this method is the
+        deterministic remainder: an equality, a bounded hand-back with the correct value SUPPLIED,
+        and at the correction cap a constructed note so the reader holds the named reading's
+        figure regardless. Returns None when the binding holds (or cannot be decided)."""
+        if not named or served_name is None or named == served_name:
+            if named and named == served_name:
+                # F4: a check that RAN and PASSED is distinguishable from one that never engaged.
+                self.acts.append(Act("scope_classifier", str(Position.REPAIR), "allowed",
+                                     f"binding holds: the question names {named} and the answer "
+                                     f"serves it").as_dict())
+            return None
+        self.repairs.append({"binding_mismatch": {"named": named, "served": served_name,
+                                                  "quote": quote}})
+        if self.hand_backs <= MAX_CORRECTIONS:      # own repair already appended above
+            self.acts.append(Act("scope_classifier", str(Position.REPAIR), "handed back",
+                                 f"binding: question names {named} ({quote!r}) but the answer "
+                                 f"serves {served_name}; correction {self.claim_retries} of 2"
+                                 ).as_dict())
+            supplied = "" if named_value is None else f" = {round(named_value, 4)}"
+            return ToolResult(
+                f"Your answer was not accepted: the question's own words ({quote!r}) name the "
+                f"{named} reading ({discriminator or 'a different scope'}), but the figure served "
+                f"is {served_name}"
+                + (f" = {round(served_value, 4)}" if served_value is not None else "")
+                + f". Serve {named}{supplied} — answer FROM that reading, stating what it counts.",
+                is_error=True)
+        note = (f"the question's words ({quote}) name {named}"
+                + ("" if named_value is None else f" = {round(named_value, 4)}"))
+        self.acts.append(Act("scope_classifier", str(Position.REPAIR), "constructed",
+                             f"binding unresolved at the cap; appended: {note}").as_dict())
+        prior = str(exit_call.args.get("explanation") or "").strip()
+        exit_call.args["explanation"] = (prior + f"  Note: {note}.").strip()
+        return None
 
     def _quote_off_axis(self, quote: str, discriminator: str) -> bool:
         """True when the scope quote is explained by a governed segment value on a dimension OTHER
@@ -1243,10 +1556,18 @@ class _Run:
         which a wrong answer has no reason to fill in correctly."""
         seen = []
         for step in self.steps:
+            if step.get("blocked_by"):
+                continue
             args = step.get("args") or {}
             metric = args.get("metric")
-            if step.get("tool") == "query_metric" and metric and not step.get("blocked_by"):
+            if step.get("tool") == "query_metric" and metric:
                 seen.append((metric, args))
+            # A define-authored spec's governed leaves ARE governed calls — recorded on the step
+            # as typed evidence, read here so contest disclosure, applied segment, direction and
+            # the change checks treat a spec-computed number exactly like a queried one.
+            for e in step.get("evidence") or ():
+                if e.get("kind") == "governed" and e.get("metric"):
+                    seen.append((e["metric"], dict(e.get("args") or {})))
         return seen
 
     def _why_unresolved(self, ref: str) -> str:
@@ -1381,6 +1702,19 @@ class _Run:
         return self._record(answer=text or None, explanation="(never called a terminal tool)",
                             outcome="error", iterations=iterations, error="no_final_answer")
 
+    def cap_caveat(self, exit_call, correction) -> None:
+        """Serve at the correction cap WITH the unresolved check named — never silently. The
+        caveat is the first sentence of the check's own hand-back, appended by the mechanism, so
+        the reader is told the answer did not pass rather than being handed it unmarked."""
+        head = str(correction.content or "").split(". ")[0].strip()[:220]
+        prior = str(exit_call.args.get("explanation") or "").strip()
+        exit_call.args["explanation"] = (
+            prior + f"  [mechanism caveat] An output check remained unresolved after the "
+            f"correction budget: {head}.").strip()
+        self.repairs.append({"cap_caveat": head, "constructed": True})
+        self.acts.append(Act("answer_spec", str(Position.REPAIR), "constructed",
+                             f"served at the cap with a caveat: {head}").as_dict())
+
     def exhausted(self, iterations: int) -> Answer:
         return self._record(answer=None, explanation="", outcome="error",
                             iterations=iterations, error="max_iterations")
@@ -1431,7 +1765,6 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     # all of them in the next. A GRACE turn is granted once, and only to a correction — the run
     # still ends through the typed protocol, one turn later than it would have.
     budget = max_iters
-    GRACE, MAX_CORRECTIONS = 1, 2
 
     for it in range(max_iters + GRACE):
         if it >= budget:
@@ -1470,15 +1803,23 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         if turn.exit_call:
             # A malformed answer is corrected, not accepted — on any turn, including the last,
             # which is where the model was rushing and citing loosest. Bounded twice over: at
-            # most MAX_CORRECTIONS per run, and the grace turn is granted once, so this cannot
-            # trade a lost measurement for an unbounded loop.
-            correction = (run.needs_correction(turn.exit_call)
-                          if run.claim_retries < MAX_CORRECTIONS else None)
-            if correction is not None:
+            # most MAX_CORRECTIONS hand-backs per run (constructions are free — hand_backs, not
+            # claim_retries), and the grace turn is granted once, so this cannot trade a lost
+            # measurement for an unbounded loop.
+            #
+            # THE CAP NEVER SERVES SILENTLY. The old form skipped the checks entirely once the
+            # budget was spent, which shipped the thing under repair with no mark on it — the
+            # frozen suite served an unfiltered total that way. Now the checks still run at the
+            # cap; an unresolved one becomes a caveat the reader can see, appended by the
+            # mechanism, and the answer serves with it.
+            correction = run.needs_correction(turn.exit_call)
+            if correction is not None and run.hand_backs < MAX_CORRECTIONS:
                 if it == budget - 1 and budget < max_iters + GRACE:
                     budget += 1
                 convo.observe([correction.for_call(turn.exit_call)])
                 continue
+            if correction is not None:
+                run.cap_caveat(turn.exit_call, correction)
             return done(run.finish(turn.exit_call, it + 1))
         if results:
             convo.observe(results)

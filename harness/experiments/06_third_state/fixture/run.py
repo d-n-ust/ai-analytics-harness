@@ -256,6 +256,7 @@ def main() -> None:
             grounding = build_grounding(cur, rung=RUNG, spec_path=layer, engine="metricflow",
                                         semantic_layer=True, guardrails=guardrails, schema=MARTS)
             grounding.semantic.catalogue = args.catalogue
+            grounding.refresh_catalogue()   # the preloaded copy must show the chosen rendering
             if args.catalogue == "normalised":
                 grounding.system += "\n\n" + SCHEMA_EXPLANATION
             elif args.catalogue == "hybrid":

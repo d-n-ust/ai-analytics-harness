@@ -13,7 +13,7 @@ generated:
   gate: lexical
   at: '2026-08-27T20:26:51Z'
 source:
-  fingerprint: sha256:0c56dc66f76e84dd687afbbc1c44f48aaf709eed7051fb651bfb8f375e507b18
+  fingerprint: sha256:afc8d65715e4a78f2af4eb9d4d3e7c7d5d85a9048e070122cedf9c49d562e9a7
   files:
   - layer/project.yaml
   - layer/semantic_models.yml

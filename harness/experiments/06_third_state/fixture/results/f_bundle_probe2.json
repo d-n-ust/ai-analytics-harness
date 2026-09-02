@@ -1,0 +1,283 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4269.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4269.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app open events (app_opens) filtered to web in March 2026 for asked How many times did users on the web open the app in March 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "Total app_opens in March 2026 on the web platform; this is the governed metric app_opens (count of app open events), month grain (2026-03), filtered to activity__platform = web; internal/test accounts are excluded by the metric.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_signups_last_week",
+    "error": null,
+    "question": "How many people signed up last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 121.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 121.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 121.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of accounts created (new signups) in that week for asked How many people signed up last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "121",
+    "explanation": "New signups (user entity) in the week 2026-07-06 to 2026-07-12 (last_week), counting all accounts created in that period.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(121,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_trial_conversions",
+    "error": null,
+    "question": "How many free-trial users converted to a paid plan last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "There is no governed metric, table column, or dimension that records an account's 'free-trial' status or a subscription's origin as a trial start (e.g. subscription_origin_type or trial flag).",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The data catalogue does not capture whether a subscription originated from a free trial, so we cannot reliably count trial-to-paid conversions.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "free-trial users converted to a paid plan last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] UNINSTRUMENTED \u2014 'free-trial users converted to a paid plan last month' is NOT captured: free-trial status / trial period flag or subscription_origin_type indicating trial start. `refuse` with reason `uninstrumented`.\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 93.67,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 93.67"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 93.67 derives from the run's own values"
+      }
+    ],
+    "answer_text": "93.67",
+    "explanation": "Marketing spend divided by new signups in 2026-Q1. marketing_spend = 59,664.99999999996 (total marketing spend, includes partnerships) \u00f7 new_signups = 637 (accounts created) = \u00a393.67 per signup. The catalogue also provides acquisition_spend = \u00a351,573 (excludes partnerships) which gives \u00a380.94 per signup; the difference is that acquisition_spend excludes the internal \u2018partnerships\u2019 channel.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]
