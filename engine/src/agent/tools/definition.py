@@ -1,0 +1,91 @@
+"""The definition tool: author + verify + compute an ungoverned measure (spec pipeline).
+
+Part of the agent's action space (see tools/__init__.py): each tool appears ONCE, a schema paired
+with its handler, returning a ToolResult the guardrails can read typed numbers from.
+"""
+
+from __future__ import annotations
+
+import json                                                                  # noqa: F401
+from dataclasses import replace                                              # noqa: F401
+
+from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeError  # noqa: F401
+from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS                           # noqa: F401
+from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text  # noqa: F401,E501
+
+from ..conversation import ToolResult                                        # noqa: F401
+from ..guardrails import LADDER, GuardrailSet, action_space, before, disclosure  # noqa: F401
+from ..outcomes import REASON_MEANINGS, REFUSAL_REASONS                      # noqa: F401
+from ..protocol import Protocol                                              # noqa: F401
+from ..rungs import capabilities                                             # noqa: F401
+
+
+_DEFINE_MEASURE = {
+    "name": "define_measure",
+    "description": "Author a VERIFIED definition for a measure that has no governed metric, and "
+                   "compute it. The definition is grounded in the graph, checked for validity, "
+                   "executed by construction, and challenged for aptness; the result comes back with "
+                   "the definition disclosed. Use this instead of raw SQL for an ungoverned measure "
+                   "(a retention/cohort calculation, a custom ratio).",
+    "input_schema": {"type": "object", "properties": {
+        "measure": {"type": "string",
+                    "description": "The measure to define and compute, in the question's own words "
+                                   "(e.g. '90-day retention by acquisition channel')."}},
+        "required": ["measure"]},
+}
+
+
+def _spec_evidence(spec) -> tuple:
+    """The typed evidence records a spec's leaves stand for. A metric/derived leaf IS a governed
+    evaluation — (metric, filters, period) — and registers as one, so every trace-reading gate
+    treats it exactly like a query_metric call. A raw leaf registers as raw SQL: visible to
+    provenance, never claiming governed status."""
+    if spec.kind == "metric":
+        return ({"kind": "governed", "metric": spec.metric,
+                 "args": {"filters": dict(spec.filters) or None,
+                          "period": spec.period or None}},)
+    if spec.kind == "derived":
+        return tuple(e for s in spec.inputs for e in _spec_evidence(s))
+    if spec.kind == "raw":
+        return ({"kind": "raw", "sql": spec.sql},)
+    return ()
+
+
+def _define_measure(tb, args) -> ToolResult:
+    """Author + verify + compute a definition for an ungoverned measure (agent/define.py). Returns the
+    computed value with its definition disclosed, an uninstrumented refusal, or a could-not-define —
+    the agent then serves the value (stating the definition) or refuses."""
+    ont, model = getattr(tb, "ontology", None), getattr(tb, "model", None)
+    if ont is None or model is None:
+        return ToolResult("UNKNOWN — define_measure is unavailable in this configuration.")
+    from ..define import define_measure
+    d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic)
+    if d.outcome == "refuse":
+        return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")
+    if d.outcome == "gave_up":
+        return ToolResult(f"COULD NOT DEFINE — {d.disclosure} Consider `clarify` or `refuse`.")
+    # Present the computed result so the agent can answer FROM IT directly — a scalar, or the rows
+    # laid out (already ordered by the definition's SQL) so "which is best/highest" is readable
+    # without a re-query. The recompute-with-run_sql wrinkle was the rows arriving as a bare list.
+    if d.value is not None:
+        result = f"value = {d.value}"
+    else:
+        rows = "\n  ".join(", ".join(str(c) for c in r) for r in d.rows[:20])
+        result = f"result rows ({len(d.rows)}, in the definition's order):\n  {rows}"
+    msg = (f"COMPUTED (tier={d.tier}). This IS the computed answer — answer FROM this directly, "
+           f"stating the definition; do NOT recompute with run_sql.\n{result}\n"
+           f"DEFINITION: {d.disclosure}")
+    if d.aptness and d.aptness != "apt":
+        msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note} — disclose this alternative reading, "
+                f"or `clarify` if it changes the answer.")
+    # The step carries WHAT was computed, typed: values for provenance/citation, evidence records
+    # for the trace-reading gates. Without these the define path was a second data path the
+    # repair chain could not see.
+    values = [d.value] if d.value is not None else [
+        c for r in d.rows[:50] for c in r if isinstance(c, (int, float)) and not isinstance(c, bool)]
+    return ToolResult(msg, values=values or None,
+                      labels=[""] * len(values) if values else None,
+                      evidence=_spec_evidence(d.spec))
+
+
+__all__ = ['_DEFINE_MEASURE', '_define_measure', '_spec_evidence']

@@ -182,7 +182,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               ("guardrails/action_space.py", "prompts.py")),
     Guardrail("resolve", Position.BEFORE,
               "runs before a governed query; refuses a filter value that is not a governed member",
-              ("guardrails/before.py", "guardrails/disclosure.py", "tools.py", "prompts.py")),
+              ("guardrails/before.py", "guardrails/disclosure.py", "tools/query.py", "prompts.py")),
     Guardrail("transparency", Position.DISCLOSURE,
               "appends the covered scope and the exact SQL to every governed result",
               ("guardrails/disclosure.py", "prompts.py")),
@@ -260,7 +260,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "prepends each metric's focused contract to its own query result and hands an answer "
               "back when the question names a governed segment the served number did not filter by, "
               "rather than serve the unfiltered total as if it were the segment",
-              ("tools.py", "guardrails/classify.py", "gates/segments.py"), in_ladder=False,
+              ("tools/query.py", "guardrails/classify.py", "gates/segments.py"), in_ladder=False,
               superseded_by="applied_segment"),   # its enforcement half was decoupled into that flag;
                                                    # its metric-context role is now the ontology anchor
     # The enforcement half of the segment slot, decoupled from the metric_brief block so it can run on
@@ -280,7 +280,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "offers show_metric_ontology, a pull tool giving a metric's full contract (arguments, "
               "dimensions and governed values, example, refuse-if-absent rule) before it is queried, "
               "while the lean metric list sits in the system prompt",
-              ("guardrails/action_space.py", "tools.py"), in_ladder=False,
+              ("guardrails/action_space.py", "tools/query.py"), in_ladder=False,
               superseded_by="graph_grounding"),   # check_answerability over the marts graph replaced
                                                    # the metric-contract pull as the grounding surface
     # The enforced answer to the substitution the ontology tool could not stop: a question that

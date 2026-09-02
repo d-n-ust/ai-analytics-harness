@@ -168,3 +168,23 @@ def test_the_pipeline_orders_supply_verify_construct():
     phases = [order[g.phase] for g in PIPELINE]
     assert phases == sorted(phases), [g.name for g in PIPELINE]
     assert len({g.name for g in PIPELINE}) == len(PIPELINE)
+
+
+# ── the proxy-lean route (the live suite caught an orphaned constant here) ────────────────────
+def test_the_proxy_route_serves_with_disclosure_under_the_default_lean(monkeypatch):
+    """substituted_measure's proxy branch — reachable only on a live proxy verdict, which is why
+    a unit pin exists: the phase-3 extraction orphaned MEASURE_PROXY_LEAN and 4 live rows died
+    with AttributeError before this test did their job."""
+    import agent.gates.measure as gm
+
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(clusters=None), guardrails=NS(grounded_measure=True))
+    obj.model = None
+    obj.question = "How many reminder notifications were opened?"
+    obj.steps = []
+    monkeypatch.setattr(gm._classify, "answer_measures_asked",
+                        lambda m, q, t: ("proxy", "reminder notifications opened", "app opens"))
+    exit_call = NS(name="answer", args={"answer": "42", "explanation": "app opens as a proxy"})
+    r = obj.substituted_measure(exit_call)
+    assert r is not None and r.is_error            # disclose lean: hand back to disclose the gap
+    assert "proxy" in r.content.lower() or "stood in" in r.content.lower() or "related" in r.content.lower()

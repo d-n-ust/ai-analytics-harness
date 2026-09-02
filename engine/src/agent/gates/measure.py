@@ -27,6 +27,13 @@ _as_number = trace.as_number
 _reported = trace.reported
 _scalar = trace.scalar
 
+# Which way the proxy case leans: "disclose" serves the proxy with the gap stated, "refuse"
+# pushes the substitution back to a decline. The dial the experiment turns — a module constant
+# so the A/B is one edit. `unmeasured` always leans refuse. (A _Run class attribute before the
+# phase-3 extraction; the live suite caught the orphaned reference — the unit suites never
+# reach the proxy route because it needs a live proxy verdict.)
+MEASURE_PROXY_LEAN = "disclose"
+
 
 def substituted_measure(run, exit_call):
     """Hand back an answer whose number measures a DIFFERENT quantity than the question asked
@@ -100,7 +107,7 @@ def substituted_measure(run, exit_call):
         return None
     run.repairs.append({"substituted_measure":
                          {"asked": asked, "served": served, "verdict": verdict}})
-    if verdict == "unmeasured" or run.MEASURE_PROXY_LEAN == "refuse":
+    if verdict == "unmeasured" or MEASURE_PROXY_LEAN == "refuse":
         tail = (f"The quantity the question asks for — {asked!r} — is not measured in this "
                 f"data; your number reports {served or 'something else'} instead. `refuse` "
                 f"with reason `uninstrumented`, unless that number genuinely answers the "
@@ -170,7 +177,7 @@ def answerability_gate(run, exit_call):
         v = _classify.answerability_via_graph(run.model, run.question, run.grounding.ontology)
     else:
         from warehouse import schema_text
-        from .rungs import capabilities
+        from ..rungs import capabilities
         con = getattr(run.grounding.toolbox, "con", None)
         sch = (schema_text(con, capabilities(run.grounding.rung).star,
                            getattr(run.grounding.toolbox, "schema", None)) if con is not None else "")
