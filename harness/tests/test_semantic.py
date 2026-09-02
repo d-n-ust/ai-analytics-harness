@@ -15,11 +15,11 @@ import dataclasses
 from pathlib import Path
 
 import harness_paths
-from agent.conversation import TERMINAL_TOOLS
+from agent.core.conversation import TERMINAL_TOOLS
 from agent.guardrails import LADDER
 from agent.guardrails import after as verifier
 from agent.guardrails import before as input_guardrail
-from agent.numbers import bare_number
+from agent.core.numbers import bare_number
 from agent.tools import Toolbox
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from semantic.tree import MetricTree
@@ -332,7 +332,7 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
     correlational and may only be suggested with the evidence it carries — including evidence
     AGAINST it, which is what this tree's one influence edge records. NO LLM: this pins that both
     kinds reach the judge, labelled, and that the fingerprint moves when the rules do."""
-    from agent.grounding import build_grounding
+    from agent.runtime.grounding import build_grounding
     from agent.guardrails import judge
     from agent.guardrails.after import causal_record
 
@@ -377,7 +377,7 @@ def test_every_measured_field_reaches_the_row():
     silently. NO LLM."""
     import dataclasses
 
-    from agent.loop import Answer
+    from agent.runtime.loop import Answer
 
     src = (Path(__file__).resolve().parent.parent / "evals" / "runner.py").read_text()
     carried = {f.name for f in dataclasses.fields(Answer)}
@@ -459,7 +459,7 @@ def test_the_refusal_vocabulary_is_defined_where_it_is_used():
 
     So the meanings live beside the codes, and the tool renders them: the vocabulary the model
     reads and the one the grader scores cannot drift apart. NO LLM."""
-    from agent.outcomes import REASON_MEANINGS, REFUSAL_REASONS
+    from agent.core.outcomes import REASON_MEANINGS, REFUSAL_REASONS
     from agent.tools import _REFUSE
 
     assert list(REASON_MEANINGS) == REFUSAL_REASONS, "one list, or the two can disagree"
@@ -559,7 +559,7 @@ def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     So nothing may infer a capability from `rung >= n`. This pins the table against the conditions
     it replaced (rungs 1-6 must be untouched) and against the one rung that proves numbers no
     longer order capabilities."""
-    from agent.rungs import RUNGS, capabilities, parse_rung
+    from agent.core.rungs import RUNGS, capabilities, parse_rung
 
     for n in (1, 2, 3, 4, 5, 6):
         c = capabilities(n)
@@ -597,7 +597,7 @@ def test_the_judge_settles_what_the_number_is_doing_before_judging_it():
     it — a self-declared role is unfalsifiable and would be a one-word exit from the strict test,
     while the judge's is scoreable against labels exactly as `mismatch` is. NO LLM: this pins the
     contract (what is asked, what is required, what a silent judge defaults to), not the ruling."""
-    from agent.conversation import ToolCall, Turn
+    from agent.core.conversation import ToolCall, Turn
     from agent.guardrails import judge
 
     assert judge._ROLE_REPORT["input_schema"]["properties"]["value_role"]["enum"] \
@@ -954,7 +954,7 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     """The point of the refactor: a leave-one-out cell exists in the flag space (no single
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
-    from agent.grounding import build_grounding
+    from agent.runtime.grounding import build_grounding
     from agent.guardrails import LADDER, incoherent
     con = open_warehouse(create_star_views=True)
     cell = LADDER[9].without("resolve")
@@ -996,9 +996,9 @@ def test_the_protocol_is_a_peer_primitive_and_labels_itself():
     on a shared API — a confound the harness refuses everywhere else.
 
     Three properties, and the third is the load-bearing one."""
-    from agent.grounding import build_grounding
+    from agent.runtime.grounding import build_grounding
     from agent.guardrails import LADDER, LADDER_ORDER
-    from agent.protocol import ROLE, RULE, Protocol, split_config
+    from agent.core.protocol import ROLE, RULE, Protocol, split_config
     con = open_warehouse(create_star_views=True)
     ALL = Protocol(purpose=True, claims=True, repair=True)
 
@@ -1126,7 +1126,7 @@ def test_verifier_is_refuse_only():
     # The judge names its OWN finding rather than casting it onto the model's refusal vocabulary.
     # `scope` used to become `other`, which threw the finding away and then had it graded against
     # a code the judge could not produce. Its codes must stay out of the refuse tool's enum.
-    from agent.outcomes import REFUSAL_REASONS, VERIFIER_REASONS
+    from agent.core.outcomes import REFUSAL_REASONS, VERIFIER_REASONS
     assert v.allowed is False and v.reason == "verifier_wrong_scope"
     assert v.reason in VERIFIER_REASONS and v.reason not in REFUSAL_REASONS
     assert v.guardrail == "trajectory_verify"
@@ -1181,7 +1181,7 @@ def test_a_refusal_that_names_a_date_is_not_a_fabrication():
     real answer is usually a sentence, and holding those to a bare-number pattern dropped 145
     genuine figures in a single run.
     """
-    from agent.numbers import asserts_number
+    from agent.core.numbers import asserts_number
 
     for prose in ("I cannot provide July 13-19, 2026 because data coverage ends 2026-07-12",
                   "No data available for 2026-07-13 to 2026-07-19",

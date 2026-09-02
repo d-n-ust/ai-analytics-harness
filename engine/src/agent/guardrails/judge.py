@@ -37,7 +37,7 @@ import json
 import os
 from dataclasses import dataclass
 
-from ..conversation import Conversation
+from ..core.conversation import Conversation
 
 # The judge's STANCE — the one paragraph that tells it what it is looking for. It is separated
 # from the five checks because it is the only part under test: the asymmetric wording resists

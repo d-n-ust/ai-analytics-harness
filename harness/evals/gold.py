@@ -13,7 +13,7 @@ from pathlib import Path
 
 import yaml
 
-from agent.outcomes import REFUSAL_REASONS
+from agent.core.outcomes import REFUSAL_REASONS
 
 EVALS_DIR = Path(__file__).resolve().parent / "cases"
 _EXPECT_TYPES = {"metric_answer", "refuse", "ambiguous", "diagnostic", "keywords", "clarify",

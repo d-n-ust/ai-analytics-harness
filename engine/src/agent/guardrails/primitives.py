@@ -40,7 +40,7 @@ import hashlib
 import json
 import re
 
-from ..conversation import Conversation
+from ..core.conversation import Conversation
 
 PRIMITIVES = ("measure", "entity", "segment", "window")
 

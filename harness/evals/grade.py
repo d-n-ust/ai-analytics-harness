@@ -44,9 +44,9 @@ from __future__ import annotations
 
 import re
 
-from agent.numbers import asserts_number
-from agent.numbers import parse_numbers as _numbers
-from agent.rungs import capabilities
+from agent.core.numbers import asserts_number
+from agent.core.numbers import parse_numbers as _numbers
+from agent.core.rungs import capabilities
 
 # What separates two words: a space, a hyphen, an en dash, a slash. A keyword written with one
 # must match a text written with another — they are the same phrase, and which one an answer

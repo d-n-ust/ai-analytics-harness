@@ -16,9 +16,9 @@ sys.path.insert(0, ".")
 sys.path.insert(0, "../../..")
 
 from run import LAYER, MARTS, RUNG, scoped_cursor          # noqa: E402
-from agent.grounding import build_grounding                # noqa: E402
-from agent.measure import Spec                             # noqa: E402
-from agent.measure_exec import run_ephemeral               # noqa: E402
+from agent.runtime.grounding import build_grounding                # noqa: E402
+from agent.core.measure import Spec                             # noqa: E402
+from agent.runtime.measure_exec import run_ephemeral               # noqa: E402
 from warehouse.warehouse import open_warehouse             # noqa: E402
 import build as fixture_build                              # noqa: E402
 

@@ -12,7 +12,7 @@ here; this module only owns completeness.
 """
 from __future__ import annotations
 
-from agent.measure import Scope, Spec, applied_segments, bind_scope, coherent, ground, periods
+from agent.core.measure import Scope, Spec, applied_segments, bind_scope, coherent, ground, periods
 from ontology.graph import MartsOntology
 
 # A closed-world graph built PURELY (no DB) — user⋈activity are related, spend is an island. Enough

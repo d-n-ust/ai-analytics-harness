@@ -17,7 +17,7 @@ it is returned untouched, so a governed tool added later discloses without anyon
 
 from __future__ import annotations
 
-from ..conversation import ToolResult
+from ..core.conversation import ToolResult
 from . import Position, note
 from .before import DIVERGENCE_THRESHOLD, gaps, pair, value_of
 

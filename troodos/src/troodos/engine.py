@@ -210,7 +210,7 @@ class Engine:
         so the two call sites are wrapped here rather than in the loop, which also means this
         disappears cleanly when the agent is vendored and can emit events itself.
         """
-        from agent.loop import run_agent  # noqa: PLC0415 — quarantined by design
+        from agent.runtime.loop import run_agent  # noqa: PLC0415 — quarantined by design
 
         if on_event is not None:
             return self._ask_traced(question, model, max_iters, verifier_model, on_event, run_agent)
@@ -330,7 +330,7 @@ def _bind_introspection(grounding, warehouse: Warehouse) -> None:
     inner = toolbox.dispatch
 
     def dispatch(name: str, args: dict):
-        from agent.conversation import ToolResult  # noqa: PLC0415 — quarantined by design
+        from agent.core.conversation import ToolResult  # noqa: PLC0415 — quarantined by design
 
         if name == "get_schema":
             return ToolResult(_schema_text(warehouse))
@@ -372,7 +372,7 @@ def build_engine(
     synthetic warehouse and wrong for anything else, so callers pointing at real data must pass
     them explicitly.
     """
-    from agent.grounding import build_grounding  # noqa: PLC0415 — quarantined by design
+    from agent.runtime.grounding import build_grounding  # noqa: PLC0415 — quarantined by design
     from semantic.semantic import SemanticLayer
     from semantic.tree import MetricTree
 
@@ -432,7 +432,7 @@ def get_model(name: str, *, mock: bool = False, reasoning: str | None = None):
     """Resolve a model by name. Quarantined here with everything else harness-shaped, because the
     harness's catalog is a closed set of priced models chosen for an experiment — a product needs
     an open registry, and that arrives with the vendoring."""
-    from agent.providers import get_model as _get  # noqa: PLC0415 — quarantined by design
+    from agent.runtime.providers import get_model as _get  # noqa: PLC0415 — quarantined by design
 
     try:
         return _get(name, mock=mock, reasoning=reasoning)

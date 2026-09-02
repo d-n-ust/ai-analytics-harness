@@ -7,8 +7,8 @@ the hand-back budget that constructions must not consume.
 """
 from types import SimpleNamespace as NS
 
-from agent.loop import _Run
-from agent.outcomes import *  # noqa: F401,F403  (import side effects none; keeps parity with loop)
+from agent.runtime.loop import _Run
+from agent.core.outcomes import *  # noqa: F401,F403  (import side effects none; keeps parity with loop)
 
 
 def _stub(steps=(), guardrails=None):

@@ -30,7 +30,7 @@ from pathlib import Path
 
 import yaml
 
-from agent.conversation import Conversation
+from agent.core.conversation import Conversation
 
 LABELS_DIR = Path(__file__).resolve().parent.parent / "labels"
 OUT = LABELS_DIR / "prose_panel.json"
@@ -123,7 +123,7 @@ def label(model, case: dict, lens: str) -> dict:
 def main() -> None:
     import glob
 
-    from agent.providers import get_model
+    from agent.runtime.providers import get_model
 
     cases = {}
     for p in glob.glob("evals/cases/*/*.yml"):

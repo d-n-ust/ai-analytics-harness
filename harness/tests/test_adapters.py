@@ -19,8 +19,8 @@ import json
 from pathlib import Path
 
 import harness_paths
-from agent.conversation import Conversation, ToolCall, ToolResult, Turn
-from agent.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
+from agent.core.conversation import Conversation, ToolCall, ToolResult, Turn
+from agent.runtime.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "wire_payloads.json"
 
@@ -124,7 +124,7 @@ def test_a_model_never_asks_for_an_effort_it_rejects():
     A model that cannot go as low as asked runs at its floor. What it must NOT do is misreport:
     reasoning effort is a treatment variable, so `.reasoning` has to be what was actually sent,
     not what was requested."""
-    from agent.models import MODEL_SPECS
+    from agent.core.models import MODEL_SPECS
 
     # The two ladders are not nested, which is the whole reason a single floor cannot describe
     # them: mini rejects `none`, terra rejects `minimal`, and each 400s on the other's word.
@@ -214,7 +214,7 @@ def test_a_refused_request_becomes_a_row_and_a_broken_key_still_stops_the_run():
     The split this pins is the whole design. A refusal of ONE request must not be able to end the
     run, and a misconfiguration that will refuse EVERY request must not be able to hide as 558
     error rows. Anything with no HTTP status is a defect in this code and must keep crashing."""
-    from agent.providers import _FATAL_STATUS, ProviderError, _call
+    from agent.runtime.providers import _FATAL_STATUS, ProviderError, _call
 
     class Refusal(Exception):
         def __init__(self, status, code=None):

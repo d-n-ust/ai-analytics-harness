@@ -18,11 +18,11 @@ from semantic import MetricTree, SemanticLayer, check_compatible
 if TYPE_CHECKING:
     from ontology import MartsOntology
 
-from .guardrails import LADDER, GuardrailSet, incoherent
+from ..guardrails import LADDER, GuardrailSet, incoherent
 from .prompts import system_prompt
-from .protocol import Protocol
-from .rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
-from .tools import Toolbox
+from ..core.protocol import Protocol
+from ..core.rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
+from ..tools import Toolbox
 
 
 @dataclass
@@ -95,7 +95,7 @@ class Grounding:
         that exists to catch it, one surface later than it should have been."""
         from warehouse import schema_text
 
-        from .rungs import capabilities
+        from ..core.rungs import capabilities
 
         surface = self.system + "\n" + json.dumps(self.toolbox.specs(), sort_keys=True)
         if self.semantic is not None:

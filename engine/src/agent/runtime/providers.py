@@ -18,9 +18,9 @@ from __future__ import annotations
 import json
 import os
 
-from . import NotConfigured
-from .conversation import ToolCall, Turn, Usage
-from .models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING, MODEL_SPECS, ModelSpec
+from .. import NotConfigured
+from ..core.conversation import ToolCall, Turn, Usage
+from ..core.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING, MODEL_SPECS, ModelSpec
 
 MAX_TOKENS = 4096
 # Transient provider failures (429 / 5xx / connection / timeout) must not become data-corrupting
@@ -98,7 +98,7 @@ def load_env() -> None:
         # The repo root, from inside the package: agent -> src -> engine -> root. Counted rather
         # than assumed, because this line used a single `..` when the package sat at the root and
         # silently began pointing at engine/src/.env when it moved.
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), *([os.pardir] * 3), ".env"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), *([os.pardir] * 4), ".env"),
         find_dotenv(usecwd=True) or None,
     ]
     for candidate in candidates:

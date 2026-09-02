@@ -21,10 +21,10 @@ sys.path.insert(0, "../../..")
 
 import yaml                                                    # noqa: E402
 from run import LAYER, MARTS, RUNG, scoped_cursor             # noqa: E402
-from agent.grounding import build_grounding                   # noqa: E402
-from agent.providers import get_model, load_env               # noqa: E402
+from agent.runtime.grounding import build_grounding                   # noqa: E402
+from agent.runtime.providers import get_model, load_env               # noqa: E402
 from agent.guardrails import classify                         # noqa: E402
-from agent.rungs import capabilities                          # noqa: E402
+from agent.core.rungs import capabilities                          # noqa: E402
 from warehouse import schema_text                             # noqa: E402
 from warehouse.warehouse import open_warehouse                # noqa: E402
 import build as fixture_build                                 # noqa: E402

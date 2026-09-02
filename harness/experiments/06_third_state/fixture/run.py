@@ -24,10 +24,10 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import yaml
-from agent.grounding import build_grounding
+from agent.runtime.grounding import build_grounding
 from agent.guardrails import parse_cell
-from agent.loop import Answer, run_agent
-from agent.providers import get_model
+from agent.runtime.loop import Answer, run_agent
+from agent.runtime.providers import get_model
 from evals.gold import _validate, compute_gold
 from evals.grade import grade
 from evals.matrix import render as render_matrix

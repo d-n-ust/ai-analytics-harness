@@ -16,9 +16,9 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
-from ..outcomes import CLARIFY_MEANINGS, CLARIFY_REASONS
-from ..protocol import Protocol
-from ..rungs import capabilities
+from ..core.outcomes import CLARIFY_MEANINGS, CLARIFY_REASONS
+from ..core.protocol import Protocol
+from ..core.rungs import capabilities
 from . import GOVERNED_TOOLS, Position, note
 
 _CHECK_TOOLS = ("check_metric_exists", "check_coverage",

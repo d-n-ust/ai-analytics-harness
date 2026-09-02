@@ -57,7 +57,7 @@ def run_ephemeral(spec, engine) -> Result:
     """Compute the value the grounded spec defines. The only I/O in the measure pipeline; returns a
     Result carrying the value (or rows) AND the SQL/definition that produced it. On any execution
     failure returns a Result with `error` set — a fact to surface, never a number to trust."""
-    from .guardrails import before
+    from ..guardrails import before
 
     if spec.kind == "metric":
         args = {"filters": dict(spec.filters) or None, "period": spec.period or None}

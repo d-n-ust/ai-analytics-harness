@@ -11,13 +11,15 @@ from pathlib import Path
 
 import yaml
 
-from .protocol import ROLE, Protocol
-from .rungs import capabilities
+from ..core.protocol import ROLE, Protocol
+from ..core.rungs import capabilities
 
 # Resolved inside this package, not from the repo root. The files are package data and must
 # travel with the wheel; reaching a level up found them from a checkout and found nothing at
 # all from site-packages, which surfaced as a missing-file error at prompt-assembly time.
-_HERE = Path(__file__).resolve().parent
+# The rung data files live at the agent package root (agent/context/), one level above this
+# module since the runtime/ move.
+_HERE = Path(__file__).resolve().parent.parent
 _VERIFIED = _HERE / "context" / "verified_queries.yml"
 _KB = _HERE / "context" / "knowledge_base.md"
 

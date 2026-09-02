@@ -17,7 +17,7 @@ hard-refuse.
 import sys
 sys.path.insert(0, "."); sys.path.insert(0, "../../..")
 
-from agent.providers import get_model, load_env             # noqa: E402
+from agent.runtime.providers import get_model, load_env             # noqa: E402
 from agent.guardrails.classify import challenge_aptness      # noqa: E402
 
 CASES = [

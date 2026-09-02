@@ -9,7 +9,7 @@ providers), and the loop that drives it.
 
 The imports below sit inside the function on purpose. A package __init__ runs on ANY import from
 the package, so pulling the warehouse and the semantic layer in at module level would mean
-`from agent.models import MODEL_SPECS` — the cost report wanting a price per token — loading
+`from agent.core.models import MODEL_SPECS` — the cost report wanting a price per token — loading
 DuckDB and the whole governance YAML. Keeping them local costs one indent and keeps the light
 imports light.
 """
@@ -22,7 +22,7 @@ __all__ = ["NotConfigured", "ask_one"]
 # re-exported here, so `from agent import NotConfigured` keeps working and the packages stay acyclic.
 from warehouse import NotConfigured
 
-from .models import DEFAULT_MODEL
+from .core.models import DEFAULT_MODEL
 
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
@@ -48,10 +48,10 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     both.""" 
     from warehouse import open_warehouse, set_star
 
-    from .grounding import RUNG_NAMES, build_grounding
-    from .loop import run_agent
-    from .providers import get_model
-    from .rungs import capabilities
+    from .runtime.grounding import RUNG_NAMES, build_grounding
+    from .runtime.loop import run_agent
+    from .runtime.providers import get_model
+    from .core.rungs import capabilities
 
     con = con or open_warehouse()
     set_star(con, capabilities(rung).star)  # rung 1 is raw-only

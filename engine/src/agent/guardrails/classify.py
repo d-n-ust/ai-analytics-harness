@@ -24,7 +24,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-from ..conversation import Conversation
+from ..core.conversation import Conversation
 
 
 # Every classifier's behaviour-defining surface, registered AT DECLARATION (each classifier calls

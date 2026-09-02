@@ -12,8 +12,8 @@ that mis-attributes what it recorded, and an audit that passes something it shou
 from __future__ import annotations
 
 import harness_paths
-from agent.conversation import Conversation, ToolCall, ToolResult, Turn
-from agent.provenance import ContextLedger, Expectation
+from agent.core.conversation import Conversation, ToolCall, ToolResult, Turn
+from agent.core.provenance import ContextLedger, Expectation
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse
 

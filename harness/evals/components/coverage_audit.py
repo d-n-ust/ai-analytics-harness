@@ -35,7 +35,7 @@ from pathlib import Path
 import harness_paths
 from agent.guardrails import parse_cell
 from agent.guardrails.after import step_values
-from agent.numbers import bare_number, parse_numbers
+from agent.core.numbers import bare_number, parse_numbers
 from evidence import num_match
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from warehouse.warehouse import QueryError, open_warehouse, run_query

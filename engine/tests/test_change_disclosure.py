@@ -11,8 +11,8 @@ other collaborator runs for real.
 """
 from types import SimpleNamespace as NS
 
-import agent.loop as loop
-from agent.loop import _Run
+import agent.runtime.loop as loop
+from agent.runtime.loop import _Run
 
 # value_moments (customer-facing) and total_value_moments (includes internal/test) at the two months.
 _VALUES = {

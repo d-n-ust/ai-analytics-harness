@@ -13,11 +13,11 @@ from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeEr
 from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS                           # noqa: F401
 from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text  # noqa: F401,E501
 
-from ..conversation import ToolResult                                        # noqa: F401
+from ..core.conversation import ToolResult                                        # noqa: F401
 from ..guardrails import LADDER, GuardrailSet, action_space, before, disclosure  # noqa: F401
-from ..outcomes import REASON_MEANINGS, REFUSAL_REASONS                      # noqa: F401
-from ..protocol import Protocol                                              # noqa: F401
-from ..rungs import capabilities                                             # noqa: F401
+from ..core.outcomes import REASON_MEANINGS, REFUSAL_REASONS                      # noqa: F401
+from ..core.protocol import Protocol                                              # noqa: F401
+from ..core.rungs import capabilities                                             # noqa: F401
 
 
 _DEFINE_MEASURE = {
@@ -58,7 +58,7 @@ def _define_measure(tb, args) -> ToolResult:
     ont, model = getattr(tb, "ontology", None), getattr(tb, "model", None)
     if ont is None or model is None:
         return ToolResult("UNKNOWN — define_measure is unavailable in this configuration.")
-    from ..define import define_measure
+    from ..runtime.define import define_measure
     d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic)
     if d.outcome == "refuse":
         return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")

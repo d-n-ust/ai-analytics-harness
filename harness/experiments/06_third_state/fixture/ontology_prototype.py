@@ -20,9 +20,9 @@ sys.path.insert(0, ".")
 sys.path.insert(0, "../../..")
 
 from run import LAYER, MARTS, RUNG, scoped_cursor          # noqa: E402
-from agent.grounding import build_grounding                # noqa: E402
-from agent.conversation import Conversation                # noqa: E402
-from agent.providers import get_model, load_env            # noqa: E402
+from agent.runtime.grounding import build_grounding                # noqa: E402
+from agent.core.conversation import Conversation                # noqa: E402
+from agent.runtime.providers import get_model, load_env            # noqa: E402
 from warehouse.warehouse import open_warehouse             # noqa: E402
 from ontology import MartsOntology                         # noqa: E402
 import build as fixture_build                              # noqa: E402

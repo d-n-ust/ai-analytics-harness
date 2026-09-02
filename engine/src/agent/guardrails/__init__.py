@@ -170,31 +170,31 @@ class Guardrail:
 GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("abstain", Position.ACTION_SPACE,
               "adds the `refuse` tool to the list, giving the run a typed way to decline",
-              ("guardrails/action_space.py", "prompts.py")),
+              ("guardrails/action_space.py", "runtime/prompts.py")),
     Guardrail("check_tools", Position.ACTION_SPACE,
               "adds four answerability lookups (metric / coverage / segment / causal) to the list",
-              ("guardrails/action_space.py", "prompts.py")),
+              ("guardrails/action_space.py", "runtime/prompts.py")),
     Guardrail("coverage_check", Position.BEFORE,
               "runs before a governed query; refuses one whose scope falls outside coverage",
-              ("guardrails/before.py", "prompts.py")),
+              ("guardrails/before.py", "runtime/prompts.py")),
     Guardrail("tool_restriction", Position.ACTION_SPACE,
               "removes `run_sql` from the list, so every data path is a governed call",
-              ("guardrails/action_space.py", "prompts.py")),
+              ("guardrails/action_space.py", "runtime/prompts.py")),
     Guardrail("resolve", Position.BEFORE,
               "runs before a governed query; refuses a filter value that is not a governed member",
-              ("guardrails/before.py", "guardrails/disclosure.py", "tools/query.py", "prompts.py")),
+              ("guardrails/before.py", "guardrails/disclosure.py", "tools/query.py", "runtime/prompts.py")),
     Guardrail("transparency", Position.DISCLOSURE,
               "appends the covered scope and the exact SQL to every governed result",
-              ("guardrails/disclosure.py", "prompts.py")),
+              ("guardrails/disclosure.py", "runtime/prompts.py")),
     Guardrail("governed_numbers", Position.AFTER,
               "adds `value`/`source_metric` to the answer schema; the served number must be a "
               "governed result, or a comparison of two of the SAME metric (a difference, ratio "
               "or percent change) — never a composition of different ones",
-              ("guardrails/action_space.py", "guardrails/after.py", "prompts.py")),
+              ("guardrails/action_space.py", "guardrails/after.py", "runtime/prompts.py")),
     Guardrail("output_validation", Position.AFTER,
               "checks the served number is well-formed for its unit (no negative count, no share "
               "above 100, no empty result)",
-              ("guardrails/after.py", "prompts.py")),
+              ("guardrails/after.py", "runtime/prompts.py")),
     # `implemented_in` names the files that key off the FLAG, not every file involved: the judge
     # this one switches on lives in agent/verifier.py, which never reads the flag and so is not
     # listed. The distinction is enforced by test, and it is the useful one — it answers "where
@@ -202,7 +202,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("trajectory_verify", Position.AFTER,
               "one more model call: a judge (agent/verifier.py) inspects the metric, its SQL and "
               "the added filters, and rejects an answer to a different question",
-              ("guardrails/after.py", "prompts.py")),
+              ("guardrails/after.py", "runtime/prompts.py")),
     # ── the ambiguity channel: how a run reports that the question has more than one answer ──
     #
     # ON BY DEFAULT, which is what every stored row already assumes: the clarify tool has been
@@ -213,14 +213,14 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("clarify", Position.ACTION_SPACE,
               "adds the `clarify` tool to the list, giving the run a typed way to report that the "
               "question has more than one defensible answer",
-              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+              ("guardrails/action_space.py", "runtime/prompts.py"), in_ladder=False),
     # The same move `governed_numbers` makes on the answer tool: the exit stays, its schema widens.
     # Without this a clarification is one line of prose, which can be counted and nothing else.
     Guardrail("typed_clarify", Position.ACTION_SPACE,
               "adds a coded `reason` and named `candidates` to the clarify tool, so a "
               "clarification can be checked against the catalogue and the warehouse rather than "
               "read",
-              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+              ("guardrails/action_space.py", "runtime/prompts.py"), in_ladder=False),
     # The grounding protocol. Enriches the clarify schema (each candidate binds a reading to a
     # grounded object) and verifies at REPAIR that each grounding resolves — dropping the ones that
     # do not, and handing the run back to refuse (nothing grounds it) or answer (one does) when
@@ -229,7 +229,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "requires each clarify option to name the real object (metric, table, or column) it "
               "is computed from, and hands back a clarification whose options ground to nothing so "
               "the run refuses `uninstrumented` instead of offering definitions the layer lacks",
-              ("guardrails/action_space.py", "guardrails/grounding_check.py", "loop.py"),
+              ("guardrails/action_space.py", "guardrails/grounding_check.py", "runtime/loop.py"),
               in_ladder=False),
     # The measure-level analog on the answer path. The model judges its own served answer — did the
     # number measure the quantity asked for, a proxy, or something the data does not capture — and
@@ -271,7 +271,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("applied_segment", Position.REPAIR,
               "hands an answer back when the question names a governed segment the served call did "
               "not filter by, so a named slice is not answered with the unfiltered total",
-              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+              ("guardrails/classify.py", "runtime/loop.py"), in_ladder=False),
     # The pull-tool alternative to `metric_brief`'s pushed block: the lean metric list moves into the
     # system prompt (so `list_metrics` costs no turn) and `show_metric_ontology(metric)` returns the
     # full per-metric contract on demand — arguments, dimensions with governed values, the example,
@@ -292,7 +292,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "grounds the whole question against the ontology and refuses an answer that names a "
               "concept with no referent (TikTok as a channel, enterprise as a plan), naming the "
               "governed siblings, rather than serve a number computed for a different concept",
-              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+              ("guardrails/classify.py", "runtime/loop.py"), in_ladder=False),
     # Governance policy on the MEASURE. Classifies a served answer's measure as governed / computable
     # from the data / uninstrumented, over the governed ontology AND the data schema, and routes it:
     # uninstrumented -> refuse; computable -> refuse `no_governed_definition` under strict policy, or
@@ -302,7 +302,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "routes a served answer by whether its measure is governed, computable from the data, "
               "or uninstrumented; refuses the uninstrumented and (strict) the ungoverned, or (with "
               "transparent_compute) requires a computed non-governed figure to disclose its definition",
-              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+              ("guardrails/classify.py", "runtime/loop.py"), in_ladder=False),
     # The policy lean read by answerability_gate: transparent lets the agent compute the long tail
     # (with disclosure); off, the gate refuses any measure with no governed definition.
     Guardrail("transparent_compute", Position.REPAIR,
@@ -343,7 +343,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("construct_disclosure", Position.REPAIR,
               "the contested-disclosure gate CONSTRUCTS the missing rival reading into the answer "
               "(mechanism computes it) instead of handing back for the agent to re-serve",
-              ("loop.py",), in_ladder=False),
+              ("runtime/loop.py",), in_ladder=False),
     # Reads the ambiguity index beside the layer and refuses a governed call whose metric has a
     # competitor. A SEPARATE guardrail from coverage_check even though both sit at BEFORE and both
     # refuse a governed call: coverage is DECLARED in the layer, so that check is a lookup against
@@ -353,7 +353,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("ambiguity_check", Position.BEFORE,
               "runs before a governed query; refuses one whose metric shares its concept with "
               "another governed definition, and names what separates them",
-              ("guardrails/before.py", "prompts.py"), in_ladder=False),
+              ("guardrails/before.py", "runtime/prompts.py"), in_ladder=False),
     # Lets a BLOCKED call come back declaring which reading the request asked for, and stands the
     # gate down when that declaration matches what the index says separates the pair. The point is
     # that the gate's side stays mechanical — a comparison against a declared fact, not a judgement
@@ -362,25 +362,25 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("scope_declaration", Position.BEFORE,
               "adds `resolved_scope` to a governed query; a declaration matching the index's own "
               "discriminator stands the ambiguity gate down for that call",
-              ("guardrails/action_space.py", "guardrails/before.py", "prompts.py"), in_ladder=False),
+              ("guardrails/action_space.py", "guardrails/before.py", "runtime/prompts.py"), in_ladder=False),
     # Never blocks. Attaches the competing definition's figure to the result, so the agent answers
     # holding both numbers and can disclose instead of asking. The third of the three responses the
     # disambiguation literature names — answer every interpretation — at the position that fits it.
     Guardrail("ambiguity_disclosure", Position.DISCLOSURE,
               "appends the competing definition's value to a governed result, so an answer can name "
               "both readings without a round trip",
-              ("guardrails/disclosure.py", "prompts.py"), in_ladder=False),
+              ("guardrails/disclosure.py", "runtime/prompts.py"), in_ladder=False),
     # Makes the line above ENFORCED instead of advisory. An answer that served one of two divergent
     # governed readings and named only that one is handed back, once, with both figures. The ladder
     # has shown twice that a disclosure the model may ignore is a disclosure the model does ignore.
     Guardrail("filter_vocabulary", Position.ACTION_SPACE,
               "closes `filters` and `group_by` to the layer's own dimension names, and builds the "
               "example from one of them, so an unqualified key cannot be sent at all",
-              ("guardrails/action_space.py", "prompts.py"), in_ladder=False),
+              ("guardrails/action_space.py", "runtime/prompts.py"), in_ladder=False),
     Guardrail("disclosure_check", Position.REPAIR,
               "hands back an answer that served one contested reading without naming the other, so "
               "the disclosure has to be acted on rather than merely read",
-              ("gates/disclosure.py", "prompts.py"), in_ladder=False),
+              ("gates/disclosure.py", "runtime/prompts.py"), in_ladder=False),
     # A restriction the agent asked for and then abandoned. Not a judgement about the question:
     # the two sets compared are both the agent's own calls, one attempt against the one that was
     # served. Answering a broader question than the one asked is the cheapest way out of a tool
@@ -391,11 +391,11 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("scope_classifier", Position.REPAIR,
               "asks a focused model call whether the request itself already chose between the two "
               "definitions, and stands the disclosure check down when it did",
-              ("guardrails/classify.py", "gates/disclosure.py", "prompts.py"), in_ladder=False),
+              ("guardrails/classify.py", "gates/disclosure.py", "runtime/prompts.py"), in_ladder=False),
     Guardrail("constraint_regression", Position.REPAIR,
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
-              ("gates/claims.py", "prompts.py"), in_ladder=False),
+              ("gates/claims.py", "runtime/prompts.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -577,7 +577,7 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     a rung without one cannot run them. Which rungs those are is asked of the rung rather than
     compared against 3 — the ladder is no longer monotonic (rung 7 holds the tree without the
     advisory blocks), so a number no longer implies what the agent has."""
-    from ..rungs import capabilities
+    from ..core.rungs import capabilities
     if g.scope_classifier and not g.disclosure_check:
         return ("scope_classifier without disclosure_check: it stands down a check that is not "
                 "running, so it can only cost a model call.")

@@ -24,9 +24,9 @@ import os
 import harness_paths
 from agent import NotConfigured
 from agent.guardrails import LADDER_ORDER
-from agent.models import DEFAULT_MODEL
-from agent.protocol import FRAMINGS, PARTS
-from agent.rungs import RUNGS, parse_rung
+from agent.core.models import DEFAULT_MODEL
+from agent.core.protocol import FRAMINGS, PARTS
+from agent.core.rungs import RUNGS, parse_rung
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
           "gpt-5-mini", "gpt-5.6-luna", "gpt-4.1-mini", "deepseek-v4-flash", "deepseek-v4-pro"]
@@ -67,7 +67,7 @@ def cmd_query(a):
 def cmd_ask(a):
     from agent import ask_one
     from agent.guardrails import parse_cell
-    from agent.protocol import Protocol
+    from agent.core.protocol import Protocol
     from cli.trace import render
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     # The renderer is passed IN. The engine has no way to reach cli/, by design.

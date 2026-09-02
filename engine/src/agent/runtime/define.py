@@ -21,9 +21,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .conversation import Conversation
-from .guardrails import classify as _classify
-from .measure import Scope, Spec, bind_scope, coherent, ground
+from ..core.conversation import Conversation
+from ..guardrails import classify as _classify
+from ..core.measure import Scope, Spec, bind_scope, coherent, ground
 from .measure_exec import run_ephemeral
 
 _SYSTEM = (

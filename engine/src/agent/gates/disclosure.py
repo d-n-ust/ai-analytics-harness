@@ -13,13 +13,13 @@ import re                                                                   # no
 import evidence as claim_audit                                              # noqa: F401
 
 from ..core import trace
-from ..conversation import Conversation, ToolCall, ToolResult, Turn, Usage  # noqa: F401
+from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage  # noqa: F401
 from ..guardrails import Act, Position, after, before                       # noqa: F401
 from ..guardrails import classify as _classify                              # noqa: F401
 from ..guardrails import grounding_check as _grounding                      # noqa: F401
-from ..numbers import bare_number, parse_numbers                            # noqa: F401
-from ..outcomes import TERMINAL_TOOLS, Answer, declared_handles             # noqa: F401
-from ..tool_args import AnswerArgs, ClarifyArgs, RefuseArgs                 # noqa: F401
+from ..core.numbers import bare_number, parse_numbers                            # noqa: F401
+from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles             # noqa: F401
+from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs                 # noqa: F401
 from ._common import GRACE, MAX_CORRECTIONS                                 # noqa: F401
 
 _COMPOSE = trace.COMPOSE

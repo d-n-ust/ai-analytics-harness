@@ -106,15 +106,15 @@ from pathlib import Path
 import yaml
 
 import harness_paths
-from agent.grounding import build_grounding
+from agent.runtime.grounding import build_grounding
 from agent.guardrails import LADDER, parse_cell
-from agent.loop import run_agent
-from agent.models import DEFAULT_MODEL
-from agent.protocol import PARTS as PROTOCOL_PARTS
-from agent.protocol import Protocol
-from agent.provenance import Expectation
-from agent.providers import get_model, get_verifier
-from agent.rungs import capabilities
+from agent.runtime.loop import run_agent
+from agent.core.models import DEFAULT_MODEL
+from agent.core.protocol import PARTS as PROTOCOL_PARTS
+from agent.core.protocol import Protocol
+from agent.core.provenance import Expectation
+from agent.runtime.providers import get_model, get_verifier
+from agent.core.rungs import capabilities
 from evals.gold import compute_gold, load_questions
 from evals.grade import grade
 from semantic.semantic import SPEC_PATH, SemanticLayer
@@ -916,7 +916,7 @@ def agent_config(study, arm=None, args=None) -> dict:
     study that pins its model means it, and `--model` silently overriding a pinned study is how two
     runs of "the same study" stop being comparable.
     """
-    from agent.models import DEFAULT_MODEL, DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
+    from agent.core.models import DEFAULT_MODEL, DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
 
     merged: dict = {}
     for source in (getattr(study, "agent", None) or {}, (arm.agent if arm is not None else {}) or {}):
