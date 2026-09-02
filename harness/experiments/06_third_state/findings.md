@@ -2439,3 +2439,42 @@ observed on both premise questions, the control untouched, and every contradicti
 the true figures. The requirement and the floor stood down because the steered model behaved;
 their firing paths are pinned by unit tests, which is the intended shape: the earlier layers make
 the later ones rare.
+
+## 56 · Class B2 closed: derivability is the reader's contract
+
+The last ledger class: figures computed in the model's head and served in prose — "fell by 39%,
+from 1,039 to 636" for a true 637 -> 1,214, with the typed value slot empty, so the slot-only
+derivability check stood down. The widened gate re-draws both sides of the comparison:
+
+- THE CHECKED SET IS WHAT THE READER RECEIVES: the answer field's numbers plus the typed value;
+  the explanation stays advisory. Date debris is masked first — the raw parser reads
+  "2026-04-01" as three numbers and "Q1 2026" as two, and every one would be an underivable
+  "figure" and a false hand-back.
+
+- THE EVIDENCE UNIVERSE IS EVERYTHING THE RUN'S RESULTS SHOWED THE MODEL: typed result values,
+  the numbers rendered in result texts (a figure copied from an [also] or [premise] line the
+  mechanism itself wrote is derived from the run, not from the model's head), each step's summed
+  values (a stated total OF a breakdown is legitimate), and row counts.
+
+- THE DERIVABLE OPS: one binary composition of two evidence values, the canonical percent-change
+  form (a-b)/b — found missing by the unit pins: "+90.6%" is one analytics concept, not chained
+  arithmetic — and x100/100 renderings. A multi-term hand-sum across arbitrary cells still
+  fires, and should: that is the prose arithmetic the doctrine forbids, and the repair says so —
+  recompute through the tools.
+
+- THE MATERIALITY LINE, found honestly by a wrong test expectation: a served 636 for a true 637
+  sits within the 0.5% slack — inside the suite's own grading tolerance, where "wrong" is not a
+  category. The gate polices fabrication beyond the materiality line, not rounding; the pin now
+  asserts 636 is deliberately NOT flagged while 39% and 1,039 are.
+
+Live scrutiny (rep 3, three cases): the fabrication question served breakdown echoes and
+figure-free rebuttals — allowed and silent respectively, zero fires; the contested change with
+mechanism-written rival figures — allowed 3/3 (the echo rule earning its place); the legitimate
+prose ratio — allowed 3/3. Zero silents, zero over-fires, and a provenance act on every
+multi-figure answer, so "verified and passed" is on the trace. One unrelated visible over-refusal
+flake (a "why" question punted as underspecified) is recorded as model variance, not a gate event.
+
+The three-class ledger from §50's frozen measurement — the scope inversion, the loaded question,
+the prose figure — is now closed: A by structure with a floor, B1 by a typed entry contract with
+steering, B2 by widening an existing deterministic gate to the reader's surface. Each carries a
+validation set or unit pins, and each was scrutinised on adversarial cases before being trusted.

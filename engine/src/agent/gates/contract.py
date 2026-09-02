@@ -57,51 +57,85 @@ def missing_value_slot(run, exit_call):
     return None
 
 
-def underived_figure(run, exit_call):
-    """Hand back a served headline figure that matches NOTHING the run's own calls returned —
-    not a value, not a single binary composition of two values, not a count of rows.
+def _figures(text: str) -> list:
+    """Numbers in text as a READER receives them — with date debris masked first. The raw parser
+    shreds "2026-04-01" into 2026, -4, -1 and reads "Q1 2026" as 1 and 2026; every one of those
+    would be an underivable "figure" and a false hand-back. Years, quarter/half ordinals and ISO
+    dates are not figures a reader mistakes for results, so they are removed before parsing."""
+    masked = re.sub(r"\d{4}-\d{2}(-\d{2})?", " ", str(text or ""))
+    masked = re.sub(r"\b(19|20)\d{2}\b", " ", masked)
+    masked = re.sub(r"\b[QH][1-4]\b", " ", masked)
+    return parse_numbers(masked)
 
-    The frozen suite served a "drop" of -60,015 where the run's own two calls gave 19,173 and
-    25,188 (a rise of 6,015): arithmetic done in prose, unverified because the delta check was
-    scoped to contested metrics. This is the general form: a headline number must be DERIVABLE
-    from the evidence. One binary op of two evidence values (and a x100/100 rendering for
-    rates) is accepted; a longer derivation is rare and costs one hand-back to restate through
-    the tools. Bounded like every gate; the cap serves with a caveat rather than silently."""
+
+def underived_figure(run, exit_call):
+    """Hand back a served headline figure that matches NOTHING the run's results contained —
+    not a shown number, not a single binary composition of two, not a step's own total, not a
+    count of rows.
+
+    THE CONTRACT IS THE READER'S: the checked figures are the typed value AND the numbers in the
+    ANSWER field (what grading and the reader treat as served — the frozen suite's fabricated
+    "fell by 39%, from 1,039 to 636" carried no typed value at all, and the slot-only check stood
+    down). The explanation stays advisory. The EVIDENCE universe is everything the run's results
+    put in front of the model: the typed result values, plus the numbers rendered in the result
+    texts themselves — a figure copied from an [also] or [premise] line the mechanism wrote is
+    derived from the run, not from the model's head. One binary op of two evidence values, a
+    x100/100 rendering, a step's summed values (a stated total OF a breakdown is legitimate) and
+    a row count are accepted; a multi-term hand-sum across arbitrary cells is not, and the repair
+    is the doctrine's: recompute through the tools. Bounded like every gate; the cap serves with
+    a caveat rather than silently."""
     g = run.grounding.guardrails
     if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
         return None
+    checked = list(_figures(exit_call.args.get("answer")))
     declared = _as_number(exit_call.args.get("value"))
-    if declared is None:
+    if declared is not None:
+        checked.append(declared)
+    checked = [c for c in checked if abs(c) > 1e-9]      # a bare zero is a statement, not a sum
+    if not checked:
         return None
-    ev = run._evidence_scalars()
+    ev = list(run._evidence_scalars())
+    sums, counts = [], []
+    for step in run.steps:
+        if step.get("blocked_by") or step.get("error"):
+            continue
+        vals = [v for v in (step.get("result_values") or ())
+                if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        if vals:
+            sums.append(float(sum(vals)))
+            counts.append(float(len(vals)))
+        ev += [v for v in _figures(step.get("result")) if isinstance(v, float)]
     if not ev:
         return None
-    counts = [float(len(step.get("result_values") or ()))
-              for step in run.steps if step.get("result_values")]
-    candidates = list(ev) + counts
-    for i, a in enumerate(ev):
-        for b in ev[i:]:
+    candidates = ev + sums + counts
+    base = list(dict.fromkeys(ev))[:80]                  # bound the pairwise set
+    for i, a in enumerate(base):
+        for b in base[i:]:
             candidates += [a - b, b - a, a + b, a * b]
             if b:
-                candidates.append(a / b)
+                # ratio, and the canonical CHANGE form (a-b)/b — "+90.6%" is one analytics
+                # concept, not chained arithmetic, and belongs in the derivable set
+                candidates += [a / b, (a - b) / b]
             if a:
-                candidates.append(b / a)
+                candidates += [b / a, (b - a) / a]
     for c in list(candidates):
         candidates += [c * 100, c / 100]
-    if any(abs(declared - c) <= 0.005 * max(abs(declared), 1e-9) for c in candidates):
+    bad = [f for f in checked
+           if not any(abs(f - c) <= 0.005 * max(abs(f), 1e-9) for c in candidates)]
+    if not bad:
         run.acts.append(Act("answer_spec", str(Position.REPAIR), "allowed",
-                             f"figure {declared} derives from the run's own values").as_dict())
+                             f"served figure(s) derive from the run's own results").as_dict())
         return None
-    run.repairs.append({"underived_figure": {"declared": declared}})
+    run.repairs.append({"underived_figure": {"figures": bad[:4]}})
     run.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
-                         f"served {declared} derives from none of the run's own values; "
+                         f"served {bad[:4]} derive from none of the run's own results; "
                          f"correction {run.claim_retries} of 2").as_dict())
-    shown = ", ".join(str(round(v, 4)) for v in ev[:12])
+    shown = ", ".join(str(round(v, 4)) for v in list(dict.fromkeys(ev))[:10])
     return ToolResult(
-        f"Your answer was not accepted: the figure {declared} matches none of the values your "
-        f"own calls returned ({shown}{'…' if len(ev) > 12 else ''}) nor any single "
-        f"difference, sum, ratio or product of two of them. Recompute through the tools and "
-        f"serve a figure your calls support — do not do arithmetic in prose.", is_error=True)
+        f"Your answer was not accepted: the figure(s) {', '.join(str(round(b, 4)) for b in bad[:4])} "
+        f"match none of the values your own calls returned ({shown}…) nor any single difference, "
+        f"sum, ratio, product, total or count of them. Recompute through the tools and serve "
+        f"figures your calls support — do not do arithmetic in prose.", is_error=True)
 
 
 def substituted_window(run, exit_call):

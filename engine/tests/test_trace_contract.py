@@ -32,7 +32,7 @@ def test_a_figure_matching_no_evidence_or_composition_is_handed_back():
     exit_call = NS(name="answer", args={"value": -60015, "explanation": ""})
     r = obj.underived_figure(exit_call)
     assert r is not None and r.is_error
-    assert "matches none" in r.content
+    assert "match none" in r.content
 
 
 def test_evidence_values_and_their_compositions_are_accepted():
@@ -252,3 +252,59 @@ def test_a_stance_free_answer_under_a_contradicted_premise_is_handed_back(monkey
     r = gc.direction_vs_evidence(obj, exit_call)
     assert r is not None and r.is_error
     assert "PRESUMES" in r.content and "false_premise" in r.content
+
+
+# ── B2: derivability is the READER's contract ─────────────────────────────────────────────────
+def test_fabricated_prose_figures_are_caught_even_with_no_typed_value():
+    """The frozen suite served "fell by 39%, from 1,039 to 636" (truth 637 -> 1,214) with the
+    value slot empty — the slot-only check stood down. The answer FIELD is what the reader
+    receives, so its numbers are the checked set."""
+    obj = _stub([_step([637], args={"metric": "new_signups", "period": "2026-Q1"}),
+                 _step([1214], args={"metric": "new_signups", "period": "2026-Q2"})])
+    exit_call = NS(name="answer", args={
+        "answer": "New signups fell by 39% (from 1,039 in Q1 to 636 in Q2)",
+        "value": None, "explanation": ""})
+    r = obj.underived_figure(exit_call)
+    assert r is not None and r.is_error
+    assert "1039" in r.content and "39" in r.content
+    # 636 is NOT flagged, deliberately: it sits within the 0.5% slack of the true 637 — inside
+    # the suite's own grading tolerance, where "wrong" is not a category. The gate polices
+    # fabrication beyond the materiality line, not rounding.
+    assert "636.0" not in r.content
+
+
+def test_legitimate_derivations_pass_including_percent_renderings():
+    obj = _stub([_step([637]), _step([1214])])
+    exit_call = NS(name="answer", args={
+        "answer": "They rose to 1,214 from 637 in Q1 2026 — a rise of 577 (+90.6%)",
+        "value": 577, "explanation": ""})
+    assert obj.underived_figure(exit_call) is None       # 577=diff, 90.6=(577/637)*100, dates masked
+
+
+def test_a_figure_echoed_from_a_mechanism_written_result_line_is_derived():
+    """The [also]/[premise] lines put figures in front of the model as result TEXT, not typed
+    values; a model that copies one has derived it from the run, not from its head."""
+    step = _step([947], args={"metric": "value_moments"})
+    step["result"] = "value 947\n[also] total_value_moments gives 1131 here, 19% apart"
+    obj = _stub([step])
+    exit_call = NS(name="answer", args={"answer": "947 (or 1,131 including internal)",
+                                        "value": 947, "explanation": ""})
+    assert obj.underived_figure(exit_call) is None
+
+
+def test_a_stated_total_of_a_breakdown_derives_but_an_arbitrary_missum_does_not():
+    cells = [195.0, 202.0, 240.0]
+    obj = _stub([_step(cells, args={"metric": "new_signups"})])
+    ok = NS(name="answer", args={"answer": "637 total across the quarter", "value": 637,
+                                 "explanation": ""})
+    assert obj.underived_figure(ok) is None              # sum of the step's own rows
+    bad = NS(name="answer", args={"answer": "734 total", "value": 734, "explanation": ""})
+    r = obj.underived_figure(bad)
+    assert r is not None and r.is_error
+
+
+def test_explanation_numbers_stay_advisory():
+    obj = _stub([_step([100.0])])
+    exit_call = NS(name="answer", args={"answer": "100", "value": 100,
+                                        "explanation": "context: back in 1999 we had 42 users"})
+    assert obj.underived_figure(exit_call) is None

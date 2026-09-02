@@ -1,0 +1,823 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h2_b_signups_collapse_q2",
+    "error": null,
+    "question": "Why did new signups collapse in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "underspecified_request",
+    "missing": "user didn't confirm which diagnostics to run (compare Q2 vs Q1, channels, marketing spend, regions)",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 3,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The question 'Why did new signups collapse in Q2 2026?' needs the period and signals to compare; I can run channel and spend diagnostics but you must confirm which to include.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "group_by": [
+            "user__signup_date"
+          ],
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: user__signup_date__day, value\n(datetime.datetime(2026, 5, 23, 0, 0), 17)\n(datetime.datetime(2026, 5, 1, 0, 0), 10)\n(datetime.datetime(2026, 6, 9, 0, 0), 13)\n(datetime.datetime(2026, 5, 7, 0, 0), 4)\n(datetime.datetime(2026, 5, 12, 0, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "time_grain": "month",
+          "period": "2026-Q2",
+          "group_by": [
+            "user__channel"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: user__channel, value\n('content_seo', 253)\n('organic', 255)\n('referral', 243)\n('paid_search', 232)\n('partnerships', 231)\n[cite] r3:content_seo \u00b7 r3:organic \u00b7 r3:referral \u00b7 r3:paid_search \u00b7 r3:partnerships"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_habits_change_mar_apr",
+    "error": null,
+    "question": "By how many did completed habits change from March 2026 to April 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 947.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 947.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose)"
+      }
+    ],
+    "answer_text": "947",
+    "explanation": "Change in completed habits (value_moments) from March 2026 (7,701) to April 2026 (8,648). Both exclude internal/test accounts; this is the month-over-month absolute difference in completed habits.  Both governed readings: the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-03",
+          "group_by": [
+            "metric_time"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: metric_time__day, value\n(datetime.datetime(2026, 3, 30, 0, 0), 284)\n(datetime.datetime(2026, 3, 8, 0, 0), 234)\n(datetime.datetime(2026, 3, 5, 0, 0), 198)\n(datetime.datetime(2026, 3, 27, 0, 0), 266)\n(datetime.datetime(2026, 3, 15, 0, "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(7701,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 7,701 against `total_value_moments` 7,950, 3.23% apart. The two differ by is_internal "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-04"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-04 -> 2026-04-01..2026-04-30\ncolumns: value\n(8648,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 8,648 against `total_value_moments` 9,081, 5.01% apart. The two differ by is_internal "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      }
+    ],
+    "answer_text": "\u00a393.68 (marketing_spend) / \u00a380.94 (acquisition_spend)",
+    "explanation": "Marketing cost per signup in 2026-Q1 = marketing_spend \u00f7 new_signups. marketing_spend for 2026-Q1 = \u00a359,664.99; new_signups in 2026-Q1 = 637; acquisition_spend (excludes partnerships) = \u00a351,573.00. So marketing_spend/new_signups = 59664.99999999996 \u00f7 637 = \u00a393.679 (\u2248 \u00a393.68) and acquisition_spend/new_signups = 51573 \u00f7 637 = \u00a380.938 (\u2248 \u00a380.94). The two governed readings differ because acquisition_spend excludes the internal 'partnerships' channel.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q1' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_b_signups_collapse_q2",
+    "error": null,
+    "question": "Why did new signups collapse in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 4,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the question presupposes direction=fell: 'collapse'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of accounts created (governed metric `new_signups`) for asked new signups [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "New signups did not collapse in Q2 2026 \u2014 they rose.",
+    "explanation": "new_signups (accounts created) in 2026-Q1 = 637 and in 2026-Q2 = 1,214. I computed both figures from the governed metric `new_signups` broken down by acquisition channel and region and summed the monthly-group rows to the quarter totals (periods: 2026-Q1 and 2026-Q2). The rise reflects increases across multiple channels and regions (notably content_seo and paid_search in APAC and EMEA).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "new signups in 2026-Q2 and breakdown by channel and region"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'new signups in 2026-Q2 and breakdown by channel and region' maps to the governed metric `metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "time_grain": "month",
+          "period": "2026-Q2",
+          "group_by": [
+            "user__channel",
+            "user__region"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: user__channel, user__region, value\n('content_seo', 'APAC', 82)\n('partnerships', 'EMEA', 99)\n('partnerships', 'Americas', 58)\n('content_seo', 'EMEA', 114)\n('content_seo', 'Americas', 57)\n('organic', 'EMEA', 109)\n('organic', 'Americas'"
+      },
+      {
+        "tool": "check_causal_evidence",
+        "args": {
+          "driver": "marketing_spend",
+          "outcome": "new_signups"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] UNKNOWN \u2014 there is no metric tree at this rung, so causal links cannot be checked here. This is not evidence that no link exists: you cannot tell either way, so do not refuse for no_causal_evidence on the strength of this answer.\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "time_grain": "month",
+          "period": "2026-Q1",
+          "group_by": [
+            "user__channel",
+            "user__region"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: user__channel, user__region, value\n('content_seo', 'APAC', 6)\n('organic', 'EMEA', 84)\n('paid_search', 'EMEA', 76)\n('paid_search', 'Americas', 51)\n('organic', 'Americas', 50)\n('referral', 'APAC', 2)\n('partnerships', 'Americas', 46)\n('"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_habits_change_mar_apr",
+    "error": null,
+    "question": "By how many did completed habits change from March 2026 to April 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 947.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 2,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 947.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose)"
+      }
+    ],
+    "answer_text": "947",
+    "explanation": "Change in completed habits (value_moments) from March 2026 (7,701) to April 2026 (8,648) = 8,648 \u2212 7,701 = 947. These are completed-habit counts, counted excluding internal/test accounts, measured as monthly totals.  Both governed readings: the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(7701,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 7,701 against `total_value_moments` 7,950, 3.23% apart. The two differ by is_internal "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-04"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-04 -> 2026-04-01..2026-04-30\ncolumns: value\n(8648,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 8,648 against `total_value_moments` 9,081, 5.01% apart. The two differ by is_internal "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      }
+    ],
+    "answer_text": "\u00a393.72 (marketing_spend) and \u00a380.93 (acquisition_spend)",
+    "explanation": "Marketing cost per signup in 2026-Q1 = marketing_spend / new_signups. marketing_spend for 2026-Q1 = \u00a359,665; new_signups = 637; marketing_spend per signup = \u00a359,664.99999999996 / 637 = \u00a393.72. acquisition_spend (excluding partnerships) for the same period = \u00a351,573; acquisition_spend per signup = \u00a351,573 / 637 = \u00a380.93. The two readings differ because acquisition_spend excludes the internal 'partnerships' channel.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q1' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_b_signups_collapse_q2",
+    "error": null,
+    "question": "Why did new signups collapse in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 9,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the question presupposes direction=fell: 'collapse'"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served counts of accounts created (new_signups) for asked new signups [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "New signups did not collapse in Q2 2026; they rose. Q1 2026 new_signups = 637 (by channel: content_seo 125, organic 139, referral 124, paid_search 132, partnerships 117). Q2 2026 new_signups = 1,214 (by channel: content_seo 253, organic 255, referral 243, paid_search 232, partnerships 231).",
+    "explanation": "Compared governed metric `new_signups` for 2026-Q1 (Jan\u2013Mar) and 2026-Q2 (Apr\u2013Jun). Values are counts of accounts created (all accounts) broken down by user__channel; totals are sums of the channel rows shown. This shows an increase from 637 in Q1 to 1,214 in Q2.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "Why did new signups collapse in the second quarter of 2026?"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'Why did new signups collapse in the second quarter of 2026?' maps to the governed metric `metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2",
+          "group_by": [
+            "user__channel"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: user__channel, value\n('content_seo', 253)\n('referral', 243)\n('partnerships', 231)\n('paid_search', 232)\n('organic', 255)\n[cite] r2:content_seo \u00b7 r2:referral \u00b7 r2:partnerships \u00b7 r2:paid_search \u00b7 r2:organic"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1",
+          "group_by": [
+            "user__channel"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: user__channel, value\n('content_seo', 125)\n('organic', 139)\n('referral', 124)\n('paid_search', 132)\n('partnerships', 117)\n[cite] r3:content_seo \u00b7 r3:organic \u00b7 r3:referral \u00b7 r3:paid_search \u00b7 r3:partnerships\n[premise] the question presum"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_habits_change_mar_apr",
+    "error": null,
+    "question": "By how many did completed habits change from March 2026 to April 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 947.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 2,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 947.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose)"
+      }
+    ],
+    "answer_text": "947",
+    "explanation": "Change in completed habits (value_moments) from March 2026 (7,701) to April 2026 (8,648): April \u2212 March = 8,648 \u2212 7,701 = 947. These counts exclude internal/test accounts (value_moments).  Both governed readings: the change in value_moments is 947 (rose); in total_value_moments (is_internal = false) it is 1131 (rose).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(7701,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 7,701 against `total_value_moments` 7,950, 3.23% apart. The two differ by is_internal "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-04"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-04 -> 2026-04-01..2026-04-30\ncolumns: value\n(8648,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 8,648 against `total_value_moments` 9,081, 5.01% apart. The two differ by is_internal "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 93.69,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 93.69"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 80.9626 (vs 93.6656)"
+      }
+    ],
+    "answer_text": "$93.69",
+    "explanation": "Marketing spend in 2026-Q1 (marketing_spend) was $59,665 and new_signups in 2026-Q1 were 637, so spend per signup = 59664.99999999996 / 637 = $93.693 (rounded to $93.69). This uses marketing_spend (all marketing channels, includes partnerships) divided by new_signups for the quarter.  Both governed readings: a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 80.9626 (vs 93.6656).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q1' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]
