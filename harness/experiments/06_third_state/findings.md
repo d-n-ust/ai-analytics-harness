@@ -2057,3 +2057,53 @@ OPEN THREADS. The filter-value grounding gap (the remaining silent); define_meas
 (it fires only when the agent reaches for it); promotion (spec -> PR into the layer); the query-leaf
 executor; and the offline-vs-online split (fix what you can offline; handle the residual online) as a
 standing policy rather than a per-case choice.
+
+## 46 · Metric anchoring and "a filter that matches nothing is not zero"
+
+The mrr_q2 silent (§45) had three roots, all now closed, and the fixes generalize beyond it.
+
+METRIC ANCHORING (the graph gap). The ontology modelled entities and metrics as separate node types
+with no edge between a metric and the dimensions it is defined over, so a governed metric was
+unanchored: "MRR from subscriptions that started in Q2" sometimes grounded governed mrr (correct) and
+sometimes over-decomposed into raw subscription cohort columns, which — subscription being an island
+(no curated join) — grounded to uninstrumented and refused. ontology_source now reads each metric's
+entity and filterable dimensions off the manifest (metric -> measure -> semantic model ->
+dimensions), and render shows "metric.mrr (measures subscription; filter by: started_date,
+cohort_month, plan, status): …". The graph now shows a governed metric is sliceable, so the model
+grounds a scoped metric as governed instead of decomposing it. Paired with a resolve_measure clause —
+a governed metric restricted through its OWN dimension (segment, period, cohort) stays governed — the
+mrr cohort question grounds 6/6 governed; the anchor helps the hardest phrasing 0/6 -> 5/6 alone, the
+clause carries it to 6/6, and answerability targets hold 4/4.
+
+A FILTER THAT MATCHES NOTHING IS NOT ZERO. A filtered query that matched no rows reached the model as
+a bare (None,)/(0,) it served as a confident zero — "£0 MRR for Q2", "0 active users in Japan"
+(implying we operate there). Two shapes, both flagged in the query_metric result:
+
+| shape | example | value | caught by |
+|-------|---------|-------|-----------|
+| empty | mrr cohort_month='2026-Q2' (SUM of no rows) | None | no numeric measure came back |
+| unknown | plan='enterprise', country='JP' (COUNT of no rows) | 0 | filter value not a governed member |
+
+The unknown check is the NON-BRITTLE form of filter-value grounding: it fires only for a dimension
+the layer ENUMERATES (authoritative member list), case/whitespace-normalised, so a valid value in any
+casing ('MONTHLY') is never flagged and an unbounded dimension (dates) is left to the empty check.
+The flag lists the dimension's real values as an advisory hint so the model re-queries, or refuses —
+never serves 0. Verified end-to-end: "active users in Japan" -> the agent filters country='JP' ->
+GUARD FIRED ('JP' is not a governed value; its values are US, BR, …) -> refuse
+ungoverned_dimension_value, declared=None, no confident zero served.
+
+DEFENSE IN DEPTH, observed. The guard is a BACKSTOP and the traces show it should rarely fire,
+because upstream fixes steer the agent away from bad filters first: mrr_q2 (anchor + clause + usage
+example -> the correct period query, never a bad filter), enterprise_plan (the catalogue lists plan
+values -> the agent refuses from list_metrics, never queries). It fires only on the residual the
+upstream could not anticipate (Japan — no usage example covers every non-existent country). Prevention
+where possible, a deterministic catch for the rest — so a confident zero cannot ship regardless of
+which upstream fix was missing.
+
+RESULT (rep-3, current-best cell + all fixes). mrr_q2_starts_agree closed 3/3 (was the §44/§45
+silent); contested_derived 6/6, contested_level 35/36; the empty/unknown guard fired twice, both with
+correct outcomes (enterprise_plan -> refuse, acquisition_spend×partnerships -> answer), and NO silent
+was caused by the anchor or the guard. Headline correct 132/138, silent 3 — at the rep-3 noise floor,
+the set rotating (mrr_q2 out, active_users_ios contested-disclosure and gross_mrr_ytd period-scope in),
+both orthogonal to this work. mrr_q2 joins the closed classes; the durable claim stays the classes and
+the architecture, not the last rep.
