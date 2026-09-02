@@ -346,6 +346,19 @@ class _Run:
         if not restricts or not phrase:
             return None
         members = list(vocab.get(dim, ()))
+        # ONE SPAN OF WORDS FEEDS ONE DECISION. When the scope classifier has already consumed a
+        # quote as the METRIC choice ("Counting subscriptions that were later refunded" names
+        # gross_mrr), the same words are not ALSO a segment restriction — reading them twice made
+        # the segment layer apply status='refunded' to an answer the binding check had just
+        # verified, overriding 2,754 with the refunded-only 68.9. Deterministic: the named phrase
+        # overlapping the consumed quote stands the segment machinery down.
+        chose = self._scope_verdict[0] if self._scope_verdict else False
+        quote = (self._scope_verdict[2] if self._scope_verdict else "") or ""
+        if chose and phrase and (phrase.lower() in quote.lower() or quote.lower() in phrase.lower()):
+            self.acts.append(Act("metric_brief", str(Position.REPAIR), "allowed",
+                                 f"segment phrase {phrase!r} is inside the scope quote that chose "
+                                 f"the metric — a definition discriminator, not a filter").as_dict())
+            return None
         # Membership-only: the model's proposal is trusted for SEMANTIC fit (its superpower) and
         # verified only for EXISTENCE — the value must be a real member. A lexical anchor test here
         # false-refused a correct semantic link ("platform not recorded" -> `unknown`), so it is gone.
@@ -660,6 +673,30 @@ class _Run:
         if ev is None:
             return None
         metric, actual, evidence, short = ev
+        # THE SIGN IS A CLAIM. A declared value of -(v1-v0) presents the change as a FALL whatever
+        # the slot or the prose says — the residual dodge after the slot and text checks: headline
+        # -6,015 with an explanation admitting a rise. Deterministic: value ~ -delta with the
+        # evidence rising is a contradiction; the fall case is left alone because a fall is
+        # conventionally served as a positive magnitude ("dropped by 6,015").
+        declared_v = _as_number(exit_call.args.get("value"))
+        pair = self._before_after_from_calls(semantic) or self._series_from_calls(semantic)
+        if declared_v is not None and declared_v < 0 and pair is not None:
+            _m, v0, v1 = pair
+            d = v1 - v0
+            if d > 0 and abs(declared_v + d) <= 0.005 * d:
+                self.repairs.append({"direction_vs_evidence":
+                                     {"claimed": f"sign:{declared_v}", "actual": actual,
+                                      "metric": metric}})
+                self.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
+                                     f"declared {declared_v} presents the change as a fall, but "
+                                     f"{short} rose by {round(d, 4)}; "
+                                     f"correction {self.claim_retries} of 2").as_dict())
+                return ToolResult(
+                    f"Your answer was not accepted: its value {declared_v} presents the change as "
+                    f"a fall, but {evidence} — the change is +{round(d, 4)}, a rise. The question "
+                    f"presumed the wrong direction: state plainly that {metric} rose by "
+                    f"{round(d, 4)} (set direction='rose', value={round(d, 4)}), or refuse the "
+                    f"false premise.", is_error=True)
         if actual == "unchanged":
             return None
         declared = str(exit_call.args.get("direction") or "").strip().lower()

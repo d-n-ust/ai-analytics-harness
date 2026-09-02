@@ -2342,3 +2342,27 @@ an off-by-one in the new hand-back budget (three corrections where the contract 
 Cost on the re-probed questions, before → after: tool calls 3→1, 2→1, 2→1, 4→2; model calls
 7→5, 6→5, 5→4, 8→5. The board held 4/4 with the contested ratio disclosed. The bundle now goes to
 a full dev-suite rep-3 before any frozen confirmation is spent.
+
+## 53 · Two residuals from the bundle run: one span of words, one decision; the sign is a claim
+
+The bundle's dev-suite run (silent 11 -> 3) left two defects, both diagnosed from their traces and
+both closed deterministically.
+
+ONE SPAN OF WORDS FEEDS ONE DECISION. The binding check verified gross_mrr as the named reading and
+constructed 2,754 — then the segment machinery read the SAME words ("counting subscriptions that
+were later refunded") a second time, as a restriction to status='refunded', and overrode the
+verified answer with the refunded-only slice (68.9, 2 of 3 reps). Two classifiers each made a
+defensible reading of one clause; nothing said the clause was already spent. The guard is in
+`_resolve_segment`: a named segment phrase that overlaps the quote the scope classifier consumed as
+the METRIC choice is a definition discriminator, not a filter, and the segment machinery stands
+down with an `allowed` act. Re-probe: 3/3 binding holds, no metric_brief act, 2,754 every rep.
+
+THE SIGN IS A CLAIM. A declared value of -(v1-v0) presents the change as a fall whatever the slot
+or the prose says — the residual dodge after both the slot and text checks: headline -6,015 with an
+explanation admitting the rise. `direction_vs_evidence` now reads the SIGN: value ~ -delta against
+rising evidence is a contradiction, handled like any directional claim. The fall convention is
+deliberately spared (a drop is served as a positive magnitude). Re-probe: 3/3 correct, and the
+three reps exercised three DIFFERENT layers — the model's own contradiction, a grounded_measure
+catch, and the direction gate on a declared `fell` — defense in depth observed rather than
+asserted. Both guards pinned in test_trace_contract.py with their negative cases (the same phrase
+outside a consumed quote still resolves as a segment; a positive fall-magnitude passes).

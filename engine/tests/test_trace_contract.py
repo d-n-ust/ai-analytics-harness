@@ -99,3 +99,59 @@ def test_binding_stands_down_when_served_equals_named_and_constructs_at_the_cap(
                              "gross of refunds", 2685.08, 2754.0) is None
     assert "gross_mrr" in exit_call.args["explanation"]
     assert "2754" in exit_call.args["explanation"]
+
+
+# ── the scope-quote overlap guard ─────────────────────────────────────────────────────────────
+def test_a_segment_phrase_inside_the_consumed_scope_quote_is_not_a_filter(monkeypatch):
+    """"Counting subscriptions that were later refunded" chose gross_mrr; the same words must not
+    ALSO become status='refunded' — the double read overrode a binding-verified 2,754 with the
+    refunded-only slice."""
+    import agent.guardrails.classify as classify
+
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(segment_vocabulary=lambda: {"subscription__status":
+                                                              ("active", "refunded", "canceled")}),
+                       guardrails=NS(answer_spec=True))
+    obj.model = None
+    obj._scope_verdict = (True, "gross_mrr", "Counting subscriptions that were later refunded")
+    obj.question = "Counting subscriptions that were later refunded, what is our MRR today?"
+    monkeypatch.setattr(classify, "segment_named",
+                        lambda *a, **k: (True, "later refunded", "subscription__status", "refunded"))
+    assert obj._resolve_segment() is None                      # stood down, not a filter
+    assert any(a.get("outcome") == "allowed" for a in obj.acts)
+    # the same phrase OUTSIDE any consumed quote still resolves as a segment
+    obj2 = _stub()
+    obj2.grounding, obj2.model = obj.grounding, None
+    obj2._scope_verdict = None
+    obj2.question = "How much MRR sits on refunded subscriptions?"
+    monkeypatch.setattr(classify, "segment_named",
+                        lambda *a, **k: (True, "refunded", "subscription__status", "refunded"))
+    seg = obj2._resolve_segment()
+    assert seg is not None and seg["linked"]
+
+
+# ── the sign-claim gate ───────────────────────────────────────────────────────────────────────
+def test_a_negative_declared_delta_against_rising_evidence_is_handed_back(monkeypatch):
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(clusters=None), guardrails=NS(answer_spec=True))
+    obj.model = None
+    monkeypatch.setattr(_Run, "_true_direction",
+                        lambda self, s: ("app_opens", "rose", "19173 then 25188", "19173->25188"))
+    monkeypatch.setattr(_Run, "_before_after_from_calls",
+                        lambda self, s: ("app_opens", 19173, 25188))
+    exit_call = NS(name="answer", args={"value": -6015, "direction": "not_a_change",
+                                        "answer": "-6015", "explanation": "rose actually"})
+    r = obj.direction_vs_evidence(exit_call)
+    assert r is not None and r.is_error and "rise" in r.content
+    # a POSITIVE magnitude with falling evidence is the conventional "dropped by N" — left alone
+    monkeypatch.setattr(_Run, "_true_direction",
+                        lambda self, s: ("app_opens", "fell", "25188 then 19173", "25188->19173"))
+    monkeypatch.setattr(_Run, "_before_after_from_calls",
+                        lambda self, s: ("app_opens", 25188, 19173))
+    monkeypatch.setattr(classify_mod, "text_asserts_direction", lambda m, t: "fell")
+    exit_call = NS(name="answer", args={"value": 6015, "direction": "fell",
+                                        "answer": "dropped by 6015", "explanation": ""})
+    assert obj.direction_vs_evidence(exit_call) is None
+
+
+import agent.guardrails.classify as classify_mod  # noqa: E402  (used by the sign test)
