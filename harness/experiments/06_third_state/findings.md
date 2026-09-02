@@ -2172,3 +2172,37 @@ already discloses both is left untouched.
 CAMPAIGN: 13 silent errors to 0. The durable claim stays the closed failure CLASSES and the
 allocation that closed them — LLM for language, deterministic mechanism for structure, protocol to
 force structure into existence — not the last rep of the last run.
+
+## 49 · The model-call counter under concurrency: a per-run meter, not a shared-counter delta
+
+The per-answer `model_calls` (f074db2) was wrong under concurrency. The runner builds ONE provider
+object and shares it across the thread pool, and each run reported the START/END DELTA of a counter
+on that shared object — which is a TIME WINDOW over every worker's calls, not this run's count. At
+concurrency 4 the held-out run reported a mean of 27 calls per answer against ~7 real ones: inflated
+by the pool width, exactly. The increment itself was also a bare read-modify-write, so concurrent
+runs could additionally lose counts. §46's "roughly five" was an architectural estimate (three gates
+plus disclosure), not a measurement; neither figure was trustworthy.
+
+The fix makes the count a property of the RUN. `run_agent` wraps the shared provider once per run in
+`_MeteredModel`, which counts `respond()` on itself and delegates everything else. One wrap point
+covers every consumer — the main loop, every classifier/gate through `run.model`, and
+check_answerability / the define_measure sub-agent through `toolbox.model` — because every call site
+receives the model as an argument rather than importing one. The provider-side counters are removed:
+their only consumer was the delta, and a second counter with a different meaning is a misreading
+waiting to happen.
+
+Pinned deterministically, not statistically: a barrier holds four concurrent runs' single calls in
+flight at once, so the old delta would provably report 4 for every run; the meter reports 1 for each
+(`test_model_meter.py`). Live at the contaminated regime (rep-3, concurrency 4):
+
+| question | shared-delta mean | per-run mean | tool calls |
+|----------|------------------:|-------------:|-----------:|
+| h_a_ios_opens_may           | 25.3 | 6.3 | 2.3 |
+| h_b_active_users_fell       | 32.3 | 7.7 | 2.0 |
+| h_c_habits_change_may_june  | 27.7 | 7.3 | 3.0 |
+| h_c_spend_per_signup_q2     | 33.7 | 9.7 | 4.0 |
+
+The trustworthy cost figure is ~6-10 model calls per answer by pile (a plain pile-A lookup at the
+bottom, a contested ratio with the full gate stack at the top), and the counts now scale with the
+question's own complexity rather than with the neighbouring workers' activity. Graded outcomes are
+untouched — the counter was observability only, and no silent-error or accuracy figure moves.

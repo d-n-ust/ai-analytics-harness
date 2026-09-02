@@ -132,6 +132,33 @@ def _as_number(value):
         return None
 
 
+class _MeteredModel:
+    """A per-run view of the shared provider: counts THIS run's model calls, delegates the rest.
+
+    The sweep runner builds ONE provider object and shares it across a thread pool, so any counter
+    on the provider is a property of the PROCESS, not of a run. The first per-run count read a
+    start/end delta of a shared counter, which under concurrency is a TIME WINDOW over every
+    worker's calls — at concurrency 4 it reported a mean of 27 "calls" per answer against ~7 real
+    ones (the pool width, exactly). Wrapping here makes the count a property of the run: every
+    consumer that holds this object — the main loop, every classifier/gate, the toolbox's
+    define_measure sub-agent — increments a counter no other run can reach. One wrap point covers
+    them all because every call site receives the model as an argument rather than importing one.
+
+    Single-threaded within a run (the nested sub-agent runs in the same worker thread), so the
+    bare increment is safe; the point of the class is which OBJECT owns the number."""
+
+    def __init__(self, model):
+        self._model = model
+        self.calls = 0
+
+    def respond(self, *args, **kwargs):
+        self.calls += 1
+        return self._model.respond(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._model, name)
+
+
 @dataclass
 class _Run:
     """One question's run: the state that accumulates across turns, and the decisions that read
@@ -167,10 +194,6 @@ class _Run:
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
-    # The model's call count when this run started, so `model_calls` reports EVERY model call the
-    # answer cost — the main loop, every classifier/gate, and the nested define_measure sub-agent —
-    # making the stacked-call cost a visible, tracked number instead of an unmodelled one.
-    start_calls: int = 0
 
     @property
     def claim_retries(self) -> int:
@@ -1374,7 +1397,9 @@ class _Run:
     def _record(self, **kw) -> Answer:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
-                      model_calls=getattr(self.model, "calls", 0) - self.start_calls,
+                      # The run's OWN meter (`_MeteredModel`) — every model call this answer cost:
+                      # the main loop, every classifier/gate, the define_measure sub-agent.
+                      model_calls=getattr(self.model, "calls", 0),
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
                       cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
                       acts=self.acts, **kw)
@@ -1382,8 +1407,10 @@ class _Run:
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
               record_context: bool = False) -> Answer:
+    # One meter per run, wrapped HERE so every consumer counts through it — the loop below, the
+    # classifiers via run.model, and check_answerability/define_measure via toolbox.model.
+    model = _MeteredModel(model)
     run = _Run(question, grounding, model, verifier_model)
-    run.start_calls = getattr(model, "calls", 0)      # baseline for the per-run model-call count
     grounding.toolbox.model = model      # so check_answerability can decompose against the graph
     convo = Conversation.opening(grounding.system, question)
 
