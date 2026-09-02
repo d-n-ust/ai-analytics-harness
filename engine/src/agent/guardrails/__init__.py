@@ -156,6 +156,12 @@ class Guardrail:
     # without renumbering a rung or moving a published number — LADDER[n] names only the first n
     # of the sequence, and these two keep their declared defaults in every preset.
     in_ladder: bool = True
+    # A newer guardrail that does this one's job better, when one exists. A superseded guardrail is
+    # kept parseable — archived cells and the Shapley lattice still reference it, so DELETING it would
+    # break replay and the in-step registry invariant — but it is documented as not-for-new-work and
+    # is excluded from the standard configuration (asserted in tests). This gives the flag set the
+    # consolidation pressure it otherwise lacks, without the fragility of removal.
+    superseded_by: str = ""
 
 
 # The order the ladder switches them on; LADDER[n] enables the first n.
@@ -254,7 +260,9 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "prepends each metric's focused contract to its own query result and hands an answer "
               "back when the question names a governed segment the served number did not filter by, "
               "rather than serve the unfiltered total as if it were the segment",
-              ("tools.py", "guardrails/classify.py", "loop.py"), in_ladder=False),
+              ("tools.py", "guardrails/classify.py", "loop.py"), in_ladder=False,
+              superseded_by="applied_segment"),   # its enforcement half was decoupled into that flag;
+                                                   # its metric-context role is now the ontology anchor
     # The enforcement half of the segment slot, decoupled from the metric_brief block so it can run on
     # its own: the model names the segment the question restricts to, the mechanism verifies it grounds
     # AND that the served call carried the filter, and hands back an answer that dropped it (organic
@@ -272,7 +280,9 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "offers show_metric_ontology, a pull tool giving a metric's full contract (arguments, "
               "dimensions and governed values, example, refuse-if-absent rule) before it is queried, "
               "while the lean metric list sits in the system prompt",
-              ("guardrails/action_space.py", "tools.py"), in_ladder=False),
+              ("guardrails/action_space.py", "tools.py"), in_ladder=False,
+              superseded_by="graph_grounding"),   # check_answerability over the marts graph replaced
+                                                   # the metric-contract pull as the grounding surface
     # The enforced answer to the substitution the ontology tool could not stop: a question that
     # restricts to a segment which is NOT a governed value ("TikTok" as a channel) is refused rather
     # than answered from the nearest governed one. The model names the segment and its dimension; the

@@ -1382,3 +1382,21 @@ def test_named_cells_are_a_single_source_of_truth():
     assert parse_cell("current_best+spec_authoring").spec_authoring
     assert not parse_cell("current_best-answer_spec").answer_spec
     assert parse_cell("current_best-answer_spec").construct_disclosure   # other flags untouched
+
+
+def test_superseded_guardrails_are_documented_and_excluded_from_current_best():
+    """A guardrail a newer mechanism replaced is kept parseable (archived cells + the Shapley lattice
+    reference it) but is documented as superseded and must not be part of the standard configuration —
+    the consolidation pressure the growing flag set otherwise lacks."""
+    from agent.guardrails import GUARDRAILS, ALL_GUARDRAILS, parse_cell
+    import dataclasses
+
+    superseded = {g.name: g.superseded_by for g in GUARDRAILS if g.superseded_by}
+    assert superseded, "expected at least the retired metric-context flags to be marked"
+    for name, by in superseded.items():
+        assert by in ALL_GUARDRAILS, f"{name} superseded_by unknown guardrail {by!r}"
+        assert not next(g.superseded_by for g in GUARDRAILS if g.name == by), \
+            f"{name} is superseded by {by}, which is itself superseded — point at the live one"
+    cb = parse_cell("current_best")
+    on = {f.name for f in dataclasses.fields(cb) if getattr(cb, f.name)}
+    assert not (on & set(superseded)), f"current_best uses superseded flags: {on & set(superseded)}"
