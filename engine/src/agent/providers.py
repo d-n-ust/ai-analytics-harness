@@ -179,6 +179,7 @@ class AnthropicModel:
 
     def respond(self, convo, tools: list, force_tool: str | None = None,
                 temperature: float | None = None, require_tool: bool = False) -> Turn:
+        self.calls = getattr(self, "calls", 0) + 1   # every model call counted; run snapshots it
         kw = dict(model=self.spec.model_id, max_tokens=MAX_TOKENS, system=convo.system,
                   messages=self._render(convo), tools=tools)
         if self.spec.thinking is not None:
@@ -343,6 +344,7 @@ class OpenAIModel:
 
     def respond(self, convo, tools: list, force_tool: str | None = None,
                 temperature: float | None = None, require_tool: bool = False) -> Turn:
+        self.calls = getattr(self, "calls", 0) + 1   # every model call counted; run snapshots it
         if self.spec.use_responses_api:                           # gpt-5.6: tools + reasoning
             return self._respond_responses(convo, tools, force_tool, require_tool)
         kw = dict(
@@ -389,6 +391,7 @@ class MockModel:
 
     def respond(self, convo, tools: list, force_tool: str | None = None,
                 temperature: float | None = None, require_tool: bool = False) -> Turn:
+        self.calls = getattr(self, "calls", 0) + 1   # every model call counted; run snapshots it
         seen_a_result = any(kind == "results" for kind, _ in convo.entries)
         call = (ToolCall("mock_2", "answer", {"answer": "0", "explanation": "mock answer"})
                 if seen_a_result else ToolCall("mock_1", "get_schema", {}))

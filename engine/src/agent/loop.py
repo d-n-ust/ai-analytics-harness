@@ -158,6 +158,10 @@ class _Run:
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
+    # The model's call count when this run started, so `model_calls` reports EVERY model call the
+    # answer cost — the main loop, every classifier/gate, and the nested define_measure sub-agent —
+    # making the stacked-call cost a visible, tracked number instead of an unmodelled one.
+    start_calls: int = 0
 
     @property
     def claim_retries(self) -> int:
@@ -1272,6 +1276,7 @@ class _Run:
     def _record(self, **kw) -> Answer:
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, tool_calls=self.tool_calls,
+                      model_calls=getattr(self.model, "calls", 0) - self.start_calls,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
                       cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
                       acts=self.acts, **kw)
@@ -1280,6 +1285,7 @@ class _Run:
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
               record_context: bool = False) -> Answer:
     run = _Run(question, grounding, model, verifier_model)
+    run.start_calls = getattr(model, "calls", 0)      # baseline for the per-run model-call count
     grounding.toolbox.model = model      # so check_answerability can decompose against the graph
     convo = Conversation.opening(grounding.system, question)
 

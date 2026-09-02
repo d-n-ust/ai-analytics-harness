@@ -190,7 +190,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             # carried on the Answer, threaded through every exit, and then dropped here,
             # leaving `iterations` null in every row ever written.
             "iterations": ans.iterations,
-            "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
+            "tool_calls": ans.tool_calls, "model_calls": ans.model_calls, "input_tokens": ans.input_tokens,
             "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
             # One entry per model call: where a run's latency actually goes, which the tool

@@ -321,7 +321,7 @@ def main() -> None:
                           # The typed direction slot, so direction_vs_evidence's effect is
                           # inspectable in the stored row (the grader reads it off the Answer).
                           "direction": getattr(answer, "direction", None),
-                          "tool_calls": len(answer.steps),
+                          "tool_calls": len(answer.steps), "model_calls": answer.model_calls,
                           "tool_errors": sum(1 for s in answer.steps if s.get("error")),
                           "handbacks": len(answer.repairs),
                           "acts": list(answer.acts or []),

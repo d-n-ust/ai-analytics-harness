@@ -219,6 +219,9 @@ class Answer:
     # which is also governed_numbers' code.
     refused_by: str = ""
     tool_calls: int = 0
+    # Every MODEL call the answer cost — the main loop, every classifier/gate, and the nested
+    # define_measure sub-agent — so the stacked-classifier cost is a visible, tracked number.
+    model_calls: int = 0
     iterations: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
