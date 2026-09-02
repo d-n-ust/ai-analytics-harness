@@ -466,12 +466,20 @@ def _define_measure(tb, args) -> ToolResult:
         return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")
     if d.outcome == "gave_up":
         return ToolResult(f"COULD NOT DEFINE — {d.disclosure} Consider `clarify` or `refuse`.")
-    val = d.value if d.value is not None else f"{len(d.rows)} rows: {list(d.rows)[:8]}"
-    msg = f"COMPUTED (tier={d.tier}). value = {val}\nDEFINITION: {d.disclosure}"
+    # Present the computed result so the agent can answer FROM IT directly — a scalar, or the rows
+    # laid out (already ordered by the definition's SQL) so "which is best/highest" is readable
+    # without a re-query. The recompute-with-run_sql wrinkle was the rows arriving as a bare list.
+    if d.value is not None:
+        result = f"value = {d.value}"
+    else:
+        rows = "\n  ".join(", ".join(str(c) for c in r) for r in d.rows[:20])
+        result = f"result rows ({len(d.rows)}, in the definition's order):\n  {rows}"
+    msg = (f"COMPUTED (tier={d.tier}). This IS the computed answer — answer FROM this directly, "
+           f"stating the definition; do NOT recompute with run_sql.\n{result}\n"
+           f"DEFINITION: {d.disclosure}")
     if d.aptness and d.aptness != "apt":
         msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note} — disclose this alternative reading, "
                 f"or `clarify` if it changes the answer.")
-    msg += "\nServe this via `answer`, STATING the definition; the number rests on it."
     return ToolResult(msg)
 
 
