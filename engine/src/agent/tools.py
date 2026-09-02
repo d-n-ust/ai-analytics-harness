@@ -378,8 +378,55 @@ def _query_metric(tb, args) -> ToolResult:
     # enforcement half). Guarded on hasattr so engines without the block are unaffected.
     brief = (tb.semantic.metric_brief(args["metric"], applied=args.get("filters"))
              if getattr(tb.g, "metric_brief", False) and hasattr(tb.semantic, "metric_brief") else "")
-    return ToolResult(brief + _time_scope_line(args) + _fmt_rows(cols, rows),
-                      sql=sql, **_labelled(_measure_values(cols, rows)))
+    values = _measure_values(cols, rows)
+    # EMPTY RESULT IS NOT ZERO. A filtered/dated query that returns no numeric measure — a filter
+    # value that matches nothing (cohort_month='2026-Q2' when the values are monthly), a period out
+    # of coverage — otherwise reaches the model as a bare (None,)/(no rows) it reads as 0 and serves.
+    # An empty result is a FACT the query returned; flag it here so the model cannot serve a confident
+    # zero, with the dimension's real values as a non-brittle hint (advisory, never a gate).
+    # Two ways a filter matches nothing, both flagged so the model cannot serve a confident zero:
+    #   empty   — no numeric measure came back (a SUM of no rows is NULL, e.g. cohort_month='2026-Q2').
+    #   unknown — a filter value that is not a governed MEMBER of its dimension (a COUNT of no rows is
+    #             0, indistinguishable from a real zero at the value level — plan='enterprise' -> 0).
+    # `unknown` is the non-brittle form of value-grounding: it fires only for a dimension the layer
+    # ENUMERATES (low-cardinality; the member list is authoritative), case-normalised, so it never
+    # false-flags a real value; an unbounded dimension (dates) has no members and is left to `empty`.
+    empty = not values and (args.get("filters") or args.get("period") or args.get("start"))
+    unknown = _unknown_filter_values(tb, args)
+    warning = (_empty_result_note(args, unknown) + "\n") if (empty or unknown) else ""
+    return ToolResult(warning + brief + _time_scope_line(args) + _fmt_rows(cols, rows),
+                      sql=sql, **_labelled(values))
+
+
+def _unknown_filter_values(tb, args) -> list:
+    """Filters whose VALUE is not a governed member of its dimension — [(dim, value, [members])].
+    Only for dimensions the layer enumerates (authoritative member list); case/whitespace-normalised,
+    so a valid value in any casing is never flagged. Unbounded dimensions (no members) are skipped."""
+    try:
+        members = tb.semantic.dimension_members()
+    except Exception:                                                       # noqa: BLE001
+        return []
+    norm = lambda s: str(s).strip().lower()
+    out = []
+    for dim, val in (args.get("filters") or {}).items():
+        vals = members.get(dim) or members.get(str(dim).split("__")[-1])
+        if vals and norm(val) not in {norm(v) for v in vals}:
+            out.append((dim, val, list(vals)))
+    return out
+
+
+def _empty_result_note(args, unknown) -> str:
+    """The 'matched nothing' flag: an empty result or an unknown filter value is NOT zero. Lists the
+    dimension's real values so the model can re-query — the members come from the layer, advisory."""
+    lines = ["EMPTY RESULT — this query matched NO ROWS, which is NOT zero. Do not report 0. A filter "
+             "value that is not a real member of its dimension, or a period outside coverage, matches "
+             "nothing."]
+    for dim, val, vals in unknown:
+        lines.append(f"  {dim}={val!r} is NOT a governed value of {dim}; its values are: "
+                     f"{', '.join(map(str, vals))}.")
+    lines.append("Re-query with a valid value (or the period for a quarter), or `refuse` "
+                 "(out_of_coverage / ungoverned_dimension_value) — never serve 0.")
+    return "\n".join(lines)
 
 
 def _time_scope_line(args) -> str:

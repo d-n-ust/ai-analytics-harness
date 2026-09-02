@@ -246,7 +246,27 @@ class MetricFlowLayer:
                 if not str(e.type).lower().endswith("primary"):
                     d["relationships"].append((e.name, f"joined on {e.expr or e.name}"))
         metrics = {name: (self.metrics.get(name, {}).get("description") or "") for name in self.metrics}
-        return {"entities": ents, "metrics": metrics, "measure_semantics": semantics}
+        # Anchor each metric to the entity it measures and the dimensions it can be FILTERED by
+        # (metric -> its measure's semantic model -> that model's dimensions). Read off the manifest,
+        # so the graph shows a governed metric is sliceable by a cohort/segment/period without the
+        # model having to infer it — and does not over-decompose "MRR started in Q2" into raw columns.
+        meas_home = {}
+        for sm in self._manifest.semantic_models:
+            primary = next((e for e in sm.entities
+                            if str(e.type).lower().endswith("primary")), None)
+            dims = [d.name for d in sm.dimensions]
+            for m in sm.measures:
+                meas_home[m.name] = (primary.name if primary else sm.name, dims)
+        metric_dims = {}
+        for metric in self._manifest.metrics:
+            tp = getattr(metric, "type_params", None)
+            measure = getattr(tp, "measure", None) if tp else None
+            mn = getattr(measure, "name", None) if measure is not None else None
+            if mn in meas_home:
+                entity, dims = meas_home[mn]
+                metric_dims[metric.name] = {"entity": entity, "dims": dims}
+        return {"entities": ents, "metrics": metrics, "measure_semantics": semantics,
+                "metric_dims": metric_dims}
 
     def ontology_text(self) -> str:
         """The whole governed ontology in one block, for the grounding resolver: every metric with

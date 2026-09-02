@@ -107,6 +107,7 @@ class MartsOntology:
     edges: frozenset         # frozenset({entity_a, entity_b}) — undirected, traversable relationships
     edge_notes: tuple        # (from, to, note) for the model's reading
     metrics: dict            # metric name -> one-line description
+    metric_dims: dict        # metric name -> {"entity", "dims"}: what it measures and filters by
     measure_semantics: dict  # measure column -> what it IS (positive description)
     nodes: frozenset         # every valid node reference: "entity.column" and "metric.<name>"
 
@@ -136,6 +137,7 @@ class MartsOntology:
         sem = {**(source.get("measure_semantics") or {}), **(measure_semantics or {})}
         return cls(entities=entities, edges=frozenset(edges), edge_notes=tuple(edge_notes),
                    metrics={m: " ".join((d or "").split()) for m, d in source["metrics"].items()},
+                   metric_dims=dict(source.get("metric_dims") or {}),
                    measure_semantics=sem, nodes=frozenset(nodes))
 
     @classmethod
@@ -169,7 +171,14 @@ class MartsOntology:
             "Governed metrics (a direct answer, alone or combined as a ratio, if one fits):",
         ]
         for m in sorted(self.metrics):
-            out.append(f"  metric.{m}: {self.metrics[m][:metric_desc_chars]}")
+            anchor = ""
+            d = self.metric_dims.get(m)
+            if d and d.get("dims"):
+                # Anchor the metric to what it measures and the dimensions it is FILTERED by, so a
+                # governed metric restricted to a segment/period/cohort grounds as governed rather
+                # than being decomposed into raw columns.
+                anchor = f" (measures {d['entity']}; filter by: {', '.join(d['dims'])})"
+            out.append(f"  metric.{m}{anchor}: {self.metrics[m][:metric_desc_chars]}")
         out += ["", "Entities (a node is entity.attribute or entity.measure):"]
         for ent, d in self.entities.items():
             out.append(f"  {ent} ({d['table']}) — grain: {d['grain'] or 'one row per ' + ent}")
