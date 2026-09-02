@@ -76,8 +76,16 @@ def _define_measure(tb, args) -> ToolResult:
            f"stating the definition; do NOT recompute with run_sql.\n{result}\n"
            f"DEFINITION: {d.disclosure}")
     if d.aptness and d.aptness != "apt":
-        msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note} — disclose this alternative reading, "
-                f"or `clarify` if it changes the answer.")
+        # THE FOURTH ACTION at the definition level: a contested definition is served like a
+        # contested metric — the reader holds BOTH readings, never a silent pick. The alternative
+        # is one more define_measure call away; a reading that cannot be authored is disclosed in
+        # words.
+        msg += (f"\nAPTNESS {d.aptness.upper()}: {d.aptness_note}\n"
+                f"Do NOT serve this figure alone. Either (a) call define_measure once more with "
+                f"the alternative reading and serve BOTH figures, each labelled with its "
+                f"definition, or (b) serve this figure while STATING the alternative reading and "
+                f"why your definition was chosen — or `clarify` if the choice changes the answer "
+                f"materially and you cannot compute both.")
     # The step carries WHAT was computed, typed: values for provenance/citation, evidence records
     # for the trace-reading gates. Without these the define path was a second data path the
     # repair chain could not see.

@@ -2634,3 +2634,31 @@ It has NO measured claim on the strict-governance suite, where its correct contr
 design — the flag stays out of `current_best`, and a future promotion into any cell couples it to
 the transparent policy it serves. The promotion loop (spec -> PR -> governed next run) remains the
 real flagship and its own experiment.
+
+## 61 · The isolation sprint: the expansion exposed v1, three bounces closed it
+
+Optimising spec-authoring in isolation began with the discipline the §50 lesson demands: GROW THE
+MEASUREMENT FIRST. The tail suite went from five questions to twelve, deliberately loaded with the
+latitude family the residual lived in — denominator choices (whole cohort vs accounts with the
+event vs engaged-only), window conventions (30/60/90 days, an offset month 61-90), day-difference
+intervals — every oracle proven before authoring, one question ambiguous BY DESIGN with its
+canonical reading named.
+
+The expansion did its job brutally: v1 of the mechanism (the choices contract and fourth-action
+routing alone) scored WORSE than hand-rolled SQL on the twelve (10 wrong vs 7; silent 0.278 vs
+0.194), with failures spread thin as 1-in-3 flakes. The traces showed three authoring-quality
+defects, none of them prompt-fixable, all of them mechanically detectable:
+
+| defect | trace | fix |
+|--------|-------|-----|
+| TABLE-AS-ENTITY | scope cited dim_users.user_id — table names as graph nodes — and gave up as uninstrumented | the resolver bounce now maps table names to their entities from the graph's own table registry (the third member of the slip family: metric-as-entity, table-as-entity) |
+| GRAIN VIOLATION | a raw spec returned 100 account-grain rows for a one-number question; the model eyeballed "7.9" from the table (true 9.69) — prose aggregation reborn INSIDE the spec path | the grain bounce: raw spec + no breakdown in the question + multi-row result -> re-author with "aggregate inside the SQL", bounded like every repair in the define loop |
+| JOIN-BUG SHARES | a share of exactly 1.0 (numerator == denominator, 103/103) served for a true 0.518 | the sanity line in the authoring contract: a share of exactly 0 or 1 usually means a join bug; re-derive the counts separately |
+
+The re-run closed it: spec v2 scored 32/36 right, 0 wrong served, silent 0.000 (four visible
+non-attempts), against hand-rolled SQL's 25/36 with 7 silents. Every gate held: resolve_validate
+10/10 (the shared resolver surface undamaged), the original five questions all correct, both test
+suites green. The sprint's shape is the campaign's shape in miniature: the honest expansion made
+the mechanism look worse before it could get better, and the wins came from deterministic repairs
+at the exact points where prose leaked back in — a table for an entity, a table for a number, a
+join bug wearing a clean ratio.

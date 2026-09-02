@@ -653,15 +653,23 @@ def answerability_via_graph(model, question: str, ontology) -> dict:
     # entity that carries the measure. One bounded retry.
     ents = set(getattr(ontology, "entities", {}) or {})
     mets = set(getattr(ontology, "metrics", {}) or {})
+    # tables are not entities either: dim_users is user's TABLE — map it back
+    tables = {str((d or {}).get("table")): e
+              for e, d in (getattr(ontology, "entities", {}) or {}).items()}
     if ents and mets:
         bad = [i for i in r["ingredients"]
-               if i.split(".")[0] not in ents and i.split(".")[0].removeprefix("metric.") in mets]
+               if i.split(".")[0] not in ents
+               and (i.split(".")[0].removeprefix("metric.") in mets
+                    or i.split(".")[0] in tables)]
         if bad:
             owner = {m: d.get("entity") for m, d in
                      (getattr(ontology, "metric_dims", {}) or {}).items()}
             def _hint(b):
                 name = b.split(".")[0].removeprefix("metric.")
-                ent = owner.get(name) or "see the graph"
+                ent = tables.get(b.split(".")[0]) or owner.get(name) or "see the graph"
+                if b.split(".")[0] in tables:
+                    return (f"{b.split('.')[0]} is a TABLE, not an entity — the entity is "
+                            f"{ent}; cite {ent}.<attribute>")
                 attrs = ""
                 if ent in ents:
                     attrs = ", ".join(list((getattr(ontology, "entities", {}).get(ent) or {})

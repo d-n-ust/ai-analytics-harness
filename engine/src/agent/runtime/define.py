@@ -46,7 +46,10 @@ _SYSTEM = (
     "  kind='query': no governed metric, but the graph has the columns to compute it. Set source "
     "(entity), measure (column), agg (sum/count_distinct/average/min/max), and any grain.\n"
     "  kind='raw': genuinely bespoke (a cohort/retention curve, custom windowing). Set sql and a "
-    "one-line definition of what it computes. Follow dbt modelling practice: build it in CTEs "
+    "one-line definition of what it computes. If the question asks ONE number, the SQL must RETURN "
+    "one row — aggregate inside the definition, never hand back per-account rows for a prose "
+    "average. Sanity-check a share: exactly 0.0 or 1.0 usually means a join bug (numerator equals "
+    "denominator); re-derive the two counts separately in CTEs. Follow dbt modelling practice: build it in CTEs "
     "(cohort -> observation -> rate), STATE THE GRAIN in the definition ('one row is one channel'), "
     "return EXACTLY the grouping the question asks for, and guard division with nullif. Use ONLY the "
     "tables and columns listed under AVAILABLE TABLES, in the stated SQL dialect. A retention or "
@@ -61,6 +64,15 @@ _SYSTEM = (
     "active_users already excludes internal accounts). Never add a filter that restates a metric's "
     "own definition — a filter is ONLY for a segment the QUESTION restricts to. If the question's "
     "constraint is exactly what a governed metric already means, pick that metric and add no filter.\n\n"
+    "DEFINITIONAL CHOICES ARE PART OF THE DEFINITION. A tail measure usually has latitude the "
+    "question does not settle — a DENOMINATOR (the whole cohort, or only accounts with the "
+    "event?), a WINDOW convention (within N days of signup; an offset month), a day-difference "
+    "basis. Your definition text MUST state each such choice in plain words ('averaged over "
+    "accounts that completed at least one habit', 'counting accounts with none as zero'). When "
+    "the question is SILENT on a choice that changes the number, use the canonical reading — an "
+    "interval 'time to first X' averages over accounts that HAVE X; a per-account count over a "
+    "cohort includes accounts with zero; a window runs from each account's own signup — AND name "
+    "the choice, so the reader can tell which question was answered.\n\n"
     "BIND EVERY SCOPE COMPONENT INTO THE SPEC. A segment the question named must appear as a filter "
     "([entity__dimension, value]) on the spec (or on a derived input); the period must be set; each "
     "qualifier must be listed in `addressed` (or reflected in the SQL). A component you leave unbound "
@@ -245,6 +257,17 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
         res = run_ephemeral(spec, engine)
         if not res.ok:
             feedback = f"the spec did not execute: {res.error} — fix the definition"
+            continue
+        # THE GRAIN BOUNCE. A raw spec that returns many rows for a question with no stated
+        # breakdown hands the model a table to aggregate in prose — which is how "7.9" got
+        # eyeballed from 100 account-grain rows for a true 9.69. A single-number question must be
+        # aggregated INSIDE the definition; deterministic, bounded like every other repair here.
+        breakdown = " by " in question.lower() or " per " in question.lower() \
+            or "which " in question.lower() or "each " in question.lower()
+        if spec.kind == "raw" and res.value is None and len(res.rows) > 3 and not breakdown:
+            feedback = (f"the definition returns {len(res.rows)} rows at row grain, but the "
+                        f"question asks for ONE number — aggregate inside the SQL (AVG/COUNT/"
+                        f"ratio in a final SELECT) and return a single row")
             continue
 
         tier = {"instrumented": "governed", "computable": "computed", "raw": "raw"}.get(verdict, "computed")

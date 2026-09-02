@@ -59,3 +59,85 @@ cases:
       e ON e.uid = u.uid AND e.etype = 2 AND e.ts >= u.created AND e.ts < u.created + INTERVAL 14 DAY WHERE u.created
       >= DATE '2026-02-01' AND u.created < DATE '2026-03-01'
   note: proven 4.03 (averaged over the whole cohort)
+# ── the latitude family (sprint expansion, findings §61): denominators, windows, intervals ──
+- id: tail_feb_30d_activation
+  tier: computable_tail
+  question: What share of February 2026 signups completed a habit within 30 days?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT round(count(DISTINCT CASE WHEN e.uid IS NOT NULL THEN u.uid END)*1.0/count(DISTINCT u.uid),4)
+      FROM "_source".u LEFT JOIN "_source".evt e ON e.uid=u.uid AND e.etype=2 AND e.ts>=u.created AND e.ts<u.created+INTERVAL
+      30 DAY WHERE u.created>=DATE '2026-02-01' AND u.created<DATE '2026-03-01'
+  note: proven 0.8465; window variant of the 90d case
+- id: tail_q1_conv_60d
+  tier: computable_tail
+  question: What share of accounts created in the first quarter of 2026 started a subscription within 60 days of signing up?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT round(count(DISTINCT CASE WHEN s.uid IS NOT NULL THEN u.uid END)*1.0/count(DISTINCT u.uid),4)
+      FROM "_source".u LEFT JOIN "_source".subs s ON s.uid=u.uid AND s."start">=u.created AND s."start"<u.created+INTERVAL
+      60 DAY WHERE u.created>=DATE '2026-01-01' AND u.created<DATE '2026-04-01'
+  note: proven 0.1303; windowed conversion
+- id: tail_mar_first7_whole_cohort
+  tier: computable_tail
+  question: On average, how many habits did a March 2026 signup complete in its first week, counting accounts that completed none?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.05
+    gold_sql: SELECT round(count(e.eid)*1.0/count(DISTINCT u.uid),2) FROM "_source".u LEFT JOIN "_source".evt e ON
+      e.uid=u.uid AND e.etype=2 AND e.ts>=u.created AND e.ts<u.created+INTERVAL 7 DAY WHERE u.created>=DATE '2026-03-01'
+      AND u.created<DATE '2026-04-01'
+  note: proven 2.08; the denominator stated EXPLICITLY (whole cohort)
+- id: tail_feb_engaged_week1
+  tier: computable_tail
+  question: Among February 2026 signups who opened the app at least once, what share completed a habit in their first week?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: WITH cohort AS (SELECT uid FROM "_source".u WHERE created>=DATE '2026-02-01' AND created<DATE '2026-03-01'),
+      opened AS (SELECT DISTINCT c.uid, u2.created FROM cohort c JOIN "_source".u u2 ON u2.uid=c.uid JOIN "_source".evt
+      e ON e.uid=c.uid AND e.etype=1) SELECT round(count(DISTINCT CASE WHEN h.uid IS NOT NULL THEN o.uid END)*1.0/count(DISTINCT
+      o.uid),4) FROM opened o LEFT JOIN "_source".evt h ON h.uid=o.uid AND h.etype=2 AND h.ts>=o.created AND h.ts<o.created+INTERVAL
+      7 DAY
+  note: proven 0.5178; an ENGAGED-only denominator, stated explicitly
+- id: tail_days_to_first_subscription
+  tier: computable_tail
+  question: Among accounts created in the first half of 2026 that ever subscribed, how many days on average from signup to their first subscription?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.05
+    gold_sql: SELECT round(avg(date_diff('day', u.created, f.first_start)),2) FROM "_source".u JOIN (SELECT uid, min("start")
+      first_start FROM "_source".subs GROUP BY uid) f ON f.uid=u.uid AND f.first_start>=u.created WHERE u.created>=DATE
+      '2026-01-01' AND u.created<DATE '2026-07-01'
+  note: proven 48.31 days; interval with the among-subscribers denominator stated
+- id: tail_jan_month3_active
+  tier: computable_tail
+  question: What share of January 2026 signups were active at some point during their third month after signup (days 61 to 90)?
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.02
+    gold_sql: SELECT round(count(DISTINCT CASE WHEN e.uid IS NOT NULL THEN u.uid END)*1.0/count(DISTINCT u.uid),4)
+      FROM "_source".u LEFT JOIN "_source".evt e ON e.uid=u.uid AND e.ts>=u.created+INTERVAL 60 DAY AND e.ts<u.created+INTERVAL
+      90 DAY WHERE u.created>=DATE '2026-01-01' AND u.created<DATE '2026-02-01'
+  note: proven 0.8308; an OFFSET window (61-90), the convention named in the question
+- id: tail_q2_days_to_first_habit
+  tier: computable_tail
+  question: How quickly do new signups complete their first habit? Give the average number of days for accounts created in the second quarter of 2026.
+  expect:
+    type: metric_answer
+    no_governed_metric: true
+    tolerance: 0.05
+    gold_sql: SELECT round(avg(date_diff('day', u.created, f.first_ts)),2) FROM "_source".u JOIN (SELECT uid, min(ts)
+      first_ts FROM "_source".evt WHERE etype=2 GROUP BY uid) f ON f.uid=u.uid WHERE u.created>=DATE '2026-04-01'
+      AND u.created<DATE '2026-07-01'
+  note: proven 9.69 days; AMBIGUOUS by design (denominator unstated) — the canonical reading is
+    among-completers, and a correct answer states that choice; serving both readings also grades
+    correct (any matching figure)
