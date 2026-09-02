@@ -1953,3 +1953,41 @@ a safety one. rep-2 is directional. The point proven is architectural and safety
 the long tail can be made reliable — grounded, executed-by-construction, aptness-challenged, disclosed
 — and every measure so defined is a promotable dbt/MetricFlow artifact. Promotion (spec -> PR into
 the layer) and query-leaf execution remain.
+
+## 44 · Contested disclosure by CONSTRUCTION: the mechanism supplies the reading, not the agent
+
+The contested-disclosure gate handed a one-reading answer back and relied on the AGENT to re-serve
+both — a probabilistic hop that flaked (active_users_organic served 171 alone, silent). The same
+verification-as-CHECK-depending-on-a-compliant-actor pattern §41/§42 had already replaced elsewhere,
+not yet carried here, with a cap that shipped the single reading under repair.
+
+construct_disclosure turns the hand-back into CONSTRUCTION: the mechanism has already computed the
+rival reading (value_of / the composition recomputed with the rival substituted); it APPENDS it to
+the served answer and serves. Both readings reach the reader by construction; the agent's compliance
+leaves the critical path. This keeps residual ambiguity handled ONLINE and reliably — the realistic
+condition, since no large layer resolves every contest offline.
+
+A REORDERING BUG THE SUITE EXPOSED, and why construct surfaced it. For a served RATIO
+(spend_per_signup = 50.44), the flat raw-metric check fired first and constructed the raw numerator
+rival (acquisition_spend = 53041), but the reader's alternative ANSWER is the RATIO 43.69/signup.
+Under hand-back this stayed hidden (the agent re-derived); construct made the disclosed value
+gradeable and the grader caught it. Fix: the composition-contest is tried BEFORE the flat check — a
+served ratio's contest passes through the numerator, so the alternative that matters is the ratio
+recomputed with the rival, not the raw numerator total. Composition owns a served composition; the
+flat check runs only when the served figure is not one (active_users_organic, a single metric, still
+falls to the flat construct: active_accounts = 178).
+
+RESULT (rep-3, 46-question held-out, current-best cell + construct_disclosure).
+
+| arm | correct | silent | constructed acts |
+|-----|---------|--------|------------------|
+| baseline (pre-construct) | 130/138 | 1 | 0 |
+| + construct (ratio bug) | 131/138 | 3 | 20 |
+| + construct (fixed) | 133/138 | 1 | 28 |
+
+contested_level 36/36, contested_derived 5/6 — the contested tier handled by construction. correct
+133/138 is the campaign high; silent is back at the noise floor (the lone silent, mrr_q2_starts, is
+the rotating cohort-scope flake, not construct-caused). The mechanism now constructs both readings
+for a contested level metric (active_accounts vs active_users) AND a contested ratio (acquisition vs
+marketing per signup), online, without depending on the agent to comply. construct_disclosure is
+folded into the standard cell going forward.
