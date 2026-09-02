@@ -2206,3 +2206,47 @@ The trustworthy cost figure is ~6-10 model calls per answer by pile (a plain pil
 bottom, a contested ratio with the full gate stack at the top), and the counts now scale with the
 question's own complexity rather than with the neighbouring workers' activity. Graded outcomes are
 untouched — the counter was observability only, and no silent-error or accuracy figure moves.
+
+## 50 · The fresh frozen suite: the campaign generalizes partially, and the gap has a name
+
+The first held-out suite stopped being held out: 28 full-suite runs were taken against it while the
+§36-§49 mechanisms were iterated, several fixes were written against its specific questions, and its
+headline (silent errors 13 to 0) therefore measures FIT — §17's own standard, violated by the
+campaign that followed it. Before publication, a second suite was authored and run ONCE with the
+mechanisms frozen at 9b50e81.
+
+`heldout2.yml`: 46 questions, same pile design, authored under §17's protocol from the schema, the
+catalogue and the pile definitions only, every oracle executed and every pile membership proved by
+`heldout2_prove.py` BEFORE the file was written. Protocol-blind, not author-blind — the author is
+the session that built the mechanisms, so blindness is enforced by procedure, and the proofs changed
+the suite three times during authoring (a drafted answerable case proved contested and moved piles;
+the cancel tier is empty because no unused cancel slice exists in the data; a spend window straddling
+the start of the spend data was replaced). One authoring erratum surfaced by the run itself: the
+organic-channel gold was first written against the catalogue prose and corrected to the staging
+model's rule (every unmatched channel falls to organic), under which the agent's served figure was
+correct; the correction is recorded in the case note and the re-score reported openly.
+
+| metric | dev suite (heldout1) | frozen (heldout2) |
+|--------|---------------------:|------------------:|
+| silent_error | 0.000 | 0.080 (11/138) |
+| coverage | 1.000 | 0.843 |
+| balanced_accuracy | 1.000 | 0.873 |
+| pile C disclosed | 42/42 | 41/42 |
+
+Three readings, in order of importance:
+
+1. THE DEV-SUITE ZERO MEASURED FIT. 0.000 there, 0.080 here. The campaign trajectory is an
+   engineering log of a development suite, and the frozen number is the one a publication can carry.
+
+2. THE CAMPAIGN GENERALIZES PARTIALLY. The contested-disclosure machinery holds off-suite (41/42
+   disclosed, one slip), pile B holds 43/45, and the frozen silent rate sits well below the
+   pre-campaign dev baseline (13-22 per 138). The deterministic mechanisms carried; what did not
+   carry is everything still resting on the model's prose.
+
+3. THE RESIDUAL HAS A NAME. The 11 genuine silents: stated-scope binding 5 (a question that names
+   its scope — "counting refunded", "including partnerships" — served through the wrong metric or
+   the named slice alone), false premise accepted 2, period binding 2 (last week answered with the
+   prior week), dropped segment 1, contested-disclosure slip 1. The dominant class was ALSO the dev
+   suite's own rotating flake (gross_mrr_ytd_stated): nothing deterministic yet verifies that a
+   scope STATED in the question is bound to the served metric. That is a mechanism gap, now
+   measured, not a mystery.
