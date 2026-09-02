@@ -240,7 +240,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "asks whether the served number measured the quantity the question asked for; hands "
               "back a substitution to disclose the proxy or refuse, rather than serve a count as "
               "if it were the duration that was asked",
-              ("guardrails/classify.py", "loop.py"), in_ladder=False),
+              ("guardrails/classify.py", "gates/measure.py"), in_ladder=False),
     # The lightest disclosure lever: shape the answer so a figure states what it measures — the
     # measure, grain, units, and segment — so a per-day rate served for a weekly question, or one
     # channel's spend served for all, is visible rather than silent. A prompt/schema nudge, not an
@@ -260,7 +260,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "prepends each metric's focused contract to its own query result and hands an answer "
               "back when the question names a governed segment the served number did not filter by, "
               "rather than serve the unfiltered total as if it were the segment",
-              ("tools.py", "guardrails/classify.py", "loop.py"), in_ladder=False,
+              ("tools.py", "guardrails/classify.py", "gates/segments.py"), in_ladder=False,
               superseded_by="applied_segment"),   # its enforcement half was decoupled into that flag;
                                                    # its metric-context role is now the ontology anchor
     # The enforcement half of the segment slot, decoupled from the metric_brief block so it can run on
@@ -308,7 +308,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("transparent_compute", Position.REPAIR,
               "the policy lean for answerability_gate: allow a non-governed measure to be computed "
               "and served when its definition is disclosed, instead of refusing it",
-              ("loop.py",), in_ladder=False),
+              ("gates/measure.py",), in_ladder=False),
     # Where answerability_gate reads its verdict from. With graph_answerability the model decomposes
     # the measure against the COMPLETE marts graph and MartsOntology.verify() decides existence and
     # joinability deterministically; off, the gate keeps the schema-text classifier. Requires the
@@ -317,7 +317,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("graph_answerability", Position.REPAIR,
               "answerability_gate decides existence by traversing the closed-world marts graph "
               "(the model decomposes, the graph verifies) instead of judging it from the schema text",
-              ("loop.py",), in_ladder=False),
+              ("gates/measure.py",), in_ladder=False),
     # The agent grounds answerability against the marts graph UPFRONT rather than only being corrected
     # after: check_answerability returns the complete closed-world graph plus the reason code each
     # verdict implies (computable -> no_governed_definition, not uninstrumented), in place of the
@@ -380,7 +380,7 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("disclosure_check", Position.REPAIR,
               "hands back an answer that served one contested reading without naming the other, so "
               "the disclosure has to be acted on rather than merely read",
-              ("loop.py", "prompts.py"), in_ladder=False),
+              ("gates/disclosure.py", "prompts.py"), in_ladder=False),
     # A restriction the agent asked for and then abandoned. Not a judgement about the question:
     # the two sets compared are both the agent's own calls, one attempt against the one that was
     # served. Answering a broader question than the one asked is the cheapest way out of a tool
@@ -391,11 +391,11 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     Guardrail("scope_classifier", Position.REPAIR,
               "asks a focused model call whether the request itself already chose between the two "
               "definitions, and stands the disclosure check down when it did",
-              ("guardrails/classify.py", "loop.py", "prompts.py"), in_ladder=False),
+              ("guardrails/classify.py", "gates/disclosure.py", "prompts.py"), in_ladder=False),
     Guardrail("constraint_regression", Position.REPAIR,
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
-              ("loop.py", "prompts.py"), in_ladder=False),
+              ("gates/claims.py", "prompts.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their

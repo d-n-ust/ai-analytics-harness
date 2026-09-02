@@ -155,3 +155,16 @@ def test_a_negative_declared_delta_against_rising_evidence_is_handed_back(monkey
 
 
 import agent.guardrails.classify as classify_mod  # noqa: E402  (used by the sign test)
+
+
+# ── the pipeline's composition law, held by a test ────────────────────────────────────────────
+def test_the_pipeline_orders_supply_verify_construct():
+    """A later hand-back must never destroy an earlier construction (findings §53): the phases in
+    the pipeline list must be SUPPLY*, then VERIFY*, then CONSTRUCT* — any interleaving is the
+    active_users_feb bug waiting to recur."""
+    from agent.gates.pipeline import CONSTRUCT, PIPELINE, SUPPLY, VERIFY
+
+    order = {SUPPLY: 0, VERIFY: 1, CONSTRUCT: 2}
+    phases = [order[g.phase] for g in PIPELINE]
+    assert phases == sorted(phases), [g.name for g in PIPELINE]
+    assert len({g.name for g in PIPELINE}) == len(PIPELINE)
