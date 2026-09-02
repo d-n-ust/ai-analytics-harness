@@ -2543,3 +2543,37 @@ reading is a YAML edit and a re-fingerprint, not a model behaviour. (Production 
 `synonyms:` explicitly — Cortex-Analyst-style; the clause check is this fixture's version of the
 same registry.) One suite alignment: instagram_ads accepts `segment_undefined` as a synonymous
 refusal code, matching the enterprise_plan precedent.
+
+## 59 · The license gate's first full-suite exposure, and the clean board
+
+The member license (§58) was committed after a three-case scrutiny — all three on the channel
+dimension, where the governed text happens to spell its synonyms. Its first FULL-suite exposure
+found the four failure modes the scrutiny's narrowness missed, and the board briefly read worse
+than before the gate existed (3 silents, 9 over-refusals — every one caused by the new gate
+refusing correct answers or burning the correction budget on false contests):
+
+| failure | cause | fix |
+|---------|-------|-----|
+| "organically" licensed to nothing | exact-token match; no morphology | stem matching (a >=4-char prefix either way: "organically" ~ organic, "referrals" ~ referral) |
+| "Germany", "the Philippines", "Indonesia" licensed to nothing | the country description declared ISO codes only — name-to-code shares no tokens | the doctrine applied to OURSELVES: the synonyms are now DECLARED in the layer ("DE (Germany); PH (the Philippines); ...") — a YAML edit and a re-fingerprint, exactly as §58 prescribes for any wanted reading |
+| "web platform" licensed to all four platforms | 'platform' appears in every member's clause — a DIMENSION descriptor read as a member selector | generic-token suppression: a token from the dimension's own name, or one supporting more than half the members, is dropped before deciding |
+| "the Philippines" licensed to IN as well as PH | substring clause assignment: the code IN sits inside "PhilippINes" and "IndonesIa" | word-boundary clause assignment |
+
+Verified: 8/8 license verdicts on the full phrase set (the three §58 cases unchanged, the five
+damaged phrasings restored), four new unit pins naming each failure mode, and a 7-question probe
+across the damaged set — 0 silents, contested 6/6 disclosed, Instagram still refused 3/3, with
+only the standing Germany layer-boundary refusals remaining (new_signups genuinely cannot filter
+country; the honest `dimension_not_supported`).
+
+THE CLEAN BOARD. The full rep-3 rerun (concurrency 8, zero provider errors): silent_error 0.000
+over 138 attempts — the first fully clean board on this suite. Pile A 47 right and 0 wrong with
+4 visible refusals; pile B 45/45 refused; pile C 42/42 handled (41 disclosed, 1 clarified), 0
+served silently; balanced accuracy 0.974. The dev-suite arc across the campaign: 11 -> 3 -> 1 ->
+0, with every closed class holding — the scope inversion (member anchor + floor), the loaded
+question (premise contract), prose arithmetic (reader-surface derivability), and segment
+substitution (the member license, which itself cost one bad board and four honest fixes between
+its scrutiny and this line).
+
+The standing caveat stands: this is the DEVELOPMENT suite, iterated against throughout. The
+publishable number is a fresh frozen heldout3 under the §17 protocol, authored blind and spent
+once.

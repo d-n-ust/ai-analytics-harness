@@ -29,7 +29,7 @@ semantic_model:
     - {name: active_date, type: time, type_params: {time_granularity: day}}
     - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
     - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
-    - {name: country, type: categorical, description: "The account country, as an ISO code: US, BR, GB, DE, FR, PH, ID, IN."}
+    - {name: country, type: categorical, description: "The account country, as an ISO code: US (the United States); BR (Brazil); GB (the United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); IN (India)."}
     - {name: platform, type: categorical, description: "The registered client platform: android, ios, web, or unknown."}
     - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
   measures:

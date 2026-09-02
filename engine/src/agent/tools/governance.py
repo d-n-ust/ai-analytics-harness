@@ -116,7 +116,7 @@ def _check_answerability(tb, args) -> ToolResult:
             if restricts and phrase and dim in vocab:
                 descs = (tb.semantic.dimension_descriptions()
                          if hasattr(tb.semantic, "dimension_descriptions") else {})
-                lic = _licenses(phrase, list(vocab[dim]), descs.get(dim, ""))
+                lic = _licenses(phrase, list(vocab[dim]), descs.get(dim, ""), dim)
                 if not lic:
                     return ToolResult(
                         f"UNGOVERNED VALUE — the measure maps to `{v['governed_metric']}`, but "

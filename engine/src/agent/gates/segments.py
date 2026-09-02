@@ -114,7 +114,7 @@ def segment_gate(run, exit_call):
         descs = (semantic.dimension_descriptions()
                  if hasattr(semantic, "dimension_descriptions") else {})
         members = seg.get("members") or []
-        lic = _licenses(seg["phrase"], members, descs.get(seg["dim"], ""))
+        lic = _licenses(seg["phrase"], members, descs.get(seg["dim"], ""), seg["dim"])
         value = seg.get("value") or ""
         if members and not lic and (not value or value not in lic):
             run.repairs.append({"unlicensed_segment": {"phrase": seg["phrase"],

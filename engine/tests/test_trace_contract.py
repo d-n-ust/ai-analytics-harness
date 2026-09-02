@@ -356,6 +356,19 @@ def test_member_licenses_route_serve_contest_refuse():
     assert licenses("Google search", CHANNELS, CH_DESC) == ["paid_search"]  # name license
     assert licenses("referrals", CHANNELS, CH_DESC) == ["referral"]
     assert licenses("the spend", CHANNELS, CH_DESC) == []                 # stopwords only
+    # the four failure modes the first full-suite exposure found (findings §59):
+    assert licenses("organically", CHANNELS, CH_DESC) == ["organic"]      # morphology (stems)
+    countries = ["US", "BR", "GB", "DE", "FR", "PH", "ID", "IN"]
+    c_desc = ("The account country, as an ISO code: US (the United States); BR (Brazil); GB (the "
+              "United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); "
+              "IN (India).")
+    assert licenses("Germany", countries, c_desc, "activity__country") == ["DE"]   # declared synonym
+    assert licenses("the Philippines", countries, c_desc, "activity__country") == ["PH"]
+    # NOT ["IN","PH"]: the code IN sits inside "PhilippINes" — word-boundary clause assignment
+    plats = ["android", "ios", "unknown", "web"]
+    p_desc = "The registered client platform: android, ios, web, or unknown."
+    assert licenses("web platform", plats, p_desc, "activity__platform") == ["web"]
+    # NOT all four: 'platform' is a dimension descriptor, suppressed; 'web' selects
 
 
 def test_the_segment_gate_blocks_an_unlicensed_fold(monkeypatch):

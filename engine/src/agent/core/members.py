@@ -30,25 +30,53 @@ def _tokens(text: str) -> set:
             if t not in _STOP and len(t) > 1}
 
 
-def licenses(phrase: str, members, description: str = "") -> list:
+def _stem_match(a: set, b: set) -> bool:
+    """Token sets share a stem: exact, or one is a prefix of the other (>=4 chars) —
+    "organically" licenses `organic`, "referrals" licenses `referral`. Morphology broke the
+    exact-token first cut on its first full-suite exposure."""
+    for x in a:
+        for y in b:
+            if x == y or (len(x) >= 4 and len(y) >= 4 and (x.startswith(y) or y.startswith(x))):
+                return True
+    return False
+
+
+def licenses(phrase: str, members, description: str = "", dimension: str = "") -> list:
     """The members of one dimension that the governed layer licenses `phrase` to mean.
 
-    Deterministic: token overlap with member names, or with the member's own clause of the
-    dimension description (clauses split on ';', each owned by the member it names). Returns []
-    when nothing licenses the phrase — the closed-world no-referent verdict."""
+    Deterministic evidence, three sources: the member's NAME (stem-matched, so "organically"
+    licenses `organic`), the member's own clause of the dimension description (split on ';'),
+    and — the production-shaped source — SYNONYMS the description declares in parentheses after
+    a member ("DE (Germany)"). GENERIC descriptor tokens are suppressed before matching: a token
+    from the dimension's own name, or one that would license more than half the members ("web
+    PLATFORM" — 'platform' describes the dimension, 'web' selects the member), is a descriptor,
+    not a selector; the first cut licensed all four platforms off the word "platform" and turned
+    a clear question into a false contest. Returns [] when nothing licenses the phrase — the
+    closed-world no-referent verdict."""
     ptoks = _tokens(phrase)
+    ptoks -= _tokens(dimension.replace("__", " ").replace("_", " "))
     if not ptoks:
         return []
     members = [str(m) for m in (members or ())]
-    out = []
     clauses = {}
     for clause in str(description or "").split(";"):
         for m in members:
-            if m.lower() in clause.lower():
+            # WORD boundary, not substring: the code IN sits inside "PhilippINes" and "IndonesIa",
+            # and substring clause-assignment licensed IN off both neighbours' clauses
+            if re.search(rf"\b{re.escape(m)}\b", clause, re.IGNORECASE):
                 clauses[m] = clauses.get(m, "") + " " + clause
-    for m in members:
-        licensed = bool(ptoks & _tokens(m.replace("_", " "))) or \
-            bool(ptoks & (_tokens(clauses.get(m, "")) - _tokens(m.replace("_", " ")) - set(members)))
-        if licensed:
-            out.append(m)
-    return out
+
+    def support(m):
+        own = _tokens(m.replace("_", " "))
+        doc = _tokens(clauses.get(m, "")) - own - set(x.lower() for x in members)
+        return own | doc
+
+    per = {m: support(m) for m in members}
+    # a token supporting more than half the members is a descriptor of the DIMENSION, not a
+    # selector of a member — drop it before deciding
+    generic = {t for t in ptoks
+               if sum(1 for m in members if _stem_match({t}, per[m])) > len(members) / 2}
+    ptoks -= generic
+    if not ptoks:
+        return []
+    return [m for m in members if _stem_match(ptoks, per[m])]
