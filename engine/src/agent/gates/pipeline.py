@@ -44,6 +44,7 @@ PIPELINE = (
     Gate("undisclosed_rival",    CONSTRUCT, disclosure.undisclosed_rival),
     Gate("applied_segment",      CONSTRUCT, segments.applied_segment),
     Gate("substituted_window",   CONSTRUCT, contract.substituted_window),
+    Gate("premise_note",         CONSTRUCT, contract.premise_note),
 )
 
 

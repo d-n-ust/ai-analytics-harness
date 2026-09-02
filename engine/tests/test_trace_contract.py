@@ -89,72 +89,85 @@ def test_binding_hands_back_when_the_served_reading_is_not_the_named_one():
     assert obj.repairs[-1]["binding_mismatch"]["served"] == "mrr"
 
 
-def test_binding_stands_down_when_served_equals_named_and_constructs_at_the_cap():
+def test_binding_stands_down_when_served_equals_named_and_constructs_both_at_the_cap():
     obj = _stub()
-    exit_call = NS(name="answer", args={"explanation": ""})
+    exit_call = NS(name="answer", args={"answer": "2754.00", "explanation": ""})
     assert obj._binding_gate(exit_call, "gross_mrr", "gross_mrr", "q", "d", 2754.0, 2754.0) is None
-    # burn the budget with prior hand-backs, then the mismatch is CONSTRUCTED, not handed back
+    assert exit_call.args["answer"] == "2754.00"           # clean match: nothing appended
+    # burn the budget with prior hand-backs, then the mismatch CONSTRUCTS BOTH READINGS into the
+    # ANSWER field — what the reader (and pile-A grading) treats as served
     obj.repairs = [{"a": 1}, {"b": 2}, {"c": 3}]
+    exit_call = NS(name="answer", args={"answer": "2685.08", "explanation": ""})
     assert obj._binding_gate(exit_call, "mrr", "gross_mrr", "counting refunded",
                              "gross of refunds", 2685.08, 2754.0) is None
-    assert "gross_mrr" in exit_call.args["explanation"]
-    assert "2754" in exit_call.args["explanation"]
+    assert "2754" in exit_call.args["answer"] and "2685" in exit_call.args["answer"]
 
 
-# ── the scope-quote overlap guard ─────────────────────────────────────────────────────────────
-def test_a_segment_phrase_inside_the_consumed_scope_quote_is_not_a_filter(monkeypatch):
-    """"Counting subscriptions that were later refunded" chose gross_mrr; the same words must not
-    ALSO become status='refunded' — the double read overrode a binding-verified 2,754 with the
-    refunded-only slice."""
-    import agent.guardrails.classify as classify
-
+def test_a_forced_swap_always_leaves_both_figures_with_the_reader():
+    """The inversion floor: when a binding hand-back FORCED the swap that produced this match,
+    the judgement behind it may have been wrong — so both readings reach the answer field. A
+    judge inversion then costs a redundant clause, never a silent number."""
     obj = _stub()
-    obj.grounding = NS(semantic=NS(segment_vocabulary=lambda: {"subscription__status":
-                                                              ("active", "refunded", "canceled")}),
-                       guardrails=NS(answer_spec=True))
-    obj.model = None
-    obj._scope_verdict = (True, "gross_mrr", "Counting subscriptions that were later refunded")
-    obj.question = "Counting subscriptions that were later refunded, what is our MRR today?"
-    monkeypatch.setattr(classify, "segment_named",
-                        lambda *a, **k: (True, "later refunded", "subscription__status", "refunded"))
-    assert obj._resolve_segment() is None                      # stood down, not a filter
-    assert any(a.get("outcome") == "allowed" for a in obj.acts)
-    # the same phrase OUTSIDE any consumed quote still resolves as a segment
+    obj.repairs = [{"binding_mismatch": {"named": "mrr", "served": "gross_mrr", "quote": "q"}}]
+    exit_call = NS(name="answer", args={"answer": "2685.08", "explanation": ""})
+    assert obj._binding_gate(exit_call, "mrr", "mrr", "counting refunded",
+                             "net of refunds", 2685.08, 2685.08) is None   # served==named values equal -> no other
+    # distinct values: the OTHER reading must be appended
     obj2 = _stub()
-    obj2.grounding, obj2.model = obj.grounding, None
-    obj2._scope_verdict = None
-    obj2.question = "How much MRR sits on refunded subscriptions?"
-    monkeypatch.setattr(classify, "segment_named",
-                        lambda *a, **k: (True, "refunded", "subscription__status", "refunded"))
-    seg = obj2._resolve_segment()
-    assert seg is not None and seg["linked"]
+    obj2.repairs = [{"binding_mismatch": {"named": "mrr", "served": "gross_mrr", "quote": "q"}}]
+    exit_call = NS(name="answer", args={"answer": "2685.08", "explanation": ""})
+    assert obj2._binding_gate(exit_call, "mrr", "mrr", "counting refunded",
+                              "net of refunds", 2754.0, 2685.08) is None
+    assert "2754" in exit_call.args["answer"]
 
 
-# ── the sign-claim gate ───────────────────────────────────────────────────────────────────────
-def test_a_negative_declared_delta_against_rising_evidence_is_handed_back(monkeypatch):
-    obj = _stub()
-    obj.grounding = NS(semantic=NS(clusters=None), guardrails=NS(answer_spec=True))
-    obj.model = None
-    monkeypatch.setattr(_Run, "_true_direction",
-                        lambda self, s: ("app_opens", "rose", "19173 then 25188", "19173->25188"))
-    monkeypatch.setattr(_Run, "_before_after_from_calls",
-                        lambda self, s: ("app_opens", 19173, 25188))
-    exit_call = NS(name="answer", args={"value": -6015, "direction": "not_a_change",
-                                        "answer": "-6015", "explanation": "rose actually"})
-    r = obj.direction_vs_evidence(exit_call)
-    assert r is not None and r.is_error and "rise" in r.content
-    # a POSITIVE magnitude with falling evidence is the conventional "dropped by N" — left alone
-    monkeypatch.setattr(_Run, "_true_direction",
-                        lambda self, s: ("app_opens", "fell", "25188 then 19173", "25188->19173"))
-    monkeypatch.setattr(_Run, "_before_after_from_calls",
-                        lambda self, s: ("app_opens", 25188, 19173))
-    monkeypatch.setattr(classify_mod, "text_asserts_direction", lambda m, t: "fell")
-    exit_call = NS(name="answer", args={"value": 6015, "direction": "fell",
-                                        "answer": "dropped by 6015", "explanation": ""})
-    assert obj.direction_vs_evidence(exit_call) is None
+def test_the_member_anchor_decides_over_predicates_and_stays_silent_on_language():
+    """v2 of the anchor: sides decided by parsed predicates evaluated on member vocabularies —
+    never by catalogue prose. The decisive property v1 lacked: it DECIDES the mrr pair (both
+    descriptions mention refunds, but only one SCOPE contains the refunded member)."""
+    from agent.gates.disclosure import member_anchor
 
+    FILTERS = {"mrr": ("{{ Dimension('subscription__status') }} = 'active'",),
+               "gross_mrr": ("{{ Dimension('subscription__status') }} != 'canceled'",),
+               "marketing_spend": (),
+               "acquisition_spend": ("{{ Dimension('spend_row__channel') }} != 'partnerships'",),
+               "active_users": ("{{ Dimension('activity__is_internal') }} = false",),
+               "active_accounts": ()}
+    MEMBERS = {"subscription__status": ["active", "refunded"],
+               "spend_row__channel": ["content_seo", "paid_search", "partnerships", "referral"],
+               "activity__is_internal": ["False", "True"]}
+    fo, mo = FILTERS.get, MEMBERS.get
 
-import agent.guardrails.classify as classify_mod  # noqa: E402  (used by the sign test)
+    # the mrr pair, both polarities — the case v1 could not decide
+    side, why = member_anchor("Counting subscriptions that were later refunded",
+                              "mrr", "gross_mrr", fo, mo)
+    assert side == "gross_mrr", why
+    side, _ = member_anchor("Excluding the terms we later refunded", "mrr", "gross_mrr", fo, mo)
+    assert side == "mrr"
+    # order of the pair must not matter
+    side, _ = member_anchor("Counting subscriptions that were later refunded",
+                            "gross_mrr", "mrr", fo, mo)
+    assert side == "gross_mrr"
+    # channel member, both polarities
+    side, _ = member_anchor("Including the internal partnerships test integration",
+                            "marketing_spend", "acquisition_spend", fo, mo)
+    assert side == "marketing_spend"
+    side, _ = member_anchor("excluding the partnerships channel",
+                            "marketing_spend", "acquisition_spend", fo, mo)
+    assert side == "acquisition_spend"
+    # boolean dimension, matched through its NAME tokens
+    side, _ = member_anchor("counting our internal staff and test accounts as well",
+                            "active_users", "active_accounts", fo, mo)
+    assert side == "active_accounts"
+    side, _ = member_anchor("excluding staff and internal test accounts",
+                            "active_users", "active_accounts", fo, mo)
+    assert side == "active_users"
+    # SILENCE where structure cannot decide — real language stays the judge's
+    assert member_anchor("the Finance definition of MRR", "mrr", "gross_mrr", fo, mo)[0] == ""
+    assert member_anchor("counting the ones we gave money back to",
+                         "mrr", "gross_mrr", fo, mo)[0] == ""          # concept not a member token
+    assert member_anchor("counting refunded terms", "mrr", "gross_mrr",
+                         lambda m: ("something un-parseable",), mo)[0] == ""
 
 
 # ── the pipeline's composition law, held by a test ────────────────────────────────────────────
@@ -188,3 +201,54 @@ def test_the_proxy_route_serves_with_disclosure_under_the_default_lean(monkeypat
     r = obj.substituted_measure(exit_call)
     assert r is not None and r.is_error            # disclose lean: hand back to disclose the gap
     assert "proxy" in r.content.lower() or "stood in" in r.content.lower() or "related" in r.content.lower()
+
+
+# ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
+def _premise_stub(record, pair):
+    import agent.gates.contract as gc
+
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(clusters=None), guardrails=NS(answer_spec=True))
+    obj.model = None
+    obj._premise = record
+    obj.question = "why did signups collapse?"
+    obj._before_after_from_calls = lambda s: pair
+    obj._series_from_calls = lambda s: None
+    return obj, gc
+
+
+def test_the_premise_note_constructs_the_correction_into_the_answer():
+    obj, gc = _premise_stub({"type": "direction", "claim": "fell", "quote": "collapse"},
+                            ("new_signups", 637, 1214))
+    exit_call = NS(name="answer", args={"answer": "1,214", "direction": "", "explanation": ""})
+    assert gc.premise_note(obj, exit_call) is None            # constructs, never blocks
+    a = exit_call.args["answer"]
+    assert "presumes" in a and "637" in a and "1214" in a and "rose" in a
+    assert obj.repairs[-1]["premise_note"]["constructed"]
+
+
+def test_the_note_stands_down_when_the_model_took_the_correct_stance():
+    obj, gc = _premise_stub({"type": "direction", "claim": "fell", "quote": "collapse"},
+                            ("new_signups", 637, 1214))
+    exit_call = NS(name="answer", args={"answer": "they rose by 577", "direction": "rose"})
+    assert gc.premise_note(obj, exit_call) is None
+    assert exit_call.args["answer"] == "they rose by 577"      # nothing appended
+    # and a question that asserts nothing has no record to fire from
+    obj2, gc = _premise_stub({"type": "none", "claim": "", "quote": ""}, ("m", 1, 2))
+    exit_call = NS(name="answer", args={"answer": "42", "direction": ""})
+    assert gc.premise_note(obj2, exit_call) is None
+    assert exit_call.args["answer"] == "42"
+
+
+def test_a_stance_free_answer_under_a_contradicted_premise_is_handed_back(monkeypatch):
+    import agent.gates.contract as gc
+
+    obj, _ = _premise_stub({"type": "direction", "claim": "fell", "quote": "collapse"},
+                           ("new_signups", 637, 1214))
+    monkeypatch.setattr(gc, "_true_direction",
+                        lambda run, s: ("new_signups", "rose", "637 then 1214", "637->1214"))
+    exit_call = NS(name="answer", args={"answer": "1,214", "direction": "not_a_change",
+                                        "value": 1214, "explanation": ""})
+    r = gc.direction_vs_evidence(obj, exit_call)
+    assert r is not None and r.is_error
+    assert "PRESUMES" in r.content and "false_premise" in r.content

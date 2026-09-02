@@ -156,6 +156,7 @@ class _Run:
     # sentence that vanished between the two was deleted, not fixed.
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
+    _premise: object = None           # cached presupposition record, once per run (gates/contract)
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
 
     @property
@@ -215,6 +216,31 @@ class _Run:
                                "blocked_by": result.blocked_by,
                                "acts": [a.as_dict() for a in result.acts],
                                "ms": round((time.perf_counter() - t0) * 1000, 1)})
+            # EARLY PREMISE STEERING (the supply-forward half of the loaded-question contract).
+            # The moment the run's own calls complete a before/after pair that contradicts a
+            # direction the QUESTION asserted as fact, the correction is put where the model is
+            # already reading — the result — so generation happens with the corrected premise
+            # instead of being repaired after committing to prose. Same channel as the [also]
+            # contest line. Exit enforcement and the constructed note remain beneath it.
+            if (call.name == "query_metric" and not result.is_error
+                    and not getattr(self, "_premise_steered", False)
+                    and (self._premise is None or self._premise.get("type") == "direction")
+                    and self.grounding.semantic is not None
+                    and (trace.before_after_from_calls(
+                        self.steps, lambda a, m: before.value_of(self.grounding.semantic, a, m))
+                        or trace.series_from_calls(
+                        self.steps, lambda a, m: before.value_of(self.grounding.semantic, a, m)))):
+                _g_contract.presupposition(self)
+                hit = _g_contract.premise_contradiction(self)
+                if hit is not None:
+                    claim, actual, metric, v0, v1 = hit
+                    line = (f"\n[premise] the question presumes {metric} {claim}; these governed "
+                            f"figures show it {actual} ({round(v0, 4)} then {round(v1, 4)}) — "
+                            f"answer the correction, or refuse `false_premise`.")
+                    result = replace(result, content=result.content + line)
+                    self.steps[-1]["result"] = result.content[:_TRACE_LIMIT]
+                    self.steps[-1]["result_len"] = len(result.content)
+                    self._premise_steered = True   # steer once; later calls need no repeat
             results.append(result.for_call(call))
         return results
 

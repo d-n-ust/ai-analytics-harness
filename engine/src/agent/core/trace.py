@@ -162,11 +162,20 @@ def period_pairs(steps) -> list:
 def before_after_from_calls(steps, value_of):
     """The earlier and later value of one metric queried at two time windows, or None.
 
-    Both must be SCALAR (one number): a grouped result is a set of comparisons, not one, and
-    forcing a single direction on it would be the wrong question."""
+    Both values must be SCALAR (one number). A pair of GROUPED calls — each quarter broken out by
+    month, or by channel and region — still compares two windows of one metric, so the grouping
+    is STRIPPED and the two period totals re-read through the layer (the layer computes the
+    total itself, so additivity is its problem, not a hand-sum here). The premise machinery was
+    blind to exactly this shape: "why did signups collapse" answered off two channel-grouped
+    quarters never yielded a pair, and the contradiction the run's own windows established went
+    unchecked."""
     for metric, early, late in period_pairs(steps):
         v0 = scalar(value_of(early, metric))
         v1 = scalar(value_of(late, metric))
+        if v0 is None or v1 is None:
+            e = {k: v for k, v in early.items() if k not in ("group_by", "time_grain")}
+            l = {k: v for k, v in late.items() if k not in ("group_by", "time_grain")}
+            v0, v1 = scalar(value_of(e, metric)), scalar(value_of(l, metric))
         if v0 is not None and v1 is not None:
             return metric, v0, v1
     return None

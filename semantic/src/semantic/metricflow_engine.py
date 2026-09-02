@@ -762,6 +762,22 @@ class MetricFlowLayer:
                     findings.append((sm.name, col, entity))
         return findings
 
+    def metric_filters(self, name: str) -> tuple:
+        """The raw where-filter templates a metric declares, verbatim from the manifest — the
+        STRUCTURAL source of a metric's scope ("{{ Dimension('subscription__status') }} =
+        'active'"). Consumers that need to reason about scope (the member anchor in the binding
+        check) parse these, never the prose description: a description can be reworded, a filter
+        is the definition."""
+        for m in self._manifest.metrics:
+            if m.name == name:
+                f = getattr(m, "filter", None)
+                if f is None:
+                    return ()
+                if hasattr(f, "where_filters"):
+                    return tuple(w.where_sql_template for w in f.where_filters)
+                return (str(f),)
+        return ()
+
     def coverage_window(self, metric: str | None = None) -> tuple:
         """The period this layer can answer for — narrowed to one metric when one is named.
 

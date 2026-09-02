@@ -2366,3 +2366,76 @@ three reps exercised three DIFFERENT layers — the model's own contradiction, a
 catch, and the direction gate on a declared `fell` — defense in depth observed rather than
 asserted. Both guards pinned in test_trace_contract.py with their negative cases (the same phrase
 outside a consumed quote still resolves as a segment; a positive fall-magnitude passes).
+
+## 54 · Class A closed: the member anchor, and a floor that makes judge error loud
+
+The scope judge gained enforcement teeth with the binding check (§51) and promptly showed the cost
+of an unvalidated forcing gate: one rep inverted the side — the judge read "counting refunded" as
+naming `mrr` — and the gate beat a correct gross-MRR serve into the net figure. A gate whose
+judge is right two times in three FIXES a silent and whose third time MANUFACTURES one is
+mis-designed regardless of the judge's accuracy, because the downside can be removed structurally.
+
+Three layers now stand where the bare judge stood, in order of authority:
+
+1. THE MEMBER ANCHOR — the side decided by STRUCTURE where structure can decide. Each reading's
+   where-filters (a closed grammar our own layer renders; `metric_filters()` exposes them
+   verbatim) are evaluated over the discriminating dimension's member vocabulary: mrr's scope
+   over status is {active}, gross_mrr's is {active, refunded}; the difference is {refunded}; a
+   quote concept matching a difference member plus the quote's polarity picks the side. A v1 that
+   matched catalogue PROSE was scrutinised and rejected — morphology, negation windows and
+   rewording are prose's fragilities, and both mrr descriptions mention refunds, so prose cannot
+   even decide the pair that failed. The member sets can. Boolean dimensions match through the
+   dimension name's tokens; non-enumerated dimensions, unparseable filters and concepts that are
+   not member tokens leave the anchor SILENT — real language stays the judge's.
+
+2. THE JUDGE, now bounded: a closed two-value enum, quote-verified, off-axis-guarded — an
+   "irrelevant metric" is not expressible, only the wrong side of the right pair is.
+
+3. THE FLOOR — a forced swap always leaves BOTH figures in the answer field, and the cap
+   constructs both readings rather than the named one. A judge inversion now costs a redundant
+   clause, never a silent number; the property holds by construction, not by judge accuracy.
+
+Scrutiny on three adversarial questions (rep 3, 9/9 correct with act-level provenance): the pair
+prose could not decide, decided 3/3 by member sets; the POLARITY TRAP — "excluding ... refunded",
+where keyword matching inverts — 2/3 anchor-confirms and 1/3 the anchor OVERRODE a live judge
+inversion (the exact §53 failure, reproduced and neutralised in one probe); a boolean-dimension
+phrasing ("counting our internal staff") decided 3/3 through the name path. Twelve unit cases pin
+both polarities, pair-order invariance, and the three silence conditions.
+
+## 55 · Class B1 closed: the loaded-question contract
+
+The generalised form of the false-premise residual: a question can EMBED a claim ("why did
+signups collapse") and an answer that neither contradicts nor refuses it — a bare count — has
+silently ratified it. The contract has four layers, each allocated to the layer that owns it:
+
+- ENTRY: `question_presupposes` extracts a TYPED claim record {type, claim, quote} — an
+  extensible enum (direction verified today, the one measured class; existence and causal already
+  have owners), minimal-span quote-verified so the mechanism can never put words in the asker's
+  mouth. Validated 10/10 on the boundary that matters: ASKING about a direction ("did signups
+  grow?") is not ASSERTING one. The one validation miss was the quote-specificity filter
+  rejecting a whole-clause quote; fixed in the prompt (quote the asserting verb), re-proven.
+
+- MID-RUN: the [premise] steering line — the moment the run's own calls complete a comparison
+  contradicting the claim, the correction is appended to the tool result the model is already
+  reading, so generation proceeds from the corrected premise instead of being repaired after
+  committing to prose. Scrutiny exposed a reader blind spot here: both quarters queried GROUPED
+  (by month, by channel x region) never yielded a pair, so the contradiction the run's own
+  windows established went unchecked. `before_after_from_calls` now strips the grouping and
+  re-reads the two period totals through the layer — the layer computes the totals, so
+  additivity stays its problem, and the fabricated hand-summed figures the ungeneralised reader
+  permitted (734 -> 1,234 for a true 637 -> 1,214) did not recur once steering engaged.
+
+- EXIT: the conditional requirement — with a verified directional presupposition AND
+  contradicting evidence, a stance-free `direction` slot is a contract violation and is handed
+  back (the not_a_change dodge closes exactly where it matters, and nowhere else: an honest
+  question or an evidence-free run never pays). The filled slot is verified by the existing gate.
+
+- FLOOR: the constructed correction, with the governed figures, into the answer field. Gated on
+  the deterministic sign test over the run's own values, so a false-positive extraction cannot
+  produce a wrong note.
+
+Live: 9/9 across the two measured failure questions and a neutral control (rep 3) — steering
+observed on both premise questions, the control untouched, and every contradiction stated with
+the true figures. The requirement and the floor stood down because the steered model behaved;
+their firing paths are pinned by unit tests, which is the intended shape: the earlier layers make
+the later ones rare.

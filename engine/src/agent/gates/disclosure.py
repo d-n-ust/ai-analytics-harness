@@ -323,6 +323,81 @@ def _construct_disclosure(run, exit_call, notes, repair):
     return None
 
 
+_INCLUDE_WORDS = ("including", "counting", "gross of", "together with", "as well", "with ")
+_EXCLUDE_WORDS = ("excluding", "not counting", "without", "except", "net of", "leaving out")
+
+# The closed grammar our own layer renders its filters in — parsing OUR renderer's output is
+# stable in a way parsing prose never is.
+_FILTER_RE = __import__("re").compile(
+    r"Dimension\('(?P<dim>[\w]+)'\)\s*\}\}\s*(?P<op>!=|<>|=)\s*(?:'(?P<qval>[^']*)'|(?P<bval>\w+))")
+
+
+def member_anchor(quote: str, mine: str, theirs: str, filters_of, members_of) -> tuple:
+    """(side, why) — the reading a scope quote names, decided over PARSED PREDICATES evaluated on
+    enumerated member vocabularies; ("", why) where structure cannot decide.
+
+    The v1 anchor matched catalogue prose and inherited prose's fragility (morphology, negation
+    windows, rewording). This one consults only structure the layer maintains anyway: each
+    reading's where-filters (a closed grammar we render ourselves) evaluated over the
+    discriminating dimension's member list gives two member SETS; their difference is what
+    actually separates the pair; a quote concept matching a difference member plus the quote's
+    polarity picks the side deterministically. "counting ... refunded": mrr's scope over status
+    is {active}, gross_mrr's is {active, refunded}; the difference is {refunded}; inclusion names
+    the reading whose scope CONTAINS it. A boolean dimension (is_internal) is matched by its
+    NAME's tokens, with `true` as the concept-present member. Silent when the dimension is not
+    enumerated, the concept matches no difference member, or the polarity keyword is absent —
+    real language stays the judge's; the floor stays under both."""
+    q = " " + quote.lower() + " "
+    polarity = ("incl" if any(w in q for w in _INCLUDE_WORDS)
+                else "excl" if any(w in q for w in _EXCLUDE_WORDS) else "")
+    if not polarity:
+        return "", "no polarity keyword"
+    tokens = set(re.findall(r"[a-z]+", q)) - {
+        "the", "a", "an", "of", "and", "or", "that", "were", "was", "our", "to", "in", "on",
+        "as", "well", "we", "with", "including", "counting", "excluding", "without", "not",
+        "too", "also"}
+
+    def scopes(metric):
+        out = {}
+        for tmpl in filters_of(metric) or ():
+            m = _FILTER_RE.search(str(tmpl))
+            if not m:
+                return None                      # a filter outside the grammar: refuse to guess
+            dim = m.group("dim")
+            val = (m.group("qval") if m.group("qval") is not None else m.group("bval") or "").lower()
+            members = members_of(dim)
+            if not members:
+                continue                         # not enumerated (dates): structure cannot decide
+            members = {str(v).lower() for v in members}
+            out[dim] = {val} & members if m.group("op") == "=" else members - {val}
+        return out
+
+    s_mine, s_theirs = scopes(mine), scopes(theirs)
+    if s_mine is None or s_theirs is None:
+        return "", "a filter outside the parseable grammar"
+    for dim in set(s_mine) | set(s_theirs):
+        members = {str(v).lower() for v in (members_of(dim) or ())}
+        if not members:
+            continue
+        a, b = s_mine.get(dim, members), s_theirs.get(dim, members)
+        for m in a.symmetric_difference(b):
+            side_with = mine if m in a else theirs
+            side_without = theirs if m in a else mine
+            # concept match: the member itself, its underscore parts, or — for a boolean
+            # dimension — the dimension name's own tokens standing for the `true` member
+            words = {m} | set(m.split("_"))
+            if members <= {"true", "false"}:
+                if m != "true":
+                    continue
+                words = set(dim.split("__")[-1].split("_")) - {"is"} | {"internal", "staff"}
+            if words & tokens:
+                named = side_with if polarity == "incl" else side_without
+                return named, (f"the quote's concept {sorted(words & tokens)[0]!r} is in "
+                               f"{side_with}'s scope of {dim.split('__')[-1]} and not in "
+                               f"{side_without}'s; {polarity} names {named}")
+    return "", "no quote concept matches a differing member"
+
+
 def _request_chose(run, missing) -> bool:
     """Did the question itself already pick a reading? One focused model call, cached per run.
 
@@ -345,6 +420,25 @@ def _request_chose(run, missing) -> bool:
         off_axis = chose and run._quote_off_axis(quote, rival.discriminator)
         if off_axis:
             chose, which, quote = False, "", f"off-axis segment {quote!r}"
+        # THE DETERMINISTIC SIDE BEATS THE MODEL'S. The judge picks within a closed pair; where
+        # string membership decides the side unambiguously, a judge inversion (observed 1-in-3 on
+        # one rep) is overridden by the anchor — and where the anchor is silent, the binding
+        # floor below guarantees a wrong side costs a redundant sentence, never a silent number.
+        if chose and quote:
+            sem = run.grounding.semantic
+            filters_of = getattr(sem, "metric_filters", None)
+            vocab = (sem.segment_vocabulary() if hasattr(sem, "segment_vocabulary") else {})
+            if filters_of is not None and vocab:
+                anchor, why = member_anchor(quote, metric, rival.name,
+                                            filters_of, lambda d: vocab.get(d))
+                if anchor and anchor != which:
+                    run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
+                                         f"member anchor overrode the judge ({why}); the judge "
+                                         f"said {which or '(unknown)'}").as_dict())
+                    which = anchor
+                elif anchor:
+                    run.acts.append(Act("scope_classifier", str(Position.REPAIR), "allowed",
+                                         f"member anchor confirms the judge: {why}").as_dict())
         run._scope_verdict = (chose, which, quote)
         run.acts.append(Act("scope_classifier", str(Position.REPAIR),
                              "stood down" if chose else "applied",
@@ -370,6 +464,22 @@ def _binding_gate(run, exit_call, served_name, named, quote, discriminator,
             run.acts.append(Act("scope_classifier", str(Position.REPAIR), "allowed",
                                  f"binding holds: the question names {named} and the answer "
                                  f"serves it").as_dict())
+            # THE INVERSION FLOOR. If this match exists because an earlier hand-back FORCED a
+            # swap, the judgement that forced it may have been wrong — so the reader gets both
+            # figures regardless. A correct judgement then costs one redundant clause; an
+            # inverted one leaves the correct number in the reader's hands. Appended to the
+            # ANSWER field, which is what a reader (and the grader) treats as served.
+            swapped = any("binding_mismatch" in r for r in run.repairs)
+            if swapped and served_value is not None and named_value is not None:
+                shown = parse_numbers(str(exit_call.args.get("answer") or ""))
+                other = served_value if abs(served_value - named_value) > 1e-9 else None
+                if other is not None and not _reported(shown, other):
+                    prior = str(exit_call.args.get("answer") or "").strip()
+                    exit_call.args["answer"] = f"{prior} ({named} = {round(named_value, 4)}; "                                                f"the other governed reading = {round(other, 4)})"
+                    run.acts.append(Act("scope_classifier", str(Position.REPAIR), "constructed",
+                                         "swap was forced by the binding check; both readings "
+                                         "appended so a wrong judgement cannot cost the reader "
+                                         "the correct figure").as_dict())
         return None
     run.repairs.append({"binding_mismatch": {"named": named, "served": served_name,
                                               "quote": quote}})
@@ -386,12 +496,11 @@ def _binding_gate(run, exit_call, served_name, named, quote, discriminator,
             + (f" = {round(served_value, 4)}" if served_value is not None else "")
             + f". Serve {named}{supplied} — answer FROM that reading, stating what it counts.",
             is_error=True)
-    note = (f"the question's words ({quote}) name {named}"
-            + ("" if named_value is None else f" = {round(named_value, 4)}"))
+    both = (f"{named} = {round(named_value, 4)}" if named_value is not None else named) +            (f"; {served_name} = {round(served_value, 4)}" if served_value is not None else "")
     run.acts.append(Act("scope_classifier", str(Position.REPAIR), "constructed",
-                         f"binding unresolved at the cap; appended: {note}").as_dict())
-    prior = str(exit_call.args.get("explanation") or "").strip()
-    exit_call.args["explanation"] = (prior + f"  Note: {note}.").strip()
+                         f"binding unresolved at the cap; both readings appended: {both}").as_dict())
+    prior = str(exit_call.args.get("answer") or "").strip()
+    exit_call.args["answer"] = f"{prior} (the question's words name {named}: {both})"
     return None
 
 

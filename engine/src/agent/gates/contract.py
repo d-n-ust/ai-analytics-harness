@@ -158,6 +158,77 @@ def substituted_window(run, exit_call):
     return None
 
 
+def presupposition(run) -> dict:
+    """The question's typed presupposition record, evaluated lazily and once per run.
+
+    {type, claim, quote} with type='none' for a question that asserts nothing. One model call at
+    most, and only for runs that ask (the evidence-annotation hook and the exit gates); a run
+    that never touches directional evidence never pays for it. The record is the entry half of
+    the loaded-question contract: the exit half (a required stance, the verified slot, the
+    constructed note) reads this record deterministically."""
+    if run._premise is None:
+        run._premise = _classify.question_presupposes(run.model, run.question)
+        if run._premise["type"] != "none":
+            run.acts.append(Act("answer_spec", str(Position.REPAIR), "applied",
+                                 f"the question presupposes {run._premise['type']}"
+                                 f"{('=' + run._premise['claim']) if run._premise['claim'] else ''}"
+                                 f": {run._premise['quote']!r}").as_dict())
+    return run._premise
+
+
+def premise_contradiction(run):
+    """(claim, actual, metric, v0, v1) when the question's directional presupposition contradicts
+    the run's own evidence, else None. Deterministic on both sides: the claim comes from the
+    quote-verified record, the actual direction from the trace readers."""
+    record = run._premise
+    if not record or record.get("type") != "direction":
+        return None
+    semantic = run.grounding.semantic
+    if semantic is None:
+        return None
+    pair = run._before_after_from_calls(semantic) or run._series_from_calls(semantic)
+    if pair is None:
+        return None
+    metric, v0, v1 = pair
+    actual = "rose" if v1 > v0 else "fell" if v1 < v0 else "unchanged"
+    if actual in ("rose", "fell") and actual != record["claim"]:
+        return record["claim"], actual, metric, v0, v1
+    return None
+
+
+def premise_note(run, exit_call):
+    """CONSTRUCT the premise correction when the question asserted a direction the run's own
+    evidence contradicts and the answer's verified stance does not already carry it.
+
+    The floor of the loaded-question contract: whatever the model wrote — a bare number, a
+    breakdown, an essay — the reader is told the premise is false, with the governed figures.
+    Cannot be wrong by construction: it fires only on a deterministic sign contradiction over the
+    run's own values, and a question with no quote-verified presupposition has no record to fire
+    from. Appended to the ANSWER field — what the reader (and the grader's rebuttal scan)
+    receives."""
+    g = run.grounding.guardrails
+    if exit_call.name != "answer" or not getattr(g, "answer_spec", False):
+        return None
+    if run._premise is None or run._premise.get("type") != "direction":
+        return None
+    hit = premise_contradiction(run)
+    if hit is None:
+        return None
+    claim, actual, metric, v0, v1 = hit
+    declared = str(exit_call.args.get("direction") or "").strip().lower()
+    if declared == actual:
+        return None                      # the model took the correct stance; the slot is verified
+    note = (f"the question presumes {metric} {claim}; the governed figures show it {actual} "
+            f"({round(v0, 4)} then {round(v1, 4)})")
+    prior = str(exit_call.args.get("answer") or "").strip()
+    exit_call.args["answer"] = (prior + f" (Note: {note}.)").strip()
+    run.repairs.append({"premise_note": {"claim": claim, "actual": actual,
+                                         "metric": metric, "constructed": True}})
+    run.acts.append(Act("answer_spec", str(Position.REPAIR), "constructed",
+                         f"premise correction appended: {note}").as_dict())
+    return None
+
+
 def direction_vs_evidence(run, exit_call):
     """Hand back an answer that treats a measure as rising or falling in a direction the run's
     OWN governed calls contradict — the false-premise defect on the answer path.
@@ -222,6 +293,25 @@ def direction_vs_evidence(run, exit_call):
     # language is the model's job — and the contradiction test against the evidence sign
     # stays code. A text that asserts nothing directional is left alone, as before.
     if declared not in ("rose", "fell", "unchanged"):
+        # THE CONDITIONAL REQUIREMENT (protocol half of the loaded-question contract). When the
+        # question itself ASSERTS a direction and the run holds contradicting evidence, a
+        # stance-free answer is the silent ratification the class-B1 row served — so the slot
+        # becomes REQUIRED, exactly as source_metric does when a contested cluster was touched.
+        # Fires only on (quote-verified presupposition AND contradicting evidence), so an honest
+        # question or an evidence-free run never pays it.
+        if presupposition(run).get("type") == "direction" and premise_contradiction(run):
+            run.repairs.append({"direction_required": {"claim": run._premise["claim"]}})
+            run.acts.append(Act("answer_spec", str(Position.REPAIR), "handed back",
+                                 f"the question presumes a direction "
+                                 f"({run._premise['quote']!r}) and the evidence contradicts it; "
+                                 f"the answer must take a stance; correction "
+                                 f"{run.claim_retries} of 2").as_dict())
+            return ToolResult(
+                f"Your answer was not accepted: the question PRESUMES a direction "
+                f"({run._premise['quote']!r}) and your own governed figures contradict it. State "
+                f"what actually happened — set `direction` to the true direction and say it "
+                f"plainly with the figures — or `refuse` with reason `false_premise`.",
+                is_error=True)
         parsed = AnswerArgs.of(exit_call.args)
         text = " ".join(x for x in (parsed.answer, parsed.explanation) if x).strip()
         asserted = _classify.text_asserts_direction(run.model, text) if text else "none"

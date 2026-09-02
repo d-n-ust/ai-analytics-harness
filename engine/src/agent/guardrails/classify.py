@@ -786,6 +786,77 @@ _TEXT_DIR_REPORT = {
 }
 
 
+# --- loaded-question extraction: does the QUESTION assert a claim as fact? ---------------------- #
+#
+# The generalized form of the false-premise family (findings §50/§53): a question can EMBED an
+# unverified claim — a direction ("why did signups collapse"), an existence ("our enterprise
+# plan"), a magnitude, a superlative, a causal story — and an answer that neither contradicts nor
+# refuses it has silently ratified it. The claim TYPE is an extensible enum; only `direction` is
+# verified downstream today (the one measured failure class), existence is owned by the
+# ungoverned-value machinery and causal by the metric tree. A `yes` survives only with a verbatim
+# quote, and an honest QUESTION about direction ("did signups grow?") is not a presupposition —
+# asking is not asserting.
+_PREMISE_SYSTEM = (
+    "You read an analytics question and report ONE thing: does the question itself ASSERT a "
+    "factual claim as if it were established — a presupposition the asker treats as true?\n\n"
+    "Types:\n"
+    "- `direction`: the question asserts the measure moved a particular way — 'why did signups "
+    "COLLAPSE', 'how big was the DROP', 'what drove the surge'. Report claim `fell` or `rose`.\n"
+    "- `none`: the question asserts nothing — it ASKS. 'Did signups grow?', 'by how many did "
+    "habits change?', 'how many signed up?' are questions, not claims. When in doubt: none.\n"
+    "- `existence`, `value`, `superlative`, `causal`: other claim kinds; report them when clear, "
+    "with the quote.\n\n"
+    "Quote ONLY the few words that carry the claim — the verb or phrase asserting it "
+    "('collapse', 'the drop', 'fell'), never a whole clause: a quote is evidence of the claim, "
+    "not a restatement of the question.")
+
+_PREMISE_USER = "Question: {question}\n\nDoes this question assert a claim as fact?"
+
+_PREMISE_REPORT = {
+    "name": "report_presupposition",
+    "description": "Report a claim the question asserts as fact, or none.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "type": {"type": "string",
+                     "enum": ["none", "direction", "existence", "value", "superlative", "causal"]},
+            "claim": {"type": "string", "enum": ["", "fell", "rose"],
+                      "description": "For type=direction: which way the question claims the "
+                                     "measure moved. Empty otherwise."},
+            "quote": {"type": "string",
+                      "description": "The MINIMAL exact words from the question carrying the "
+                                     "claim — the asserting verb or phrase ('collapse', 'the "
+                                     "drop'), at most a few words. Empty when type=none."},
+        },
+        "required": ["type"],
+    },
+}
+
+
+_register(_PREMISE_SYSTEM, _PREMISE_USER, _PREMISE_REPORT)
+
+
+def question_presupposes(model, question: str) -> dict:
+    """{type, claim, quote} — the claim the question asserts as fact, or type='none'.
+
+    Quote-verified like every extractor here: a claimed presupposition whose quote is not
+    verbatim in the question is downgraded to none, so the mechanism can never invent a premise
+    the asker did not state. Defaults to none on any error — a judgement that did not arrive
+    must not put words in the question's mouth."""
+    args = _ask(model, _PREMISE_SYSTEM, _PREMISE_USER.format(question=question), _PREMISE_REPORT)
+    none = {"type": "none", "claim": "", "quote": ""}
+    if args is None:
+        return none
+    kind = str(args.get("type") or "none").strip().lower()
+    claim = str(args.get("claim") or "").strip().lower()
+    quote = str(args.get("quote") or "").strip()
+    if kind == "none" or not quote or not _quoted_from(question, quote):
+        return none
+    if kind == "direction" and claim not in ("fell", "rose"):
+        return none
+    return {"type": kind, "claim": claim, "quote": quote}
+
+
 _register(_TEXT_DIR_SYSTEM, _TEXT_DIR_USER, _TEXT_DIR_REPORT)
 
 
