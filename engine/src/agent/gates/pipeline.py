@@ -34,6 +34,7 @@ PIPELINE = (
     # constraint quarrel for the shared correction budget — the Instagram row lost exactly that
     # race, and the cap caveat quoted a dropped date filter while the substitution shipped.
     Gate("segment_gate",         VERIFY,    segments.segment_gate),
+    Gate("ungrounded_unit",      VERIFY,    segments.ungrounded_unit),
     Gate("malformed_claims",     VERIFY,    claims.malformed_claims),
     Gate("dropped_constraint",   VERIFY,    claims.dropped_constraint),
     Gate("ungrounded_candidates", VERIFY,   claims.ungrounded_candidates),
@@ -41,6 +42,7 @@ PIPELINE = (
     Gate("underived_figure",     VERIFY,    contract.underived_figure),
     Gate("answerability_gate",   VERIFY,    measure.answerability_gate),
     Gate("computed_refusal",     VERIFY,    measure.computed_refusal),
+    Gate("governed_scalar_binding", VERIFY, measure.governed_scalar_binding),
     Gate("substituted_measure",  VERIFY,    measure.substituted_measure),
     # Construct-capable gates LAST: undisclosed_rival can still hand back (the binding check),
     # but its constructions — like applied_segment's and substituted_window's — must attach to

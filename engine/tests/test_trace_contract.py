@@ -654,6 +654,78 @@ def test_define_measure_is_terminal_after_two_could_not_define(monkeypatch):
     assert "Do NOT call define_measure again" in r3.content
 
 
+def _binding_stub(scalars_per_step, served, measure="signups", compare=""):
+    steps = [{"tool": "query_metric", "args": {"metric": "new_signups", "filters": {"user__channel": "content_seo"}, "period": "2025-11"},
+              "result_values": vs} for vs in scalars_per_step]
+    obj = _stub(steps, guardrails=NS(answerability_gate=True))
+    obj.scope_shadow = {"measure": measure, "compare_period": compare}
+    return obj, NS(name="answer", args={"answer": served, "explanation": served})
+
+
+def test_scope_match_fires_on_a_recount_that_contradicts_the_one_governed_scalar():
+    """Mode 1: the run computed one governed scalar (23) and served a different number (a group_by
+    recount). The single scalar is the governed answer; serving something else contradicts it."""
+    import agent.gates.measure as gm
+    obj, exit_call = _binding_stub([[23], [17, 6]], served="17")   # one scalar + a breakdown
+    r = gm.governed_scalar_binding(obj, exit_call)
+    assert r is not None and r.content.startswith("[policy]") and "23" in r.content
+
+
+def test_scope_match_is_silent_when_the_answer_serves_the_governed_scalar():
+    import agent.gates.measure as gm
+    obj, exit_call = _binding_stub([[23], [17, 6]], served="the governed metric returned 23")
+    assert gm.governed_scalar_binding(obj, exit_call) is None
+
+
+def test_scope_match_is_silent_on_a_composition_two_scalars():
+    """spend-per-signup / a change compute two governed scalars — the served number legitimately
+    differs from each, so the guard must not fire."""
+    import agent.gates.measure as gm
+    obj, exit_call = _binding_stub([[20242], [403]], served="50.23", measure="cost per signup")
+    assert gm.governed_scalar_binding(obj, exit_call) is None
+
+
+def test_scope_match_is_silent_on_a_change_by_the_record():
+    """A single scalar but the record marks a compare_period — a change answer differs from the
+    one window's figure by design."""
+    import agent.gates.measure as gm
+    obj, exit_call = _binding_stub([[637]], served="577", measure="signups", compare="Q1")
+    assert gm.governed_scalar_binding(obj, exit_call) is None
+
+
+def _unit_stub(question):
+    obj = _stub([], guardrails=NS(segment_gate=True))
+    obj.grounding = NS(semantic=NS(metrics=["active_users", "value_moments", "app_opens", "new_signups"],
+                                   segment_vocabulary=lambda: {"activity__platform": ("ios", "web")}),
+                       guardrails=obj.grounding.guardrails)
+    obj.question = question
+    return obj, NS(name="answer", args={"answer": "9.7", "explanation": "value per unit"})
+
+
+def test_an_ungrounded_per_unit_is_refused():
+    """Mode 2: 'per app session' — session is neither a metric, dimension, nor entity; a
+    per-active-user proxy served in its place is a silent substitution. Refuse."""
+    import agent.gates.segments as gs
+    obj, exit_call = _unit_stub("How many habits does the average user complete per app session?")
+    r = gs.ungrounded_unit(obj, exit_call)
+    assert r is not None and r.content.startswith("[policy]") and "session" in r.content
+
+
+def test_a_grounded_per_unit_is_left_alone():
+    """'per active user' — user grounds (an entity the metrics are of); never refuse a real unit."""
+    import agent.gates.segments as gs
+    for qq in ("On average how many habits per active user in March?",
+               "app opens per user last week", "spend for each signup in Q1"):
+        obj, exit_call = _unit_stub(qq)
+        assert gs.ungrounded_unit(obj, exit_call) is None
+
+
+def test_no_per_unit_phrase_means_no_check():
+    import agent.gates.segments as gs
+    obj, exit_call = _unit_stub("How many active users did we have in May?")
+    assert gs.ungrounded_unit(obj, exit_call) is None
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

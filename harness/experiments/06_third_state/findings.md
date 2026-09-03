@@ -3329,3 +3329,40 @@ five modes named. That is a strong, honest result (a 96.4% no-confident-wrong ra
 questions, contested reasoning intact) and it is publication-HONEST in a way the heldout2 0 was
 not. The remaining work is real and now specified: close the query_metric-breakdown recount and the
 per-session substitution, then author heldout4 to re-measure — never iterate against heldout3.
+
+## 78 · Modes 1 & 2: the held-out silents fixed as guard generalisations, heldout3 untouched
+
+The five heldout3 silents (§77) were three modes; two are principled generalisations of existing
+guards and are now implemented, WITHOUT touching heldout3 (it stays the before/after witness). The
+fixes were designed from the invariant, tested on a fresh blind probe, and validated on heldout2
+boundary questions.
+
+MODE 1 — the scope-match invariant (`governed_scalar_binding`, gates/measure.py). §72's
+governed-over-raw guard caught a served figure contradicting a scoped governed query_metric ONLY
+under raw provenance; a fresh run showed the same miscount through a group_by query_metric (read
+new_signups(channel)=23, issued a breakdown, served a different number). The generalisation is
+provenance-free: when the run computed EXACTLY ONE governed scalar and the answer omits it, the
+answer contradicts the one governed figure the run holds. The composition boundary keeps it safe —
+a change (two windows) or a ratio/share/per-unit answer has two or more scalars, or the scope
+record marks a compare_period / per-unit measure, and it stays silent. Four pins (fires on the
+recount, silent on the served-scalar, the two-scalar composition, and the record-marked change).
+
+MODE 2 — the unit-grounding extension (`ungrounded_unit`, gates/segments.py). §74 refused an
+ungrounded CONCEPT (device); the same principle extends to a measure's UNIT. "per app session"
+served habits_per_active_user because "habits" and "user" ground and the substitution judge passed
+it, dropping "session". The check is deterministic: take the head noun of each 'per X' / 'each X',
+refuse when its stem grounds in no metric, dimension, or entity noun. The scrutiny probe caught a
+MISFIRE the pins had not — "each active user COMPLETE" extracted the verb 'complete' as the unit —
+fixed by stopping the unit at a verb boundary and checking EVERY per-phrase, not the first. Three
+pins.
+
+VALIDATION (heldout3 never run). Fresh blind probe (modes_probe.yml): per-session and per-store
+refuse, per-active-user answers (boundary holds), single-scalar and contested answers do not
+misfire. heldout2 boundary targets (ratio, per-signup, contested, two normal answerables): 5/5
+correct, neither new gate fired. The stochastic reps where the model SERVES the proxy were not
+reproduced in the probe (the model refused on its own), so both gates' FIRING is proven by the
+pins, their NON-misfire by the live boundary runs.
+
+MODE 3 (the premise flake) is NOT fixed — a stochastic single-judge recall miss, not a missing
+check; the honest floor. The real proof of Modes 1 & 2 is a fresh heldout4, authored blind and run
+once — never a re-run of heldout3. Engine 134 + harness 121 tests green.

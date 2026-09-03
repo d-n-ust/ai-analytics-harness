@@ -96,6 +96,69 @@ def _grounds_literally(run, concept: str, semantic) -> bool:
     return any(toks & set(re.findall(r"[a-z0-9]+", pool.lower())) for pool in pools)
 
 
+def ungrounded_unit(run, exit_call):
+    """Mode 2: a per-unit denominator whose HEAD NOUN grounds nowhere in the ontology is an
+    ungrounded measure — refuse, the same principle as §74's ungrounded concept, extended from a
+    segment to the measure's unit.
+
+    A held-out run answered "how many habits does the average user complete per app SESSION" by
+    serving habits_per_active_user (a governed proxy): "habits" and "user" ground, so the
+    substitution judge passed it, and "session" — the ungrounded unit — was dropped silently. The
+    structural fact the judge missed is deterministic: "session" is neither a governed metric, a
+    dimension, nor an entity noun. The check reads the QUESTION's own "per X" / "each X", takes the
+    head noun of X, and refuses only when its stem matches nothing governed — conservative, so a
+    real per-user / per-account / per-signup unit is never refused."""
+    g = run.grounding.guardrails
+    if exit_call.name != "answer" or not getattr(g, "segment_gate", False):
+        return None
+    sem = run.grounding.semantic
+    if sem is None or not hasattr(sem, "segment_vocabulary"):
+        return None
+    # The governed vocabulary: metric names, dimension values, and the entity nouns the metrics
+    # are OF (a per-unit denominator is an entity you divide by).
+    pool = " ".join([mm.replace("_", " ") for mm in sem.metrics]
+                    + [str(v).replace("_", " ") for vals in sem.segment_vocabulary().values() for v in vals]
+                    + ["user users account accounts signup signups subscription subscriptions "
+                       "customer customers habit habits open opens person people"])
+    stems = {w[:4] for w in re.findall(r"[a-z0-9]+", pool)}
+    # Every 'per X' / 'each X' unit, X up to the first boundary — a preposition, a time
+    # determiner, or a VERB (the predicate, not the unit: 'each active user COMPLETE' names the
+    # unit 'active user', not 'complete'). The head noun of each unit is checked; ONE ungrounded
+    # unit is enough ('each user ... per session' -> 'user' grounds, 'session' does not).
+    _BOUND = {"in", "during", "for", "last", "this", "over", "by", "on", "at", "of", "and", "or",
+              "since", "between", "compared", "vs", "than", "to", "from", "who", "that", "with",
+              "complete", "completes", "completed", "do", "does", "did", "open", "opens", "opened",
+              "spend", "spends", "spent", "make", "makes", "made", "sign", "signed", "use", "uses",
+              "used", "get", "gets", "have", "has", "had", "generate", "produce", "took", "take"}
+    _DROP = {"the", "a", "an", "our", "their", "its", "app", "average", "typical"}
+    head = None
+    for mm in re.finditer(r"\b(?:per|for each|each)\s+([a-z][a-z ]*)", run.question.lower()):
+        unit_words = []
+        for w in mm.group(1).split():
+            if w in _BOUND:
+                break
+            unit_words.append(w)
+        words = [w for w in unit_words if w not in _DROP]
+        if words and words[-1][:4] not in stems:
+            head = words[-1]; break                    # an ungrounded unit — this is the one
+    if head is None:
+        return None                                    # no per-unit, or every unit grounds
+    served = parse_numbers(after.served_text(exit_call.args)) if hasattr(after, "served_text") else []
+    if not served:
+        return None
+    run.repairs.append({"ungrounded_unit": {"unit": head}})
+    run.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
+                         f"the question asks a figure PER {head!r}, which is not a governed unit "
+                         f"(no metric, dimension, or entity names it); a per-active-user or "
+                         f"per-open proxy was served in its place; correction "
+                         f"{run.claim_retries} of 2").as_dict())
+    return ToolResult(
+        f"[policy] Your answer was not accepted: the question asks a figure per {head!r}, but "
+        f"{head!r} is not a governed unit — the data has no {head} entity to divide by. Do not "
+        f"serve a per-active-user or per-open figure as if it were per {head}. `refuse` with "
+        f"reason `no_governed_definition`.", is_error=True)
+
+
 def segment_gate(run, exit_call):
     """Refuse an answer whose question names a concept the ONTOLOGY does not contain.
 

@@ -344,6 +344,58 @@ def _answerability_refusal(run, exit_call, g):
 _REFUSAL_POLICIES = {"out_of_coverage", "false_premise", "no_governed_definition"}
 
 
+def governed_scalar_binding(run, exit_call):
+    """The scope-match invariant (Mode 1, generalising the §72 governed-over-raw guard from raw
+    provenance to ANY provenance). §72 caught a served figure that contradicted a scoped governed
+    query_metric ONLY when the recount came from run_sql; a fresh held-out run showed the same
+    miscount arriving through a group_by query_metric — the agent read new_signups(channel)=23,
+    issued a breakdown, and served a different number. The invariant is provenance-free: when the
+    run computed EXACTLY ONE governed scalar and the answer serves a number that omits it, the
+    answer contradicts the one governed figure the run holds.
+
+    The composition boundary is what keeps it from firing on legitimate derived answers: a change
+    (two windows) or a ratio/share/per-unit answer computes TWO OR MORE governed scalars, or the
+    scope record marks a compare_period / per-unit measure — in either case this stays silent. A
+    breakdown call returns rows, not a scalar, so the one direct query is the only scalar and the
+    breakdown does not mask it."""
+    g = run.grounding.guardrails
+    if exit_call.name != "answer" or not getattr(g, "answerability_gate", False):
+        return None
+    # Governed query_metric steps that returned a SINGLE scalar (a scoped direct query, not a
+    # breakdown). A group_by / multi-row call returns several values and is not counted here.
+    scalars = []
+    for step in run.steps:
+        if step.get("tool") != "query_metric" or step.get("blocked_by"):
+            continue
+        vals = [v for v in (step.get("result_values") or [])
+                if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        if len(vals) == 1:
+            scalars.append(vals[0])
+    if len(scalars) != 1:
+        return None                        # zero, or a composition/change (>=2) — not our case
+    # Composition by the scope record: a compare_period (change) or a per-unit / share measure is
+    # a derived answer whose number legitimately differs from the single scalar.
+    rec = getattr(run, "scope_shadow", None) or {}
+    measure = str(rec.get("measure") or "").lower()
+    if rec.get("compare_period") or any(w in measure for w in
+                                        ("per ", "each ", "ratio", "share", "average", "%", "rate")):
+        return None
+    gv = scalars[0]
+    served_nums = parse_numbers(after.served_text(exit_call.args))
+    if _reported(served_nums, gv):
+        return None                        # the answer serves the governed scalar — fine
+    run.repairs.append({"governed_scalar_binding": {"value": gv}})
+    run.acts.append(Act("answerability_gate", str(Position.REPAIR), "handed back",
+                         f"the run computed one governed scalar ({gv}) for this scope and the "
+                         f"served figure omits it — a recount that contradicts the governed "
+                         f"value; correction {run.hand_backs} of 2").as_dict())
+    return ToolResult(
+        f"[policy] Your answer was not accepted: a governed query in this run already returned "
+        f"{gv} for the question's scope, but the number you served is different. Serve {gv} "
+        f"(the governed value), or `refuse` — do not re-derive a governed result by hand.",
+        is_error=True)
+
+
 def computed_refusal(run, exit_call):
     g = run.grounding.guardrails
     if not getattr(g, "computed_refusal", False) or exit_call.name != "refuse":
