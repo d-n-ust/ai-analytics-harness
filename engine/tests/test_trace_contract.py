@@ -206,6 +206,38 @@ def test_the_proxy_route_serves_with_disclosure_under_the_default_lean(monkeypat
     assert "proxy" in r.content.lower() or "stood in" in r.content.lower() or "related" in r.content.lower()
 
 
+def test_the_cluster_stand_down_logs_its_act(monkeypatch):
+    """The contested-cluster short-circuit (a served figure that IS a queried cluster reading is
+    the binding check's jurisdiction, not this gate's) was the one silent stand-down — and its
+    first logged act crashed live with TypeError: rivals are Competitor objects, not strings.
+    A scrutiny probe found both; this pins them."""
+    import agent.gates.measure as gm
+
+    class _Competitor:
+        def __init__(self, name):
+            self.name = name
+
+    class _Clusters:
+        def competitors(self, metric):
+            return (_Competitor("acquisition_spend"),) if metric == "marketing_spend" else ()
+
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(clusters=_Clusters()), guardrails=NS(grounded_measure=True))
+    obj.model = None
+    obj.question = "How much did we spend on referral marketing in March 2026?"
+    obj.steps = [{"tool": "query_metric",
+                  "args": {"metric": "marketing_spend", "filters": {"spend_row__channel": "referral"},
+                           "period": "2026-03"}}]
+    obj.acts = []
+    monkeypatch.setattr(gm.before, "value_of", lambda sem, args, m: {"value": 1858.95})
+    exit_call = NS(name="answer",
+                   args={"answer": "1858.95", "explanation": "referral marketing spend, March 2026"})
+    assert obj.substituted_measure(exit_call) is None
+    acts = [a for a in obj.acts if a["guardrail"] == "grounded_measure"]
+    assert len(acts) == 1 and acts[0]["outcome"] == "allowed"
+    assert "acquisition_spend" in acts[0]["detail"]
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

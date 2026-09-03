@@ -259,6 +259,79 @@ def test_coherent_allows_summing_a_semi_additive_within_one_period():
     assert add == []
 
 
+def test_raw_declared_filter_needs_sql_evidence():
+    """A raw spec's SQL runs verbatim, so a declared filter is only a claim. It binds when the SQL
+    shows the value or the leaf column; declared-with-no-trace routes to unbound, and the authoring
+    loop asks for it inside the SQL. This closes the one unverified input to bind_scope."""
+    scope = Scope(measure="retention", segments=(("user__channel", "paid_search"),))
+    honest = Spec.raw("SELECT ... WHERE u.channel = 'paid_search'", "retention by channel",
+                      filters=[("user__channel", "paid_search")])
+    assert bind_scope(scope, honest) == ()
+    claimed = Spec.raw("SELECT count(*) FROM user u", "retention",
+                       filters=[("user__channel", "paid_search")])
+    assert ("segment", "user__channel=paid_search") in bind_scope(scope, claimed)
+
+
+def test_raw_declared_filter_scan_confirms_never_refutes():
+    """The scan accepts the leaf column alone — expression shapes (CASE, IN-lists, joins) mention
+    the column without the exact literal, and a correct SQL must never be rejected here."""
+    scope = Scope(measure="retention", segments=(("user__channel", "paid_search"),))
+    by_column = Spec.raw("SELECT ... WHERE channel IN ('paid_search','paid_social')", "x",
+                         filters=[("user__channel", "paid_search")])
+    assert bind_scope(scope, by_column) == ()
+
+
+def test_raw_declared_period_needs_date_evidence():
+    """Same reasoning for the period: declared '2026-Q1' with no date constraint in the SQL is a
+    silent whole-history figure. Any year the period names counts as evidence — loose on purpose,
+    because date arithmetic takes many shapes."""
+    scope = Scope(measure="signup share", period="2026-Q1")
+    dated = Spec.raw("... WHERE signup_date >= '2026-01-01' AND signup_date < '2026-04-01'", "x",
+                     period="2026-Q1")
+    assert bind_scope(scope, dated) == ()
+    undated = Spec.raw("SELECT count(*) FROM user", "x", period="2026-Q1")
+    assert ("period", "2026-Q1") in bind_scope(scope, undated)
+
+
+def test_metric_declared_filter_still_binds_without_sql():
+    """The scan is raw-only: a metric spec's filters compile into the engine query, so the
+    declaration IS the application and no SQL evidence exists to ask for."""
+    scope = Scope(measure="spend", segments=(("user__channel", "paid_search"),))
+    spec = Spec.metric("marketing_spend", filters=[("user__channel", "paid_search")])
+    assert bind_scope(scope, spec) == ()
+
+
+def test_derived_period_pushes_into_inputs():
+    """A period declared on a ratio means: on every input. bind_scope passed the declaration
+    (periods() gathers across the tree) while the executor computed each input as its leaf declared
+    — so a Q1 ratio served the whole-history figure, matching all-time spend/signups to six decimal
+    places. Push-down at construction makes the declared window the executed one."""
+    ratio = Spec.derived("ratio",
+                         inputs=[Spec.metric("marketing_spend"), Spec.metric("new_signups")],
+                         period="2026-Q1")
+    assert all(s.period == "2026-Q1" for s in ratio.inputs)
+
+
+def test_derived_input_period_wins_over_the_top():
+    """A period-over-period difference declares one window per input; the top-level period (if any)
+    must not overwrite them, or every change-metric collapses to one window minus itself."""
+    change = Spec.derived("difference",
+                          inputs=[Spec.metric("active_users", period="last_week"),
+                                  Spec.metric("active_users", period="prev_week")],
+                          period="last_week")
+    assert [s.period for s in change.inputs] == ["last_week", "prev_week"]
+
+
+def test_derived_filter_pushes_into_inputs():
+    """Same rule for filters: 'web' on a ratio filters both parts; an input's own filters stand."""
+    ratio = Spec.derived("ratio",
+                         inputs=[Spec.metric("marketing_spend"),
+                                 Spec.metric("new_signups", filters=[("user__channel", "paid")])],
+                         filters=[("activity__platform", "web")])
+    assert ratio.inputs[0].filters == (("activity__platform", "web"),)
+    assert ratio.inputs[1].filters == (("user__channel", "paid"),)
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in tests:

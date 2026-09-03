@@ -26,7 +26,10 @@ _DEFINE_MEASURE = {
                    "compute it. The definition is grounded in the graph, checked for validity, "
                    "executed by construction, and challenged for aptness; the result comes back with "
                    "the definition disclosed. Use this instead of raw SQL for an ungoverned measure "
-                   "(a retention/cohort calculation, a custom ratio).",
+                   "(a retention/cohort calculation, a custom ratio) AND for any answer that "
+                   "COMBINES governed metrics — a ratio, share, or per-unit figure. Authoring the "
+                   "combination makes the operation a declared, checked fact; dividing figures by "
+                   "hand in the answer does not.",
     "input_schema": {"type": "object", "properties": {
         "measure": {"type": "string",
                     "description": "The measure to define and compute, in the question's own words "
@@ -59,7 +62,8 @@ def _define_measure(tb, args) -> ToolResult:
     if ont is None or model is None:
         return ToolResult("UNKNOWN — define_measure is unavailable in this configuration.")
     from ..runtime.define import define_measure
-    d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic)
+    d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic,
+                       verifier_model=getattr(tb, "verifier_model", None))
     if d.outcome == "refuse":
         return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")
     if d.outcome == "gave_up":

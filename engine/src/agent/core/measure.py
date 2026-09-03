@@ -26,7 +26,9 @@ artifact the adversary can review) — far smaller than leaving completeness to 
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re as _re
+
+from dataclasses import dataclass, replace as _dc_replace
 
 
 def _leaf(dimension: str) -> str:
@@ -106,7 +108,17 @@ class Spec:
 
     @classmethod
     def derived(cls, op: str, inputs, filters=(), period="", addressed=()) -> "Spec":
-        return cls(kind="derived", op=op, inputs=tuple(inputs), filters=tuple(filters),
+        # A period or filter declared on the DERIVED spec means: on every input. Pushed down at
+        # construction, so declaration, evidence records, and execution are one fact — the executor
+        # computes each input exactly as its leaf declares. Without this, a Q1 declared on a ratio
+        # passed bind_scope (periods() gathers across the tree) while both governed inputs executed
+        # with period=None: the served spend-per-signup was the whole-history ratio labelled Q1, to
+        # six decimal places. An input's own period or filters win (a period-over-period difference
+        # declares one window per input; both stand).
+        inputs = tuple(_dc_replace(s, period=s.period or period,
+                                   filters=s.filters or tuple(filters))
+                       for s in inputs)
+        return cls(kind="derived", op=op, inputs=inputs, filters=tuple(filters),
                    period=period, addressed=tuple(addressed))
 
     @classmethod
@@ -116,10 +128,37 @@ class Spec:
 
 
 # ── the uniform surface: what a spec covers, across a derived spec's whole tree (pure, recursive) ──
+def _sql_confirms_filter(sql: str, dimension: str, value: str) -> bool:
+    """Conservative evidence that a raw spec's declared filter is real: the SQL mentions the value
+    literal or the filter's leaf column. Confirms only, never refutes — a filter the SQL applies
+    without declaring is a different check (the adversary's), and a correct SQL is never rejected
+    here. Absence routes the filter to `unbound`, and the authoring loop's feedback asks for it
+    to be applied inside the SQL."""
+    s = str(sql).lower()
+    return _norm(value) in s or _leaf(dimension) in s
+
+
+def _sql_confirms_period(sql: str, period: str) -> bool:
+    """Loose evidence that a raw spec's declared period constrains the SQL: the period token or
+    any year it names appears in the text. Loose on purpose — date arithmetic takes many shapes,
+    and the check exists to catch a declared period with NO date constraint at all."""
+    s = str(sql).lower()
+    return _norm(period) in s or any(y in s for y in _re.findall(r"\d{4}", str(period)))
+
+
 def applied_segments(spec: Spec) -> set:
     """Every (leaf_dimension, value) the spec applies, gathered across a derived spec's inputs. A
-    filter on any input counts — 'web' applied to the numerator of a ratio binds the question's 'web'."""
-    out = {(_leaf(d), _norm(v)) for d, v in spec.filters}
+    filter on any input counts — 'web' applied to the numerator of a ratio binds the question's 'web'.
+
+    For metric/derived kinds a declared filter IS applied — the engine compiles it into the query.
+    For a raw kind the SQL runs verbatim and the declaration is only a claim, so it counts only
+    when the SQL shows evidence of it (`_sql_confirms_filter`); a declared-but-absent filter was
+    the one unverified input to bind_scope."""
+    if spec.kind == "raw" and spec.sql:
+        out = {(_leaf(d), _norm(v)) for d, v in spec.filters
+               if _sql_confirms_filter(spec.sql, d, v)}
+    else:
+        out = {(_leaf(d), _norm(v)) for d, v in spec.filters}
     for sub in spec.inputs:
         out |= applied_segments(sub)
     return out
@@ -127,8 +166,13 @@ def applied_segments(spec: Spec) -> set:
 
 def periods(spec: Spec) -> set:
     """Every period the spec computes over, across its inputs. A derived spec whose inputs share a
-    period reports that period; a period-over-period change reports both."""
-    out = {_norm(spec.period)} if spec.period else set()
+    period reports that period; a period-over-period change reports both. A raw spec's declared
+    period counts only with date evidence in the SQL (`_sql_confirms_period`), same reasoning as
+    `applied_segments`."""
+    if spec.kind == "raw" and spec.sql:
+        out = {_norm(spec.period)} if spec.period and _sql_confirms_period(spec.sql, spec.period) else set()
+    else:
+        out = {_norm(spec.period)} if spec.period else set()
     for sub in spec.inputs:
         out |= periods(sub)
     return out

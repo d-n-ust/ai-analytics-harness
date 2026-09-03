@@ -2703,3 +2703,122 @@ noise. define fired 9 times on the standard suite (the capability is reachable; 
 era ends) and zero policy-cap conversions were needed — the gate's ordinary hand-backs sufficed,
 with the conversion standing as the proven backstop. Promotion (spec -> PR into the layer)
 remains deliberately unbuilt — its own experiment.
+
+## 63 · The review executed: the query trap removed, the judge re-scored honestly, the raw claim verified
+
+A seven-point technical review of the spec-authoring machinery was adjudicated in §62's aftermath;
+three of its tiers were executed here, methodically (test, smoke, review per tier). The fourth —
+one Scope artifact replacing the classifier stack — is an epic queued behind Phase 4, eval-gated.
+
+TIER 1, THE OFFERED TRAP. The define enum offered kind='query' while `run_ephemeral` returned
+"query-leaf execution not yet implemented" — an enum value the executor could not run, whose
+failure fed back as "fix the definition" and burned a bounded retry on definitions that were
+CORRECT. Removed from the enum and the prompt; the core Spec.query constructor and the executor
+stub stay for the compiler that will earn the kind back. Alongside it, the row schema now
+publishes `hand_backs` (corrections that cost a round trip) beside `claim_retries` (which counts
+constructions too and keeps its archived meaning) — the fixture's old `handbacks` field was
+`len(repairs)`, a third thing, now split into both honest numbers.
+
+The tier-1 smoke failed usefully twice. First: 3/3 tail questions REFUSED under `current_best` —
+not a regression but the strict policy working as written (a computable's raw provenance routes to
+refusal); the lesson, now recorded: THE TAIL SUITE'S CELL IS THE TRANSPARENT ARM. Second: the
+refused rows could not explain their own gate decisions — the fixture serialized steps without the
+typed evidence records the gates decide on. Fixture rows now carry `evidence`. Re-run under
+`current_best+transparent_compute`: 3/3 correct, raw kind authored directly, no query burn.
+
+TIER 2, THE JUDGE AUDITED BY ITS AUTHOR. `challenge_aptness` ran on the same model object that
+authored the definition it challenges — same weights, same blind spots — while `get_verifier`
+(one effort notch up, optionally a different model) sat unused by the define path. Plumbed
+through: run_agent -> toolbox.verifier_model -> define_measure, metered into the RUN's counter so
+`model_calls` keeps meaning every call the answer cost. The fixture runner never built a verifier
+at all; it does now.
+
+The validation was re-scored under the split the review demanded. The first 6 cases are the TUNE
+set (the 'refute if you can' first cut scored 1/6 on them; the rewrite was tuned until they
+passed) — a score on them measures memorisation. The 8 later cases are the holdout.
+
+| set | exact | apt-vs-flagged | standing |
+|---|---|---|---|
+| tune (6) | 4/6 | 4/6 | reported, never asserted on |
+| holdout (8) | 7/8 | 8/8 | the number that counts |
+
+The published claim shrinks from "13/14" to "holdout 8/8 flagged, 7/8 exact". The verifier
+resolution flags the two genuinely debatable tune cases the author-resolution accepted; the wire
+is disclose-only, so over-flagging costs a note naming the alternative, not a refusal — failure
+in the widening direction. The assertion gates on the holdout only.
+
+TIER 3A, THE UNVERIFIED CLAIM. For metric/derived kinds a declared filter IS applied — the engine
+compiles it into the query. For kind='raw' the SQL runs verbatim and `spec.filters`/`spec.period`
+were only claims, yet `bind_scope` counted them as bindings — the one unverified input to the
+completeness check. Now a raw declaration counts only with evidence in the SQL: the value literal
+or the leaf column for a filter, the period token or any year it names for the period. The scan
+CONFIRMS AND NEVER REFUTES — absence routes to `unbound` and the authoring feedback asks for the
+component inside the SQL; a correct SQL in any expression shape passes via the column/year match.
+Four unit pins; qualifiers stay declared-only (free-text claims have no scannable shape — stated,
+not hidden). Live: the scan's first catch was real — a spec declaring the 2026-Q1 cohort as a
+filter over a SQL with no date constraint bounced and was re-authored; 3/3 tail correct.
+
+TIER 3B, THE FREELANCE PATH. The tier-2 smoke surfaced the review's composition case live: one
+rep skipped check_answerability entirely, hand-assembled a share from 7 query_metric calls
+(subscriptions started IN Q1 over Q1 signups, 0.137) where the question asks the cohort
+follow-forward (0.259) — every figure governed, so raw-provenance gates never fire, and the
+wrong-quantity ratio served silently. Four runs of that question pre-steering: 2 correct via
+define, 1 safe refusal, 1 silent freelance. The steering: the define tool description (visible
+even when check_answerability is skipped) and the GOVERNED verdict text both now name the
+composition route — a ratio, share, or per-unit figure of governed metrics is authored with
+define_measure, where a wrong-quantity ratio is a named defect instead of arithmetic in prose.
+The steering probes, and what the second one caught. The freelance-prone question re-run 3 reps
+with the new text: 3/3 took check_answerability -> define_measure, zero freelance, 2 correct and
+1 safe refusal, zero silent. The governed-ratio control (habits per active user) answered from
+its own governed metric both reps — no composition to steer, the right outcome for the wrong
+specimen.
+
+THE CATCH THE PROBE PAID FOR. The contested composition (spend per signup, Q1) ran 1/2 with one
+CONFIDENT WRONG — and the just-published evidence records explained it in one read: both governed
+inputs carried `period: null`. The model had declared 2026-Q1 on the DERIVED spec; `periods()`
+gathers across the tree, so bind_scope passed the declaration, while the executor computed each
+input exactly as its own leaf declared — no period at all. The served 84.376208 IS the
+whole-history spend over whole-history signups, to six decimal places (gold Q1: 93.6656). The
+declared-but-not-applied class of tier 3a, alive in the derived executor.
+
+The fix defines the error out of existence, at construction: a period or filter declared on a
+derived spec pushes down into every input that lacks its own (`Spec.derived`), so declaration,
+evidence records, and execution are one fact. An input's own period or filters win — a
+period-over-period difference declares one window per input, and both stand (pinned). Three unit
+pins; the re-probe ran 3/3 correct with both governed inputs carrying `period: 2026-Q1` in their
+evidence records and the served figures matching gold exactly (80.9626 acquisition primary,
+93.6656 marketing disclosed — or the reverse, both readings always present). Worth naming: the
+defect was found BY the new evidence records within minutes of publishing them — the row explained
+its own wrong number, which is the argument for publishing what gates read.
+
+Observed for later, not fixed here: the ephemeral runner feeds SQL dialect errors back verbatim
+(`julianday` does not exist in DuckDB) and the model repeated the mistake once before routing
+around it — a dialect hint in that feedback is a cheap future bounce. Steering is text, not
+protocol: the freelance path remains open by construction, and the protocol-level close (a
+composition detector on served arithmetic, or the unified Scope artifact) stays on the queue.
+
+## 64 · A five-question scrutiny, and the bug the probe caught in its own fix
+
+Five questions sampled at random from the dev suite, rep 1, `current_best`: 5/5 correct, zero
+silent, zero hand-backs, every figure matching the suite's proven gold (62, 3096, 1858.95). The
+three answerables were single governed calls with the right filter and window; the uninstrumented
+refusal took one check_answerability; the coverage trap showed the citation discipline working —
+a blocked call cannot be cited, so the model fetched check_coverage for a citable handle before
+refusing.
+
+Three findings, none behavioural. (1) The `value` slot was constructor-filled 3 for 3 — the §51
+constructor is the normal path on this sample, not the fallback; known design, worth remembering
+when reading repair counts. (2) The grounded_measure act printed `correction {claim_retries} of
+2` while the loop budgets on `hand_backs` — after §63 split them, the line could read "2 of 2"
+with no budget spent. Now prints hand_backs. (3) The contested-cluster stand-down (served figure
+IS a queried cluster reading — the binding check's jurisdiction) returned without logging an act:
+the one silent branch in the gate, invisible in the agree-case trace. Now logged like its
+siblings.
+
+The first version of fix (3) crashed live: `', '.join(rivals)` assumed strings; `competitors()`
+returns Competitor objects, and the re-probe erred with TypeError — caught because the fix was
+probed before being trusted (§62's lesson, applied to a two-line change). The branch had no unit
+coverage, which is how the bug reached a live run; `test_the_cluster_stand_down_logs_its_act`
+now pins the act and the name join, and fails on the old code. Re-probe: both questions correct,
+the agree-case trace now reading `contested cluster: the served figure is the queried
+'marketing_spend' reading (rivals: acquisition_spend)`.

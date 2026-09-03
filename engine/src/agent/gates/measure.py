@@ -97,12 +97,17 @@ def substituted_measure(run, exit_call):
                 continue
             v = _scalar(before.value_of(sem, args, metric))
             if v is not None and _reported(served_nums, v):
+                names = ", ".join(c.name for c in rivals)
+                run.acts.append(Act("grounded_measure", str(Position.REPAIR), "allowed",
+                                     f"contested cluster: the served figure is the queried "
+                                     f"{metric!r} reading (rivals: {names}); which "
+                                     "variant is the binding check's question").as_dict())
                 return None
     verdict, asked, served = _classify.answer_measures_asked(run.model, run.question, text)
     run.acts.append(Act("grounded_measure", str(Position.REPAIR),
                          "stood down" if verdict == "measures" else "handed back",
                          f"served {served or '?'} for asked {asked or '(same)'} [{verdict}]; "
-                         f"correction {run.claim_retries} of 2").as_dict())
+                         f"correction {run.hand_backs} of 2").as_dict())
     if verdict == "measures":
         return None
     run.repairs.append({"substituted_measure":

@@ -110,12 +110,15 @@ class _MeteredModel:
     Single-threaded within a run (the nested sub-agent runs in the same worker thread), so the
     bare increment is safe; the point of the class is which OBJECT owns the number."""
 
-    def __init__(self, model):
+    def __init__(self, model, count_into=None):
         self._model = model
+        # A second provider in the same run (the verifier) meters into the RUN's counter, so
+        # `model_calls` stays what its name says: every call this answer cost, whoever served it.
+        self._counter = count_into if count_into is not None else self
         self.calls = 0
 
     def respond(self, *args, **kwargs):
-        self.calls += 1
+        self._counter.calls += 1
         return self._model.respond(*args, **kwargs)
 
     def __getattr__(self, name):
@@ -426,7 +429,8 @@ class _Run:
                       sources=declared_handles(args),
                       value_recovered=recovered is not None,
                       typed_value=bool(self.grounding.toolbox.g.governed_numbers),
-                      claim_retries=self.claim_retries, repairs=tuple(self.repairs),
+                      claim_retries=self.claim_retries, hand_backs=self.hand_backs,
+                      repairs=tuple(self.repairs),
                       verifier_verdict=self.last_verdict)
         if not verdict.allowed:
             return self._record(answer=None, explanation=verdict.detail, outcome="refuse",
@@ -560,8 +564,11 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     # One meter per run, wrapped HERE so every consumer counts through it — the loop below, the
     # classifiers via run.model, and check_answerability/define_measure via toolbox.model.
     model = _MeteredModel(model)
+    if verifier_model is not None:
+        verifier_model = _MeteredModel(verifier_model, count_into=model)
     run = _Run(question, grounding, model, verifier_model)
     grounding.toolbox.model = model      # so check_answerability can decompose against the graph
+    grounding.toolbox.verifier_model = verifier_model  # so the aptness challenger audits, not echoes
     convo = Conversation.opening(grounding.system, question)
 
     def done(answer: Answer) -> Answer:

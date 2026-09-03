@@ -43,9 +43,8 @@ _SYSTEM = (
     "  kind='metric': a governed metric fits directly. Set metric=<name>.\n"
     "  kind='derived': combine governed metrics with an op (ratio/difference/sum/product). Set op and "
     "inputs=[{kind:'metric',metric:...}, ...]. Use for a ratio or a change of governed metrics.\n"
-    "  kind='query': no governed metric, but the graph has the columns to compute it. Set source "
-    "(entity), measure (column), agg (sum/count_distinct/average/min/max), and any grain.\n"
-    "  kind='raw': genuinely bespoke (a cohort/retention curve, custom windowing). Set sql and a "
+    "  kind='raw': no governed metric fits — a cohort/retention curve, custom windowing, a measure "
+    "built from the graph's columns. Set sql and a "
     "one-line definition of what it computes. If the question asks ONE number, the SQL must RETURN "
     "one row — aggregate inside the definition, never hand back per-account rows for a prose "
     "average. Sanity-check a share: exactly 0.0 or 1.0 usually means a join bug (numerator equals "
@@ -82,7 +81,11 @@ _SYSTEM = (
 
 def _spec_props(with_op: bool) -> dict:
     p = {
-        "kind": {"type": "string", "enum": ["metric", "query", "derived", "raw"]},
+        # `query` is deliberately absent until its leaf compiler exists: offering an enum value the
+        # executor cannot run burned a bounded retry on definitions that were CORRECT — the loop
+        # fed "not yet implemented" back as "fix the definition". The kind returns with the
+        # compiler (the more valuable path: a query leaf is verifiable by construction).
+        "kind": {"type": "string", "enum": ["metric", "derived", "raw"]},
         "metric": {"type": "string", "description": "kind=metric: the governed metric name"},
         "source": {"type": "string", "description": "kind=query: the entity the measure is on"},
         "measure": {"type": "string", "description": "kind=query: the measure column"},
@@ -226,7 +229,7 @@ def _author(model, question: str, ontology_render: str, wh_context: str, feedbac
 
 
 def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
-                   challenge: bool = True) -> Defined:
+                   challenge: bool = True, verifier_model=None) -> Defined:
     """Author a definition for the question's measure, verify it deterministically, compute, disclose.
     The one model call authors {scope, spec}; the deterministic pipeline decides the rest, handing back
     a specific failure for the model to fix, bounded by max_tries."""
@@ -248,10 +251,15 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
 
         unbound = bind_scope(scope, spec)
         if unbound:
+            hint = (" For kind='raw' a declared filter or period only counts when the SQL shows "
+                    "it (the value or column in a WHERE/JOIN, the period's dates) — apply it "
+                    "INSIDE the SQL, not only in the declaration."
+                    if spec.kind == "raw" else "")
             feedback = ("the spec drops components the question named: "
                         + "; ".join(f"{k} {d}" for k, d in unbound)
                         + " — bind each (add the filter / set the period / list the qualifier in "
-                          "`addressed`), or drop it from the scope if the question did not name it")
+                          "`addressed`), or drop it from the scope if the question did not name it"
+                        + hint)
             continue
 
         res = run_ephemeral(spec, engine)
@@ -281,7 +289,11 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
         # refused, which is the safe use of a judge validated on a small set.
         if challenge and spec.kind != "metric":
             defn = res.definition + (f"\nSQL:\n{spec.sql}" if spec.kind == "raw" else "")
-            apt = _classify.challenge_aptness(model, question, defn)
+            # The challenger runs on the VERIFIER resolution (one notch up the effort ladder,
+            # optionally a different model), not the author — a reviewer that thinks exactly
+            # like the author mostly agrees with it. Falls back to the author when no
+            # verifier is wired (direct define_measure calls outside the agent loop).
+            apt = _classify.challenge_aptness(verifier_model or model, question, defn)
             d.aptness, d.aptness_note = apt["verdict"], (apt.get("alternative") or apt.get("why") or "")
             if apt["verdict"] != "apt":
                 d.disclosure += (f"  NOTE ({apt['verdict']}): a competent analyst might read this "

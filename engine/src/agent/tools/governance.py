@@ -130,8 +130,17 @@ def _check_answerability(tb, args) -> ToolResult:
                 else:
                     note = (f"\nSEGMENT NOTE: read {phrase!r} as {dim}={lic[0]!r} (the governed "
                             f"text licenses this mapping); STATE the mapping in your answer.")
+        # The composition route, stated where the model reads its verdict: a governed PART does
+        # not license hand-arithmetic on the WHOLE. Authoring the combination keeps the operation
+        # inside the checked pipeline (bind/ground/coherent), where a wrong-quantity ratio is a
+        # named defect instead of prose.
+        combine = ("\n(If the question asks for a COMBINATION of governed metrics — a ratio, "
+                   "share, or per-unit figure — author it with define_measure instead of "
+                   "combining figures by hand.)"
+                   if getattr(tb.g, "spec_authoring", False) and getattr(tb, "model", None) is not None
+                   else "")
         return ToolResult(f"GOVERNED — {measure!r} maps to the governed metric `{v['governed_metric']}`. "
-                          "Answer with it (apply any segment or period as a filter)." + note,
+                          "Answer with it (apply any segment or period as a filter)." + note + combine,
                           evidence=resolution)
     if v["verdict"] == "computable":
         basis = v.get("basis") or "attributes and measures the graph captures"

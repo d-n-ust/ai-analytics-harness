@@ -27,7 +27,7 @@ import yaml
 from agent.runtime.grounding import build_grounding
 from agent.guardrails import parse_cell
 from agent.runtime.loop import Answer, run_agent
-from agent.runtime.providers import get_model
+from agent.runtime.providers import get_model, get_verifier
 from evals.gold import _validate, compute_gold
 from evals.grade import grade
 from evals.matrix import render as render_matrix
@@ -221,6 +221,9 @@ def main() -> None:
         sys.exit(f"{len(broken)} metric(s) in {layer} do not run. Fix the layer before measuring.")
 
     model = get_model(args.model, mock=args.mock)
+    # The verifier resolution (used by the aptness challenger) — the eval runner already
+    # builds one; the fixture ran the challenger on the author until this line.
+    verifier = get_verifier(args.model, mock=args.mock)
 
     for case in cases:
         pile = _PILE[case["expect"]["type"]]
@@ -280,7 +283,7 @@ def main() -> None:
                     print("metrics in the catalogue: "
                           f"{', '.join(sorted(grounding.toolbox.semantic.metrics))}\n")
             try:
-                answer = run_agent(case["question"], grounding, model)
+                answer = run_agent(case["question"], grounding, model, verifier_model=verifier)
             except Exception as exc:                                       # noqa: BLE001
                 answer = Answer(case["question"], RUNG, model.spec.name, None,
                                 outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
@@ -324,7 +327,10 @@ def main() -> None:
                           "direction": getattr(answer, "direction", None),
                           "tool_calls": len(answer.steps), "model_calls": answer.model_calls,
                           "tool_errors": sum(1 for s in answer.steps if s.get("error")),
-                          "handbacks": len(answer.repairs),
+                          # hand_backs = corrections that cost a round trip; repairs_total
+                          # keeps the old key's meaning (constructions included)
+                          "handbacks": answer.hand_backs,
+                          "repairs_total": len(answer.repairs),
                           "acts": list(answer.acts or []),
                           # The served TEXT, because several checks are about what the reader
                           # receives and cannot be evaluated from a graded row without it.
@@ -335,6 +341,9 @@ def main() -> None:
                           "steps": [{"tool": s.get("tool"), "args": s.get("args"),
                                      "error": bool(s.get("error")),
                                      "blocked": bool(s.get("blocked_by")),
+                                     # the typed records gates decide on (answerability_gate reads
+                                     # kind=raw here); a row without them cannot explain the gate
+                                     "evidence": s.get("evidence") or None,
                                      "result": str(s.get("result") or s.get("error") or "")[:300]}
                                     for s in answer.steps]}
 

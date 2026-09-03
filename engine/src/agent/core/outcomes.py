@@ -208,6 +208,10 @@ class Answer:
     # How many times the answer was handed back for citing something that does not
     # exist. A run that needed a second go is not the same as one that got it right.
     claim_retries: int = 0
+    # Round trips that actually cost a correction — constructions (the mechanism supplying a fact
+    # into the answer) are repairs but not hand-backs, and counting them together muddled the
+    # published retry field. Both are published; claim_retries keeps its archived meaning.
+    hand_backs: int = 0
     # What each of those handbacks was given, so the repair can be told from a deletion: the
     # claim count and the broken claims' text going in, against `claims` above coming out.
     # Without it a repaired answer and a truncated one are the same stored row.
