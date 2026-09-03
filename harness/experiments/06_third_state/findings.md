@@ -3202,3 +3202,57 @@ does NOT list for this question — though it DOES accept it for instagram (same
 That inconsistency is a gold-taxonomy call for the author: accept ungoverned_dimension_value for
 devices too, or leave devices as a reason-graded miss. It is a correct refusal either way, never a
 wrong number.
+
+## 75 · The certified run, and a tool-trajectory analysis
+
+The re-certification confirmed the fix: 129/138, balanced 0.9804, coverage 0.9412, and silent 0
+verified directly (zero confident_wrong across 138 attempts, zero refuse-gold questions answered,
+pile B served 0). Series: 122/3 -> 119/7 -> 126/2 -> 129/0. The two residual non-correct families
+(germany 3/3, devices 1/3) are refusals/no-figures, never wrong numbers.
+
+A full tool-call trajectory analysis over the 138 attempts (201 tool calls, 1,008 model calls):
+
+| signal | value | reading |
+|---|---|---|
+| one-call attempts | 105/138 (76%) | 85 single query_metric + 20 single check_answerability — the ideal shape dominates |
+| median tool calls / attempt | 1 | no systemic over-orchestration |
+| median model calls / attempt | 6 | the classifier/gate fan-out on a normal answer |
+| tool-call errors/blocks | 19/201 (9%) | 10 null-filter bounces, 7 coverage blocks, 1 bad dimension, 1 bad period |
+| identical (tool,args) repeated | 1 | the model varies args, it does not resubmit verbatim |
+| run_sql after query_metric | 0 | the freelance-arithmetic path was NOT taken (the §63 concern is quiet) |
+| cost concentration | 4 questions = 9% of attempts, 25% of tool calls, 17% of model calls | the tail is where all the flailing lives |
+
+TOOL USAGE. query_metric 130 (19 bounced), check_answerability 43 (0 error), define_measure 18
+(6 could-not-define), check_coverage 6, list_metrics 2, check_causal_evidence 2, run_sql 0.
+
+WHAT THE TAIL REVEALS, per question:
+
+- germany (h2_a_signups_germany_h1) — the clearest systematic problem. ALL 10 null-filter bounces
+  and the three longest trajectories (up to query_metric x6 -> check_answerability). The country
+  segment is unbindable on new_signups, and the model FLAILS: it emits {signup_date: null} and
+  {region: null} to express the window/segment, bounces, tries another spelling, bounces again —
+  a variation loop, not a verbatim repeat. 19 and 16 model calls in two reps, and it STILL
+  refuses (a coverage/bindability miss). This one question is the fragility hotspot: the tool
+  interface lets a malformed filter be emitted and bounced repeatedly rather than the class being
+  made unexpressible.
+- time_to_first (27 model calls, the single most expensive attempt) — define_measure x4, each
+  COULD NOT DEFINE. The §70 anti-shopping line fires only on a COMPUTED result ("do not re-define
+  a computed answer"); it does NOT cover a FAILED define retried, which is a distinct loop (2
+  define->define-after-failure transitions observed). A cap on define attempts, or a
+  failure-specific "do not retry the same measure" hand-back, would close it.
+- devices (14 model calls) — define x2 then refuse; the ungrounded-concept path, now safe (§74).
+- signups_collapse (13-15 calls) — check_causal_evidence interleaved with query_metric; the ONE
+  legitimately multi-call shape (a causal/premise question genuinely needs the tree edge and the
+  two windows), not flailing.
+
+RIGIDITY / GENERALISATION READING. The body of the suite is neither over-complex nor rigid: 76%
+one call, no verbatim repeats, no freelance SQL. The flailing is confined to the ungoverned /
+unbindable tail, and it is the SAME shape each time — a tool accepts a malformed or unbindable
+request and bounces, and the model retries variations until the budget or a gate stops it. Two
+generalisable openings, neither a silent (all refuse safely today):
+  1. The null-filter class should be unexpressible, not bounced: a `period`/`filters` schema that
+     cannot carry a null value removes germany's 10-bounce loop at the interface.
+  2. define_measure needs a retry discipline symmetric to the anti-shopping line: a failed
+     authoring of the same measure should not be re-attempted from scratch up to the cap.
+Both are efficiency/robustness, not correctness — the confident-wrong rate is 0 and these paths
+all terminate in a safe refusal.
