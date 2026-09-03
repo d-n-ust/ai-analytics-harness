@@ -823,3 +823,28 @@ def test_the_segment_gate_blocks_an_unlicensed_fold(monkeypatch):
                         lambda m, q, v: (True, "SEO", "spend_row__channel", "content_seo"))
     monkeypatch.setattr(gs._classify, "ground_question", lambda m, q, o: (True, "", ""))
     assert obj2.segment_gate(NS(name="answer", args={"answer": "1,858.95"})) is None
+
+
+def test_an_ungrounded_concept_handback_is_policy_marked_so_the_cap_refuses(monkeypatch):
+    """devices-per-user: the graph grounded 'different devices' onto activity__platform, define
+    COMPUTED a platform average, and segment_gate correctly caught the ungrounded concept — but
+    unmarked, the cap served 1.0 platforms with a caveat (silent, refuse-gold). The hand-back is
+    a [policy] refusal (a concept absent from the data is illegal to serve a number for), so the
+    cap converts to a refusal instead of serving the substitute."""
+    import agent.gates.segments as gs
+
+    obj = _stub()
+    obj.grounding = NS(
+        semantic=NS(ontology_text=lambda: "x",
+                    segment_vocabulary=lambda: {"activity__platform": ("android", "ios", "web")},
+                    dimension_descriptions=lambda: {}),
+        guardrails=NS(segment_gate=True))
+    obj.model = None
+    obj.question = "How many different devices does the average user sign in from?"
+    obj._scope_verdict = (False, "", "")
+    monkeypatch.setattr(gs._classify, "segment_named", lambda m, q, v: (False, "", "", ""))
+    monkeypatch.setattr(gs._classify, "ground_question",
+                        lambda m, q, o: (False, "different devices", "activity__platform"))
+    obj._grounds_literally = lambda c, s: False
+    r = obj.segment_gate(NS(name="answer", args={"answer": "1.0"}))
+    assert r is not None and r.is_error and r.content.startswith("[policy]")

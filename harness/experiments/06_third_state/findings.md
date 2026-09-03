@@ -3176,3 +3176,29 @@ while being a correct refusal. Whether the gold should accept that reason is a t
 flagged not fixed. Live probe: the row refuses (not silent); this rep computed a platform spec in
 r3 and refused on its own judgement, so the guard's firing is held by the pins, not reproduced
 live, under the run-economy rule.
+
+## 74 · Certification, and the devices silent's answer-path twin
+
+The rep-3 certification of the fixed cell: 126/138, balanced 0.966, silent 2 — the best board of
+the series (cert #1 122/3-silent, cert #2 119/7-silent), and pile A now has ZERO wrong numbers
+(the stated-marker family closed by typed polarity). Both remaining silents were devices_per_user
+reps that ANSWERED — the ANSWER-path twin of the §73 refuse-override silent.
+
+The path: the graph grounded 'different devices' onto activity__platform, define COMPUTED a
+platform average (1.0-1.14), and segment_gate CORRECTLY caught the ungrounded concept and handed
+back — but the hand-back was not [policy]-marked, so at the correction cap the loop served the
+platform figure with a caveat (the §62 policy-vs-verification distinction: a concept absent from
+the data is a policy refusal, not a verification dispute). Marked [policy], the cap converts to a
+refusal instead.
+
+Probe rep-3: devices refuses 3/3 (rep2 via the cap conversion to no_governed_definition; reps 0-1
+within budget), zero served, zero confident-wrong. The instagram control — the other user of this
+gate — refuses cleanly 3/3, unchanged. The silent is eliminated.
+
+RESIDUAL, escalated (NOT a silent). devices still grades correct only when the reason lands on the
+gold's accepted set (no_governed_definition / uninstrumented); reps that refuse within budget pick
+`ungoverned_dimension_value`, which the segment_gate hand-back itself instructs and which the gold
+does NOT list for this question — though it DOES accept it for instagram (same reason, same gate).
+That inconsistency is a gold-taxonomy call for the author: accept ungoverned_dimension_value for
+devices too, or leave devices as a reason-graded miss. It is a correct refusal either way, never a
+wrong number.

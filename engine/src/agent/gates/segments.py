@@ -187,10 +187,16 @@ def segment_gate(run, exit_call):
     run.acts.append(Act("segment_gate", str(Position.REPAIR), "handed back",
                          f"question names {concept!r}, which does not ground to the ontology; "
                          f"correction {run.claim_retries} of 2").as_dict())
+    # [policy], not a verification dispute: a concept with no referent in the data is ILLEGAL to
+    # serve a number for, so at the correction cap this CONVERTS to a refusal rather than serving
+    # the substitute figure with a caveat. devices-per-user grounded 'different devices' onto
+    # activity__platform, define COMPUTED a platform average, and this gate correctly caught the
+    # ungrounded concept — but unmarked, the cap served 1.0 platforms with a caveat (a silent
+    # wrong number for a refuse-gold question). Marked, the cap refuses.
     return ToolResult(
-        "Your answer was not accepted: the question names something this data does not contain.\n"
-        f"{concept!r} has no referent in the governed ontology — no metric and no dimension value "
-        f"matches it.{sibling} It is not in the data, so `refuse` with reason "
+        "[policy] Your answer was not accepted: the question names something this data does not "
+        f"contain.\n{concept!r} has no referent in the governed ontology — no metric and no "
+        f"dimension value matches it.{sibling} It is not in the data, so `refuse` with reason "
         f"`ungoverned_dimension_value` rather than serve a number computed for a different "
         f"concept.", is_error=True)
 
