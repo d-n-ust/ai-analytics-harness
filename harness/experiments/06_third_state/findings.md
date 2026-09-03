@@ -3003,3 +3003,51 @@ The standard cell now reads the question once into the record, backstops the pre
 licenses chose verdicts by qualifier spans, hands governed mappings over at entry, and refuses
 only for reasons that are policies. Remaining on the ledger: period and measure still shadow-only,
 the REPLACE stage untouched, and the germany author-stubbornness watch item.
+
+## 69 · The wrap: judges retired, dials collapsed, the record is now a component
+
+The unified Scope artifact project closes here. The wrap executed the architect's steer: the
+record earns its place by RETIRING things, and everything in this section made the system
+smaller except the probes that justified it.
+
+THE TWO REPLACES. With a record present, the chose judge no longer runs at all: the record's
+qualifier spans are the only words that could pick a side, and the member anchor decides which —
+deterministic where membership decides it, disclosure where it is silent. Probe 8/8: the anchor
+decided both stated families ('refunded', 'partnerships' concepts) and denied cleanly on the
+contested ones, zero judge calls. The premise judge likewise: the record IS the premise (its
+GUARD phase measured 44-45/46 shadow agreement with both investigated disagreements resolved in
+the record's favour). Probe 6/6, every premise caught from the record, no judge calls. Both
+judges survive in code for cells without a record, so the ladder's archived arms keep their
+meaning; in the standard cell they are retired.
+
+THE KIND-CONSTRAINT. The define author stayed on kind='metric' through a reachability bounce
+that named the raw route in words, about half the time — instruction is not enforcement. After
+that bounce the retry's action space no longer offers the kind (the tool enum itself, not the
+prompt). Pinned including schema-never-mutated.
+
+THE COLLAPSE. `scope_record` is now the one dial: a parse_cell alias expanding to the four
+underlying flags in every syntax position (+/-/explicit), so per-field ablation remains possible
+while the standard cell reads `+spec_authoring+scope_record+computed_refusal`. The migration
+scaffolding has its scheduled death.
+
+THE LEDGER AT CLOSE. Migrated and judge-retired: presupposes, chose. At entry-mapping: segments.
+Parked BY DESIGN with explicit preconditions (a duplicate question-reader to delete, or an
+evidenced silent error): period, measure, breakdown, compare_period — their live sources are the
+model's own typed tool arguments, which is the target architecture, and making the record a
+second authority over them would recreate the dual-source problem this project existed to remove.
+Further migration is maintenance triggered by evidence, not a project.
+
+WATCH ITEMS AT CLOSE, honestly listed. The germany family now has THREE named failure modes:
+the author second-guessing a COMPUTED answer (covered by computed_refusal where the reason is
+not a policy), the metric-kind stubbornness (covered by the kind-constraint), and — new this
+probe — a join-grain ambiguity: the layer's only country dimension is activity-side, so an
+author faithfully following the license counted signups with DE activity (266) instead of DE
+users (gold 294), and the cap served it with a caveat over an unresolved check. That last row is
+the cap-caveat policy tension (§67) wearing a new face: whether verification disputes at the cap
+should serve-with-caveat or convert to refusal is a policy decision, queued with the strict-leak
+call and the board's silent-vs-confident_wrong definition. None of the three is scope machinery;
+all three are visible BECAUSE of it.
+
+Tests at close: engine 115, harness 121. The record reads the question once, backs the premise
+contract, licenses chose through the anchor, hands mappings over at entry — and the standard
+cell now runs two fewer judges than it did this morning.

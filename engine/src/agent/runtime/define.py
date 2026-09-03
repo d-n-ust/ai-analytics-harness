@@ -218,11 +218,23 @@ def _disclose(scope: Scope, spec: Spec, res, tier: str) -> str:
     return f"You asked for {asked}. Computed via {res.definition} = {val}. [{note}]"
 
 
-def _author(model, question: str, ontology_render: str, wh_context: str, feedback: str) -> dict:
+def _author(model, question: str, ontology_render: str, wh_context: str, feedback: str,
+            banned_kinds: frozenset = frozenset()) -> dict:
     user = f"{ontology_render}\n\n{wh_context}\n\nQuestion: {question}"
     if feedback:
         user += f"\n\nYour previous definition was REJECTED — {feedback}\nAuthor a corrected definition."
-    turn = model.respond(Conversation.opening(_SYSTEM, user), [_DEFINE_TOOL],
+    tool = _DEFINE_TOOL
+    if banned_kinds:
+        # PROTOCOL, not advice. The author stayed on kind='metric' through a reachability bounce
+        # that named the raw route in words, half the time — so after that bounce the retry's
+        # action space simply no longer offers the kind. Instruction is not enforcement.
+        import copy as _copy
+        tool = _copy.deepcopy(_DEFINE_TOOL)
+        kinds = tool["input_schema"]["properties"]["spec"]["properties"]["kind"]
+        kinds["enum"] = [k for k in kinds["enum"] if k not in banned_kinds]
+        user += ("\n\nThe kinds " + ", ".join(sorted(banned_kinds)) + " are NO LONGER OFFERED "
+                 "for this retry — the rejection above rules them out.")
+    turn = model.respond(Conversation.opening(_SYSTEM, user), [tool],
                          force_tool="define_measure", temperature=0)
     call = next((c for c in turn.tool_calls if c.name == "define_measure"), None)
     return call.args if call else {}
@@ -234,9 +246,11 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
     The one model call authors {scope, spec}; the deterministic pipeline decides the rest, handing back
     a specific failure for the model to fix, bounded by max_tries."""
     feedback, scope, spec = "", Scope(), Spec(kind="unknown")
+    banned: frozenset = frozenset()
     wh_context = warehouse_context(ontology)
     for attempt in range(max_tries + 1):
-        args = _author(model, question, ontology.render(), wh_context, feedback)
+        args = _author(model, question, ontology.render(), wh_context, feedback,
+                       banned_kinds=banned)
         scope, spec = _parse_scope(args.get("scope")), _parse_spec(args.get("spec"))
 
         viol = coherent(spec)
@@ -265,6 +279,9 @@ def define_measure(model, question: str, ontology, engine, max_tries: int = 2,
         res = run_ephemeral(spec, engine)
         if not res.ok:
             feedback = f"the spec did not execute: {res.error} — fix the definition"
+            # The reachability bounce rules the metric kind OUT for this measure; enforce it.
+            if "cannot be filtered by" in str(res.error):
+                banned = banned | {"metric"}
             continue
         # THE GRAIN BOUNCE. A raw spec that returns many rows for a question with no stated
         # breakdown hands the model a table to aggregate in prose — which is how "7.9" got

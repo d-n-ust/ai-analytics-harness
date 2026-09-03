@@ -238,11 +238,11 @@ def test_the_cluster_stand_down_logs_its_act(monkeypatch):
     assert "acquisition_spend" in acts[0]["detail"]
 
 
-def test_the_scope_record_witnesses_a_premise_the_live_judge_missed(monkeypatch):
-    """The premise OR-gate (tier 4, phase 2). The premise family's certified silent was the live
-    judge returning `none` on 'why did new signups collapse' in a rep where the shadow record had
-    caught the claim. Two quote-verified witnesses; either one is a claim. Off means off: without
-    the flag the record must not gate — the shadow cell's contract is observational."""
+def test_the_scope_record_is_the_premise_and_the_judge_is_retired(monkeypatch):
+    """REPLACE (tier 4 wrap): with a record, the record IS the premise and the live judge is
+    never called — measured through the GUARD phase (44-45/46 shadow agreement, both investigated
+    disagreements resolved in the record's favour, one certified silent caught). Off means off:
+    without the flag the live judge still owns the path, so archived cells keep their meaning."""
     import agent.gates.contract as gc
 
     def _stub_run(flag):
@@ -258,14 +258,21 @@ def test_the_scope_record_witnesses_a_premise_the_live_judge_missed(monkeypatch)
                                             "quote": "new signups collapse"}}
         return obj
 
-    monkeypatch.setattr(gc._classify, "question_presupposes",
-                        lambda m, q: {"type": "none", "claim": "", "quote": ""})
+    calls = []
+
+    def _judge(m, q):
+        calls.append(q)
+        return {"type": "none", "claim": "", "quote": ""}
+
+    monkeypatch.setattr(gc._classify, "question_presupposes", _judge)
     on = _stub_run(True)
     rec = gc.presupposition(on)
     assert rec["type"] == "direction" and rec["claim"] == "fell"
+    assert calls == []                      # the judge is retired from the record path
     assert any("scope record" in a["detail"] for a in on.acts)
     off = _stub_run(False)
     assert gc.presupposition(off)["type"] == "none" and off.acts == []
+    assert len(calls) == 1                  # without the flag the live judge still owns the path
 
 
 def _chose_stub(flag, qualifiers, monkeypatch, judge):
@@ -297,20 +304,43 @@ def test_no_qualifier_spans_means_no_chose_and_no_judge_call(monkeypatch):
     assert any("no qualifier spans" in a["detail"] for a in obj.acts)
 
 
-def test_a_chose_quote_outside_every_qualifier_span_is_overridden(monkeypatch):
-    obj, gd, missing = _chose_stub(
-        True, ["including the partnerships integration"], monkeypatch,
-        lambda *a, **k: (True, "marketing_spend", "marketing for each person"))
-    assert gd._request_chose(obj, missing) is False
-    assert any("outside every qualifier span" in a["detail"] for a in obj.acts)
+def _anchor_stub(obj):
+    """The REPLACE path needs a semantic with a vocabulary; the anchor itself is monkeypatched —
+    these pins hold the WIRING (anchor decides / anchor silent), member_anchor has its own."""
+    obj.grounding = NS(semantic=NS(metric_filters=lambda m: (),
+                                   segment_vocabulary=lambda: {"channel": ("partnerships",)}),
+                       guardrails=NS(scope_chose=True, scope_classifier=True))
+    return obj
 
 
-def test_a_chose_quote_inside_a_qualifier_span_stands(monkeypatch):
+def test_with_a_record_the_anchor_decides_and_the_judge_is_never_called(monkeypatch):
+    """REPLACE (tier 4 wrap): qualifier spans + member anchor decide chose with zero model calls;
+    the judge survives only for cells without a record."""
+    def _forbidden(*a, **k):
+        raise AssertionError("the chose judge is retired from the record path")
+
     obj, gd, missing = _chose_stub(
-        True, ["including the partnerships integration"], monkeypatch,
-        lambda *a, **k: (True, "marketing_spend", "including the partnerships integration"))
+        True, ["including the partnerships integration"], monkeypatch, _forbidden)
+    _anchor_stub(obj)
+    monkeypatch.setattr(gd, "member_anchor",
+                        lambda span, m, r, f, v: ("marketing_spend", "test-anchor"))
     assert gd._request_chose(obj, missing) is True
     assert obj._scope_verdict[1] == "marketing_spend"
+    assert any("no judge call" in a["detail"] for a in obj.acts)
+
+
+def test_an_anchor_silent_span_forces_disclosure_not_a_judge_call(monkeypatch):
+    """Where member membership cannot decide the side, the verdict is False and the disclosure
+    machinery supplies both figures — widening, never a fall back to the judge."""
+    def _forbidden(*a, **k):
+        raise AssertionError("the chose judge is retired from the record path")
+
+    obj, gd, missing = _chose_stub(
+        True, ["counting terms later refunded"], monkeypatch, _forbidden)
+    _anchor_stub(obj)
+    monkeypatch.setattr(gd, "member_anchor", lambda span, m, r, f, v: ("", "no member evidence"))
+    assert gd._request_chose(obj, missing) is False
+    assert any("disclosure required" in a["detail"] for a in obj.acts)
 
 
 def test_the_chose_license_is_dead_without_its_flag(monkeypatch):
@@ -378,6 +408,27 @@ def test_entry_mappings_license_the_records_spans_deterministically():
     assert "no governed member" in none
     assert gs.entry_mappings({"segments": []}, sem) == ""
     assert gs.entry_mappings(None, sem) == ""
+
+
+def test_the_reachability_bounce_removes_the_metric_kind_from_the_retry():
+    """Protocol, not advice: the author stayed on kind='metric' through a reachability bounce
+    that named the raw route in words, about half the time. After that bounce the retry's action
+    space no longer offers the kind at all."""
+    import agent.runtime.define as rd
+
+    captured = {}
+
+    class _Model:
+        def respond(self, convo, tools, force_tool=None, temperature=None):
+            captured["kinds"] = tools[0]["input_schema"]["properties"]["spec"]["properties"]["kind"]["enum"]
+            return NS(tool_calls=[])
+
+    rd._author(_Model(), "q", "ont", "wh", "feedback", banned_kinds=frozenset({"metric"}))
+    assert "metric" not in captured["kinds"] and "raw" in captured["kinds"]
+    rd._author(_Model(), "q", "ont", "wh", "")
+    assert "metric" in captured["kinds"]          # no ban, full action space
+    # the pristine module-level schema must never be mutated by a banned retry
+    assert "metric" in rd._DEFINE_TOOL["input_schema"]["properties"]["spec"]["properties"]["kind"]["enum"]
 
 
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────

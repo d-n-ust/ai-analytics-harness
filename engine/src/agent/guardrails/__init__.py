@@ -554,12 +554,11 @@ NAMED_CELLS = {
         "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary"
         "+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate"
         "+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure"
-        "+spec_authoring+scope_shadow+scope_premise+scope_chose"
-        # computed_refusal and scope_segments joined on the §68 paired probe (five flip families,
-        # both arms, rep-2): 8/10 vs 6/10, zero silent, no family behind. scope_segments closed
-        # the instagram entry (deterministic zero-license note, one-call refusals); the
-        # computed_refusal trigger shape is rare and stands as pinned insurance.
-        "+computed_refusal+scope_segments"),
+        # scope_record collapses the record and its three consumers (shadow extraction, the
+        # premise REPLACE, the chose license with the anchor-decided side, entry mappings) —
+        # promoted across §66-68 by paired evidence, judges retired at the wrap (§69).
+        # computed_refusal joined on the §68 paired probe (8/10 vs 6/10, zero silent).
+        "+spec_authoring+scope_record+computed_refusal"),
 }
 
 
@@ -579,6 +578,15 @@ def parse_cell(spec: str) -> GuardrailSet:
     name and guarantees the two drift apart. `R3-clarify` and `R3+typed_clarify` are the arms of
     the ambiguity experiment, and both read as what they are.
     """
+    # `scope_record` is the collapsed name for the record and its three consumers — one dial in
+    # a cell string, four fields kept underneath for per-field ablation. Textual expansion, with
+    # the surrounding operator preserved, so +scope_record, -scope_record, and explicit-set
+    # positions all mean the four flags they collapse.
+    _SCOPE_FIELDS = ("scope_shadow", "scope_premise", "scope_chose", "scope_segments")
+    spec = re.sub(r"(^|\+)scope_record\b",
+                  lambda m: m.group(1) + "+".join(_SCOPE_FIELDS), spec)
+    spec = re.sub(r"-scope_record\b", "-" + "-".join(_SCOPE_FIELDS), spec)
+
     def canonical(name: str) -> str:
         return _LEGACY_NAMES.get(name, name)
 

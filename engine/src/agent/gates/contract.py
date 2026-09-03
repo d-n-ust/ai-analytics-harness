@@ -212,27 +212,29 @@ def presupposition(run) -> dict:
     the loaded-question contract: the exit half (a required stance, the verified slot, the
     constructed note) reads this record deterministically."""
     if run._premise is None:
-        run._premise = _classify.question_presupposes(run.model, run.question)
-        # The OR-gate (tier 4, phase 2): the unified Scope record as a SECOND witness for the
-        # premise. Both witnesses are quote-verified readings of the same question; the premise
-        # family's one certified silent was exactly the live judge returning `none` on 'why did
-        # new signups collapse' in the rep where the shadow record had caught the claim. A claim
-        # either witness can point at in the question is a claim; widening (a correction floor
-        # that was not needed) is the cheap direction, missing one is the silent.
+        # REPLACE (tier 4 wrap). With a scope record present, the record IS the premise — one
+        # quote-verified reading, zero extra model calls — and the live judge is retired from
+        # this path (it survives for cells without a record, so the ladder's archived arms keep
+        # their meaning). The GUARD phase ran both as an OR and measured them: the record agreed
+        # 44-45/46 in shadow, and both investigated disagreements resolved in the record's
+        # favour, including the one certified silent (the live judge returning `none` on 'why
+        # did new signups collapse' in the rep where the record had caught the claim).
         shadow = getattr(run, "scope_shadow", None) or {}
-        if (run._premise["type"] == "none"
-                and getattr(run.grounding.toolbox.g, "scope_premise", False)
-                and shadow.get("presupposes")):
-            sp = shadow["presupposes"]
-            run._premise = {"type": str(sp.get("kind") or "none"),
-                            "claim": str(sp.get("claim") or ""),
-                            "quote": str(sp.get("quote") or "")}
-            run.acts.append(Act("answer_spec", str(Position.REPAIR), "applied",
-                                 "premise witnessed by the scope record where the live judge "
-                                 f"saw none: {run._premise['type']}"
-                                 f"{('=' + run._premise['claim']) if run._premise['claim'] else ''}"
-                                 f" {run._premise['quote']!r}").as_dict())
-        elif run._premise["type"] != "none":
+        if getattr(run.grounding.toolbox.g, "scope_premise", False) and shadow and not shadow.get("error"):
+            sp = shadow.get("presupposes")
+            run._premise = ({"type": str(sp.get("kind") or "none"),
+                             "claim": str(sp.get("claim") or ""),
+                             "quote": str(sp.get("quote") or "")}
+                            if sp else {"type": "none", "claim": "", "quote": ""})
+            if run._premise["type"] != "none":
+                run.acts.append(Act("answer_spec", str(Position.REPAIR), "applied",
+                                     f"the question presupposes {run._premise['type']}"
+                                     f"{('=' + run._premise['claim']) if run._premise['claim'] else ''}"
+                                     f": {run._premise['quote']!r} (scope record; no judge "
+                                     f"call)").as_dict())
+            return run._premise
+        run._premise = _classify.question_presupposes(run.model, run.question)
+        if run._premise["type"] != "none":
             run.acts.append(Act("answer_spec", str(Position.REPAIR), "applied",
                                  f"the question presupposes {run._premise['type']}"
                                  f"{('=' + run._premise['claim']) if run._premise['claim'] else ''}"

@@ -428,17 +428,38 @@ def _request_chose(run, missing) -> bool:
                                  "no qualifier spans, so nothing in the question could have "
                                  "chosen a reading").as_dict())
             return False
+        if licensed:
+            # REPLACE (tier 4 wrap). With a record present the chose judge is RETIRED from this
+            # path: the record's qualifier spans are the only words that could pick a side, and
+            # which side they pick is the member anchor's question — deterministic where member
+            # membership decides it, and where the anchor is silent the verdict is False and the
+            # disclosure machinery supplies both figures (widening, the cheap direction). Zero
+            # model calls either way. The judge below survives only for cells without a record
+            # (the ladder's archived arms), so stored comparisons keep their meaning.
+            sem = run.grounding.semantic
+            filters_of = getattr(sem, "metric_filters", None)
+            vocab = (sem.segment_vocabulary() if hasattr(sem, "segment_vocabulary") else {})
+            chose, which, quote = False, "", "qualifier spans anchor no side"
+            if filters_of is not None and vocab:
+                for span in rec["qualifiers"]:
+                    anchor, why = member_anchor(span, metric, rival.name,
+                                                filters_of, lambda d: vocab.get(d))
+                    if anchor:
+                        chose, which, quote = True, anchor, span
+                        run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
+                                             f"chose decided by the member anchor over the "
+                                             f"record's qualifier span ({why}); no judge "
+                                             f"call").as_dict())
+                        break
+            if not chose:
+                run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
+                                     "no anchor decides a side from the qualifier spans; "
+                                     "disclosure required").as_dict())
+            run._scope_verdict = (chose, which, quote)
+            return chose
         chose, which, quote = _classify.question_chose_scope(
             run.model, run.question, metric, run._describe(metric),
             rival.name, run._describe(rival.name), rival.discriminator)
-        if licensed and chose:
-            spans = [" ".join(str(s).lower().split()) for s in rec["qualifiers"]]
-            q = " ".join(str(quote).lower().split())
-            if not any(q in s or s in q for s in spans):
-                run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
-                                     f"chose overridden: quote {quote!r} lies outside every "
-                                     f"qualifier span {rec['qualifiers']!r}").as_dict())
-                chose, which, quote = False, "", f"unlicensed quote {quote!r}"
         # Mechanical off-axis guard: a `chose` whose quote is a segment value on a DIFFERENT axis
         # than the discriminator narrows WHICH rows are counted, not WHICH definition counts them.
         # "organic acquisition" resolves nothing about is_internal, and the model cannot be talked
