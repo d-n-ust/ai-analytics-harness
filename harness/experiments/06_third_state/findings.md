@@ -3051,3 +3051,32 @@ all three are visible BECAUSE of it.
 Tests at close: engine 115, harness 121. The record reads the question once, backs the premise
 contract, licenses chose through the anchor, hands mappings over at entry — and the standard
 cell now runs two fewer judges than it did this morning.
+
+## 70 · A ten-question scrutiny, and the gate's first live firing
+
+Ten random questions, rep 1, the wrapped standard cell: 10/10 correct, zero silent. Seven traces
+at the intended ideal (contested one-call-with-disclosure, the premise family two-call); the
+substitution check earned its keep on annual subscriptions — active_subscriptions counts
+CONTRACTS (an account with two live terms counts twice), grounded_measure handed it back naming
+exactly that grain, and the model re-served from paying_users. Three findings, two fixed.
+
+DEFINE-SHOPPING. time_to_first called define_measure four times, got four slightly different
+COMPUTED readings (12.78/12.56/12.55/12.56 — the §69 join-grain ambiguity, here safely refused),
+then refused: nothing said a re-definition would not change governance status, so the model
+shopped. The COMPUTED result now says so ("do NOT call define_measure again — a re-definition
+changes the reading, never its governance status"). Probe: define calls 4 -> 2, model calls
+23 -> 16.
+
+UNINSTRUMENTED OVER A COMPUTED ANSWER. habit_streaks: the graph proved the measure computable,
+define COMPUTED it, and the model refused `uninstrumented` — provably false with the answer in
+hand. `computed_refusal` had exempted the reason as a policy; the exemption is removed. And its
+first live firing taught the better allocation: the hand-back arrived at an exhausted budget and
+the false reason survived with a caveat — but for THIS case the correct code is known
+deterministically, so the gate now CONSTRUCTS the rewrite (uninstrumented ->
+no_governed_definition, free, like every construction) instead of spending a round trip asking
+the model to say what the mechanism already knows. Pinned; the not-held shape (define gave up ->
+uninstrumented is an honest open-world claim) verified standing silent live.
+
+NOTED, NOT FIXED. referral_spend held both agreeing rivals (1858.95 = 1858.95) after two calls
+and then probed two more filter spellings into resolution errors before serving — benign
+exploration, two wasted calls, not worth machinery.

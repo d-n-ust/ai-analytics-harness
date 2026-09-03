@@ -382,6 +382,16 @@ def test_a_policy_reason_refusal_stands_even_over_a_computed_answer():
     assert gm.computed_refusal(obj, exit_call) is None
 
 
+def test_uninstrumented_over_a_computed_answer_is_rewritten_not_handed_back():
+    """A COMPUTED result is constructive proof the data is captured, so the correct refusal code
+    is KNOWN — the gate constructs the rewrite (free) rather than spending a round trip: its
+    first live firing arrived at an exhausted budget and the false reason survived."""
+    obj, gm, exit_call = _refusal_stub(True, "uninstrumented", held=True)
+    assert gm.computed_refusal(obj, exit_call) is None
+    assert exit_call.args["reason"] == "no_governed_definition"
+    assert any(a["outcome"] == "constructed" for a in obj.acts)
+
+
 def test_no_computed_answer_means_no_computed_refusal_check():
     obj, gm, exit_call = _refusal_stub(True, "dimension_not_supported", held=False)
     assert gm.computed_refusal(obj, exit_call) is None

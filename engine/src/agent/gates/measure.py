@@ -289,8 +289,11 @@ def _answerability_refusal(run, exit_call, g):
 # discarded. The legitimate refusals keep their standing: `no_governed_definition` IS the strict
 # policy for a computed figure, and coverage/premise reasons override a computation. Everything
 # else is handed back ONCE: serve what you computed (stating its definition), or name the policy.
-_REFUSAL_POLICIES = {"uninstrumented", "out_of_coverage", "false_premise",
-                     "no_governed_definition"}
+# `uninstrumented` is deliberately NOT here: a COMPUTED result is constructive proof the data
+# is captured, so that reason is provably false over a held answer — the correct policy is
+# `no_governed_definition`, and the hand-back names it (a live run refused `uninstrumented`
+# after define computed the streak count).
+_REFUSAL_POLICIES = {"out_of_coverage", "false_premise", "no_governed_definition"}
 
 
 def computed_refusal(run, exit_call):
@@ -304,6 +307,20 @@ def computed_refusal(run, exit_call):
                  if s.get("tool") == "define_measure" and not s.get("blocked_by")
                  and "COMPUTED (tier=" in str(s.get("result") or "")), None)
     if held is None:
+        return None
+    if reason == "uninstrumented":
+        # The correct code is KNOWN here — a COMPUTED answer proves the data is captured, so the
+        # only true refusal reason is no_governed_definition. A reason code is structure, not
+        # judgement: CONSTRUCT the fix (free, like every construction) instead of spending a
+        # round trip asking the model to say what the mechanism already knows. The first live
+        # firing of this gate arrived at an exhausted budget and the false reason survived with
+        # a caveat; a construction cannot be starved that way.
+        exit_call.args["reason"] = "no_governed_definition"
+        run.repairs.append({"computed_refusal": {"reason": reason, "constructed": True},
+                            "constructed": True})
+        run.acts.append(Act("computed_refusal", str(Position.REPAIR), "constructed",
+                             "reason `uninstrumented` rewritten to `no_governed_definition`: "
+                             "a COMPUTED answer proves the data is captured").as_dict())
         return None
     defn = held.split("DEFINITION:", 1)[-1].strip()[:220]
     run.repairs.append({"computed_refusal": {"reason": reason}})

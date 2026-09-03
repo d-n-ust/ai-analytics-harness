@@ -76,8 +76,14 @@ def _define_measure(tb, args) -> ToolResult:
     else:
         rows = "\n  ".join(", ".join(str(c) for c in r) for r in d.rows[:20])
         result = f"result rows ({len(d.rows)}, in the definition's order):\n  {rows}"
+    # "do NOT re-define" closes the loop "do NOT recompute" left open: a scrutinized run called
+    # define_measure four times, got four slightly different COMPUTED readings, and refused —
+    # shopping for a definition that would come back governed. Re-defining changes the reading,
+    # never the status.
     msg = (f"COMPUTED (tier={d.tier}). This IS the computed answer — answer FROM this directly, "
-           f"stating the definition; do NOT recompute with run_sql.\n{result}\n"
+           f"stating the definition; do NOT recompute with run_sql and do NOT call "
+           f"define_measure again (a re-definition changes the reading, never its governance "
+           f"status).\n{result}\n"
            f"DEFINITION: {d.disclosure}")
     if d.aptness and d.aptness != "apt":
         # THE FOURTH ACTION at the definition level: a contested definition is served like a
