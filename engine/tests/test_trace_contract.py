@@ -538,6 +538,54 @@ def test_a_record_qualifier_stands_the_segment_machinery_down(monkeypatch):
     assert gs._resolve_segment(obj2) is not None
 
 
+def test_a_raw_figure_that_contradicts_a_governed_scalar_is_handed_back():
+    """Silent: the model queried new_signups(referral, Q4)=62 (governed) then served a run_sql
+    hand-recount of 44, and the graph re-classification flaked to uninstrumented over it. A
+    scoped governed scalar the answer omits is ground truth in the trace — [policy] hand-back to
+    serve the governed value or refuse, never the contradicting raw figure."""
+    import agent.gates.measure as gm
+
+    steps = [
+        {"tool": "query_metric",
+         "args": {"metric": "new_signups", "filters": {"user__channel": "referral"},
+                  "period": "2025-Q4"},
+         "result_values": [62]},
+        {"tool": "run_sql", "args": {"query": "SELECT count(*) ..."}, "result_values": [44]},
+    ]
+    obj = _stub(steps, guardrails=NS(answerability_gate=True, graph_answerability=False))
+    obj.grounding = NS(semantic=NS(ontology_text=lambda: "x"), ontology=None,
+                       toolbox=NS(con=None, schema=None), rung=3,
+                       guardrails=obj.grounding.guardrails)
+    exit_call = NS(name="answer", args={"answer": "44", "explanation": "counted referral days"})
+    r = gm.answerability_gate(obj, exit_call)
+    assert r is not None and r.is_error and r.content.startswith("[policy]") and "62" in r.content
+
+
+def test_a_legitimate_raw_computation_with_no_governed_answer_is_untouched():
+    """The boundary: a raw computation (retention) with NO governed query_metric answering it
+    has nothing to contradict — the check stays silent and the normal answerability path runs."""
+    import agent.gates.measure as gm
+
+    steps = [{"tool": "run_sql", "args": {"query": "WITH cohort AS ..."}, "result_values": [0.42]}]
+    obj = _stub(steps, guardrails=NS(answerability_gate=True, graph_answerability=False))
+    obj.grounding = NS(semantic=NS(ontology_text=lambda: "layer"), ontology=None,
+                       toolbox=NS(con=None, schema=None), rung=3,
+                       guardrails=obj.grounding.guardrails)
+    obj.question = "Which channel gives the best 90-day retention?"
+    obj.model = None
+    # no governed query_metric in the trace -> the governed-over-raw branch cannot fire; whatever
+    # the downstream classifier decides, it is NOT this check that acted.
+    import agent.guardrails.classify as cl
+    cl_orig = cl.classify_answerability
+    cl.classify_answerability = lambda *a, **k: {"verdict": "governed", "measure": "retention"}
+    try:
+        r = gm.answerability_gate(obj, exit_call=NS(name="answer",
+                                  args={"answer": "0.42", "explanation": "90-day retention"}))
+    finally:
+        cl.classify_answerability = cl_orig
+    assert not any(rp.get("governed_over_raw") for rp in obj.repairs)
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

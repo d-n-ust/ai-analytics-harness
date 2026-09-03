@@ -3119,3 +3119,34 @@ dropped it — the variance the string version could not survive.
 Gates untouched: they consume segments/qualifiers, now the correctly-routed views of the typed
 list. The include/exclude-is-never-a-filter invariant that spend_dec exposed is a one-line
 deterministic guard when a probe shows it needed; the typed field makes it stateable.
+
+## 72 · Silent: a governed answer in the trace, discarded for a raw hand-recount
+
+referral_signups (1-in-3 rep): the model queried new_signups filtered to referral over Q4 = 62
+(the gold, governed), then fetched a daily breakdown and hand-computed over it with run_sql —
+producing 62, then 44 (a count of distinct DAYS), then 65 — and served 44. The provenance check
+passed (44 was in a run_sql result), and answerability_gate, on the raw-provenance path,
+re-classified the measure through the graph — which FLAKED to `uninstrumented` for a measure a
+governed metric had just answered — so the cap served the miscount 44 with a false "not captured"
+caveat. Confident-wrong, 44 for 62.
+
+Two defects, one root: the gate reached for a re-derivation (the graph classifier) when the trace
+already held the dispositive fact (a governed query_metric returned 62). The architect's
+principle: verify facts in the trace, not a re-derivation.
+
+THE FIX (generalised, in answerability_gate, no new dial). Before the graph re-classification, on
+the raw-provenance path: a SCOPED governed query_metric (carrying filters or a period) whose
+single returned scalar the served answer does NOT report is ground truth the run already holds.
+That is a [policy] hand-back — serve the governed value (stated), or refuse at the cap — never
+serve the contradicting raw figure. The boundary keeps it safe: a legitimate raw computation
+(retention, a cohort) has no governed query_metric answering it, so nothing contradicts and the
+check stays silent; a governed composition carries governed (not raw) provenance and never
+reaches this path. Two pins: fires on the contradiction (supplies 62), silent on a raw
+computation with no governed answer.
+
+The confident-wrong outcome is now structurally impossible for this class — the worst case is a
+safe refuse. The model's arithmetic detour itself is not prevented (stochastic, 1-in-3, not
+instructable), and does not need to be: the harm is caught at the serve. The live probe did not
+reproduce the detour this rep (the model served 62 directly, and the gate correctly stood down —
+no false positive); the gate's firing is held by the deterministic pin, not a live rep, by
+choice under the run-economy rule.

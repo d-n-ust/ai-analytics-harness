@@ -178,6 +178,39 @@ def answerability_gate(run, exit_call):
             e.get("kind") == "raw" for e in step.get("evidence") or ())
     if not any(_raw_provenance(step) for step in run.steps):
         return None
+    # A GOVERNED VALUE IN THE TRACE IS GROUND TRUTH THE RUN ALREADY HOLDS. When the model made a
+    # scoped governed query_metric (referral signups: new_signups filtered to referral over Q4 =
+    # 62) and then served a raw-SQL figure that OMITS it (a hand-recount of 44 distinct days),
+    # the served number contradicts the governed layer's own answer. Caught here, before the
+    # graph re-classification — which in that trace FLAKED to `uninstrumented` for a measure a
+    # governed metric had just answered, then the cap served the miscount with a false caveat.
+    # The check reads the trace, never a re-derivation: a scoped governed scalar the answer does
+    # not report is a [policy] hand-back (serve the governed value, or refuse at the cap — never
+    # serve the contradicting raw figure). A legitimate raw computation (retention, a cohort) has
+    # NO governed query_metric answering it, so nothing contradicts and this stays silent.
+    served_nums = parse_numbers(after.served_text(exit_call.args))
+    for step in run.steps:
+        if step.get("tool") != "query_metric" or step.get("blocked_by"):
+            continue
+        args = step.get("args") or {}
+        if not (args.get("filters") or args.get("period")):
+            continue                                  # a bare total, not a scoped resolution
+        scalars = [v for v in (step.get("result_values") or [])
+                   if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        gv = scalars[0] if len(scalars) == 1 else None
+        if gv is not None and not _reported(served_nums, gv):
+            metric = args.get("metric")
+            run.repairs.append({"governed_over_raw": {"metric": metric, "value": gv}})
+            run.acts.append(Act("answerability_gate", str(Position.REPAIR), "handed back",
+                                 f"a governed query returned {metric}={gv} for this run's scope; "
+                                 f"the served figure omits it and came from raw SQL — a "
+                                 f"hand-recount of a governed result; correction "
+                                 f"{run.hand_backs} of 2").as_dict())
+            return ToolResult(
+                f"[policy] Your answer was not accepted: a governed metric ({metric}) already "
+                f"returned {gv} for the query this run made, but the number you served is a "
+                f"raw-SQL figure that differs. Serve {gv} (the governed value, stating it), or "
+                f"`refuse` — do not hand-recompute a governed result.", is_error=True)
     semantic = run.grounding.semantic
     if semantic is None or not hasattr(semantic, "ontology_text"):
         return None
