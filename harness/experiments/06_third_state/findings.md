@@ -3285,3 +3285,47 @@ No regressions: the boolean control is clean, no new silents, correctness unchan
 efficiency/robustness on the ~9%-of-attempts tail; the body of the suite (76% one-call) is
 untouched. germany remains the honest hard case, its cost dominated by the unbindable-country
 root, not by the two symptoms addressed here.
+
+## 77 · heldout3: the real held-out number, and the oracle bug that nearly hid it
+
+heldout2 became a dev suite (27+ runs, fixes written against its traces), so its 0-silent board
+measures FIT. heldout3 restores a held-out measurement: 46 questions, the exact tier distribution
+of heldout2, FRESH slices (months and segments heldout2 did not use), authored from the schema,
+catalogue and pile definitions only, every oracle proven by heldout3_prove.py before the file was
+written. Run ONCE at rep-3 on the frozen current_best cell.
+
+THE ORACLE BUG, caught by the run and reported against ourselves. The first heldout3 run scored
+silent 0.1014 (14) — alarming, and WRONG. Diagnosis (governed value vs served figure, not "flip
+the agent"): the raw _source channel column is deliberately messy ('Organic'/'organic'/'' for
+organic; 'SEO'/'content'/'content/seo'/'content_seo' for content_seo), and the dbt mart normalises
+it. My hand-SQL oracle used INCOMPLETE spelling sets (organic missed the blank-default bucket,
+content_seo missed 'content/seo'), so the gold disagreed with the correct governed answer on three
+channel questions, and a fourth case (stated inclusive APP OPENS) was mis-authored — there is a
+governed total_value_moments for habits but NO total_app_opens, so the inclusive-opens reading has
+no governed metric. Nine of the fourteen silents were the oracle, three the mis-authored case, two
+real. The oracles were corrected to the fixture's COMPLETE channel normalisation (verified against
+the mart, still computed independently in raw _source SQL per the gold.py contract), the app-opens
+case re-authored to habits (total_value_moments), and the suite re-run once. The lesson: a held-out
+oracle over a normalised dimension must replicate the FULL normalisation, or it measures the
+oracle's gaps as the agent's.
+
+THE HELD-OUT NUMBER (corrected, rep-3, one run): correct 124/138, coverage 1.0, balanced 0.9647,
+SILENT 0.0362 (5). Contested pile 42/42 disclosed, coverage 6/6, premise 8/9. The mechanisms
+GENERALISE substantially from fit to fresh data — contested/coverage perfect, pile A 49/51 — but
+the confident-wrong rate on truly held-out questions is 3.6%, not the 0 heldout2 suggests, and that
+gap is the honest measure of capability.
+
+THE FIVE SILENTS, none fixed (fixing against a held-out set destroys it — heldout2's fate):
+- habits_per_session (2/3): the agent serves habits_per_active_user (a governed proxy) for the
+  ungoverned "per app SESSION" — an adjacent-concept substitution, a systematic gap.
+- seo_signups / paid_search_signups (1/3 each): the agent read the governed scalar, then
+  re-derived from a group_by breakdown and miscounted — the §72 hand-recount family, but through
+  query_metric rather than run_sql, so the governed-over-raw guard does not reach it.
+- signups_fell_q2 (1/3): premise detection flaked, answering the change instead of refusing the
+  false "fell" premise.
+
+PUBLICATION READING. The claim to publish is 0.036 silent on a fresh held-out set, not 0 — with the
+five modes named. That is a strong, honest result (a 96.4% no-confident-wrong rate on unseen
+questions, contested reasoning intact) and it is publication-HONEST in a way the heldout2 0 was
+not. The remaining work is real and now specified: close the query_metric-breakdown recount and the
+per-session substitution, then author heldout4 to re-measure — never iterate against heldout3.
