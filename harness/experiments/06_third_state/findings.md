@@ -3150,3 +3150,29 @@ instructable), and does not need to be: the harm is caught at the serve. The liv
 reproduce the detour this rep (the model served 62 directly, and the gate correctly stood down —
 no false positive); the gate's firing is held by the deterministic pin, not a live rep, by
 choice under the run-economy rule.
+
+## 73 · Silent: the graph's "computable" check overrode a refusal the author had already failed
+
+devices_per_user (1-in-3 rep): 'how many different devices does the average user sign in from?'
+Gold: refuse — platform is recorded per account, devices are not tracked. The graph classifier
+grounded 'different devices' onto activity__platform (a four-value enum) and called the measure
+COMPUTABLE; define_measure then COULD NOT author a valid spec; the model refused `uninstrumented`
+(a gold-accepted reason); and answerability_gate OVERRODE that refusal — "wrong reason, it is
+computable" — on the strength of the graph verdict, so the cap served a caveat'd non-answer.
+Confident-wrong on a refuse-gold question.
+
+THE FIX (architect's principle: verification-as-construction beats verification-as-check). The
+graph's "computable" is a prediction. define_measure actually trying and FAILING is construction.
+When define was attempted in the trace and never returned COMPUTED, the prediction is falsified —
+the author could not produce a spec — so `_answerability_refusal` no longer overrides the
+refusal, and does not even consult the graph. A failed construction leaves the refusal standing.
+The guard is narrow: a run with no define attempt, or a COMPUTED one (time_to_first), still lets
+the override correct a genuinely wrong `uninstrumented` reason. Two pins.
+
+The confident-wrong is eliminated (the row now refuses). A residual remains that is NOT a silent:
+the model sometimes refuses with reason `ungoverned_dimension_value`, which the gold does not list
+(it accepts no_governed_definition / uninstrumented), so the row can grade incorrect-on-reason
+while being a correct refusal. Whether the gold should accept that reason is a taxonomy call,
+flagged not fixed. Live probe: the row refuses (not silent); this rep computed a platform spec in
+r3 and refused on its own judgement, so the guard's firing is held by the pins, not reproduced
+live, under the run-economy rule.

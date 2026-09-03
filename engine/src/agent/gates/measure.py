@@ -291,6 +291,21 @@ def _answerability_refusal(run, exit_call, g):
         return None
     if str(RefuseArgs.of(exit_call.args).reason or "").strip() != "uninstrumented":
         return None
+    # VERIFICATION-AS-CONSTRUCTION BEATS THE GRAPH'S CHECK. If define_measure — the sanctioned
+    # authoring path — was ATTEMPTED and never returned COMPUTED, the graph's "computable" is a
+    # prediction the run already falsified: the author could not produce a valid spec. Overriding
+    # the refusal to "it's computable, go compute it" is then both futile and harmful — devices
+    # per user grounded 'device' onto activity__platform, the graph said computable, define could
+    # not author it, and this override turned a CORRECT uninstrumented refusal into a served
+    # caveat. A failed construction leaves the refusal standing.
+    define_tried = [str(s.get("result") or "") for s in run.steps
+                    if s.get("tool") == "define_measure" and not s.get("blocked_by")]
+    if define_tried and not any("COMPUTED (tier=" in r for r in define_tried):
+        run.acts.append(Act("answerability_gate", str(Position.REPAIR), "allowed",
+                             "refusal stands: define_measure was attempted and could not author "
+                             "a spec, which falsifies the graph's `computable` prediction "
+                             "(construction beats the check)").as_dict())
+        return None
     v = _classify.answerability_via_graph(run.model, run.question, run.grounding.ontology)
     if v["verdict"] != "computable":
         return None                       # the graph agrees it is not captured — refusal stands

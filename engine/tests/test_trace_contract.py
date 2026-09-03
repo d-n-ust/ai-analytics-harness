@@ -586,6 +586,50 @@ def test_a_legitimate_raw_computation_with_no_governed_answer_is_untouched():
     assert not any(rp.get("governed_over_raw") for rp in obj.repairs)
 
 
+def _refusal_gate_stub(steps, reason="uninstrumented"):
+    obj = _stub(steps, guardrails=NS(answerability_gate=True, graph_answerability=True))
+    obj.grounding = NS(semantic=NS(ontology_text=lambda: "x"), ontology="ONT",
+                       toolbox=NS(con=None, schema=None), rung=3,
+                       guardrails=obj.grounding.guardrails)
+    obj.question = "How many different devices does the average user sign in from?"
+    obj.model = None
+    return obj, NS(name="refuse", args={"reason": reason, "explanation": "no device id"})
+
+
+def test_a_failed_define_leaves_an_uninstrumented_refusal_standing(monkeypatch):
+    """Construction beats the check: 'different devices' grounded onto activity__platform, the
+    graph said computable, define COULD NOT author it, and the override turned a correct
+    uninstrumented refusal into a served caveat. A define that was tried and never COMPUTED
+    falsifies the graph's prediction — the refusal stands, and the graph is never even asked."""
+    import agent.gates.measure as gm
+
+    asked = {"n": 0}
+
+    def _graph(*a, **k):
+        asked["n"] += 1
+        return {"verdict": "computable", "measure": "devices per user", "basis": "platform"}
+
+    monkeypatch.setattr(gm._classify, "answerability_via_graph", _graph)
+    steps = [{"tool": "define_measure",
+              "result": "[r2] COULD NOT DEFINE — could not author a valid definition ..."}]
+    obj, exit_call = _refusal_gate_stub(steps)
+    assert gm._answerability_refusal(obj, exit_call, obj.grounding.guardrails) is None
+    assert asked["n"] == 0                       # the graph prediction is not even consulted
+    assert any("construction beats the check" in a["detail"] for a in obj.acts)
+
+
+def test_a_computable_define_still_lets_the_override_correct_the_reason(monkeypatch):
+    """The guard is narrow: only a FAILED define blocks the override. A run with no define
+    attempt (or a COMPUTED one) still lets the graph correct a wrong uninstrumented reason."""
+    import agent.gates.measure as gm
+
+    monkeypatch.setattr(gm._classify, "answerability_via_graph",
+                        lambda *a, **k: {"verdict": "computable", "measure": "m", "basis": "b"})
+    obj, exit_call = _refusal_gate_stub([])       # no define attempted
+    r = gm._answerability_refusal(obj, exit_call, obj.grounding.guardrails)
+    assert r is not None and r.is_error and "no_governed_definition" in r.content
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc
