@@ -412,9 +412,33 @@ def _request_chose(run, missing) -> bool:
     """
     if run._scope_verdict is None:
         metric, rival = missing[0][0], missing[0][1]
+        # THE CHOSE LICENSE (tier 4, scope_chose): only a QUALIFIER SPAN of the scope record can
+        # license a chose verdict — those are the question's choosing words by construction. With
+        # a record and no qualifier spans, nothing in the question could have chosen: verdict
+        # decided without a judge call, and the flake surface (a quote naming the measure,
+        # 'marketing for each person', which no other guard catches) disappears with it. A
+        # reader that missed a qualifier forces disclosure — widening, the cheap direction.
+        rec = getattr(run, "scope_shadow", None)
+        licensed = (getattr(run.grounding.guardrails, "scope_chose", False)
+                    and isinstance(rec, dict) and not rec.get("error"))
+        if licensed and not rec.get("qualifiers"):
+            run._scope_verdict = (False, "", "no qualifier spans (scope record)")
+            run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
+                                 "chose denied without a judge call: the scope record carries "
+                                 "no qualifier spans, so nothing in the question could have "
+                                 "chosen a reading").as_dict())
+            return False
         chose, which, quote = _classify.question_chose_scope(
             run.model, run.question, metric, run._describe(metric),
             rival.name, run._describe(rival.name), rival.discriminator)
+        if licensed and chose:
+            spans = [" ".join(str(s).lower().split()) for s in rec["qualifiers"]]
+            q = " ".join(str(quote).lower().split())
+            if not any(q in s or s in q for s in spans):
+                run.acts.append(Act("scope_classifier", str(Position.REPAIR), "applied",
+                                     f"chose overridden: quote {quote!r} lies outside every "
+                                     f"qualifier span {rec['qualifiers']!r}").as_dict())
+                chose, which, quote = False, "", f"unlicensed quote {quote!r}"
         # Mechanical off-axis guard: a `chose` whose quote is a segment value on a DIFFERENT axis
         # than the discriminator narrows WHICH rows are counted, not WHICH definition counts them.
         # "organic acquisition" resolves nothing about is_internal, and the model cannot be talked

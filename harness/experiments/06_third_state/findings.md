@@ -2870,3 +2870,136 @@ Not switched: segments, period, and the scope_classifier's chose remain live-sta
 candidate is chose (the record-side fix is architectural: no chose without the candidate pair in
 view). Promotion of scope_shadow+scope_premise into current_best awaits a rep-3 A/B, which is its
 own run.
+
+## 66 · The plan of record, and the chose license
+
+Tier 4 got its standing design document (scope_artifact.md): the record's invariants, the
+three-step migration pattern per field (SHADOW -> GUARD/OR -> REPLACE, each step eval-gated),
+and the field ledger mapping every question-reading judge to the record field that will own it.
+Two rules the pattern enforces: behaviour changes only where the live judge was shown wrong, and
+every change widens (more disclosure, earlier refusal), never narrows.
+
+THE CHOSE LICENSE (`scope_chose`), the second guard. The §65 evidence: spend-per-signup served
+one reading undisclosed because the chose judge quoted 'marketing for each person' — the measure
+phrase, which neither the name-only nor the off-axis guard catches. The guard: only a QUALIFIER
+SPAN of the record can license a chose verdict. With a record and no qualifier spans the verdict
+is decided False without a judge call — the flake surface removed, not patched — and a chose
+whose quote lies outside every span is overridden to disclosure, with an act naming the rejected
+quote. Rejected alternative: re-prompting the judge on qualifier spans only (new surface, new
+tuning loop, same constraint the membership check enforces mechanically). Fallback: without a
+record the live path is byte-identical. Four pins, including judge-must-not-be-called.
+
+Probes. Target family rep-3: 3/3 correct, chose denied deterministically each rep, both readings
+disclosed — the class is closed. Controls 4/4 correct, with one honest observation: the
+stated-chose SURVIVAL path did not show live (the reader missed the 'Including the internal
+partnerships...' span in one rep — run-to-run reader variance on the qualifier field — and the
+live judge itself declined in the other); both reps still graded correct because denial forces
+both-figures disclosure, the widening contract doing its job. Survival is pinned in unit.
+
+The switched cell's first full board (rep-1, current_best+scope_shadow+scope_premise+scope_chose):
+43/46, silent 0.0, balanced 0.9804, every contested disclosed — against the same day's baseline
+41/46 / 0.9608. Rep-1 is a signal, not the promotion evidence; the rep-3 A/B against current_best
+is the gate, and it is the next run.
+
+## 67 · The segment that could not bind, and the promotion A/B
+
+Proceeding down the ledger surfaced a defect class the scope work was pointed at all along, and
+closed it at three layers.
+
+THE EVIDENCE. 'How many people from Germany signed up in the first half of 2026?' (gold 294 via
+the user table's country column). The signups model carries signup_date, is_internal, channel,
+region — no country; the member license correctly maps 'Germany' to activity__country='DE', and
+new_signups cannot reach that dimension. The old flow: check_answerability said GOVERNED at the
+measure level, told the model to "apply any segment as a filter", and the model dead-ended on
+binder errors (three of them passing null filter values) before serving prose with no figure.
+
+THE THREE LAYERS, allocation-law-shaped (code owns structure, the model carries language):
+
+1. Tool boundary: a null-valued filter bounces with instruction ("a filter needs a value; for a
+   time window use `period`") instead of compiling to WHERE dim = None — and instead of being
+   silently dropped, which would serve a whole-history figure as the period's.
+2. The verdict: check_answerability now checks BINDABILITY (engine.allowed_filters — the
+   metric's queryable dimensions, deterministic) after licensing. A licensed-but-unbindable
+   segment returns GOVERNED, SEGMENT UNBINDABLE with the mapping riding IN the suggested call
+   (define_measure authors in a fresh context and never sees the verdict; without the mapping in
+   the measure text the author folded 'Germany' into user__region and burned its tries).
+3. The executor: two typed bounces where "returned nothing" used to send the author hunting for
+   the wrong defect — dimension REACHABILITY (metric cannot join the filter's dimension ->
+   "author kind='raw' SQL; the graph joins the data") and MEMBER VALIDITY ('Germany' is not a
+   member of user__region; the members are named).
+
+Probes: strict cell now refuses cleanly (typed, cited) where it produced prose; the transparent
+cell computes 294 exactly via authored raw SQL in both reps, serving it in one — the other rep
+held 294 and refused after a self-invented "governance-compliant" re-define failed, a
+model-choice flake in the safe direction, now a watched family. Segment controls (referral,
+Philippines — dimensions the metrics CAN reach) unchanged and correct.
+
+THE PROMOTION A/B (rep-3, both arms on frozen code). Arm A (current_best) 130/138, 0 silent;
+arm B (+scope_shadow+scope_premise+scope_chose) 125/138, 1 silent. On the numbers, promotion is
+DECLINED. The causal analysis says the numbers measure noise, not the flags: the five-row gap
+decomposes into germany second-guessing (2 — define COMPUTED 294 and the model refused anyway,
+both arms capable of it), the over-rigid qualifier family (2 net — the model refuses free-text
+exclusions on its own doctrine, no gate involved), the julianday dialect burn (2), instagram
+clarify-vs-refuse (1), and the reminder cap-caveat proxy (1 — the board's one 'silent', which is
+the cap SERVING WITH the mechanism caveat after two grounded_measure hand-backs: disclosed to the
+reader, counted silent by the metric; a scoring-vs-policy tension now on the record).
+
+The attribution that settles it: arm B logged 30 scope-act firings — 28 chose denials, 2 premise
+OR-gate catches — and EVERY row carrying one graded correct; ZERO scope acts appear in any
+flipped row. The premise OR-gate fired live on h2_c_habits_change_mar_apr in two reps (the record
+witnessing a direction claim the live judge missed), both correct — the live proof §66 lacked.
+Promotion stays parked per the eval-gate rule; the next promotion case will be built from
+targeted paired-family probes, not another full A/B — full suites are now reserved for explicit
+certification (run-economy directive, recorded).
+
+THE DIALECT FIX, evidenced at last. The A/B's time_to_first rows showed the author writing
+SQLite's julianday() four times against an error naming it each time — a bare Catalog Error reads
+as 'fix the definition', not 'wrong dialect'. The ephemeral error now names the dialect and the
+replacement (date_diff / date subtraction). Probe: define COMPUTES first-call in both reps and
+strict refuses with the correct no_governed_definition (was reason `other`, graded wrong).
+
+Noted for the queue, not fixed: the segment-unbindable class resolves GOVERNED at measure level,
+so the strict cell's computable-refusal never engages and a define-raw answer can serve under
+strict (germany arm A, correct at 294 with a cap caveat). Whether strict should route
+segment-unbindable to the computable policy is a design call, not a bug fix.
+
+## 68 · Promotion by paired evidence, and the ledger's next two steps taken
+
+The run-economy discipline got its first full application: every decision in this section was
+made from targeted probes and the A/B data already paid for — no new full-suite run.
+
+THE SCOPE TRIO PROMOTED. The paired comparison on the thirteen questions where the record acts —
+extracted from the existing rep-3 A/B at zero cost — came back 39/39 vs 39/39, identical and
+silent-free, with arm B deciding 28 chose verdicts deterministically (no judge call) and the
+premise OR-gate catching two live. Combined with §67's attribution (zero scope acts in any
+flipped row), that is the promotion case: scope_shadow+scope_premise+scope_chose entered
+current_best. Promotion smoke (four questions, one per touched surface): 4/4 rows correct,
+records on every row.
+
+STEP 2, THE COMPUTED-REFUSAL GATE. Three A/B rows shared one shape: define_measure returned
+COMPUTED with the correct value and the model refused anyway with an invented reason
+(dimension_not_supported, segment_undefined, other). New VERIFY gate `computed_refusal`: a
+refusal whose reason is not a policy, while the run holds a COMPUTED answer, is handed back once
+— serve the figure with its definition, or name the policy (`no_governed_definition` under
+strict; coverage and premise reasons override a computation and stand). Four pins including
+policy-reasons-stand. The live trigger shape did not occur in eight probe reps — the gate is
+insurance, like the premise OR, and its mechanism is held by the pins.
+
+STEP 3, SEGMENTS AT ENTRY. `entry_mappings` (gates/segments.py): the record's segment spans
+licensed against the layer's vocabulary at question entry — deterministic, zero model calls —
+and appended to the question MESSAGE (run.question stays pristine for the quote verifiers).
+'from Germany' arrives as activity__country 'DE'; 'Instagram ads' arrives as matching no
+governed member. Probes: instagram 2/2 one-call refusals (a family that cost an A/B point,
+closed at the entry), philippines and referral clean, germany unchanged — its residual is the
+define author staying on kind='metric' through the reachability bounce (~1 in 2), now a named
+watch item rather than a mystery.
+
+THE SECOND PAIRED PROBE, THE SECOND PROMOTION. Five flip families, both arms, rep-2: the new
+pair (computed_refusal+scope_segments) 8/10 against current_best 6/10, zero silent, no family
+behind — and the probe doubles as the promotion smoke, since its arm B is exactly the promoted
+cell. Both flags entered current_best.
+
+The standard cell now reads the question once into the record, backstops the premise judge,
+licenses chose verdicts by qualifier spans, hands governed mappings over at entry, and refuses
+only for reasons that are policies. Remaining on the ledger: period and measure still shadow-only,
+the REPLACE stage untouched, and the germany author-stubbornness watch item.

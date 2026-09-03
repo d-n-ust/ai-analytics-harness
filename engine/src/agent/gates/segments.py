@@ -256,3 +256,37 @@ def _segment_value(run, served, dim, value):
         if isinstance(v, (int, float)) and not isinstance(v, bool):
             return round(v, 4)
     return None
+
+
+# --- `scope_segments`: the record's segment spans licensed at question entry (tier 4) ---------- #
+def entry_mappings(record, semantic) -> str:
+    """Governed mapping notes for the scope record's segment spans, built deterministically at
+    question entry — zero model calls, `core.members.licenses` over the layer's own vocabulary.
+
+    The Germany traces showed the run REDISCOVERING mid-flight what the license already knew,
+    burning three to five calls on wrong dimensions and null filters before check_answerability
+    finally named the mapping. Handing the mapping over with the question removes that discovery
+    loop; the notes are appended to the question MESSAGE only (run.question stays pristine — the
+    premise and chose quote verifiers read the original words). Empty when there is nothing to
+    say: no record, no segments, or a layer without a vocabulary."""
+    spans = (record or {}).get("segments") or ()
+    if not spans or not hasattr(semantic, "segment_vocabulary"):
+        return ""
+    from ..core.members import licenses as _licenses
+    vocab = semantic.segment_vocabulary()
+    descs = (semantic.dimension_descriptions()
+             if hasattr(semantic, "dimension_descriptions") else {})
+    lines = []
+    for span in spans:
+        hits = []
+        for dim, members in vocab.items():
+            for m in _licenses(span, list(members), descs.get(dim, ""), dim):
+                hits.append((dim, m))
+        if not hits:
+            lines.append(f"'{span}' matches no governed member of any dimension")
+        elif len(hits) == 1:
+            lines.append(f"'{span}' = {hits[0][0]} {hits[0][1]!r} (licensed by the governed text)")
+        else:
+            opts = "; ".join(f"{d} {m!r}" for d, m in hits)
+            lines.append(f"'{span}' can mean: {opts} — say which, or give each")
+    return "\n\n[governed mappings] " + " | ".join(lines)

@@ -124,6 +124,41 @@ def _check_answerability(tb, args) -> ToolResult:
                         f"{', '.join(vocab[dim])}). Do NOT fold it into a different value — it "
                         f"is not in the data. `refuse` with reason `ungoverned_dimension_value`.",
                         evidence=resolution)
+                # THE BINDABILITY CHECK. A licensed segment can still be unbindable on the
+                # mapped metric — 'from Germany' licenses activity__country='DE', and new_signups
+                # (the user-grain model: signup_date, is_internal, channel, region) cannot filter
+                # by it. The old note said "apply it as a filter"; the model obeyed, dead-ended
+                # on binder errors, and served prose with no figure. The metric's queryable
+                # dimensions are deterministic (allowed_filters), so the verdict routes honestly:
+                # the measure is governed, this segment ON IT is not — author the computation.
+                bindable = True
+                if len(lic) == 1 and hasattr(tb.semantic, "allowed_filters"):
+                    metric_name = str(v.get("governed_metric") or "")
+                    metric_name = metric_name[len("metric."):] if metric_name.startswith("metric.") else metric_name
+                    try:
+                        bindable = dim in tb.semantic.allowed_filters(metric_name)
+                    except Exception:                                   # noqa: BLE001
+                        bindable = True                                 # unknown -> do not block
+                if not bindable:
+                    # The mapping rides IN the suggested call: define_measure authors in a fresh
+                    # context and never sees this verdict, so a route without the license made
+                    # the author re-guess the segment (it folded 'Germany' into user__region and
+                    # burned its tries on empty results). Code owns the mapping; the model only
+                    # carries it.
+                    mapped = f"{measure} [{phrase} = {dim.split('__')[-1]} {lic[0]!r}]"
+                    route = (f"Call define_measure(measure={mapped!r}) to author the "
+                             f"computation — the graph captures the data even though the "
+                             f"metric cannot filter by it."
+                             if getattr(tb.g, "spec_authoring", False)
+                             and getattr(tb, "model", None) is not None else
+                             f"There is no governed way to bind it; `refuse` with reason "
+                             f"`no_governed_definition`.")
+                    return ToolResult(
+                        f"GOVERNED, SEGMENT UNBINDABLE — the measure maps to "
+                        f"`{v['governed_metric']}`, and {phrase!r} licenses {dim}={lic[0]!r}, "
+                        f"but that metric CANNOT be filtered by {dim} (its queryable "
+                        f"dimensions do not include it). Do NOT apply a different dimension's "
+                        f"filter as a stand-in. {route}", evidence=resolution)
                 if len(lic) > 1:
                     note = (f"\nSEGMENT NOTE: {phrase!r} can mean {', '.join(lic)} — give the "
                             f"figure for each, or `clarify` which was meant.")

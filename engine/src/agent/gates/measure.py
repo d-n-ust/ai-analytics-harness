@@ -280,3 +280,38 @@ def _answerability_refusal(run, exit_call, g):
         f"{measure} can be computed from {basis}; it has no GOVERNED metric, but the warehouse "
         f"does capture it. `refuse` with reason `no_governed_definition`, not `uninstrumented`.",
         is_error=True)
+
+
+# A refusal's reason must be a POLICY when the run holds a computed answer. Three A/B rows
+# followed one shape: define_measure returned COMPUTED with the correct value (294 for the
+# Germany cohort, twice) and the model then refused with an invented reason
+# (`dimension_not_supported`, `segment_undefined`, `other`) — the answer existed and was
+# discarded. The legitimate refusals keep their standing: `no_governed_definition` IS the strict
+# policy for a computed figure, and coverage/premise reasons override a computation. Everything
+# else is handed back ONCE: serve what you computed (stating its definition), or name the policy.
+_REFUSAL_POLICIES = {"uninstrumented", "out_of_coverage", "false_premise",
+                     "no_governed_definition"}
+
+
+def computed_refusal(run, exit_call):
+    g = run.grounding.guardrails
+    if not getattr(g, "computed_refusal", False) or exit_call.name != "refuse":
+        return None
+    reason = str(RefuseArgs.of(exit_call.args).reason or "").strip()
+    if reason in _REFUSAL_POLICIES:
+        return None
+    held = next((str(s.get("result") or "") for s in run.steps
+                 if s.get("tool") == "define_measure" and not s.get("blocked_by")
+                 and "COMPUTED (tier=" in str(s.get("result") or "")), None)
+    if held is None:
+        return None
+    defn = held.split("DEFINITION:", 1)[-1].strip()[:220]
+    run.repairs.append({"computed_refusal": {"reason": reason}})
+    run.acts.append(Act("computed_refusal", str(Position.REPAIR), "handed back",
+                         f"refused {reason!r} while holding a COMPUTED answer; "
+                         f"correction {run.hand_backs} of 2").as_dict())
+    return ToolResult(
+        f"Your refusal was not accepted: this run COMPUTED the answer (define_measure returned "
+        f"COMPUTED — {defn}). {reason!r} is not a policy. Either serve that figure, stating the "
+        f"definition it was computed by, or `refuse` with reason `no_governed_definition` if "
+        f"strict governance forbids serving a computed figure.", is_error=True)

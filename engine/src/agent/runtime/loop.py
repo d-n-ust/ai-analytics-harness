@@ -578,7 +578,12 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     # not of anything the run went on to do.
     if getattr(grounding.toolbox.g, "scope_shadow", False):
         run.scope_shadow = _classify.read_scope(model, question)
-    convo = Conversation.opening(grounding.system, question)
+    # scope_segments: the record's spans licensed at entry (gates/segments.entry_mappings). The
+    # notes ride the MESSAGE, not run.question — quote verifiers read the original words.
+    opening_text = question
+    if getattr(grounding.toolbox.g, "scope_segments", False) and run.scope_shadow:
+        opening_text += _g_segments.entry_mappings(run.scope_shadow, grounding.semantic)
+    convo = Conversation.opening(grounding.system, opening_text)
 
     def done(answer: Answer) -> Answer:
         """Attach what the model was actually shown, on every exit path.

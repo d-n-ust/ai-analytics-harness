@@ -268,6 +268,118 @@ def test_the_scope_record_witnesses_a_premise_the_live_judge_missed(monkeypatch)
     assert gc.presupposition(off)["type"] == "none" and off.acts == []
 
 
+def _chose_stub(flag, qualifiers, monkeypatch, judge):
+    import agent.gates.disclosure as gd
+
+    obj = _stub()
+    obj.grounding = NS(semantic=None, guardrails=NS(scope_chose=flag, scope_classifier=True))
+    obj.model = None
+    obj.question = "What did it cost us in marketing for each person who signed up in Q1?"
+    obj._scope_verdict = None
+    obj.acts = []
+    obj.scope_shadow = {"qualifiers": qualifiers}
+    obj._describe = lambda m: ""
+    monkeypatch.setattr(gd._classify, "question_chose_scope", judge)
+    rival = NS(name="acquisition_spend", discriminator="channel <> 'partnerships'")
+    return obj, gd, [("marketing_spend", rival, {"v": 1.0}, {"v": 2.0}, {"v": 1.0})]
+
+
+def test_no_qualifier_spans_means_no_chose_and_no_judge_call(monkeypatch):
+    """The chose license (tier 4): with a scope record and no qualifier spans, nothing in the
+    question could have chosen a reading — the verdict is decided without a judge call, which is
+    the spend-per-signup flake surface ('marketing for each person' licensed a silent single
+    reading) removed rather than guarded."""
+    def _forbidden(*a, **k):
+        raise AssertionError("the judge must not be called when no span could license a chose")
+
+    obj, gd, missing = _chose_stub(True, [], monkeypatch, _forbidden)
+    assert gd._request_chose(obj, missing) is False
+    assert any("no qualifier spans" in a["detail"] for a in obj.acts)
+
+
+def test_a_chose_quote_outside_every_qualifier_span_is_overridden(monkeypatch):
+    obj, gd, missing = _chose_stub(
+        True, ["including the partnerships integration"], monkeypatch,
+        lambda *a, **k: (True, "marketing_spend", "marketing for each person"))
+    assert gd._request_chose(obj, missing) is False
+    assert any("outside every qualifier span" in a["detail"] for a in obj.acts)
+
+
+def test_a_chose_quote_inside_a_qualifier_span_stands(monkeypatch):
+    obj, gd, missing = _chose_stub(
+        True, ["including the partnerships integration"], monkeypatch,
+        lambda *a, **k: (True, "marketing_spend", "including the partnerships integration"))
+    assert gd._request_chose(obj, missing) is True
+    assert obj._scope_verdict[1] == "marketing_spend"
+
+
+def test_the_chose_license_is_dead_without_its_flag(monkeypatch):
+    """Off means off — the shadow cell's observational contract, and byte-identical live
+    behaviour for every stored row from before the flag existed."""
+    obj, gd, missing = _chose_stub(
+        False, [], monkeypatch,
+        lambda *a, **k: (True, "marketing_spend", "marketing for each person"))
+    assert gd._request_chose(obj, missing) is True
+
+
+def _refusal_stub(flag, reason, held):
+    import agent.gates.measure as gm
+
+    obj = _stub()
+    obj.grounding = NS(semantic=None, guardrails=NS(computed_refusal=flag))
+    obj.steps = ([{"tool": "define_measure", "result":
+                   "[r2] COMPUTED (tier=raw). ...\nvalue = 294\nDEFINITION: count of DE signups"}]
+                 if held else [])
+    obj.repairs, obj.acts = [], []
+    exit_call = NS(name="refuse", args={"reason": reason, "explanation": "x"})
+    return obj, gm, exit_call
+
+
+def test_a_junk_reason_refusal_over_a_computed_answer_is_handed_back():
+    """Three A/B rows: define COMPUTED the correct value and the model refused with an invented
+    reason (dimension_not_supported / segment_undefined / other) — the answer existed and was
+    discarded. One bounded hand-back: serve it, or name the policy."""
+    obj, gm, exit_call = _refusal_stub(True, "dimension_not_supported", held=True)
+    r = gm.computed_refusal(obj, exit_call)
+    assert r is not None and r.is_error and "COMPUTED" in r.content
+    assert any(a["guardrail"] == "computed_refusal" for a in obj.acts)
+
+
+def test_a_policy_reason_refusal_stands_even_over_a_computed_answer():
+    """no_governed_definition IS the strict policy for a computed figure; coverage and premise
+    reasons override a computation. The gate polices junk reasons, never policies."""
+    obj, gm, exit_call = _refusal_stub(True, "no_governed_definition", held=True)
+    assert gm.computed_refusal(obj, exit_call) is None
+
+
+def test_no_computed_answer_means_no_computed_refusal_check():
+    obj, gm, exit_call = _refusal_stub(True, "dimension_not_supported", held=False)
+    assert gm.computed_refusal(obj, exit_call) is None
+
+
+def test_computed_refusal_is_dead_without_its_flag():
+    obj, gm, exit_call = _refusal_stub(False, "dimension_not_supported", held=True)
+    assert gm.computed_refusal(obj, exit_call) is None
+
+
+def test_entry_mappings_license_the_records_spans_deterministically():
+    """scope_segments: the record's segment spans licensed at question entry, zero model calls.
+    'from Germany' rides the description synonym ('DE (Germany)'); an unlicensed span is said to
+    match nothing rather than dropped — the agent decides what that means, with the fact in hand."""
+    import agent.gates.segments as gs
+
+    sem = NS(segment_vocabulary=lambda: {"activity__country": ("US", "DE", "FR")},
+             dimension_descriptions=lambda: {
+                 "activity__country": "The account country, as an ISO code: US (the United "
+                                      "States); DE (Germany); FR (France)."})
+    notes = gs.entry_mappings({"segments": ["from Germany"]}, sem)
+    assert "activity__country" in notes and "'DE'" in notes
+    none = gs.entry_mappings({"segments": ["on Instagram ads"]}, sem)
+    assert "no governed member" in none
+    assert gs.entry_mappings({"segments": []}, sem) == ""
+    assert gs.entry_mappings(None, sem) == ""
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

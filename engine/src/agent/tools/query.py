@@ -156,6 +156,15 @@ def _query_metric(tb, args) -> ToolResult:
     """The governed data path: compile the metric to SQL, run it, return the rows plus the typed
     measure values the AFTER guardrails read. The SQL travels with the result so DISCLOSURE can
     show what actually ran; whether it is shown is not this function's business."""
+    # A null-valued filter is a malformed constraint, not an absent one. Passing it through
+    # compiled to WHERE dim = None (a Binder Error, three times in one live run); silently
+    # dropping it would be worse — {"user__signup_date": null} usually MEANS a time window, and
+    # a dropped window is a whole-history figure served as the period's. Bounce with the fix.
+    nulls = [d for d, v in (args.get("filters") or {}).items() if v is None]
+    if nulls:
+        return ToolResult(
+            f"filters carry null for {', '.join(nulls)} — a filter needs a value. For a time "
+            f"window use `period` (or `start`/`end`); otherwise omit the key.", is_error=True)
     sql, cols, rows = tb.semantic.query_with_sql(
         args["metric"], group_by=args.get("group_by"), filters=args.get("filters"),
         time_grain=args.get("time_grain"), start=args.get("start"), end=args.get("end"),

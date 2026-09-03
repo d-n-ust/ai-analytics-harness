@@ -60,6 +60,38 @@ def run_ephemeral(spec, engine) -> Result:
     from ..guardrails import before
 
     if spec.kind == "metric":
+        # Dimension REACHABILITY is checked before members: a metric spec filtering on a
+        # dimension the metric cannot join to (country on new_signups) executed to an engine
+        # resolution failure surfaced as "returned nothing", and the author re-guessed members
+        # instead of switching kinds. The typed bounce names the defect and the raw route —
+        # the same bindability fact check_answerability routes on, enforced where specs run.
+        if spec.filters and hasattr(engine, "allowed_filters"):
+            try:
+                allowed = engine.allowed_filters(spec.metric)
+            except Exception:                                           # noqa: BLE001
+                allowed = None
+            if allowed:
+                leaves = {a.split("__")[-1].lower() for a in allowed}
+                bad = [d for d, _ in spec.filters
+                       if d not in allowed and str(d).split("__")[-1].lower() not in leaves]
+                if bad:
+                    return Result(value=None, error=(
+                        f"metric {spec.metric!r} cannot be filtered by {', '.join(bad)} — its "
+                        f"queryable dimensions are {', '.join(sorted(allowed))}. The graph still "
+                        f"captures the data: author kind='raw' SQL that joins it instead"))
+        # Filter values are validated against the layer's member vocabulary BEFORE running: an
+        # invented member ('Germany' on user__region, whose members are Americas/EMEA/APAC)
+        # otherwise executes to an empty result, and "returned nothing" sends the author hunting
+        # for the wrong defect. The typed bounce names the members and the raw route.
+        vocab = engine.segment_vocabulary() if hasattr(engine, "segment_vocabulary") else {}
+        leaves = {d.split("__")[-1].lower(): v for d, v in vocab.items()}
+        for d, val in spec.filters:
+            members = vocab.get(d) or leaves.get(str(d).split("__")[-1].lower()) or ()
+            if members and str(val) not in members:
+                return Result(value=None, error=(
+                    f"{val!r} is not a member of {d} (members: {', '.join(members)}) — map the "
+                    f"segment to a governed member, or author kind='raw' SQL if no governed "
+                    f"dimension expresses it"))
         args = {"filters": dict(spec.filters) or None, "period": spec.period or None}
         try:
             keyed = before.value_of(engine, args, spec.metric)
@@ -103,7 +135,18 @@ def run_ephemeral(spec, engine) -> Result:
             cols, rows = run_query(engine.con, spec.sql, schema=getattr(engine, "schema", None))
             cols, rows = tuple(cols), tuple(rows)
         except Exception as exc:                                            # noqa: BLE001
-            return Result(value=None, error=f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}")
+            msg = f"{type(exc).__name__}: {str(exc).splitlines()[0][:160]}"
+            # The dialect hint. The author wrote SQLite's julianday() four times in one run
+            # against an error that named it each time — a bare Catalog Error reads as "fix the
+            # definition", not "wrong dialect", so the author re-guessed the definition. Name
+            # the dialect and the replacement; the loop's feedback is only as good as its words.
+            low = msg.lower()
+            if "julianday" in low:
+                msg += (" — the warehouse is DuckDB, which has no julianday(): use "
+                        "date_diff('day', a, b) or (CAST(b AS DATE) - CAST(a AS DATE))")
+            elif "catalog error" in low and "function" in low:
+                msg += " — the warehouse is DuckDB; use DuckDB's SQL functions"
+            return Result(value=None, error=msg)
         # A single-cell result is a scalar; anything wider/taller is a grouped result the caller reads.
         val = rows[0][0] if len(rows) == 1 and len(cols) == 1 and isinstance(
             rows[0][0], (int, float)) and not isinstance(rows[0][0], bool) else None

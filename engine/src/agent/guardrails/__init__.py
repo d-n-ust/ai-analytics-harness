@@ -393,11 +393,26 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "breakdown, qualifiers, presupposition) and publishes it on the row — shadow phase "
               "of tier 4: gates nothing, measured for per-field agreement with the live stack",
               ("guardrails/classify.py", "runtime/loop.py"), in_ladder=False),
+    Guardrail("computed_refusal", Position.REPAIR,
+              "hands back a refusal whose reason is not a policy while the run holds a COMPUTED "
+              "define_measure answer — serve the computed figure with its definition, or name "
+              "the policy (no_governed_definition under strict)",
+              ("gates/measure.py",), in_ladder=False),
     Guardrail("scope_premise", Position.BEFORE,
               "lets the shadow Scope record witness a presupposition the live premise judge "
               "missed (an OR-gate over two quote-verified readings) — tier 4's first gate switch, "
               "meaningful only with scope_shadow on",
               ("gates/contract.py",), in_ladder=False),
+    Guardrail("scope_chose", Position.REPAIR,
+              "licenses a chose verdict by the scope record's qualifier spans — no spans means "
+              "no judge call, and a chose quote outside every span is overridden to disclosure; "
+              "meaningful only with scope_shadow on",
+              ("gates/disclosure.py",), in_ladder=False),
+    Guardrail("scope_segments", Position.BEFORE,
+              "appends deterministic governed-mapping notes for the scope record's segment spans "
+              "to the question message (core.members.licenses at entry, zero model calls) — the "
+              "run stops rediscovering mid-flight what the license already knew",
+              ("gates/segments.py", "runtime/loop.py"), in_ladder=False),
     Guardrail("scope_classifier", Position.REPAIR,
               "asks a focused model call whether the request itself already chose between the two "
               "definitions, and stands the disclosure check down when it did",
@@ -466,7 +481,10 @@ class GuardrailSet:
     filter_vocabulary: bool = False
     disclosure_check: bool = False
     scope_shadow: bool = False
+    computed_refusal: bool = False
     scope_premise: bool = False
+    scope_chose: bool = False
+    scope_segments: bool = False
     scope_classifier: bool = False
     constraint_regression: bool = False
 
@@ -527,11 +545,21 @@ NAMED_CELLS = {
     # cell's STRICT policy the exit gate still refuses computables, so on the standard suite the
     # capability is availability, not a policy flip — its measured value lives in the transparent
     # arm (§60-61), and promotion (spec -> PR) remains its own experiment.
+    # The scope trio joined on the §67 paired evidence: 39/39 vs 39/39 on every question where
+    # the record acts (identical, zero silent), zero scope acts in any A/B-flipped row, the
+    # premise OR-gate catching live what the live judge missed, and 28 chose-judge calls decided
+    # deterministically. The record costs one call per question and retires the chose call where
+    # no qualifier span exists.
     "current_best": (
         "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary"
         "+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate"
         "+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure"
-        "+spec_authoring"),
+        "+spec_authoring+scope_shadow+scope_premise+scope_chose"
+        # computed_refusal and scope_segments joined on the §68 paired probe (five flip families,
+        # both arms, rep-2): 8/10 vs 6/10, zero silent, no family behind. scope_segments closed
+        # the instagram entry (deterministic zero-license note, one-call refusals); the
+        # computed_refusal trigger shape is rare and stands as pinned insurance.
+        "+computed_refusal+scope_segments"),
 }
 
 
