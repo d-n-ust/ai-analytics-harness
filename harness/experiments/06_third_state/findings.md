@@ -3366,3 +3366,42 @@ pins, their NON-misfire by the live boundary runs.
 MODE 3 (the premise flake) is NOT fixed — a stochastic single-judge recall miss, not a missing
 check; the honest floor. The real proof of Modes 1 & 2 is a fresh heldout4, authored blind and run
 once — never a re-run of heldout3. Engine 134 + harness 121 tests green.
+
+## 79 · heldout4: Modes 1 & 2 measured on fresh data — silent 0.036 → 0.014
+
+heldout4 is a second held-out suite authored to measure whether the §78 guard generalisations move
+the held-out silent rate: 46 questions, heldout2's exact tier distribution, FRESH slices (October
+2025, January 2026, Brazil/India/APAC, months and segments neither heldout2 nor heldout3 used),
+oracles proven AND — the heldout3 lesson — CROSS-CHECKED against the governed mart before authoring
+(every _source gold asserted equal to its wh_06 value; the channel-normalisation bug that
+contaminated heldout3's first run is now impossible by construction). Run ONCE, rep-3. heldout3 was
+never re-run.
+
+THE NUMBER: correct 125/138, coverage 0.9216, balanced 0.959, SILENT 0.0145 (2) — against
+heldout3's 0.0362 (5). Pile A (answerable) 47/51 with ZERO wrong numbers; contested 42/42;
+coverage 6/6.
+
+THE CAUSAL EVIDENCE, not just the rate. The two generalised guards FIRED on fresh held-out
+questions and caught their target classes:
+- Mode 1 (governed_scalar_binding) fired on h4_a_referral_signups_oct — a channel-signup recount
+  that would have been a silent, caught by the scope-match invariant.
+- Mode 2 (ungrounded_unit) fired on h4_b_opens_per_session (2/3 reps); both per-unit targets
+  (opens per session, devices per account) refused 3/3. The per-session/per-device substitution
+  class is closed on unseen questions.
+
+THE RESIDUAL is entirely Mode 3. Both remaining silents are h4_b_habits_fell_june (2/3) — a false
+"fell" premise the agent answered instead of refusing, the stochastic single-judge miss §78 named
+as the floor and did NOT fix. The other two premise questions were handled correctly 3/3. So on a
+fresh held-out set, the confident-wrong rate is 1.4%, and 100% of it is the one acknowledged
+stochastic mode — none of it is Mode 1 or Mode 2.
+
+HONEST CAVEAT. heldout4 is a DIFFERENT suite from heldout3 (fresh items), so this is a
+same-protocol rate comparison, not a controlled A/B on identical questions — a suite can be
+marginally easier or harder. What makes the causal claim solid beyond the rate is the direct
+firing: the guards demonstrably caught Mode-1 and Mode-2 instances that fresh data produced, and
+zero silents of those classes survived.
+
+PUBLICATION READING. The number to publish is 0.014 silent on a fresh held-out set, with the single
+residual mode named (premise recall). Closing Mode 3 (a second premise witness, or self-consistency
+on the direction read) and one more fresh suite would be the path to a defensible sub-0.01 claim;
+the generator + prover + cross-check are tracked so heldout5 is a re-run away.

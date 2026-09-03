@@ -1,0 +1,516 @@
+# HELD-OUT SUITE 4 — authored 2026-09-03 to measure whether Modes 1 & 2 (findings §78) move the
+# heldout3 silent rate. Same §17 protocol, heldout2's exact tier distribution, FRESH slices (months
+# and segments neither heldout2 nor heldout3 used), oracles proven AND cross-checked against the
+# governed mart before authoring (the heldout3 channel-normalisation bug, now caught by construction).
+# Run ONCE, blind. heldout3 is never re-run.
+cases:
+- id: h4_a_referral_signups_oct
+  tier: answerable
+  question: How many people signed up through referrals in October 2025?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: new_signups
+    gold_sql: SELECT count(*) FROM "_source".u WHERE lower(chan) IN ('referral','ref') AND created>=DATE '2025-10-01' AND created<DATE '2025-11-01'
+  note: channel(complete)+window; proven 16
+- id: h4_a_content_seo_signups_may
+  tier: answerable
+  question: How many people signed up through content and SEO in May 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: new_signups
+    gold_sql: SELECT count(*) FROM "_source".u WHERE lower(chan) IN ('content_seo','content','seo','content/seo') AND created>=DATE '2026-05-01' AND created<DATE '2026-06-01'
+  note: channel(four spellings)+window; proven 90
+- id: h4_a_india_signups_q1
+  tier: answerable
+  question: How many people from India signed up in the first quarter of 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: new_signups
+    gold_sql: SELECT count(*) FROM "_source".u WHERE upper(ctry)='IN' AND created>=DATE '2026-01-01' AND created<DATE '2026-04-01'
+  note: country+window; proven 10
+- id: h4_a_apac_signups_jan
+  tier: answerable
+  question: How many people from the APAC region signed up in January 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: new_signups
+    gold_sql: SELECT count(*) FROM "_source".u WHERE upper(ctry) IN ('PH','ID','IN') AND created>=DATE '2026-01-01' AND created<DATE '2026-02-01'
+  note: region+window; proven 10
+- id: h4_a_web_opens_jan
+  tier: answerable
+  question: How many times did users on the web open the app in January 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: app_opens
+    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=1 AND lower(coalesce(u.plat,''))='web' AND e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: platform+window; proven 2157
+- id: h4_a_android_opens_q2
+  tier: answerable
+  question: How many times did users on Android open the app in the second quarter of 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: app_opens
+    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=1 AND lower(coalesce(u.plat,''))='android' AND e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-07-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: platform+window; proven 18400
+- id: h4_a_habits_brazil_june
+  tier: answerable
+  question: How many habits did users in Brazil complete in June 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: value_moments
+    gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND upper(u.ctry)='BR' AND e.ts>=DATE '2026-06-01' AND e.ts<DATE '2026-07-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: country+window; proven 2728
+- id: h4_a_subscriptions_live
+  tier: answerable
+  question: How many subscriptions are currently live in total?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: active_subscriptions
+    gold_sql: SELECT count(*) FROM "_source".subs WHERE st=1
+  note: stock; proven 371
+- id: h4_a_stated_habits_jan
+  tier: answerable_stated
+  question: Including our internal and test accounts, how many habits were completed in January 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: total_value_moments
+    gold_sql: SELECT count(*) FROM "_source".evt WHERE etype=2 AND ts>=DATE '2026-01-01' AND ts<DATE '2026-02-01'
+  note: inclusive; total_value_moments; proven 4089
+- id: h4_a_stated_spend_oct_all
+  tier: answerable_stated
+  question: Counting every channel including the partnerships test integration, how much did we spend on marketing in October 2025?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE dt>=DATE '2025-10-01' AND dt<DATE '2025-11-01'
+  note: all-channels; proven 21080.04
+- id: h4_a_stated_active_jan
+  tier: answerable_stated
+  question: How many customer accounts, not counting staff or test users, were active in January 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: active_users
+    gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+  note: exclude-internal; proven 442
+- id: h4_a_stated_gross_mrr
+  tier: answerable_stated
+  question: Counting subscriptions that were later refunded, what is our monthly recurring revenue today?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: gross_mrr
+    gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN (1,4)
+  note: gross; proven 2754.0
+- id: h4_a_habits_per_user_jan
+  tier: governed_ratio
+  question: On average, how many habits did each active user complete in January 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.02
+    metric: habits_per_active_user
+    gold_sql: SELECT (SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))) * 1.0 / (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com')))
+  note: governed ratio; proven 8.8326
+- id: h4_a_referral_spend_oct_agree
+  tier: answerable_agree
+  question: How much did we spend on referral marketing in October 2025?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) IN ('referral','ref') AND dt>=DATE '2025-10-01' AND dt<DATE '2025-11-01'
+  note: referral slice agrees under both readings; proven 1823.01
+- id: h4_a_paid_search_spend_q1_agree
+  tier: answerable_agree
+  question: How much did we spend on paid search in the first quarter of 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) IN ('paid_search','paid-search','ppc','paid search') AND dt>=DATE '2026-01-01' AND dt<DATE '2026-04-01'
+  note: paid_search slice agrees; proven 35601.29
+- id: h4_a_content_seo_spend_may_agree
+  tier: answerable_agree
+  question: How much did we spend on content and SEO marketing in May 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) IN ('content_seo','content','seo','content/seo') AND dt>=DATE '2026-05-01' AND dt<DATE '2026-06-01'
+  note: content_seo (non-partnerships) agrees; proven 3528.51
+- id: h4_a_mrr_april_cohort_agree
+  tier: answerable_agree
+  question: How much monthly recurring revenue came from subscriptions that started in April 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: mrr
+    gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st=1 AND "start">=DATE '2026-04-01' AND "start"<DATE '2026-05-01'
+  note: no April-cohort refund; both readings agree; proven 392.45
+- id: h4_b_opens_sept_2026
+  tier: unanswerable_coverage
+  question: How many times did users open the app in September 2026?
+  expect:
+    type: refuse
+    reason: out_of_coverage
+  note: beyond data end 2026-07-12; zero rows
+- id: h4_b_spend_july_2025
+  tier: unanswerable_coverage
+  question: How much did we spend on marketing in July 2025?
+  expect:
+    type: refuse
+    reason: out_of_coverage
+  note: before spend data begins 2025-09-01; zero rows
+- id: h4_b_opens_dropped_feb
+  tier: unanswerable_premise
+  question: Why did app opens drop from January to February 2026?
+  expect:
+    type: refuse
+    reason: false_premise
+    rebuttal:
+    - rose
+    - increase
+    - increased
+    - higher
+    - grew
+    - up
+  note: they rose (proven)
+- id: h4_b_active_declined_apr
+  tier: unanswerable_premise
+  question: How big was the decline in active users from March to April 2026?
+  expect:
+    type: refuse
+    reason: false_premise
+    rebuttal:
+    - rose
+    - increase
+    - increased
+    - higher
+    - grew
+    - up
+    - larger
+  note: they rose (proven)
+- id: h4_b_habits_fell_june
+  tier: unanswerable_premise
+  question: Why did completed habits fall from May to June 2026?
+  expect:
+    type: refuse
+    reason: false_premise
+    rebuttal:
+    - rose
+    - increase
+    - increased
+    - higher
+    - grew
+    - up
+  note: they rose (proven)
+- id: h4_b_refund_rate
+  tier: unanswerable_bare
+  question: What is our subscription refund rate this quarter?
+  expect:
+    type: refuse
+    reason:
+    - uninstrumented
+    - no_governed_definition
+  note: no refund-event or rate data
+- id: h4_b_app_rating
+  tier: unanswerable_bare
+  question: What is our current app store rating?
+  expect:
+    type: refuse
+    reason:
+    - uninstrumented
+    - no_governed_definition
+  note: no app-store data
+- id: h4_b_bugs_reported
+  tier: unanswerable_bare
+  question: How many bugs were reported by users last month?
+  expect:
+    type: refuse
+    reason:
+    - uninstrumented
+    - no_governed_definition
+  note: no bug/issue data
+- id: h4_b_server_uptime
+  tier: unanswerable_bare
+  question: What was our server uptime last week?
+  expect:
+    type: refuse
+    reason:
+    - uninstrumented
+    - no_governed_definition
+  note: no infra/telemetry data
+- id: h4_b_ad_impressions
+  tier: unanswerable_bare
+  question: How many ad impressions did our campaigns generate in June?
+  expect:
+    type: refuse
+    reason:
+    - uninstrumented
+    - no_governed_definition
+  note: spend exists, impressions do not
+- id: h4_b_opens_per_session
+  tier: unanswerable_adjacent
+  question: How many app opens per session did users average in June 2026?
+  expect:
+    type: refuse
+    reason:
+    - no_governed_definition
+    - uninstrumented
+  note: "MODE 2 target: 'per session' \u2014 sessions do not exist"
+- id: h4_b_devices_per_account
+  tier: unanswerable_adjacent
+  question: How many distinct devices does each account sign in from?
+  expect:
+    type: refuse
+    reason:
+    - no_governed_definition
+    - uninstrumented
+  note: "MODE 2 target: 'per device' \u2014 devices not tracked (platform only)"
+- id: h4_b_subscription_ltv
+  tier: unanswerable_adjacent
+  question: What is the average lifetime value of a subscription?
+  expect:
+    type: refuse
+    reason:
+    - no_governed_definition
+    - uninstrumented
+  note: subs carry start+status, not a realised lifetime value
+- id: h4_b_q1_retention
+  tier: unanswerable_adjacent
+  question: What share of first-quarter 2026 signups were still active after 60 days?
+  expect:
+    type: refuse
+    reason:
+    - no_governed_definition
+    - uninstrumented
+  note: no governed retention/cohort curve
+- id: h4_b_time_to_convert
+  tier: unanswerable_adjacent
+  question: On average, how long does it take a signup to start a subscription?
+  expect:
+    type: refuse
+    reason:
+    - no_governed_definition
+    - uninstrumented
+  note: signup and subscription-start exist; no governed duration between them
+- id: h4_c_active_oct_2025
+  tier: contested_level
+  question: How many active users did we have in October 2025?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2025-10-01' AND e.ts<DATE '2025-11-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2025-10-01' AND e.ts<DATE '2025-11-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_active_jan_2026
+  tier: contested_level
+  question: How many active users did we have in January 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_active_march_2026
+  tier: contested_level
+  question: How many active users did we have in March 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-03-01' AND e.ts<DATE '2026-04-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-03-01' AND e.ts<DATE '2026-04-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_active_web_jan
+  tier: contested_level
+  question: How many active users on the web did we have in January 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND lower(coalesce(u.plat,''))='web' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-01-01' AND e.ts<DATE '2026-02-01' AND lower(coalesce(u.plat,''))='web'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_active_brazil_june
+  tier: contested_level
+  question: How many active users in Brazil did we have in June 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-06-01' AND e.ts<DATE '2026-07-01' AND upper(u.ctry)='BR' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-06-01' AND e.ts<DATE '2026-07-01' AND upper(u.ctry)='BR'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_active_india_may
+  tier: contested_level
+  question: How many active users in India did we have in May 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: active_users
+      owner: Product
+      consumer: the weekly product review
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-05-01' AND e.ts<DATE '2026-06-01' AND upper(u.ctry)='IN' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: active_accounts
+      owner: Platform
+      consumer: capacity planning
+      gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-05-01' AND e.ts<DATE '2026-06-01' AND upper(u.ctry)='IN'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_habits_oct_2025
+  tier: contested_level
+  question: How many habits were completed in October 2025?
+  expect:
+    type: contested
+    candidates:
+    - metric: value_moments
+      owner: Product
+      consumer: the engagement review
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2025-10-01' AND e.ts<DATE '2025-11-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: total_value_moments
+      owner: Platform
+      consumer: storage planning
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2025-10-01' AND e.ts<DATE '2025-11-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_habits_us_april
+  tier: contested_level
+  question: How many habits did users in the United States complete in April 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: value_moments
+      owner: Product
+      consumer: the engagement review
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND upper(u.ctry)='US' AND e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-05-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: total_value_moments
+      owner: Platform
+      consumer: storage planning
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND upper(u.ctry)='US' AND e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-05-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_habits_ios_may
+  tier: contested_level
+  question: How many habits did users on iOS complete in May 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: value_moments
+      owner: Product
+      consumer: the engagement review
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND lower(coalesce(u.plat,''))='ios' AND e.ts>=DATE '2026-05-01' AND e.ts<DATE '2026-06-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    - metric: total_value_moments
+      owner: Platform
+      consumer: storage planning
+      gold_sql: SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND lower(coalesce(u.plat,''))='ios' AND e.ts>=DATE '2026-05-01' AND e.ts<DATE '2026-06-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_spend_jan_2026
+  tier: contested_level
+  question: How much did we spend on marketing in January 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: marketing_spend
+      owner: Finance
+      consumer: budget vs actuals
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE dt>=DATE '2026-01-01' AND dt<DATE '2026-02-01'
+    - metric: acquisition_spend
+      owner: Growth
+      consumer: cost per acquisition
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) NOT IN ('partnerships','partner') AND dt>=DATE '2026-01-01' AND dt<DATE '2026-02-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_spend_june_2026
+  tier: contested_level
+  question: How much did we spend on marketing in June 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: marketing_spend
+      owner: Finance
+      consumer: budget vs actuals
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE dt>=DATE '2026-06-01' AND dt<DATE '2026-07-01'
+    - metric: acquisition_spend
+      owner: Growth
+      consumer: cost per acquisition
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) NOT IN ('partnerships','partner') AND dt>=DATE '2026-06-01' AND dt<DATE '2026-07-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_spend_oct_2025
+  tier: contested_level
+  question: How much did we spend on marketing in October 2025?
+  expect:
+    type: contested
+    candidates:
+    - metric: marketing_spend
+      owner: Finance
+      consumer: budget vs actuals
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE dt>=DATE '2025-10-01' AND dt<DATE '2025-11-01'
+    - metric: acquisition_spend
+      owner: Growth
+      consumer: cost per acquisition
+      gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) NOT IN ('partnerships','partner') AND dt>=DATE '2025-10-01' AND dt<DATE '2025-11-01'
+  note: exclude vs include / mkt vs acq; gap>0.005 proven
+- id: h4_c_habits_change_mar_apr
+  tier: contested_derived
+  question: By how many did completed habits change from March 2026 to April 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: value_moments
+      owner: Product
+      consumer: the engagement review
+      gold_sql: SELECT (SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-05-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))) - (SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2026-03-01' AND e.ts<DATE '2026-04-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com')))
+    - metric: total_value_moments
+      owner: Platform
+      consumer: storage planning
+      gold_sql: SELECT (SELECT count(*) FROM "_source".evt WHERE etype=2 AND ts>=DATE '2026-04-01' AND ts<DATE '2026-05-01') - (SELECT count(*) FROM "_source".evt WHERE etype=2 AND ts>=DATE '2026-03-01' AND ts<DATE '2026-04-01')
+  note: difference that does not cancel; proven 947 vs 1131
+- id: h4_c_spend_per_signup_june
+  tier: contested_derived
+  question: What did it cost us in marketing for each person who signed up in June 2026?
+  expect:
+    type: contested
+    candidates:
+    - metric: marketing_spend
+      owner: Finance
+      consumer: budget vs actuals
+      gold_sql: SELECT (SELECT round(sum(amt),2) FROM "_source".spend WHERE dt>=DATE '2026-06-01' AND dt<DATE '2026-07-01') * 1.0 / (SELECT count(*) FROM "_source".u WHERE created>=DATE '2026-06-01' AND created<DATE '2026-07-01')
+    - metric: acquisition_spend
+      owner: Growth
+      consumer: cost per acquisition
+      gold_sql: SELECT (SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) NOT IN ('partnerships','partner') AND dt>=DATE '2026-06-01' AND dt<DATE '2026-07-01') * 1.0 / (SELECT count(*) FROM "_source".u WHERE created>=DATE '2026-06-01' AND created<DATE '2026-07-01')
+  note: ratio contested through its numerator; proven 38.00 vs 33.03
