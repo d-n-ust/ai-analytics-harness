@@ -29,7 +29,7 @@ CASES = [
      {"measure": "spend", "segments": ["Instagram ads"], "period": "June 2026"}),
     ("How many customer accounts, not counting staff or test users, were active in June 2026?",
      {"measure": "accounts", "period": "June 2026",
-      "qualifiers": ["not counting staff or test users"]}),
+      "qualifiers": ["staff or test users"]}),
     ("How many support tickets did we receive last week?",
      {"measure": "support tickets", "period": "last week"}),
     ("What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
@@ -43,7 +43,7 @@ CASES = [
      {"measure": "active users", "period": "May 2026", "compare_period": "April"}),
     ("Including the internal partnerships test integration, how much did we spend on marketing in December 2025?",
      {"measure": "spend on marketing", "period": "December 2025",
-      "qualifiers": ["Including the internal partnerships test integration"]}),
+      "qualifiers": ["internal partnerships test integration"]}),
     ("How many active users did we have in October 2026?",
      {"measure": "active users", "period": "October 2026"}),
     ("On average, how many habits did each active user complete in March 2026?",
@@ -80,6 +80,24 @@ def main() -> None:
                 field_ok += 1
             else:
                 errs.append(f"{f}: want {expected!r} got {got!r}")
+        # POLARITY is the typed field the gates will trust, so it is validated directly (the
+        # architect's rule: a judge that gates behaviour is validated before it gates). A labelled
+        # segment must carry polarity 'restrict'; a labelled qualifier 'include' or 'exclude'.
+        conds = {c["phrase"].lower(): c["polarity"] for c in rec.get("conditions", [])}
+        for seg in want.get("segments", []):
+            field_n += 1
+            hit = next((pol for ph, pol in conds.items() if _contains(ph, seg)), None)
+            if hit == "restrict":
+                field_ok += 1
+            else:
+                errs.append(f"polarity[{seg!r}]: want restrict got {hit!r}")
+        for qual in want.get("qualifiers", []):
+            field_n += 1
+            hit = next((pol for ph, pol in conds.items() if _contains(ph, qual)), None)
+            if hit in ("include", "exclude"):
+                field_ok += 1
+            else:
+                errs.append(f"polarity[{qual!r}]: want include/exclude got {hit!r}")
         p_want, p_got = want.get("presupposes"), rec.get("presupposes")
         field_n += 1
         if (p_want is None) == (p_got is None) and (

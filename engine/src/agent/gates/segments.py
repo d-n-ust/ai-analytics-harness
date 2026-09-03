@@ -58,6 +58,22 @@ def _resolve_segment(run):
                              f"segment phrase {phrase!r} is inside the scope quote that chose "
                              f"the metric — a definition discriminator, not a filter").as_dict())
         return None
+    # A RECORD QUALIFIER IS NEVER A RESTRICTION — the guard above keyed on the CHOSE verdict, and
+    # the chose REPLACE narrowed it: with no anchor-decided side, chose is False and the segment
+    # layer ran free. Silent #1 of the invalidated certification came exactly that way —
+    # segment_named read 'Counting subscriptions that were later refunded' as status='refunded',
+    # computed the slice, and ordered the correct 2,754 replaced by 68.9. A phrase lying inside
+    # any qualifier span stands the segment machinery down whatever the chose verdict says: the
+    # record already typed those words as an accounting condition, not a slice.
+    pl = " ".join(str(phrase).lower().split())
+    for q in (getattr(run, "scope_shadow", None) or {}).get("qualifiers") or ():
+        qn = " ".join(str(q).lower().split())
+        if pl and (pl in qn or qn in pl):
+            run.acts.append(Act("metric_brief", str(Position.REPAIR), "allowed",
+                                 f"segment claim stood down: {phrase!r} lies within the record's "
+                                 f"qualifier {q!r} — an accounting condition, not a "
+                                 f"slice").as_dict())
+            return None
     # Membership-only: the model's proposal is trusted for SEMANTIC fit (its superpower) and
     # verified only for EXISTENCE — the value must be a real member. A lexical anchor test here
     # false-refused a correct semantic link ("platform not recorded" -> `unknown`), so it is gone.
@@ -282,10 +298,22 @@ def entry_mappings(record, semantic) -> str:
         for dim, members in vocab.items():
             for m in _licenses(span, list(members), descs.get(dim, ""), dim):
                 hits.append((dim, m))
+        values = {m for _d, m in hits}
         if not hits:
-            lines.append(f"'{span}' matches no governed member of any dimension")
-        elif len(hits) == 1:
-            lines.append(f"'{span}' = {hits[0][0]} {hits[0][1]!r} (licensed by the governed text)")
+            # NON-STEERING by design: the reader over-captures the counted population's own noun
+            # ('users') at some rate, and a note reading as evidence-of-absence for the SUBJECT
+            # pushed three zero-call refusals on an answerable question. State the fact, keep the
+            # slice-vs-population judgement with the model (a real ungoverned slice — 'Instagram
+            # ads' — still reads as exactly what it is).
+            lines.append(f"'{span}' maps to no governed member — if it names a slice to bind, "
+                         f"it is ungoverned; if it is just the counted population, ignore this")
+        elif len(values) == 1:
+            # One VALUE is one mapping, however many dimensions carry the member — 'Americas'
+            # lives on both region dimensions, and 'say which' over an identical value
+            # manufactured ambiguity where none exists (3/3 refusals on an answerable).
+            dims = ", ".join(sorted({d for d, _m in hits}))
+            lines.append(f"'{span}' = {next(iter(values))!r} (on {dims}; licensed by the "
+                         f"governed text)")
         else:
             opts = "; ".join(f"{d} {m!r}" for d, m in hits)
             lines.append(f"'{span}' can mean: {opts} — say which, or give each")

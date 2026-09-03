@@ -3080,3 +3080,42 @@ uninstrumented is an honest open-world claim) verified standing silent live.
 NOTED, NOT FIXED. referral_spend held both agreeing rivals (1858.95 = 1858.95) after two calls
 and then probed two more filter spellings into resolution errors before serving — benign
 exploration, two wasted calls, not worth machinery.
+
+## 71 · Two invalidated certifications, one root cause, and the typed-polarity fix
+
+A rep-3 certification of the wrapped cell came back 122/138 with 3 silents; the americas fix (a
+segment-note dedup regression) took it to a re-run that exposed the real defect at 119/138 with 7
+silents. NEITHER stands as a certification — both measured code with a live defect. The diagnosis
+made the second run worth its cost.
+
+THE ROOT CAUSE, one mechanism behind 5 of the 7 silents (the stated family: gross_mrr x2,
+spend_dec x3). The scope reader's minimal-span rule trimmed exactly the marker words the routing
+keyed on — 'Counting subscriptions that were later refunded' came back without 'Counting',
+landed in `segments`, and from there two harm paths: the `applied_segment` gate OVERRODE the
+correct gross total with the refunded slice (68.9 for 2,754), and the `scope_segments` entry note
+STEERED the model to filter channel='partnerships' (2,673 for the 20,439 December total). Same
+mis-extraction, opposite gates.
+
+THE FIRST FIX, a floor. Marker restoration from the question text + an `applied_segment`
+stand-down on any phrase inside a qualifier span. Verified 9/9 on the stated family — but it is
+deterministic code reconstructing a polarity the model knew and the trim discarded: fragile on
+paraphrase ('partnerships included' mid-clause, 'net of refunds'), English-prefix-bound.
+
+THE GENERALISED FIX (architect). Type the polarity, do not parse it back. `read_scope` emits
+`conditions: [{phrase, polarity}]` with polarity in {restrict, include, exclude} DECLARED by the
+model in the same call — no new model call. The record routes on the declared type: restrict ->
+segment (a slice), include/exclude -> qualifier (an accounting condition, never a slice). The
+string surgery is deleted; a marker heuristic survives only as the floor for a condition that
+arrives without a declared polarity. The polarity travels with the meaning, not with a marker
+word's position, so the paraphrase family is safe by construction, not by prefix list.
+
+VALIDATION (the architect's rule: a gating judge is validated first). `scope_validate.py` scores
+polarity directly — a labelled segment must type restrict, a qualifier include/exclude: 84/89
+fields, assert holds, ZERO polarity mis-routings (the 5 misses are measure-extraction variance
+and one compound-qualifier split). Target probe rep-3: 9/9 correct, 0 silent, the typed condition
+correct in every rep INCLUDING the reps where the phrase kept the marker and the reps where it
+dropped it — the variance the string version could not survive.
+
+Gates untouched: they consume segments/qualifiers, now the correctly-routed views of the typed
+list. The include/exclude-is-never-a-filter invariant that spend_dec exposed is a one-line
+deterministic guard when a probe shows it needed; the typed field makes it stateable.

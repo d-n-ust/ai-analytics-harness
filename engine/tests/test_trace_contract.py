@@ -415,9 +415,27 @@ def test_entry_mappings_license_the_records_spans_deterministically():
     notes = gs.entry_mappings({"segments": ["from Germany"]}, sem)
     assert "activity__country" in notes and "'DE'" in notes
     none = gs.entry_mappings({"segments": ["on Instagram ads"]}, sem)
-    assert "no governed member" in none
+    assert "no governed member" in none and "counted population" in none
     assert gs.entry_mappings({"segments": []}, sem) == ""
     assert gs.entry_mappings(None, sem) == ""
+
+
+def test_one_value_on_two_dimensions_is_one_mapping():
+    """'Americas' lives on both region dimensions; 'say which' over an identical value
+    manufactured ambiguity where none exists (three zero-call refusals on an answerable).
+    One VALUE is one mapping, whatever carries it; 'say which' survives for real forks."""
+    import agent.gates.segments as gs
+
+    sem = NS(segment_vocabulary=lambda: {"user__region": ("Americas", "EMEA"),
+                                         "activity__region": ("Americas", "EMEA")},
+             dimension_descriptions=lambda: {})
+    notes = gs.entry_mappings({"segments": ["the Americas region"]}, sem)
+    assert "say which" not in notes and "'Americas'" in notes
+    fork = gs.entry_mappings({"segments": ["organic"]},
+                             NS(segment_vocabulary=lambda: {"a__x": ("organic",),
+                                                            "b__y": ("organic_search",)},
+                                dimension_descriptions=lambda: {}))
+    assert "say which" in fork or "'organic'" in fork
 
 
 def test_the_reachability_bounce_removes_the_metric_kind_from_the_retry():
@@ -439,6 +457,85 @@ def test_the_reachability_bounce_removes_the_metric_kind_from_the_retry():
     assert "metric" in captured["kinds"]          # no ban, full action space
     # the pristine module-level schema must never be mutated by a banned retry
     assert "metric" in rd._DEFINE_TOOL["input_schema"]["properties"]["spec"]["properties"]["kind"]["enum"]
+
+
+def _scope_reader(question, reported):
+    """read_scope with a scripted reader — pins the deterministic routing, not the model."""
+    import agent.guardrails.classify as cl
+
+    class _Model:
+        def respond(self, convo, tools, force_tool=None, temperature=None):
+            return NS(tool_calls=[NS(name="report_scope",
+                                     args={"measure": "", "presupposes_kind": "none", **reported})])
+
+    return cl.read_scope(_Model(), question)
+
+
+def test_declared_polarity_routes_conditions_without_string_surgery():
+    """Typed polarity, not parsed markers: the model DECLARES include/exclude/restrict in the
+    same call, and the record routes on the type. Two certified silents came from the old string
+    surgery (a qualifier trimmed of its marker, mis-routed to segments, applied as a filter);
+    the declared type cannot be trimmed away."""
+    rec = _scope_reader(
+        "Counting subscriptions that were later refunded, what is our MRR today?",
+        {"conditions": [{"phrase": "subscriptions that were later refunded",
+                         "polarity": "include"}]})
+    assert rec["segments"] == []
+    assert rec["qualifiers"] == ["subscriptions that were later refunded"]
+
+
+def test_restrict_polarity_is_a_segment_include_and_exclude_are_qualifiers():
+    rec = _scope_reader(
+        "How many people from Germany signed up, not counting staff, in H1?",
+        {"conditions": [{"phrase": "from Germany", "polarity": "restrict"},
+                        {"phrase": "staff", "polarity": "exclude"}]})
+    assert rec["segments"] == ["from Germany"]
+    assert rec["qualifiers"] == ["staff"]
+    assert {c["polarity"] for c in rec["conditions"]} == {"restrict", "exclude"}
+
+
+def test_a_legacy_bare_condition_falls_back_to_the_marker_heuristic():
+    """Floor only, until the typed field is promoted: a condition with no declared polarity is
+    routed by its leading marker, the pre-typed behaviour — so an older reader cannot regress."""
+    rec = _scope_reader(
+        "Including partnerships, how much did we spend?",
+        {"conditions": [{"phrase": "Including partnerships", "polarity": ""}]})
+    assert rec["qualifiers"] == ["Including partnerships"] and rec["segments"] == []
+
+
+def test_a_record_qualifier_stands_the_segment_machinery_down(monkeypatch):
+    """Silent #1 of the invalidated certification: segment_named read 'Counting subscriptions
+    that were later refunded' as a restriction to status='refunded' and ordered the correct
+    total replaced by the slice. The record typed those words as a QUALIFIER — an accounting
+    condition — and that typing now stands the segment resolver down whatever the chose verdict
+    says (the chose-quote guard alone went dark when no anchor decided a side)."""
+    import agent.gates.segments as gs
+
+    obj = _stub()
+    obj.grounding = NS(semantic=NS(segment_vocabulary=lambda: {"subscription__status":
+                                                               ("active", "refunded")}),
+                       guardrails=NS(applied_segment=True))
+    obj.model = None
+    obj.question = "Counting subscriptions that were later refunded, what is our MRR today?"
+    obj._scope_verdict = (False, "", "no qualifier spans anchor no side")
+    obj.acts = []
+    obj.scope_shadow = {"qualifiers": ["Counting subscriptions that were later refunded"]}
+    monkeypatch.setattr(gs._classify, "segment_named",
+                        lambda m, q, v: (True, "subscriptions that were later refunded",
+                                         "subscription__status", "refunded"))
+    assert gs._resolve_segment(obj) is None
+    assert any("accounting condition" in a["detail"] for a in obj.acts)
+    # a genuine segment on a question with unrelated qualifiers still resolves
+    obj2 = _stub()
+    obj2.grounding = obj.grounding
+    obj2.model = None
+    obj2.question = "How much did we spend on paid search last week?"
+    obj2._scope_verdict = (False, "", "")
+    obj2.acts = []
+    obj2.scope_shadow = {"qualifiers": []}
+    monkeypatch.setattr(gs._classify, "segment_named",
+                        lambda m, q, v: (True, "paid search", "subscription__status", "refunded"))
+    assert gs._resolve_segment(obj2) is not None
 
 
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────

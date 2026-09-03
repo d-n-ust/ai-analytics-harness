@@ -933,18 +933,24 @@ _SCOPEREC_SYSTEM = (
     "empty component is a fact, not a failure.\n\n"
     "- measure: the quantity asked for ('support tickets', 'people signed up', 'marketing "
     "spend per new signup').\n"
-    "- segments: each slice narrowing who or what is counted, naming a VALUE of some dimension "
-    "— a country, a channel, a platform ('from Germany', 'through referrals', 'on Instagram "
-    "ads'). One entry per slice. Time windows are NOT segments; include/exclude conditions "
-    "('including X', 'not counting Y') are qualifiers, not segments.\n"
+    "- conditions: each phrase that constrains WHO or WHAT is counted, EACH WITH ITS POLARITY:\n"
+    "    * polarity 'restrict' — the phrase NARROWS the population to a value of some dimension: "
+    "a country, a channel, a platform ('from Germany', 'through referrals', 'on Instagram "
+    "ads'). The answer counts ONLY that slice.\n"
+    "    * polarity 'include' — the phrase says a group is COUNTED IN a total that already spans "
+    "it ('including the test integration', 'counting subscriptions later refunded', 'gross of "
+    "refunds'). The answer is the WHOLE, not that group alone.\n"
+    "    * polarity 'exclude' — the phrase REMOVES a group from the population ('not counting "
+    "staff or test users', 'excluding partners', 'net of refunds').\n"
+    "  Read the polarity from the language: 'only/from/on/through X' is restrict; 'including/"
+    "counting/gross of X' is include; 'excluding/not counting/net of X' is exclude. Report the "
+    "MINIMAL naming words as the phrase (the marker word need not be included — polarity carries "
+    "it). Time windows are NEVER conditions.\n"
     "- period: the time window ('in March 2026', 'the first half of 2026', 'last week').\n"
     "- compare_period: the second window when the question compares two ('than in May', "
     "'vs Q1').\n"
     "- breakdown: a dimension to split the answer by ('by channel', 'per region') — only when "
     "the question asks for a split, not a single figure.\n"
-    "- qualifiers: population or accounting conditions the answer must honour ('not counting "
-    "staff or test users', 'including the test integration', 'gross of refunds'). One entry per "
-    "condition.\n"
     "- presupposes_*: a claim the question asserts as established ('why did signups COLLAPSE' "
     "asserts a fall). Quote the claim-carrying words; kind `none` when the question only asks — "
     "when in doubt: none.\n\n"
@@ -972,11 +978,21 @@ _SCOPEREC_REPORT = {
         "type": "object",
         "properties": {
             "measure": {"type": "string"},
-            "segments": {"type": "array", "items": {"type": "string"}},
+            "conditions": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "phrase": {"type": "string",
+                                   "description": "the minimal naming words, verbatim"},
+                        "polarity": {"type": "string",
+                                     "enum": ["restrict", "include", "exclude"]},
+                    },
+                    "required": ["phrase", "polarity"],
+                }},
             "period": {"type": "string"},
             "compare_period": {"type": "string"},
             "breakdown": {"type": "string"},
-            "qualifiers": {"type": "array", "items": {"type": "string"}},
             "presupposes_kind": {
                 "type": "string",
                 "enum": ["none", "direction", "existence", "value", "superlative", "causal"]},
@@ -1017,10 +1033,6 @@ def read_scope(model, question: str) -> dict:
     record["period"] = _take(args.get("period"))
     record["compare_period"] = _take(args.get("compare_period"))
     record["breakdown"] = _take(args.get("breakdown"))
-    # Category assignment between segments and qualifiers is STRUCTURE, owned deterministically
-    # (the tune set showed the reader captures the right words but wanders between the two): a
-    # span carried by an include/exclude marker is a qualifier whatever field reported it, and a
-    # span the question prefixes with 'each'/'per' is the unit of a per-unit measure, no slice.
     ql = question.lower()
 
     def _unit(span):
@@ -1028,23 +1040,44 @@ def read_scope(model, question: str) -> dict:
         head = ql[:i].rstrip().rsplit(None, 1)
         return i >= 0 and head and head[-1] in ("each", "per", "every")
 
-    segments, qualifiers = [], []
-    for span in (*(args.get("segments") or ()), *(args.get("qualifiers") or ())):
-        v = _take(span)
+    # POLARITY IS TYPED, NOT PARSED BACK. The model declares each condition's polarity in the
+    # same call (it reads the language — 'counting X' includes, 'only X' restricts); the record
+    # routes on the DECLARED type, not on string markers reconstructed from a trimmed span. Two
+    # certified silents came from the old string surgery — a qualifier trimmed of its marker,
+    # mis-routed to segments, then applied as a narrowing filter. `restrict` -> segment (a real
+    # slice); `include`/`exclude` -> qualifier (an accounting condition, never a slice).
+    _MARKERS = ("including", "include", "includes", "counting", "excluding",
+                "excludes", "exclude", "except", "without", "not")
+
+    def _polarity_fallback(v):
+        # Floor only: a legacy/blank polarity is inferred from a leading marker, the pre-typed
+        # heuristic. Kept until the typed field is validated and promoted, then deleted.
+        first = v.lower().split(None, 1)[0] if v else ""
+        return "include" if first in _MARKERS else "restrict"
+
+    segments, qualifiers, conditions = [], [], []
+    raw = args.get("conditions")
+    if raw is None:                                    # a model that emitted the old flat fields
+        raw = [{"phrase": s, "polarity": ""} for s in
+               (*(args.get("segments") or ()), *(args.get("qualifiers") or ()))]
+    for c in raw:
+        phrase = c.get("phrase") if isinstance(c, dict) else c
+        v = _take(phrase)
         if not v or _unit(v):
             continue
         low = v.lower()
-        # A span that IS the breakdown (or the measure) is that component, double-reported.
         if low in (record["breakdown"].lower(), record["measure"].lower()):
             continue
-        if low.startswith(("including", "excluding", "not counting", "counting", "except")):
-            qualifiers.append(v)
-        else:
-            segments.append(v)
+        pol = str((c.get("polarity") if isinstance(c, dict) else "") or "").strip().lower()
+        if pol not in ("restrict", "include", "exclude"):
+            pol = _polarity_fallback(v)
+        conditions.append({"phrase": v, "polarity": pol})
+        (segments if pol == "restrict" else qualifiers).append(v)
     record["segments"], record["qualifiers"] = segments, qualifiers
-    # No `chose` component: picking one reading among several is a question-times-catalogue
-    # judgement (scope_classifier holds the candidate pair); question-only extraction cannot
-    # make it — the include/exclude words land in `qualifiers`, where they belong.
+    # The typed conditions themselves are published for observability and the future
+    # include/exclude-is-never-a-filter invariant; the gates consume segments/qualifiers, which
+    # are now the restrict / (include|exclude) views of this one list.
+    record["conditions"] = conditions
     kind = str(args.get("presupposes_kind") or "none").strip().lower()
     quote = _take(args.get("presupposes_quote")) if kind != "none" else ""
     # The premise judge's rule: an asserted claim that cannot point at the question is no claim.
