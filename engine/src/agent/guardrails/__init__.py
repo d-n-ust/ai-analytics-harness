@@ -388,6 +388,16 @@ GUARDRAILS: tuple[Guardrail, ...] = (
     # The one delegated judgement. Everything else about ambiguity here is mechanical; this asks a
     # focused model call whether the REQUEST already chose, because two definitions produce
     # identical tool calls either way and nothing in the trace can distinguish them.
+    Guardrail("scope_shadow", Position.BEFORE,
+              "reads the question once into the unified Scope record (measure, segments, period, "
+              "breakdown, qualifiers, presupposition) and publishes it on the row — shadow phase "
+              "of tier 4: gates nothing, measured for per-field agreement with the live stack",
+              ("guardrails/classify.py", "runtime/loop.py"), in_ladder=False),
+    Guardrail("scope_premise", Position.BEFORE,
+              "lets the shadow Scope record witness a presupposition the live premise judge "
+              "missed (an OR-gate over two quote-verified readings) — tier 4's first gate switch, "
+              "meaningful only with scope_shadow on",
+              ("gates/contract.py",), in_ladder=False),
     Guardrail("scope_classifier", Position.REPAIR,
               "asks a focused model call whether the request itself already chose between the two "
               "definitions, and stands the disclosure check down when it did",
@@ -455,6 +465,8 @@ class GuardrailSet:
     ambiguity_disclosure: bool = False
     filter_vocabulary: bool = False
     disclosure_check: bool = False
+    scope_shadow: bool = False
+    scope_premise: bool = False
     scope_classifier: bool = False
     constraint_regression: bool = False
 

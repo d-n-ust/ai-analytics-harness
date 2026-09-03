@@ -141,6 +141,7 @@ class _Run:
     # question, rather than on a Toolbox that outlives it.
     last_verdict: dict | None = None
     answer_text: str = ""     # the answer under check, for the AFTER guardrails
+    scope_shadow: dict | None = None   # tier-4 shadow record, published on the Answer
     # One entry per model call: how long it took, what it asked for, what it cost. The tool
     # steps alone hide where a run's time goes, which for an agent is almost always here.
     turns: list = field(default_factory=list)
@@ -554,6 +555,9 @@ class _Run:
                       # The run's OWN meter (`_MeteredModel`) — every model call this answer cost:
                       # the main loop, every classifier/gate, the define_measure sub-agent.
                       model_calls=getattr(self.model, "calls", 0),
+                      # The shadow Scope is a property of the QUESTION, so it rides the common
+                      # construction — a refusal's row needs it exactly as much as an answer's.
+                      scope_shadow=self.scope_shadow,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
                       cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
                       acts=self.acts, **kw)
@@ -569,6 +573,11 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     run = _Run(question, grounding, model, verifier_model)
     grounding.toolbox.model = model      # so check_answerability can decompose against the graph
     grounding.toolbox.verifier_model = verifier_model  # so the aptness challenger audits, not echoes
+    # Tier-4 shadow: one Scope reading per question, alongside (never instead of) the live
+    # classifiers. Read HERE, before the first turn, so it is a property of the question alone —
+    # not of anything the run went on to do.
+    if getattr(grounding.toolbox.g, "scope_shadow", False):
+        run.scope_shadow = _classify.read_scope(model, question)
     convo = Conversation.opening(grounding.system, question)
 
     def done(answer: Answer) -> Answer:

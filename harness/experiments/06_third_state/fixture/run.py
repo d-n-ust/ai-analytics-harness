@@ -330,6 +330,7 @@ def main() -> None:
                           # hand_backs = corrections that cost a round trip; repairs_total
                           # keeps the old key's meaning (constructions included)
                           "handbacks": answer.hand_backs,
+                          "scope_shadow": answer.scope_shadow,
                           "repairs_total": len(answer.repairs),
                           "acts": list(answer.acts or []),
                           # The served TEXT, because several checks are about what the reader

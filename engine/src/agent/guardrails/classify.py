@@ -910,3 +910,147 @@ def text_asserts_direction(model, text: str) -> str:
         return "none"
     v = str(args.get("asserts") or "").strip().lower()
     return v if v in ("rose", "fell") else "none"
+
+
+# --- `scope_shadow`: the unified Scope record, extraction only (tier 4, phase 1) --------------- #
+#
+# ONE reading of the question into every typed component the answer must bind — the record the
+# per-fact classifiers above each extract a slice of. Phase 1 is SHADOW: the record is produced
+# alongside the live classifiers and published on the row, gating nothing; per-field agreement
+# against the live stack (measured over the dev suite) is the evidence that decides whether any
+# gate switches its input to this record. The frontier trade is explicit: one semantic judgement
+# per fact (no re-reading prose six times) against the accidental cross-checking the independent
+# slices provide today — which is why the switch is per-gate and eval-gated, not a rewrite.
+#
+# Verified, not taken: every reported component must be the question's own words (`_quoted_from`,
+# the same guard the scope and premise judges learned the hard way); a component that cannot point
+# at the question is dropped into `unverified` rather than silently kept.
+
+_SCOPEREC_SYSTEM = (
+    "You read one analytics question and decompose it into its SCOPE — the typed components an "
+    "answer must bind. Report each component as the MINIMAL exact words from the question that "
+    "name it (a phrase, never a whole clause). Omit components the question does not name: an "
+    "empty component is a fact, not a failure.\n\n"
+    "- measure: the quantity asked for ('support tickets', 'people signed up', 'marketing "
+    "spend per new signup').\n"
+    "- segments: each slice narrowing who or what is counted, naming a VALUE of some dimension "
+    "— a country, a channel, a platform ('from Germany', 'through referrals', 'on Instagram "
+    "ads'). One entry per slice. Time windows are NOT segments; include/exclude conditions "
+    "('including X', 'not counting Y') are qualifiers, not segments.\n"
+    "- period: the time window ('in March 2026', 'the first half of 2026', 'last week').\n"
+    "- compare_period: the second window when the question compares two ('than in May', "
+    "'vs Q1').\n"
+    "- breakdown: a dimension to split the answer by ('by channel', 'per region') — only when "
+    "the question asks for a split, not a single figure.\n"
+    "- qualifiers: population or accounting conditions the answer must honour ('not counting "
+    "staff or test users', 'including the test integration', 'gross of refunds'). One entry per "
+    "condition.\n"
+    "- presupposes_*: a claim the question asserts as established ('why did signups COLLAPSE' "
+    "asserts a fall). Quote the claim-carrying words; kind `none` when the question only asks — "
+    "when in doubt: none.\n\n"
+    "Rules:\n"
+    "- COPY EXACT WORDS. Never reword, inflect, or add prepositions; a span you cannot point at "
+    "verbatim in the question is omitted, not approximated.\n"
+    "- 'Which X gives/has the best Y' asks Y split by X: X is the breakdown.\n"
+    "- A per-unit denominator ('per active user', 'for each person who signed up') is part of "
+    "the measure, never a segment: it names no slice, it names what one unit is.\n"
+    "- The counted population's own noun ('users', 'accounts', 'signups') is part of the "
+    "measure, never a segment: a segment narrows the population, it does not name it.\n"
+    "- 'Did X grow?' / 'how did X change?' ASK about direction; they assert none.\n"
+    "- When a component's naming words are split by other words ('people from Germany signed "
+    "up' names the measure around a segment), quote the longest CONTIGUOUS core ('signed up') — "
+    "never stitch words together across a gap.\n"
+    "- In 'A compared to B' / 'A vs B', period is A (the window asked about), compare_period "
+    "is B.")
+
+_SCOPEREC_USER = "Question: {question}\n\nDecompose this question's scope."
+
+_SCOPEREC_REPORT = {
+    "name": "report_scope",
+    "description": "The question's scope, each component in the question's own minimal words.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "measure": {"type": "string"},
+            "segments": {"type": "array", "items": {"type": "string"}},
+            "period": {"type": "string"},
+            "compare_period": {"type": "string"},
+            "breakdown": {"type": "string"},
+            "qualifiers": {"type": "array", "items": {"type": "string"}},
+            "presupposes_kind": {
+                "type": "string",
+                "enum": ["none", "direction", "existence", "value", "superlative", "causal"]},
+            "presupposes_claim": {
+                "type": "string", "enum": ["", "fell", "rose"],
+                "description": "For kind=direction: which way the question claims the measure "
+                               "moved. Empty otherwise."},
+            "presupposes_quote": {"type": "string"},
+        },
+        "required": ["measure", "presupposes_kind"],
+    },
+}
+_register(_SCOPEREC_SYSTEM, _SCOPEREC_USER, _SCOPEREC_REPORT)
+
+
+def read_scope(model, question: str) -> dict:
+    """The unified Scope record for one question — shadow phase: published, never gating.
+
+    Every component is verified as the question's own words; a component whose text is not a
+    specific span of the question moves to `unverified` (kept for the agreement analysis — a
+    judge that fabricates spans must be seen doing it, not cleaned up)."""
+    args = _ask(model, _SCOPEREC_SYSTEM, _SCOPEREC_USER.format(question=question),
+                _SCOPEREC_REPORT)
+    if args is None:
+        return {"error": "scope reader did not report"}
+    record, unverified = {}, []
+
+    def _take(value):
+        v = " ".join(str(value or "").split())
+        if not v:
+            return ""
+        if _quoted_from(question, v):
+            return v
+        unverified.append(v)
+        return ""
+
+    record["measure"] = _take(args.get("measure"))
+    record["period"] = _take(args.get("period"))
+    record["compare_period"] = _take(args.get("compare_period"))
+    record["breakdown"] = _take(args.get("breakdown"))
+    # Category assignment between segments and qualifiers is STRUCTURE, owned deterministically
+    # (the tune set showed the reader captures the right words but wanders between the two): a
+    # span carried by an include/exclude marker is a qualifier whatever field reported it, and a
+    # span the question prefixes with 'each'/'per' is the unit of a per-unit measure, no slice.
+    ql = question.lower()
+
+    def _unit(span):
+        i = ql.find(span.lower())
+        head = ql[:i].rstrip().rsplit(None, 1)
+        return i >= 0 and head and head[-1] in ("each", "per", "every")
+
+    segments, qualifiers = [], []
+    for span in (*(args.get("segments") or ()), *(args.get("qualifiers") or ())):
+        v = _take(span)
+        if not v or _unit(v):
+            continue
+        low = v.lower()
+        # A span that IS the breakdown (or the measure) is that component, double-reported.
+        if low in (record["breakdown"].lower(), record["measure"].lower()):
+            continue
+        if low.startswith(("including", "excluding", "not counting", "counting", "except")):
+            qualifiers.append(v)
+        else:
+            segments.append(v)
+    record["segments"], record["qualifiers"] = segments, qualifiers
+    # No `chose` component: picking one reading among several is a question-times-catalogue
+    # judgement (scope_classifier holds the candidate pair); question-only extraction cannot
+    # make it — the include/exclude words land in `qualifiers`, where they belong.
+    kind = str(args.get("presupposes_kind") or "none").strip().lower()
+    quote = _take(args.get("presupposes_quote")) if kind != "none" else ""
+    # The premise judge's rule: an asserted claim that cannot point at the question is no claim.
+    record["presupposes"] = (
+        {"kind": kind, "claim": str(args.get("presupposes_claim") or ""), "quote": quote}
+        if kind != "none" and quote else None)
+    if unverified:
+        record["unverified"] = unverified
+    return record

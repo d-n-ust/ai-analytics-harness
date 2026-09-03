@@ -238,6 +238,36 @@ def test_the_cluster_stand_down_logs_its_act(monkeypatch):
     assert "acquisition_spend" in acts[0]["detail"]
 
 
+def test_the_scope_record_witnesses_a_premise_the_live_judge_missed(monkeypatch):
+    """The premise OR-gate (tier 4, phase 2). The premise family's certified silent was the live
+    judge returning `none` on 'why did new signups collapse' in a rep where the shadow record had
+    caught the claim. Two quote-verified witnesses; either one is a claim. Off means off: without
+    the flag the record must not gate — the shadow cell's contract is observational."""
+    import agent.gates.contract as gc
+
+    def _stub_run(flag):
+        obj = _stub()
+        obj.grounding = NS(semantic=NS(clusters=None),
+                           toolbox=NS(g=NS(scope_premise=flag)),
+                           guardrails=NS(answer_spec=True))
+        obj.model = None
+        obj._premise = None
+        obj.question = "Why did new signups collapse in the second quarter of 2026?"
+        obj.acts = []
+        obj.scope_shadow = {"presupposes": {"kind": "direction", "claim": "fell",
+                                            "quote": "new signups collapse"}}
+        return obj
+
+    monkeypatch.setattr(gc._classify, "question_presupposes",
+                        lambda m, q: {"type": "none", "claim": "", "quote": ""})
+    on = _stub_run(True)
+    rec = gc.presupposition(on)
+    assert rec["type"] == "direction" and rec["claim"] == "fell"
+    assert any("scope record" in a["detail"] for a in on.acts)
+    off = _stub_run(False)
+    assert gc.presupposition(off)["type"] == "none" and off.acts == []
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

@@ -181,6 +181,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "claim_audit": ans.claim_audit,
             "claim_retries": ans.claim_retries,
             "hand_backs": ans.hand_backs,
+            "scope_shadow": ans.scope_shadow,
             # The before-state of each handback. `claims` above is the after-state; the pair is
             # what makes "repaired the citation" and "deleted the sentence" different rows.
             "repairs": list(ans.repairs),

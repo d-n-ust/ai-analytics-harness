@@ -212,6 +212,9 @@ class Answer:
     # into the answer) are repairs but not hand-backs, and counting them together muddled the
     # published retry field. Both are published; claim_retries keeps its archived meaning.
     hand_backs: int = 0
+    # The unified Scope record (tier 4 shadow): one typed reading of the question, published for
+    # per-field agreement analysis against the live classifiers. None when the shadow is off.
+    scope_shadow: dict | None = None
     # What each of those handbacks was given, so the repair can be told from a deletion: the
     # claim count and the broken claims' text going in, against `claims` above coming out.
     # Without it a repaired answer and a truncated one are the same stored row.

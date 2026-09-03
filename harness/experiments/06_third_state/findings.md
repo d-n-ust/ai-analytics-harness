@@ -2822,3 +2822,51 @@ coverage, which is how the bug reached a live run; `test_the_cluster_stand_down_
 now pins the act and the name join, and fails on the old code. Re-probe: both questions correct,
 the agree-case trace now reading `contested cluster: the served figure is the queried
 'marketing_spend' reading (rivals: acquisition_spend)`.
+
+## 65 · Tier 4 begins: the shadow Scope record, and the first gate it now backs
+
+The unified Scope artifact entered as designed — shadow first, gates later, evidence between.
+
+THE READER. `read_scope` (guardrails/classify.py, registered on the classifier fingerprint) reads
+one question into the typed record {measure, segments, period, compare_period, breakdown,
+qualifiers, presupposes}, every component the question's own MINIMAL words, verified by
+`_quoted_from` — a span the reader cannot point at moves to `unverified` rather than being kept.
+Two structural decisions came out of validation rather than the design doc. First, `chose` (does
+the question pick one reading among several) was REMOVED from the record: it is a question-times-
+catalogue judgement — extraction that has never seen the candidate pair cannot make it, and the
+tune set showed those words landing in `qualifiers`, where they belong. Second, category
+assignment between segments and qualifiers is deterministic post-routing (marker words route to
+qualifiers; a span the question prefixes with each/per is the unit of a per-unit measure) — the
+reader captures the right words and wanders between fields, which is structure, and structure is
+code's job. Tune set: 12 questions, 82/84 fields, floor asserted at 0.85; marked TUNE honestly —
+the field test is the suite.
+
+THE SHADOW. Flag `scope_shadow` (BEFORE, outside the ladder): one metered call at question entry,
+record published on every row through `_record`'s common construction — the first wiring put it
+on the served-answer path only and the smoke caught refusal rows publishing null (a question
+property rides every exit). Field test on the dev suite: 46/46 records, zero reader errors;
+behaviour unchanged (41/46, within rep-1 noise of the same day's baseline). Per-field agreement
+(scope_agreement.py): period 28 agree / 0 disagree, presupposes 44/0, segments 15/4 — and all
+four segment flags are the country-code family (the record says 'in Germany', the live filter
+says DE), a witness-text gap, not a reader error.
+
+THE EVIDENCE THAT PAID FOR THE PHASE. The shadow run's board carried two silent wrong numbers —
+both known rep-flake families, and on both the record was right where the live stack flaked:
+'why did new signups collapse' served a causal story because the live premise judge returned
+`none` in that rep — the record had {direction, fell, 'new signups collapse'}; and
+spend-per-signup served one reading undisclosed because scope_classifier ruled the question CHOSE
+a reading, quoting 'marketing for each person' — a span that names the measure and isolates no
+discriminator. The record has no chose field for exactly that reason.
+
+THE FIRST SWITCH. `scope_premise` (its own flag; the shadow cell stays observational): an OR-gate
+in `presupposition()` — when the live judge says none and the record carries a verified claim,
+the record's claim stands, with an act naming the source. Two quote-verified witnesses of the
+same question; missing a claim is the silent direction, an unneeded correction floor is the cheap
+one. Pinned both ways (fires with the flag, dead without); live probe on the flaked question
+rep-3: premise caught every rep (by the live judge — the OR-gate is insurance for the flake rep,
+which is the point), rebuttal answers each time, zero silent.
+
+Not switched: segments, period, and the scope_classifier's chose remain live-stack; the next
+candidate is chose (the record-side fix is architectural: no chose without the candidate pair in
+view). Promotion of scope_shadow+scope_premise into current_best awaits a rep-3 A/B, which is its
+own run.
