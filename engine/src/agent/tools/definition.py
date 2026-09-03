@@ -61,13 +61,27 @@ def _define_measure(tb, args) -> ToolResult:
     ont, model = getattr(tb, "ontology", None), getattr(tb, "model", None)
     if ont is None or model is None:
         return ToolResult("UNKNOWN — define_measure is unavailable in this configuration.")
+    # FAILED-RETRY DISCIPLINE (symmetric to the anti-shopping line on COMPUTED). A gave_up is the
+    # authoring pipeline's verdict that this measure cannot be defined; the agent re-called the
+    # tool up to four times on a reworded measure (time_to_first: 27 model calls), each internally
+    # exhausting its own retries. After two could-not-define results in a run, the authoring
+    # answer will not change — the third call is terminal: refuse or clarify, do not re-author.
+    prior_giveups = getattr(tb, "_define_giveups", 0)
+    if prior_giveups >= 2:
+        return ToolResult(
+            "COULD NOT DEFINE (and define_measure has already failed twice this run) — the "
+            "authoring pipeline cannot produce a valid definition for this measure. Do NOT call "
+            "define_measure again; `refuse` (reason `no_governed_definition`) or `clarify`.")
     from ..runtime.define import define_measure
     d = define_measure(model, str(args.get("measure") or ""), ont, tb.semantic,
                        verifier_model=getattr(tb, "verifier_model", None))
     if d.outcome == "refuse":
         return ToolResult(f"UNINSTRUMENTED — {d.disclosure} `refuse` with reason `uninstrumented`.")
     if d.outcome == "gave_up":
-        return ToolResult(f"COULD NOT DEFINE — {d.disclosure} Consider `clarify` or `refuse`.")
+        tb._define_giveups = prior_giveups + 1
+        tail = (" define_measure has now failed twice; do not call it again — `refuse` or "
+                "`clarify`." if tb._define_giveups >= 2 else " Consider `clarify` or `refuse`.")
+        return ToolResult(f"COULD NOT DEFINE — {d.disclosure}{tail}")
     # Present the computed result so the agent can answer FROM IT directly — a scalar, or the rows
     # laid out (already ordered by the definition's SQL) so "which is best/highest" is readable
     # without a re-query. The recompute-with-run_sql wrinkle was the rows arriving as a bare list.

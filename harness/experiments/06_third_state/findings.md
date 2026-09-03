@@ -3256,3 +3256,32 @@ generalisable openings, neither a silent (all refuse safely today):
      authoring of the same measure should not be re-attempted from scratch up to the cap.
 Both are efficiency/robustness, not correctness — the confident-wrong rate is 0 and these paths
 all terminate in a safe refusal.
+
+## 76 · The two tail-efficiency openings, and their honest effect
+
+Both §75 openings implemented; neither is a correctness change (silent rate stays 0), both target
+the expensive tail. Scrutinised on their target questions; the effect is partial and reported as
+measured, not as hoped.
+
+OPENING 1 — the null-filter class at the schema. query_metric and decompose_tree filter values
+are now typed {string, number, boolean}, so null is schema-invalid (the boolean example
+is_internal=false still validates). The surface golden was regenerated (deliberate change). Live
+effect is PARTIAL: germany's null emissions fell (one rep 4 -> 1) but did not vanish (another rep
+still emitted 2) — gpt-5-mini does not hard-enforce additionalProperties value-types, so the
+schema DISCOURAGES the null filter without removing it, and the deterministic bounce remains the
+floor. The boolean-filter control (active_june, is_internal=false) answered in one call,
+unregressed. Honest reading: a correct schema tightening with a modest live payoff; germany's real
+cost is the unbindable country segment (the join-grain watch item), which this does not touch.
+
+OPENING 2 — define_measure failed-retry discipline. After two could-not-define results in a run,
+the third define call is terminal (refuse/clarify) and the authoring pipeline is not re-entered —
+symmetric to the §70 anti-shopping line, which covered only COMPUTED. Deterministic, pinned three
+ways (fires on the third call, the pipeline is not entered, the message steers to refuse).
+time_to_first fell from 27 model calls to 17 on probe; the 3-call cap did not trigger live this
+round (the model self-limited to two defines), so the cap is a proven backstop, not a
+regularly-exercised path.
+
+No regressions: the boolean control is clean, no new silents, correctness unchanged. Both are
+efficiency/robustness on the ~9%-of-attempts tail; the body of the suite (76% one-call) is
+untouched. germany remains the honest hard case, its cost dominated by the unbindable-country
+root, not by the two symptoms addressed here.

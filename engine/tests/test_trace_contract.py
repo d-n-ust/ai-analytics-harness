@@ -630,6 +630,30 @@ def test_a_computable_define_still_lets_the_override_correct_the_reason(monkeypa
     assert r is not None and r.is_error and "no_governed_definition" in r.content
 
 
+def test_define_measure_is_terminal_after_two_could_not_define(monkeypatch):
+    """Failed-retry discipline (§76): the agent re-called define_measure up to four times on a
+    reworded measure (time_to_first, 27 model calls). After two gave_up results in a run the third
+    call is terminal — refuse/clarify, and the authoring pipeline is not even entered again."""
+    import agent.tools.definition as td
+    import agent.runtime.define as rd
+
+    calls = {"n": 0}
+
+    def _fake_define(model, measure, ont, sem, verifier_model=None):
+        calls["n"] += 1
+        return NS(outcome="gave_up", disclosure="could not author")
+
+    monkeypatch.setattr(rd, "define_measure", _fake_define)
+    tb = NS(ontology="ONT", model=object(), semantic=NS(), verifier_model=None)
+    r1 = td._define_measure(tb, {"measure": "avg days to first habit"})
+    r2 = td._define_measure(tb, {"measure": "mean days to first habit"})
+    assert calls["n"] == 2 and tb._define_giveups == 2
+    assert "failed twice" in r2.content
+    r3 = td._define_measure(tb, {"measure": "average days to first activity"})
+    assert calls["n"] == 2                    # the pipeline is NOT entered a third time
+    assert "Do NOT call define_measure again" in r3.content
+
+
 # ── the loaded-question contract (B1) ─────────────────────────────────────────────────────────
 def _premise_stub(record, pair):
     import agent.gates.contract as gc

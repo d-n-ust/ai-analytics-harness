@@ -198,7 +198,7 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint d2d624ba0ed8 ===
+=== rung 3 · R0 · fingerprint ac06772fc30b ===
 system: sha256=8772c40df969 chars=6647
 [
   {
@@ -256,8 +256,14 @@ system: sha256=8772c40df969 chars=6647
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -357,7 +363,7 @@ system: sha256=8772c40df969 chars=6647
   }
 ]
 
-=== rung 3 · R2 · fingerprint 5988a77e2ae1 ===
+=== rung 3 · R2 · fingerprint 5c4bfe884b0f ===
 system: sha256=9828af414511 chars=7242
 [
   {
@@ -415,8 +421,14 @@ system: sha256=9828af414511 chars=7242
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -632,7 +644,7 @@ system: sha256=9828af414511 chars=7242
   }
 ]
 
-=== rung 3 · R4 · fingerprint 0208cb1d8b8f ===
+=== rung 3 · R4 · fingerprint 5d8dbedd62ba ===
 system: sha256=779f2dcd399a chars=7557
 [
   {
@@ -675,8 +687,14 @@ system: sha256=779f2dcd399a chars=7557
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -911,7 +929,7 @@ system: sha256=779f2dcd399a chars=7557
   }
 ]
 
-=== rung 3 · R6 · fingerprint d864d4859def ===
+=== rung 3 · R6 · fingerprint 23f1b1513666 ===
 system: sha256=2859427d4ead chars=8068
 [
   {
@@ -954,8 +972,14 @@ system: sha256=2859427d4ead chars=8068
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1190,7 +1214,7 @@ system: sha256=2859427d4ead chars=8068
   }
 ]
 
-=== rung 3 · R9 · fingerprint 420acca60283 ===
+=== rung 3 · R9 · fingerprint 915978b7ee95 ===
 system: sha256=da0935c14ce4 chars=9530
 [
   {
@@ -1233,8 +1257,14 @@ system: sha256=da0935c14ce4 chars=9530
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1503,7 +1533,7 @@ system: sha256=da0935c14ce4 chars=9530
   }
 ]
 
-=== rung 6 · R0 · fingerprint d5a2b0483f1a ===
+=== rung 6 · R0 · fingerprint 258f44ca3fa9 ===
 system: sha256=35809e63a742 chars=11558
 [
   {
@@ -1561,8 +1591,14 @@ system: sha256=35809e63a742 chars=11558
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1636,8 +1672,14 @@ system: sha256=35809e63a742 chars=11558
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -1712,7 +1754,7 @@ system: sha256=35809e63a742 chars=11558
   }
 ]
 
-=== rung 6 · R2 · fingerprint 581a6a1570f6 ===
+=== rung 6 · R2 · fingerprint d173f30eb015 ===
 system: sha256=addb8dd4ef1c chars=12153
 [
   {
@@ -1770,8 +1812,14 @@ system: sha256=addb8dd4ef1c chars=12153
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1845,8 +1893,14 @@ system: sha256=addb8dd4ef1c chars=12153
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2037,7 +2091,7 @@ system: sha256=addb8dd4ef1c chars=12153
   }
 ]
 
-=== rung 6 · R4 · fingerprint b588fc1c9a39 ===
+=== rung 6 · R4 · fingerprint c7312810b7ec ===
 system: sha256=7b38d3c8000d chars=12468
 [
   {
@@ -2080,8 +2134,14 @@ system: sha256=7b38d3c8000d chars=12468
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2174,8 +2234,14 @@ system: sha256=7b38d3c8000d chars=12468
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2375,7 +2441,7 @@ system: sha256=7b38d3c8000d chars=12468
   }
 ]
 
-=== rung 6 · R6 · fingerprint c2ebb5d16c01 ===
+=== rung 6 · R6 · fingerprint 91ab869df363 ===
 system: sha256=5fc18fbdbb89 chars=12979
 [
   {
@@ -2418,8 +2484,14 @@ system: sha256=5fc18fbdbb89 chars=12979
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2512,8 +2584,14 @@ system: sha256=5fc18fbdbb89 chars=12979
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2713,7 +2791,7 @@ system: sha256=5fc18fbdbb89 chars=12979
   }
 ]
 
-=== rung 6 · R9 · fingerprint aee5d47d36c0 ===
+=== rung 6 · R9 · fingerprint d24dccfd6499 ===
 system: sha256=8da21963ab32 chars=14441
 [
   {
@@ -2756,8 +2834,14 @@ system: sha256=8da21963ab32 chars=14441
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2850,8 +2934,14 @@ system: sha256=8da21963ab32 chars=14441
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3085,7 +3175,7 @@ system: sha256=8da21963ab32 chars=14441
   }
 ]
 
-=== rung 7 · R0 · fingerprint 4bc604b0afbf ===
+=== rung 7 · R0 · fingerprint 18fb8657e822 ===
 system: sha256=52d1e0c76690 chars=7025
 [
   {
@@ -3143,8 +3233,14 @@ system: sha256=52d1e0c76690 chars=7025
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3218,8 +3314,14 @@ system: sha256=52d1e0c76690 chars=7025
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3294,7 +3396,7 @@ system: sha256=52d1e0c76690 chars=7025
   }
 ]
 
-=== rung 7 · R2 · fingerprint d5bf0b5415ce ===
+=== rung 7 · R2 · fingerprint e2d2483131b9 ===
 system: sha256=52c741e82c5f chars=7620
 [
   {
@@ -3352,8 +3454,14 @@ system: sha256=52c741e82c5f chars=7620
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3427,8 +3535,14 @@ system: sha256=52c741e82c5f chars=7620
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3619,7 +3733,7 @@ system: sha256=52c741e82c5f chars=7620
   }
 ]
 
-=== rung 7 · R4 · fingerprint fe6500ac5179 ===
+=== rung 7 · R4 · fingerprint 6ff87d9ade89 ===
 system: sha256=39a837edddba chars=7935
 [
   {
@@ -3662,8 +3776,14 @@ system: sha256=39a837edddba chars=7935
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3756,8 +3876,14 @@ system: sha256=39a837edddba chars=7935
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3957,7 +4083,7 @@ system: sha256=39a837edddba chars=7935
   }
 ]
 
-=== rung 7 · R6 · fingerprint 864bef24dee1 ===
+=== rung 7 · R6 · fingerprint 98de1fd124e4 ===
 system: sha256=6fe600443d81 chars=8446
 [
   {
@@ -4000,8 +4126,14 @@ system: sha256=6fe600443d81 chars=8446
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4094,8 +4226,14 @@ system: sha256=6fe600443d81 chars=8446
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -4295,7 +4433,7 @@ system: sha256=6fe600443d81 chars=8446
   }
 ]
 
-=== rung 7 · R9 · fingerprint d1ae61c19329 ===
+=== rung 7 · R9 · fingerprint d23355e21c5a ===
 system: sha256=acb15b955570 chars=9908
 [
   {
@@ -4338,8 +4476,14 @@ system: sha256=acb15b955570 chars=9908
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4432,8 +4576,14 @@ system: sha256=acb15b955570 chars=9908
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -4667,7 +4817,7 @@ system: sha256=acb15b955570 chars=9908
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint 9578464a20ea ===
+=== rung 7 · R9/purpose · fingerprint 09561a47df20 ===
 system: sha256=2892b0be5490 chars=10282
 [
   {
@@ -4714,8 +4864,14 @@ system: sha256=2892b0be5490 chars=10282
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4812,8 +4968,14 @@ system: sha256=2892b0be5490 chars=10282
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -5047,7 +5209,7 @@ system: sha256=2892b0be5490 chars=10282
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint c9d509d462c6 ===
+=== rung 7 · R9/claims · fingerprint 749852cc88d5 ===
 system: sha256=f00585083b6e chars=10612
 [
   {
@@ -5090,8 +5252,14 @@ system: sha256=f00585083b6e chars=10612
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -5184,8 +5352,14 @@ system: sha256=f00585083b6e chars=10612
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -5454,7 +5628,7 @@ system: sha256=f00585083b6e chars=10612
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint ef4bd6c09973 ===
+=== rung 7 · R9/claims+repair · fingerprint 4ec45475e918 ===
 system: sha256=f15e2615f93c chars=10818
 [
   {
@@ -5497,8 +5671,14 @@ system: sha256=f15e2615f93c chars=10818
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -5591,8 +5771,14 @@ system: sha256=f15e2615f93c chars=10818
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -5861,7 +6047,7 @@ system: sha256=f15e2615f93c chars=10818
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint 2b921f5d1555 ===
+=== rung 7 · R9/purpose+claims+repair · fingerprint 9198e4e35ee3 ===
 system: sha256=8e605ec45993 chars=11192
 [
   {
@@ -5908,8 +6094,14 @@ system: sha256=8e605ec45993 chars=11192
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -6006,8 +6198,14 @@ system: sha256=8e605ec45993 chars=11192
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -6276,7 +6474,7 @@ system: sha256=8e605ec45993 chars=11192
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint dde4bb42c962 ===
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint 5d1d6fb81550 ===
 system: sha256=7da0cf61d104 chars=12011
 [
   {
@@ -6323,8 +6521,14 @@ system: sha256=7da0cf61d104 chars=12011
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -6421,8 +6625,14 @@ system: sha256=7da0cf61d104 chars=12011
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -6691,7 +6901,7 @@ system: sha256=7da0cf61d104 chars=12011
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint 034eb256251d ===
+=== rung 5 · R5/claims · fingerprint a356bff22626 ===
 system: sha256=85b29e5dab0a chars=13033
 [
   {
@@ -6734,8 +6944,14 @@ system: sha256=85b29e5dab0a chars=13033
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -7005,7 +7221,7 @@ system: sha256=85b29e5dab0a chars=13033
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint a6a73c6c6e19 ===
+=== rung 5 · R5/claims+role · fingerprint b13f341bea27 ===
 system: sha256=4f8d4e3079a4 chars=13854
 [
   {
@@ -7048,8 +7264,14 @@ system: sha256=4f8d4e3079a4 chars=13854
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {

@@ -82,8 +82,15 @@ _QUERY_METRIC = {
             "metric": {"type": "string", "description": "Metric name (see list_metrics)."},
             "group_by": {"type": "array", "items": {"type": "string"},
                          "description": "Dimensions to break the metric down by."},
-            "filters": {"type": "object", "additionalProperties": True,
-                        "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}"},
+            # A filter VALUE is a string / number / boolean, never null — a null filter is a
+            # malformed constraint the model reached for to mean "no filter" or "the time window"
+            # (one question spent four bounces on {signup_date: null}). Forbidding null at the
+            # schema makes the class unexpressible; the deterministic bounce below stays as floor.
+            "filters": {"type": "object",
+                        "additionalProperties": {"type": ["string", "number", "boolean"]},
+                        "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. "
+                                       "Omit a key to leave it unfiltered; use `period` for the "
+                                       "time window (never a null filter value)."},
             "time_grain": {"type": "string", "enum": list(TIME_GRAINS),
                            "description": "Bucket the time column (for trends)."},
             # The contract, stated where the model reads it: named values are RELATIVE and always

@@ -54,10 +54,12 @@ _DECOMPOSE_CHANGE = {
                          "description": "Baseline period (default prev_week)."},
             "period_b": {"type": "string", "enum": list(NAMED_PERIODS),
                          "description": "Comparison period (default last_week)."},
-            "filters": {"type": "object", "additionalProperties": True,
+            "filters": {"type": "object",
+                        "additionalProperties": {"type": ["string", "number", "boolean"]},
                         "description": "Restrict the WHOLE decomposition to one scope, e.g. "
                                        "{\"region\": \"EMEA\"} to decompose EMEA on its own. "
-                                       "Every node is computed inside that scope."},
+                                       "Every node is computed inside that scope. Omit a key to "
+                                       "leave it unfiltered (never a null value)."},
         },
     },
 }

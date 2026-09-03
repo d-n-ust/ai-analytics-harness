@@ -573,6 +573,7 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     run = _Run(question, grounding, model, verifier_model)
     grounding.toolbox.model = model      # so check_answerability can decompose against the graph
     grounding.toolbox.verifier_model = verifier_model  # so the aptness challenger audits, not echoes
+    grounding.toolbox._define_giveups = 0  # per-run: the failed-define retry cap (tools/definition)
     # Tier-4 shadow: one Scope reading per question, alongside (never instead of) the live
     # classifiers. Read HERE, before the first turn, so it is a property of the question alone —
     # not of anything the run went on to do.
