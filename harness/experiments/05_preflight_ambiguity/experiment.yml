@@ -13,7 +13,7 @@ question: >-
   When a static scan flags confusable definitions in a warehouse and they are fixed, how much does
   the agent's wrong-grounding rate fall, and what share of the harm is left in problems the scan
   cannot read?
-status: in_progress
+status: shipped
 
 article:
   slug: why-ai-analysts-pick-the-wrong-metric

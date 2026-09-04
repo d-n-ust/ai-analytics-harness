@@ -12,12 +12,15 @@ experiments/
 ├── 01_grounding_ladder/            ✓ shipped — how much does each layer of grounding buy?
 ├── 02_reliability_ladder/          ✓ shipped — what is each guardrail worth?
 ├── 03_evidence_graph/              ✓ shipped — what if every claim must cite its tool result?
-└── 04_repair_matrix/               · in progress — which primitive failed, and where must its grounding live?
-    ├── experiment.yml
-    ├── 00_primitive_load/          the flagship: 62 items × 8 arms × 3 reps — the matrix itself
-    ├── 02_segment/                 the segment hides in the metric NAME    (S1)
-    ├── 02_segment__mf/             the segment hides in the AGGREGATE      (S4)
-    └── …                           catalogue format, entity, grain, additivity
+├── 04_repair_matrix/               ✓ shipped — which primitive failed, and where must its grounding live?
+│   ├── experiment.yml
+│   ├── 00_primitive_load/          the flagship: 62 items × 8 arms × 3 reps — the matrix itself
+│   ├── 02_segment/                 the segment hides in the metric NAME    (S1)
+│   ├── 02_segment__mf/             the segment hides in the AGGREGATE      (S4)
+│   └── …                           catalogue format, entity, grain, additivity
+├── 05_preflight_ambiguity/         ✓ shipped — does fixing what a static scan flags remove the runtime harm?
+└── 06_third_state/                 ✓ measured — what does the agent do when two definitions are both right?
+    └── fixture/                    a dbt project, a MetricFlow layer, the contested pair, the held-out suites
 ```
 
 ```bash

@@ -318,8 +318,8 @@ class Experiment:
     status: str                        # shipped | in_progress | planned
     runs: str                          # declarative | cli | code — how this project's runs happen
     article: dict = field(default_factory=dict)
-    evidence: list = field(default_factory=list)
-    notes: list = field(default_factory=list)
+    evidence: list = field(default_factory=list)   # paths; checked by problems()
+    notes: list = field(default_factory=list)      # free prose; never resolved as paths
     directory: Path = None
 
     KEYS = {"title", "question", "status", "runs", "article", "evidence", "notes"}
@@ -352,8 +352,9 @@ class Experiment:
         """Pointers that have gone stale. A manifest nobody checks is a manifest that lies."""
         # Resolved the same way a study's own paths are, or `bench exp` reports every
         # pre-registration pointer as stale on a perfectly healthy tree — and a manifest check
-        # that cries wolf is one nobody reads.
-        missing = [p for p in list(self.evidence) + list(self.notes)
+        # that cries wolf is one nobody reads. Only `evidence` is checked: `notes` is prose, and a
+        # paragraph passed to stat() raised ENAMETOOLONG and took the whole tree down with it.
+        missing = [p for p in self.evidence
                    if not _resolve_declared(p).exists() and not (self.directory / p).exists()]
         out = [f"{self.name}: evidence path does not exist: {p}" for p in missing]
         if self.runs == "declarative" and not self.studies():
@@ -366,7 +367,7 @@ class Experiment:
 
 
 def tree() -> str:
-    """The four experiments, their status, and the studies each one can run."""
+    """Every experiment, its status, and the studies each one can run."""
     mark = {"shipped": "✓", "in_progress": "·", "planned": " "}
     lines, problems = [], []
     for e in Experiment.load_all():

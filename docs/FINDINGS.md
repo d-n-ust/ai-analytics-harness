@@ -433,6 +433,7 @@ declared `0` had matched any rate below 50%.
 | 5 | does any of this matter on a strong model | ~500 attempts at a fair reasoning budget | repair has never fired there, but that is 0/15 |
 | 6 | split identity from arithmetic in `num_match` | small change, wide blast radius | rule (a) asks "is this a governed result", rule (b) "is this a comparison of two"; only (b) accumulates float error, and they share one predicate. Cost a correct answer 5/5 in one cell |
 | 7 | rename `value_moments` / `weekly_value_moments` | layer change + regrade | the 28% mislabel rate, and the largest single defect we have not touched |
+| 8 | **`real_value_moments` served for `value_moments` at the standard cell on the default layer** | one ablation: `current_best` minus each R9-tier guardrail, on `t1_ios_value_moments_june` | found 2026-09-04 by a three-question probe: 4 of 4 draws at rungs 3 and 7 served the `real_` twin (5,374 for a correct 5,648), plain R3 on the same code served the correct twin 2 of 2, and the July R0–R9 run had the case correct 28 of 30. The drift is in guardrails R9 and `current_best` share and R3 lacks. The published held-out boards did not see it because they run on the 06 fixture, where the twin was collapsed. `FOUNDATION.md` F-40, `HARNESS.md` H-37 |
 
 ---
 

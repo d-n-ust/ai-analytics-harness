@@ -28,7 +28,7 @@ runs: cli
 evidence:
   - docs/GROUNDING.md                         # what each rung is, and why it exists
   - results/published/2026-07-grounding-ladder/summary.md    # the published numbers
-  - agent/rungs.py                            # the rungs themselves, as capabilities
+  - agent/core/rungs.py                       # the rungs themselves, as capabilities
   - evals/cases/                              # the frozen question set every rung is scored on
 
 notes:
