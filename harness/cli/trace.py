@@ -20,8 +20,8 @@ import shutil
 import sys
 import textwrap
 
-from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, Position, parse_cell
-from agent.protocol import split_config
+from agent.core.protocol import split_config
+from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, GuardrailSet, Position, parse_cell
 from cli.style import cut as _short
 from cli.style import paint as _paint  # noqa: F401
 from cli.style import use_colour as _use_colour  # noqa: F401
@@ -47,7 +47,11 @@ def _guardrail_line(config: str, paint) -> list[str]:
     except (ValueError, AttributeError):
         return [f"  guardrails  {paint(config or 'unknown', 'dim')}"]
     on = [g for g in GUARDRAILS if getattr(gset, g.name, False)]
-    if not on:
+    # "Bare" means the DEFAULT set, not the empty one. R0 was never empty — the clarify tool has
+    # been offered on every run ever stored, and it only stopped being invisible when it became a
+    # flag. Comparing against the defaults keeps this line true as guardrails are added, where a
+    # `not on` test would have quietly started calling R0 something else.
+    if gset == GuardrailSet():
         return [f"  guardrails  {paint('none — the bare agent', 'dim')}"]
     enforced = [g.name for g in on if g.position in _ENFORCED]
     advisory = [g.name for g in on if g.position not in _ENFORCED]
@@ -123,6 +127,8 @@ def _act_lines(acts, paint, indent: str) -> list[str]:
     are very different claims about a number."""
     lines = []
     for a in acts or []:
+        if isinstance(a, str):                      # a row may store just the guardrail name
+            a = {"guardrail": a}
         glyph, colour = _MARK.get(a.get("outcome", ""), ("·", "dim"))
         name = a.get("guardrail", "?")
         detail = a.get("detail") or ""

@@ -1,0 +1,288 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4269.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4269.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Monthly app opens (additive count) on the web platform for March 2026 for asked How many times did users on the web open the app in March 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "Monthly app opens (additive count) on the web platform for March 2026 (period 2026-03), excluding internal and test accounts as governed metric enforces.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_gross_mrr_now_stated",
+    "error": null,
+    "question": "Counting subscriptions that were later refunded, what is our monthly recurring revenue today?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 2754.0016666666666,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 2754.0016666666666"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 2754.0016666666666 derives from the run's own values"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'Counting subscriptions that were later refunded'"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "binding holds: the question names gross_mrr and the answer serves it"
+      },
+      {
+        "guardrail": "metric_brief",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "segment phrase 'refunded' is inside the scope quote that chose the metric \u2014 a definition discriminator, not a filter"
+      }
+    ],
+    "answer_text": "2754.0016666666666",
+    "explanation": "gross_mrr (monthly recurring revenue counting subscription terms that were later refunded) \u2014 running current-book snapshot as of now, in currency units; this includes refunded terms so it is gross of refunds. Computed from the governed metric `gross_mrr`.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "gross_mrr"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(2754.0016666666666,)\n[also] `mrr` is an equally governed answer to the same question and returns a different number here: `gross_mrr` 2,754 against `mrr` 2,685, 2.50% apart. The two differ by status = active and s"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_trial_conversions",
+    "error": null,
+    "question": "How many free-trial users converted to a paid plan last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "the platform does not capture a 'free-trial' status or a trial start flag for users; there is no governed metric or table tracking 'trial users' or their conversions to paid plans",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The governed metric catalogue and marts do not include any metric or column marking a user as being on a free trial, so conversion from trial to paid cannot be computed from available data.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "free-trial users converted to a paid plan last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] UNINSTRUMENTED \u2014 'free-trial users converted to a paid plan last month' is NOT captured: free-trial users (trial status/start flag). `refuse` with reason `uninstrumented`.\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": "$93.72 (marketing_spend) and $80.95 (acquisition_spend)",
+    "explanation": "Marketing cost per signup = total marketing_spend in 2026-Q1 divided by new_signups in 2026-Q1. marketing_spend = 59,664.99999999996; new_signups = 637 \u2192 59,665 / 637 = $93.72 per signup. acquisition_spend (excludes partnerships) = 51,573 \u2192 51,573 / 637 = $80.95 per signup. The two readings differ because acquisition_spend excludes the internal/test channel 'partnerships'.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q1' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

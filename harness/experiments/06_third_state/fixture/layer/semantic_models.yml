@@ -1,0 +1,269 @@
+# The governed semantic layer over the marts.
+#
+# FORMAT. This is MetricFlow's own YAML — one `semantic_model:` or `metric:` per document — which is
+# what dbt compiles its `semantic_models:` blocks into, what `metricflow` parses directly, and what
+# `preflight scan --dialect metricflow` reads. The engine takes a directory, not a file
+# (semantic/metricflow_engine.py).
+#
+# THE POINT OF THIS FILE. Two metrics answer the question "how many active users did we have last
+# week", they disagree by about 4%, and both are correct. `active_users` and `active_accounts`
+# differ in one filter, have different owners, and have different downstream consumers. Neither is
+# a leftover and neither can be deleted without breaking a real report, so no offline repair can
+# collapse them. That is what makes this ambiguity IRREDUCIBLE, and it is the whole reason the
+# experiment exists.
+#
+# MetricFlow has no field for the concept a metric claims, and no field for its owner. Both facts
+# below are written into the description because there is nowhere else to put them — which is
+# itself the finding: the format most teams use cannot express that two metrics answer the same
+# question, so nothing can compute how many definitions a question has.
+---
+semantic_model:
+  name: user_activity
+  description: "One row is one account on one day it did anything in the product."
+  node_relation: {schema_name: wh_06, alias: fct_user_days}
+  defaults: {agg_time_dimension: active_date}
+  entities:
+    - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: active_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
+    - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
+    - {name: country, type: categorical, description: "The account country, as an ISO code: US (the United States); BR (Brazil); GB (the United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); IN (India)."}
+    - {name: platform, type: categorical, description: "The registered client platform: android, ios, web, or unknown."}
+    - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
+  measures:
+    - {name: active_account_count, agg: count_distinct, expr: user_id}
+    - {name: value_moment_count, agg: sum, expr: value_moments}
+    - {name: app_open_count, agg: sum, expr: app_opens}
+---
+semantic_model:
+  name: users
+  description: "The account dimension. One row is one signup."
+  node_relation: {schema_name: wh_06, alias: dim_users}
+  defaults: {agg_time_dimension: signup_date}
+  entities: [{name: user, type: primary, expr: user_id}]
+  dimensions:
+    - {name: signup_date, type: time, type_params: {time_granularity: day}}
+    - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
+    - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
+    - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
+  measures:
+    - {name: signup_count, agg: count, expr: user_id}
+---
+semantic_model:
+  name: subscriptions
+  description: "One row is one subscription term."
+  node_relation: {schema_name: wh_06, alias: fct_subscriptions}
+  defaults: {agg_time_dimension: started_date}
+  entities:
+    - {name: subscription, type: primary, expr: subscription_id}
+    # The account that holds the term. fct_subscriptions has always carried user_id (schema.yml:
+    # "every fact carries user_id", and paying_user_count counts it) — the relationship existed in
+    # the mart and was simply never declared, so the graph truthfully reported subscription and
+    # user as unjoinable and every cross-entity verdict inherited a wrong reason.
+    - {name: user, type: foreign, expr: user_id}
+  dimensions:
+    - {name: started_date, type: time, type_params: {time_granularity: day}}
+    - {name: cohort_month, type: categorical, expr: "strftime(started_date, '%Y-%m')",
+       description: "The month a term STARTED, as YYYY-MM. Filter this for a cohort question — how
+         much recurring revenue comes from terms that began in a given month — as a first-class
+         equality that composes with plan. It is a different question from the current book."}
+    - {name: plan, type: categorical, description: "The billing interval of the subscription term: annual or monthly. There is no enterprise, team, or per-seat plan."}
+    - {name: is_active, type: categorical, description: "TRUE when the subscription term is currently active."}
+    - {name: status, type: categorical, description: "The subscription term status: active, canceled, paused, or refunded. active is the current paying book."}
+  measures:
+    - name: mrr_amount
+      agg: sum
+      expr: "CASE WHEN plan = 'annual' THEN billed_amount / 12.0 ELSE billed_amount END"
+    - {name: subscription_count, agg: count, expr: subscription_id}
+    - {name: paying_user_count, agg: count_distinct, expr: user_id}
+---
+semantic_model:
+  name: marketing
+  description: "One row is one channel-day of marketing spend."
+  node_relation: {schema_name: wh_06, alias: fct_marketing_spend}
+  defaults: {agg_time_dimension: spend_date}
+  entities: [{name: spend_row, type: primary, expr: "spend_date || channel"}]
+  dimensions:
+    - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    - {name: channel, type: categorical,
+       description: "The marketing channel the spend is on. content_seo is spend on CONTENT and
+         SEO; paid_search is paid search advertising; partnerships is an internal test integration
+         that books spend but buys no customers; referral is referrals."}
+  measures:
+    - {name: spend_amount, agg: sum, expr: spend}
+
+# ── the contested pair ────────────────────────────────────────────────────────────────────────
+# Both answer "how many active users". Both are right. They are 3.7% apart on the last full week
+# and between 0.0% and 5.2% apart across the slices the layer can break them down by, which is the
+# range in which a swap is invisible: the wrong number is the right order of magnitude, in the right
+# unit, from a real metric, computed by real SQL.
+---
+metric:
+  name: active_users
+  description: >-
+    Distinct accounts with any product activity in the period, EXCLUDING internal and test
+    accounts. Owned by Product. Used by the weekly product review and the North Star metric tree.
+    This is a DISTINCT COUNT, so it is SEMI-ADDITIVE: an account active on several days is counted
+    once for the period, and a weekly figure is NOT the sum of its seven daily figures — summing
+    days double-counts anyone active more than once. Ask for the grain you want and read the value
+    directly; do not pull it by day and add the days up. Example — weekly active users by platform:
+    query_metric(active_users, group_by=['activity__platform'], time_grain='week'), which returns
+    one already-weekly distinct count per platform. To compare two weeks, run it once per period
+    (period='last_week', then period='prev_week') and subtract the two values.
+  type: simple
+  type_params: {measure: active_account_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: active_users_growth
+  description: >-
+    The change in active_users from the prior period to this one — this period's active_users minus
+    the prior period's. A GOVERNED derived metric, so the LAYER computes the delta; do not query two
+    periods and subtract by hand. It is a period-over-period offset, so query it GROUPED BY TIME:
+    query_metric(active_users_growth, group_by=['metric_time'], time_grain='week', period='last_week')
+    returns the single week-over-week change (last week's active_users minus the week before's).
+    It is SLICEABLE by a segment — the change on one platform, region or channel — but you must
+    FILTER, not group_by (a period-over-period offset cannot be grouped by a non-time dimension). The
+    growth of active users on web last week: query_metric(active_users_growth,
+    filters={'activity__platform': 'web'}, group_by=['metric_time'], time_grain='week',
+    period='last_week'); the filter applies to both periods.
+    Excludes internal and test accounts, like active_users.
+  type: derived
+  type_params:
+    expr: "this_period - prior_period"
+    metrics:
+      - name: active_users
+        alias: this_period
+      - name: active_users
+        alias: prior_period
+        offset_window: 1 week
+---
+metric:
+  name: active_accounts
+  description: >-
+    Distinct accounts with any product activity in the period, INCLUDING internal and test
+    accounts. Owned by Platform. Used by capacity planning and the support-volume forecast, both of
+    which care about load rather than about customers.
+  type: simple
+  type_params: {measure: active_account_count}
+
+# ── everything else, so the layer is not a two-metric toy ─────────────────────────────────────
+# ── contested · engagement volume ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: value_moments
+  description: >-
+    Completed habits in the period, EXCLUDING internal and test accounts — that filter is built in,
+    so do not add it yourself. Owned by Product. Used by the engagement review and the North Star
+    metric tree. Filter by a segment for a slice: query_metric(value_moments,
+    filters={'activity__region': 'EMEA'}, period='2026-06') is habit completions in EMEA in June;
+    the regions are Americas, EMEA, APAC.
+  type: simple
+  type_params: {measure: value_moment_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: total_value_moments
+  description: >-
+    Completed habits in the period, INCLUDING internal and test accounts. Owned by Platform. Used
+    for write-volume forecasting and storage planning, which care about rows rather than customers.
+  type: simple
+  type_params: {measure: value_moment_count}
+---
+metric:
+  name: app_opens
+  description: >-
+    App opens in the period, excluding internal and test accounts (built in). An additive count, so
+    read a whole period DIRECTLY rather than summing sub-periods: query_metric(app_opens,
+    filters={'activity__region': 'EMEA'}, period='2026-H1') is EMEA app opens across the first half
+    of 2026 — do not query each month and add them up.
+  type: simple
+  type_params: {measure: app_open_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
+---
+metric:
+  name: new_signups
+  description: "Accounts created in the period, all accounts."
+  type: simple
+  type_params: {measure: signup_count}
+# ── contested · recurring revenue ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: mrr
+  description: >-
+    The current monthly value of every active subscription, net of terms later refunded. A running
+    figure: leave `period` out to get it as it stands today, which is what a question with no date is
+    asking for. A `period` here selects terms that STARTED in it — a cohort, a different question —
+    not the running figure on that date. An annual term counts as one twelfth. Example:
+    query_metric(metric='mrr', filters={'subscription__plan': 'monthly'}) is the monthly-plan figure
+    today, and query_metric(metric='mrr', filters={'subscription__cohort_month': '2026-06'}) is the
+    revenue from terms that started in June — a cohort, not the current book. For a QUARTER or any multi-month cohort, use the period: query_metric(metric='mrr', period='2026-Q2') is the revenue from terms that started in Q2. cohort_month is MONTHLY ('2026-06') only; do NOT filter it by a quarter like '2026-Q2' — that value does not exist and matches nothing, returning an empty result. Owned by Finance. Used
+    by the board pack and the revenue forecast.
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+---
+metric:
+  name: gross_mrr
+  description: >-
+    The same running figure as `mrr`, but gross of refunds — a term that was later refunded still
+    counts. That single difference is what separates the two. Same rules: leave `period` out for the
+    figure today; a `period` selects the cohort that started in it. Owned by Sales. Used for quota
+    attainment and commission, which pay on what was closed rather than on what was kept.
+  type: simple
+  type_params: {measure: mrr_amount}
+  filter: "{{ Dimension('subscription__status') }} != 'canceled'"
+
+# ── clean · the subscription book ─────────────────────────────────────────────────────────────
+---
+metric:
+  name: paying_users
+  description: >-
+    Distinct accounts holding a live subscription. Filter by plan for a plan-specific count:
+    query_metric(paying_users, filters={'subscription__plan': 'monthly'}) is the customers on the
+    monthly plan today, and 'annual' for the annual plan; leave the filter off for all plans.
+  type: simple
+  type_params: {measure: paying_user_count}
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+---
+metric:
+  name: active_subscriptions
+  description: "Live subscription contracts. An account holding two counts twice."
+  type: simple
+  type_params: {measure: subscription_count}
+  filter: "{{ Dimension('subscription__status') }} = 'active'"
+# ── contested · marketing spend ───────────────────────────────────────────────────────────────
+---
+metric:
+  name: marketing_spend
+  description: >-
+    Every pound of marketing spend in the period, ALL channels. Filter by channel for one
+    channel's spend: query_metric(marketing_spend, filters={'spend_row__channel': 'content_seo'})
+    is spend on content and SEO; leave the filter off for all channels. Owned by Finance. Used by
+    the budget-versus-actuals report, which must reconcile to the ledger.
+  type: simple
+  type_params: {measure: spend_amount}
+---
+metric:
+  name: acquisition_spend
+  description: >-
+    Marketing spend on REAL acquisition channels, excluding `partnerships` — an internal test
+    integration that books spend but buys no customers. Owned by Growth. Used for cost per
+    acquisition and channel efficiency.
+  type: simple
+  type_params: {measure: spend_amount}
+  filter: "{{ Dimension('spend_row__channel') }} != 'partnerships'"
+---
+metric:
+  name: habits_per_active_user
+  description: >-
+    Average completed habits per active user, customer-facing (numerator and denominator both
+    exclude internal and test accounts). A GOVERNED ratio metric, so the LAYER computes it at the
+    query grain — do not divide two figures by hand. query_metric(habits_per_active_user,
+    period='last_week') is last week's completed habits per active user.
+  type: ratio
+  type_params:
+    numerator: {name: value_moments}
+    denominator: {name: active_users}

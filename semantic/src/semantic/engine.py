@@ -106,6 +106,10 @@ GUARDRAIL_NEEDS = {
 # engine correctly refused — which is a crash where it should have been an absence.
 TOOL_NEEDS = {
     "check_coverage": ("coverage",),
+    # An engine with no NAMED segments cannot answer "is this a governed segment"; on MetricFlow
+    # segment_defined returns the same NO for every term, so the tool is noise the agent wastes a
+    # call on. Withdrawn where segments=False; kept where an engine genuinely has named segments.
+    "check_segment_defined": ("segments",),
 }
 
 

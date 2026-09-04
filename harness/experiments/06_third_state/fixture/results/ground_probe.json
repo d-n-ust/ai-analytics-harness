@@ -1,0 +1,1191 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_acquisition_spend_q2_stated",
+    "error": null,
+    "question": "What did we spend on real acquisition channels in the second quarter of 2026, excluding the partnerships test integration?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 0,
+    "declared": 53041.55,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding the partnerships test integration'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Sum of acquisition_spend (marketing spend on real acquisition channels, excluding the internal partnerships test) for 2026-Q2 in GBP for asked real acquisition channels [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "53,041.55",
+    "explanation": "Sum of acquisition_spend (marketing spend on real acquisition channels, excluding the internal partnerships test) for 2026-Q2 (2026-04-01 to 2026-06-30) in GBP; computed from the governed metric acquisition_spend.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "acquisition_spend",
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(53041.550000000054,)\n[also] `marketing_spend` is an equally governed answer to the same question and returns a different number here: `acquisition_spend` 53,042 against `marketing_spend` 61,233, 15.44% apart. The two differ by"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 0,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of spend_row rows where spend_row.channel = paid_search (marketing_spend metric, spend entity, currency units) for asked paid search [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36,875.98",
+    "explanation": "Sum of all spend_row rows with spend_row.channel = paid_search between 2026-04-01 and 2026-06-30 (marketing_spend metric, spend entity, currency units).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_unknown_plat",
+    "error": null,
+    "question": "How many active users did we have last week on devices where the platform is not recorded?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 0,
+    "declared": 25.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct customer accounts with any product activity on activity.platform = 'unknown' for asked active users [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "25",
+    "explanation": "Weekly active_users: distinct customer accounts with any product activity during 2026-07-06..2026-07-12 on activity.platform = 'unknown' (internal/test accounts excluded).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "filters": {
+            "activity__platform": "unknown"
+          },
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(25,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_tiktok_spend",
+    "error": null,
+    "question": "How much did we spend on TikTok ads in the second quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 0,
+    "declared": null,
+    "reason": "segment_undefined",
+    "missing": "TikTok is not a governed channel; dim_channel contains only content_seo, paid_search, partnerships, referral, organic",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "There is no 'TikTok' channel in the governed channels; spend rows are only by those channels so TikTok spend cannot be reported from this layer.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_segment_defined",
+        "args": {
+          "term": "TikTok"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 this layer declares no named segments \u2014 a population is expressed as a filter over a dimension, so name the dimension and the value instead\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {},
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ by channel cmp chan"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r4 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r6] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "content_seo"
+          },
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r7] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(10643.219999999998,)\n[cite] r7 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 0,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "subscription__plan does not include 'enterprise' \u2014 governed values are 'monthly' and 'annual'",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct paying_users across all plans (live subscriptions) for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "segment_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "question names 'enterprise plan', which does not ground to the ontology; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The catalog has no 'enterprise' plan; asking 'How many customers are on the enterprise plan?' cannot be answered from the governed data because that segment value is not defined.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_acquisition_spend_q2_stated",
+    "error": null,
+    "question": "What did we spend on real acquisition channels in the second quarter of 2026, excluding the partnerships test integration?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 1,
+    "declared": 53041.55,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding the partnerships test integration'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of acquisition_spend (marketing spend on real acquisition channels, excluding the internal 'partnerships' channel) for Q2 2026 for asked real acquisition channels [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "\u00a353,041.55",
+    "explanation": "Sum of acquisition_spend (marketing spend on real acquisition channels, excluding the internal 'partnerships' channel) for Q2 2026 (2026-04-01 through 2026-06-30).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "acquisition_spend",
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(53041.550000000054,)\n[also] `marketing_spend` is an equally governed answer to the same question and returns a different number here: `acquisition_spend` 53,042 against `marketing_spend` 61,233, 15.44% apart. The two differ by"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 1,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Total marketing_spend on the spend_row entity for spend_row__channel = paid_search during 2026-Q2; amount in account currency, summed across spend rows for asked What did we spend on paid search in the second quarter of 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36875.98",
+    "explanation": "Total marketing_spend on the spend_row entity for spend_row__channel = paid_search during 2026-Q2 (2026-04-01 to 2026-06-30); amount in account currency, summed across spend rows.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_unknown_plat",
+    "error": null,
+    "question": "How many active users did we have last week on devices where the platform is not recorded?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 1,
+    "declared": 25.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct accounts with any product activity on activity.platform = 'unknown' during the week for asked active users [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "25",
+    "explanation": "Weekly active_users = distinct accounts with any product activity in the week 2026-07-06 to 2026-07-12 on activity.platform = 'unknown' (internal/test excluded by the metric).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "filters": {
+            "activity__platform": "unknown"
+          },
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(25,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_tiktok_spend",
+    "error": null,
+    "question": "How much did we spend on TikTok ads in the second quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 1,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "spend_row__channel does not include 'tiktok' as a governed value; channels are content_seo/paid_search/partnerships/referral",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "constraint_regression",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "spend_date asked for and then dropped; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed marketing_spend metric cannot filter or report spend specifically for 'TikTok' because 'TikTok' is not a defined channel in the semantic layer. To produce a TikTok-specific number I'd need either a mapping that assigns TikTok rows to one of the existing channels or permission to run raw SQL against spend_rows to identify rows by platform/campaign. Without that, the layer cannot provide a reliable TikTok spend figure.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__spend_date": null
+          },
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "time_grain": "month"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Binder Error: Referenced column \"None\" not found in FROM clause! Candidate bindings: \"spend_row__spend_date__day\" LINE 19: WHERE spend_row__spend_date__day = None ^"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "time_grain": "month",
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ by channel cmp chan"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "time_grain": "month",
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "filters": {
+            "spend_row__spend_date": [
+              "2026-04-01",
+              "2026-06-30"
+            ]
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(1331.3799999999999,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 1,331 against `acquisition_spend` 1,186, 10.89% apart. The two differ by channel cmp chann"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 1,
+    "declared": null,
+    "reason": "segment_undefined",
+    "missing": "no governed segment named 'enterprise'; subscription__plan supports only 'monthly' or 'annual'",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The semantic layer has no 'enterprise' plan value; you must request a supported plan or define the rule for 'enterprise' (e.g., MRR threshold or seat count) for me to compute it.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_segment_defined",
+        "args": {
+          "term": "enterprise"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 this layer declares no named segments \u2014 a population is expressed as a filter over a dimension, so name the dimension and the value instead\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_acquisition_spend_q2_stated",
+    "error": null,
+    "question": "What did we spend on real acquisition channels in the second quarter of 2026, excluding the partnerships test integration?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: 'unverified quote \"channel cmp channel <> \\'partnerships\\'\"'"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing spend on REAL acquisition channels, excluding the partnerships test integration for asked real acquisition channels [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "\u00a353,041.55 (or \u00a361,233.32)",
+    "explanation": "acquisition_spend for 2026-Q2 = \u00a353,041.55 (marketing spend on REAL acquisition channels, excluding the partnerships test integration). marketing_spend for 2026-Q2 = \u00a361,233.32 (total marketing spend including the partnerships test integration). The two governed metrics differ only by excluding vs including spend_row.channel = 'partnerships'.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "acquisition_spend",
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(53041.550000000054,)\n[also] `marketing_spend` is an equally governed answer to the same question and returns a different number here: `acquisition_spend` 53,042 against `marketing_spend` 61,233, 15.44% apart. The two differ by"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 2,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of marketing_spend for spend_row where spend_row__channel = paid_search (currency: GBP) for asked What did we spend on paid search in the second quarter of 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36875.98",
+    "explanation": "Total marketing_spend on spend_row (paid_search) for calendar quarter 2026-Q2 (2026-04-01 through 2026-06-30). Metric 'marketing_spend' sums spend rows; filtered to spend_row__channel = paid_search. Units: currency (GBP).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_unknown_plat",
+    "error": null,
+    "question": "How many active users did we have last week on devices where the platform is not recorded?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 2,
+    "declared": 25.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct accounts with any product activity (excluding internal/test) on activity__platform = 'unknown' within the week, counted once per week for asked active users [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "25",
+    "explanation": "Weekly active_users (distinct accounts with any product activity, excluding internal/test accounts) on activity__platform = 'unknown' for the week 2026-07-06 to 2026-07-12 (last_week) \u2014 distinct accounts counted once for the week.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "filters": {
+            "activity__platform": "unknown"
+          },
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(25,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "error",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "error",
+    "id": "h_b_tiktok_spend",
+    "error": "max_iterations",
+    "question": "How much did we spend on TikTok ads in the second quarter?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 7,
+    "tool_errors": 1,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "constraint_regression",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "spend_date asked for and then dropped; correction 1 of 2"
+      },
+      {
+        "guardrail": "constraint_regression",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "spend_date asked for and then dropped; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_segment_defined",
+        "args": {
+          "term": "TikTok"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 this layer declares no named segments \u2014 a population is expressed as a filter over a dimension, so name the dimension and the value instead\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "TikTok"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named 'TikTok'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r5] YES \u2014 period 2026-04-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r5 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__spend_date": "2026-Q2"
+          },
+          "period": "2026-Q2"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Conversion Error: invalid timestamp field format: \"2026-Q2\", expected format is (YYYY-MM-DD HH:MM:SS[.US][\u00b1HH[:MM[:SS]]| ZONE]) LINE 19: WHERE spend_row__spend_date__day = '2026-Q2' ^"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "start": "2026-04-01",
+          "end": "2026-06-30",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r6] time scope: 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ by channel cmp chan"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate",
+    "rep": 2,
+    "declared": null,
+    "reason": "segment_undefined",
+    "missing": "There is no 'enterprise' plan in subscription__plan; allowed values are 'annual' and 'monthly'.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The catalogue shows subscription__plan only has 'annual' and 'monthly', so 'enterprise' is not a governed segment and cannot be measured.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

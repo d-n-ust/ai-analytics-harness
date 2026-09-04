@@ -1,0 +1,210 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of spend_row rows where channel = paid_search (Total marketing_spend) for 2026-Q2 for asked paid search [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36875.98",
+    "explanation": "Total marketing_spend (sum of spend_row rows) on channel = paid_search, for the calendar quarter 2026-Q2 (2026-04-01 through 2026-06-30). Units: currency (same units as ledger).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Total marketing spend on paid_search (sum of spend_row amounts, period 2026-04-01 to 2026-06-30) in account currency (GBP) for asked paid search in the second quarter of 2026 [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36875.98",
+    "explanation": "Total marketing spend on paid_search in Q2 2026 (sum of spend_row amounts, period 2026-04-01 to 2026-06-30), in account currency (GBP).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_paid_search_spend_q2",
+    "error": null,
+    "question": "What did we spend on paid search in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 36875.98,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of spend_row rows where spend_row.channel = paid_search (currency) for asked paid search [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "36875.98",
+    "explanation": "Total marketing_spend on spend_row.channel = paid_search summed over 2026-Q2 (2026-04-01 to 2026-06-30). Units: currency (pounds). Counted at the spend_row row level and summed for the quarter.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "paid_search"
+          },
+          "time_grain": "month",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(36875.979999999996,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

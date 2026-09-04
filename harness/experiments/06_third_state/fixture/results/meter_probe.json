@@ -1,0 +1,998 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6,684",
+    "explanation": "app_opens for May 2026 (count of app-open events, month grain, excluding internal/test accounts) filtered to activity__platform = ios \u2014 total across 2026-05-01..2026-05-31.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "time_grain": "month",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-05-01",
+          "end": "2026-05-31",
+          "region": "Americas"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-05-01..2026-05-31 within coverage (2025-09-01..2026-07-12). (this layer has no governed regions, so 'Americas' was not applied)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 2,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served change in distinct active accounts in that week versus the prior week for asked Active users fell last week. By how much did they fall? [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "claimed fell but active_users_growth=50 is rose; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served the governed period-over-period change in distinct active accounts (last week's active users minus the prior week's) for asked Active users fell last week. By how much did they fall? [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "active_users_growth for last_week (2026-07-06 to 2026-07-12): the governed period-over-period change in distinct active accounts (activity entity, excludes internal/test accounts). This is last week's active users minus the prior week's.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "time_grain": "week",
+          "group_by": [
+            "metric_time"
+          ],
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3,689 (customer-facing completed habits) and 3,792 (including internal/test accounts)",
+    "explanation": "value_moments (completed habits, excluding internal/test accounts) rose from 11,640 in May 2026 to 15,329 in June 2026, an increase of 3,689. total_value_moments (completed habits including internal/test accounts) rose from 12,249 in May to 16,041 in June, an increase of 3,792. The two metrics differ only by whether internal/test accounts are excluded.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 4,
+    "model_calls": 9,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing cost per signup (total marketing spend divided by new signups) for asked marketing for each person who signed up [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.43 (marketing spend) \u2014 and \u00a343.70 (acquisition spend)",
+    "explanation": "Marketing spend in 2026-Q2 was \u00a361,233.32 and new_signups in the same period were 1,214, so marketing cost per signup = 61,233.32 / 1,214 = \u00a350.43. An alternative governed reading excludes 'partnerships' spend: acquisition_spend was \u00a353,042.00, giving \u00a353,042 / 1,214 = \u00a343.70. The metric is cost per signup in Q2 2026 (total spend divided by count of new accounts).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q2' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of App opens (activity entity) for iOS users in May 2026 for asked How many times did iOS users open the app in May 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6684",
+    "explanation": "App opens (activity entity) in May 2026 on iOS users \u2014 additive count across 2026-05-01..2026-05-31, excluding internal/test accounts as the metric defines.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 2,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served active_users_growth (change in weekly distinct active accounts; reported as +50) for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "active_users growth = last week's active_users minus the prior week's (weekly distinct accounts with any product activity, excluding internal/test accounts). The governed metric active_users_growth for last_week (2026-07-06 to 2026-07-12) is +50 active users.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "group_by": [
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'By how many did completed habits change from May 2026 to June 2026?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): the change in value_moments is 3689 (rose); in total_value_moments (is_internal = false) it is 3792 (rose)"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments and total_value_moments) for asked completed habits [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "1689 completed habits (customer-facing, excluding internal/test accounts); 1,792 including internal/test accounts.",
+    "explanation": "value_moments (completed habits, excludes internal/test accounts) were 11,640 in May 2026 and 15,329 in June 2026 \u2192 change = 15,329 \u2212 11,640 = 1,689 completed habits. total_value_moments (includes internal/test accounts) were 12,249 in May and 16,041 in June \u2192 change = 16,041 \u2212 12,249 = 1,792 completed habits. The two governed metrics differ by whether internal/test accounts are excluded.  Both governed readings: the change in value_moments is 3689 (rose); in total_value_moments (is_internal = false) it is 3792 (rose).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 50.44,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 4,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'What did it cost us in marketing for each person who signed up in the second quarter of 2026?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 43.6916 (vs 50.4393)"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.44",
+    "explanation": "marketing_spend \u00f7 new_signups for 2026-Q2 = \u00a361,233.32 / 1,214 = \u00a350.44 per signup. Metric definitions: marketing_spend is total marketing spend (spend_row) in Q2 2026; new_signups is accounts created in Q2 2026 (user entity).  Both governed readings: a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 43.6916 (vs 50.4393).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q2' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app open events (app_opens) by iOS users in May 2026 for asked How many times did iOS users open the app in May 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6684",
+    "explanation": "Total app opens (activity entity) by iOS users in May 2026. Sourced from the governed metric app_opens, filtered to activity__platform = ios, period = 2026-05; the metric counts app open events excluding internal/test accounts and returns the additive total for the month.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_b_active_users_fell",
+    "error": null,
+    "question": "Active users fell last week. By how much did they fall?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 2,
+    "model_calls": 9,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "claimed fell but active_users_growth=50 is rose; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference between last week's active_users and the prior week's active_users, reported as +50 (indicating a rise) for asked (same) [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "active_users_growth (week 2026-07-06 to 2026-07-12): the governed metric computes last week's active_users minus the prior week's; it returned +50, meaning active users rose by 50, not fell.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users_growth",
+          "group_by": [
+            "metric_time"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 50)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 3689.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of customer-facing habit completions (value_moments) for May and June 2026 for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3689",
+    "explanation": "Change in completed habits (value_moments) from May 2026 to June 2026: 15,329 (June) \u2212 11,640 (May) = 3,689 completed habits. These are customer-facing habit completions (activity entity, excluding internal/test accounts), counted for the full calendar months May 2026 and June 2026. [Also: the platform-inclusive metric total_value_moments was 12,249 in May and 16,041 in June, a difference of 3,792; the two readings differ because total_value_moments includes internal/test accounts while value_moments excludes them.]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_spend_per_signup_q2",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the second quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 50.43,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 4,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'What did it cost us in marketing for each person who signed up in the second quarter of 2026?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 43.6916 (vs 50.4393)"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served marketing spend per new signup (marketing_spend / new_signups) for asked each person who signed up [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "\u00a350.43",
+    "explanation": "Marketing spend (sum of spend rows) in Q2 2026 was \u00a361,233.32; new signups (accounts created) in Q2 2026 were 1,214. Cost per signup = marketing_spend / new_signups = \u00a361,233.32 / 1,214 = \u00a350.43 per signup. This counts all marketing spend and all signups (period: 2026-Q2).  Both governed readings: a ratio using acquisition_spend (channel cmp channel <> 'partnerships') instead of marketing_spend gives 43.6916 (vs 50.4393).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q2' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r2] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(61233.32000000003,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 61,233 against `acquisition_spend` 53,042, 13.38% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q2"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-Q2 -> 2026-04-01..2026-06-30\ncolumns: value\n(1214,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

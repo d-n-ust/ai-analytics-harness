@@ -19,8 +19,8 @@ import json
 from pathlib import Path
 
 import harness_paths
-from agent.conversation import Conversation, ToolCall, ToolResult, Turn
-from agent.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
+from agent.core.conversation import Conversation, ToolCall, ToolResult, Turn
+from agent.runtime.providers import AnthropicModel, OpenAIModel, _anthropic_blocks
 
 GOLDEN = Path(__file__).resolve().parent / "golden" / "wire_payloads.json"
 
@@ -124,7 +124,7 @@ def test_a_model_never_asks_for_an_effort_it_rejects():
     A model that cannot go as low as asked runs at its floor. What it must NOT do is misreport:
     reasoning effort is a treatment variable, so `.reasoning` has to be what was actually sent,
     not what was requested."""
-    from agent.models import MODEL_SPECS
+    from agent.core.models import MODEL_SPECS
 
     # The two ladders are not nested, which is the whole reason a single floor cannot describe
     # them: mini rejects `none`, terra rejects `minimal`, and each 400s on the other's word.
@@ -156,6 +156,41 @@ def test_tools_schema_mapping():
     assert flat[0]["name"] == "answer" and "function" not in flat[0]   # flat — no nested wrapper
 
 
+def test_time_grain_binds_metric_time_so_a_weekly_ask_is_not_returned_daily():
+    """`time_grain` was a DEAD parameter: the grain of a time breakdown came only from the group-by
+    column name, so a bare `metric_time` (day) returned DAY rows even when the caller asked for
+    week. A semi-additive measure handed back at day grain invites a SUM over time — the weekly
+    figure reported as the sum of its daily distinct counts, a plausible number for the wrong
+    grain. The fix binds a bare metric_time to the requested grain; an explicit metric_time__day is
+    left alone, so a real by-day breakdown still works. NO LLM."""
+    try:
+        import metricflow  # noqa: F401
+    except ImportError:
+        # The no-LLM script run (`bench test`, CI's plain `uv sync`) has no metricflow group;
+        # the pytest job installs it and runs this test in full. Skip here rather than fail.
+        print("  skip  test_time_grain_binds_metric_time: metricflow not installed")
+        return
+    from semantic.metricflow_engine import MetricFlowLayer
+    from warehouse.warehouse import open_warehouse, set_star
+
+    con = open_warehouse()
+    set_star(con, 3)
+    layer = MetricFlowLayer(con, harness_paths.ROOT / ("harness/experiments/04_repair_matrix"
+                            "/00_primitive_load/layers/D_declared"))
+    win = {"start": "2026-06-01", "end": "2026-06-30"}
+
+    # Week asked + bare metric_time -> WEEKLY buckets, not the day rows the summing bug rode in on.
+    _, cols, _ = layer.query_with_sql("people_reminded", group_by=["metric_time"],
+                                      time_grain="week", **win)
+    assert "metric_time__week" in cols and "metric_time__day" not in cols, \
+        f"a weekly ask on a semi-additive metric returned {cols} — the day-grain footgun"
+
+    # An EXPLICIT day grain still returns daily: a real by-day series must not break.
+    _, cday, rday = layer.query_with_sql("people_reminded", group_by=["metric_time__day"], **win)
+    assert "metric_time__day" in cday and len(rday) > 1, \
+        "an explicit by-day breakdown must still return day rows"
+
+
 TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
          test_a_model_never_asks_for_an_effort_it_rejects,
          test_empty_assistant_content_is_string_not_null,
@@ -163,13 +198,15 @@ TESTS = [test_wire_payloads_are_unchanged_by_the_refactor,
          test_responses_threads_a_call_to_its_result_by_call_id,
          test_anthropic_renders_like_every_other_provider,
          test_a_received_turn_is_echoed_back_verbatim,
-         test_tools_schema_mapping]
+         test_tools_schema_mapping,
+         test_time_grain_binds_metric_time_so_a_weekly_ask_is_not_returned_daily]
 
 
 if __name__ == "__main__":
     for fn in TESTS:
         fn()
-    print(f"OK - adapters: {len(TESTS)} shape tests pass, wire payloads byte-identical to golden.")
+    print(f"OK - adapters: {len(TESTS)} tests pass, wire payloads byte-identical to golden and a "
+          f"weekly ask is not returned at day grain.")
 
 
 # --------------------------------------------------------------------------- #
@@ -184,7 +221,7 @@ def test_a_refused_request_becomes_a_row_and_a_broken_key_still_stops_the_run():
     The split this pins is the whole design. A refusal of ONE request must not be able to end the
     run, and a misconfiguration that will refuse EVERY request must not be able to hide as 558
     error rows. Anything with no HTTP status is a defect in this code and must keep crashing."""
-    from agent.providers import _FATAL_STATUS, ProviderError, _call
+    from agent.runtime.providers import _FATAL_STATUS, ProviderError, _call
 
     class Refusal(Exception):
         def __init__(self, status, code=None):

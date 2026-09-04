@@ -17,12 +17,12 @@ from functools import partial
 from pathlib import Path
 
 import harness_paths
-from agent.grounding import build_grounding
-from agent.loop import Answer, run_agent
-from agent.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
-from agent.protocol import Protocol
-from agent.providers import get_model, get_verifier
-from agent.rungs import capabilities
+from agent.core.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
+from agent.core.protocol import Protocol
+from agent.core.rungs import capabilities
+from agent.runtime.grounding import build_grounding
+from agent.runtime.loop import Answer, run_agent
+from agent.runtime.providers import get_model, get_verifier
 from warehouse.warehouse import cursor as scoped_cursor
 from warehouse.warehouse import open_warehouse, set_star
 
@@ -158,6 +158,10 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "bucket": g["bucket"], "expected_refuse": g["expected_refuse"],
             "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
             "source_metric": ans.source_metric,
+            # The typed direction slot (answer_spec) and the clarify candidates: both are measured
+            # on the Answer and must reach the row, or they read as null measurements.
+            "direction": ans.direction,
+            "candidates": list(ans.candidates),
             # Which governed result the answer names. Provenance is a lookup when this is
             # present and a flagged guess when it is not, so its adoption rate is itself worth
             # measuring — a declared field the model ignores is not a guarantee.
@@ -176,6 +180,8 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             "claims": list(ans.claims),
             "claim_audit": ans.claim_audit,
             "claim_retries": ans.claim_retries,
+            "hand_backs": ans.hand_backs,
+            "scope_shadow": ans.scope_shadow,
             # The before-state of each handback. `claims` above is the after-state; the pair is
             # what makes "repaired the citation" and "deleted the sentence" different rows.
             "repairs": list(ans.repairs),
@@ -186,7 +192,7 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             # carried on the Answer, threaded through every exit, and then dropped here,
             # leaving `iterations` null in every row ever written.
             "iterations": ans.iterations,
-            "tool_calls": ans.tool_calls, "input_tokens": ans.input_tokens,
+            "tool_calls": ans.tool_calls, "model_calls": ans.model_calls, "input_tokens": ans.input_tokens,
             "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
             "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
             # One entry per model call: where a run's latency actually goes, which the tool

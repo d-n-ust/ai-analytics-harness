@@ -17,6 +17,7 @@ authors = [{ name = "Dmitry Ustimov" }]
 dependencies = [
     "ai-analytics-engine",
     "ai-analytics-harness",
+    "ai-analytics-ontology",
     "ai-analytics-semantic",
     "ai-analytics-warehouse",
 ]
@@ -26,7 +27,7 @@ dependencies = [
 package = false
 
 [tool.uv.workspace]
-members = ["engine", "harness", "warehouse", "semantic"]
+members = ["engine", "harness", "warehouse", "semantic", "ontology"]
 # troodos/ is excluded: a standalone package with a heavier dependency closure that must not land in
 # the shared engine+harness environment. (preflight was extracted to its own repo,
 # github.com/d-n-ust/preflight-analytics; install it from there where an experiment needs it.)
@@ -35,6 +36,7 @@ exclude = ["troodos"]
 [tool.uv.sources]
 ai-analytics-engine = { workspace = true }
 ai-analytics-harness = { workspace = true }
+ai-analytics-ontology = { workspace = true }
 ai-analytics-semantic = { workspace = true }
 ai-analytics-warehouse = { workspace = true }
 
@@ -68,6 +70,12 @@ select = ["E", "F", "I", "UP", "B"]
 # Many governed prompts and docstrings are intentionally long single strings; length isn't the
 # signal here. Keep the correctness rules (F/B), import order (I), and modern-Python (UP).
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# toolbox.py is the tools package's re-export hub: it star-imports every tool module so each
+# schema/handler pair is registered once and reachable under one name. The registry below the
+# imports uses those names, which F405 reports as "maybe undefined"; the star imports are the point.
+"engine/src/agent/tools/toolbox.py" = ["F405"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent", "semantic", "warehouse", "evidence",

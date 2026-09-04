@@ -30,7 +30,7 @@ from sentence_transformers import SentenceTransformer
 HERE = pathlib.Path(__file__).resolve()
 REPO = HERE.parents[3]
 LAYER = REPO / "engine/src/semantic/semantic_layer.yml"
-RUN = REPO / "results/published/2026-07/runs/20260726-224953-gpt-5-mini.raw.jsonl.gz"
+RUN = REPO / "results/published/2026-07-reliability-ladder/runs/20260726-224953-gpt-5-mini.raw.jsonl.gz"
 CASES = REPO / "harness/evals/cases"
 OUT_MD = HERE.parent / "06_embeddings.md"
 MODEL = "sentence-transformers/all-MiniLM-L6-v2"

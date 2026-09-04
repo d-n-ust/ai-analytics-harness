@@ -78,7 +78,7 @@ system: sha256=59a42399fbd7 chars=757
   }
 ]
 
-=== rung 1 · R1 · fingerprint 5d7f1fcd835f ===
+=== rung 1 · R1 · fingerprint ea1621920c13 ===
 system: sha256=4c657e0a749a chars=1175
 [
   {
@@ -153,9 +153,10 @@ system: sha256=4c657e0a749a chars=1175
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -197,8 +198,8 @@ system: sha256=4c657e0a749a chars=1175
   }
 ]
 
-=== rung 3 · R0 · fingerprint d80571c29dc5 ===
-system: sha256=b3932ec88871 chars=951
+=== rung 3 · R0 · fingerprint ac06772fc30b ===
+system: sha256=8772c40df969 chars=6647
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -239,7 +240,7 @@ system: sha256=b3932ec88871 chars=951
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -255,8 +256,14 @@ system: sha256=b3932ec88871 chars=951
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -283,10 +290,10 @@ system: sha256=b3932ec88871 chars=951
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -356,8 +363,8 @@ system: sha256=b3932ec88871 chars=951
   }
 ]
 
-=== rung 3 · R2 · fingerprint d74382808e27 ===
-system: sha256=541a80869276 chars=1546
+=== rung 3 · R2 · fingerprint 5c4bfe884b0f ===
+system: sha256=9828af414511 chars=7242
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -398,7 +405,7 @@ system: sha256=541a80869276 chars=1546
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -414,8 +421,14 @@ system: sha256=541a80869276 chars=1546
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -442,10 +455,10 @@ system: sha256=541a80869276 chars=1546
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -492,7 +505,7 @@ system: sha256=541a80869276 chars=1546
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -586,9 +599,10 @@ system: sha256=541a80869276 chars=1546
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -630,8 +644,8 @@ system: sha256=541a80869276 chars=1546
   }
 ]
 
-=== rung 3 · R4 · fingerprint ef3e3430255a ===
-system: sha256=bcd41ca8653e chars=1861
+=== rung 3 · R4 · fingerprint 5d8dbedd62ba ===
+system: sha256=779f2dcd399a chars=7557
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -657,7 +671,7 @@ system: sha256=bcd41ca8653e chars=1861
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -673,8 +687,14 @@ system: sha256=bcd41ca8653e chars=1861
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -720,10 +740,10 @@ system: sha256=bcd41ca8653e chars=1861
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -770,7 +790,7 @@ system: sha256=bcd41ca8653e chars=1861
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -864,9 +884,10 @@ system: sha256=bcd41ca8653e chars=1861
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -908,8 +929,8 @@ system: sha256=bcd41ca8653e chars=1861
   }
 ]
 
-=== rung 3 · R6 · fingerprint 3df28841a6e2 ===
-system: sha256=6a06892ba048 chars=2372
+=== rung 3 · R6 · fingerprint 23f1b1513666 ===
+system: sha256=2859427d4ead chars=8068
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -935,7 +956,7 @@ system: sha256=6a06892ba048 chars=2372
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -951,8 +972,14 @@ system: sha256=6a06892ba048 chars=2372
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -998,10 +1025,10 @@ system: sha256=6a06892ba048 chars=2372
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1048,7 +1075,7 @@ system: sha256=6a06892ba048 chars=2372
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -1142,9 +1169,10 @@ system: sha256=6a06892ba048 chars=2372
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -1186,8 +1214,8 @@ system: sha256=6a06892ba048 chars=2372
   }
 ]
 
-=== rung 3 · R9 · fingerprint 0f39fdbc8f9c ===
-system: sha256=78da06e54edc chars=3834
+=== rung 3 · R9 · fingerprint 915978b7ee95 ===
+system: sha256=da0935c14ce4 chars=9530
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1213,7 +1241,7 @@ system: sha256=78da06e54edc chars=3834
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1229,8 +1257,14 @@ system: sha256=78da06e54edc chars=3834
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1276,10 +1310,10 @@ system: sha256=78da06e54edc chars=3834
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1326,7 +1360,7 @@ system: sha256=78da06e54edc chars=3834
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -1454,9 +1488,10 @@ system: sha256=78da06e54edc chars=3834
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -1498,8 +1533,8 @@ system: sha256=78da06e54edc chars=3834
   }
 ]
 
-=== rung 6 · R0 · fingerprint ab8754f010ec ===
-system: sha256=10ce3dd5f275 chars=5862
+=== rung 6 · R0 · fingerprint 258f44ca3fa9 ===
+system: sha256=35809e63a742 chars=11558
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1540,7 +1575,7 @@ system: sha256=10ce3dd5f275 chars=5862
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1556,8 +1591,14 @@ system: sha256=10ce3dd5f275 chars=5862
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1584,10 +1625,10 @@ system: sha256=10ce3dd5f275 chars=5862
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1631,8 +1672,14 @@ system: sha256=10ce3dd5f275 chars=5862
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -1707,8 +1754,8 @@ system: sha256=10ce3dd5f275 chars=5862
   }
 ]
 
-=== rung 6 · R2 · fingerprint 949a8325ec53 ===
-system: sha256=dd3f8d612279 chars=6457
+=== rung 6 · R2 · fingerprint d173f30eb015 ===
+system: sha256=addb8dd4ef1c chars=12153
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -1749,7 +1796,7 @@ system: sha256=dd3f8d612279 chars=6457
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -1765,8 +1812,14 @@ system: sha256=dd3f8d612279 chars=6457
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -1793,10 +1846,10 @@ system: sha256=dd3f8d612279 chars=6457
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -1840,8 +1893,14 @@ system: sha256=dd3f8d612279 chars=6457
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -1893,7 +1952,7 @@ system: sha256=dd3f8d612279 chars=6457
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -1987,9 +2046,10 @@ system: sha256=dd3f8d612279 chars=6457
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -2031,8 +2091,8 @@ system: sha256=dd3f8d612279 chars=6457
   }
 ]
 
-=== rung 6 · R4 · fingerprint c15fbe1ed879 ===
-system: sha256=f5657c94f5ee chars=6772
+=== rung 6 · R4 · fingerprint c7312810b7ec ===
+system: sha256=7b38d3c8000d chars=12468
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2058,7 +2118,7 @@ system: sha256=f5657c94f5ee chars=6772
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2074,8 +2134,14 @@ system: sha256=f5657c94f5ee chars=6772
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2121,10 +2187,10 @@ system: sha256=f5657c94f5ee chars=6772
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2168,8 +2234,14 @@ system: sha256=f5657c94f5ee chars=6772
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2230,7 +2302,7 @@ system: sha256=f5657c94f5ee chars=6772
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -2324,9 +2396,10 @@ system: sha256=f5657c94f5ee chars=6772
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -2368,8 +2441,8 @@ system: sha256=f5657c94f5ee chars=6772
   }
 ]
 
-=== rung 6 · R6 · fingerprint 0077eb626da9 ===
-system: sha256=0661873056fe chars=7283
+=== rung 6 · R6 · fingerprint 91ab869df363 ===
+system: sha256=5fc18fbdbb89 chars=12979
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2395,7 +2468,7 @@ system: sha256=0661873056fe chars=7283
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2411,8 +2484,14 @@ system: sha256=0661873056fe chars=7283
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2458,10 +2537,10 @@ system: sha256=0661873056fe chars=7283
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2505,8 +2584,14 @@ system: sha256=0661873056fe chars=7283
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2567,7 +2652,7 @@ system: sha256=0661873056fe chars=7283
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -2661,9 +2746,10 @@ system: sha256=0661873056fe chars=7283
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -2705,8 +2791,8 @@ system: sha256=0661873056fe chars=7283
   }
 ]
 
-=== rung 6 · R9 · fingerprint 25fd7351bc58 ===
-system: sha256=2b63dd316caf chars=8745
+=== rung 6 · R9 · fingerprint d24dccfd6499 ===
+system: sha256=8da21963ab32 chars=14441
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -2732,7 +2818,7 @@ system: sha256=2b63dd316caf chars=8745
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -2748,8 +2834,14 @@ system: sha256=2b63dd316caf chars=8745
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -2795,10 +2887,10 @@ system: sha256=2b63dd316caf chars=8745
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -2842,8 +2934,14 @@ system: sha256=2b63dd316caf chars=8745
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -2904,7 +3002,7 @@ system: sha256=2b63dd316caf chars=8745
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3032,9 +3130,10 @@ system: sha256=2b63dd316caf chars=8745
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -3076,8 +3175,8 @@ system: sha256=2b63dd316caf chars=8745
   }
 ]
 
-=== rung 7 · R0 · fingerprint ec50a789f8d4 ===
-system: sha256=4ccdadfd4322 chars=1329
+=== rung 7 · R0 · fingerprint 18fb8657e822 ===
+system: sha256=52d1e0c76690 chars=7025
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3118,7 +3217,7 @@ system: sha256=4ccdadfd4322 chars=1329
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3134,8 +3233,14 @@ system: sha256=4ccdadfd4322 chars=1329
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3162,10 +3267,10 @@ system: sha256=4ccdadfd4322 chars=1329
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3209,8 +3314,14 @@ system: sha256=4ccdadfd4322 chars=1329
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3285,8 +3396,8 @@ system: sha256=4ccdadfd4322 chars=1329
   }
 ]
 
-=== rung 7 · R2 · fingerprint ac0489765815 ===
-system: sha256=21c611aa1778 chars=1924
+=== rung 7 · R2 · fingerprint e2d2483131b9 ===
+system: sha256=52c741e82c5f chars=7620
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3327,7 +3438,7 @@ system: sha256=21c611aa1778 chars=1924
     "name": "run_sql"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3343,8 +3454,14 @@ system: sha256=21c611aa1778 chars=1924
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3371,10 +3488,10 @@ system: sha256=21c611aa1778 chars=1924
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3418,8 +3535,14 @@ system: sha256=21c611aa1778 chars=1924
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3471,7 +3594,7 @@ system: sha256=21c611aa1778 chars=1924
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3565,9 +3688,10 @@ system: sha256=21c611aa1778 chars=1924
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -3609,8 +3733,8 @@ system: sha256=21c611aa1778 chars=1924
   }
 ]
 
-=== rung 7 · R4 · fingerprint 988c3e6a17f6 ===
-system: sha256=f6fa332612c3 chars=2239
+=== rung 7 · R4 · fingerprint 6ff87d9ade89 ===
+system: sha256=39a837edddba chars=7935
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3636,7 +3760,7 @@ system: sha256=f6fa332612c3 chars=2239
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3652,8 +3776,14 @@ system: sha256=f6fa332612c3 chars=2239
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -3699,10 +3829,10 @@ system: sha256=f6fa332612c3 chars=2239
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -3746,8 +3876,14 @@ system: sha256=f6fa332612c3 chars=2239
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -3808,7 +3944,7 @@ system: sha256=f6fa332612c3 chars=2239
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -3902,9 +4038,10 @@ system: sha256=f6fa332612c3 chars=2239
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -3946,8 +4083,8 @@ system: sha256=f6fa332612c3 chars=2239
   }
 ]
 
-=== rung 7 · R6 · fingerprint c50d4cb6c445 ===
-system: sha256=4fcfa635ca94 chars=2750
+=== rung 7 · R6 · fingerprint 98de1fd124e4 ===
+system: sha256=6fe600443d81 chars=8446
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -3973,7 +4110,7 @@ system: sha256=4fcfa635ca94 chars=2750
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -3989,8 +4126,14 @@ system: sha256=4fcfa635ca94 chars=2750
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4036,10 +4179,10 @@ system: sha256=4fcfa635ca94 chars=2750
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4083,8 +4226,14 @@ system: sha256=4fcfa635ca94 chars=2750
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -4145,7 +4294,7 @@ system: sha256=4fcfa635ca94 chars=2750
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -4239,9 +4388,10 @@ system: sha256=4fcfa635ca94 chars=2750
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -4283,8 +4433,8 @@ system: sha256=4fcfa635ca94 chars=2750
   }
 ]
 
-=== rung 7 · R9 · fingerprint e887b47c7fa3 ===
-system: sha256=bc9a5349fe29 chars=4212
+=== rung 7 · R9 · fingerprint d23355e21c5a ===
+system: sha256=acb15b955570 chars=9908
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -4310,7 +4460,7 @@ system: sha256=bc9a5349fe29 chars=4212
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4326,8 +4476,14 @@ system: sha256=bc9a5349fe29 chars=4212
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4373,10 +4529,10 @@ system: sha256=bc9a5349fe29 chars=4212
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4420,8 +4576,14 @@ system: sha256=bc9a5349fe29 chars=4212
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -4482,7 +4644,7 @@ system: sha256=bc9a5349fe29 chars=4212
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -4610,9 +4772,10 @@ system: sha256=bc9a5349fe29 chars=4212
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -4654,8 +4817,8 @@ system: sha256=bc9a5349fe29 chars=4212
   }
 ]
 
-=== rung 7 · R9/purpose · fingerprint d458c557b66c ===
-system: sha256=f58f8e6082be chars=4586
+=== rung 7 · R9/purpose · fingerprint 09561a47df20 ===
+system: sha256=2892b0be5490 chars=10282
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -4681,7 +4844,7 @@ system: sha256=f58f8e6082be chars=4586
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -4701,8 +4864,14 @@ system: sha256=f58f8e6082be chars=4586
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -4748,10 +4917,10 @@ system: sha256=f58f8e6082be chars=4586
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -4799,8 +4968,14 @@ system: sha256=f58f8e6082be chars=4586
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -4861,7 +5036,7 @@ system: sha256=f58f8e6082be chars=4586
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -4989,9 +5164,10 @@ system: sha256=f58f8e6082be chars=4586
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -5033,8 +5209,8 @@ system: sha256=f58f8e6082be chars=4586
   }
 ]
 
-=== rung 7 · R9/claims · fingerprint 62a9aea928f6 ===
-system: sha256=68cafd4271e5 chars=4916
+=== rung 7 · R9/claims · fingerprint 749852cc88d5 ===
+system: sha256=f00585083b6e chars=10612
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5060,7 +5236,7 @@ system: sha256=68cafd4271e5 chars=4916
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -5076,8 +5252,14 @@ system: sha256=68cafd4271e5 chars=4916
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -5123,10 +5305,10 @@ system: sha256=68cafd4271e5 chars=4916
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5170,8 +5352,14 @@ system: sha256=68cafd4271e5 chars=4916
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -5232,7 +5420,7 @@ system: sha256=68cafd4271e5 chars=4916
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -5395,9 +5583,10 @@ system: sha256=68cafd4271e5 chars=4916
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -5439,8 +5628,8 @@ system: sha256=68cafd4271e5 chars=4916
   }
 ]
 
-=== rung 7 · R9/claims+repair · fingerprint b372dd84e152 ===
-system: sha256=eea8b0e9a393 chars=5122
+=== rung 7 · R9/claims+repair · fingerprint 4ec45475e918 ===
+system: sha256=f15e2615f93c chars=10818
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5466,7 +5655,7 @@ system: sha256=eea8b0e9a393 chars=5122
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -5482,8 +5671,14 @@ system: sha256=eea8b0e9a393 chars=5122
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -5529,10 +5724,10 @@ system: sha256=eea8b0e9a393 chars=5122
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5576,8 +5771,14 @@ system: sha256=eea8b0e9a393 chars=5122
     "input_schema": {
       "properties": {
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -5638,7 +5839,7 @@ system: sha256=eea8b0e9a393 chars=5122
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -5801,9 +6002,10 @@ system: sha256=eea8b0e9a393 chars=5122
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -5845,8 +6047,8 @@ system: sha256=eea8b0e9a393 chars=5122
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair · fingerprint 92ec6ef66505 ===
-system: sha256=8c766050a8fe chars=5496
+=== rung 7 · R9/purpose+claims+repair · fingerprint 9198e4e35ee3 ===
+system: sha256=8e605ec45993 chars=11192
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -5872,7 +6074,7 @@ system: sha256=8c766050a8fe chars=5496
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -5892,8 +6094,14 @@ system: sha256=8c766050a8fe chars=5496
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -5939,10 +6147,10 @@ system: sha256=8c766050a8fe chars=5496
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -5990,8 +6198,14 @@ system: sha256=8c766050a8fe chars=5496
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -6052,7 +6266,7 @@ system: sha256=8c766050a8fe chars=5496
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -6215,9 +6429,10 @@ system: sha256=8c766050a8fe chars=5496
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -6259,8 +6474,8 @@ system: sha256=8c766050a8fe chars=5496
   }
 ]
 
-=== rung 7 · R9/purpose+claims+repair+role · fingerprint ca2375544fe4 ===
-system: sha256=47984fc1fb8e chars=6315
+=== rung 7 · R9/purpose+claims+repair+role · fingerprint 5d1d6fb81550 ===
+system: sha256=7da0cf61d104 chars=12011
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -6286,7 +6501,7 @@ system: sha256=47984fc1fb8e chars=6315
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -6306,8 +6521,14 @@ system: sha256=47984fc1fb8e chars=6315
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -6353,10 +6574,10 @@ system: sha256=47984fc1fb8e chars=6315
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6404,8 +6625,14 @@ system: sha256=47984fc1fb8e chars=6315
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "Restrict the WHOLE decomposition to one scope, e.g. {\"region\": \"EMEA\"} to decompose EMEA on its own. Every node is computed inside that scope. Omit a key to leave it unfiltered (never a null value).",
           "type": "object"
         },
         "node": {
@@ -6466,7 +6693,7 @@ system: sha256=47984fc1fb8e chars=6315
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -6629,9 +6856,10 @@ system: sha256=47984fc1fb8e chars=6315
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -6673,8 +6901,8 @@ system: sha256=47984fc1fb8e chars=6315
   }
 ]
 
-=== rung 5 · R5/claims · fingerprint 3ad3da628744 ===
-system: sha256=1e342c97f77d chars=7337
+=== rung 5 · R5/claims · fingerprint a356bff22626 ===
+system: sha256=85b29e5dab0a chars=13033
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -6700,7 +6928,7 @@ system: sha256=1e342c97f77d chars=7337
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -6716,8 +6944,14 @@ system: sha256=1e342c97f77d chars=7337
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -6763,10 +6997,10 @@ system: sha256=1e342c97f77d chars=7337
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -6813,7 +7047,7 @@ system: sha256=1e342c97f77d chars=7337
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -6942,9 +7176,10 @@ system: sha256=1e342c97f77d chars=7337
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",
@@ -6986,8 +7221,8 @@ system: sha256=1e342c97f77d chars=7337
   }
 ]
 
-=== rung 5 · R5/claims+role · fingerprint f789107b05be ===
-system: sha256=e8e9c0005054 chars=8158
+=== rung 5 · R5/claims+role · fingerprint b13f341bea27 ===
+system: sha256=4f8d4e3079a4 chars=13854
 [
   {
     "description": "List the tables available to you and their columns.",
@@ -7013,7 +7248,7 @@ system: sha256=e8e9c0005054 chars=8158
     "name": "describe_table"
   },
   {
-    "description": "List the governed metrics available through the semantic layer.",
+    "description": "Re-print the governed metric catalogue. The FULL catalogue is already in your instructions under GOVERNED METRIC CATALOGUE \u2014 read it there; call this only if you genuinely need it re-printed.",
     "input_schema": {
       "properties": {},
       "type": "object"
@@ -7029,8 +7264,14 @@ system: sha256=e8e9c0005054 chars=8158
           "type": "string"
         },
         "filters": {
-          "additionalProperties": true,
-          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          },
+          "description": "e.g. {\"platform\": \"ios\", \"is_internal\": false}. Omit a key to leave it unfiltered; use `period` for the time window (never a null filter value).",
           "type": "object"
         },
         "group_by": {
@@ -7076,10 +7317,10 @@ system: sha256=e8e9c0005054 chars=8158
               ]
             },
             {
-              "pattern": "^\\d{4}-\\d{2}$"
+              "pattern": "^\\d{4}-(\\d{2}|[Qq][1-4]|[Hh][12])$"
             }
           ],
-          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all) or a specific calendar month as YYYY-MM. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
+          "description": "Either a RELATIVE preset (always a complete period: last_week, prev_week, last_month, last_quarter, ytd, all), a calendar month as YYYY-MM, a quarter as YYYY-Qn (e.g. 2026-Q2), or a half-year as YYYY-Hn. For any other exact range use start/end. Omit period entirely for the current value: a snapshot (stock) metric then returns its latest snapshot, which is the 'right now' number; a flow metric totals all time.",
           "type": "string"
         },
         "segment": {
@@ -7126,7 +7367,7 @@ system: sha256=e8e9c0005054 chars=8158
     "name": "check_metric_exists"
   },
   {
-    "description": "Check whether data coverage exists for a period, optionally for one region or country. Pass both start and end for a range; the whole period must be covered.",
+    "description": "Produce citable evidence about data coverage for a period (optionally one region or country). Coverage is ALREADY ENFORCED on every query \u2014 an out-of-range query_metric is refused with the reason \u2014 so do NOT call this before an ordinary query. Call it only when you need coverage as evidence: before refusing out_of_coverage, or when a query was blocked and you are deciding what IS answerable.",
     "input_schema": {
       "properties": {
         "country": {
@@ -7255,9 +7496,10 @@ system: sha256=e8e9c0005054 chars=8158
           "type": "string"
         },
         "reason": {
-          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
+          "description": "Why this cannot be answered. Name the ROOT CAUSE, not the symptom:\n- no_governed_definition: no governed metric defines what was asked (ARR, churn rate, an engagement score)\n- uninstrumented: the question asks to measure something the warehouse does not instrument AT ALL \u2014 no metric, table, or column, in any layer, records it (customer satisfaction, when nothing captures a survey, a rating, or sentiment). Stronger than no_governed_definition: that is a metric not yet defined over data that exists; this is data that does not exist to define one over\n- out_of_coverage: the metric exists but the period asked for falls outside the data's coverage window\n- segment_undefined: the group asked about (whales, churned users, free tier) is not a governed segment\n- no_causal_evidence: the question asks WHY or WHETHER X caused Y and no governed causal evidence links them\n- false_premise: the question asserts something untrue \u2014 a change that did not happen, an event that never occurred. Put the correction in `missing`\n- wrong_measure: a metric exists for this thing but measures a different quantity than the one asked for\n- wrong_grain: the metric exists but not at the time grain or level of detail the question needs\n- dimension_not_supported: the metric cannot be broken down or filtered by the dimension named at all\n- ungoverned_dimension_value: the dimension exists, but the VALUE named is not one of its governed members (Mexico when only 8 countries are covered)\n- result_empty: the query ran and came back with nothing. Use this ONLY when you cannot say why \u2014 if you know the period is uncovered or the filter value is not a governed member, give THAT reason instead, because it is the one that can be acted on\n- implausible_value: a number came back that cannot be right for its unit (a share above 100, a negative count)\n- other: none of the above fits. Prefer a specific reason: `other` cannot be counted, routed or acted on, so reach for it only when nothing else is true",
           "enum": [
             "no_governed_definition",
+            "uninstrumented",
             "out_of_coverage",
             "segment_undefined",
             "no_causal_evidence",

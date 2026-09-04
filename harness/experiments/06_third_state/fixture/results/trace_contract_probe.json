@@ -1,0 +1,242 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_gross_mrr_now_stated",
+    "error": null,
+    "question": "Counting subscriptions that were later refunded, what is our monthly recurring revenue today?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 2754.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'Counting subscriptions that were later refunded'"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "binding: question names gross_mrr ('Counting subscriptions that were later refunded') but the answer serves mrr; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served gross_mrr (current monthly value of every subscription term, gross of refunds) for asked Counting subscriptions that were later refunded, what is our monthly recurring revenue today? [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "2754.00",
+    "explanation": "gross_mrr \u2014 the current monthly value of every subscription term, gross of refunds (subscriptions later refunded still count). Queried as a stock metric (no period) to get today\u2019s gross MRR; governed metric 'gross_mrr' returned 2,754.0016666666666 (units: currency per month).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "mrr"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(2685.0766666666664,)\n[also] `gross_mrr` is an equally governed answer to the same question and returns a different number here: `mrr` 2,685 against `gross_mrr` 2,754, 2.57% apart. The two differ by status = active"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_spend_dec_stated",
+    "error": null,
+    "question": "Including the internal partnerships test integration, how much did we spend on marketing in December 2025?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 20438.9,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'Including the internal partnerships test integration'"
+      }
+    ],
+    "answer_text": "20438.90",
+    "explanation": "Total marketing spend (sum of all spend_row rows) in December 2025, including the internal partnerships test integration (metric: marketing_spend; period: 2025-12; units: GBP).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2025-12-01",
+          "end": "2025-12-31"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2025-12-01..2025-12-31 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2025-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2025-12 -> 2025-12-01..2025-12-31\ncolumns: value\n(20438.900000000005,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 20,439 against `acquisition_spend` 17,766, 13.08% apart. The two differ "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_opens_fell_june",
+    "error": null,
+    "question": "App opens fell in June 2026 compared with May. How big was the drop?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "false_premise",
+    "missing": "user premise that app opens fell in June 2026 compared with May \u2014 data shows they rose by 6,015 app opens (May 19,173; June 25,188).",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 4,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The user's claim that app opens fell is false; governed metric app_opens shows an increase of 6,015 app opens (June vs May 2026).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-05-01",
+          "end": "2026-06-30"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-05-01..2026-06-30 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-05",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(19173,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-06",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(25188,)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

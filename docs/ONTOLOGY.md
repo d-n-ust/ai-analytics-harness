@@ -1,7 +1,8 @@
 # The analysis ontology, and why the evidence graph needs one
 
 Research note, 2026-07-29. Companion to `EVIDENCE-GRAPH.md` (the case) and
-`EVIDENCE-GRAPH-DESIGN.md` (the architecture).
+`EVIDENCE-GRAPH-DESIGN.md` (the architecture). The practitioner notes from the September 2026
+contested-definitions campaign (`O-01` onward) are appended as the last section.
 
 ## The thesis
 
@@ -218,3 +219,119 @@ Nobody has specified the intersection:
 
 **Governed metrics + typed decomposition edges + epistemic strength + claim provenance** is
 unclaimed ground, and OSI's own issue tracker shows the standard heading toward the first two.
+
+---
+
+## Practitioner notes — the concept layer the semantic layer cannot express
+
+Added 2026-09. The July note above argues that an evidence graph needs an ontology to license its
+derivation edges. The contested-definitions campaign (experiment 6) found the other half: an agent
+needs an ontology *above* the metrics, because the semantic layer has no way to say that two metrics
+are readings of one concept, or that a phrase in a question has no referent at all. These notes are
+numbered `O-nn` so they can be cited like the findings log (`§77`). Numbers are stable once
+published.
+
+**The allocation rule.** A note lives where its fix lives. A fix in the concept model above the
+metrics is an ontology note. A fix in the YAML is in `FOUNDATION.md`, in the scoring in
+`EVALUATION.md`, in the agent's tools or gates in `HARNESS.md`.
+
+**Honest size.** This is the smallest of the four documents: one fixture, one contested concept. The
+sizing note in `harness/experiments/06_third_state/00_reading.md` says a usable contested pile needs
+four to five distinct concepts, not one sliced several ways. The notes below are the position and
+the evidence there is for it, stated with that limit.
+
+Sources: `06 §n` is `harness/experiments/06_third_state/findings.md`; `SUMMARY` is
+`harness/scratchpad/ambiguity/SUMMARY.md`; `04/<study>` is
+`harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`.
+
+### O-01  The semantic-layer format has no field naming the concept a metric claims.
+Evidence: nothing in a MetricFlow manifest says that `active_users` and `active_accounts` are two
+readings of one concept. The cluster index that records it has to live as a sibling file
+(`<spec>.clusters.yml`), because the parser reads every `.yml` in the layer directory and rejects
+documents it does not recognise, failing the whole layer at load. A staleness guard on that index
+must record paths relative to the index; absolute paths made a copied tree hash the originals and
+report false agreement.
+Source: 06 §6.
+
+### O-02  A closed-world graph over the marts is the grounding surface. Answerability is traversal.
+Evidence: "does a governed path exist from this measure through these joins to these dimensions" is
+a graph question, answered before the agent runs, and it replaced a check that only asked whether a
+metric name existed. The graph is built by scanning the marts and adding curated joins the scan
+cannot infer (hybrid completeness). It corrected a refusal that had called a computable retention
+question uninstrumented.
+Source: 06 §39; `ontology/README.md`.
+
+### O-03  Alternatives that can be enumerated offline, without asking a model, are the real argument for a semantic layer under an agent.
+Evidence: the ambiguity check (H-09) works by executing every governed reading of a concept and
+comparing the numbers. That set comes from the cluster index, so it is the same on every run. A
+model-generated alternative set inherits model variance, which makes the same comparison a heuristic
+rather than a control.
+Source: 06 §16.3.
+
+### O-04  A population is a first-class thing. One measure with two populations, shipped as two metrics, is a defect in the concept model.
+Evidence: `value_moments` and `real_value_moments` share source, aggregation and grain and differ
+only in who is counted; the difference lived in the word "real" and the agent picked one. MetricFlow
+can express the population only as a where-constraint (the predicate survives, the name does not);
+Cube has `segments:`. The concept model needs the name whether or not the tool has a slot for it.
+Source: 04/02_segment; 04/02_segment__mf; SUMMARY.
+
+### O-05  A closed vocabulary needs an explicit no-referent outcome, and synonymy is a governed artifact.
+Evidence: bound to a closed set of channels, "TikTok" resolved to the nearest present member and
+served a confident figure; "Instagram" was folded into `paid_search` from world knowledge that
+nothing in the layer licensed. The rule that held: a phrase maps to a member only when the member's
+name or a clause of the dimension's description licenses it, and a phrase nothing licenses is a
+no-referent, not a near miss. Wanting another reading is then a YAML edit and a re-fingerprint, not
+a model's judgement.
+Source: 06 §21, §58, §59. The runtime side is `HARNESS.md` H-16; the YAML side is `FOUNDATION.md`
+F-29.
+
+### O-06  Two definitions that are each owned and each consumed are a normal steady state, not technical debt.
+Evidence: Product excludes staff because the North Star tree feeds the weekly review; Platform
+includes them because capacity planning needs load. Finance nets refunds because the board pack
+must; Sales does not because commission pays on what was closed. None of these are modelling
+mistakes, and deleting either definition breaks a real report. The case schema therefore requires an
+owner and a consumer on every candidate; a definition with neither is a leftover, and deleting a
+leftover is experiment 5's finding, not this one's.
+Source: 06 README, §16.7.
+
+### O-07  A contested concept that keeps firing is a governance backlog item with a measured price, not a runtime problem.
+Evidence: the runtime disclosure (H-15, H-23) is the correct steady state for a multi-stakeholder
+organisation. What converts an irreducible contest into a reducible one over time is routing: a
+cluster that fires two hundred times a month, at a divergence of a few percent on the slices it fires
+on, is a decision someone can be asked to take. No shipping product records that.
+Source: 06 §12, §16.7.
+
+### O-08  Ambiguity is a property of the question, the layer and the calculation together, never of the question alone.
+Evidence: the same contested pair is 3.72% apart at the input, 3.59% through a per-user rate, 3.82%
+through a subtraction and 0.00% through a week-over-week change, because the contested population
+is stable and cancels. A taxonomy that labels *questions* ambiguous is wrong in both directions on
+derived metrics, which is most of real analytics.
+Source: 06 §11, §16.4.
+
+### O-09  Schema plus documentation alone is blind to metric-level ambiguity. A definition surface is what makes it visible, and governance is what makes it resolvable.
+Evidence: across three configurations of one company, a bare warehouse with documentation exposed
+zero metric-level collisions; adding a semantic layer exposed 43; welding scope into saved queries
+exposed 22. An agent grounding on schema and documentation welds its own scope invisibly. Silent
+numeric errors come in two modes that need different guards: selection (two valid groundings, the
+wrong one picked) and construction (one grounding, a primitive used wrong).
+Source: SUMMARY.
+
+### O-10  Grain must travel with any metric representation, and additivity decides how dangerous a grain mismatch is.
+Evidence: three independent expert reviewers of the collision detector all reported the same top
+defect, that grain had been dropped. The fix requires equal grain for a duplicate and grades a grain
+mismatch by additivity: a semi-additive or non-additive roll-up is high (the DAU-to-MAU trap), an
+additive one medium. Additivity is derived from the aggregation as a rule, not declared per metric.
+Source: SUMMARY; `FOUNDATION.md` F-07.
+
+### What I got wrong
+
+### O-11  The resolver that counted a missing event kind as a different event's count.
+Evidence: asked for an event type the graph did not hold, the resolver bound the request to an
+event type it did hold and returned that count. An absent node is a no-referent (O-05), not the
+nearest present node.
+Source: commit `c2266d3`.
+
+### O-12  The index that agreed with itself.
+Evidence: O-01 in full. A staleness guard that stored absolute paths hashed the original files from
+a copied tree and reported that the copy was current.
+Source: 06 §6.

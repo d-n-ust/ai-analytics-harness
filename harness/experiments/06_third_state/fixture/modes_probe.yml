@@ -1,0 +1,30 @@
+cases:
+- id: p_habits_per_session
+  tier: unanswerable_adjacent
+  question: How many habits does each user complete per session?
+  expect: {type: refuse, reason: [no_governed_definition, uninstrumented]}
+  note: MODE 2 target — 'per session' is an ungrounded unit
+- id: p_opens_per_store
+  tier: unanswerable_adjacent
+  question: How many app opens do we get per store location?
+  expect: {type: refuse, reason: [no_governed_definition, uninstrumented]}
+  note: MODE 2 target — 'per store' is an ungrounded unit
+- id: p_habits_per_user_april
+  tier: governed_ratio
+  question: On average, how many habits did each active user complete in April 2026?
+  expect: {type: metric_answer, tolerance: 0.02, metric: habits_per_active_user, gold_sql: "SELECT (SELECT count(*) FROM \"_source\".evt e JOIN \"_source\".u u ON u.uid=e.uid WHERE e.etype=2 AND e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-05-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))) * 1.0 / (SELECT count(DISTINCT e.uid) FROM \"_source\".evt e JOIN \"_source\".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-04-01' AND e.ts<DATE '2026-05-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com')))"}
+  note: MODE 2 boundary — 'per active user' MUST answer (user grounds)
+- id: p_web_opens_feb
+  tier: answerable
+  question: How many times did users on the web open the app in February 2026?
+  expect: {type: metric_answer, tolerance: 0.005, metric: app_opens, gold_sql: "SELECT count(*) FROM \"_source\".evt e JOIN \"_source\".u u ON u.uid=e.uid WHERE e.etype=1 AND lower(coalesce(u.plat,''))='web' AND e.ts>=DATE '2026-02-01' AND e.ts<DATE '2026-03-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))"}
+  note: MODE 1 boundary — a single-scalar answer MUST NOT misfire
+- id: p_active_march
+  tier: contested_level
+  question: How many active users did we have in March 2026?
+  expect:
+    type: contested
+    candidates:
+    - {metric: active_users, owner: Product, consumer: the review, gold_sql: "SELECT count(DISTINCT e.uid) FROM \"_source\".evt e JOIN \"_source\".u u ON u.uid=e.uid WHERE e.ts>=DATE '2026-03-01' AND e.ts<DATE '2026-04-01' AND NOT ((coalesce(u.internal,0)=1) OR (lower(u.email) LIKE '%@internal-test.com'))"}
+    - {metric: active_accounts, owner: Platform, consumer: capacity, gold_sql: "SELECT count(DISTINCT uid) FROM \"_source\".evt WHERE ts>=DATE '2026-03-01' AND ts<DATE '2026-04-01'"}
+  note: MODE 1 boundary — contested (two scalars) MUST NOT misfire

@@ -1,0 +1,810 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Total app opens (additive count of activity rows with app_open events) by iOS platform for May 2026, excluding internal/test accounts for asked How many times did iOS users open the app in May 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6684",
+    "explanation": "Total app opens (additive count of activity rows with app_open events) by iOS platform for the calendar month May 2026 (2026-05-01 through 2026-05-31), excluding internal/test accounts (the app_opens metric is customer-facing).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_monthly_paying_users",
+    "error": null,
+    "question": "How many customers are currently paying us on the monthly plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": 237.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of paying_users (distinct accounts holding a live subscription) filtered to subscription__plan = monthly for asked How many customers are currently paying us on the monthly plan? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "237",
+    "explanation": "paying_users (distinct accounts holding a live subscription) filtered to subscription__plan = monthly; snapshot as of the latest data (current number of customers on the monthly plan).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users",
+          "filters": {
+            "subscription__plan": "monthly"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(237,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_seo_spend_june",
+    "error": null,
+    "question": "How much did we spend on content and SEO in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": 3605.41,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3605.41",
+    "explanation": "Total marketing spend on the spend_row entity for channel = content_seo in June 2026 (sum of spend rows, period 2026-06-01 to 2026-06-30). Units: GBP.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "content_seo"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(3605.4100000000003,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 0,
+    "declared": null,
+    "reason": "ungoverned_dimension_value",
+    "missing": "subscription__plan does not include 'enterprise' \u2014 allowed values are 'annual' and 'monthly'",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct accounts holding a live subscription across all plans (paying_users), queried without filtering by plan for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "segment_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "question names 'enterprise plan', which does not ground to the ontology; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The semantic layer has no 'enterprise' plan value; therefore we cannot report how many customers are on an 'enterprise' plan from the governed data.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served additive count of activity rows labelled as app opens in the activity entity (total app opens) for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6684",
+    "explanation": "Total app opens (an additive count of activity rows) by iOS users in May 2026, measured across the activity entity, period 2026-05 (2026-05-01 to 2026-05-31), excluding internal/test accounts (built into the metric).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_monthly_paying_users",
+    "error": null,
+    "question": "How many customers are currently paying us on the monthly plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": 237.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Count of distinct accounts holding a live subscription on the monthly plan today (governed metric `paying_users` filtered by subscription__plan = 'monthly') for asked How many customers are currently paying us on the monthly plan? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "237",
+    "explanation": "Count of distinct accounts holding a live subscription on the monthly plan today (governed metric `paying_users` filtered by subscription__plan = 'monthly'), using the metric's current snapshot.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users",
+          "filters": {
+            "subscription__plan": "monthly"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(237,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_seo_spend_june",
+    "error": null,
+    "question": "How much did we spend on content and SEO in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": 3605.41,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served sum of spend rows (marketing_spend) for channel=content_seo during June 2026, in GBP for asked How much did we spend on content and SEO in June 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3605.41",
+    "explanation": "Total marketing_spend on the spend_row entity for channel=content_seo during June 2026 (sum of spend rows, currency in GBP), measured for the calendar month 2026-06 (2026-06-01 to 2026-06-30).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-06",
+          "filters": {
+            "spend_row__channel": "content_seo"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(3605.4100000000003,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 1,
+    "declared": null,
+    "reason": "segment_undefined",
+    "missing": "subscription__plan does not include 'enterprise' \u2014 available values are 'monthly' and 'annual'",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The governed metric paying_users counts live subscriptions and supports filtering by subscription__plan, but 'enterprise' is not a defined plan value in the catalog; therefore I cannot report customers on an undefined segment without a user-provided definition.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_ios_opens_may",
+    "error": null,
+    "question": "How many times did iOS users open the app in May 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": 6684.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served Total app opens (an additive count of activity rows) by iOS platform for May 2026, excluding internal/test accounts (the app_opens metric) for asked How many times did iOS users open the app in May 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6684",
+    "explanation": "Total app opens (an additive count of activity rows) by iOS platform for the calendar month May 2026 (2026-05-01 through 2026-05-31), excluding internal/test accounts (the app_opens metric is built to exclude them).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "ios"
+          },
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(6684,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_a_monthly_paying_users",
+    "error": null,
+    "question": "How many customers are currently paying us on the monthly plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": null,
+    "reason": "other",
+    "missing": "requery_needed",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "metric_brief",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "question restricts to subscription__plan='monthly' but the served number applied no such filter; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The previous answer used paying_users without filtering by subscription__plan. I will re-query the governed metric paying_users with filters={'subscription__plan':'monthly'} to return the monthly-plan count.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "paying_users"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: none given (a stock metric reads its latest snapshot)\ncolumns: value\n(371,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_seo_spend_june",
+    "error": null,
+    "question": "How much did we spend on content and SEO in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": 3605.41,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served 3605.41 Total marketing_spend (sum of spend_row rows) on channel = content_seo for the calendar month 2026-06, in GBP (period 2026-06-01..2026-06-30) for asked How much did we spend on content and SEO in June 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3605.41",
+    "explanation": "Total marketing_spend (sum of spend_row rows) on channel = content_seo for the calendar month 2026-06, in GBP (period 2026-06-01..2026-06-30).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "filters": {
+            "spend_row__channel": "content_seo"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(3605.4100000000003,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_enterprise_plan",
+    "error": null,
+    "question": "How many customers are on the enterprise plan?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment",
+    "rep": 2,
+    "declared": null,
+    "reason": "segment_undefined",
+    "missing": "There is no 'enterprise' plan in the governed subscription dimensions. The subscription__plan dimension only contains 'annual' and 'monthly'.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The semantic layer lists subscription__plan values as only 'annual' and 'monthly'; therefore we cannot report customers on an 'enterprise' plan because that segment is not defined in the data.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "enterprise plan"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named 'enterprise plan'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, app_opens, gross_mrr, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

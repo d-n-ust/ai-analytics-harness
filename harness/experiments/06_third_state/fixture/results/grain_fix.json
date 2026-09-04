@@ -1,0 +1,1244 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_android_stated",
+    "error": null,
+    "question": "How many active users, excluding staff and test accounts, did we have on Android last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": 291.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding staff and test accounts'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct accounts with any product activity in the week, excluding internal and test accounts, filtered to activity__platform = 'android' for asked How many active users, excluding staff and test accounts, did we have on Android last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "291",
+    "explanation": "291 weekly active users on Android in last week (week 2026-07-06 to 2026-07-12). This is the governed metric active_users (distinct accounts with any product activity in the week), EXCLUDING internal and test accounts, counted once per account for the whole week, filtered to activity__platform = 'android'.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "android"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('android', 291)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for android, `active_users` 291 against `active_accounts` 302, 3.78% apart."
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'is_internal = false'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of active users (distinct accounts with activity, excluding internal/test accounts) for asked active users [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "50 (active_users) / 50 (active_accounts)",
+    "explanation": "Active users (distinct accounts with activity, EXCLUDING internal/test accounts) rose from 836 to 886 = +50 for 2026-06-29\u20132026-07-05 \u2192 2026-07-06\u20132026-07-12. Active accounts (including internal/test accounts) rose from 869 to 919 = +50 over the same weeks. The two governed metrics differ only by whether internal/test accounts are excluded (active_users excludes them; active_accounts includes them).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "last_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "prev_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth_web",
+    "error": null,
+    "question": "By how many did active users on the web platform grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": 6.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'active users on the web platform'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct active accounts on web (excluding internal/test) for asked active users on the web platform [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6",
+    "explanation": "active_users on web grew by 6 accounts (week grain, distinct active accounts excluding internal/test accounts). Calculation: last_week (2026-07-06..2026-07-12) = 277 minus prev_week (2026-06-29..2026-07-05) = 271 \u2192 +6.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 against `active_accounts` 289, 4.33% apart. The two"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "prev_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__platform, value\n('web', 271)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 271 against `active_accounts` 283, 4.43% apart. The two"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_ios_last_week",
+    "error": null,
+    "question": "How many active users were on iOS last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 2,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'How many active users were on iOS last week?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 contested figure(s) omitted; correction 2 of 2"
+      }
+    ],
+    "answer_text": "293 and 303",
+    "explanation": "iOS weekly active for 2026-07-06..2026-07-12: active_users = 293 (distinct accounts with activity, EXCLUDING internal/test accounts); active_accounts = 303 (distinct accounts with activity, INCLUDING internal/test accounts). The two readings differ only by the activity__is_internal filter.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n('ios', 293)\n('android', 291)\n('unknown', 25)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 again"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_accounts",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 289)\n('android', 302)\n('ios', 303)\n('unknown', 25)\n[also] `active_users` is an equally governed answer to the same question and returns a different number here: for web, `active_accounts` 289 again"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": true,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": "active_users",
+    "divergence": 0.04093567251461988,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_organic",
+    "error": null,
+    "question": "How many active users came to us through organic acquisition last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 0,
+    "declared": 171.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'organic acquisition'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct customer accounts with any product activity acquired via the organic channel (weekly active_users) for asked active users came to us through organic acquisition last week [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "171",
+    "explanation": "Weekly active users (distinct customer accounts with any product activity, excluding internal/test accounts) acquired via the organic channel for last ISO week (2026-07-06 to 2026-07-12) \u2014 computed from governed metric active_users with activity__channel='organic' and time_grain=week, period=last_week.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__channel": "organic"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(171,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 171 against `active_accounts` 178, 4.09% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_android_stated",
+    "error": null,
+    "question": "How many active users, excluding staff and test accounts, did we have on Android last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": 291.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding staff and test accounts'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct accounts active during 2026-07-06 to 2026-07-12 on Android, excluding internal and test accounts (governed metric active_users weekly) for asked How many active users, excluding staff and test accounts, did we have on Android last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "291",
+    "explanation": "Weekly active users (distinct accounts active during 2026-07-06 to 2026-07-12), excluding internal and test accounts, on Android = 291. Computed using governed metric active_users (weekly grain) filtered to activity__platform='android'.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "android"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('android', 291)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for android, `active_users` 291 against `active_accounts` 302, 3.78% apart."
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served difference in active_users (distinct accounts with any product activity) between two weeks (886 vs 836 = 50) for asked By how many did active users grow last week compared with the week before? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "Active users grew by 50 accounts week-over-week: active_users (distinct accounts with any product activity, excluding internal/test accounts) was 886 for 2026-07-06\u20132026-07-12 (last_week) vs 836 for 2026-06-29\u20132026-07-05 (prev_week); difference = 886 \u2212 836 = 50. [Also: active_accounts (including internal/test) was 919 vs 869, a +50 change as well; the two metrics differ only by inclusion of internal accounts.]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "last_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "prev_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth_web",
+    "error": null,
+    "question": "By how many did active users on the web platform grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": 6.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'active users on the web platform'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct active users (active_users) on web platform for asked active users on the web platform [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6",
+    "explanation": "Change in active_users (count of distinct active users) on the web platform: week 2026-07-06..2026-07-12 = 277 minus prior week 2026-06-29..2026-07-05 = 271 \u2192 +6 users. (Governed metric: active_users by week filtered to activity__platform='web'. Note: active_accounts is an alternate governed definition and would give +6 as well for web: 289\u2212283=+6; the difference between metrics is that active_accounts excludes internal users.)",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "prev_week",
+          "group_by": [
+            "activity__platform"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__platform, value\n('web', 271)\n('android', 268)\n('ios', 274)\n('unknown', 23)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 271 again"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "group_by": [
+            "activity__platform"
+          ]
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n('android', 291)\n('ios', 293)\n('unknown', 25)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 again"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_ios_last_week",
+    "error": null,
+    "question": "How many active users were on iOS last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'How many active users were on iOS last week?'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 contested figure(s) omitted; correction 1 of 2"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct accounts active on iOS in the week (excluding or including internal/test accounts) for asked active users were on iOS last week [measures]; correction 1 of 2"
+      }
+    ],
+    "answer_text": "293 (or 303)",
+    "explanation": "Two governed readings exist. active_users = 293: distinct accounts active on iOS in week 2026-07-06..2026-07-12, EXCLUDING internal/test accounts. active_accounts = 303: distinct accounts active on iOS same week, INCLUDING internal/test accounts. Both are weekly distinct counts; they differ only by whether internal/test accounts are excluded.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "ios"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('ios', 293)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for ios, `active_users` 293 against `active_accounts` 303, 3.41% apart. The two"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_accounts",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "ios"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('ios', 303)\n[also] `active_users` is an equally governed answer to the same question and returns a different number here: for ios, `active_accounts` 303 against `active_users` 293, 3.30% apart. The two di"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_organic",
+    "error": null,
+    "question": "How many active users came to us through organic acquisition last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 1,
+    "declared": 171.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served governed metric active_users filtered to activity__channel = organic (weekly distinct count) for asked active users came to us through organic acquisition [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "171",
+    "explanation": "This is the governed metric active_users (distinct accounts with any product activity in the period, excluding internal/test accounts) for last calendar week (2026-07-06 to 2026-07-12), filtered to activity__channel = organic (weekly distinct count). Source: governed metric query (active_users, period=last_week, filters activity__channel=organic). [also: active_accounts = 178 (includes internal/test accounts), a different governed reading].",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "last_week",
+          "time_grain": "week",
+          "filters": {
+            "activity__channel": "organic"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(171,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 171 against `active_accounts` 178, 4.09% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_android_stated",
+    "error": null,
+    "question": "How many active users, excluding staff and test accounts, did we have on Android last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 291.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'excluding staff and test accounts'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct customer accounts with any product activity during ISO week 2026-07-06 to 2026-07-12 filtered to activity__platform = android and excluding internal/test accounts (governed metric active_users) for asked active users, excluding staff and test accounts, did we have on Android last week [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "291",
+    "explanation": "Weekly active users (distinct customer accounts with any product activity during the ISO week 2026-07-06 to 2026-07-12), filtered to activity__platform = android, excluding internal and test accounts (governed metric active_users). Source: governed metric query for last_week.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "android"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('android', 291)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for android, `active_users` 291 against `active_accounts` 302, 3.78% apart."
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth",
+    "error": null,
+    "question": "By how many did active users grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 50.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct accounts with any product activity (excluding internal/test accounts) for asked active users [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "50",
+    "explanation": "active_users (distinct accounts with any product activity, excluding internal/test accounts), weekly grain, difference between last week (2026-07-06..2026-07-12) = 886 and the prior week (2026-06-29..2026-07-05) = 836; growth = 886 \u2212 836 = 50. Note: active_accounts (including internal/test) would be 919 vs 869 = +50 as well and differs only by inclusion of internal/test accounts.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "last_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(886,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 886 against `active_accounts` 919, 3.72% apart. The two differ by is_internal = false. If "
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "prev_week",
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: value\n(836,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 836 against `active_accounts` 869, 3.95% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_a_active_users_growth_web",
+    "error": null,
+    "question": "By how many did active users on the web platform grow last week compared with the week before?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 6.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "the request named which reading: 'active users on the web platform'"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct accounts with activity excluding internal/test accounts for asked active users on the web platform [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "6",
+    "explanation": "active_users on web = distinct accounts with activity excluding internal/test accounts; week is 2026-07-06..2026-07-12 (last_week) = 277, previous week 2026-06-29..2026-07-05 (prev_week) = 271; growth = 277 - 271 = 6 accounts.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: activity__platform, value\n('web', 277)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 277 against `active_accounts` 289, 4.33% apart. The two"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "group_by": [
+            "activity__platform"
+          ],
+          "time_grain": "week",
+          "period": "prev_week",
+          "filters": {
+            "activity__platform": "web"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=prev_week -> 2026-06-29..2026-07-05\ncolumns: activity__platform, value\n('web', 271)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: for web, `active_users` 271 against `active_accounts` 283, 4.43% apart. The two"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_ios_last_week",
+    "error": null,
+    "question": "How many active users were on iOS last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 293.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served distinct customer accounts with any product activity in that week (active_users, week grain, platform=ios), excluding internal/test accounts for asked How many active users were on iOS last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "293",
+    "explanation": "Weekly active users on iOS for last ISO week (2026-07-06 to 2026-07-12): distinct customer accounts with any product activity in that week, excluding internal/test accounts, counted once per account (active_users, week grain, platform=ios). Source: governed metric active_users (period=last_week, activity__platform=ios). [also: active_accounts=303 includes internal/test accounts]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__platform": "ios"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(293,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 293 against `active_accounts` 303, 3.41% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_active_users_organic",
+    "error": null,
+    "question": "How many active users came to us through organic acquisition last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec",
+    "rep": 2,
+    "declared": 171.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of distinct external customer accounts with any product activity (active_users) acquired via organic channel during last week for asked How many active users came to us through organic acquisition last week? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "171",
+    "explanation": "Active users (distinct external customer accounts with any product activity) acquired via organic channel during the ISO week 2026-07-06 to 2026-07-12 (last_week). Computed using governed metric active_users filtered to activity__channel='organic' and time_grain='week' for period='last_week'. [Note: active_accounts (including internal/test accounts) is 178 \u2014 differs because active_users excludes internal/test accounts.]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "time_grain": "week",
+          "period": "last_week",
+          "filters": {
+            "activity__channel": "organic"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(171,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 171 against `active_accounts` 178, 4.09% apart. The two differ by is_internal = false. If "
+      }
+    ]
+  }
+]

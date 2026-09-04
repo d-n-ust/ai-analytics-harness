@@ -25,8 +25,8 @@ import logging
 # the one import that crosses that line, and it crosses it in the permitted direction.
 from evidence.values import num_match
 
-from ..numbers import bare_number, parse_numbers
-from ..outcomes import declared_handles
+from ..core.numbers import bare_number, parse_numbers
+from ..core.outcomes import declared_handles
 from . import DECOMPOSE_TOOLS, GOVERNED_TOOLS, Position, Verdict, judge, note
 
 _log = logging.getLogger(__name__)

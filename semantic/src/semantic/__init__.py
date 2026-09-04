@@ -7,12 +7,15 @@ is deliberately absent: it pulls the optional MetricFlow dependency, so it stays
 one call site.
 """
 
+from .clusters import Clusters, Competitor, StaleIndex
+from .clusters import load as load_clusters
 from .engine import check_compatible, tools_unavailable
 from .semantic import SemanticError, SemanticLayer
 from .tree import Causality, MetricTree, TreeError
 
 __all__ = [
     "SemanticLayer", "SemanticError",
+    "Clusters", "Competitor", "StaleIndex", "load_clusters",
     "MetricTree", "Causality", "TreeError",
     "check_compatible", "tools_unavailable",
 ]

@@ -11,6 +11,13 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   because the question names an undefined term with more than one plausible
                   governed reading, and picking one silently is the failure. Serving a number
                   is still a miss, so the trap the case sets is unchanged.
+  contested       a clarifying question, OR an answer that discloses every reading's figure
+                  (`_disclosed_both`). Two or more GOVERNED definitions answer the question and
+                  every one is defensible, so refusing is an over-refusal — something does answer
+                  it, in fact two things do — and serving one number without disclosure is the
+                  silent error. This is the one expectation
+                  where the failure leaves no signature: the served figure is a real governed
+                  result of a real metric, so provenance, unit validation and the judge all pass.
 
 Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
 
@@ -37,9 +44,9 @@ from __future__ import annotations
 
 import re
 
-from agent.numbers import asserts_number
-from agent.numbers import parse_numbers as _numbers
-from agent.rungs import capabilities
+from agent.core.numbers import asserts_number
+from agent.core.numbers import parse_numbers as _numbers
+from agent.core.rungs import capabilities
 
 # What separates two words: a space, a hyphen, an en dash, a slash. A keyword written with one
 # must match a text written with another — they are the same phrase, and which one an answer
@@ -110,6 +117,55 @@ def _metric_match(answer, expect: dict):
     return str(got).strip().lower() == str(want).strip().lower()
 
 
+def _candidate_served(answer, expect: dict, tol: float) -> dict | None:
+    """Which contested candidate the served number came from, or None when it matches none.
+
+    Matched on the VALUE, not on the declared metric name. A model that names one metric and
+    reports the other one's figure served the other reading whatever it called it, and the reader
+    is holding the number rather than the label. The declared name is a second, weaker signal and
+    is not needed to decide this.
+    """
+    nums = _numbers(answer.answer)
+    declared = getattr(answer, "declared_value", None)
+    if declared is not None:
+        nums = [declared, *nums]
+    for candidate in expect.get("candidates") or ():
+        value = candidate.get("value")
+        if value is not None and any(_close(n, value, tol) for n in nums):
+            return candidate
+    return None
+
+
+def _disclosed_both(answer, expect: dict, tol: float) -> bool:
+    """Does the answer put EVERY candidate's figure in front of the reader?
+
+    Read from the served text rather than from a declaration, because what matters is what the
+    reader receives. A number is disclosed when it appears in the prose within tolerance; an answer
+    that names one and alludes to the other in words has still handed over one number.
+    """
+    values = [c.get("value") for c in expect.get("candidates") or ()]
+    if len(values) < 2 or any(v is None for v in values):
+        return False
+    text = f"{getattr(answer, 'answer', '') or ''} {getattr(answer, 'explanation', '') or ''}"
+    found = _numbers(text)
+    return all(any(_close(n, v, tol) for n in found) for v in values)
+
+
+def _divergence(served: dict, expect: dict) -> float | None:
+    """How far the served reading sits from the others it was chosen over, relative to itself.
+
+    The WIDEST gap, because what the miss costs is bounded by the alternative the reader would
+    most have wanted. With two candidates this is simply the gap between them. None when the
+    figures cannot be compared, which keeps an unpriceable miss visibly unpriced rather than free.
+    """
+    base = served.get("value")
+    others = [c.get("value") for c in expect.get("candidates") or ()
+              if c is not served and c.get("value") is not None]
+    if not base or not others:
+        return None
+    return max(abs(v - base) / abs(base) for v in others)
+
+
 def _accepted_reasons(expect: dict) -> tuple[str, ...]:
     """The refusal codes this case counts as right. A string for the usual one-answer case, a
     list where a defect is genuinely describable two ways.
@@ -153,14 +209,19 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # the analyst's manner rather than the analyst's judgement: 27 attempts at t4_retention_trend
     # produced 19 clarifications and 4 refusals, and the old gold called 23 of the 27 wrong.
     expects_refusal = etype in ("refuse", "ambiguous")
-    accepts_clarify = etype in ("clarify", "ambiguous")
+    # A CONTESTED case joins the clarify-accepting set and stays out of the refusal-expecting one,
+    # and that pair of memberships is the whole scoring rule: asking is right, declining is not.
+    accepts_clarify = etype in ("clarify", "ambiguous", "contested")
     # Was the context this case's answer depends on actually supplied? Asked of the rung's
     # capabilities rather than compared against a rung number: rung 7 is governed-only and holds
     # the tree WITHOUT the knowledge base, so `rung >= 5` would get this exactly backwards.
     missing_context = _missing_context(case, getattr(answer, "rung", None))
     accepted_reasons = _accepted_reasons(expect)
     is_false_premise = expects_refusal and "false_premise" in accepted_reasons
-    tol = expect.get("tolerance", 0.02)
+    # A contested case needs a tighter band than the rest by default: attributing a served number
+    # to one of the candidates requires a tolerance narrower than the gap between them, and on this
+    # fixture that gap is as small as 1.1% on one slice.
+    tol = expect.get("tolerance", 0.005 if etype == "contested" else 0.02)
     # Did it put a FIGURE forward? Where the answer schema carried a typed `value` (R7+), the
     # model has already said so and reading its prose can only invent a disagreement: one run
     # declared no value, wrote "over the last 30 days", and the digit scan filed a clarification
@@ -178,6 +239,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
     wrong_scope = wrong_metric = False
     reason_match = driver_ok = cause_ok = metric_match = None
+    served_candidate = divergence = None
 
     if outcome == "error":
         bucket = "error"
@@ -201,6 +263,33 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     elif outcome == "clarify":
         correct = accepts_clarify or missing_context
         bucket = "idk"
+    elif etype == "contested":
+        # ANSWERED a question that two or more governed definitions answer. Whichever figure was
+        # served, serving it alone is the failure: the number IS a governed result of a real
+        # metric, computed by real SQL, so every check in this system passes and the reader has no
+        # way to tell that a choice was made on their behalf.
+        #
+        # WHICH candidate it came from is recorded rather than pooled into one count, because what
+        # this miss costs is the gap between the definitions and that gap is not a constant — on
+        # this fixture the same pair sits 0.0% apart on one slice and 5.2% apart on another.
+        # `served_candidate` is None when the figure matches no candidate: still a wrong number,
+        # but an ordinary one rather than the invisible kind, and worth telling apart.
+        if not has_number:
+            bucket = "other"                         # abstention prose through the answer channel
+        elif _disclosed_both(answer, expect, tol):
+            # THE FOURTH ACTION. An answer naming every reading and its figure has not made a
+            # silent choice — the reader is holding both numbers and can pick. It costs one
+            # sentence where a clarification costs a round trip, so it is scored correct rather
+            # than counted as the failure the pile exists to catch.
+            correct = True
+            bucket = "right"
+        else:
+            served = _candidate_served(answer, expect, tol)
+            if served is not None:
+                served_candidate = served["metric"]
+                divergence = _divergence(served, expect)
+            confident_wrong = True
+            bucket = "wrong"
     elif is_false_premise:
         # ANSWERED a question whose premise is false. Refusing is already handled above, and both
         # responses are correct: "I will not answer that" and "signups did not fall, they rose from
@@ -214,8 +303,15 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         # that fabricated a causal story for a decline that never happened was not distinguishable
         # from the four that rebutted correctly. The contradiction is decidable from the case's own
         # word list, so it is decided here rather than deferred to a model that is not called.
-        correct = grade_keywords(f"{answer.answer or ''} {answer.explanation or ''}",
-                                 expect["rebuttal"])["correct"]
+        # Score the TYPED `direction` slot first (a structured outcome), then fall back to prose. An
+        # answer that set direction=rose has rebutted the "fell" premise whatever words it chose, so
+        # a bare "+50" with the right typed direction is not a silent error — scoring only the prose
+        # penalised phrasing over judgement. The prose scan stays for arms that offer no typed slot.
+        _RISE = {"rose", "grew", "grown", "increase", "increased", "higher", "up", "climbed", "gained"}
+        true_dir = "rose" if any(str(w).lower() in _RISE for w in expect["rebuttal"]) else "fell"
+        typed = str(getattr(answer, "direction", "") or "").strip().lower()
+        correct = (typed == true_dir) or grade_keywords(
+            f"{answer.answer or ''} {answer.explanation or ''}", expect["rebuttal"])["correct"]
         # Accepting a false premise and explaining it is the worst outcome the pile can produce:
         # a confident, fully reasoned account of an event that did not occur. It counts as a silent
         # error, which is what `confident_wrong` feeds.
@@ -294,6 +390,17 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "wrong_metric": wrong_metric,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        # WHICH terminal action this question calls for, as a field rather than a boolean, because
+        # there are now three. `expected_refuse` is kept beside it and unchanged: every stored row
+        # ever written carries that name, and the coverage audit reads all of them. Readers that
+        # know about three piles use `expected_action`; readers that do not see exactly what they
+        # saw before, and a suite with no contested cases scores identically either way.
+        "expected_action": ("clarify" if etype == "contested"
+                            else "refuse" if expects_refusal else "answer"),
+        # Contested only: the definition whose figure was actually served, and how far it sits from
+        # the ones it was chosen over. Both None everywhere else, and None here when the served
+        # number came from neither definition.
+        "served_candidate": served_candidate, "divergence": divergence,
         "reason_match": reason_match, "metric_match": metric_match,
         "driver_ok": driver_ok, "cause_ok": cause_ok,
         "score": 1.0 if correct else (-WRONG_COST if wrong_number else 0.0),

@@ -11,10 +11,10 @@
 
 title: "The repair matrix"
 question: "When a question fails, which primitive broke, and what is the cheapest location where its grounding reliably holds?"
-status: in_progress
+status: shipped
 
 article:
-  slug: null                 # unwritten
+  slug: the-ai-readiness-repair-matrix
   repo: decisionspine-site
 
 # HOW ITS RUNS ARE DRIVEN. This is the first project with DECLARATIVE studies: each subdirectory is
@@ -26,8 +26,8 @@ runs: declarative
 evidence:
   - semantic/semantic_layer.yml    # the base every arm patches
   - semantic/ambiguity.py          # the lint the S-conditions are checked by
-  - results/probes/                # 12 pre-migration runs of study 01, still readable
-  - results/experiments/           # every study run since
+  - 00_primitive_load/FINDINGS.md  # the flagship board; every other study carries its own FINDINGS.md
+  - 00_primitive_load/PRACTITIONER-NOTES.md   # and its practitioner notes, cited by docs/FOUNDATION.md
 
 # The framework this project is testing lives in the site repo:
 #   docs/blog-research/semantic-normalization-framework.md   the S1-S6 conditions, and their evidence

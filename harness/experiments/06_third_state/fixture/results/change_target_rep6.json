@@ -1,0 +1,470 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 22,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3,689 (customer-facing completed habits) \u2014 or 3,792 including internal/test accounts",
+    "explanation": "value_moments (completed habits excluding internal/test accounts) were 11,640 in May 2026 and 15,329 in June 2026, a change of 15,329 \u2212 11,640 = 3,689. The alternate governed metric total_value_moments (includes internal/test accounts) was 12,249 in May and 16,041 in June, a change of 3,792; the two readings differ because total_value_moments includes activity by internal/test accounts while value_moments excludes them.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 3689.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 22,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3689",
+    "explanation": "Change in completed habits (value_moments) from May 2026 (11,640 completed habits, excluding internal/test accounts) to June 2026 (15,329 completed habits, excluding internal/test accounts): 15,329 \u2212 11,640 = 3,689 additional completed habits in June versus May. (Note: the platform-including metric total_value_moments would be 12,249 \u2192 16,041, a change of 3,792; the two readings differ because total_value_moments includes internal/test accounts while value_moments excludes them.)",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 3689.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 19,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3689",
+    "explanation": "Change in completed habits (value_moments) from May 2026 to June 2026: June value_moments (15,329 completed habits, customer-facing excluding internal/test accounts) minus May value_moments (11,640 completed habits) = 3,689 additional completed habits in June. Also: the platform-level total_value_moments (including internal/test accounts) changed from 12,249 in May to 16,041 in June, a change of 3,792; the two definitions differ by inclusion of internal/test accounts.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 3,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 21,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments / total_value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3,689 (customer-facing completed habits) and 3,792 (including internal/test accounts)",
+    "explanation": "value_moments (completed habits excluding internal/test accounts) rose from 11,640 in May 2026 to 15,329 in June 2026, an increase of 3,689. total_value_moments (including internal/test accounts) rose from 12,249 in May to 16,041 in June, an increase of 3,792. The two metrics differ only by whether internal/test accounts are excluded.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 4,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 20,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments) excluding internal/test accounts (customer-facing) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "3,689 (customer-facing completed habits)",
+    "explanation": "Difference in completed habits (value_moments) between June 2026 and May 2026: 15,329 (June) minus 11,640 (May) = 3,689 completed habits. value_moments counts habit completions in the month and EXCLUDES internal/test accounts (customer-facing). [Also: the platform-total measure total_value_moments is 16,041 in June and 12,249 in May, a difference of 3,792 \u2014 it includes internal/test accounts and therefore returns a slightly larger change.]",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h_c_habits_change_may_june",
+    "error": null,
+    "question": "By how many did completed habits change from May 2026 to June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 5,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "rose",
+    "tool_calls": 3,
+    "model_calls": 19,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of completed habits (value_moments and total_value_moments) for asked completed habits [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "+3,689 completed habits (customer-facing) / +3,712 completed habits (including internal/test)",
+    "explanation": "Change in completed habits (value_moments) from May 2026 to June 2026: customer-facing completed habits rose from 11,640 in May to 15,329 in June, an increase of 3,689. The platform-facing total_value_moments (includes internal/test accounts) rose from 12,249 to 16,041, an increase of 3,792. I report both because the governed layer defines two equally-grounded metrics: value_moments (excludes internal/test) and total_value_moments (includes them).",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-05"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-05 -> 2026-05-01..2026-05-31\ncolumns: value\n(11640,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 11,640 against `total_value_moments` 12,249, 5.23% apart. The two differ by is_intern"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "value_moments",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(15329,)\n[also] `total_value_moments` is an equally governed answer to the same question and returns a different number here: `value_moments` 15,329 against `total_value_moments` 16,041, 4.64% apart. The two differ by is_intern"
+      }
+    ]
+  }
+]

@@ -78,8 +78,26 @@ def resolve_period(name: str | None) -> tuple[dt.date | None, dt.date | None]:
             first = dt.date(year, month, 1)
             last = (dt.date(year + 1, 1, 1) if month == 12 else dt.date(year, month + 1, 1)) - dt.timedelta(days=1)
             return first, last
-    raise ValueError(f"unknown period {name!r}; use one of {NAMED_PERIODS}, a month as YYYY-MM, "
-                     f"or explicit start/end dates")
+    # A calendar QUARTER "YYYY-Qn" and HALF "YYYY-Hn", for the same reason YYYY-MM was added: the
+    # natural window a question names should be a legal token, not something the model improvises. A
+    # question about "the second quarter" was answered by writing period='2026-04/2026-06', which is
+    # not a period, erroring, and then dropping the window and serving all-time. `last_quarter` and
+    # start/end both existed and the error named start/end; the model widened anyway. Making the
+    # utterance legal removes the improvisation at its source.
+    m = re.fullmatch(r"(\d{4})-[Qq]([1-4])", name)
+    if m:
+        year, q = int(m.group(1)), int(m.group(2))
+        first = dt.date(year, (q - 1) * 3 + 1, 1)
+        last = (dt.date(year + 1, 1, 1) if q == 4 else dt.date(year, q * 3 + 1, 1)) - dt.timedelta(days=1)
+        return first, last
+    m = re.fullmatch(r"(\d{4})-[Hh]([12])", name)
+    if m:
+        year, h = int(m.group(1)), int(m.group(2))
+        first = dt.date(year, 1 if h == 1 else 7, 1)
+        last = (dt.date(year, 7, 1) if h == 1 else dt.date(year + 1, 1, 1)) - dt.timedelta(days=1)
+        return first, last
+    raise ValueError(f"unknown period {name!r}; use one of {NAMED_PERIODS}, a month as YYYY-MM, a "
+                     f"quarter as YYYY-Qn, a half as YYYY-Hn, or explicit start/end dates")
 
 
 # --------------------------------------------------------------------------- #

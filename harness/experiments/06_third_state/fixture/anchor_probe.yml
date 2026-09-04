@@ -1,0 +1,30 @@
+# Scrutiny probe for the member anchor (binding check v2). Three questions chosen to be HARD for
+# exactly this mechanism: (1) the suite's stated-gross case — the pair v1's prose anchor could not
+# decide; (2) the same member with the OPPOSITE polarity — the inversion trap: a keyword-only
+# reading sees "refunded" and picks gross, the polarity says net; (3) a boolean dimension named
+# only through its concept words. Golds proven by SQL before writing (2754.00 / 2685.08 / 1683).
+cases:
+- id: probe_counting_refunded
+  tier: answerable_stated
+  question: Counting subscriptions that were later refunded, what is our monthly recurring revenue today?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: gross_mrr
+    gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st IN (1,4)
+- id: probe_excluding_refunded
+  tier: answerable_stated
+  question: Excluding the subscription terms we later refunded, what is our monthly recurring revenue today?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: mrr
+    gold_sql: SELECT round(sum(CASE WHEN p='a' THEN amt/12.0 ELSE amt END),2) FROM "_source".subs WHERE st = 1
+- id: probe_counting_staff
+  tier: answerable_stated
+  question: How many accounts were active during June 2026, counting our internal staff and test accounts as well?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: active_accounts
+    gold_sql: SELECT count(DISTINCT e.uid) FROM "_source".evt e WHERE e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01'

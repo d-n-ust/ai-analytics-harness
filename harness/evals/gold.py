@@ -13,10 +13,11 @@ from pathlib import Path
 
 import yaml
 
-from agent.outcomes import REFUSAL_REASONS
+from agent.core.outcomes import REFUSAL_REASONS
 
 EVALS_DIR = Path(__file__).resolve().parent / "cases"
-_EXPECT_TYPES = {"metric_answer", "refuse", "ambiguous", "diagnostic", "keywords", "clarify"}
+_EXPECT_TYPES = {"metric_answer", "refuse", "ambiguous", "diagnostic", "keywords", "clarify",
+                 "contested"}
 # The context a case may declare it depends on, mirroring agent.rungs.Capabilities.
 _CONTEXT_KINDS = {"star", "semantic", "examples", "knowledge", "tree"}
 
@@ -83,6 +84,28 @@ def _validate(case: dict, where: str) -> None:
             if code not in REFUSAL_REASONS:
                 raise ValueError(f"{where}: {t} case {case['id']!r} reason {code!r} "
                                  f"not in REFUSAL_REASONS")
+    # A CONTESTED case declares every governed definition that answers it, and each candidate
+    # declares its own oracle. Two is the minimum, because one candidate is not a fork; distinct
+    # metric names are required, because the same metric twice is a typo rather than an ambiguity.
+    #
+    # `owner` and `consumer` are REQUIRED and that is the substantive check, not paperwork. A
+    # candidate nobody owns and nothing consumes is a leftover, and a leftover is reducible — it
+    # should be deleted offline, which is the previous experiment's finding rather than this one's.
+    # Forcing both fields at authoring time is what keeps the pile to irreducible forks.
+    if t == "contested":
+        candidates = e.get("candidates") or []
+        if len(candidates) < 2:
+            raise ValueError(f"{where}: contested case {case['id']!r} needs at least two candidates")
+        names = [c.get("metric") for c in candidates]
+        if len(set(names)) != len(names):
+            raise ValueError(f"{where}: contested case {case['id']!r} names a metric twice: {names}")
+        for c in candidates:
+            for field in ("metric", "gold_sql", "owner", "consumer"):
+                if not c.get(field):
+                    raise ValueError(
+                        f"{where}: contested case {case['id']!r} candidate {c.get('metric')!r} "
+                        f"declares no {field}. Every candidate needs one: a definition with no "
+                        f"owner and no consumer is a leftover to delete, not a fork to gate.")
     if t == "diagnostic" and not e.get("driver"):
         raise ValueError(f"{where}: diagnostic case {case['id']!r} needs a driver list")
     if t == "keywords" and not e.get("keywords"):
@@ -118,9 +141,20 @@ def load_questions(root: Path = EVALS_DIR) -> list[dict]:
 def compute_gold(con, cases: list[dict] | None = None) -> dict[str, float | None]:
     """Map case id -> gold number (None when the case declares no gold_sql). The gold_sql
     lives inside `expect`; for a refuse case it is provenance (the trap value), used by the
-    grader only to tell a wrong number from a right-but-should-refuse one."""
+    grader only to tell a wrong number from a right-but-should-refuse one.
+
+    A CONTESTED case has no single gold, and forcing one would state the very thing the case
+    denies. Its entry is therefore None, and each candidate's own oracle is resolved onto the
+    candidate as `value`. Resolution happens HERE rather than in a second function every runner
+    would have to remember to call: a contested case that reached the grader with unresolved
+    candidates could not be scored, and the cheapest way to make that impossible is to leave no
+    path on which it happens.
+    """
     golds: dict[str, float | None] = {}
     for case in (load_questions() if cases is None else cases):
+        for candidate in case["expect"].get("candidates") or ():
+            value = con.execute(candidate["gold_sql"]).fetchone()[0]
+            candidate["value"] = None if value is None else float(value)
         sql = case["expect"].get("gold_sql")
         if sql:
             val = con.execute(sql).fetchone()[0]

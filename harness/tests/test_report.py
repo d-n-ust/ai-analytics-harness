@@ -115,6 +115,37 @@ def test_grounded_answers_is_all_or_nothing_and_excludes_the_layers_own_defect()
     assert (s2.checkable, s2.audited) == (0, 0)
 
 
+def test_contested_disclosed_answer_is_credited_like_a_clarification():
+    """A contested question answered with EVERY reading disclosed is correct, not a miss.
+
+    The pile exists to catch ONE failure: serving a single reading silently. Asking which reading
+    is meant and disclosing both readings are two correct handlings of the same question, and both
+    must count toward pile-C accuracy — otherwise the metric marks the disclosed-both answer (the
+    grader's fourth action, `_disclosed_both` -> correct) as a failure it is not. Crediting only
+    `clarified` scored this suite 1/3 where the truth is 2/3; this test is where that argument is
+    fixed rather than quietly reverted.
+    """
+    import math
+
+    from evals.selective import selective
+
+    def contested(**kw):
+        return _row(expected_refuse=True, expected_action="clarify", gold=None, **kw)
+
+    s = selective([
+        contested(outcome="answer", correct=True),                       # disclosed both -> correct
+        contested(outcome="clarify", correct=True, abstained=True,       # asked -> correct
+                  answer=None, declared_value=None),
+        contested(outcome="answer", correct=False, bucket="wrong",       # one reading, silently -> miss
+                  confident_wrong=True, answer="5", declared_value=5.0),
+    ])
+    assert (s.contested, s.clarified, s.contested_disclosed, s.contested_served) == (3, 1, 1, 1)
+    # Pile C is the only pile here, so balanced accuracy IS its accuracy: two of three handled well.
+    assert math.isclose(s.balanced_accuracy, 2 / 3), s.balanced_accuracy
+    # The one served silently is still the silent error, disclosure or not.
+    assert math.isclose(s.silent_error, 1 / 3), s.silent_error
+
+
 def _step(tool="query_metric", **kw):
     base = dict(tool=tool, args={}, error=False, blocked_by="", blocked_reason="", result="")
     base.update(kw)

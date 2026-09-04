@@ -16,8 +16,9 @@ depends on the tools it gates.
 
 from __future__ import annotations
 
-from ..protocol import Protocol
-from ..rungs import capabilities
+from ..core.outcomes import CLARIFY_MEANINGS, CLARIFY_REASONS
+from ..core.protocol import Protocol
+from ..core.rungs import capabilities
 from . import GOVERNED_TOOLS, Position, note
 
 _CHECK_TOOLS = ("check_metric_exists", "check_coverage",
@@ -48,7 +49,7 @@ def with_purpose(base: dict) -> dict:
 
 def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
           *, protocol: Protocol | None = None, terminal_only: bool = False,
-          record=None) -> list[dict]:
+          record=None, ontology=None) -> list[dict]:
     """The tool schemas this configuration offers the model.
 
     Three axes decide it, and they are not the same thing: `rung` is grounding — what the agent
@@ -79,6 +80,14 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
         if caps.semantic:
             offered += [schema("list_metrics"),
                         query_metric_schema(schema("query_metric"), guardrails, semantic, record)]
+            # `ontology_tool`: a pull tool for the full per-metric contract before a query — offered
+            # beside the lean catalogue so the deep detail is fetched for the metric in play rather
+            # than dumped for all of them. It spends the turn `list_metrics` used to cost (the lean
+            # list moves into the system prompt), not an added one.
+            if guardrails.ontology_tool and semantic is not None:
+                offered.append(schema("show_metric_ontology"))
+                note(record, "ontology_tool", Position.ACTION_SPACE, "offered",
+                     "show_metric_ontology — full per-metric contract on demand")
         if caps.tree:
             offered += [schema("get_metric_tree"),
                         decompose_schema(schema("decompose_change"), guardrails, tree, record)]
@@ -88,6 +97,10 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
             from semantic import tools_unavailable
             gone = tools_unavailable(semantic.capabilities)
             names = [n for n in _CHECK_TOOLS if n not in gone]
+            # graph_grounding replaces the name-match check_metric_exists with check_answerability
+            # (offered below); drop it here so the agent is not handed both for the same question.
+            if guardrails.graph_grounding and ontology is not None:
+                names = [n for n in names if n != "check_metric_exists"]
             offered += [schema(name) for name in names]
             note(record, "check_tools", Position.ACTION_SPACE, "applied",
                  f"offered {len(names)} answerability lookups")
@@ -95,11 +108,27 @@ def offer(tools: dict, rung: int, guardrails, semantic=None, tree=None,
                 note(record, "check_tools", Position.ACTION_SPACE, "withdrew",
                      f"{', '.join(sorted(gone))} — the {semantic.capabilities.name} engine "
                      "cannot answer it")
+        # graph_grounding: the marts graph as the agent's answerability SURFACE, consulted upfront.
+        # check_answerability returns the complete closed-world graph and the reason code each verdict
+        # implies, in place of the name-match check_metric_exists dropped above.
+        if guardrails.graph_grounding and ontology is not None:
+            offered.append(schema("check_answerability"))
+            note(record, "graph_grounding", Position.ACTION_SPACE, "offered",
+                 "check_answerability — three-way answerability from the marts graph")
+        # spec_authoring: define_measure, the verified compute-the-tail path (needs the graph).
+        if guardrails.spec_authoring and ontology is not None:
+            offered.append(schema("define_measure"))
+            note(record, "spec_authoring", Position.ACTION_SPACE, "offered",
+                 "define_measure — author + verify + compute a definition for an ungoverned measure")
     offered.append(answer_schema(schema("answer"), guardrails, semantic, protocol, record))
     if guardrails.abstain:
         offered.append(schema("refuse"))
         note(record, "abstain", Position.ACTION_SPACE, "applied", "offered the refuse tool")
-    offered.append(schema("clarify"))
+    if guardrails.clarify:
+        offered.append(clarify_schema(schema("clarify"), guardrails, record))
+    else:
+        note(record, "clarify", Position.ACTION_SPACE, "withdrew",
+             "no way to report ambiguity — the run must answer or refuse")
     # Applied once over the assembled list rather than at each governed tool: the set of calls
     # that carry a purpose is one fact about the configuration, and stating it once means adding
     # a third governed tool later cannot leave `because` off it by omission.
@@ -121,10 +150,24 @@ def query_metric_schema(base: dict, guardrails, semantic, record=None) -> dict:
     if semantic is None:
         return base
     props = dict(base["input_schema"]["properties"])
+    if guardrails.scope_declaration:
+        # Asked for in the INDEX'S OWN WORDS, not in the user's, and that is the whole design. A
+        # free-text justification would have to be judged; a string that must match the
+        # discriminator the index already records can be compared. The agent learns the exact
+        # wording from the block it just received, which names it.
+        props["resolved_scope"] = {
+            "type": "string",
+            "description": ("Only when the REQUEST ITSELF named which reading of a contested metric "
+                            "it wanted. Repeat the discriminator exactly as the block stated it "
+                            "(e.g. `is_internal = false`). Leave it out when the request did not "
+                            "say — inventing one to get past the block serves a number the reader "
+                            "did not choose.")}
     if guardrails.coverage_check:
         props["metric"] = {**props["metric"], "enum": list(semantic.metrics)}
         note(record, "coverage_check", Position.ACTION_SPACE, "narrowed",
              f"metric closed to the {len(semantic.metrics)}-metric catalog")
+    if guardrails.filter_vocabulary:
+        props.update(_filter_vocabulary(semantic, props, record))
     segments = semantic.segment_names()
     if segments:
         props["segment"] = {
@@ -155,6 +198,128 @@ def decompose_schema(base: dict, guardrails, tree, record=None) -> dict:
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
 
 
+def clarify_schema(base: dict, guardrails, record=None) -> dict:
+    """Add a coded reason and named candidates to the clarify tool when `typed_clarify` is on.
+
+    An enrichment rather than a second tool, the same shape `answer_schema` uses for provenance:
+    one exit, one handler, a schema that widens under a guardrail. Two competing dicts for one
+    tool name is how the check_coverage handler came to read an argument its schema never offered.
+
+    WHAT THE FIELDS BUY, and why this is not decoration. A refusal can only be checked against a
+    reason code somebody wrote down in advance. A clarification that NAMES the definitions it is
+    choosing between can be checked against the layer and the warehouse — do these exist, and do
+    they actually return different numbers for this slice — with no gold answer and no second
+    model. That is the only measurement in this harness a reader could run on their own data,
+    where nobody has an answer key. It exists only if the model names things rather than
+    describing them, which is why `candidates` asks for catalogue names and `question` does not.
+
+    `question` is asked for in the USER's words on purpose. "Did you mean active_users or
+    active_accounts" cannot be answered outside the data team; "should staff and test accounts be
+    counted" can be answered by anyone, and they are the same clarification. The second names what
+    DIFFERS between the candidates, and that difference is a fact the layer already declares.
+
+    `candidates` is not required. An underspecified period has no competing definitions to name,
+    and demanding two would teach the model to invent a pair rather than report the ambiguity it
+    actually found.
+    """
+    if not guardrails.typed_clarify:
+        return base
+    props = dict(base["input_schema"]["properties"])
+    props["reason"] = {
+        "type": "string", "enum": CLARIFY_REASONS,
+        "description": ("What kind of ambiguity this is. Name the ROOT CAUSE:\n"
+                        + "\n".join(f"- {k}: {v}" for k, v in CLARIFY_MEANINGS.items()))}
+    props["candidates"] = {
+        "type": "array", "items": {"type": "string"},
+        "description": ("The governed metric names that could EACH answer the question, spelled "
+                        "as the catalogue spells them. Two or more when the ambiguity is about "
+                        "which definition to use; empty when it is not.")}
+    props["question"] = {
+        "type": "string",
+        "description": ("The one question to ask, in the USER's words, about what DIFFERS between "
+                        "the candidates — not about which metric name to pick. Someone outside "
+                        "the data team has to be able to answer it.")}
+    note(record, "typed_clarify", Position.ACTION_SPACE, "applied",
+         "clarify gained a coded reason and named candidates")
+    required = ["reason", "question"]
+    if getattr(guardrails, "grounded_candidates", False):
+        # The grounding protocol: each option offered to the user must name the object that
+        # operationalises it. Making the binding explicit is the lever — a reading the model cannot
+        # ground (NPS, when nothing records a survey) cannot be shown as a choice, so a menu of
+        # definitions the system does not have collapses to the refusal it always was. The
+        # mechanism verifies each grounding EXISTS (guardrails/grounding_check.py); whether it is
+        # the right object for the concept stays the model's judgement.
+        props["candidates"] = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "reading": {"type": "string", "description":
+                                "One interpretation of the question, in the user's words."},
+                    "grounding": {"type": "string", "description":
+                                  "The real object this reading is computed from, spelled as the "
+                                  "catalogue spells it: a governed metric, a fact/dimension table, "
+                                  "or a column (`mrr`, `fct_subscriptions`, "
+                                  "`fct_subscriptions.plan`). It must already exist — do not name "
+                                  "one you would have to build."}},
+                "required": ["reading", "grounding"]},
+            "description": ("The competing readings, EACH bound to the object that grounds it. Two "
+                            "or more genuinely-grounded readings make this a clarification; if you "
+                            "cannot ground two, this is not one — refuse (nothing grounds it) or "
+                            "answer (one does).")}
+        required = ["reason", "question", "candidates"]
+        note(record, "grounded_candidates", Position.ACTION_SPACE, "applied",
+             "clarify candidates must each bind a reading to a grounded object")
+    return {**base,
+            "description": ("End by asking one clarifying question, because more than one reading "
+                            "of the question is defensible and they give different numbers."),
+            "input_schema": {**base["input_schema"], "properties": props,
+                             "required": required}}
+
+
+def _spec_answer(base: dict, record=None) -> dict:
+    """Make the final answer state WHAT IT MEASURES, so a figure cannot be mistaken for a
+    different question than the one asked.
+
+    The lightest form of the disclosure principle the series has been building: a governed number
+    answers a query with four slots — measure, grain, segment, and which definition — and a silent
+    wrong answer is a slot that differs from the question's without the reader seeing it (a COUNT
+    for a duration, a PER-DAY rate for a weekly question, ALL channels for one). This does not
+    police the slots against the question, which would mean reading it; it asks the answer to name
+    them, which does the work two ways — writing "per day" tends to make the model recompute to the
+    week, and where it does not, the reader can see the mismatch instead of being trapped by it.
+    """
+    props = dict(base["input_schema"]["properties"])
+    props["explanation"] = {
+        "type": "string",
+        "description": ("One line on how you got the answer. Where the answer is a figure, state "
+                        "WHAT IT MEASURES so it cannot be read as a different question: the MEASURE "
+                        "(what is counted or summed), the GRAIN (per week / per day / total / per "
+                        "user — the level the figure is at), the UNITS, and the SEGMENT (which "
+                        "population — e.g. excluding internal accounts, one channel, one platform). "
+                        "A figure given without these can answer a neighbouring question without "
+                        "the reader noticing.")}
+    # A TYPED direction, because a change question has a fifth slot — which way it moved — and a
+    # prose instruction to state it lets the model skip it and echo the question's presupposition
+    # ("fell") while its own numbers rose. A required enum forces the judgement on every answer:
+    # for a change it must commit to rose/fell READ FROM ITS OWN VALUES, which is where the
+    # contradiction with a false premise becomes unavoidable; a level answer says `not_a_change`.
+    props["direction"] = {
+        "type": "string",
+        "enum": ["rose", "fell", "unchanged", "not_a_change"],
+        "description": ("Only meaningful for a CHANGE or COMPARISON question (grew, fell, more "
+                        "than, versus last week): the direction read from YOUR OWN two values — "
+                        "836 then 886 is `rose` — NOT from how the question phrased it. If the "
+                        "question presumes a direction your numbers contradict, trust your numbers "
+                        "and say so in `explanation`. Use `not_a_change` when the answer is a "
+                        "level, not a change.")}
+    note(record, "answer_spec", Position.ACTION_SPACE, "applied",
+         "answer must state measure, grain, units, and segment")
+    required = list(base["input_schema"].get("required", [])) + ["direction"]
+    return {**base, "input_schema": {**base["input_schema"], "properties": props,
+                                     "required": required}}
+
+
 def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) -> dict:
     """Add typed provenance to the answer tool when the served number must be checked.
 
@@ -176,6 +341,8 @@ def answer_schema(base: dict, guardrails, semantic, protocol=None, record=None) 
     the search back into a lookup.
     """
     protocol = protocol or Protocol()
+    if getattr(guardrails, "answer_spec", False):
+        base = _spec_answer(base, record)
     if semantic is None or not (guardrails.governed_numbers or protocol.claims):
         return base
     props = dict(base["input_schema"]["properties"])
@@ -270,3 +437,41 @@ def _with_claims(base: dict, props: dict, protocol, record=None) -> dict:
              "answer gained a REQUIRED `claims` — each assertion names the value it rests on")
 
     return {**base, "input_schema": {**base["input_schema"], "properties": props}}
+
+
+def _filter_vocabulary(semantic, props: dict, record=None) -> dict:
+    """Close `filters` and `group_by` to the dimensions this layer actually has.
+
+    THE TOOL TAUGHT THE MISTAKE. The stock description read `e.g. {"platform": "ios",
+    "is_internal": false}` — unqualified names, because one of the two engines accepts them. On
+    the MetricFlow layer the names are `activity__platform` and `activity__is_internal`, and one
+    run sent `{'platform': 'web', 'is_internal': False, 'is_test_account': False}`, which is the
+    example almost verbatim. Two rejections later it dropped the restriction entirely and answered
+    across all platforms.
+
+    So this does two things at once, and the second is why it is an ACTION_SPACE guardrail rather
+    than a better sentence: the example is rebuilt from a real dimension of this layer, and the key
+    set is CLOSED, which makes the wrong call unmakeable instead of merely correctable. That is the
+    same argument the metric enum already makes one field along.
+    """
+    names = set()
+    for metric in getattr(semantic, "metrics", ()):          # union: filters are per-metric
+        try:
+            names |= set(semantic.allowed_filters(metric))
+        except Exception:                                    # noqa: BLE001 — a layer without them
+            continue
+    names = sorted(n for n in names if n)
+    if not names:
+        return {}
+    example = next((n for n in names if n.endswith("platform")), names[0])
+    out = {"filters": {"type": "object",
+                       "properties": {n: {} for n in names},
+                       "additionalProperties": False,
+                       "description": ("Restrict the metric. Use the dimension names exactly as "
+                                       f"list_metrics prints them, e.g. {{\"{example}\": \"web\"}}. "
+                                       "No other key is accepted.")}}
+    if "group_by" in props:
+        out["group_by"] = {**props["group_by"], "items": {"type": "string", "enum": names}}
+    note(record, "filter_vocabulary", Position.ACTION_SPACE, "narrowed",
+         f"filters and group_by closed to the layer's {len(names)} dimensions")
+    return out

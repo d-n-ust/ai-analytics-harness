@@ -1,0 +1,528 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4269.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4269.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app opens by users on platform=web in March 2026, excluding internal/test accounts for asked How many times did users on the web open the app in March 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "Total app opens by users on the web (platform=web), across March 2026 (2026-03-01 through 2026-03-31); metric app_opens excludes internal/test accounts.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": true,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h2_b_reminder_opens",
+    "error": null,
+    "question": "How many habit reminder notifications were opened last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 25188.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 3,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 25188.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 25188.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served count of app opens (app_opens) in June 2026, excluding internal/test accounts for asked habit reminder notifications were opened last month [proxy]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 25188.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 25188.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "served app_opens (app opens excluding internal/test accounts) for asked habit reminder notifications were opened [proxy]; correction 1 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your answer was not accepted: it does not measure what was asked.\nYour number reports app_opens (app opens excluding internal/test accounts), a stand-in for the 'habit reminder notifications were opened' the question ask"
+      }
+    ],
+    "answer_text": "25,188 (proxy)",
+    "explanation": "There is no governed metric for 'habit reminder notifications opened'. The closest available proxy in the semantic layer is app_opens (app opens excluding internal/test accounts). app_opens for June 2026 (2026-06-01 to 2026-06-30) = 25,188; I used that as a proxy for 'habit reminder notifications opened last month'.  [mechanism caveat] An output check remained unresolved after the correction budget: Your answer was not accepted: it does not measure what was asked.\nYour number reports app_opens (app opens excluding internal/test accounts), a stand-in for the 'habit reminder notifications were opened' the question ask.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "habit reminder notifications opened last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'habit reminder notifications opened last month' maps to the governed metric `metric.app_opens`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(25188,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4269.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4269.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app_open events filtered to activity__platform = web for March 2026 (excluding internal/test accounts) for asked How many times did users on the web open the app in March 2026? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "Total app opens in March 2026 on the web platform. This is the governed metric app_opens filtered to activity__platform = web, measured for the calendar month 2026-03 (count of app_open events, excluding internal/test accounts).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": true,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h2_b_reminder_opens",
+    "error": null,
+    "question": "How many habit reminder notifications were opened last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": 25188.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 9,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 25188.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 25188.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app_opens recorded as habit reminder notifications opened for asked How many habit reminder notifications were opened last month? [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "25,188",
+    "explanation": "app_opens (habit reminder notifications opened) in June 2026 (calendar month 2026-06), excluding internal/test accounts as per the governed metric definition; total app_opens = 25,188.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "habit reminder notifications opened last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'habit reminder notifications opened last month' maps to the governed metric `metric.app_opens`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__channel": "content_seo"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(4697,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(25188,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4269.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4269.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "app_opens in March 2026 for activity.platform = web (app opens, customer-facing; total for the month).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": true,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h2_b_reminder_opens",
+    "error": null,
+    "question": "How many habit reminder notifications were opened last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": 4697.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 4697.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "figure 4697.0 derives from the run's own values"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served count of app_opens (app opens via content_seo) for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "4,697",
+    "explanation": "app_opens for the period 2026-06 (June 2026) filtered to the activity__channel = content_seo; this is the governed metric 'app_opens' and measures app opens (excluding internal/test accounts) in the month of June 2026 for habit reminder notifications opened via content/SEO channel.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "habit reminder notifications opened last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'habit reminder notifications opened last month' maps to the governed metric `metric.app_opens`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-06",
+          "filters": {}
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(25188,)\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "period": "2026-06",
+          "filters": {
+            "activity__channel": "content_seo"
+          }
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(4697,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

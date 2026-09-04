@@ -1,0 +1,136 @@
+# preflight ambiguity index — GENERATED. Regenerate with `preflight index`; do not hand-edit,
+# because the next run overwrites it.
+#
+# Every governed name appears, with an empty `competes_with` when nothing collides with it —
+# so a name that is MISSING from this file was never scanned, which is an error rather than a
+# pass. `scope_delta` is what separates a pair, and is the sentence a clarification should ask
+# about. Whether a collision changes any particular answer is not decided here: that needs the
+# data, and this file has none.
+version: 1
+generated:
+  by: preflight 0.4.0
+  dialect: metricflow
+  gate: lexical
+  at: '2026-08-27T20:26:51Z'
+source:
+  fingerprint: sha256:9bdefe7969b77e1e8c381527a5680ef6e09de66746fcea604f6607ced6d938c5
+  files:
+  - layer/project.yaml
+  - layer/semantic_models.yml
+names:
+  acquisition_spend:
+    competes_with:
+    - name: marketing_spend
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - channel cmp channel <> 'partnerships'
+  active_accounts:
+    competes_with:
+    - name: active_users
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  active_subscriptions:
+    competes_with: []
+  active_users_growth:
+    competes_with: []
+  habits_per_active_user:
+    competes_with: []
+  active_users:
+    competes_with:
+    - name: active_accounts
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'active_users' is 'active_accounts' plus a filter \u2014 bare question silently\
+        \ scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  app_opens:
+    competes_with: []
+  gross_mrr:
+    competes_with:
+    - name: mrr
+      layer: semantic
+      collision: SIBLING
+      danger: low
+      note: "same measure, incomparable scopes \u2014 a question must name one"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - status = active
+      - status cmp status <> 'canceled'
+  marketing_spend:
+    competes_with:
+    - name: acquisition_spend
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'acquisition_spend' is 'marketing_spend' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - channel cmp channel <> 'partnerships'
+  mrr:
+    competes_with:
+    - name: gross_mrr
+      layer: semantic
+      collision: SIBLING
+      danger: low
+      note: "same measure, incomparable scopes \u2014 a question must name one"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - status = active
+      - status cmp status <> 'canceled'
+  new_signups:
+    competes_with: []
+  paying_users:
+    competes_with: []
+  total_value_moments:
+    competes_with:
+    - name: value_moments
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false
+  value_moments:
+    competes_with:
+    - name: total_value_moments
+      layer: semantic
+      collision: SCOPE_TRAP
+      danger: high
+      note: "same measure; 'value_moments' is 'total_value_moments' plus a filter \u2014 bare question\
+        \ silently scoped, swap invisible"
+      kind: metric
+      differs_in:
+      - scope
+      scope_delta:
+      - is_internal = false

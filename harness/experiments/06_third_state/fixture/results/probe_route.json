@@ -1,0 +1,335 @@
+[
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 0,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 6,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served share of users in a signup cohort who had any active day within 90 days of signup for asked 90-day retention [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "measure '90-day retention' is computable, policy=transparent: computed and disclosed"
+      }
+    ],
+    "answer_text": "content_seo",
+    "explanation": "90-day retention = share of users in a signup cohort who had any active day within 90 days of signup. Computed per acquisition channel across cohorts with full 90-day follow-up (signup 2025-09-01 through 2026-04-13). content_seo: 216 retained of 222 cohort users = 97.30% (computed from dim_users and fct_user_days).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by acquisition channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.channel']). Call define_measure(measure='90-day retention by acquisition channel') to author a VERIFIED definit"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by acquisition channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). value = 1089 rows: [(datetime.date(2025, 9, 4), 'partnerships', 1, 1, 1.0), (datetime.date(2025, 9, 5), 'paid_search', 1, 1, 1.0), (datetime.date(2025, 9, 6), 'content_seo', 1, 1, 1.0), (datetime.date(2025, 9, 6), 'paid_search', 1, 1, 1.0), (datetime.date(2025, 9, 9), 'cont"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, COUNT(*) AS cohort_count, AVG(retained_90) AS retention_90\nFROM (\n  SELECT u.channel,\n         u.signup_date::date AS cohort_date,\n         u.user_id,\n         CASE WHEN EXISTS(\n           SELECT 1 FROM fct_activity a WHERE a.user_id = u.user_id AND a.active_date BETWEEN u.signup_date AND DATE(u.signup_date) + INTERVAL '90 day'\n         ) THEN 1 ELSE 0 END AS retained_90\n  FROM dim_user u\n) t\nGROUP BY channel\nORDER BY retention_90 DESC NULLS LAST;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name dim_user does not exist!\nDid you mean \"dim_users\"?\n\nLINE 9:   FROM dim_user u\n               ^"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, COUNT(*) AS cohort_count, AVG(retained_90) AS retention_90\nFROM (\n  SELECT u.channel,\n         u.signup_date::date AS cohort_date,\n         u.user_id,\n         CASE WHEN EXISTS(\n           SELECT 1 FROM fct_activity a WHERE a.user_id = u.user_id AND a.active_date BETWEEN u.signup_date AND DATE(u.signup_date) + INTERVAL '90 day'\n         ) THEN 1 ELSE 0 END AS retained_90\n  FROM dim_users u\n) t\nGROUP BY channel\nORDER BY retention_90 DESC NULLS LAST;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_activity does not exist!\nDid you mean \"fct_subscriptions\"?\n\nLINE 7:            SELECT 1 FROM fct_activity a WHERE a.user_id = u.user_id AND a.active_date...\n                                 ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r3] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, COUNT(DISTINCT user_id) AS cohort_users, SUM(retained_90) AS retained_users, AVG(retained_90) AS retention_90\nFROM (\n  SELECT u.user_id, u.channel, u.signup_date AS cohort_date,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM fct_user_days d WHERE d.user_id = u.user_id AND d.active_date BETWEEN u.signup_date AND u.signup_date + INTERVAL '90 day'\n    ) THEN 1 ELSE 0 END AS retained_90\n  FROM dim_users u\n  WHERE u.signup_date BETWEEN '2025-09-01' AND '2026-04-13' -- ensure cohorts have full 90-day window within coverage (dim_date coverage starts 2025-09-01)\n) t\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] columns: channel, cohort_users, retained_users, retention_90\n('content_seo', 222, 216, 0.972972972972973)\n('partnerships', 236, 228, 0.9661016949152542)\n('organic', 239, 227, 0.9497907949790795)\n('referral', 208, 197, 0.9471153846153846)\n('paid_search', 245, 232, 0.9469387755102041)\n[cite] r4 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 1,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 7,
+    "tool_errors": 3,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served fraction of users in each signup cohort who had at least one active day within 90 days of signup (averaged across cohorts) for asked 90-day retention [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "measure '90-day retention' is computable, policy=transparent: computed and disclosed"
+      }
+    ],
+    "answer_text": "partnerships",
+    "explanation": "90-day retention = fraction of users in each signup cohort who had at least one active day within 90 days of signup; averaged across cohorts, by dim_users.channel. Partnerships: 0.889 (highest). Source: computed cohort retention over fct_user_days joined to dim_users.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.channel']). Call define_measure(measure='90-day retention by channel') to author a VERIFIED definition and compute it \u2014 do "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). value = 1089 rows: [(datetime.date(2025, 9, 4), 'partnerships', 1, 1, 1.0), (datetime.date(2025, 9, 5), 'paid_search', 1, 1, 1.0), (datetime.date(2025, 9, 6), 'content_seo', 1, 1, 1.0), (datetime.date(2025, 9, 6), 'paid_search', 1, 1, 1.0), (datetime.date(2025, 9, 9), 'cont"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retained_90)::numeric,4) AS retention_90\nFROM (\n  SELECT user.channel, user.signup_date::date AS cohort_day,\n    CASE WHEN COUNT(a.activity_id) FILTER (WHERE a.active_date <= user.signup_date + INTERVAL '90 day' AND a.active_date >= user.signup_date) > 0 THEN 1 ELSE 0 END AS retained_90\n  FROM fct_users user\n  LEFT JOIN fct_activity a ON a.user_id = user.user_id\n  GROUP BY user.channel, cohort_day\n) t\nGROUP BY channel\nORDER BY retention_90 DESC\nLIMIT 1;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_users does not exist!\nDid you mean \"fct_user_days\"?\n\nLINE 5:   FROM fct_users user\n               ^"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retained_90)::numeric,4) AS retention_90\nFROM (\n  SELECT u.user_channel AS channel, u.signup_date::date AS cohort_day,\n    CASE WHEN COUNT(a.activity_id) FILTER (WHERE a.active_date <= u.signup_date + INTERVAL '90 day' AND a.active_date >= u.signup_date) > 0 THEN 1 ELSE 0 END AS retained_90\n  FROM dim_users u\n  LEFT JOIN fct_activity a ON a.user_id = u.user_id\n  GROUP BY u.user_channel, cohort_day\n) t\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name fct_activity does not exist!\nDid you mean \"fct_subscriptions\"?\n\nLINE 6:   LEFT JOIN fct_activity a ON a.user_id = u.user_id\n                    ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r3] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT u.channel AS channel, ROUND(AVG(retained_90)::numeric,4) AS retention_90\nFROM (\n  SELECT du.user_id, du.channel, du.signup_date,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM fct_user_days ud WHERE ud.user_id = du.user_id AND ud.active_date BETWEEN du.signup_date AND du.signup_date + INTERVAL '90 day'\n    ) THEN 1 ELSE 0 END AS retained_90\n  FROM dim_users du\n) s\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Binder Error: Referenced table \"u\" not found!\nCandidate tables: \"s\"\n\nLINE 1: SELECT u.channel AS channel, ROUND(AVG(retained_90)::numeric,4...\n               ^"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT channel, ROUND(AVG(retained_90)::numeric,4) AS retention_90\nFROM (\n  SELECT du.user_id, du.channel AS channel, du.signup_date,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM fct_user_days ud WHERE ud.user_id = du.user_id AND ud.active_date BETWEEN du.signup_date AND du.signup_date + INTERVAL '90 day'\n    ) THEN 1 ELSE 0 END AS retained_90\n  FROM dim_users du\n) s\nGROUP BY channel\nORDER BY retention_90 DESC;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] columns: channel, retention_90\n('partnerships', Decimal('0.889'))\n('content_seo', Decimal('0.860'))\n('paid_search', Decimal('0.856'))\n('organic', Decimal('0.852'))\n('referral', Decimal('0.838'))\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "other",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "answer",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability+graph_grounding+construct_disclosure+transparent_compute+spec_authoring",
+    "rep": 2,
+    "declared": null,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 6,
+    "tool_errors": 2,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served percent of users (cohort by signup_date) who had at least one active day within 90 days after signup for asked 90-day retention [measures]; correction 0 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "measure '90-day retention' is computable, policy=transparent: computed and disclosed"
+      }
+    ],
+    "answer_text": "partnerships",
+    "explanation": "90-day retention = percent of users (cohort by signup_date) who had at least one active day within 90 days after signup, computed per acquisition channel using dim_users joined to fct_user_days; highest 90-day retention is partnerships at 88.93% (cohort_users=488, retained_90=434).",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 '90-day retention by channel' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.channel']). Call define_measure(measure='90-day retention by channel') to author a VERIFIED definition and compute it \u2014 do "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "90-day retention by channel"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). value = 221 rows: [('content_seo', datetime.datetime(2025, 9, 1, 0, 0), 1, 1, 1.0), ('content_seo', datetime.datetime(2025, 9, 8, 0, 0), 1, 1, 1.0), ('content_seo', datetime.datetime(2025, 9, 15, 0, 0), 3, 3, 1.0), ('content_seo', datetime.datetime(2025, 9, 22, 0, 0), 4, 4,"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT user.channel AS channel,\n       COUNT(DISTINCT user.user_id) AS cohort_users,\n       COUNT(DISTINCT CASE WHEN activity.active_date BETWEEN user.signup_date AND date_add('day',90,user.signup_date) THEN user.user_id END) AS retained_90\nFROM user_dim user\nLEFT JOIN activity_fact activity ON user.user_id = activity.user_id\nGROUP BY user.channel\nORDER BY retained_90*1.0/cohort_users DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Catalog Error: Table with name user_dim does not exist!\nDid you mean \"fct_reminders\"?\n\nLINE 4: FROM user_dim user\n             ^"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r3] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT u.channel,\n  COUNT(DISTINCT u.user_id) AS cohort_users,\n  COUNT(DISTINCT CASE WHEN d.date_day BETWEEN u.signup_date AND date_add('day',90,u.signup_date) THEN u.user_id END) AS retained_90,\n  ROUND(100.0 * COUNT(DISTINCT CASE WHEN d.date_day BETWEEN u.signup_date AND date_add('day',90,u.signup_date) THEN u.user_id END) / NULLIF(COUNT(DISTINCT u.user_id),0),2) AS pct_retained_90\nFROM dim_users u\nLEFT JOIN fct_user_days d ON u.user_id = d.user_id\nGROUP BY u.channel\nORDER BY pct_retained_90 DESC;"
+        },
+        "error": true,
+        "blocked": false,
+        "result": "Error: Binder Error: Macro date_add() does not support the supplied arguments. You might need to add explicit type casts.\nCandidate macros:\n\tdate_add(date, interval)\n\nLINE 3: ... COUNT(DISTINCT CASE WHEN d.date_day BETWEEN u.signup_date AND date_add('day',90,u.signup_date) THEN u.user_id END) AS...\n"
+      },
+      {
+        "tool": "run_sql",
+        "args": {
+          "query": "SELECT u.channel,\n  COUNT(DISTINCT u.user_id) AS cohort_users,\n  COUNT(DISTINCT CASE WHEN d.active_date BETWEEN u.signup_date AND u.signup_date + INTERVAL '90' DAY THEN u.user_id END) AS retained_90,\n  ROUND(100.0 * COUNT(DISTINCT CASE WHEN d.active_date BETWEEN u.signup_date AND u.signup_date + INTERVAL '90' DAY THEN u.user_id END) / NULLIF(COUNT(DISTINCT u.user_id),0),2) AS pct_retained_90\nFROM dim_users u\nLEFT JOIN fct_user_days d ON u.user_id = d.user_id\nGROUP BY u.channel\nORDER BY pct_retained_90 DESC;"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r4] columns: channel, cohort_users, retained_90, pct_retained_90\n('partnerships', 488, 434, 88.93)\n('content_seo', 507, 436, 86.0)\n('paid_search', 508, 435, 85.63)\n('organic', 515, 439, 85.24)\n('referral', 482, 404, 83.82)\n[cite] r4 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

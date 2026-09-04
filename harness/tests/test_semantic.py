@@ -15,11 +15,11 @@ import dataclasses
 from pathlib import Path
 
 import harness_paths
-from agent.conversation import TERMINAL_TOOLS
+from agent.core.conversation import TERMINAL_TOOLS
+from agent.core.numbers import bare_number
 from agent.guardrails import LADDER
 from agent.guardrails import after as verifier
 from agent.guardrails import before as input_guardrail
-from agent.numbers import bare_number
 from agent.tools import Toolbox
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from semantic.tree import MetricTree
@@ -156,11 +156,25 @@ def test_the_guardrail_registry_matches_the_set_and_names_real_files():
     answered by grepping. The registry answers it, and this keeps the answer true: every flag is
     described, in ladder order, and every file it claims to be implemented in exists and mentions
     it."""
-    from agent.guardrails import GUARDRAILS, LADDER_ORDER, GuardrailSet, Position
+    from agent.guardrails import GUARDRAILS, LADDER, LADDER_ORDER, GuardrailSet, Position
 
     declared = [f.name for f in dataclasses.fields(GuardrailSet)]
-    assert [g.name for g in GUARDRAILS] == declared == LADDER_ORDER, \
-        "the registry, the flag set and the ladder order must be the same set, in one order"
+    assert [g.name for g in GUARDRAILS] == declared, \
+        "the registry and the flag set must be the same guardrails, in one order"
+    # LADDER_ORDER is the registry's `in_ladder` SUBSET, not the whole of it. Two guardrails sit
+    # outside the published ladder — `clarify`, which every run ever stored already had, and
+    # `typed_clarify`, which arrived after R0..R9 were published — and keeping them out is what
+    # lets both exist without renumbering a rung. The subset relation is asserted rather than the
+    # equality, so the registry and the ladder still cannot drift apart in either direction.
+    assert LADDER_ORDER == [g.name for g in GUARDRAILS if g.in_ladder], \
+        "the ladder must be exactly the registry's in_ladder entries, in registry order"
+    for g in GUARDRAILS:
+        if not g.in_ladder:
+            preset_values = {getattr(LADDER[n], g.name) for n in LADDER}
+            assert len(preset_values) == 1, (
+                f"{g.name} is outside the ladder but varies across presets — an out-of-ladder "
+                f"guardrail must hold its declared default in every rung, or R0..R9 no longer "
+                f"mean what the published runs meant")
 
     root = harness_paths.ROOT / "engine" / "src" / "agent"
     for g in GUARDRAILS:
@@ -318,9 +332,9 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
     correlational and may only be suggested with the evidence it carries — including evidence
     AGAINST it, which is what this tree's one influence edge records. NO LLM: this pins that both
     kinds reach the judge, labelled, and that the fingerprint moves when the rules do."""
-    from agent.grounding import build_grounding
     from agent.guardrails import judge
     from agent.guardrails.after import causal_record
+    from agent.runtime.grounding import build_grounding
 
     con = open_warehouse(create_star_views=True)
     grounding = build_grounding(con, 7, guardrails=LADDER[9])
@@ -363,7 +377,7 @@ def test_every_measured_field_reaches_the_row():
     silently. NO LLM."""
     import dataclasses
 
-    from agent.loop import Answer
+    from agent.runtime.loop import Answer
 
     src = (Path(__file__).resolve().parent.parent / "evals" / "runner.py").read_text()
     carried = {f.name for f in dataclasses.fields(Answer)}
@@ -445,7 +459,7 @@ def test_the_refusal_vocabulary_is_defined_where_it_is_used():
 
     So the meanings live beside the codes, and the tool renders them: the vocabulary the model
     reads and the one the grader scores cannot drift apart. NO LLM."""
-    from agent.outcomes import REASON_MEANINGS, REFUSAL_REASONS
+    from agent.core.outcomes import REASON_MEANINGS, REFUSAL_REASONS
     from agent.tools import _REFUSE
 
     assert list(REASON_MEANINGS) == REFUSAL_REASONS, "one list, or the two can disagree"
@@ -545,7 +559,7 @@ def test_a_rung_is_what_it_declares_not_what_its_number_implies():
     So nothing may infer a capability from `rung >= n`. This pins the table against the conditions
     it replaced (rungs 1-6 must be untouched) and against the one rung that proves numbers no
     longer order capabilities."""
-    from agent.rungs import RUNGS, capabilities, parse_rung
+    from agent.core.rungs import RUNGS, capabilities, parse_rung
 
     for n in (1, 2, 3, 4, 5, 6):
         c = capabilities(n)
@@ -583,7 +597,7 @@ def test_the_judge_settles_what_the_number_is_doing_before_judging_it():
     it — a self-declared role is unfalsifiable and would be a one-word exit from the strict test,
     while the judge's is scoreable against labels exactly as `mismatch` is. NO LLM: this pins the
     contract (what is asked, what is required, what a silent judge defaults to), not the ruling."""
-    from agent.conversation import ToolCall, Turn
+    from agent.core.conversation import ToolCall, Turn
     from agent.guardrails import judge
 
     assert judge._ROLE_REPORT["input_schema"]["properties"]["value_role"]["enum"] \
@@ -940,8 +954,8 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     """The point of the refactor: a leave-one-out cell exists in the flag space (no single
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
-    from agent.grounding import build_grounding
     from agent.guardrails import LADDER, incoherent
+    from agent.runtime.grounding import build_grounding
     con = open_warehouse(create_star_views=True)
     cell = LADDER[9].without("resolve")
 
@@ -982,9 +996,9 @@ def test_the_protocol_is_a_peer_primitive_and_labels_itself():
     on a shared API — a confound the harness refuses everywhere else.
 
     Three properties, and the third is the load-bearing one."""
-    from agent.grounding import build_grounding
+    from agent.core.protocol import ROLE, RULE, Protocol, split_config
     from agent.guardrails import LADDER, LADDER_ORDER
-    from agent.protocol import ROLE, RULE, Protocol, split_config
+    from agent.runtime.grounding import build_grounding
     con = open_warehouse(create_star_views=True)
     ALL = Protocol(purpose=True, claims=True, repair=True)
 
@@ -1112,7 +1126,7 @@ def test_verifier_is_refuse_only():
     # The judge names its OWN finding rather than casting it onto the model's refusal vocabulary.
     # `scope` used to become `other`, which threw the finding away and then had it graded against
     # a code the judge could not produce. Its codes must stay out of the refuse tool's enum.
-    from agent.outcomes import REFUSAL_REASONS, VERIFIER_REASONS
+    from agent.core.outcomes import REFUSAL_REASONS, VERIFIER_REASONS
     assert v.allowed is False and v.reason == "verifier_wrong_scope"
     assert v.reason in VERIFIER_REASONS and v.reason not in REFUSAL_REASONS
     assert v.guardrail == "trajectory_verify"
@@ -1167,7 +1181,7 @@ def test_a_refusal_that_names_a_date_is_not_a_fabrication():
     real answer is usually a sentence, and holding those to a bare-number pattern dropped 145
     genuine figures in a single run.
     """
-    from agent.numbers import asserts_number
+    from agent.core.numbers import asserts_number
 
     for prose in ("I cannot provide July 13-19, 2026 because data coverage ends 2026-07-12",
                   "No data available for 2026-07-13 to 2026-07-19",
@@ -1354,3 +1368,36 @@ def test_a_refusal_names_the_failure_it_found_not_the_one_it_knows():
                              run_governed_numbers=True, run_output_validation=False,
                              served_answer="prose")
     assert not composed.allowed and "composed from different metrics" in composed.detail
+
+
+def test_named_cells_are_a_single_source_of_truth():
+    """The standard configuration is a NAMED constant, not a 15-flag string retyped per run where a
+    dropped flag is a silent treatment change. A named cell expands to its set and still ablates."""
+    from agent.guardrails import NAMED_CELLS, incoherent, parse_cell
+
+    cb = parse_cell("current_best")
+    assert cb == parse_cell(NAMED_CELLS["current_best"])          # the name IS the string
+    assert incoherent(cb, rung=3) is None                         # and it is a coherent configuration
+    # composes with the ablation syntax like a preset
+    assert parse_cell("current_best+spec_authoring").spec_authoring
+    assert not parse_cell("current_best-answer_spec").answer_spec
+    assert parse_cell("current_best-answer_spec").construct_disclosure   # other flags untouched
+
+
+def test_superseded_guardrails_are_documented_and_excluded_from_current_best():
+    """A guardrail a newer mechanism replaced is kept parseable (archived cells + the Shapley lattice
+    reference it) but is documented as superseded and must not be part of the standard configuration —
+    the consolidation pressure the growing flag set otherwise lacks."""
+    import dataclasses
+
+    from agent.guardrails import ALL_GUARDRAILS, GUARDRAILS, parse_cell
+
+    superseded = {g.name: g.superseded_by for g in GUARDRAILS if g.superseded_by}
+    assert superseded, "expected at least the retired metric-context flags to be marked"
+    for name, by in superseded.items():
+        assert by in ALL_GUARDRAILS, f"{name} superseded_by unknown guardrail {by!r}"
+        assert not next(g.superseded_by for g in GUARDRAILS if g.name == by), \
+            f"{name} is superseded by {by}, which is itself superseded — point at the live one"
+    cb = parse_cell("current_best")
+    on = {f.name for f in dataclasses.fields(cb) if getattr(cb, f.name)}
+    assert not (on & set(superseded)), f"current_best uses superseded flags: {on & set(superseded)}"

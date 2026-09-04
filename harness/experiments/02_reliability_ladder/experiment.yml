@@ -25,8 +25,8 @@ runs: cli
 evidence:
   - docs/RELIABILITY.md                # the ladder, rung by rung
   - docs/TRUST-MODEL.md
-  - results/published/2026-07/         # the published grid: cells, tiers, tools, raw runs
-  - results/published/shapley-proof/   # the restricted-Shapley attribution
+  - results/published/2026-07-reliability-ladder/         # the published grid: cells, tiers, tools, raw runs
+  - results/published/2026-07-guardrail-shapley/   # the restricted-Shapley attribution
   - agent/guardrails/                  # before / after / judge / disclosure / action_space
   - evals/cases/reliability/
 

@@ -1,0 +1,312 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_habits_per_user_march",
+    "error": null,
+    "question": "On average, how many habits did each active user complete in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 9.77284263959391,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 9.77284263959391"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served average completed habits per active user (total completed habits divided by distinct active users) for asked how many habits did each active user complete [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "9.77284263959391",
+    "explanation": "Average completed habits per active user in March 2026 (a ratio metric: total completed habits divided by distinct active users, customer-facing, measured for the month 2026-03).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "2026-03",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(9.77284263959391,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_habit_streaks",
+    "error": null,
+    "question": "How many users currently have a habit streak of 30 days or more?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "Per-user habit streak (consecutive-day streak lengths) is not captured as a governed metric or a persisted column in the warehouse; event-level sequences sufficient to compute validated consecutive streaks are not available to the governed layer.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 12,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 0.0"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'users with habit streak >= 30 days' is uninstrumented, policy=strict: refuse uninstrumented"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "No governed metric defines streaks and the warehouse lacks a validated per-user-per-habit streak attribute, so the request cannot be answered reliably.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'users with a habit streak of 30 days or more' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habit_id']). Call define_measure(measure='users with a habit streak of 30 days or more') to author a "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nvalue = 0\nDEFINITION: You asked for users with a habit streak of 30 days or more. Computed via Count of distinct users who have at least one habit with a consecut"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_time_to_first_habit",
+    "error": null,
+    "question": "How long does it take a new signup to complete their first habit, on average?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "A governed metric for 'average time from signup to first completed habit' does not exist in the metric catalogue; while the raw data exists and an ad-hoc computation was possible, the organisation has not defined this as a governed metric so I cannot return an authoritative governed figure.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 13,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 12.499082568807339"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'time from signup to first habit (average)' is computable, policy=strict: refuse no_governed_definition"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The semantic layer lacks a governed definition for this exact measure; define it in the metric catalogue or permit use of the verified ad-hoc computed value.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "time from signup to first completed habit (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'time from signup to first completed habit (average)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_ts', 'value_moments.completed_ts', 'value_moments.value_moment_id']). Call define_measure(measure='time from signup to first completed h"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "time from signup to first completed habit (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nvalue = 12.499082568807339\nDEFINITION: You asked for Average days from signup to first completed habit. Computed via Returns one row: the average number of days b"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_active_users_feb",
+    "error": null,
+    "question": "How many active users did we have in February 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 593.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 1,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 593.0"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "scope_classifier",
+        "position": "repair",
+        "outcome": "applied",
+        "detail": "the request did not name which reading: \"unverified quote 'EXCLUDING internal and test accounts'\""
+      },
+      {
+        "guardrail": "disclosure_check",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "appended the omitted governed reading(s): active_accounts (is_internal = false) = 614 (vs 593)"
+      }
+    ],
+    "answer_text": "593",
+    "explanation": "Active users (distinct customer accounts with any product activity in February 2026, excluding internal/test accounts) = 593. Computed by the governed metric active_users for period=2026-02 (month grain).  Both governed readings: active_accounts (is_internal = false) = 614 (vs 593).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "active_users",
+          "period": "2026-02",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-02 -> 2026-02-01..2026-02-28\ncolumns: value\n(593,)\n[also] `active_accounts` is an equally governed answer to the same question and returns a different number here: `active_users` 593 against `active_accounts` 614, 3.54% apart. The two differ by is_internal = false. If th"
+      }
+    ]
+  }
+]

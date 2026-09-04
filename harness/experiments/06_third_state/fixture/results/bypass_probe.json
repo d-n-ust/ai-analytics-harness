@@ -1,0 +1,500 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_habit_streaks",
+    "error": null,
+    "question": "How many users currently have a habit streak of 30 days or more?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "No governed metric, table, or column captures per-habit consecutive-day streaks or per-user day-by-day habit continuity needed to determine a 30-day same-habit consecutive streak (the warehouse has value_moments rows but not the per-habit consecutive-day streak computation/instrumentation as a repeatable field).",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "3 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The system cannot compute 'users with a 30-day same-habit consecutive streak' because no governed metric or existing table/column defines or stores habit-streak continuity; the required consecutive-day streak attribute is uninstrumented in the marts.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more (current)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'users with a habit streak of 30 days or more (current)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habit_id', 'habit.user_id']). Call define_measure(measure='users with a habit streak of 30 "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "number of distinct users (customer-facing, excluding internal/test accounts) who currently have an active habit streak of at least 30 consecutive days as of 2026-07-12 (the last full week end). A user has a habit streak if they have completed the same habit on each calendar day for the previous N days inclusive of the end date. Count each user once if any of their habits meets the 30-day-consecutive-days requirement. Use activity/value_moments (completed habit events) joined to habit and user; exclude user__is_internal = True. Return a single number and a one-line definition justification."
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COULD NOT DEFINE \u2014 could not author a valid definition for 'distinct users with an active habit streak >= 30 days (customer-facing, as of 2026-07-12)': the spec drops components the question named: qualifier streak of same habit completed on each calendar day for the previous 30 days inclusive "
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "wrong",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": true,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": -4.0,
+    "outcome": "answer",
+    "id": "h2_b_time_to_first_habit",
+    "error": null,
+    "question": "How long does it take a new signup to complete their first habit, on average?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 301.54,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 14,
+    "tool_errors": 0,
+    "handbacks": 3,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "1 option(s) grounded to nothing, 1 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 301.54"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'time from signup to first habit (average)' is computable, policy=strict: refuse no_governed_definition"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your answer was not accepted: it reports a measure with no governed definition.\ntime from signup to first habit (average) can be computed from the data, but no GOVERNED metric defines it, so a single figure is not author"
+      }
+    ],
+    "answer_text": "301.54 hours",
+    "explanation": "Mean hours between a user\u2019s signup_date and their first completed habit (value_moment), excluding internal/test accounts; computed as the arithmetic mean of each included user\u2019s time delta (hours) and returned to two decimals.  [mechanism caveat] An output check remained unresolved after the correction budget: Your answer was not accepted: it reports a measure with no governed definition.\ntime from signup to first habit (average) can be computed from the data, but no GOVERNED metric defines it, so a single figure is not author.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "time from signup to first completed habit (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'time from signup to first completed habit (average)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_ts', 'value_moments.completed_ts', 'value_moments.user_id', 'user.user_id']). Call define_measure(measure='time from signup to first com"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "average hours between user.signup_date and their first value_moments completed_ts, excluding internal/test accounts, across all users who have at least one completed habit; compute as mean of per-user time-deltas; report in hours to two decimal places"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COULD NOT DEFINE \u2014 could not author a valid definition for 'avg_hours_to_first_value_moment_per_user': the spec drops components the question named: qualifier mean of per-user time deltas, in hours \u2014 bind each (add the filter / set the period / list the qualifier in `addressed`), or drop it fro"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "Mean hours between user.user__signup_date and the user's first activity.activity__active_date where activity is a value_moment (completed habit). Exclude activity__is_internal = True and user__is_internal = True. Compute per user who has at least one value_moment: first_activity_date - signup_date in hours; then take the arithmetic mean across users. Return number (hours) and method. Use available columns user.user__signup_date and activity.activity__active_date."
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nvalue = 301.54285714285714\nDEFINITION: You asked for Mean hours from signup to first value_moment (per user). Computed via One row: the arithmetic mean (in hours)"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_habit_streaks",
+    "error": null,
+    "question": "How many users currently have a habit streak of 30 days or more?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "No governed metric, table, or column records users' consecutive-day habit streaks (current or historical). The warehouse captures habit completions (value_moments/completed_date) and user/habit identifiers, but there is no precomputed 'streak' field or governed metric; computing active 30-day streaks requires a derived consecutive-days calculation not present as a governed measure or column.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The data ingredients exist but the semantic layer has no governed metric or dedicated streak column; the request cannot be answered reliably without authoring and validating a new derived definition and computation.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more (current)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'users with a habit streak of 30 days or more (current)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habit_id', 'habit.user_id']). Call define_measure(measure='users with a habit streak of 30 "
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "number of distinct users who currently have an active habit streak of at least 30 consecutive days as of the latest date in the activity data"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COULD NOT DEFINE \u2014 could not author a valid definition for 'count of distinct users with an active habit streak >= 30 consecutive days ending on the latest activity date': the spec drops components the question named: qualifier streak: consecutive calendar days with at least one value_moment (h"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_time_to_first_habit",
+    "error": null,
+    "question": "How long does it take a new signup to complete their first habit, on average?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 1,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "time from signup to first completed habit (average) \u2014 there is no governed metric defining this measure; although the underlying tables exist, the semantic layer has no governed definition to report as authoritative",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 10,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 12.499082568807339"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'time from signup to first habit (average)' is computable, policy=strict: refuse no_governed_definition"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse captures signup timestamps and value_moment completion timestamps, so the value can be computed, but the governed metric catalogue contains no metric for 'time from signup to first completed habit (average)'; per process we must refuse and name what is missing.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "time from signup to first completed habit (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'time from signup to first completed habit (average)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_ts', 'value_moments.completed_ts', 'value_moments.user_id', 'user.user_id']). Call define_measure(measure='time from signup to first com"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "time from signup to first completed habit (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nvalue = 12.499082568807339\nDEFINITION: You asked for average days from signup to first completed habit. Computed via Average, over users who completed at least on"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_habit_streaks",
+    "error": null,
+    "question": "How many users currently have a habit streak of 30 days or more?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "the warehouse does not capture per-user current habit streaks or consecutive-day streak lengths; there is no governed metric or persisted column for 'current streak' or 'longest consecutive streak'",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 2,
+    "model_calls": 11,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 0.0"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'users currently have a habit streak of 30 days or more' is uninstrumented, policy=strict: refuse uninstrumented"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: 'users with a habit streak >= 30 days' is computable (ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habit_id', 'habit.created_date', 'habit.is_archived']); policy=strict; correction 2 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your refusal used the wrong reason: this measure IS captured by the data.\nusers with a habit streak >= 30 days can be computed from ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habi"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "While individual value_moments (habit completions) exist, the governed layer has no metric or column that records users' current streak lengths or longest consecutive-day streaks; therefore the exact count of users whose current habit streak is \u226530 days cannot be reliably answered from the governed data.  [mechanism caveat] An output check remained unresolved after the correction budget: Your refusal used the wrong reason: this measure IS captured by the data.\nusers with a habit streak >= 30 days can be computed from ingredients exist and join: ['user.user_id', 'value_moments.completed_date', 'habit.habi.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'users with a habit streak of 30 days or more' has NO governed metric, but the data IS captured (ingredients exist and join: ['value_moments.completed_date', 'value_moments.user_id', 'habit.habit_id', 'habit.user_id']). Call define_measure(measure='users with a habit streak of 30 d"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nvalue = 0\nDEFINITION: You asked for users with a habit streak of 30 days or more. Computed via Count of distinct users whose longest consecutive-day streak of com"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_time_to_first_habit",
+    "error": null,
+    "question": "How long does it take a new signup to complete their first habit, on average?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 2,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric defines 'average time from signup to first habit completion' \u2014 although the data exists (user.signup_date and value_moments.completed_date), this measure is not in the governed metric catalogue and therefore is not authoritative. Ask product to approve and add a governed metric or allow computation via a verified definition.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 3,
+    "model_calls": 14,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 12.56"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "measure 'time from signup to first habit (average)' is computable, policy=strict: refuse no_governed_definition"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse captures signup_date and value_moment completions (so the number can be computed), but the governed metrics catalogue contains no metric for this measure; policy requires refusing until a governed definition is added.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "time from signup to first habit completion (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] COMPUTABLE \u2014 'time from signup to first habit completion (average)' has NO governed metric, but the data IS captured (ingredients exist and join: ['user.signup_date', 'value_moments.completed_date', 'value_moments.user_id']). Call define_measure(measure='time from signup to first habit completi"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "average days from user signup_date to their first value_moment completed_date, excluding internal/test accounts; compute the mean across users who have at least one completed habit, report in days with two decimal places; period: include all historical data available"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] COULD NOT DEFINE \u2014 could not author a valid definition for 'average days from signup to first value_moment (users with at least one)': the spec did not execute: QueryError: Catalog Error: Scalar Function with name julianday does not exist! \u2014 fix the definition Consider `clarify` or `refuse`.\n[c"
+      },
+      {
+        "tool": "define_measure",
+        "args": {
+          "measure": "average days from user signup_date to their first value_moment completed_date, excluding internal/test accounts; compute the mean across users who have at least one completed habit, report in days with two decimal places; period: include all historical data available. Use date_diff in days between value_moments.completed_date and user.signup_date; if dates are same day count as 0 days."
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] COMPUTED (tier=raw). This IS the computed answer \u2014 answer FROM this directly, stating the definition; do NOT recompute with run_sql.\nresult rows (1, in the definition's order):\n  12.56\nDEFINITION: You asked for average days from signup to first value_moment (users with \u22651 value_moment) [user__i"
+      }
+    ]
+  }
+]

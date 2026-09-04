@@ -14,13 +14,33 @@ make install && make data && make smoke     # end to end, no API key
 > Companion essays: [How Much Does Grounding Actually Buy You?](https://decisionspine.com/blog/agentic-analytics-grounding)
 > · [Teaching an AI Analyst to Say I Don't Know](https://decisionspine.com/blog/teaching-an-ai-analyst-to-say-i-dont-know)
 > · [The Evidence Graph](https://decisionspine.com/blog/the-evidence-graph-teaching-an-ai-analyst-to-show-its-work)
-> · [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026), the argument underneath all three.
+> · [The AI-Readiness Repair Matrix](https://decisionspine.com/blog/the-ai-readiness-repair-matrix)
+> · [Why AI Analysts Pick the Wrong Metric](https://decisionspine.com/blog/why-ai-analysts-pick-the-wrong-metric)
+> · [Data Modelling in 2026](https://decisionspine.com/blog/data-modelling-in-2026), the argument underneath all of them.
 
-## The five experiments
+## Start here
+
+Three readers arrive here with three intents.
+
+- **To verify a number from an article:** `make install && make data && make smoke`, then
+  [`docs/FINDINGS.md`](docs/FINDINGS.md), where every figure is labelled with its n, and
+  [`results/published/`](results/published/), the rows behind each published board.
+- **To run an experiment yourself:** `./bench study` lists every experiment and study; each
+  experiment folder's `README.md` says what it asks and how to run it.
+- **To take the lessons without running anything:** four documents of numbered practitioner notes,
+  each note carrying the measurement behind it. [`docs/FOUNDATION.md`](docs/FOUNDATION.md): the
+  warehouse, the semantic layer, the documentation. [`docs/EVALUATION.md`](docs/EVALUATION.md): how
+  to know whether an AI analyst is safe. [`docs/HARNESS.md`](docs/HARNESS.md): how the agent is
+  built, and why prompts are not enough. [`docs/ONTOLOGY.md`](docs/ONTOLOGY.md): the concept layer
+  the semantic layer cannot express.
+
+## The six experiments
 
 The first three vary one axis of the agent — what it *knows*, what it may *do*, what it must
-*declare* — over the same **65 questions**. The last two freeze the agent and vary the warehouse
-underneath it. Every delta is attributable to one change, not to prompt luck or question drift.
+*declare* — over the same **65 questions**. Experiments 4 and 5 freeze the agent and vary the
+warehouse underneath it. Experiment 6 freezes both and asks what the agent does when two governed
+definitions are both right. Every delta is attributable to one change, not to prompt luck or
+question drift.
 
 The first three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
 protocol crosses the guardrail cells rather than extending them, and "R5 with claims" is a cell you
@@ -65,6 +85,22 @@ see — two undocumented staff flags and a stale `status` column — did the dam
 not remove, and a third residue is new: asked for a count the layer governs no metric for, the
 agent substitutes the nearest governed metric rather than writing SQL.*
 → [`harness/experiments/05_preflight_ambiguity/`](harness/experiments/05_preflight_ambiguity/)
+
+**6 · Contested definitions** — one question, two governed metrics that both answer it correctly,
+3.72% apart: `active_users` excludes internal accounts and `active_accounts` includes them, both
+owned, both consumed. Serving either alone is a number the reader cannot tell was a choice, and
+every existing check passes. What makes the agent say so? A third outcome, `clarify`, joins
+`answer` and `refuse` as a first-class pile in the scorer, and the arms are what a team can
+actually ship.
+*Everything advisory pooled — no clarify tool, a prose one, a typed one, a prompt rule, renaming,
+reordering, showing the compiled SQL — **16 clarifications in 217 attempts**. An enforced check that
+executes both definitions and blocks only when the numbers differ: **15 of 15**. Renaming the pair
+does not stop the silent choice; it changes which definition is chosen (886 → 919 when the word
+"active" moved). On fresh held-out suites the standard cell's silent-error rate is **0.036 → 0.014**
+(`gpt-5-mini`, rung 3, the open-source MetricFlow engine). The mechanism shipping products use for
+this problem is the advisory arm.*
+→ [`harness/experiments/06_third_state/`](harness/experiments/06_third_state/) ·
+[`results/published/2026-09-held-out-reliability/`](results/published/2026-09-held-out-reliability/)
 
 [`docs/FINDINGS.md`](docs/FINDINGS.md) is the standing ledger — what is established, what is a
 measured null, and what was tried and rejected. Every number is labelled with its n.
@@ -196,7 +232,7 @@ function-local imports, and fails on any edge in the wrong direction.
   their n. Re-running a cell moves it a point or two, and the write-ups print two runs of the same
   configuration so a reader can see how much.
 
-Every published figure lives in [`results/published/2026-07/`](results/published/2026-07/) — 70
+Every published figure lives in [`results/published/2026-07-reliability-ladder/`](results/published/2026-07-reliability-ladder/) — 70
 cells across the 12 runs the write-ups cite, regenerable with
 `harness/evals/components/publish_metrics.py`. The four runs whose raw rows back a claim the tables
 cannot express are in `2026-07/runs/`, gzipped with traces intact.

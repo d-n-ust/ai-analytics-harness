@@ -31,7 +31,7 @@ from pathlib import Path
 
 import yaml
 
-from agent.models import MODEL_SPECS
+from agent.core.models import MODEL_SPECS
 from evals.selective import selective
 
 CACHED_DISCOUNT = 0.1

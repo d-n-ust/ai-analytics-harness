@@ -1,0 +1,328 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_web_opens_march",
+    "error": null,
+    "question": "How many times did users on the web open the app in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 4269.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 5,
+    "tool_errors": 0,
+    "handbacks": 4,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 4269.0 but declares no `value`; correction 1 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 4269.0 but declares no `value`; correction 2 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 4269.0 but declares no `value`; correction 3 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your answer states a figure (4269.0) but leaves the typed `value` field empty"
+      }
+    ],
+    "answer_text": "4269",
+    "explanation": "app_opens in March 2026 on the web platform \u2014 total app open events during 2026-03-01..2026-03-31 for activity__platform = web (customer-facing excludes internal/test accounts).  [mechanism caveat] An output check remained unresolved after the correction budget: Your answer states a figure (4269.0) but leaves the typed `value` field empty.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "web"
+          },
+          "period": "2026-03"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(4269,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_signups_last_week",
+    "error": null,
+    "question": "How many people signed up last week?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 121.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 2,
+    "model_calls": 6,
+    "tool_errors": 0,
+    "handbacks": 4,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 121.0 but declares no `value`; correction 1 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 121.0 but declares no `value`; correction 2 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 121.0 but declares no `value`; correction 3 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your answer states a figure (121.0) but leaves the typed `value` field empty"
+      }
+    ],
+    "answer_text": "121",
+    "explanation": "new_signups (all accounts created) in the week 2026-07-06 to 2026-07-12 (last_week), per the governed metric new_signups.  [mechanism caveat] An output check remained unresolved after the correction budget: Your answer states a figure (121.0) but leaves the typed `value` field empty.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "last_week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: value\n(121,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "last_week",
+          "group_by": [
+            "metric_time"
+          ],
+          "time_grain": "week"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=last_week -> 2026-07-06..2026-07-12\ncolumns: metric_time__week, value\n(datetime.datetime(2026, 7, 6, 0, 0), 121)\n[cite] r2:2026-07-06 00:00:00"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_trial_conversions",
+    "error": null,
+    "question": "How many free-trial users converted to a paid plan last month?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "There is no governed metric or captured column for 'free-trial' status or trial start/flag; the warehouse does not record which users were on a free trial, so conversions from free trial to paid cannot be measured from the governed layer.",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The data catalogue does not capture trial-start or trial-status, and no governed metric measures trial conversions.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "free-trial users converted to a paid plan last month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] UNINSTRUMENTED \u2014 'free-trial users converted to a paid plan last month' is NOT captured: free-trial status (trial start/flag). `refuse` with reason `uninstrumented`.\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "clarify",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_c_spend_per_signup_q1",
+    "error": null,
+    "question": "What did it cost us in marketing for each person who signed up in the first quarter of 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 93.65,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 3,
+    "model_calls": 8,
+    "tool_errors": 0,
+    "handbacks": 4,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 93.65 but declares no `value`; correction 1 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 93.65 but declares no `value`; correction 2 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "the answer states 93.65 but declares no `value`; correction 3 of 2"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "served at the cap with a caveat: Your answer states a figure (93.65) but leaves the typed `value` field empty"
+      }
+    ],
+    "answer_text": "\u00a393.65",
+    "explanation": "marketing_spend in 2026-Q1 (\u00a359,664.99) divided by new_signups in 2026-Q1 (637) = \u00a393.65 per signup. marketing_spend includes all channels; acquisition_spend (excludes partnerships) would give \u00a351,573 / 637 = \u00a380.95 per signup as an alternative.  [mechanism caveat] An output check remained unresolved after the correction budget: Your answer states a figure (93.65) but leaves the typed `value` field empty.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "marketing cost per signup in 2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] GOVERNED \u2014 'marketing cost per signup in 2026-Q1' maps to the governed metric `metric.marketing_spend / metric.new_signups`. Answer with it (apply any segment or period as a filter).\n[cite] r1 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "marketing_spend",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(59664.99999999996,)\n[also] `acquisition_spend` is an equally governed answer to the same question and returns a different number here: `marketing_spend` 59,665 against `acquisition_spend` 51,573, 13.56% apart. The two differ b"
+      },
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "new_signups",
+          "period": "2026-Q1"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] time scope: period=2026-Q1 -> 2026-01-01..2026-03-31\ncolumns: value\n(637,)\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

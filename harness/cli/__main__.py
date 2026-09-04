@@ -23,10 +23,10 @@ import os
 # themselves rather than a second copy of them.
 import harness_paths
 from agent import NotConfigured
+from agent.core.models import DEFAULT_MODEL
+from agent.core.protocol import FRAMINGS, PARTS
+from agent.core.rungs import RUNGS, parse_rung
 from agent.guardrails import LADDER_ORDER
-from agent.models import DEFAULT_MODEL
-from agent.protocol import FRAMINGS, PARTS
-from agent.rungs import RUNGS, parse_rung
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
           "gpt-5-mini", "gpt-5.6-luna", "gpt-4.1-mini", "deepseek-v4-flash", "deepseek-v4-pro"]
@@ -66,34 +66,56 @@ def cmd_query(a):
 
 def cmd_ask(a):
     from agent import ask_one
+    from agent.core.protocol import Protocol
     from agent.guardrails import parse_cell
-    from agent.protocol import Protocol
     from cli.trace import render
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     # The renderer is passed IN. The engine has no way to reach cli/, by design.
     ask_one(question=a.question, rung=a.rung, model=a.model, mock=a.mock, guardrails=guardrails,
             protocol=Protocol.parse(a.protocol), verbose=not a.trace,
-            trace=render if a.trace else None)
+            trace=render if a.trace else None, spec_path=a.layer, engine=a.engine)
+
+
+def _stored_rows(arg) -> tuple:
+    """(rows, label) from wherever a study wrote them.
+
+    A grid run writes `raw.jsonl` under a run directory; an experiment writes a JSON array with
+    `--json`. Both are stored rows and both should be readable by `trace`, whose whole claim is
+    that any row ever written can be read back. Accepting only the first shape made that claim
+    false for every experiment in `harness/experiments/`, which is where the traces worth reading
+    mostly are.
+    """
+    import json
+    run = _run_dir(a_run := arg)
+    if run.is_file():
+        text = run.read_text()
+        rows = ([json.loads(line) for line in text.splitlines() if line.strip()]
+                if run.suffix == ".jsonl" else json.loads(text))
+        return rows, run.name
+    if not (run / "raw.jsonl").exists():
+        raise SystemExit(f"{run} has no raw.jsonl. Pass a results .json file directly, or "
+                         + ("`runs/latest` points at a run that no longer exists; "
+                            "pass --run explicitly." if "latest" in str(a_run) else
+                            "name a run directory."))
+    return [json.loads(line) for line in (run / "raw.jsonl").open()], run.name
 
 
 def _rows_for(a) -> list:
     """The stored rows matching one question. Shared by `trace` and `chain`, which are two views
-    over the same row and must never disagree about which row they are showing."""
-    import json
-    run = _run_dir(a.run)
-    # `runs/latest` is a symlink and outlives the run it points at — deleting a scratch run
-    # leaves it dangling, and the resulting FileNotFoundError names a path the user never typed.
-    if not (run / "raw.jsonl").exists():
-        raise SystemExit(f"{run} has no raw.jsonl. "
-                         + ("`runs/latest` points at a run that no longer exists; "
-                            "pass --run explicitly." if "latest" in str(a.run) else ""))
-    rows = [json.loads(line) for line in (run / "raw.jsonl").open()]
-    picked = [r for r in rows if r.get("qid") == a.qid
+    over the same row and must never disagree about which row they are showing.
+
+    The question key is `qid` in a grid run and `id` in an experiment. Both are read, because the
+    alternative is a second command that renders the same rows differently."""
+    rows, label = _stored_rows(a.run)
+
+    def qid_of(r):
+        return r.get("qid", r.get("id"))
+    picked = [r for r in rows if qid_of(r) == a.qid
               and (a.config is None or r.get("config") == a.config)
               and (a.model is None or r.get("model") == a.model)]
     if not picked:
-        ids = sorted({r.get("qid") for r in rows})
-        raise SystemExit(f"no row for qid={a.qid!r} in {run.name}. Available: {', '.join(ids[:12])}…")
+        ids = sorted({str(qid_of(r)) for r in rows})
+        raise SystemExit(f"no row for qid={a.qid!r} in {label}. Available: {', '.join(ids[:12])}…")
     return picked
 
 
@@ -347,6 +369,15 @@ def main() -> None:
                     help="deterministic mock model (no API key). Checks the wiring, measures nothing.")
     sp.add_argument("--trace", action="store_true",
                     help="print the full run: every model call, tool call and guardrail that acted")
+    # Without these, the one command for asking a single question could not ask a question any
+    # experiment studies: each keeps its own layer beside its fixture, and the default layer does
+    # not contain their metrics.
+    sp.add_argument("--layer", default=None,
+                    help="semantic layer directory to ask against, e.g. "
+                         "harness/experiments/06_third_state/fixture/layer. Its warehouse must "
+                         "already exist; an experiment's own runner builds it.")
+    sp.add_argument("--engine", default="harness", choices=("harness", "metricflow"),
+                    help="which semantic layer implementation reads --layer")
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("run", aliases=["eval"], help="run the experiment grid")
@@ -387,7 +418,9 @@ def main() -> None:
 
     sp = sub.add_parser("trace", help="re-render a stored run as a full trace")
     sp.add_argument("qid", help="question id, e.g. u_apac_march")
-    sp.add_argument("--run", default="runs/latest")
+    sp.add_argument("--run", default="runs/latest",
+                    help="a run directory holding raw.jsonl, or a results file written by an "
+                         "experiment's --json")
     sp.add_argument("--config", default=None, help="one guardrail cell, e.g. R9")
     sp.add_argument("--model", default=None)
     sp.add_argument("--limit", type=int, default=3)

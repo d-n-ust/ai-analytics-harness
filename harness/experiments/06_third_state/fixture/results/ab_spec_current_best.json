@@ -1,0 +1,182 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "h2_a_habits_per_user_march",
+    "error": null,
+    "question": "On average, how many habits did each active user complete in March 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": 9.77284263959391,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": "not_a_change",
+    "tool_calls": 1,
+    "model_calls": 7,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "constructed",
+        "detail": "filled the empty `value` slot with the answer's own figure 9.77284263959391"
+      },
+      {
+        "guardrail": "answer_spec",
+        "position": "repair",
+        "outcome": "allowed",
+        "detail": "served figure(s) derive from the run's own results"
+      },
+      {
+        "guardrail": "grounded_measure",
+        "position": "repair",
+        "outcome": "stood down",
+        "detail": "served ? for asked (same) [measures]; correction 0 of 2"
+      }
+    ],
+    "answer_text": "9.77284263959391",
+    "explanation": "habits_per_active_user for March 2026 \u2014 average completed habits per active user during 2026-03 (customer-facing; excludes internal/test accounts).",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "habits_per_active_user",
+          "period": "2026-03",
+          "time_grain": "month"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] time scope: period=2026-03 -> 2026-03-01..2026-03-31\ncolumns: value\n(9.77284263959391,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_habit_streaks",
+    "error": null,
+    "question": "How many users currently have a habit streak of 30 days or more?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "no governed metric or table captures per-user consecutive-day habit-streak length; the warehouse lacks a recorded streak attribute or a governed metric for 'users with X-day streaks'",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "There is no instrumented measure of per-account consecutive-day habit streak length in the governed metrics or marts, so we cannot reliably count users with current 30+ day streaks.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "users with a habit streak of 30 days or more"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] UNINSTRUMENTED \u2014 'users with a habit streak of 30 days or more' is NOT captured: habit streak length per user (consecutive-days-streak) \u2014 no streak/daily-consecutive-run measure or attribute exists in the graph; need per-user consecutive-day habit streak computation or a recorded streak attribu"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h2_b_time_to_first_habit",
+    "error": null,
+    "question": "How long does it take a new signup to complete their first habit, on average?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "current_best",
+    "rep": 0,
+    "declared": null,
+    "reason": "uninstrumented",
+    "missing": "no instrumented link between user signup and first habit completion time \u2014 the 'user' and 'activity' entities are not joinable for that event sequence",
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [],
+    "answer_text": null,
+    "explanation": "The warehouse does not capture or a governed metric does not define the time delta from an account's signup to their first completed habit; there's no governed join linking user.signup_date to activity.first_completion to compute this per-account duration.",
+    "steps": [
+      {
+        "tool": "check_answerability",
+        "args": {
+          "measure": "time from signup to first habit completion (average)"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r1] UNINSTRUMENTED \u2014 'time from signup to first habit completion (average)' is NOT captured: entities ['user', 'value_moments'] are not related \u2014 cannot be joined. `refuse` with reason `uninstrumented`.\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

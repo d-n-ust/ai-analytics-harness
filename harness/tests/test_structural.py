@@ -13,8 +13,8 @@ Run: uv run python -m pytest harness/tests/test_structural.py -q     (or run thi
 from __future__ import annotations
 
 import harness_paths
-from agent.grounding import build_grounding
 from agent.guardrails import LADDER
+from agent.runtime.grounding import build_grounding
 from semantic.semantic import SemanticError, SemanticLayer
 from semantic.tree import MetricTree
 from warehouse.warehouse import open_warehouse

@@ -1,0 +1,401 @@
+[
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 0,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric named '90-day retention' exists; retention at 90 days is not a predefined metric in the semantic layer (available metrics list).",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metrics catalogue does not define any 90-day retention metric; computeable from raw tables but not governed, so we cannot return a governed authoritative figure.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 1,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric defines '90-day retention' by acquisition channel. While the raw tables (dim_users, fct_user_days/fct_value_moments) exist to compute cohort retention, the semantic layer has no governed 90-day retention metric; per rules we must refuse for missing governed definition.",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse contains user signup and activity data but there is no governed metric for 90-day retention; governed metrics are required for this question.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-14",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-14..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 2,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric named '90-day retention' or any other retention metric exists in the semantic layer; governed metrics available include active_users and new_signups but no retention definition",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The warehouse captures signup and activity rows, but the governed metric catalogue provides no established 90-day retention metric to query; per governance rules we must refuse for missing governed definition.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": false,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": false,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 0.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 3,
+    "declared": null,
+    "reason": "underspecified_request",
+    "missing": "Need definition of '90-day retention' (cohort by signup within 90 days vs week-to-week 13-week retention) and which cohort/period to evaluate (e.g., signups in which month or last 90-day window).",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 4,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "2 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "Multiple reasonable definitions exist and they yield different numbers; specify which retention definition and what signup/cohort period to use.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-14",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] YES \u2014 period 2026-04-14..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r2 \u2014 cite this whole statement as evidence"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r3 \u2014"
+      },
+      {
+        "tool": "get_schema",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r4] dim_channel(channel varchar, is_paid boolean, is_test_integration boolean, is_real_acquisition boolean)\n    Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are c"
+      }
+    ]
+  },
+  {
+    "executed": false,
+    "correct": true,
+    "bucket": "idk",
+    "abstained": true,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": true,
+    "expected_action": "refuse",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": true,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "refuse",
+    "id": "h_b_retention_by_channel",
+    "error": null,
+    "question": "Which acquisition channel gives us the best 90-day retention?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "R3+typed_clarify+ambiguity_disclosure+disclosure_check+scope_classifier+filter_vocabulary+constraint_regression+grounded_candidates+grounded_measure+answer_spec+segment_gate+answerability_gate+applied_segment+graph_answerability",
+    "rep": 4,
+    "declared": null,
+    "reason": "no_governed_definition",
+    "missing": "No governed metric named '90-day retention' or any governed retention metric in the catalogue; retention can be computed from raw tables but the semantic layer lacks a standard definition to ensure consistent measurement",
+    "candidates": [],
+    "source_metric": null,
+    "tool_calls": 3,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "acts": [
+      {
+        "guardrail": "grounded_candidates",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "3 option(s) grounded to nothing, 0 survived; correction 1 of 2"
+      },
+      {
+        "guardrail": "answerability_gate",
+        "position": "repair",
+        "outcome": "handed back",
+        "detail": "refusal reason `uninstrumented` is wrong: '90-day retention' is computable (ingredients exist and join: ['user.signup_date', 'activity.active_date', 'user.user_id']); policy=strict; correction 2 of 2"
+      }
+    ],
+    "answer_text": null,
+    "explanation": "The governed metrics list contains no retention metric; without a governed definition I cannot reliably report the single company-standard '90-day retention' by acquisition channel.",
+    "steps": [
+      {
+        "tool": "list_metrics",
+        "args": {},
+        "error": false,
+        "blocked": false,
+        "result": "[r1] Governed metrics (call query_metric with these names):\n- active_users: Distinct accounts with any product activity in the period, EXCLUDING internal and test accounts. Owned by Product. Used by the weekly product review and the North Star metric tree. This is a DISTINCT COUNT, so it is SEMI-ADD"
+      },
+      {
+        "tool": "check_metric_exists",
+        "args": {
+          "term": "90-day retention"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r2] NO \u2014 no governed metric named '90-day retention'; available: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments\n[cite] r2 \u2014"
+      },
+      {
+        "tool": "check_coverage",
+        "args": {
+          "start": "2026-04-13",
+          "end": "2026-07-12"
+        },
+        "error": false,
+        "blocked": false,
+        "result": "[r3] YES \u2014 period 2026-04-13..2026-07-12 within coverage (2025-09-01..2026-07-12).\n[cite] r3 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

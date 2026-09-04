@@ -1,0 +1,1346 @@
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+pile A     : How many times did users on the web open the app in March 2026?
+pile A     : How many people signed up through referrals in the fourth quarter of 2025?
+pile A     : How many annual-plan subscriptions are currently live?
+pile A     : How many people from Germany signed up in the first half of 2026?
+pile A     : How many people signed up organically in June 2026?
+pile A     : How many times did users in the Americas region open the app in the fourth quarter of 2025?
+pile A     : How many people signed up last week?
+pile A     : How many customers are paying us on the annual plan right now?
+pile A     : How much did we spend on referral marketing in March 2026?
+pile A     : How much monthly recurring revenue came from subscriptions that started in April 2026?
+pile A     : How many habits were completed by users in the Philippines in February 2026?
+pile A     : How many habits did users in Indonesia complete in April 2026?
+pile A     : Including our internal and test accounts, how many habits were completed in April 2026?
+pile A     : Counting subscriptions that were later refunded, what is our monthly recurring revenue today?
+pile A     : How many customer accounts, not counting staff or test users, were active in June 2026?
+pile A     : Including the internal partnerships test integration, how much did we spend on marketing in December 2025?
+pile A     : On average, how many habits did each active user complete in March 2026?
+pile B     : What was the average session length in the app last week?
+pile B     : How many users currently have a habit streak of 30 days or more?
+pile B     : How many habit reminder notifications were opened last month?
+pile B     : How long does it take a new signup to complete their first habit, on average?
+pile B     : How many different devices does the average user sign in from?
+pile B     : What is our NPS this quarter?
+pile B     : How many support tickets did we receive last week?
+pile B     : What is our average app-store rating this month?
+pile B     : How many free-trial users converted to a paid plan last month?
+pile B     : How many employees does the company have right now?
+pile B     : How many active users did we have in October 2026?
+pile B     : How much did we spend on marketing in July 2025?
+pile B     : App opens fell in June 2026 compared with May. How big was the drop?
+pile B     : Why did new signups collapse in the second quarter of 2026?
+pile B     : How much did we spend on Instagram ads in June 2026?
+pile C     : How many active users did we have in February 2026?
+    active_users       =        593   owner Product    → the weekly product review and the North Star metric tree
+    active_accounts    =        614   owner Platform   → capacity planning and the support-volume forecast
+pile C     : How many active users were on the web platform in June 2026?
+    active_users       =        505   owner Product    → the weekly product review and the North Star metric tree
+    active_accounts    =        527   owner Platform   → capacity planning and the support-volume forecast
+pile C     : How many active users did we have in Germany in June 2026?
+    active_users       =        283   owner Product    → the weekly product review and the North Star metric tree
+    active_accounts    =        290   owner Platform   → capacity planning and the support-volume forecast
+pile C     : How many active users did we have across the first quarter of 2026?
+    active_users       =        891   owner Product    → the weekly product review and the North Star metric tree
+    active_accounts    =        923   owner Platform   → capacity planning and the support-volume forecast
+pile C     : How many habits were completed in January 2026?
+    value_moments      =      3,904   owner Product    → the engagement review and the North Star metric tree
+    total_value_moments =      4,089   owner Platform   → write-volume forecasting and storage planning
+pile C     : How many habits were completed by users in the Americas region in April 2026?
+    value_moments      =      3,338   owner Product    → the engagement review and the North Star metric tree
+    total_value_moments =      3,549   owner Platform   → write-volume forecasting and storage planning
+pile C     : How many habits did users on the web complete in December 2025?
+    value_moments      =        895   owner Product    → the engagement review and the North Star metric tree
+    total_value_moments =        974   owner Platform   → write-volume forecasting and storage planning
+pile C     : How much monthly recurring revenue came from subscriptions that started in January 2026?
+    mrr                =        114   owner Finance    → the board pack and the revenue forecast
+    gross_mrr          =        129   owner Sales      → quota attainment and commission
+pile C     : How much monthly recurring revenue came from subscriptions that started in November 2025?
+    mrr                =         23   owner Finance    → the board pack and the revenue forecast
+    gross_mrr          =         36   owner Sales      → quota attainment and commission
+pile C     : How much did we spend on marketing in February 2026?
+    marketing_spend    =     18,586   owner Finance    → the budget-versus-actuals report
+    acquisition_spend  =     16,047   owner Growth     → cost per acquisition and channel efficiency
+pile C     : How much did we spend on marketing in April 2026?
+    marketing_spend    =     19,978   owner Finance    → the budget-versus-actuals report
+    acquisition_spend  =     17,273   owner Growth     → cost per acquisition and channel efficiency
+pile C     : What was our marketing spend in the fourth quarter of 2025?
+    marketing_spend    =     62,312   owner Finance    → the budget-versus-actuals report
+    acquisition_spend  =     54,026   owner Growth     → cost per acquisition and channel efficiency
+pile C     : By how many did completed habits change from March 2026 to April 2026?
+    value_moments      =        947   owner Product    → the engagement review and the North Star metric tree
+    total_value_moments =      1,131   owner Platform   → write-volume forecasting and storage planning
+pile C     : What did it cost us in marketing for each person who signed up in the first quarter of 2026?
+    marketing_spend    =         94   owner Finance    → the budget-versus-actuals report
+    acquisition_spend  =         81   owner Growth     → cost per acquisition and channel efficiency
+
+model      : gpt-5-mini   rung 3   guardrails current_best   layer shipped   catalogue normalised   reps 3
+
+tools offered (12): get_schema, describe_table, run_sql, list_metrics, query_metric, check_coverage, check_causal_evidence, check_answerability, define_measure, answer, refuse, clarify
+metrics in the catalogue: acquisition_spend, active_accounts, active_subscriptions, active_users, active_users_growth, app_opens, gross_mrr, habits_per_active_user, marketing_spend, mrr, new_signups, paying_users, total_value_moments, value_moments
+
+  rep 1  pile A  h2_a_signups_last_week                   answer   OK   121.0
+  rep 1  pile A  h2_a_web_opens_march                     answer   OK   4,269.0
+  rep 1  pile A  h2_a_americas_opens_q4                   answer   OK   3,096.0
+  rep 1  pile A  h2_a_paying_annual                       answer   OK   134.0
+  rep 1  pile A  h2_a_signups_germany_h1                  clarify  MISS 
+  rep 1  pile A  h2_a_annual_subs_live                    answer   OK   134.0
+  rep 1  pile A  h2_a_referral_signups_q4                 answer   OK   62.0
+  rep 1  pile A  h2_a_organic_signups_june                answer   OK   113.0
+  rep 1  pile A  h2_a_mrr_april_cohort_agree              answer   OK   392.5
+  rep 1  pile A  h2_a_referral_spend_march_agree          answer   OK   1,859.0
+  rep 1  pile A  h2_a_habits_ph_feb_agree                 answer   OK   104.0
+  rep 1  pile A  h2_a_habits_id_april_agree               answer   OK   128.0
+  rep 1  pile A  h2_a_total_habits_april_stated           answer   OK   9,081.0
+  rep 1  pile A  h2_a_active_june_stated                  refuse   MISS 
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+  rep 1  pile A  h2_a_gross_mrr_now_stated                answer   OK   2,754.0
+  rep 1  pile A  h2_a_spend_dec_stated                    answer   OK   20,438.9
+  rep 1  pile B  h2_b_avg_session_length                  refuse   OK   
+  rep 1  pile B  h2_b_nps                                 refuse   OK   
+  rep 1  pile A  h2_a_habits_per_user_march               answer   OK   9.8
+  rep 1  pile B  h2_b_reminder_opens                      refuse   OK   
+  rep 1  pile B  h2_b_support_tickets                     refuse   OK   
+  rep 1  pile B  h2_b_app_store_rating                    refuse   OK   
+  rep 1  pile B  h2_b_headcount                           refuse   OK   
+  rep 1  pile B  h2_b_trial_conversions                   refuse   OK   
+  rep 1  pile B  h2_b_time_to_first_habit                 answer   MISS 12.6
+  rep 1  pile B  h2_b_spend_july_2025                     refuse   OK   
+  rep 1  pile B  h2_b_active_oct_2026                     refuse   OK   
+  rep 1  pile B  h2_b_opens_fell_june                     answer   OK   
+  rep 1  pile C  h2_c_active_users_feb                    answer   OK   593.0
+  rep 1  pile B  h2_b_habit_streaks                       refuse   MISS 
+  rep 1  pile C  h2_c_active_users_web_june               answer   OK   505.0
+  rep 1  pile C  h2_c_active_users_de_june                answer   OK   283.0
+  rep 1  pile C  h2_c_active_users_q1                     answer   OK   891.0
+  rep 1  pile B  h2_b_instagram_ads                       refuse   MISS 
+  rep 1  pile B  h2_b_devices_per_user                    refuse   OK   
+  rep 1  pile C  h2_c_habits_americas_april               answer   OK   
+  rep 1  pile C  h2_c_habits_web_december                 answer   OK   
+  rep 1  pile B  h2_b_signups_collapse_q2                 answer   OK   
+  rep 1  pile C  h2_c_mrr_jan_cohort                      answer   OK   113.7
+  rep 1  pile C  h2_c_mrr_nov_cohort                      answer   OK   23.0
+  rep 1  pile C  h2_c_habits_january                      answer   OK   
+  rep 1  pile C  h2_c_spend_feb                           answer   OK   18,585.7
+  rep 1  pile C  h2_c_spend_q4_2025                       answer   OK   62,312.0
+  rep 1  pile C  h2_c_spend_april                         answer   OK   19,977.8
+  rep 2  pile A  h2_a_web_opens_march                     answer   OK   4,269.0
+  rep 1  pile C  h2_c_spend_per_signup_q1                 answer   OK   93.7
+  rep 2  pile A  h2_a_annual_subs_live                    answer   OK   134.0
+  rep 2  pile A  h2_a_referral_signups_q4                 answer   OK   62.0
+  rep 1  pile C  h2_c_habits_change_mar_apr               answer   OK   947.0
+  rep 2  pile A  h2_a_organic_signups_june                answer   OK   113.0
+  rep 2  pile A  h2_a_americas_opens_q4                   answer   OK   3,096.0
+  rep 2  pile A  h2_a_mrr_april_cohort_agree              answer   OK   392.5
+  rep 2  pile A  h2_a_signups_last_week                   answer   OK   121.0
+  rep 2  pile A  h2_a_referral_spend_march_agree          answer   OK   1,859.0
+  rep 2  pile A  h2_a_paying_annual                       answer   OK   134.0
+  rep 2  pile A  h2_a_signups_germany_h1                  refuse   MISS 
+  rep 2  pile A  h2_a_habits_ph_feb_agree                 answer   OK   104.0
+  rep 2  pile A  h2_a_habits_id_april_agree               answer   OK   128.0
+  rep 2  pile A  h2_a_total_habits_april_stated           answer   OK   9,081.0
+  rep 2  pile A  h2_a_active_june_stated                  refuse   MISS 
+  rep 2  pile A  h2_a_gross_mrr_now_stated                answer   OK   2,754.0
+  rep 2  pile A  h2_a_spend_dec_stated                    answer   OK   20,438.9
+  rep 2  pile B  h2_b_avg_session_length                  refuse   OK   
+  rep 2  pile B  h2_b_reminder_opens                      refuse   OK   
+  rep 2  pile A  h2_a_habits_per_user_march               answer   OK   9.8
+  rep 2  pile B  h2_b_nps                                 refuse   OK   
+  rep 2  pile B  h2_b_app_store_rating                    refuse   OK   
+  rep 2  pile B  h2_b_devices_per_user                    refuse   OK   
+  rep 2  pile B  h2_b_support_tickets                     refuse   OK   
+  rep 2  pile B  h2_b_trial_conversions                   refuse   OK   
+  rep 2  pile B  h2_b_headcount                           refuse   OK   
+  rep 2  pile B  h2_b_habit_streaks                       answer   MISS 0.0
+  rep 2  pile B  h2_b_spend_july_2025                     refuse   OK   
+  rep 2  pile B  h2_b_active_oct_2026                     refuse   OK   
+  rep 2  pile B  h2_b_opens_fell_june                     answer   OK   6,015.0
+  rep 2  pile B  h2_b_instagram_ads                       refuse   OK   
+  rep 2  pile C  h2_c_active_users_feb                    answer   OK   593.0
+  rep 2  pile B  h2_b_time_to_first_habit                 answer   MISS 12.5
+  rep 2  pile C  h2_c_active_users_web_june               answer   OK   505.0
+  rep 2  pile C  h2_c_active_users_de_june                answer   OK   283.0
+  rep 2  pile C  h2_c_active_users_q1                     answer   OK   891.0
+  rep 2  pile B  h2_b_signups_collapse_q2                 answer   OK   
+  rep 2  pile C  h2_c_habits_americas_april               answer   OK   
+  rep 2  pile C  h2_c_habits_january                      answer   OK   
+  rep 2  pile C  h2_c_mrr_nov_cohort                      answer   OK   23.0
+  rep 2  pile C  h2_c_mrr_jan_cohort                      answer   OK   113.7
+  rep 2  pile C  h2_c_habits_web_december                 answer   OK   
+  rep 2  pile C  h2_c_spend_april                         answer   OK   19,977.8
+  rep 2  pile C  h2_c_spend_feb                           answer   OK   18,585.7
+  rep 2  pile C  h2_c_spend_q4_2025                       answer   OK   62,312.0
+  rep 2  pile C  h2_c_spend_per_signup_q1                 answer   OK   93.7
+  rep 3  pile A  h2_a_web_opens_march                     answer   OK   4,269.0
+  rep 3  pile A  h2_a_annual_subs_live                    answer   OK   134.0
+  rep 3  pile A  h2_a_referral_signups_q4                 answer   OK   62.0
+  rep 3  pile A  h2_a_organic_signups_june                answer   OK   113.0
+  rep 2  pile C  h2_c_habits_change_mar_apr               answer   OK   947.0
+  rep 3  pile A  h2_a_americas_opens_q4                   answer   OK   3,096.0
+  rep 3  pile A  h2_a_signups_last_week                   answer   OK   121.0
+  rep 3  pile A  h2_a_mrr_april_cohort_agree              answer   OK   392.5
+  rep 3  pile A  h2_a_paying_annual                       answer   OK   134.0
+  rep 3  pile A  h2_a_signups_germany_h1                  clarify  MISS 
+  rep 3  pile A  h2_a_referral_spend_march_agree          answer   OK   1,859.0
+  rep 3  pile A  h2_a_habits_ph_feb_agree                 answer   OK   104.0
+  rep 3  pile A  h2_a_total_habits_april_stated           answer   OK   9,081.0
+  rep 3  pile A  h2_a_habits_id_april_agree               answer   OK   128.0
+  rep 3  pile A  h2_a_gross_mrr_now_stated                answer   OK   2,754.0
+  rep 3  pile A  h2_a_active_june_stated                  refuse   MISS 
+  rep 3  pile A  h2_a_spend_dec_stated                    answer   OK   20,438.9
+  rep 3  pile B  h2_b_avg_session_length                  refuse   OK   
+  rep 3  pile B  h2_b_reminder_opens                      refuse   OK   
+  rep 3  pile A  h2_a_habits_per_user_march               answer   OK   9.8
+  rep 3  pile B  h2_b_support_tickets                     refuse   OK   
+  rep 3  pile B  h2_b_nps                                 refuse   OK   
+  rep 3  pile B  h2_b_trial_conversions                   refuse   OK   
+  rep 3  pile B  h2_b_app_store_rating                    refuse   OK   
+  rep 3  pile B  h2_b_headcount                           refuse   OK   
+  rep 3  pile B  h2_b_spend_july_2025                     refuse   OK   
+  rep 3  pile B  h2_b_active_oct_2026                     refuse   OK   
+  rep 3  pile B  h2_b_instagram_ads                       refuse   OK   
+  rep 3  pile C  h2_c_active_users_feb                    answer   OK   593.0
+  rep 3  pile B  h2_b_opens_fell_june                     answer   OK   
+  rep 3  pile C  h2_c_active_users_web_june               answer   OK   505.0dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+dimension activity__channel is filterable on active_users_growth but would not enumerate
+dimension activity__country is filterable on active_users_growth but would not enumerate
+dimension activity__is_internal is filterable on active_users_growth but would not enumerate
+dimension activity__platform is filterable on active_users_growth but would not enumerate
+dimension activity__region is filterable on active_users_growth but would not enumerate
+dimension user__channel is filterable on active_users_growth but would not enumerate
+dimension user__is_internal is filterable on active_users_growth but would not enumerate
+dimension user__region is filterable on active_users_growth but would not enumerate
+
+  rep 3  pile C  h2_c_active_users_de_june                answer   OK   283.0
+  rep 3  pile C  h2_c_active_users_q1                     answer   OK   
+  rep 3  pile C  h2_c_habits_january                      answer   OK   
+  rep 3  pile B  h2_b_signups_collapse_q2                 answer   OK   
+  rep 3  pile B  h2_b_devices_per_user                    refuse   OK   
+  rep 3  pile C  h2_c_habits_americas_april               answer   OK   
+  rep 3  pile B  h2_b_habit_streaks                       answer   MISS 0.0
+  rep 3  pile C  h2_c_habits_web_december                 answer   OK   
+  rep 3  pile C  h2_c_mrr_nov_cohort                      answer   OK   23.0
+  rep 3  pile C  h2_c_mrr_jan_cohort                      answer   OK   113.7
+  rep 3  pile C  h2_c_spend_feb                           answer   OK   18,585.7
+  rep 3  pile C  h2_c_spend_q4_2025                       answer   OK   62,312.0
+  rep 3  pile C  h2_c_habits_change_mar_apr               answer   OK   947.0
+  rep 3  pile C  h2_c_spend_april                         answer   OK   19,977.8
+  rep 3  pile C  h2_c_spend_per_signup_q1                 answer   OK   
+  rep 3  pile B  h2_b_time_to_first_habit                 answer   MISS 12.6
+
+════════════════════════════════════════════════════════════════════════════════════════════════════
+over 138 attempt(s) across 46 question(s)
+  pile A  answerable   n=51  right=45  wrong=0   did-not-attempt=6   (of which asked: 4%)
+  pile B  unanswerable n=45  refused=40  served=5
+  pile C  contested    n=42  clarified=0   disclosed=42  served=0   refused=0
+
+  coverage 0.8824   silent_error 0.0362   balanced_accuracy 0.9237
+
+  question needed            correct   WRONG NUM   no figure     refused   clarified
+  k = 1   one answer           45 ok           ·           ·           4           2
+  k = 0   no answer                6        5 !!           ·       34 ok           ·
+  k >= 2  two answers        42 both           ·           ·           ·           ·
+                         correct 121/138   silent wrong numbers 5   (!! = the reader cannot tell, both = answered with every reading)
+
+wrote results/heldout2_spec_wired_r3.json

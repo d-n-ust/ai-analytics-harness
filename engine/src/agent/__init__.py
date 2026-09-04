@@ -9,7 +9,7 @@ providers), and the loop that drives it.
 
 The imports below sit inside the function on purpose. A package __init__ runs on ANY import from
 the package, so pulling the warehouse and the semantic layer in at module level would mean
-`from agent.models import MODEL_SPECS` — the cost report wanting a price per token — loading
+`from agent.core.models import MODEL_SPECS` — the cost report wanting a price per token — loading
 DuckDB and the whole governance YAML. Keeping them local costs one indent and keeps the light
 imports light.
 """
@@ -22,12 +22,12 @@ __all__ = ["NotConfigured", "ask_one"]
 # re-exported here, so `from agent import NotConfigured` keeps working and the packages stay acyclic.
 from warehouse import NotConfigured
 
-from .models import DEFAULT_MODEL
+from .core.models import DEFAULT_MODEL
 
 
 def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=None,
             protocol=None, mock: bool = False, verbose: bool = False, con=None,
-            trace=None):
+            trace=None, spec_path=None, engine: str = "harness"):
     """Ask one question at one rung and return the typed Answer.
 
     `trace` is a RENDERER — a callable taking the run row and returning text — not a boolean.
@@ -39,17 +39,25 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     the one place the engine reached into the apparatus. Inverting it means every dependency now
     points apparatus -> engine, which is what lets the engine be installed, tested, and one day
     shipped without the harness. The alternative — guarding the import — would leave the name
-    unbound at the call site below and raise NameError instead of degrading.""" 
+    unbound at the call site below and raise NameError instead of degrading.
+
+    `spec_path` and `engine` name WHICH semantic layer to ask against. Without them this function
+    could only reach the default layer, so the one command built for asking a single question could
+    not ask any question an experiment studies — and every experiment layer had to be driven
+    through its own script. They are passed straight to `build_grounding`, which already took
+    both.""" 
     from warehouse import open_warehouse, set_star
 
-    from .grounding import RUNG_NAMES, build_grounding
-    from .loop import run_agent
-    from .providers import get_model
-    from .rungs import capabilities
+    from .core.rungs import capabilities
+    from .runtime.grounding import RUNG_NAMES, build_grounding
+    from .runtime.loop import run_agent
+    from .runtime.providers import get_model
 
     con = con or open_warehouse()
     set_star(con, capabilities(rung).star)  # rung 1 is raw-only
-    grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol)
+    grounding = build_grounding(con, rung, guardrails=guardrails, protocol=protocol,
+                                spec_path=spec_path, engine=engine,
+                                semantic_layer=True if spec_path else None)
     live = get_model(model, mock=mock)
     result = run_agent(question, grounding, live)
     if trace is not None:

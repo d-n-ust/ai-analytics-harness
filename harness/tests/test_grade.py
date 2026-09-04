@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent.loop import Answer
+from agent.runtime.loop import Answer
 from evals.gold import load_questions
 from evals.grade import grade
 

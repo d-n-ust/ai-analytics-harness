@@ -41,7 +41,7 @@ RUN = "20260726-224953-gpt-5-mini"
 
 def _find_run() -> pathlib.Path:
     for base in (REPO, pathlib.Path("/Users/diust/_proj/ai-analytics-harness")):
-        p = base / f"results/published/2026-07/runs/{RUN}.raw.jsonl.gz"
+        p = base / f"results/published/2026-07-reliability-ladder/runs/{RUN}.raw.jsonl.gz"
         if p.exists():
             return p
     raise SystemExit(f"run rows not found for {RUN}")

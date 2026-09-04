@@ -1,0 +1,25 @@
+# Scrutiny probe for the member-license ladder (findings §57). Three natural-language segment
+# phrasings against the channel dimension: a term licensed to NOTHING (refuse, never fold), a
+# term licensed by the DOCUMENTATION ("content_seo is content marketing and SEO"), and a term
+# licensed by a member NAME ("Google search" -> paid_search — the organic reading is not declared
+# in the governed text, so per the license doctrine it does not exist; wanting it is a YAML edit,
+# not a model behaviour). Golds proven by SQL (3,605.41 / 12,786.81).
+cases:
+- id: probe_seo_spend_june
+  tier: answerable_stated
+  question: How much did we spend on SEO in June 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) IN ('content_seo','content/seo','seo','content')
+      AND dt >= DATE '2026-06-01' AND dt < DATE '2026-07-01'
+- id: probe_google_search_spend
+  tier: answerable_stated
+  question: How much did we spend on Google search ads in June 2026?
+  expect:
+    type: metric_answer
+    tolerance: 0.005
+    metric: marketing_spend
+    gold_sql: SELECT round(sum(amt),2) FROM "_source".spend WHERE lower(chan) IN ('paid_search','paid-search','ppc','paid search')
+      AND dt >= DATE '2026-06-01' AND dt < DATE '2026-07-01'

@@ -1,0 +1,127 @@
+# The MARTS layer, documented. Facts are business processes at a declared grain; dimensions are
+# conformed so the same key means the same thing across facts (the bus matrix). Descriptions carry
+# purpose, an example, and — where a question could be answered by the wrong nearby column — what the
+# column is NOT. Persisted as COMMENT ON (dbt persist_docs) and surfaced to the agent by get_schema.
+models:
+  # ── conformed dimensions ─────────────────────────────────────────────────────────────────────
+  - name: dim_date
+    description: >-
+      Conformed calendar. One row per day from 2025-09-01 to 2026-07-12. Join any fact's date to this
+      to group by week, month, or quarter consistently. Example: join fct_value_moments.completed_date
+      = dim_date.date_day, group by month_start.
+    columns:
+      - {name: date_day, description: "The day. Primary key. Every fact's date column joins here."}
+      - {name: quarter_start, description: "First day of the calendar quarter — group by this for quarterly figures."}
+      - {name: is_month_end, description: "True on the last day of a month; the row to read for a month-end balance."}
+
+  - name: dim_users
+    description: >-
+      Conformed account (customer) dimension. One row per account. Every fact carries user_id and
+      joins here — this is how any metric is sliced by region, country, platform, channel, or the
+      staff/test flag. Example: fct_value_moments JOIN dim_users USING (user_id) WHERE region='EMEA'.
+    columns:
+      - {name: user_id, description: "The account. Primary key; the foreign key every fact carries."}
+      - {name: is_internal, description: "TRUE for staff and test accounts. Exclude (is_internal = false) for customer-facing figures; the two governed 'active user' definitions differ only on whether they apply this filter."}
+      - {name: channel, description: "The acquisition channel of the account (content_seo, organic, paid_search, partnerships, referral). Conforms to dim_channel.channel and to fct_marketing_spend.channel."}
+      - {name: region, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
+      - {name: platform, description: "Registered client platform: android, ios, web, or unknown."}
+
+  - name: dim_habit
+    description: >-
+      One row per habit a user created. Join fct_value_moments.habit_id here to group completions by
+      habit or category. Example: completions by category = fct_value_moments JOIN dim_habit USING
+      (habit_id) GROUP BY category.
+    columns:
+      - {name: habit_id, description: "The habit. Primary key."}
+      - {name: category, description: "The habit's subject (productivity, health, finance, ...). This is the closest thing to a 'feature' or 'area'; the app has no product-feature or screen taxonomy."}
+
+  - name: dim_channel
+    description: >-
+      Conformed marketing/acquisition channel. One row per channel, shared by fct_marketing_spend and
+      dim_users so 'spend by channel' and 'signups by channel' agree. The governed channels are
+      content_seo, organic, paid_search, partnerships, referral — any other channel (e.g. tiktok,
+      google, facebook) does not exist here.
+    columns:
+      - {name: channel, description: "Channel name. Primary key. The complete set of channels; there is no paid-social, tiktok, or email channel."}
+      - {name: is_test_integration, description: "TRUE for 'partnerships', an internal test integration that books spend but buys no customers; the governed acquisition-spend definition excludes it."}
+      - {name: is_real_acquisition, description: "TRUE for channels that buy real customers (everything except partnerships)."}
+
+  # ── business-process facts ───────────────────────────────────────────────────────────────────
+  - name: fct_value_moments
+    description: >-
+      BUSINESS PROCESS: a habit completion. Grain: one row per completed habit at the moment it
+      happened. Additive — two days of completions add to two days. Example: habits completed in June
+      = COUNT(*) WHERE completed_date in June. Excludes nothing by itself; join dim_users to exclude
+      internal/test accounts.
+    columns:
+      - {name: value_moment_id, description: "The completion event. Primary key."}
+      - {name: user_id, description: "Who completed it. Joins dim_users."}
+      - {name: habit_id, description: "Which habit. Joins dim_habit."}
+      - {name: completed_date, description: "The day it was completed. Joins dim_date."}
+      - {name: recorded_by, description: "The CLIENT that recorded the completion (app, widget, api). This is NOT a product feature, a screen, or a section, and it is NOT a session. The warehouse records no screens, no sessions, and no time-in-app."}
+
+  - name: fct_app_opens
+    description: >-
+      BUSINESS PROCESS: an app open. Grain: one row per app open. Additive. Example: iOS opens in May
+      = COUNT(*) JOIN dim_users USING (user_id) WHERE platform='ios' AND opened_date in May. Counts
+      OPENS, not sessions or time in app — the warehouse measures neither duration nor sessions.
+    columns:
+      - {name: app_open_id, description: "The open event. Primary key."}
+      - {name: opened_date, description: "The day of the open. Joins dim_date. There is no session or duration column — an open is a point event, not a timed session."}
+      - {name: recorded_by, description: "The client that recorded the open (app, widget, api). Not a screen or feature."}
+
+  - name: fct_reminders
+    description: >-
+      BUSINESS PROCESS: a reminder the product sent and the user clicked. Grain: one row per reminder
+      click. Additive. Counts reminder clicks only; there is no email or push channel breakdown and no
+      open/delivery data.
+    columns:
+      - {name: reminder_id, description: "The reminder-click event. Primary key."}
+      - {name: reminded_date, description: "The day. Joins dim_date."}
+
+  - name: fct_subscriptions
+    description: >-
+      BUSINESS PROCESS: a subscription term. Grain: one row per term. Carries the billed amount and
+      the term's status; the governed mrr / gross_mrr metrics are built on this. Plans are 'annual'
+      or 'monthly' only — there is no enterprise or per-seat plan. Example: live monthly subscriptions
+      = COUNT(*) WHERE status='active' AND plan='monthly'.
+    columns:
+      - {name: subscription_id, description: "The term. Primary key."}
+      - {name: user_id, description: "The subscriber. Joins dim_users."}
+      - {name: plan, description: "Billing interval of the term: 'annual' or 'monthly'. There is no 'enterprise' plan."}
+      - {name: billed_amount, description: "The amount billed for the WHOLE term — an annual term carries its yearly lump, so divide by 12 for a monthly rate (this is what the mrr metric does)."}
+      - {name: started_date, description: "When the term began. Joins dim_date. Filter this for a COHORT — revenue from terms that started in a period."}
+      - {name: status, description: "active | canceled | paused | refunded. 'active' is the current book."}
+      - {name: is_active, description: "TRUE when the term is currently active."}
+
+  - name: fct_marketing_spend
+    description: >-
+      BUSINESS PROCESS: marketing spend. Grain: one row per channel per day. Additive. Example: Q2
+      spend = SUM(spend) WHERE spend_date in Q2. Join dim_channel to separate real acquisition from the
+      partnerships test integration.
+    columns:
+      - {name: spend_date, description: "The day of spend. Joins dim_date."}
+      - {name: channel, description: "The channel spent on. Joins dim_channel. Only content_seo, paid_search, partnerships, referral appear; there is no tiktok, google, or paid-social spend."}
+      - {name: spend, description: "Amount spent on that channel that day."}
+
+  - name: fct_referrals
+    description: >-
+      BUSINESS PROCESS: a referral. Grain: one row per referral. Example: accepted referrals =
+      COUNT(*) WHERE status='accepted'. referrer and referred both join dim_users.
+    columns:
+      - {name: referral_id, description: "The referral. Primary key."}
+      - {name: referrer_user_id, description: "The account that referred. Joins dim_users.user_id."}
+      - {name: referred_user_id, description: "The account that was referred. Joins dim_users.user_id."}
+      - {name: status, description: "The referral's state."}
+
+  - name: fct_user_days
+    description: >-
+      A daily activity aggregate: one row per account per day it did anything, carrying that day's
+      value-moment and app-open counts plus the account's attributes denormalised on. The governed
+      active-user and activity metrics read this. Use the transaction facts (fct_value_moments,
+      fct_app_opens) for event-level questions; use this for daily active-account questions.
+    columns:
+      - {name: active_date, description: "The activity day. Joins dim_date."}
+      - {name: is_internal, description: "Staff/test flag, denormalised from dim_users so a metric can exclude them without a join."}
+      - {name: value_moments, description: "Count of habit completions by this account on this day."}
+      - {name: app_opens, description: "Count of app opens by this account on this day."}

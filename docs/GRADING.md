@@ -43,7 +43,7 @@ It let one bad answer through: *"how many users do we have in total?"*, answered
 metric — a real number to a question nobody asked, which is the failure the whole experiment is
 about.
 
-Those four counts are columns in `results/published/2026-07/cells.csv` (`judge_ran`,
+Those four counts are columns in `results/published/2026-07-reliability-ladder/cells.csv` (`judge_ran`,
 `judge_rejected`, `judge_blocked_good`, `judge_passed_bad`), so the claim is checkable rather than
 asserted.
 
