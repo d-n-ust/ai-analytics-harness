@@ -6,20 +6,26 @@ with its handler, returning a ToolResult the guardrails can read typed numbers f
 
 from __future__ import annotations
 
-import json                                                                  # noqa: F401
-from dataclasses import replace                                              # noqa: F401
+import json  # noqa: F401
+from dataclasses import replace  # noqa: F401
 
 from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeError  # noqa: F401
-from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS                           # noqa: F401
-from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text  # noqa: F401,E501
+from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # noqa: F401
+from warehouse import (  # noqa: F401,E501
+    NAMED_PERIODS,
+    TIME_GRAINS,
+    QueryError,
+    describe_table,
+    run_query,
+    schema_text,
+)
 
-from ..core.conversation import ToolResult                                        # noqa: F401
+from ..core.conversation import ToolResult  # noqa: F401
+from ..core.outcomes import REASON_MEANINGS, REFUSAL_REASONS  # noqa: F401
+from ..core.protocol import Protocol  # noqa: F401
+from ..core.rungs import capabilities  # noqa: F401
 from ..guardrails import LADDER, GuardrailSet, action_space, before, disclosure  # noqa: F401
-from ..core.outcomes import REASON_MEANINGS, REFUSAL_REASONS                      # noqa: F401
-from ..core.protocol import Protocol                                              # noqa: F401
-from ..core.rungs import capabilities                                             # noqa: F401
 from ._shared import _fmt_rows, _labelled, _measure_values, _time_scope_line  # noqa: F401
-
 
 _GET_METRIC_TREE = {
     "name": "get_metric_tree",

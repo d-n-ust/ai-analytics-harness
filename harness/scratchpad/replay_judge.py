@@ -16,10 +16,10 @@ from __future__ import annotations
 import json
 import sys
 
-from agent.runtime.grounding import build_grounding
 from agent.guardrails import LADDER
 from agent.guardrails.after import governed_notes
 from agent.guardrails.judge import verify_trajectory
+from agent.runtime.grounding import build_grounding
 from agent.runtime.providers import get_model
 from semantic.semantic import SemanticLayer
 from warehouse.warehouse import open_warehouse, set_star

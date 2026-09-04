@@ -174,8 +174,8 @@ def before_after_from_calls(steps, value_of):
         v1 = scalar(value_of(late, metric))
         if v0 is None or v1 is None:
             e = {k: v for k, v in early.items() if k not in ("group_by", "time_grain")}
-            l = {k: v for k, v in late.items() if k not in ("group_by", "time_grain")}
-            v0, v1 = scalar(value_of(e, metric)), scalar(value_of(l, metric))
+            lt = {k: v for k, v in late.items() if k not in ("group_by", "time_grain")}
+            v0, v1 = scalar(value_of(e, metric)), scalar(value_of(lt, metric))
         if v0 is not None and v1 is not None:
             return metric, v0, v1
     return None

@@ -3,7 +3,7 @@
 When no governed metric answers a question directly, the agent's job is not to produce a number — it
 is to AUTHOR A DEFINITION (a spec) for the measure, have it grounded and challenged, compute from it,
 and disclose it. The number is a consequence of the spec, not the thing produced. A governed metric
-is the trivial spec (`Spec.metric("active_users")`), so governed and ad-hoc flow through one shape.
+is the trivial spec (`Spec.governed("active_users")`), so governed and ad-hoc flow through one shape.
 
 This module is the PURE CORE (a function of plain data — no database, no model, no I/O), so it is
 exhaustively unit-testable. Two typed values and the deterministic checks over them:
@@ -27,8 +27,8 @@ artifact the adversary can review) — far smaller than leaving completeness to 
 from __future__ import annotations
 
 import re as _re
-
-from dataclasses import dataclass, replace as _dc_replace
+from dataclasses import dataclass
+from dataclasses import replace as _dc_replace
 
 
 def _leaf(dimension: str) -> str:
@@ -95,19 +95,21 @@ class Spec:
     definition: str = ""           # kind=raw: the stated definition, for disclosure and the adversary
 
     # ── constructors: name the kind at the call site, keep invalid shapes hard to build ──────────
+    # `governed`, not `metric`: a classmethod named `metric` would shadow the field above, and the
+    # dataclass then takes the bound method as the field's default for every non-metric spec.
     @classmethod
-    def metric(cls, name: str, filters=(), period="", addressed=()) -> "Spec":
+    def governed(cls, name: str, filters=(), period="", addressed=()) -> Spec:
         return cls(kind="metric", metric=name, filters=tuple(filters), period=period,
                    addressed=tuple(addressed))
 
     @classmethod
     def query(cls, source: str, measure: str, agg: str, grain: str = "",
-              filters=(), period="", addressed=()) -> "Spec":
+              filters=(), period="", addressed=()) -> Spec:
         return cls(kind="query", source=source, measure=measure, agg=agg, grain=grain,
                    filters=tuple(filters), period=period, addressed=tuple(addressed))
 
     @classmethod
-    def derived(cls, op: str, inputs, filters=(), period="", addressed=()) -> "Spec":
+    def derived(cls, op: str, inputs, filters=(), period="", addressed=()) -> Spec:
         # A period or filter declared on the DERIVED spec means: on every input. Pushed down at
         # construction, so declaration, evidence records, and execution are one fact — the executor
         # computes each input exactly as its leaf declares. Without this, a Q1 declared on a ratio
@@ -122,7 +124,7 @@ class Spec:
                    period=period, addressed=tuple(addressed))
 
     @classmethod
-    def raw(cls, sql: str, definition: str, filters=(), period="", addressed=()) -> "Spec":
+    def raw(cls, sql: str, definition: str, filters=(), period="", addressed=()) -> Spec:
         return cls(kind="raw", sql=sql, definition=definition, filters=tuple(filters),
                    period=period, addressed=tuple(addressed))
 

@@ -113,7 +113,7 @@ class MartsOntology:
 
     # ── construction: pure core, then the impure shell ─────────────────────────────────────────
     @classmethod
-    def from_source(cls, source: dict, columns_by_table: dict, measure_semantics=None) -> "MartsOntology":
+    def from_source(cls, source: dict, columns_by_table: dict, measure_semantics=None) -> MartsOntology:
         """PURE. Assemble the complete present-graph from a `source` (each entity's table, grain,
         measures and relationships, read from the manifest by the caller) and the columns of each
         table. ATTRIBUTES are every non-measure column, so the graph is complete and cannot claim a
@@ -156,7 +156,7 @@ class MartsOntology:
                    measure_semantics=sem, nodes=frozenset(nodes))
 
     @classmethod
-    def build(cls, cursor, schema: str, source: dict, measure_semantics=None) -> "MartsOntology":
+    def build(cls, cursor, schema: str, source: dict, measure_semantics=None) -> MartsOntology:
         """The imperative shell: read each entity table's columns from information_schema, then hand
         them to the pure `from_source`. The only side effect in the module lives here."""
         tables = {spec["table"] for spec in source["entities"].values()}
@@ -164,7 +164,7 @@ class MartsOntology:
         return cls.from_source(source, columns_by_table, measure_semantics)
 
     @classmethod
-    def build_marts(cls, cursor, schema: str, manifest_source: dict, measure_semantics=None) -> "MartsOntology":
+    def build_marts(cls, cursor, schema: str, manifest_source: dict, measure_semantics=None) -> MartsOntology:
         """Build the COMPLETE marts graph under hybrid completeness: scan EVERY table in the schema so
         the present is complete (absence is derivable), but keep relationships only where the manifest
         curates them — an unmodeled table is an island. This is the graph the agent makes authoritative

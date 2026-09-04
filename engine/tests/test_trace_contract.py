@@ -7,8 +7,8 @@ the hand-back budget that constructions must not consume.
 """
 from types import SimpleNamespace as NS
 
-from agent.runtime.loop import _Run
 from agent.core.outcomes import *  # noqa: F401,F403  (import side effects none; keeps parity with loop)
+from agent.runtime.loop import _Run
 
 
 def _stub(steps=(), guardrails=None):
@@ -579,8 +579,8 @@ def test_a_legitimate_raw_computation_with_no_governed_answer_is_untouched():
     cl_orig = cl.classify_answerability
     cl.classify_answerability = lambda *a, **k: {"verdict": "governed", "measure": "retention"}
     try:
-        r = gm.answerability_gate(obj, exit_call=NS(name="answer",
-                                  args={"answer": "0.42", "explanation": "90-day retention"}))
+        gm.answerability_gate(obj, exit_call=NS(name="answer",
+                              args={"answer": "0.42", "explanation": "90-day retention"}))
     finally:
         cl.classify_answerability = cl_orig
     assert not any(rp.get("governed_over_raw") for rp in obj.repairs)
@@ -634,8 +634,8 @@ def test_define_measure_is_terminal_after_two_could_not_define(monkeypatch):
     """Failed-retry discipline (§76): the agent re-called define_measure up to four times on a
     reworded measure (time_to_first, 27 model calls). After two gave_up results in a run the third
     call is terminal — refuse/clarify, and the authoring pipeline is not even entered again."""
-    import agent.tools.definition as td
     import agent.runtime.define as rd
+    import agent.tools.definition as td
 
     calls = {"n": 0}
 
@@ -645,7 +645,7 @@ def test_define_measure_is_terminal_after_two_could_not_define(monkeypatch):
 
     monkeypatch.setattr(rd, "define_measure", _fake_define)
     tb = NS(ontology="ONT", model=object(), semantic=NS(), verifier_model=None)
-    r1 = td._define_measure(tb, {"measure": "avg days to first habit"})
+    td._define_measure(tb, {"measure": "avg days to first habit"})
     r2 = td._define_measure(tb, {"measure": "mean days to first habit"})
     assert calls["n"] == 2 and tb._define_giveups == 2
     assert "failed twice" in r2.content

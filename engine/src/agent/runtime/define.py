@@ -22,8 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..core.conversation import Conversation
-from ..guardrails import classify as _classify
 from ..core.measure import Scope, Spec, bind_scope, coherent, ground
+from ..guardrails import classify as _classify
 from .measure_exec import run_ephemeral
 
 _SYSTEM = (
@@ -192,7 +192,7 @@ def _parse_spec(d: dict) -> Spec:
         # queries by the bare name. Strip the prefix so an authored `metric.active_users` executes.
         name = str(d.get("metric") or "").strip()
         name = name[len("metric."):] if name.startswith("metric.") else name
-        return Spec.metric(name, filters=filters, period=period, addressed=addressed)
+        return Spec.governed(name, filters=filters, period=period, addressed=addressed)
     if kind == "query":
         return Spec.query(str(d.get("source") or ""), str(d.get("measure") or ""),
                           str(d.get("agg") or ""), str(d.get("grain") or ""),

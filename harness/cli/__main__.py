@@ -23,10 +23,10 @@ import os
 # themselves rather than a second copy of them.
 import harness_paths
 from agent import NotConfigured
-from agent.guardrails import LADDER_ORDER
 from agent.core.models import DEFAULT_MODEL
 from agent.core.protocol import FRAMINGS, PARTS
 from agent.core.rungs import RUNGS, parse_rung
+from agent.guardrails import LADDER_ORDER
 
 MODELS = ["claude-haiku-4-5", "claude-sonnet-5", "gpt-5.6-terra", "gpt-5.4-mini",
           "gpt-5-mini", "gpt-5.6-luna", "gpt-4.1-mini", "deepseek-v4-flash", "deepseek-v4-pro"]
@@ -66,8 +66,8 @@ def cmd_query(a):
 
 def cmd_ask(a):
     from agent import ask_one
-    from agent.guardrails import parse_cell
     from agent.core.protocol import Protocol
+    from agent.guardrails import parse_cell
     from cli.trace import render
     guardrails = parse_cell(a.guardrails) if a.guardrails else None
     # The renderer is passed IN. The engine has no way to reach cli/, by design.
@@ -107,7 +107,9 @@ def _rows_for(a) -> list:
     The question key is `qid` in a grid run and `id` in an experiment. Both are read, because the
     alternative is a second command that renders the same rows differently."""
     rows, label = _stored_rows(a.run)
-    qid_of = lambda r: r.get("qid", r.get("id"))
+
+    def qid_of(r):
+        return r.get("qid", r.get("id"))
     picked = [r for r in rows if qid_of(r) == a.qid
               and (a.config is None or r.get("config") == a.config)
               and (a.model is None or r.get("model") == a.model)]

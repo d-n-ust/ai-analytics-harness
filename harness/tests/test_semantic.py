@@ -16,10 +16,10 @@ from pathlib import Path
 
 import harness_paths
 from agent.core.conversation import TERMINAL_TOOLS
+from agent.core.numbers import bare_number
 from agent.guardrails import LADDER
 from agent.guardrails import after as verifier
 from agent.guardrails import before as input_guardrail
-from agent.core.numbers import bare_number
 from agent.tools import Toolbox
 from semantic.semantic import COVERAGE_DIMS, SemanticError, SemanticLayer
 from semantic.tree import MetricTree
@@ -332,9 +332,9 @@ def test_the_judge_is_shown_what_the_tree_vouches_for():
     correlational and may only be suggested with the evidence it carries — including evidence
     AGAINST it, which is what this tree's one influence edge records. NO LLM: this pins that both
     kinds reach the judge, labelled, and that the fingerprint moves when the rules do."""
-    from agent.runtime.grounding import build_grounding
     from agent.guardrails import judge
     from agent.guardrails.after import causal_record
+    from agent.runtime.grounding import build_grounding
 
     con = open_warehouse(create_star_views=True)
     grounding = build_grounding(con, 7, guardrails=LADDER[9])
@@ -954,8 +954,8 @@ def test_ablation_cell_is_expressible_and_incoherent_cells_are_named():
     """The point of the refactor: a leave-one-out cell exists in the flag space (no single
     rrung can express it), is self-labelling so a stored row says what produced it, and the
     cells that measure a DIFFERENT system are named rather than silently reported."""
-    from agent.runtime.grounding import build_grounding
     from agent.guardrails import LADDER, incoherent
+    from agent.runtime.grounding import build_grounding
     con = open_warehouse(create_star_views=True)
     cell = LADDER[9].without("resolve")
 
@@ -996,9 +996,9 @@ def test_the_protocol_is_a_peer_primitive_and_labels_itself():
     on a shared API — a confound the harness refuses everywhere else.
 
     Three properties, and the third is the load-bearing one."""
-    from agent.runtime.grounding import build_grounding
-    from agent.guardrails import LADDER, LADDER_ORDER
     from agent.core.protocol import ROLE, RULE, Protocol, split_config
+    from agent.guardrails import LADDER, LADDER_ORDER
+    from agent.runtime.grounding import build_grounding
     con = open_warehouse(create_star_views=True)
     ALL = Protocol(purpose=True, claims=True, repair=True)
 
@@ -1373,7 +1373,7 @@ def test_a_refusal_names_the_failure_it_found_not_the_one_it_knows():
 def test_named_cells_are_a_single_source_of_truth():
     """The standard configuration is a NAMED constant, not a 15-flag string retyped per run where a
     dropped flag is a silent treatment change. A named cell expands to its set and still ablates."""
-    from agent.guardrails import NAMED_CELLS, parse_cell, incoherent
+    from agent.guardrails import NAMED_CELLS, incoherent, parse_cell
 
     cb = parse_cell("current_best")
     assert cb == parse_cell(NAMED_CELLS["current_best"])          # the name IS the string
@@ -1388,8 +1388,9 @@ def test_superseded_guardrails_are_documented_and_excluded_from_current_best():
     """A guardrail a newer mechanism replaced is kept parseable (archived cells + the Shapley lattice
     reference it) but is documented as superseded and must not be part of the standard configuration —
     the consolidation pressure the growing flag set otherwise lacks."""
-    from agent.guardrails import GUARDRAILS, ALL_GUARDRAILS, parse_cell
     import dataclasses
+
+    from agent.guardrails import ALL_GUARDRAILS, GUARDRAILS, parse_cell
 
     superseded = {g.name: g.superseded_by for g in GUARDRAILS if g.superseded_by}
     assert superseded, "expected at least the retired metric-context flags to be marked"

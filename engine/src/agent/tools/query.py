@@ -6,20 +6,26 @@ with its handler, returning a ToolResult the guardrails can read typed numbers f
 
 from __future__ import annotations
 
-import json                                                                  # noqa: F401
-from dataclasses import replace                                              # noqa: F401
+import json  # noqa: F401
+from dataclasses import replace  # noqa: F401
 
 from semantic import Causality, MetricTree, SemanticError, SemanticLayer, TreeError  # noqa: F401
-from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS                           # noqa: F401
-from warehouse import NAMED_PERIODS, TIME_GRAINS, QueryError, describe_table, run_query, schema_text  # noqa: F401,E501
+from warehouse import DEFAULT_MAX_ROWS as MAX_ROWS  # noqa: F401
+from warehouse import (  # noqa: F401,E501
+    NAMED_PERIODS,
+    TIME_GRAINS,
+    QueryError,
+    describe_table,
+    run_query,
+    schema_text,
+)
 
-from ..core.conversation import ToolResult                                        # noqa: F401
+from ..core.conversation import ToolResult  # noqa: F401
+from ..core.outcomes import REASON_MEANINGS, REFUSAL_REASONS  # noqa: F401
+from ..core.protocol import Protocol  # noqa: F401
+from ..core.rungs import capabilities  # noqa: F401
 from ..guardrails import LADDER, GuardrailSet, action_space, before, disclosure  # noqa: F401
-from ..core.outcomes import REASON_MEANINGS, REFUSAL_REASONS                      # noqa: F401
-from ..core.protocol import Protocol                                              # noqa: F401
-from ..core.rungs import capabilities                                             # noqa: F401
 from ._shared import _fmt_rows, _labelled, _measure_values, _time_scope_line, _verdict  # noqa: F401
-
 
 _GET_SCHEMA = {
     "name": "get_schema",
@@ -210,7 +216,8 @@ def _unknown_filter_values(tb, args) -> list:
         members = tb.semantic.dimension_members()
     except Exception:                                                       # noqa: BLE001
         return []
-    norm = lambda s: str(s).strip().lower()
+    def norm(s):
+        return str(s).strip().lower()
     out = []
     for dim, val in (args.get("filters") or {}).items():
         vals = members.get(dim) or members.get(str(dim).split("__")[-1])

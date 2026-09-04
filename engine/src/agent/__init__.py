@@ -48,10 +48,10 @@ def ask_one(question: str, rung: int, model: str = DEFAULT_MODEL, *, guardrails=
     both.""" 
     from warehouse import open_warehouse, set_star
 
+    from .core.rungs import capabilities
     from .runtime.grounding import RUNG_NAMES, build_grounding
     from .runtime.loop import run_agent
     from .runtime.providers import get_model
-    from .core.rungs import capabilities
 
     con = con or open_warehouse()
     set_star(con, capabilities(rung).star)  # rung 1 is raw-only

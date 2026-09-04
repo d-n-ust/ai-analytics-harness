@@ -18,29 +18,27 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import re
 import time
 from dataclasses import dataclass, field, replace
 
 import evidence as claim_audit
 
 from ..core import trace
+from ..core.conversation import Conversation, ToolCall, Turn, Usage
+from ..core.numbers import bare_number
+from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles
+from ..core.provenance import ContextLedger
+from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs
 from ..gates import claims as _g_claims
-from ..gates import pipeline as _pipeline
 from ..gates import contract as _g_contract
 from ..gates import disclosure as _g_disclosure
 from ..gates import measure as _g_measure
+from ..gates import pipeline as _pipeline
 from ..gates import segments as _g_segments
 from ..gates._common import GRACE, MAX_CORRECTIONS
-from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from ..guardrails import Act, Position, after, before
 from ..guardrails import classify as _classify
-from ..guardrails import grounding_check as _grounding
-from ..core.numbers import bare_number, parse_numbers
-from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles
-from ..core.provenance import ContextLedger
 from .providers import ProviderError
-from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
 

@@ -18,11 +18,11 @@ from semantic import MetricTree, SemanticLayer, check_compatible
 if TYPE_CHECKING:
     from ontology import MartsOntology
 
-from ..guardrails import LADDER, GuardrailSet, incoherent
-from .prompts import system_prompt
 from ..core.protocol import Protocol
 from ..core.rungs import RUNG_NAMES, capabilities  # noqa: F401 — RUNG_NAMES re-exported for reports
+from ..guardrails import LADDER, GuardrailSet, incoherent
 from ..tools import Toolbox
+from .prompts import system_prompt
 
 
 @dataclass

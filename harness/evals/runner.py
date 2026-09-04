@@ -17,12 +17,12 @@ from functools import partial
 from pathlib import Path
 
 import harness_paths
-from agent.runtime.grounding import build_grounding
-from agent.runtime.loop import Answer, run_agent
 from agent.core.models import DEFAULT_REASONING, DEFAULT_VERIFIER_REASONING
 from agent.core.protocol import Protocol
-from agent.runtime.providers import get_model, get_verifier
 from agent.core.rungs import capabilities
+from agent.runtime.grounding import build_grounding
+from agent.runtime.loop import Answer, run_agent
+from agent.runtime.providers import get_model, get_verifier
 from warehouse.warehouse import cursor as scoped_cursor
 from warehouse.warehouse import open_warehouse, set_star
 

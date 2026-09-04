@@ -71,6 +71,12 @@ select = ["E", "F", "I", "UP", "B"]
 # signal here. Keep the correctness rules (F/B), import order (I), and modern-Python (UP).
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# toolbox.py is the tools package's re-export hub: it star-imports every tool module so each
+# schema/handler pair is registered once and reachable under one name. The registry below the
+# imports uses those names, which F405 reports as "maybe undefined"; the star imports are the point.
+"engine/src/agent/tools/toolbox.py" = ["F405"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["agent", "semantic", "warehouse", "evidence",
                      "cli", "evals", "experiments", "scratchpad", "harness_paths"]

@@ -17,10 +17,10 @@ from types import SimpleNamespace as NS
 
 from agent import as_row
 from agent.core.conversation import TERMINAL_TOOLS, ToolCall, Turn, Usage
-from agent.runtime.grounding import build_grounding
-from agent.guardrails import LADDER
-from agent.runtime.loop import run_agent
 from agent.core.protocol import Protocol
+from agent.guardrails import LADDER
+from agent.runtime.grounding import build_grounding
+from agent.runtime.loop import run_agent
 from warehouse.warehouse import open_warehouse
 
 QM = {"metric": "active_users", "period": "last_week"}

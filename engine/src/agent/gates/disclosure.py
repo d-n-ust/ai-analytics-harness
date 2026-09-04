@@ -8,19 +8,19 @@ the answer back, or None (standing down, or after constructing into the exit cal
 """
 from __future__ import annotations
 
-import re                                                                   # noqa: F401
+import re  # noqa: F401
 
-import evidence as claim_audit                                              # noqa: F401
+import evidence as claim_audit  # noqa: F401
 
 from ..core import trace
 from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage  # noqa: F401
-from ..guardrails import Act, Position, after, before                       # noqa: F401
-from ..guardrails import classify as _classify                              # noqa: F401
-from ..guardrails import grounding_check as _grounding                      # noqa: F401
-from ..core.numbers import bare_number, parse_numbers                            # noqa: F401
-from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles             # noqa: F401
-from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs                 # noqa: F401
-from ._common import GRACE, MAX_CORRECTIONS                                 # noqa: F401
+from ..core.numbers import bare_number, parse_numbers  # noqa: F401
+from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles  # noqa: F401
+from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs  # noqa: F401
+from ..guardrails import Act, Position, after, before  # noqa: F401
+from ..guardrails import classify as _classify  # noqa: F401
+from ..guardrails import grounding_check as _grounding  # noqa: F401
+from ._common import GRACE, MAX_CORRECTIONS  # noqa: F401
 
 _COMPOSE = trace.COMPOSE
 _leaf = trace.leaf
@@ -183,8 +183,11 @@ def _composition_contest(run, served):
                 if base is None or not _reported(served, base):
                     continue                              # the served figure is not this op(x,y)
                 # A contest in EITHER input propagates; recompute op with that input's rival.
+                # Defaults bind op/xv/yv at definition time; the lambdas are called inside this
+                # iteration, but binding them keeps the capture explicit.
                 for base_m, base_args, with_rival in (
-                        (xm, xa, lambda rv: op(rv, yv)), (ym, ya, lambda rv: op(xv, rv))):
+                        (xm, xa, lambda rv, op=op, yv=yv: op(rv, yv)),
+                        (ym, ya, lambda rv, op=op, xv=xv: op(xv, rv))):
                     for rival in rivals(base_m):
                         rv = scal(before.value_of(sem, base_args, rival.name))
                         if rv is None:

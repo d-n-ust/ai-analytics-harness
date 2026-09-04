@@ -287,7 +287,8 @@ def units_match(model, question: str, answer: str) -> dict:
     read = next((c.args for c in turn.tool_calls if c.name == "report_quantities"), None)
     if not read:
         return blank
-    norm = lambda s: " ".join(str(s or "").lower().split())
+    def norm(s):
+        return " ".join(str(s or "").lower().split())
     grounded = (norm(read.get("asked_quote")) in norm(question)
                 and norm(read.get("delivered_quote")) in norm(answer)
                 and bool(norm(read.get("asked_quote"))) and bool(norm(read.get("delivered_quote"))))

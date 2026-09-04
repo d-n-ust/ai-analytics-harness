@@ -30,20 +30,20 @@ def main() -> None:
                           semantic_layer=True, guardrails=None, schema=MARTS).semantic
 
     # 1. a governed metric spec -> a scalar, with its definition disclosed
-    r = run_ephemeral(Spec.metric("marketing_spend", period="2026-Q2"), eng)
+    r = run_ephemeral(Spec.governed("marketing_spend", period="2026-Q2"), eng)
     assert r.ok and abs(r.value - 61233.32) < 0.01, r
     assert "marketing_spend" in r.definition
 
     # 2. a derived spec (spend_per_signup = marketing_spend / new_signups) -> composed scalar
-    ratio = Spec.derived("ratio", inputs=[Spec.metric("marketing_spend", period="2026-Q2"),
-                                          Spec.metric("new_signups", period="2026-Q2")])
+    ratio = Spec.derived("ratio", inputs=[Spec.governed("marketing_spend", period="2026-Q2"),
+                                          Spec.governed("new_signups", period="2026-Q2")])
     r = run_ephemeral(ratio, eng)
     assert r.ok and abs(r.value - 50.44) < 0.01, r
     assert "ratio of" in r.definition                       # the composition is disclosable
 
     # 3. a governed metric with a segment filter -> the web slice, not the total
-    total = run_ephemeral(Spec.metric("active_users", period="last_week"), eng).value
-    web = run_ephemeral(Spec.metric("active_users", filters=[("activity__platform", "web")],
+    total = run_ephemeral(Spec.governed("active_users", period="last_week"), eng).value
+    web = run_ephemeral(Spec.governed("active_users", filters=[("activity__platform", "web")],
                                     period="last_week"), eng)
     assert web.ok and web.value is not None and web.value < total, (web, total)
 
@@ -61,7 +61,7 @@ def main() -> None:
     assert r.sql == sql and "retention" in r.definition
 
     # 5. the error path is a fact, not a crash
-    r = run_ephemeral(Spec.metric("no_such_metric", period="2026-Q2"), eng)
+    r = run_ephemeral(Spec.governed("no_such_metric", period="2026-Q2"), eng)
     assert not r.ok and r.value is None, r
 
     print("OK - run_ephemeral: metric scalar, derived compose, filtered slice, raw grouped, error "

@@ -8,19 +8,19 @@ the answer back, or None (standing down, or after constructing into the exit cal
 """
 from __future__ import annotations
 
-import re                                                                   # noqa: F401
+import re  # noqa: F401
 
-import evidence as claim_audit                                              # noqa: F401
+import evidence as claim_audit  # noqa: F401
 
 from ..core import trace
 from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage  # noqa: F401
-from ..guardrails import Act, Position, after, before                       # noqa: F401
-from ..guardrails import classify as _classify                              # noqa: F401
-from ..guardrails import grounding_check as _grounding                      # noqa: F401
-from ..core.numbers import bare_number, parse_numbers                            # noqa: F401
-from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles             # noqa: F401
-from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs                 # noqa: F401
-from ._common import GRACE, MAX_CORRECTIONS                                 # noqa: F401
+from ..core.numbers import bare_number, parse_numbers  # noqa: F401
+from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles  # noqa: F401
+from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs  # noqa: F401
+from ..guardrails import Act, Position, after, before  # noqa: F401
+from ..guardrails import classify as _classify  # noqa: F401
+from ..guardrails import grounding_check as _grounding  # noqa: F401
+from ._common import GRACE, MAX_CORRECTIONS  # noqa: F401
 
 _COMPOSE = trace.COMPOSE
 _leaf = trace.leaf
@@ -140,7 +140,8 @@ def ungrounded_unit(run, exit_call):
             unit_words.append(w)
         words = [w for w in unit_words if w not in _DROP]
         if words and words[-1][:4] not in stems:
-            head = words[-1]; break                    # an ungrounded unit — this is the one
+            head = words[-1]                           # an ungrounded unit — this is the one
+            break
     if head is None:
         return None                                    # no per-unit, or every unit grounds
     served = parse_numbers(after.served_text(exit_call.args)) if hasattr(after, "served_text") else []

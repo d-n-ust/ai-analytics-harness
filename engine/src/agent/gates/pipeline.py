@@ -13,8 +13,8 @@ constructing into the exit call in place, which is what the CONSTRUCT phase is f
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from . import claims, contract, disclosure, measure, segments
 

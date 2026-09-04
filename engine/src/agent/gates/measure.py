@@ -7,19 +7,19 @@ the answer back, or None (standing down, or after constructing into the exit cal
 """
 from __future__ import annotations
 
-import re                                                                   # noqa: F401
+import re  # noqa: F401
 
-import evidence as claim_audit                                              # noqa: F401
+import evidence as claim_audit  # noqa: F401
 
 from ..core import trace
 from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage  # noqa: F401
-from ..guardrails import Act, Position, after, before                       # noqa: F401
-from ..guardrails import classify as _classify                              # noqa: F401
-from ..guardrails import grounding_check as _grounding                      # noqa: F401
-from ..core.numbers import bare_number, parse_numbers                            # noqa: F401
-from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles             # noqa: F401
-from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs                 # noqa: F401
-from ._common import GRACE, MAX_CORRECTIONS                                 # noqa: F401
+from ..core.numbers import bare_number, parse_numbers  # noqa: F401
+from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles  # noqa: F401
+from ..core.tool_args import AnswerArgs, ClarifyArgs, RefuseArgs  # noqa: F401
+from ..guardrails import Act, Position, after, before  # noqa: F401
+from ..guardrails import classify as _classify  # noqa: F401
+from ..guardrails import grounding_check as _grounding  # noqa: F401
+from ._common import GRACE, MAX_CORRECTIONS  # noqa: F401
 
 _COMPOSE = trace.COMPOSE
 _leaf = trace.leaf
@@ -227,6 +227,7 @@ def answerability_gate(run, exit_call):
         v = _classify.answerability_via_graph(run.model, run.question, run.grounding.ontology)
     else:
         from warehouse import schema_text
+
         from ..core.rungs import capabilities
         con = getattr(run.grounding.toolbox, "con", None)
         sch = (schema_text(con, capabilities(run.grounding.rung).star,

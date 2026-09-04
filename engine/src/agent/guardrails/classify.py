@@ -26,7 +26,6 @@ import json
 
 from ..core.conversation import Conversation
 
-
 # Every classifier's behaviour-defining surface, registered AT DECLARATION (each classifier calls
 # `_register` beside its function), so the fingerprint can never silently miss one — the
 # hand-maintained list this replaces did exactly that once.
@@ -145,7 +144,8 @@ def _quoted_from(question: str, quote: str) -> bool:
     wrongly-accepted one loses the disclosure entirely, which is the silent failure. Whitespace and
     case are normalised; nothing else is, because a quote that needs interpretation is not a quote.
     """
-    norm = lambda s: " ".join(str(s or "").lower().split())
+    def norm(s):
+        return " ".join(str(s or "").lower().split())
     q, whole = norm(quote), norm(question)
     if not q or q not in whole:
         return False

@@ -13,9 +13,7 @@ lives in the agent; here we test only what the module owns: the deterministic se
 from __future__ import annotations
 
 import duckdb
-
-from ontology.graph import (COMPUTABLE, INSTRUMENTED, UNINSTRUMENTED, MartsOntology, island_source,
-                            joinable)
+from ontology.graph import COMPUTABLE, INSTRUMENTED, UNINSTRUMENTED, MartsOntology, island_source, joinable
 
 # A `source` shaped like what the semantic layer's ontology_source() returns, and the columns each
 # table would report. `spend` exists but is related to nothing — the case a node-only existence
@@ -243,7 +241,9 @@ def test_build_fetches_columns_and_matches_the_pure_core():
 
 def test_build_rejects_a_measure_that_is_not_a_column():
     """The honesty check must hold through the shell: a measure absent from the real table raises."""
-    con = duckdb.connect(); con.execute("create schema m"); con.execute("create table m.t(a int)")
+    con = duckdb.connect()
+    con.execute("create schema m")
+    con.execute("create table m.t(a int)")
     src = {"entities": {"e": {"table": "t", "measures": ("not_a_column",)}}, "metrics": {}}
     try:
         MartsOntology.build(con, "m", src)

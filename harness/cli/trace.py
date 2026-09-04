@@ -20,9 +20,8 @@ import shutil
 import sys
 import textwrap
 
-from agent.guardrails import (DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, GuardrailSet,
-                              Position, parse_cell)
 from agent.core.protocol import split_config
+from agent.guardrails import DECOMPOSE_TOOLS, GOVERNED_TOOLS, GUARDRAILS, GuardrailSet, Position, parse_cell
 from cli.style import cut as _short
 from cli.style import paint as _paint  # noqa: F401
 from cli.style import use_colour as _use_colour  # noqa: F401
