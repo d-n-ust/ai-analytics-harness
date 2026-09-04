@@ -163,6 +163,13 @@ def test_time_grain_binds_metric_time_so_a_weekly_ask_is_not_returned_daily():
     figure reported as the sum of its daily distinct counts, a plausible number for the wrong
     grain. The fix binds a bare metric_time to the requested grain; an explicit metric_time__day is
     left alone, so a real by-day breakdown still works. NO LLM."""
+    try:
+        import metricflow  # noqa: F401
+    except ImportError:
+        # The no-LLM script run (`bench test`, CI's plain `uv sync`) has no metricflow group;
+        # the pytest job installs it and runs this test in full. Skip here rather than fail.
+        print("  skip  test_time_grain_binds_metric_time: metricflow not installed")
+        return
     from semantic.metricflow_engine import MetricFlowLayer
     from warehouse.warehouse import open_warehouse, set_star
 

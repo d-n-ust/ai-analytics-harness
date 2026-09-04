@@ -73,13 +73,14 @@ jobs:
       # `--package`, because the root is a workspace shell with no build backend: `uv build` there
       # falls back to setuptools' legacy path, which refuses a flat layout holding five top-level
       # directories, and the job died at step one.
-      # The engine depends on the semantic and warehouse packages by NAME, and they live in this
-      # repo rather than in a registry, so installing the engine wheel alone cannot resolve. Build
-      # all three and install all three.
+      # The engine depends on the semantic, warehouse and ontology packages by NAME, and they live
+      # in this repo rather than in a registry, so installing the engine wheel alone cannot resolve.
+      # Build all four and install all four.
       - name: Build the engine wheel and the packages it depends on
         run: |
           uv build --wheel --package ai-analytics-warehouse --out-dir dist/
           uv build --wheel --package ai-analytics-semantic --out-dir dist/
+          uv build --wheel --package ai-analytics-ontology --out-dir dist/
           uv build --wheel --package ai-analytics-engine --out-dir dist/
 
       # Run from OUTSIDE the checkout. Python puts the working directory on sys.path, so from the
@@ -92,12 +93,14 @@ jobs:
           uv run --isolated --no-project \
             --with "$GITHUB_WORKSPACE"/dist/ai_analytics_warehouse-*.whl \
             --with "$GITHUB_WORKSPACE"/dist/ai_analytics_semantic-*.whl \
+            --with "$GITHUB_WORKSPACE"/dist/ai_analytics_ontology-*.whl \
             --with "$GITHUB_WORKSPACE"/dist/ai_analytics_engine-*.whl \
             python - <<'PY'
           import pathlib
-          import agent.loop, agent.guardrails, agent.prompts as prompts
+          import agent.runtime.loop, agent.guardrails, agent.runtime.prompts as prompts
           import semantic.semantic, semantic.tree
           import evidence
+          from ontology import MartsOntology  # noqa: F401 — the engine's answerability graph
           from warehouse.environment import GRAIN_DIR, PRESETS_DIR
 
           # Package DATA travels with the package, or the failure is silent: a prompt assembles
