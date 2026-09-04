@@ -196,7 +196,7 @@ function-local imports, and fails on any edge in the wrong direction.
   their n. Re-running a cell moves it a point or two, and the write-ups print two runs of the same
   configuration so a reader can see how much.
 
-Every published figure lives in [`results/published/2026-07/`](results/published/2026-07/) — 70
+Every published figure lives in [`results/published/2026-07-reliability-ladder/`](results/published/2026-07-reliability-ladder/) — 70
 cells across the 12 runs the write-ups cite, regenerable with
 `harness/evals/components/publish_metrics.py`. The four runs whose raw rows back a claim the tables
 cannot express are in `2026-07/runs/`, gzipped with traces intact.

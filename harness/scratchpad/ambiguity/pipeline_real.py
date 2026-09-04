@@ -28,7 +28,7 @@ import pipeline  # noqa: E402 — sys.path is extended just above so this module
 
 REPO = HERE.parents[3]
 LAYER = REPO / "engine/src/semantic/semantic_layer.yml"
-RUN = REPO / "results/published/2026-07/runs/20260726-224953-gpt-5-mini.raw.jsonl.gz"
+RUN = REPO / "results/published/2026-07-reliability-ladder/runs/20260726-224953-gpt-5-mini.raw.jsonl.gz"
 CASES = REPO / "harness/evals/cases"
 OUT_MD = HERE.parent / "09_pipeline_real.md"
 

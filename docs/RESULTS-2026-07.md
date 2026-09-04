@@ -105,7 +105,7 @@ Two limits, stated because they decide what this does and does not settle:
 ### The evidence behind every number here
 
 `runs/` is gitignored — 27 runs in one day, and per-run output is a dev iteration. What is
-tracked is the **measurements**, in `results/published/2026-07/`:
+tracked is the **measurements**, in `results/published/2026-07-reliability-ladder/`:
 
 | file | grain | what it holds |
 |---|---|---|

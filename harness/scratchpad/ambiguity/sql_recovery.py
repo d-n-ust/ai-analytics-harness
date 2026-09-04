@@ -27,7 +27,7 @@ from sqlglot.optimizer.scope import traverse_scope
 
 HERE = pathlib.Path(__file__).resolve()
 REPO = HERE.parents[3]
-RUNS = sorted(glob.glob(str(REPO / "results/published/2026-07/runs/*.raw.jsonl.gz")))
+RUNS = sorted(glob.glob(str(REPO / "results/published/2026-07-reliability-ladder/runs/*.raw.jsonl.gz")))
 OUT = HERE.parent / "03_sql_recovery.md"
 _SQL_IN_RESULT = re.compile(r"\[sql\]\s*(SELECT[\s\S]+?)(?:\n\[|$)", re.I)
 

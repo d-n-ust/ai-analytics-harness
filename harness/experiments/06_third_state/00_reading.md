@@ -5,7 +5,7 @@ The brief (`three-state-experiment-brief.md`) asks for a stop-and-report after s
 after step 2 ("size Pile C against the noise band"). This is both reports. No code has been changed.
 
 Every number below is computed from the repository as it stands at `c6ce983`, from the 5,985
-archived rows in `results/published/2026-07/runs/` and from the layer YAML. Nothing is typed from
+archived rows in `results/published/2026-07-reliability-ladder/runs/` and from the layer YAML. Nothing is typed from
 memory.
 
 ---
@@ -15,7 +15,7 @@ memory.
 | brief says | repository |
 |---|---|
 | `evals/selective.py` | `harness/evals/selective.py` (PR #10 modularised the tree) |
-| `results/published/2026-07/cells.csv` | correct, and it already carries an `outcome_clarify` column |
+| `results/published/2026-07-reliability-ladder/cells.csv` | correct, and it already carries an `outcome_clarify` column |
 | "no question in the suite has clarification as its correct outcome" | half true. `expect.type: clarify` exists in `schema.json` and in `grade.py` and is used by **zero** cases. `expect.type: ambiguous` exists and is used by **three** cases, where a refusal *or* a clarification is graded correct |
 | "the `clarify` terminal tool already exists in the agent's action space" | correct, and it is offered **unconditionally** at every rung and every guardrail cell, including R0 |
 | run-to-run spread: BA 86.5–90.0%, coverage 79.5–85.9% | the published spread is wider: BA 84.5–91.9%, coverage 75.0–87.2%. It is also **not a clean replication** — see §5 |

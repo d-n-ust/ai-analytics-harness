@@ -13,7 +13,7 @@ question: >-
   When a static scan flags confusable definitions in a warehouse and they are fixed, how much does
   the agent's wrong-grounding rate fall, and what share of the harm is left in problems the scan
   cannot read?
-status: done
+status: in_progress
 
 article:
   slug: why-ai-analysts-pick-the-wrong-metric
@@ -22,6 +22,7 @@ article:
 runs: code
 
 evidence:
+  - results/published/2026-08-preflight-ambiguity/   # the published board: scan 11->0, and the before/after agent (final 2026-08-21 run)
   - one_warehouse/            # THE experiment: one warehouse, both floors, one agent
   - one_warehouse/scan.md     # the static dose: 11 findings before, 0 after
   - one_warehouse/result__gpt-5-mini.json
