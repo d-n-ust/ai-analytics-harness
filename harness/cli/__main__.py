@@ -319,6 +319,12 @@ def cmd_report(a):
     print(f"re-rendered {run / 'summary.md'} and summary.json")
 
 
+def cmd_gate(a):
+    """Prove the measurement pipeline on three questions before a sweep is paid for."""
+    from evals.gate import gate
+    raise SystemExit(gate(model=a.model, cell=a.cell))
+
+
 def cmd_test(a):
     import subprocess
     import sys
@@ -488,6 +494,13 @@ def main() -> None:
     sp.set_defaults(func=cmd_ambiguity)
 
     sub.add_parser("test", help="run the no-LLM test suite").set_defaults(func=cmd_test)
+
+    # The spend gate. Three questions, one per pile, through the same command the sweep runs.
+    g = sub.add_parser("gate", help="3 questions x 1 rep: prove the pipeline before paying for a sweep")
+    g.add_argument("--model", default=None,
+                   help="go live against this model (~$0.01). Default: the mock model, free.")
+    g.add_argument("--cell", default=None, help="guardrail cell, e.g. R3+typed_clarify")
+    g.set_defaults(func=cmd_gate)
 
     args = p.parse_args()
     try:
