@@ -51,7 +51,11 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 # v19: `suite` — the question set's fingerprint. `surface_fingerprint` said what the model was
 #      shown and nothing said which version of the suite asked, so two runs weeks apart looked
 #      comparable whatever had happened to the questions in between.
-ROW_SCHEMA_VERSION = 19
+# v20: `second_turn` and `resolution` — what a clarification actually bought. Until this ran, a
+#      round trip was priced at half an episode by assumption, which flattered every arm that buys
+#      safety by asking. None on a run that did not clarify, which is not the same as a round trip
+#      that bought nothing.
+ROW_SCHEMA_VERSION = 20
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:

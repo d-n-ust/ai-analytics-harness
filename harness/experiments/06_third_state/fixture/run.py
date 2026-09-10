@@ -31,6 +31,7 @@ from agent.runtime.loop import Answer, run_agent
 from agent.runtime.providers import get_model, get_verifier
 from evals.gold import _validate, compute_gold, stamp_suite
 from evals.row import measured_row
+from evals.second_turn import follow_up
 from evals.matrix import render as render_matrix
 from evals.selective import selective
 from warehouse.warehouse import cursor as _shared_cursor
@@ -287,13 +288,24 @@ def main() -> None:
                     print(f"\ntools offered ({len(offered)}): {', '.join(offered)}")
                     print("metrics in the catalogue: "
                           f"{', '.join(sorted(grounding.toolbox.semantic.metrics))}\n")
+            def _ask(text, _g=grounding):
+                try:
+                    return run_agent(text, _g, model, verifier_model=verifier)
+                except Exception as exc:                                   # noqa: BLE001
+                    return Answer(text, RUNG, model.spec.name, None,
+                                  outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+
             t0 = time.perf_counter()
-            try:
-                answer = run_agent(case["question"], grounding, model, verifier_model=verifier)
-            except Exception as exc:                                       # noqa: BLE001
-                answer = Answer(case["question"], RUNG, model.spec.name, None,
-                                outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+            answer = _ask(case["question"])
             elapsed_s = time.perf_counter() - t0
+            # THE SECOND TURN. A clarification is not a finished episode: someone reads it, answers
+            # it and asks again. Until this ran, that round trip was priced by assumption at half an
+            # episode, which flatters every arm that buys safety by asking. Timed separately, so the
+            # row's own latency stays the first attempt's and the episode is the sum.
+            t1 = time.perf_counter()
+            follow = follow_up(answer, case, _ask)
+            if follow is not None:
+                follow["elapsed_s"] = round(time.perf_counter() - t1, 3)
         finally:
             cur.close()
         pile = _PILE[case["expect"]["type"]]
@@ -307,7 +319,11 @@ def main() -> None:
             # outcome does. `repairs_total` keeps the archived key's meaning (constructions
             # included), beside the canonical `repairs` list it is derived from.
             tool_errors=sum(1 for st in answer.steps if st.get("error")),
-            repairs_total=len(answer.repairs))
+            repairs_total=len(answer.repairs),
+            # What the clarification bought, and None on every run that did not clarify — which is
+            # the difference between "the round trip failed" and "there was no round trip".
+            second_turn=follow,
+            resolution=(follow or {}).get("resolution"))
         if trace:                       # one named case, one rep: show the whole run, not a line
             with print_lock:
                 demonstrate(answer, case, golds[case["id"]], row)

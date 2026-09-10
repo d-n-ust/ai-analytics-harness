@@ -115,7 +115,8 @@ def gate(model: str | None = None, cell: str | None = None) -> int:
     # ---- the row carries what a measurement needs ------------------------------------------
     REQUIRED = ["input_tokens", "output_tokens", "cached_tokens", "cost_usd", "tool_calls",
                 "model_calls", "iterations", "elapsed_s", "round_trips", "schema_version",
-                "correct", "bucket", "outcome", "steps", "turns", "acts"]
+                "correct", "bucket", "outcome", "steps", "turns", "acts", "suite",
+                "second_turn", "resolution"]
     missing = sorted({f for r in rows for f in REQUIRED if f not in r})
     c(not missing, "every telemetry and verdict field present",
       str(missing) if missing else f"all {len(REQUIRED)} present")
@@ -154,6 +155,24 @@ def gate(model: str | None = None, cell: str | None = None) -> int:
                  if r["round_trips"] != (1 if r["outcome"] == "clarify" else 0)]
     c(not bad_trips, "round trips priced by outcome",
       str(bad_trips) if bad_trips else "clarify=1, everything else=0")
+
+    # ---- the second turn --------------------------------------------------------------------
+    # Conditional on behaviour, deliberately: whether the agent clarifies is the experiment's
+    # subject, not the pipeline's. What must hold is that IF it clarified, the round trip was
+    # answered and scored, and that a run which did not clarify records None rather than a
+    # resolution nobody measured.
+    clarified = [r for r in rows if r["outcome"] == "clarify"]
+    quiet = [r for r in rows if r["outcome"] != "clarify"]
+    c(all(r.get("second_turn") is None and r.get("resolution") is None for r in quiet),
+      "no phantom round trips", f"{len(quiet)} runs did not clarify")
+    if clarified:
+        ok = all((r.get("second_turn") or {}).get("resolution")
+                 in ("resolved_correct", "resolved_wrong", "unresolved") for r in clarified)
+        c(ok, "every clarification was answered and scored",
+          "; ".join(f"{r['qid']}={r.get('resolution')}" for r in clarified))
+    else:
+        c(True, "second turn (not exercised)",
+          "nothing clarified at this cell — try --cell R3+typed_clarify+ambiguity_check")
 
     # ---- the metrics read the rows ---------------------------------------------------------
     s = selective(rows)

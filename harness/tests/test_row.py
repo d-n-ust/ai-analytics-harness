@@ -44,6 +44,9 @@ V19_FIELDS = {
     "suite",              # which version of the question set asked
 }
 
+# Set by the fixture runner as context; absent on a row from a runner that does not follow up.
+V20_FIELDS = {"second_turn", "resolution"}
+
 V18_FIELDS = {
     "cost_usd",           # per row, so cost splits by pile and by outcome, not only by cell
     "round_trips",        # what a clarification costs the reader, as a column not a footnote
