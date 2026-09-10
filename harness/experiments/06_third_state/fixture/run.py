@@ -21,6 +21,7 @@ import json
 import pathlib
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import yaml
@@ -29,7 +30,7 @@ from agent.guardrails import parse_cell
 from agent.runtime.loop import Answer, run_agent
 from agent.runtime.providers import get_model, get_verifier
 from evals.gold import _validate, compute_gold
-from evals.grade import grade
+from evals.row import measured_row
 from evals.matrix import render as render_matrix
 from evals.selective import selective
 from warehouse.warehouse import cursor as _shared_cursor
@@ -282,71 +283,36 @@ def main() -> None:
                     print(f"\ntools offered ({len(offered)}): {', '.join(offered)}")
                     print("metrics in the catalogue: "
                           f"{', '.join(sorted(grounding.toolbox.semantic.metrics))}\n")
+            t0 = time.perf_counter()
             try:
                 answer = run_agent(case["question"], grounding, model, verifier_model=verifier)
             except Exception as exc:                                       # noqa: BLE001
                 answer = Answer(case["question"], RUNG, model.spec.name, None,
                                 outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+            elapsed_s = time.perf_counter() - t0
         finally:
             cur.close()
-        graded = grade(answer, case, golds[case["id"]])
+        pile = _PILE[case["expect"]["type"]]
+        row = measured_row(
+            answer, case, golds[case["id"]], elapsed_s=elapsed_s,
+            # What THIS runner varies. Spelled the way the sweeps and the studies spell it, so one
+            # report, one selective score and one confusion matrix read all three.
+            rung=RUNG, config=args.cell or "loop default", rep=rep,
+            # Fixture-only, and both are counts a fix is measured BY rather than verdicts: a change
+            # aimed at tool errors is judged on tool errors, which vary far less than the graded
+            # outcome does. `repairs_total` keeps the archived key's meaning (constructions
+            # included), beside the canonical `repairs` list it is derived from.
+            tool_errors=sum(1 for st in answer.steps if st.get("error")),
+            repairs_total=len(answer.repairs))
         if trace:                       # one named case, one rep: show the whole run, not a line
             with print_lock:
-                demonstrate(answer, case, golds[case["id"]], graded)
-        pile = _PILE[case["expect"]["type"]]
+                demonstrate(answer, case, golds[case["id"]], row)
         with print_lock:
-            mark = "OK  " if graded["correct"] else "MISS"
+            mark = "OK  " if row["correct"] else "MISS"
             served = "" if answer.declared_value is None else f"{answer.declared_value:,.1f}"
             print(f"  rep {rep + 1}  pile {pile}  {case['id']:40} {answer.outcome:8} {mark} {served}"
                   + (f"  {answer.error}" if answer.error else ""))
-        # Recorded because the score alone cannot separate "the mechanism worked" from "the model
-        # had a good day": a fix aimed at tool errors is measured by tool errors, which vary far
-        # less than the graded outcome does.
-        return rep, idx, {**graded, "outcome": answer.outcome, "id": case["id"],
-                          # Header fields cli/trace.py needs to render a stored row without the
-                          # run that produced it. A trace you can only see live is a trace you
-                          # cannot go back to when a number looks wrong.
-                          # The exception text, because a row that says outcome=error and nothing
-                          # else cannot be diagnosed without re-running, and re-running is a
-                          # different sample.
-                          "error": answer.error,
-                          "question": case["question"], "rung": RUNG, "model": model.spec.name,
-                          "config": args.cell or "loop default",
-                          "rep": rep, "declared": answer.declared_value,
-                          # The coded reason/missing a decline carried, so a refusal's CODE is
-                          # visible in the stored row (grade.py already grades on answer.reason;
-                          # this makes it inspectable without re-running).
-                          "reason": answer.reason, "missing": answer.missing,
-                          # The clarify options, with their groundings under grounded_candidates.
-                          # Without this the trace cannot show what the model offered — the gap
-                          # that made a laundered clarify look reason-less until it was stored.
-                          "candidates": list(getattr(answer, "candidates", ()) or ()),
-                          "source_metric": answer.source_metric,
-                          # The typed direction slot, so direction_vs_evidence's effect is
-                          # inspectable in the stored row (the grader reads it off the Answer).
-                          "direction": getattr(answer, "direction", None),
-                          "tool_calls": len(answer.steps), "model_calls": answer.model_calls,
-                          "tool_errors": sum(1 for s in answer.steps if s.get("error")),
-                          # hand_backs = corrections that cost a round trip; repairs_total
-                          # keeps the old key's meaning (constructions included)
-                          "handbacks": answer.hand_backs,
-                          "scope_shadow": answer.scope_shadow,
-                          "repairs_total": len(answer.repairs),
-                          "acts": list(answer.acts or []),
-                          # The served TEXT, because several checks are about what the reader
-                          # receives and cannot be evaluated from a graded row without it.
-                          "answer_text": answer.answer, "explanation": answer.explanation,
-                          # A compact trace on the row, so a failure can be diagnosed from stored
-                          # results instead of re-run. Re-running gives a DIFFERENT sample, which
-                          # is the wrong thing to diagnose when the question is why THIS run failed.
-                          "steps": [{"tool": s.get("tool"), "args": s.get("args"),
-                                     "error": bool(s.get("error")),
-                                     "blocked": bool(s.get("blocked_by")),
-                                     # the typed records gates decide on (answerability_gate reads
-                                     # kind=raw here); a row without them cannot explain the gate
-                                     "evidence": s.get("evidence") or None,
-                                     "result": str(s.get("result") or s.get("error") or "")[:300]}
-                                    for s in answer.steps]}
+        return rep, idx, row
 
     tasks = [(rep, i, c) for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:
@@ -383,7 +349,7 @@ def main() -> None:
                        and (s.get("args") or {}).get("metric") in semi_additive for s in steps)
         return sql_sum and distinct
 
-    summed = sorted({r["id"] for r in rows if _summed(r)})
+    summed = sorted({r["qid"] for r in rows if _summed(r)})
     if summed:
         print(f"  semi-additive SUMs (run_sql sum + a distinct-count metric): "
               f"{sum(1 for r in rows if _summed(r))}  {', '.join(summed)}")

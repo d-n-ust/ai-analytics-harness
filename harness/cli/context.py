@@ -64,7 +64,7 @@ def _args(args) -> str:
 
 def _rows(run: dict, arm: str | None, qid: str | None) -> list[dict]:
     return [r for r in run["rows"]
-            if (arm is None or r["arm"] == arm) and (qid is None or r["id"] == qid)]
+            if (arm is None or r["arm"] == arm) and (qid is None or r["qid"] == qid)]
 
 
 def render_ledger(run: dict, blobs: dict, arm=None, qid=None, source=None, full=False) -> str:
@@ -72,10 +72,10 @@ def render_ledger(run: dict, blobs: dict, arm=None, qid=None, source=None, full=
     out: list[str] = []
     for r in _rows(run, arm, qid):
         audit = r.get("context_audit") or []
-        ok = (r.get("grade") or {}).get("correct")
-        picked = r.get("picked") or "—"
+        ok = r.get("correct")
+        picked = r.get("source_metric") or "—"
 
-        out.append(paint("┌─ ", "dim") + paint(f"{r['arm']} · {r['id']}", "bold"))
+        out.append(paint("┌─ ", "dim") + paint(f"{r['arm']} · {r['qid']}", "bold"))
         out.append(paint("│  ", "dim") + f"{'picked':8s} {picked:22s} "
                    + (paint("✓ correct", "ok") if ok else paint("✗ miss", "bad")))
         out.append(paint("│  ", "dim") + f"{'context':8s} "
@@ -144,7 +144,7 @@ def render_ledger(run: dict, blobs: dict, arm=None, qid=None, source=None, full=
     # this view defaults to the NEWEST probe run, and a one-arm run is a normal thing to have made
     # last. Say what is actually in the file rather than leaving that to be guessed.
     have_arms = sorted({r["arm"] for r in run["rows"]})
-    have_qids = sorted({r["id"] for r in run["rows"]})
+    have_qids = sorted({r["qid"] for r in run["rows"]})
     return (paint("no rows matched", "warn")
             + paint(f"\n  this run has arms: {', '.join(have_arms)}"
                     f"\n  and questions:     {', '.join(have_qids)}"

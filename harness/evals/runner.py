@@ -29,6 +29,7 @@ from warehouse.warehouse import open_warehouse, set_star
 from . import report
 from .gold import compute_gold, load_questions
 from .grade import grade
+from .row import measured_row
 
 # Runs are output, not evidence. `results/` holds the curated, tracked measurements that
 # published essays cite by GitHub-relative path; `runs/` holds everything a run regenerates, and
@@ -138,84 +139,26 @@ def run_experiment(mock: bool = False, models=("gpt-5.6-terra", "gpt-5.4-mini"),
             surface = grounding.fingerprint()
         finally:
             cur.close()
-        g = grade(ans, q, golds[q["id"]])
-        row = {
-            "qid": q["id"], "tier": q["tier"], "rung": rung, "rrung": rrung,
-            "config": config_label,
-            "model": model_name, "rep": rep,
-            "question": q["question"], "gold": golds[q["id"]],
-            "answer": ans.answer, "explanation": ans.explanation,
-            "outcome": ans.outcome, "reason": ans.reason, "missing": ans.missing,
-            # Which output guardrail downgraded the answer, when one did — the reason code
-            # cannot say on its own, because the judge shares governed_numbers' code.
-            "refused_by": ans.refused_by,
-            "correct": g["correct"], "executed": g["executed"],
-            "abstained": g["abstained"], "confident_wrong": g["confident_wrong"],
-            "wrong_metric": g["wrong_metric"],
-            "fabricated": g["fabricated"], "off_governance": g.get("off_governance", False),
-            "wrong_scope": g.get("wrong_scope", False),
-            "needs_judge": g.get("needs_judge", False),
-            "bucket": g["bucket"], "expected_refuse": g["expected_refuse"],
-            "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
-            "source_metric": ans.source_metric,
-            # The typed direction slot (answer_spec) and the clarify candidates: both are measured
-            # on the Answer and must reach the row, or they read as null measurements.
-            "direction": ans.direction,
-            "candidates": list(ans.candidates),
-            # Which governed result the answer names. Provenance is a lookup when this is
-            # present and a flagged guess when it is not, so its adoption rate is itself worth
-            # measuring — a declared field the model ignores is not a guarantee.
-            "sources": list(ans.sources),
-            "declared_value": ans.declared_value,
-            # True when the number came from the answer text rather than the typed
-            # field — so "the model forgot to declare it" stays measurable after
-            # the recovery closed the hole it used to open.
-            "value_recovered": ans.value_recovered,
-            # Whether the answer tool carried a typed `value` at all. Without it a re-grade
-            # cannot tell "declared nothing" from "was never asked to declare", and would read
-            # the prose in one case and the declaration in the other.
-            "typed_value": ans.typed_value,
-            # What the answer committed to, and whether each commitment resolved. The whole
-            # point of the rung: an answer's assertions are countable, not just its verdict.
-            "claims": list(ans.claims),
-            "claim_audit": ans.claim_audit,
-            "claim_retries": ans.claim_retries,
-            "hand_backs": ans.hand_backs,
-            "scope_shadow": ans.scope_shadow,
-            # The before-state of each handback. `claims` above is the after-state; the pair is
-            # what makes "repaired the citation" and "deleted the sentence" different rows.
-            "repairs": list(ans.repairs),
-            "verifier_verdict": ans.verifier_verdict, "score": g["score"],
-            "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
-            # How many times round the orchestrator loop. A multi-step loop multiplies
-            # per-step error, so the step count is the denominator for that — and it was
-            # carried on the Answer, threaded through every exit, and then dropped here,
-            # leaving `iterations` null in every row ever written.
-            "iterations": ans.iterations,
-            "tool_calls": ans.tool_calls, "model_calls": ans.model_calls, "input_tokens": ans.input_tokens,
-            "output_tokens": ans.output_tokens, "cached_tokens": ans.cached_tokens, "error": ans.error,
-            "elapsed_s": round(elapsed_s, 3), "steps": ans.steps,
-            # One entry per model call: where a run's latency actually goes, which the tool
-            # steps alone cannot show.
-            "turns": ans.turns,
-            # What every guardrail did, in order — so "which ones actually fired" is a count
-            # over stored runs rather than a re-derivation from the config label.
-            "acts": ans.acts,
-            "schema_version": report.ROW_SCHEMA_VERSION,
+        row = measured_row(
+            ans, q, golds[q["id"]], elapsed_s=elapsed_s,
+            # What THIS runner varies, and nothing else. Everything about the run itself — the
+            # grade, the trace, the telemetry — belongs to the row builder, so a field cannot be
+            # spelled one way here and another way in a study.
+            rung=rung, rrung=rrung, config=config_label, rep=rep,
             # What the model was actually shown, hashed — so a surface edit between runs is
             # visible in the rows rather than inferred from the git log.
-            "surface_fingerprint": surface,
-            "main_reasoning": getattr(model, "reasoning", None),
-            "verifier_model": verifier_used, "verifier_reasoning": verifier_reasoning,
-            "sampling": model.sampling, "verifier_sampling": verifier_model.sampling,
-            "verifier_stance": verifier_stance,
-            "claim_framing": proto.framing,
+            surface_fingerprint=surface,
+            main_reasoning=getattr(model, "reasoning", None),
+            verifier_model=verifier_used, verifier_reasoning=verifier_reasoning,
+            sampling=model.sampling, verifier_sampling=verifier_model.sampling,
+            verifier_stance=verifier_stance,
+            claim_framing=proto.framing,
             # WHICH declarations were asked for. `claim_framing` says how they were asked for and
             # says nothing about whether they were asked at all — so without this a run that
             # declared nothing and a run that declared everything both stamp "rule".
-            "protocol": proto.label().lstrip("/") or "none",
-        }
-        mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if g["correct"] else "✗")
+            protocol=proto.label().lstrip("/") or "none",
+        )
+        mark = {"refuse": "~", "clarify": "?"}.get(ans.outcome, "✓" if row["correct"] else "✗")
         with write_lock:
             rows.append(row)
             raw_f.write(json.dumps(row, default=str) + "\n")

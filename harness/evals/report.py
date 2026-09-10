@@ -46,14 +46,9 @@ from agent.runtime.grounding import RUNG_NAMES
 
 from .grade import WRONG_COST
 
-# Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
-# surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 17  # v17: rendered measurements carry `declared_text` (what the model
-                         # wrote) beside `text` (what the harness rendered). v16 rows mean
-                         # `text` IS the model's; pooling the two compares model prose
-                         # against rendered prose and calls the difference a trend.
-
-CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
+# Re-exported from the row builder, which stamps it. Two copies of a version number is how a row
+# comes to claim a schema the reader does not implement, so there is one and this is not it.
+from .row import ROW_SCHEMA_VERSION
 
 
 # --------------------------------------------------------------------------- #
@@ -235,18 +230,16 @@ def _std(vals) -> float | None:
 
 
 def _usd(rows) -> float:
-    """Real cost when cache hits are recorded: the cached slice of input bills at 10%, the rest at
-    full price. Rows without `cached_tokens` (pre-v4, or non-OpenAI) treat cached as 0 → upper bound."""
-    total = 0.0
-    for r in rows:
-        spec = MODEL_SPECS.get(r["model"])
-        if spec:
-            cached = r.get("cached_tokens", 0) or 0
-            fresh = max(0, r["input_tokens"] - cached)
-            total += (fresh * spec.input_price
-                      + cached * spec.input_price * CACHED_INPUT_DISCOUNT
-                      + r["output_tokens"] * spec.output_price) / 1e6
-    return total
+    """What a set of rows cost, summed.
+
+    The per-row arithmetic belongs to the model's own price (`ModelSpec.cost`), not here: this
+    total and the `cost_usd` stamped on each row have to agree, and the only way to guarantee
+    that is for both to call the same function. Rows are skipped rather than guessed when the
+    model is not in the catalog — an unknown model has no price, and a zero would read as free.
+    """
+    return sum(spec.cost(r["input_tokens"], r["output_tokens"], r.get("cached_tokens", 0) or 0)
+               for r in rows
+               if (spec := MODEL_SPECS.get(r["model"])) is not None)
 
 
 def _prices_estimated(models) -> bool:
