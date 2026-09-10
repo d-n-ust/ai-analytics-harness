@@ -49,6 +49,7 @@ from .grade import WRONG_COST
 # Re-exported from the row builder, which stamps it. Two copies of a version number is how a row
 # comes to claim a schema the reader does not implement, so there is one and this is not it.
 from .row import ROW_SCHEMA_VERSION
+from .stats import MIN_DISCORDANT as STATS_MIN_DISCORDANT
 
 
 # --------------------------------------------------------------------------- #
@@ -218,6 +219,28 @@ def _rates(rs) -> dict:
         "precision": sum(bool(r.get("correct")) for r in answered) / len(answered) if answered else None,
         "grounded": 1 - _ungrounded(una) / len(una) if una else None,
     }
+
+
+def _uncertainty(rows) -> dict:
+    """Cluster-bootstrap intervals for the three selective rates, plus the floor for this suite.
+
+    Computed here rather than at render time because `summary.json` is the machine contract: an
+    analysis reading the JSON must get the interval, not have to re-derive it from rows it may not
+    have. NaN survives into the JSON as null, which is the honest reading of a pile nobody asked.
+    """
+    from .selective import selective
+    from .stats import detectable, interval
+
+    def _clean(e):
+        return {k: (None if isinstance(v, float) and v != v else v) for k, v in e.as_dict().items()}
+
+    out = {name: _clean(interval(rows, fn)) for name, fn in (
+        ("coverage", lambda rs: selective(rs).coverage),
+        ("silent_error", lambda rs: selective(rs).silent_error),
+        ("balanced_accuracy", lambda rs: selective(rs).balanced_accuracy))}
+    n_q = out["silent_error"]["n_questions"]
+    out["min_detectable_difference"] = round(detectable(n_q), 4) if n_q else None
+    return out
 
 
 def _std(vals) -> float | None:
@@ -411,6 +434,11 @@ def aggregate(rows) -> dict:
                 "risk": (1 - precision) if precision is not None else None,
                 "answered": len(answered), "answerable": len(ans_valid),
             },
+            # The three headline rates with a cluster-bootstrap interval over QUESTIONS. A rate
+            # published without one invites a reader to treat two point estimates as a difference,
+            # which is the error that put several comparisons in findings.md §23 inside the noise
+            # band without anyone noticing. `n_questions` is the real sample size; `n` above is rows.
+            "uncertainty": _uncertainty(rs),
             "correctness_axes": {
                 "groundedness": groundedness,
                 "answer_correctness": answer_correctness,
@@ -593,19 +621,45 @@ def render_markdown(summary: dict) -> str:
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
 
-    # 1b. Reproducibility across reps — is a rung step real, or run-to-run noise? (only with reps > 1)
-    if meta.get("reps", 1) > 1:
-        for m in meta["models"]:
-            L += ["", f"## Reproducibility across reps — {m}  ({meta['reps']} reps)", "",
-                  "_Precision and grounded measured **separately per rep**, then mean ±sample-std. If two "
-                  "rungs' means sit within each other's ±band, the step between them is inside the noise._",
-                  "", f"| {axis} | precision / rep | mean ±sd | grounded / rep | mean ±sd |",
-                  "|" + "---|" * 5]
-            for c in _cells_for(summary, m):
-                rp = summary["cells"][m][c]["per_rep"]
-                p_per, p_ms = _band(rp["precision"])
-                g_per, g_ms = _band(rp["grounded"])
-                L.append(f"| {c} | {p_per} | {p_ms} | {g_per} | {g_ms} |")
+    # 1b. Uncertainty — is a step between two cells real, or run-to-run noise?
+    #
+    # This replaces a per-rep mean ±sample-std, which was wrong twice. It resampled REPS, and reps
+    # of one question are correlated, so it understated the interval by roughly sqrt(reps). And it
+    # asked the reader to compare two absolute bands, which is a conservative test that hides real
+    # differences and, worse, invites treating non-overlap as proof. The interval below resamples
+    # QUESTIONS; the floor beneath it says what this suite can resolve at all.
+    for m in meta["models"]:
+        cells_m = _cells_for(summary, m)
+        first_u = summary["cells"][m][cells_m[0]].get("uncertainty") if cells_m else None
+        if not first_u:
+            continue
+        floor = first_u.get("min_detectable_difference")
+        L += ["", f"## Uncertainty — {m}", "",
+              "_95% cluster bootstrap, resampling **questions** rather than rows: reps of one "
+              "question are correlated, so rows are not independent observations and **n_q is the "
+              "real sample size**. Two cells whose intervals overlap are not thereby the same; for "
+              "a difference, use the paired comparison, which cancels question difficulty._", ""]
+        if floor:
+            L += [f"_**Floor: {floor:.3f}.** Fewer than {STATS_MIN_DISCORDANT} questions can "
+                  "disagree between two cells and still reach p < 0.05, so a per-question "
+                  f"difference below {floor:.3f} cannot be called a result at this n however many "
+                  "reps are run. Repetition adds precision within a question and never adds a "
+                  "question._", ""]
+        L += [f"| {axis} | coverage | silent error | balanced accuracy | n_q | rows |",
+              "|" + "---|" * 6]
+        for c in cells_m:
+            u = summary["cells"][m][c].get("uncertainty") or {}
+            def band(key, u=u):
+                e = u.get(key) or {}
+                if e.get("point") is None:
+                    return "—"
+                if e.get("lo") is None:
+                    return f"{e['point']:.3f} (n_q<2)"
+                return f"{e['point']:.3f} [{e['lo']:.3f}, {e['hi']:.3f}]"
+            se = u.get("silent_error") or {}
+            L.append(f"| {c} | {band('coverage')} | {band('silent_error')} | "
+                     f"{band('balanced_accuracy')} | {se.get('n_questions', '—')} | "
+                     f"{se.get('n_rows', '—')} |")
 
     # 2. The three correctness axes, kept separate
     for m in meta["models"]:

@@ -118,6 +118,7 @@ from agent.core.provenance import Expectation
 from agent.runtime.providers import get_model, get_verifier
 from agent.core.rungs import capabilities
 from evals.gold import compute_gold, load_questions
+from evals.stats import MIN_DISCORDANT
 from evals.row import measured_row
 from semantic.semantic import SPEC_PATH, SemanticLayer
 from warehouse.warehouse import cursor as warehouse_cursor
@@ -1295,6 +1296,33 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
             print("  a gap narrower than this is noise: "
                   + ", ".join(f"{a}/{q}" for a, q in wobble[:4])
                   + (" …" if len(wobble) > 4 else ""))
+
+    # EVERY ARM AGAINST THE BASELINE, PAIRED. A study varies one thing against a control, so the
+    # question is never "what did each arm score" but "did this arm beat the control", and those
+    # need different instruments. Comparing two absolute scores throws away the pairing: arms run
+    # on the same questions, question difficulty dominates both scores, and it cancels exactly in
+    # the difference. The absolute table above cannot show a real six-question effect that this
+    # one resolves, and it can make a two-question accident look like a step.
+    #
+    # The FIRST arm is the baseline. That is the study convention — column A is the untreated
+    # case — and `COLUMNS` fixes the ordering, so it is a property of the matrix rather than of
+    # who happened to author the arm files.
+    from evals.stats import detectable, paired
+    if len(arms) > 1:
+        base = arms[0]
+        floor = detectable(len(cases))
+        print(f"\n{'arm vs ' + base:26s} {'delta':>16s} {'95% CI':>22s} {'p':>7s} {'disc':>5s}  verdict")
+        for a in arms[1:]:
+            cmp = paired(results[a]["rows"], results[base]["rows"],
+                         lambda rs: selective(rs).balanced_accuracy)
+            verdict = ("REAL" if cmp.significant else
+                       f"inside the noise (needs {MIN_DISCORDANT}+ discordant)")
+            print(f"{a:26s} {cmp.delta:>+16.3f} "
+                  f"{f'[{cmp.lo:+.3f}, {cmp.hi:+.3f}]':>22s} {cmp.p_value:>7.3f} "
+                  f"{cmp.discordant:>5d}  {verdict}")
+        print(f"  balanced accuracy, paired over {len(cases)} questions. A question both arms get "
+              f"right, or both get wrong,\n  carries no information about which is better and is not "
+              f"counted. Floor at this n: {floor:.3f}.")
 
     discordant = sum(1 for c in cases
                      if len({tuple(sorted(r["correct"]

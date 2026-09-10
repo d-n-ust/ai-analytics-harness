@@ -230,21 +230,38 @@ def test_summary_is_json_serialisable_and_renders():
                     "## Refusals by coded reason", "## Agent behaviour", "## Process hygiene",
                     "## Telemetry"):
         assert section in md, f"missing section: {section}"
-    # single model, single rep -> the comparison + reproducibility sections stay hidden
+    # single model -> the cross-model comparison stays hidden. Uncertainty does NOT: a rate is
+    # published with an interval or it invites being read as exact, however few reps produced it.
     assert "## Model comparison" not in md
-    assert "## Reproducibility across reps" not in md
+    assert "## Uncertainty" in md
 
 
 def test_per_rep_spread_is_measured_per_rep():
     # same answerable question, two reps: rep 0 right, rep 1 wrong -> per-rep precision [1.0, 0.0],
-    # NOT the pooled 0.5 — the spread is what tells a real rung step from run-to-run noise
+    # NOT the pooled 0.5. Still computed and still in summary.json, because published summaries
+    # carry it; it is no longer the uncertainty instrument, for the reason section 1b now states.
     rows = [_row(qid="a", rep=0, correct=True, bucket="right"),
             _row(qid="a", rep=1, correct=False, bucket="wrong", confident_wrong=True, answer="5")]
     s = report.aggregate(rows)
     assert s["meta"]["reps"] == 2
     pr = s["cells"]["m"]["R9"]["per_rep"]
     assert pr["n"] == 2 and pr["precision"] == [1.0, 0.0]
-    assert "## Reproducibility across reps" in report.render_markdown(s)
+
+
+def test_uncertainty_counts_questions_not_rows():
+    """The instrument that replaced the per-rep band. One question asked five times is one
+    observation; reporting five would understate the interval by roughly sqrt(5)."""
+    rows = [_row(qid="a", rep=k, correct=True, bucket="right") for k in range(5)]
+    rows += [_row(qid="b", rep=k, correct=False, bucket="wrong", confident_wrong=True, answer="5")
+             for k in range(5)]
+    s = report.aggregate(rows)
+    u = s["cells"]["m"]["R9"]["uncertainty"]
+    assert u["silent_error"]["n_questions"] == 2, "questions, not rows, are the sample"
+    assert u["silent_error"]["n_rows"] == 10
+    # Two questions cannot resolve anything; the floor says so rather than implying precision.
+    assert u["min_detectable_difference"] == 3.0
+    md = report.render_markdown(s)
+    assert "## Uncertainty" in md and "Floor:" in md
 
 
 def test_cross_model_leaderboard_only_multi_model():
@@ -262,6 +279,7 @@ if __name__ == "__main__":
     test_schema_skew_is_detected()
     test_summary_is_json_serialisable_and_renders()
     test_per_rep_spread_is_measured_per_rep()
+    test_uncertainty_counts_questions_not_rows()
     test_cross_model_leaderboard_only_multi_model()
     print("OK - report aggregator: arithmetic + process hygiene + dead rows + json + render "
           "+ spread + leaderboard all pass.")
