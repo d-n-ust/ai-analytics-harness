@@ -29,7 +29,7 @@ from agent.runtime.grounding import build_grounding
 from agent.guardrails import parse_cell
 from agent.runtime.loop import Answer, run_agent
 from agent.runtime.providers import get_model, get_verifier
-from evals.gold import _validate, compute_gold
+from evals.gold import _validate, compute_gold, stamp_suite
 from evals.row import measured_row
 from evals.matrix import render as render_matrix
 from evals.selective import selective
@@ -136,6 +136,10 @@ def load_cases(name: str = "cases.yml") -> list[dict]:
     cases = yaml.safe_load((HERE / name).read_text())["cases"]
     for case in cases:
         _validate(case, name)
+    # This fixture reads its own YAML rather than going through `load_questions`, so it stamps the
+    # suite fingerprint itself. Without it every row here would record `suite: null` and a result
+    # could not be tied to the version of the suite that produced it.
+    stamp_suite(cases)
     return cases
 
 

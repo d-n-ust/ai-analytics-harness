@@ -40,6 +40,10 @@ PUBLISHED_FIELDS = {
 }
 
 # What v18 adds. Named separately so the reason each one exists is recorded next to it.
+V19_FIELDS = {
+    "suite",              # which version of the question set asked
+}
+
 V18_FIELDS = {
     "cost_usd",           # per row, so cost splits by pile and by outcome, not only by cell
     "round_trips",        # what a clarification costs the reader, as a column not a footnote
@@ -66,6 +70,7 @@ def test_the_row_carries_every_published_field_and_the_telemetry():
     missing = PUBLISHED_FIELDS - set(row)
     assert not missing, f"the row no longer carries published fields: {sorted(missing)}"
     assert V18_FIELDS <= set(row), f"missing v18 fields: {sorted(V18_FIELDS - set(row))}"
+    assert V19_FIELDS <= set(row), f"missing v19 fields: {sorted(V19_FIELDS - set(row))}"
     assert row["schema_version"] == ROW_SCHEMA_VERSION
 
 
@@ -163,6 +168,59 @@ def test_no_runner_assembles_a_row_of_its_own():
         "debt list keeps meaning what it says.")
 
 
+def test_the_suite_fingerprint_identifies_the_questions_that_were_asked():
+    """The counterpart to `surface_fingerprint`. That one says what the model was SHOWN; without
+    this one, nothing said which version of the suite ASKED, so two runs weeks apart looked
+    comparable whatever had happened to the questions in between."""
+    from evals.gold import stamp_suite
+
+    a = [dict(CASE)]
+    fp = stamp_suite(a)
+    assert a[0]["suite"] == fp, "stamp_suite must stamp the cases it fingerprints"
+    assert measured_row(_answer(), a[0], 886.0, elapsed_s=1.0)["suite"] == fp
+
+    # Editing what is MEASURED changes the fingerprint.
+    for field, value in (("question", "how many active accounts?"),
+                         ("id", "q2"),
+                         ("tier", "contested")):
+        b = [{**CASE, field: value}]
+        assert stamp_suite(b) != fp, f"editing {field} left the suite fingerprint unchanged"
+    b = [{**CASE, "expect": {**CASE["expect"], "tolerance": 0.05}}]
+    assert stamp_suite(b) != fp, "editing the oracle left the suite fingerprint unchanged"
+
+    # Editing PROSE FOR HUMANS does not. An edited comment must not make a run look like a
+    # different experiment.
+    assert stamp_suite([{**CASE, "note": "a remark for whoever reads the file"}]) == fp
+
+    # A case that belongs to no suite records None rather than a fabricated identity.
+    assert measured_row(_answer(), CASE, 886.0, elapsed_s=1.0)["suite"] is None
+
+
+def test_every_loader_stamps_the_suite():
+    """Two paths load cases: `load_questions` for the frozen set, and the contested fixture, which
+    reads its own YAML. A loader that forgets writes `suite: null` on every row it produces, and
+    the omission is invisible until someone tries to tie a published number to a question set."""
+    import ast
+    root = Path(__file__).resolve().parents[1]
+    loaders = {
+        "evals/gold.py": "load_questions",
+        "experiments/06_third_state/fixture/run.py": "load_cases",
+    }
+    for rel, func in loaders.items():
+        path = root / rel
+        if not path.exists():
+            continue
+        tree = ast.parse(path.read_text())
+        fn = next((n for n in ast.walk(tree)
+                   if isinstance(n, ast.FunctionDef) and n.name == func), None)
+        assert fn is not None, f"{rel} no longer defines {func}()"
+        calls = {n.func.id for n in ast.walk(fn)
+                 if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)}
+        assert "stamp_suite" in calls, (
+            f"{rel}::{func}() does not call stamp_suite, so every row it produces records "
+            "`suite: null` and cannot be tied to the questions that were asked")
+
+
 def test_the_row_builder_is_the_only_place_that_stamps_a_schema_version():
     """Two copies of a version number is how a row comes to claim a schema its reader does not
     implement. `report.py` re-exports it; nothing else may define one."""
@@ -181,6 +239,9 @@ if __name__ == "__main__":
     test_a_clarification_costs_one_round_trip_and_nothing_else_does()
     test_caller_context_merges_last_and_cannot_be_dropped()
     test_no_runner_assembles_a_row_of_its_own()
+    test_the_suite_fingerprint_identifies_the_questions_that_were_asked()
+    test_every_loader_stamps_the_suite()
     test_the_row_builder_is_the_only_place_that_stamps_a_schema_version()
     print("OK — one recorder: the published fields survive, latency cannot be forgotten, "
-          "cost follows the model price, and no runner writes a row of its own.")
+          "cost follows the model price, every loader stamps its suite, and no runner "
+          "writes a row of its own.")

@@ -123,6 +123,12 @@ def gate(model: str | None = None, cell: str | None = None) -> int:
     c(all(r["schema_version"] == ROW_SCHEMA_VERSION for r in rows),
       "row schema is current", f"v{ROW_SCHEMA_VERSION}")
 
+    # A sweep that cannot be tied to the version of the suite that produced it is a sweep that has
+    # to be re-run the next time anyone edits a question.
+    suites = {r.get("suite") for r in rows}
+    c(len(suites) == 1 and None not in suites, "suite fingerprint stamped and uniform",
+      str(suites.pop() if len(suites) == 1 else sorted(map(str, suites))))
+
     # ---- the meter actually moved ----------------------------------------------------------
     # On a mock model the counts are synthetic, so only their PRESENCE is provable. Live, they
     # must be plausible: a real run of this agent cannot cost zero tokens, and a cost of exactly

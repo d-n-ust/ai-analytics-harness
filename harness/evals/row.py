@@ -48,7 +48,10 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 # v18: telemetry is universal. Every runner writes tokens, model calls and latency because every
 #      runner writes its row here; `cost_usd` and `round_trips` are stamped per row rather than
 #      derived per cell, so cost splits by pile and by outcome the way accuracy already does.
-ROW_SCHEMA_VERSION = 18
+# v19: `suite` — the question set's fingerprint. `surface_fingerprint` said what the model was
+#      shown and nothing said which version of the suite asked, so two runs weeks apart looked
+#      comparable whatever had happened to the questions in between.
+ROW_SCHEMA_VERSION = 19
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -79,8 +82,12 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
     cost = _cost_usd(answer.model, answer.input_tokens, answer.output_tokens, answer.cached_tokens)
     return {
         # ---- identity ----------------------------------------------------------------
+        # `suite` is the QUESTION SET's fingerprint, the counterpart to `surface_fingerprint`:
+        # one says what the model was shown, the other says which version of the suite asked.
+        # Stamped on the case by `gold.stamp_suite`, so no runner can forget to pass it. None on
+        # a case built by hand in a test, which belongs to no suite.
         "qid": case["id"], "tier": case.get("tier"), "question": case["question"],
-        "model": answer.model, "gold": gold,
+        "suite": case.get("suite"), "model": answer.model, "gold": gold,
 
         # ---- what the run did --------------------------------------------------------
         "answer": answer.answer, "explanation": answer.explanation,

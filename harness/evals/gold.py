@@ -9,6 +9,8 @@ hide — and never hand-typed, so they follow the generator.
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import yaml
@@ -118,6 +120,33 @@ def _validate(case: dict, where: str) -> None:
                              f"not one of {sorted(_CONTEXT_KINDS)}")
 
 
+def stamp_suite(cases: list[dict]) -> str:
+    """Fingerprint a set of cases, stamp it on each of them, and return it.
+
+    THE PROMPT HAS A SERIAL NUMBER AND THE SUITE DOES NOT. `Grounding.fingerprint` hashes
+    everything the model is shown, so two runs on different prompts are visibly incomparable. The
+    QUESTIONS are equally a treatment — edit a case's wording, its oracle or its expected action
+    and the run measures something else — and nothing recorded which version asked them. Two runs
+    six weeks apart therefore looked comparable whatever had happened to the suite in between.
+
+    WHAT IS HASHED is what changes the measurement: the id, the question as asked, the whole
+    `expect` block (oracle, tolerance, expected action, candidates) and the tier, because the
+    report groups published tables by it. `note` is excluded: it is prose for whoever reads the
+    file, and an edited comment must not make a run look like a different experiment.
+
+    STAMPED ON THE CASES rather than returned for a runner to pass along, because a runner that
+    has to remember is a runner that will forget — which is the defect `evals/row.py` was written
+    to close. A case carries its suite, `measured_row` reads it off the case, and a hand-built
+    case in a test records None, which is the truth about a question that belongs to no suite.
+    """
+    graded = [{k: c.get(k) for k in ("id", "question", "expect", "tier")} for c in cases]
+    fp = hashlib.sha256(
+        json.dumps(graded, sort_keys=True, default=str).encode()).hexdigest()[:12]
+    for case in cases:
+        case["suite"] = fp
+    return fp
+
+
 def load_questions(root: Path = EVALS_DIR) -> list[dict]:
     """Every case across <root>/**/*.yml, in a stable (path-sorted) order, validated. The
     name is kept for callers; a case *is* the question dict (id, question, tier, expect).
@@ -135,6 +164,7 @@ def load_questions(root: Path = EVALS_DIR) -> list[dict]:
                 raise ValueError(f"duplicate case id {case['id']!r} (also in an earlier file)")
             seen.add(case["id"])
             cases.append(case)
+    stamp_suite(cases)
     return cases
 
 
