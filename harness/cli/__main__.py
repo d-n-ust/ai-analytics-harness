@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pathlib
 
 # The one eager agent import: rungs is a leaf (dataclasses only, no warehouse, no providers), and
 # the parser needs the rung table to build --rung's help and validation from the definitions
@@ -319,6 +320,33 @@ def cmd_report(a):
     print(f"re-rendered {run / 'summary.md'} and summary.json")
 
 
+def cmd_utility(a):
+    """Which arm to ship, as a function of the price of a wrong answer."""
+    import json as _json
+
+    from evals.utility import compare, profile, render
+    profiles, rowsets = [], {}
+    for spec in a.arms:
+        name, _, path = spec.partition("=")
+        if not path:
+            name, path = pathlib.Path(spec).stem, spec
+        rows = _json.loads(pathlib.Path(path).read_text())
+        rows = rows["rows"] if isinstance(rows, dict) else rows
+        rowsets[name] = rows
+        profiles.append(profile(rows, name, miss=a.miss))
+    if not profiles:
+        raise SystemExit("name at least one arm: ./bench utility A=arm_a.json B=arm_b.json")
+    print()
+    print(render(profiles))
+    names = list(rowsets)
+    if len(names) > 1:
+        print(f"\ncrossovers (95% CI, questions resampled; miss={a.miss:g})")
+        base = names[0]
+        for other in names[1:]:
+            print("  " + str(compare(rowsets[base], rowsets[other],
+                                     name_a=base, name_b=other, miss=a.miss)))
+
+
 def cmd_gate(a):
     """Prove the measurement pipeline on three questions before a sweep is paid for."""
     from evals.gate import gate
@@ -501,6 +529,14 @@ def main() -> None:
                    help="go live against this model (~$0.01). Default: the mock model, free.")
     g.add_argument("--cell", default=None, help="guardrail cell, e.g. R3+typed_clarify")
     g.set_defaults(func=cmd_gate)
+
+    # The break-even curve. Replaces the WRONG_COST placeholder with a price the reader supplies.
+    u = sub.add_parser("utility", help="which arm to ship, as a function of the price of a wrong answer")
+    u.add_argument("arms", nargs="+", metavar="[NAME=]FILE",
+                   help="one stored arm result per argument (a JSON list of rows, or {rows: [...]})")
+    u.add_argument("--miss", type=float, default=1.0,
+                   help="what a question that ends with NO answer costs, in round trips (default 1)")
+    u.set_defaults(func=cmd_utility)
 
     args = p.parse_args()
     try:
