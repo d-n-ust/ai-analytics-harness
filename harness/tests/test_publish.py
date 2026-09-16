@@ -271,6 +271,182 @@ def test_an_absent_backend_is_reported_and_never_raised():
         os.environ.update({k: v for k, v in saved.items() if v is not None})
 
 
+# ---------------------------------------------------------------------------------------------
+# The SEND path. Everything above tests `render`, which is pure; this tests `emit`, which was
+# covered by nothing until the four defects below had already been shipped and found by hand.
+# ---------------------------------------------------------------------------------------------
+
+class Recorder:
+    """Stands in for the backend and remembers everything it was asked to do.
+
+    Small on purpose: it implements exactly the surface `emit` uses, so a change in that surface
+    breaks this file rather than breaking a dashboard quietly. It needs no server, no credentials
+    and no langfuse install, which is what lets CI run it — CI syncs without the observability
+    group, so the real client is not importable there.
+    """
+
+    def __init__(self, existing_runs=()):
+        self.created, self.items, self.run_items = [], [], []
+        self.scores, self.traces, self.spans = [], [], []
+        self._existing = list(existing_runs)
+        self._current = None
+        self.flushed = 0
+        # emit reaches the raw API as client.api.datasets.get_runs and
+        # client.api.dataset_run_items.create, so those paths must resolve exactly.
+        self.api = type("API", (), {"datasets": self, "dataset_run_items": self})()
+
+    # -- client surface ------------------------------------------------------------------
+    def create_dataset(self, *, name, description=None, **kw):
+        self.created.append(name)
+
+    def create_dataset_item(self, *, dataset_name, id, input, expected_output, metadata, **kw):
+        self.items.append({"id": id, "input": input, "expected": expected_output,
+                           "metadata": metadata})
+
+    def create_trace_id(self, *, seed=None):
+        import hashlib
+        return hashlib.sha256((seed or "").encode()).hexdigest()[:32]
+
+    def create_score(self, *, name, value, score_id=None, data_type=None,
+                     trace_id=None, dataset_run_id=None, **kw):
+        self.scores.append({"name": name, "value": value, "type": data_type,
+                            "id": score_id, "trace_id": trace_id, "run_id": dataset_run_id})
+
+    def start_as_current_observation(self, **kw):
+        self.traces.append(kw)
+        self._current = (kw.get("trace_context") or {}).get("trace_id")
+        return _Span(self, kw)
+
+    def start_observation(self, **kw):
+        # The real client creates a child of whatever span is current, which is why emit calls it
+        # on the client rather than on the root span.
+        self.spans.append({**kw, "trace": getattr(self, "_current", None)})
+        return _Child()
+
+    def flush(self):
+        self.flushed += 1
+
+    # -- raw api surface -----------------------------------------------------------------
+    def get_runs(self, dataset, page=1, limit=100):
+        return type("B", (), {"data": self._existing if page == 1 else []})()
+
+    def create(self, *, run_name, dataset_item_id, trace_id, run_description=None, metadata=None,
+               **kw):
+        self.run_items.append({"run": run_name, "item": dataset_item_id, "trace": trace_id,
+                               "metadata": metadata})
+        return type("I", (), {"dataset_run_id": f"id-of-{run_name}"})()
+
+
+class _Span:
+    def __init__(self, rec, kw):
+        self.rec, self.kw = rec, kw
+        self.trace_id = kw.get("trace_context", {}).get("trace_id")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def set_trace_io(self, **kw):
+        pass
+
+    def end(self, end_time=None):
+        pass
+
+
+class _Child:
+    def end(self, end_time=None):
+        pass
+
+
+def _emit(rows, summary=None, run_dir=None, **kw):
+    """One publish. `run_dir` is reusable on purpose: the run directory's NAME is part of every
+    trace seed, so simulating a re-publish means sending the same directory twice, not two
+    directories holding the same rows."""
+    rec = Recorder(**kw)
+    out = emit(run_dir or written(rows, summary), client=rec)
+    return rec, out
+
+
+def test_emit_sends_one_item_per_question_and_one_trace_per_row():
+    rows = [row(q, c, rep=r) for q in ("q1", "q2") for c in ("A", "B") for r in (0, 1)]
+    rec, out = _emit(rows)
+    assert out["sent"] is True
+    assert rec.created == ["suite-abc123"], "the dataset is created once, by suite hash"
+    assert sorted(i["id"] for i in rec.items) == ["q1", "q2"], "one item per QUESTION"
+    assert len(rec.run_items) == 8, "every row is linked"
+    assert len({r["trace"] for r in rec.run_items}) == 8, "and every row has its own trace"
+    assert rec.flushed == 1, "an unflushed emit loses the tail of the run"
+
+
+def test_emit_writes_no_trace_bodies_for_a_run_it_has_already_published():
+    """A stable trace id does not make the SPANS inside it stable, so re-sending appended a second
+    copy of every model call and doubled the trace. The dataset run is the unit of publication."""
+    d = written([row("q1", "A"), row("q2", "A")])
+    fresh, _ = _emit(None, run_dir=d)
+    assert fresh.spans, "a first publish must write the bodies"
+
+    already = [type("R", (), {"name": n, "id": "x"})()
+               for n in {r["run"] for r in fresh.run_items}]
+    again, out = _emit(None, run_dir=d, existing_runs=already)
+    assert again.spans == [], "re-publishing must not append a second copy of every span"
+    assert again.run_items == [], "nor a second set of run items"
+    assert [s for s in again.scores if s["trace_id"]], "but scores ARE rewritten — regrade needs it"
+    assert out["rescored"] == 1
+
+
+def test_a_score_is_written_under_a_stable_id_so_a_regrade_corrects_it_in_place():
+    import json as _json
+    d = written([row("q1", "A")])
+    first, _ = _emit(None, run_dir=d)
+    # What `bench regrade` does: the same run directory, the same rows, a corrected verdict.
+    (d / "raw.jsonl").write_text(_json.dumps(row("q1", "A", correct=False, bucket="wrong")) + "\n")
+    second, _ = _emit(None, run_dir=d)
+    by_name = {s["name"]: s for s in first.scores}
+    again = {s["name"]: s for s in second.scores}
+    assert by_name["correct"]["id"] == again["correct"]["id"], \
+        "a regrade must correct the score a reader has open, not add a second beside it"
+    assert by_name["correct"]["value"] != again["correct"]["value"]
+
+
+def test_every_score_reaches_the_backend_with_its_declared_type():
+    rec, _ = _emit([row("q1", "A")])
+    typed = {s["name"]: s["type"] for s in rec.scores if s["trace_id"]}
+    assert typed["correct"] == "BOOLEAN" and typed["bucket"] == "CATEGORICAL"
+    assert typed["cost_usd"] == "NUMERIC"
+    assert typed["silent_error"] == "BOOLEAN"
+
+
+def test_set_level_scores_go_to_the_run_and_never_collide_with_a_row_score():
+    rec, _ = _emit([row("q1", "A"), row("q2", "A")])
+    run_level = {s["name"] for s in rec.scores if s["run_id"]}
+    row_level = {s["name"] for s in rec.scores if s["trace_id"]}
+    assert "run/coverage" in run_level and "run/silent_error" in run_level
+    assert not (run_level & row_level), f"a name means two things at once: {run_level & row_level}"
+
+
+def test_a_model_call_is_sent_with_its_usage_and_our_price():
+    """Usage and a model name are enough for a backend to apply its OWN price table, which is the
+    one thing it does not get to own. The turns must carry the price row.py computed."""
+    rec, _ = _emit([row("q1", "A")])
+    gen = [s for s in rec.spans if s["as_type"] == "generation"][0]
+    assert gen["usage_details"]["input"] == 100
+    assert gen["usage_details"]["cache_read_input_tokens"] == 80
+    assert gen["cost_details"] is not None and gen["cost_details"]["total"] > 0
+
+
+def test_a_cell_with_a_slash_produces_a_run_name_that_can_be_fetched_back():
+    """A cell is named things like R7/D_declared, and the backend addresses a run by name IN THE
+    URL PATH — so a slash made a run that existed and could not be read back."""
+    rec, _ = _emit([row("q1", "R7/D_declared"), row("q1", "R7/A_implicit")])
+    for item in rec.run_items:
+        assert "/" not in item["run"], f"unfetchable run name: {item['run']}"
+        assert "--" not in item["run"].split("--", 1)[1], "separator collapsed to a double dash"
+    assert {i["metadata"]["cell"] for i in rec.run_items} == {"R7/D_declared", "R7/A_implicit"}, \
+        "the exact cell must survive in metadata, since the name could not carry it"
+
+
 if __name__ == "__main__":
     # `bench test` runs each file as a SCRIPT, so a test absent from this block runs nowhere.
     test_one_dataset_item_per_question_however_many_times_it_was_asked()
@@ -294,5 +470,12 @@ if __name__ == "__main__":
     test_a_set_level_number_cannot_collide_with_a_row_level_one()
     test_an_experiment_run_reads_the_same_as_a_grid_run()
     test_an_absent_backend_is_reported_and_never_raised()
+    test_emit_sends_one_item_per_question_and_one_trace_per_row()
+    test_emit_writes_no_trace_bodies_for_a_run_it_has_already_published()
+    test_a_score_is_written_under_a_stable_id_so_a_regrade_corrects_it_in_place()
+    test_every_score_reaches_the_backend_with_its_declared_type()
+    test_set_level_scores_go_to_the_run_and_never_collide_with_a_row_score()
+    test_a_model_call_is_sent_with_its_usage_and_our_price()
+    test_a_cell_with_a_slash_produces_a_run_name_that_can_be_fetched_back()
     print("OK — one item per question, a run per cell, typed scores, our own set-level numbers "
           "with intervals, both run shapes, and an absent backend that reports instead of raising.")

@@ -355,7 +355,7 @@ def _run_name(run_id: str, cell: str) -> str:
     return f"{run_id}--{re.sub('-{2,}', '-', safe)}"
 
 
-def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
+def emit(run_dir: Path, *, dry_run: bool = False, client=None) -> dict:
     """Send one finished run to the backend. Returns what happened, and never raises for absence.
 
     RE-EMITTING IS SAFE AND IS THE POINT. Every trace id is derived from
@@ -373,9 +373,15 @@ def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
     if dry_run:
         return {"sent": False, "reason": "dry run", **tally}
 
-    client, reason = _client()
+    # The one external boundary, and the only thing in this module that needs a server. Injecting
+    # it is what lets the send path be tested at all: `render` was covered and `emit` was not, and
+    # the first time `emit` met a real run it produced four defects that corrupted the published
+    # numbers in silence. A recorder passed in here replays that whole path in CI, with no
+    # container, no credentials and no network.
     if client is None:
-        return {"sent": False, "reason": reason, **tally}
+        client, reason = _client()
+        if client is None:
+            return {"sent": False, "reason": reason, **tally}
 
     run_id = run_dir.name
     client.create_dataset(
@@ -443,12 +449,14 @@ def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
 
 def _existing_runs(client, dataset: str) -> dict:
     """Which dataset runs are already published, and their ids. Empty for a dataset that is new."""
+    # Deliberately NOT wrapped in a try. `create_dataset` has already run, so the dataset exists
+    # and a dataset with no runs returns an empty list rather than an error. Swallowing exceptions
+    # here would turn a wrong API path, an expired key or a network failure into "nothing is
+    # published yet" — and the consequence of that is a second copy of every span, written
+    # silently. A failure here should stop the publish.
     found, page = {}, 1
     while True:
-        try:
-            batch = client.api.datasets.get_runs(dataset, page=page, limit=100)
-        except Exception:
-            return found          # a dataset nobody has written yet has no runs to collide with
+        batch = client.api.datasets.get_runs(dataset, page=page, limit=100)
         for r in batch.data:
             found[r.name] = r.id
         if len(batch.data) < 100:
