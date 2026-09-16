@@ -110,7 +110,27 @@ def test_the_frozen_cases_all_name_their_metric():
     assert not missing, f"frozen metric_answer cases with no metric: {missing}"
 
 
+def test_a_prose_graded_answer_scores_correct_and_can_never_be_a_silent_error():
+    """THE KNOWN EXPOSURE, pinned rather than left to be rediscovered.
+
+    `diagnostic` and `keywords` verdicts come from matching words in free text. That path sets
+    neither `confident_wrong` nor `fabricated`, so an answer that names the right driver amid
+    invented figures scores CORRECT and never registers as a silent error. This is the failure
+    mode the v1 keyword grader had. It is bounded — 11 of 65 questions — and `report.py` prints
+    the share on every run. If this test starts failing, the grading path changed and the
+    report's claim about it must change too.
+    """
+    from evals.grade import grade_diagnostic
+    spec = {"driver": ["ios"], "cause": ["push"]}
+    honest = grade_diagnostic("the drop came from iOS, driven by push", spec)
+    invented = grade_diagnostic("the drop came from iOS: 4,182,900 users churned on 31 Feb", spec)
+    assert honest["correct"] is True
+    assert invented["correct"] is True, \
+        "pinned: a word match cannot see the invented figures beside the right driver"
+
+
 if __name__ == "__main__":
+    test_a_prose_graded_answer_scores_correct_and_can_never_be_a_silent_error()
     test_the_frozen_cases_all_name_their_metric()
     test_an_ambiguous_question_accepts_both_declining_and_asking()
     test_a_case_stops_demanding_an_answer_where_its_context_was_never_supplied()

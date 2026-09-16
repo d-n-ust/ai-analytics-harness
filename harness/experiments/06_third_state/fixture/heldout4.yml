@@ -3,6 +3,25 @@
 # and segments neither heldout2 nor heldout3 used), oracles proven AND cross-checked against the
 # governed mart before authoring (the heldout3 channel-normalisation bug, now caught by construction).
 # Run ONCE, blind. heldout3 is never re-run.
+#
+# COMPOSITION — 46 questions in three piles, and the mix is a design rather than an accident of
+# authoring order. It decides what `balanced_accuracy` averages over and what `coverage` means.
+#
+#   A  answerable    17   a governed metric answers it: 8 plain, 4 with the scope stated in the
+#                         question, 4 where two definitions AGREE, 1 governed ratio
+#   B  unanswerable  15   nothing answers it, in four distinct ways: 5 bare, 5 adjacent (a
+#                         plausible neighbour exists), 3 false-premise, 2 outside coverage
+#   C  contested     14   two governed definitions both answer it: 12 at the metric level,
+#                         2 through a derived calculation
+#
+# Roughly even thirds, so no pile can dominate the balanced mean, and pile B is split four ways
+# because "cannot answer" has four causes that a single bucket would hide.
+#
+# SCOPE, stated rather than implied: every question here resolves to a NUMBER or a refusal. There
+# are no diagnostic or keyword cases — the argument-shaped questions ("why did opens drop") live
+# only in the frozen 65-question set under evals/cases/, which is retained for reproducing the
+# published experiment 01-03 ladder numbers. A result measured on this suite says nothing about
+# diagnostic reasoning, and a write-up must say so rather than let a reader assume coverage.
 cases:
 - id: h4_a_referral_signups_oct
   tier: answerable

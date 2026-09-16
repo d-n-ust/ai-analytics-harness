@@ -99,6 +99,7 @@ import datetime as dt
 import json
 import re
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -108,6 +109,7 @@ import yaml
 import harness_paths
 from agent.runtime.grounding import build_grounding
 from agent.guardrails import LADDER, parse_cell
+from agent.core.outcomes import Answer
 from agent.runtime.loop import run_agent
 from agent.core.models import DEFAULT_MODEL
 from agent.core.protocol import PARTS as PROTOCOL_PARTS
@@ -116,7 +118,8 @@ from agent.core.provenance import Expectation
 from agent.runtime.providers import get_model, get_verifier
 from agent.core.rungs import capabilities
 from evals.gold import compute_gold, load_questions
-from evals.grade import grade
+from evals.stats import MIN_DISCORDANT
+from evals.row import measured_row
 from semantic.semantic import SPEC_PATH, SemanticLayer
 from warehouse.warehouse import cursor as warehouse_cursor
 from warehouse.warehouse import open_warehouse, set_star
@@ -1089,28 +1092,53 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
                                           engine=arm.engine or study.engine)
         return local.g
 
+    # THE LABEL THE SHARED REPORT KEYS ITS TABLES ON, and the arm has to be in it. `report.write`
+    # groups by `config`, so three arms sharing one guardrail cell would pool into a single row —
+    # the exact "a treatment with no label of its own is silently pooled" failure the sweeps'
+    # protocol suffix already exists to prevent. Same convention as `R9/claims`: the cell, then
+    # what this run varies within it.
+    cell_label = f"{_guardrails_of(study, arm).label()}/{arm.name}"
+
     def _one(unit):
             rep, case = unit
-            answer = run_agent(case["question"], _grounding(), model,
-                               verifier_model=verifier, record_context=True)
+            t0 = time.perf_counter()
+            try:
+                answer = run_agent(case["question"], _grounding(), model,
+                                   verifier_model=verifier, record_context=True)
+            except Exception as exc:  # noqa: BLE001 — one bad question must not kill the arm
+                # An arm is a column of a matrix, and one provider failure used to take the whole
+                # column with it: `_one` ran uncaught inside a pool, so a RateLimitError surviving
+                # the SDK's retries aborted every remaining case. The sweeps have caught this since
+                # they were written (evals/runner.py); the studies never did. Recording the
+                # exception TYPE keeps a persistent API failure distinguishable from a code bug.
+                answer = Answer(case["question"], rung, model.spec.name, None,
+                                outcome="error", error=f"{type(exc).__name__}: {exc}"[:200])
+            elapsed_s = time.perf_counter() - t0
             metric, route = arm.reach(case["expect"].get("metric"))
             segment = route.get("segment")
             graded = {**case, "expect": {**case["expect"], **({"metric": metric} if metric else {})}}
-            g = grade(answer, graded, golds.get(case["id"]))
             got_segment = next((s.get("args", {}).get("segment") for s in answer.steps or ()
                                 if s.get("tool") == "query_metric"), None)
-            if segment is not None and got_segment != segment:
-                g = {**g, "correct": False, "wrong_segment": f"{got_segment!r} != {segment!r}"}
             audit = answer.context.audit(expectation) if answer.context else ("no context recorded",)
-            row = ({"id": case["id"], "rep": rep, "picked": answer.source_metric,
-                        "answer": answer.answer, "declared_value": answer.declared_value,
-                        "outcome": answer.outcome, "reason": answer.reason,
-                        "explanation": answer.explanation, "steps": answer.steps,
-                        "tool_calls": answer.tool_calls, "grade": g, "segment": got_segment,
-                        "context_audit": list(audit),
-                        "context": answer.context.digest() if answer.context else []})
+            row = measured_row(
+                answer, graded, golds.get(case["id"]), elapsed_s=elapsed_s,
+                # What a STUDY varies. `config` and `rung` are spelled the way the sweeps spell
+                # them so one report, one selective score and one confusion matrix read both —
+                # a study's rows were previously unreadable by every shared analysis.
+                rep=rep, rung=rung, config=cell_label, arm=arm.name,
+                # Study-only: which segment the agent actually queried, and whether the arm's
+                # treatment reached the model at all.
+                segment=got_segment, context_audit=list(audit),
+                context=answer.context.digest() if answer.context else [])
+            # THE ARM'S OWN CRITERION, applied on top of the shared grade rather than inside it:
+            # a study that routes a metric to a segment is asking a question the shared grader
+            # cannot know about, and serving the right number from the wrong segment is not a
+            # correct answer here. `wrong_segment` records why, so the row says which rule failed.
+            if segment is not None and got_segment != segment:
+                row["correct"] = False
+                row["wrong_segment"] = f"{got_segment!r} != {segment!r}"
             print(f"  {arm.name:16s} rep{rep} {case['id']:26s} picked={answer.source_metric or '—':16s}"
-                  f" {'ok' if g.get('correct') else 'MISS'}"
+                  f" {'ok' if row['correct'] else 'MISS'}"
                   + (f"  ⚠ CONTEXT: {'; '.join(audit)}" if audit else ""), flush=True)
             return row, (answer.context.blobs if answer.context else {})
 
@@ -1123,7 +1151,7 @@ def _run_arm(con, study: Study, arm: Arm, spec_path: Path, cases, golds, args, r
     # Sorted back into (rep, case) order: threads finish out of order, and a results file whose row
     # order depends on which API call returned first is not comparable with the next run's.
     order = {(rep, case["id"]): i for i, (rep, case) in enumerate(units)}
-    done.sort(key=lambda d: order[(d[0]["rep"], d[0]["id"])])
+    done.sort(key=lambda d: order[(d[0]["rep"], d[0]["qid"])])
     for row, b in done:
         out.append(row)
         blobs.update(b)
@@ -1173,9 +1201,9 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     for case in cases:
         cells = []
         for a in arms:
-            rs = [r for r in results[a]["rows"] if r["id"] == case["id"]]
-            right = sum(1 for r in rs if r["grade"].get("correct"))
-            picks = {r["picked"] or "—" for r in rs}
+            rs = [r for r in results[a]["rows"] if r["qid"] == case["id"]]
+            right = sum(1 for r in rs if r["correct"])
+            picks = {r["source_metric"] or "—" for r in rs}
             pick = next(iter(picks)) if len(picks) == 1 else f"{len(picks)} different"
             segs = {r["segment"] for r in rs if r["segment"]}
             seg = f"/{next(iter(segs))}" if len(segs) == 1 else ""
@@ -1193,7 +1221,7 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
             print(f"  {case['id']:26s} accepts {accepted if isinstance(accepted, list) else [accepted]}")
             for a in arms:
                 tally: dict = {}
-                for r in (r for r in results[a]["rows"] if r["id"] == case["id"]):
+                for r in (r for r in results[a]["rows"] if r["qid"] == case["id"]):
                     key = r["reason"] if r["outcome"] == "refuse" else f"<{r['outcome']}>"
                     tally[key or "<none>"] = tally.get(key or "<none>", 0) + 1
                 print(f"    {a:16s} " + ", ".join(f"{k} x{v}" for k, v in sorted(tally.items())))
@@ -1208,12 +1236,12 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     for a in arms:
         rs = results[a]["rows"]
         action = sum(1 for r in rs
-                     if r["grade"].get("correct")
-                     or (r["grade"].get("expected_refuse") and r["outcome"] == "refuse"))
-        print(f"{a:16s} {sum(1 for r in rs if r['grade'].get('correct')):>6d}/{len(rs):<3d}"
+                     if r["correct"]
+                     or (r["expected_refuse"] and r["outcome"] == "refuse"))
+        print(f"{a:16s} {sum(1 for r in rs if r['correct']):>6d}/{len(rs):<3d}"
               f" {action:>10d}/{len(rs):<3d}"
-              f" {sum(1 for r in rs if r['grade'].get('confident_wrong')):>14d}"
-              f" {sum(1 for r in rs if r['grade'].get('wrong_metric')):>14d}"
+              f" {sum(1 for r in rs if r['confident_wrong']):>14d}"
+              f" {sum(1 for r in rs if r['wrong_metric']):>14d}"
               f" {sum(1 for r in rs if r['context_audit']):>14d}")
 
     # THE SELECTIVE-PREDICTION POINT, once a study carries both piles. An agent that may decline
@@ -1225,15 +1253,17 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     # GROUNDED-ANSWER RATE IS OMITTED, not silently NaN. It needs the claims protocol, and a study
     # that runs with `protocol: {}` has no opinion on it — which is not the same as scoring zero.
     from evals.selective import selective
-    if any((r["grade"].get("expected_refuse")) for a in arms for r in results[a]["rows"]):
+    if any(r["expected_refuse"] for a in arms for r in results[a]["rows"]):
         print()
         print(f"{'arm':16s} {'coverage':>9s} {'silent err':>11s} {'balanced acc':>13s} "
               f"{'governed usage':>14s}")
         for a in arms:
             rs = results[a]["rows"]
-            flat = [{**r["grade"], "outcome": r["outcome"],
-                     "claim_audit": r.get("claim_audit")} for r in rs]
-            sel = selective(flat)
+            # Straight in. A study's rows used to need reshaping here because the grade was nested
+            # under a `grade` key while `selective` — like every published analysis — indexes the
+            # verdicts directly. One recorder removes the adapter, and with it the chance that the
+            # adapter and the metric disagree about what a field is called.
+            sel = selective(rs)
             # AN ARM BELOW RUNG 3 HAS NO CATALOGUE, so an empty `context_audit` means "nothing was
             # expected", not "the catalogue was read". Reporting 100% there would credit an arm for
             # using something it was never given — and the first mock run did exactly that.
@@ -1257,8 +1287,8 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
     reps = 1 + max((r.get("rep", 0) for a in arms for r in results[a]["rows"]), default=0)
     if reps > 1:
         wobble = [(a, c["id"]) for a in arms for c in cases
-                  if len({r["grade"].get("correct")
-                          for r in results[a]["rows"] if r["id"] == c["id"]}) > 1]
+                  if len({r["correct"]
+                          for r in results[a]["rows"] if r["qid"] == c["id"]}) > 1]
         cells = len(arms) * len(cases)
         print(f"\nself-disagreement: {len(wobble)} of {cells} arm-question cells gave different "
               f"verdicts across {reps} identical reps.")
@@ -1267,9 +1297,36 @@ def _summarise(study: Study, results: dict, cases: list, vocab: list) -> None:
                   + ", ".join(f"{a}/{q}" for a, q in wobble[:4])
                   + (" …" if len(wobble) > 4 else ""))
 
+    # EVERY ARM AGAINST THE BASELINE, PAIRED. A study varies one thing against a control, so the
+    # question is never "what did each arm score" but "did this arm beat the control", and those
+    # need different instruments. Comparing two absolute scores throws away the pairing: arms run
+    # on the same questions, question difficulty dominates both scores, and it cancels exactly in
+    # the difference. The absolute table above cannot show a real six-question effect that this
+    # one resolves, and it can make a two-question accident look like a step.
+    #
+    # The FIRST arm is the baseline. That is the study convention — column A is the untreated
+    # case — and `COLUMNS` fixes the ordering, so it is a property of the matrix rather than of
+    # who happened to author the arm files.
+    from evals.stats import detectable, paired
+    if len(arms) > 1:
+        base = arms[0]
+        floor = detectable(len(cases))
+        print(f"\n{'arm vs ' + base:26s} {'delta':>16s} {'95% CI':>22s} {'p':>7s} {'disc':>5s}  verdict")
+        for a in arms[1:]:
+            cmp = paired(results[a]["rows"], results[base]["rows"],
+                         lambda rs: selective(rs).balanced_accuracy)
+            verdict = ("REAL" if cmp.significant else
+                       f"inside the noise (needs {MIN_DISCORDANT}+ discordant)")
+            print(f"{a:26s} {cmp.delta:>+16.3f} "
+                  f"{f'[{cmp.lo:+.3f}, {cmp.hi:+.3f}]':>22s} {cmp.p_value:>7.3f} "
+                  f"{cmp.discordant:>5d}  {verdict}")
+        print(f"  balanced accuracy, paired over {len(cases)} questions. A question both arms get "
+              f"right, or both get wrong,\n  carries no information about which is better and is not "
+              f"counted. Floor at this n: {floor:.3f}.")
+
     discordant = sum(1 for c in cases
-                     if len({tuple(sorted(r["grade"].get("correct", False)
-                                          for r in results[a]["rows"] if r["id"] == c["id"]))
+                     if len({tuple(sorted(r["correct"]
+                                          for r in results[a]["rows"] if r["qid"] == c["id"]))
                              for a in arms}) > 1)
     print(f"\ndiscriminating questions: {discordant} of {len(cases)}."
           + ("  Six is the floor for p < 0.05 on a paired test; below that no number of reps helps."
@@ -1328,8 +1385,20 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
                          "catalogue": _catalogue_id(layers[a])} if a in layers else {})}
                  for a in results},
         "vocabulary_audit": vocab, "gold": golds, "cases": cases,
-        "rows": [dict(arm=a, **r) for a in results for r in results[a]["rows"]],
+        # The arm is stamped when the run is recorded, not glued on at persist time. Attaching it
+        # here meant a row in memory and the same row on disk were different shapes, so an analysis
+        # written against one silently failed against the other.
+        "rows": [r for a in results for r in results[a]["rows"]],
     }, indent=2, default=str))
+
+    # THE SAME REPORT EVERY OTHER RUN PRODUCES. Until now a study reported to a terminal: 35
+    # print() calls and a run.json. The sweeps produced summary.md and summary.json and the
+    # studies produced neither, so two experiments in the same repo could not be read the same
+    # way, and a study's result could not be re-read at all without re-running it.
+    #
+    # Rows are canonical since v18, so this is a call rather than a conversion.
+    from evals import report
+    report.write([r for a in results for r in results[a]["rows"]], out, mock=args.mock)
     return out
 
 

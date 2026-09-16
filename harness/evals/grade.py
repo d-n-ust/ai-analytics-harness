@@ -236,6 +236,14 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # decided here, because deferring to a judge that no runner calls scored the deferred rows zero.
     # Do not reintroduce it without a pass that resolves it; `report.py` and `publish_metrics.py`
     # both DROP flagged rows from the unanswerable metrics, so a deferral is invisible twice over.
+    # HOW this verdict was reached, recorded rather than inferred. Three of the paths compare
+    # against something checkable — a gold figure, a gold SQL result, the required terminal action.
+    # One does not: `prose` means the verdict came from matching words in free text, which cannot
+    # tell an answer that names the right driver from one that names it amid invented figures.
+    # That path sets neither `confident_wrong` nor `fabricated`, so a fabricated analysis scores
+    # correct and can never register as a silent error. Naming the path is what lets a reader see
+    # how much of a result rests on it; see report.py's grading-provenance table.
+    graded_by = "numeric"
     correct = fabricated = confident_wrong = off_governance = needs_judge = executed = False
     wrong_scope = wrong_metric = False
     reason_match = driver_ok = cause_ok = metric_match = None
@@ -243,8 +251,10 @@ def grade(answer, case: dict, gold: float | None) -> dict:
 
     if outcome == "error":
         bucket = "error"
+        graded_by = "none"                       # infrastructure, never a verdict about behaviour
     elif outcome == "refuse":
         if expects_refusal:                          # the right call — check it named the right reason
+            graded_by = "action"                     # compared against the action the case requires
             if getattr(answer, "refused_by", "") == "trajectory_verify":
                 # The judge is scored on the ACTION, not the code. It answers a different
                 # question from the one the vocabulary asks: the question's expected reason says
@@ -310,6 +320,10 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         _RISE = {"rose", "grew", "grown", "increase", "increased", "higher", "up", "climbed", "gained"}
         true_dir = "rose" if any(str(w).lower() in _RISE for w in expect["rebuttal"]) else "fell"
         typed = str(getattr(answer, "direction", "") or "").strip().lower()
+        # The typed slot is a structured outcome and is checkable; the fallback is a word list and
+        # is not. Recording which one decided it is the difference between a verdict a reader can
+        # audit and one they have to trust.
+        graded_by = "direction" if typed == true_dir else "prose"
         correct = (typed == true_dir) or grade_keywords(
             f"{answer.answer or ''} {answer.explanation or ''}", expect["rebuttal"])["correct"]
         # Accepting a false premise and explaining it is the worst outcome the pile can produce:
@@ -347,10 +361,12 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             g = grade_diagnostic(f"{answer.answer or ''} {answer.explanation or ''}", expect)
             correct, driver_ok, cause_ok = g["correct"], g["driver_ok"], g["cause_ok"]
             bucket = "right" if correct else "other"     # a wrong *analysis* is not a wrong *number*
+            graded_by = "prose"
         elif etype == "keywords":
             correct = grade_keywords(f"{answer.answer or ''} {answer.explanation or ''}",
                                      expect["keywords"])["correct"]
             bucket = "right" if correct else "other"
+            graded_by = "prose"
         else:                                            # metric_answer
             num_ok = grade_numeric(answer.answer, gold, tol)["correct"]
             metric_match = _metric_match(answer, expect)
@@ -390,6 +406,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "wrong_metric": wrong_metric,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        "graded_by": graded_by,
         # WHICH terminal action this question calls for, as a field rather than a boolean, because
         # there are now three. `expected_refuse` is kept beside it and unchanged: every stored row
         # ever written carries that name, and the coverage audit reads all of them. Readers that

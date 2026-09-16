@@ -46,14 +46,10 @@ from agent.runtime.grounding import RUNG_NAMES
 
 from .grade import WRONG_COST
 
-# Bump on any raw-row schema change. The version is stamped on every row (evals/runner.py) and
-# surfaced here; skew — rows predating the current version — is flagged, never silently mis-read.
-ROW_SCHEMA_VERSION = 17  # v17: rendered measurements carry `declared_text` (what the model
-                         # wrote) beside `text` (what the harness rendered). v16 rows mean
-                         # `text` IS the model's; pooling the two compares model prose
-                         # against rendered prose and calls the difference a trend.
-
-CACHED_INPUT_DISCOUNT = 0.1   # OpenAI bills a prompt-cache HIT at ~10% of the input price
+# Re-exported from the row builder, which stamps it. Two copies of a version number is how a row
+# comes to claim a schema the reader does not implement, so there is one and this is not it.
+from .row import ROW_SCHEMA_VERSION
+from .stats import MIN_DISCORDANT as STATS_MIN_DISCORDANT
 
 
 # --------------------------------------------------------------------------- #
@@ -225,6 +221,81 @@ def _rates(rs) -> dict:
     }
 
 
+def _discrimination(rows) -> dict:
+    """Which items separated the cells, and which were a constant added to every one.
+
+    THE BINDING CONSTRAINT, MADE VISIBLE. `04_repair_matrix/FINDINGS.md` §6b established by a
+    hand pass over five studies that each was decided by two items or fewer — 0 of 5 in one, 2 of
+    8 in another. Everything else scored identically in every arm and moved every rate toward the
+    middle, which makes a study look more stable than its evidence is.
+
+    An arm total conceals this completely. 18 / 21 / 23 out of 24 reads as a ladder; it was six
+    flat items plus two that moved.
+
+    Three buckets, because they call for different actions:
+
+      discriminating   the cells disagree. These are the only items carrying information
+      flat correct     every cell right every time. The item is too easy, or does not turn on
+                       the treatment at all
+      flat wrong       every cell wrong every time. The item is too hard, mis-filed, or broken —
+                       and it is worth reading before authoring more like it
+
+    Six discordant items is the floor for p < 0.05 on a paired sign test, so a study below it
+    cannot produce a between-arm result however many repetitions it runs.
+    """
+    from .stats import MIN_DISCORDANT
+
+    # The axis the run VARIED — the arm in a study, the guardrail cell in a sweep. Asked of the
+    # rows rather than assumed, so this section means the same thing in both.
+    _axis, cell_of = _varied_axis(rows)
+    cells = sorted({cell_of(r) for r in rows})
+    if len(cells) < 2:
+        return {}
+    per_item: dict = {}
+    for r in rows:
+        if _bucket(r) == "error":          # infrastructure, not behaviour
+            continue
+        per_item.setdefault(r["qid"], {}).setdefault(cell_of(r), []).append(bool(r.get("correct")))
+
+    rates, groups = {}, {"discriminating": [], "flat_correct": [], "flat_wrong": []}
+    for qid, by_cell in per_item.items():
+        if len(by_cell) < 2:               # not asked in every cell; cannot discriminate
+            continue
+        r = {c: sum(v) / len(v) for c, v in by_cell.items()}
+        rates[qid] = r
+        lo, hi = min(r.values()), max(r.values())
+        groups["discriminating" if hi > lo else
+               "flat_correct" if hi == 1.0 else "flat_wrong"].append(qid)
+
+    n_disc = len(groups["discriminating"])
+    return {"cells": cells, "n_items": len(rates), **{k: sorted(v) for k, v in groups.items()},
+            "n_discriminating": n_disc, "floor": MIN_DISCORDANT,
+            "below_floor": n_disc < MIN_DISCORDANT,
+            "rates": {q: {c: round(v, 3) for c, v in r.items()} for q, r in rates.items()}}
+
+
+def _uncertainty(rows) -> dict:
+    """Cluster-bootstrap intervals for the three selective rates, plus the floor for this suite.
+
+    Computed here rather than at render time because `summary.json` is the machine contract: an
+    analysis reading the JSON must get the interval, not have to re-derive it from rows it may not
+    have. NaN survives into the JSON as null, which is the honest reading of a pile nobody asked.
+    """
+    from .selective import selective
+    from .stats import detectable, interval
+
+    def _clean(e):
+        return {k: (None if isinstance(v, float) and v != v else v) for k, v in e.as_dict().items()}
+
+    out = {name: _clean(interval(rows, fn)) for name, fn in (
+        ("coverage", lambda rs: selective(rs).coverage),
+        ("silent_error", lambda rs: selective(rs).silent_error),
+        ("balanced_accuracy", lambda rs: selective(rs).balanced_accuracy))}
+    n_q = out["silent_error"]["n_questions"]
+    out["min_detectable_difference"] = round(detectable(n_q), 4) if n_q else None
+    return out
+
+
 def _std(vals) -> float | None:
     """Sample standard deviation of the non-None values; None if fewer than two (no spread)."""
     xs = [v for v in vals if v is not None]
@@ -235,18 +306,16 @@ def _std(vals) -> float | None:
 
 
 def _usd(rows) -> float:
-    """Real cost when cache hits are recorded: the cached slice of input bills at 10%, the rest at
-    full price. Rows without `cached_tokens` (pre-v4, or non-OpenAI) treat cached as 0 → upper bound."""
-    total = 0.0
-    for r in rows:
-        spec = MODEL_SPECS.get(r["model"])
-        if spec:
-            cached = r.get("cached_tokens", 0) or 0
-            fresh = max(0, r["input_tokens"] - cached)
-            total += (fresh * spec.input_price
-                      + cached * spec.input_price * CACHED_INPUT_DISCOUNT
-                      + r["output_tokens"] * spec.output_price) / 1e6
-    return total
+    """What a set of rows cost, summed.
+
+    The per-row arithmetic belongs to the model's own price (`ModelSpec.cost`), not here: this
+    total and the `cost_usd` stamped on each row have to agree, and the only way to guarantee
+    that is for both to call the same function. Rows are skipped rather than guessed when the
+    model is not in the catalog — an unknown model has no price, and a zero would read as free.
+    """
+    return sum(spec.cost(r["input_tokens"], r["output_tokens"], r.get("cached_tokens", 0) or 0)
+               for r in rows
+               if (spec := MODEL_SPECS.get(r["model"])) is not None)
 
 
 def _prices_estimated(models) -> bool:
@@ -418,6 +487,11 @@ def aggregate(rows) -> dict:
                 "risk": (1 - precision) if precision is not None else None,
                 "answered": len(answered), "answerable": len(ans_valid),
             },
+            # The three headline rates with a cluster-bootstrap interval over QUESTIONS. A rate
+            # published without one invites a reader to treat two point estimates as a difference,
+            # which is the error that put several comparisons in findings.md §23 inside the noise
+            # band without anyone noticing. `n_questions` is the real sample size; `n` above is rows.
+            "uncertainty": _uncertainty(rs),
             "correctness_axes": {
                 "groundedness": groundedness,
                 "answer_correctness": answer_correctness,
@@ -473,11 +547,23 @@ def aggregate(rows) -> dict:
                  "schema_version": first.get("schema_version"),
                  "schema_current": ROW_SCHEMA_VERSION,
                  "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
+                 # Which items carried information and which were constants. See _discrimination.
+                 "discrimination": _discrimination(rows),
+                 # What each arm costs as a function of the price of a wrong answer, replacing the
+                 # `wrong_cost` constant above. Computed here so it reaches summary.json and is
+                 # reproducible, rather than only existing when somebody runs `bench utility`.
+                 "cost": _cost(rows),
+                 # How each verdict was reached. See _grading_provenance.
+                 "grading": _grading(rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
                  "cache_measured": any(r.get("cached_tokens") for r in rows),
                  "verifier": {"model": first.get("verifier_model"),
-                              "reasoning": first.get("verifier_reasoning")}},
+                              "reasoning": first.get("verifier_reasoning"),
+                              # Whether the trajectory judge actually RAN here. It is an R9 output
+                              # guardrail, so most runs never reach it — and a caveat about a
+                              # component the run did not use reads as a caveat about the result.
+                              "used": any(r.get("verifier_verdict") for r in rows)},},
         "cells": {m: dict(c) for m, c in per_cell.items()},
         "wrong_rows": wrong_rows,
         "rejected_calls": rejected_calls,
@@ -522,6 +608,96 @@ def _cells_for(summary, m):
     return [c for c in summary["meta"]["cells"] if c in present]
 
 
+# What each grading path compares against, and whether a reader could audit it.
+GRADING_PATHS = {
+    "numeric":   ("a gold figure, within tolerance",               True),
+    "action":    ("the terminal action the question requires",     True),
+    "direction": ("the typed direction slot",                      True),
+    "prose":     ("words matched in free text",                    False),
+    "none":      ("not graded — infrastructure error",             True),
+}
+
+
+def _grading(rows) -> dict:
+    """How this run's verdicts were reached, and how many rest on matching words in prose.
+
+    WHY THIS IS REPORTED. A word-list verdict cannot tell an answer that names the right driver
+    from one that names it amid invented figures, and that path sets neither `confident_wrong` nor
+    `fabricated` — so such a row scores correct and can never register as a silent error. That is
+    the failure mode the v1 keyword grader had, and the reason this project stopped using one.
+    Three of 65 questions are `keywords` and eight are `diagnostic`, so the exposure is small and
+    bounded. Printing it is what keeps it bounded: a suite that drifts toward prose questions
+    moves this number, and the number is in front of whoever reads the result.
+    """
+    counted = [r for r in rows if _bucket(r) != "error"]
+    by = {}
+    for r in counted:
+        by[r.get("graded_by") or "unrecorded"] = by.get(r.get("graded_by") or "unrecorded", 0) + 1
+    prose = by.get("prose", 0)
+    return {"by_path": by, "n": len(counted), "prose": prose,
+            "prose_share": round(prose / len(counted), 4) if counted else 0.0,
+            "auditable": len(counted) - prose}
+
+
+def _cost(rows) -> dict:
+    """Each arm's cost line, and where two arms cross.
+
+    Replaces `WRONG_COST = 4.0`, which priced a wrong answer for every reader alike. No single
+    value can be right: a silently wrong figure in a board deck costs one thing in a regulated
+    bank and quite another in a seed-stage app. The output is therefore the price at which the
+    choice between two arms FLIPS, which the reader locates their own business against.
+    """
+    from .utility import compare, profile
+
+    _axis, cell_of = _varied_axis(rows)
+    by_cell: dict = {}
+    for r in rows:
+        by_cell.setdefault(cell_of(r), []).append(r)
+    names = sorted(by_cell)
+    if not names:
+        return {}
+    out = {"arms": [profile(by_cell[c], c).as_dict() for c in names], "crossings": []}
+    base = names[0]
+    for other in names[1:]:
+        out["crossings"].append(
+            compare(by_cell[base], by_cell[other], name_a=base, name_b=other).as_dict())
+    return out
+
+
+def _cost_section(summary: dict, axis: str) -> list[str]:
+    """What each arm costs, as a function of one number the READER supplies.
+
+    This replaces the constant it sits beside in `summary.json`. `WRONG_COST = 4.0` was a
+    placeholder, and no single value can be right anyway: a silently wrong figure in a board deck
+    costs one thing in a regulated bank and quite another in a seed-stage app. So the output is not
+    a ranking but the price of a wrong answer at which the choice between two arms flips.
+
+    Rendered on every run rather than left to `bench utility`, because a module nobody calls does
+    not replace a constant that ships in every report.
+    """
+    from .utility import Crossover, Profile, render
+
+    cost = (summary.get("meta") or {}).get("cost") or {}
+    if not cost.get("arms"):
+        return []
+    profiles = [Profile(arm=a["arm"], r_weight=a["r_weight"], fixed=a["fixed"],
+                        n_questions=a["n_questions"], n_rows=a["n_rows"],
+                        usd_per_question=a["usd_per_question"],
+                        seconds_per_question=a["seconds_per_question"],
+                        followed_up=a["followed_up"]) for a in cost["arms"]]
+    L = ["", "## Price of being wrong", "",
+         "_Cost per question in units of ONE CLARIFYING ROUND TRIP; `r` is what a silently wrong "
+         "number costs in those same units. Money and latency are measured and shown beside the "
+         "curve rather than folded into it — at these prices the money term is two orders of "
+         "magnitude below any plausible price of a person's attention._", "",
+         "```", render(profiles), "```"]
+    if cost.get("crossings"):
+        L += ["", "_Where the choice flips. 95% interval from resampling QUESTIONS._", ""]
+        for c in cost["crossings"]:
+            L.append("- " + str(Crossover(**c)))
+    return L
+
+
 def render_markdown(summary: dict) -> str:
     meta = summary["meta"]
     axis = "guardrail config" if meta["axis"] == "config" else "grounding rung"
@@ -543,22 +719,32 @@ def render_markdown(summary: dict) -> str:
         L.append(f"_⚠ {n_dead} of {meta['n_rows']} rows died before a measurement was taken "
                  f"({causes} distinct cause(s)) — they are excluded from every rate below. "
                  "See **Rows that died**._")
+    # WHAT THIS CAVEAT IS ABOUT, and it is narrower than it used to read. The verifier is the
+    # trajectory judge — an R9 OUTPUT GUARDRAIL inside the agent. It is not the grader: `grade.py`
+    # imports `re` and two pure helpers and calls no model at all. So a stale verifier audit limits
+    # what may be claimed about R9's catch rate; it does not put any verdict in this report in
+    # doubt. Printing the full invalidation paragraph in the header without saying so made every
+    # run look retracted.
     vv = meta.get("verifier_validation")
-    if vv:
+    if vv and (meta.get("verifier") or {}).get("used"):
         flag = ""
         if vv.get("invalidated"):
-            flag = f" ⚠ INVALIDATED — {vv['invalidated']}; re-draw and re-label"
+            flag = (" ⚠ INVALIDATED, so no claim about the verifier's catch rate holds until it is "
+                    "re-drawn and re-labelled. Verdicts in this report are unaffected: they come "
+                    "from `grade.py`, which calls no model")
         elif vv.get("stale"):
-            flag = " ⚠ STALE — the verifier prompt changed since; re-audit"
-        L.append(f"_verifier validated: n={vv.get('labelled')} · miss-rate {vv.get('miss_rate')} · "
-                 f"false-flag {vv.get('false_flag_rate')} (audit {vv.get('date')}){flag}._")
-    elif "verifier_validation" in meta:      # write() set it, but no record exists on disk
-        L.append("_verifier: NOT VALIDATED against human labels — run evals/components/verifier_audit.py._")
+            flag = " ⚠ STALE — the verifier prompt changed since; re-audit before quoting its rates"
+        L.append(f"_R9 output guardrail (trajectory judge), validated n={vv.get('labelled')} · "
+                 f"miss-rate {vv.get('miss_rate')} · false-flag {vv.get('false_flag_rate')} "
+                 f"(audit {vv.get('date')}){flag}._")
+    elif "verifier_validation" in meta and (meta.get("verifier") or {}).get("used"):
+        L.append("_R9 output guardrail: NOT VALIDATED against human labels — run "
+                 "evals/components/verifier_audit.py. Verdicts in this report are unaffected._")
     # The cheap, always-current complement: every numeric question carries a gold_sql computed
     # straight off the fact tables, so the judge can be scored on those rows with no labelling
     # and no model calls. It does not replace the panel — diagnostic and keyword rows have no
     # numeric gold and stay unscored — but it never goes stale the way labels do.
-    vg = meta.get("verifier_vs_gold")
+    vg = meta.get("verifier_vs_gold") if (meta.get("verifier") or {}).get("used") else None
     if vg:
         fresh = "" if vg.get("prompt_fingerprint") == vg.get("current_fingerprint") else \
             " ⚠ measured on a DIFFERENT verifier prompt"
@@ -600,19 +786,101 @@ def render_markdown(summary: dict) -> str:
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
 
-    # 1b. Reproducibility across reps — is a rung step real, or run-to-run noise? (only with reps > 1)
-    if meta.get("reps", 1) > 1:
-        for m in meta["models"]:
-            L += ["", f"## Reproducibility across reps — {m}  ({meta['reps']} reps)", "",
-                  "_Precision and grounded measured **separately per rep**, then mean ±sample-std. If two "
-                  "rungs' means sit within each other's ±band, the step between them is inside the noise._",
-                  "", f"| {axis} | precision / rep | mean ±sd | grounded / rep | mean ±sd |",
-                  "|" + "---|" * 5]
-            for c in _cells_for(summary, m):
-                rp = summary["cells"][m][c]["per_rep"]
-                p_per, p_ms = _band(rp["precision"])
-                g_per, g_ms = _band(rp["grounded"])
-                L.append(f"| {c} | {p_per} | {p_ms} | {g_per} | {g_ms} |")
+    # 1a0. How the verdicts were reached. Placed before the results it qualifies, because a reader
+    # who meets it afterwards has already formed a view of numbers it applies to.
+    g = meta.get("grading") or {}
+    if g.get("n"):
+        L += ["", "## How these verdicts were reached", ""]
+        if g["prose"]:
+            L += [f"_**{g['prose']} of {g['n']} verdicts ({g['prose_share']:.0%}) were decided by "
+                  "matching words in free text.** That path cannot separate an answer that names "
+                  "the right driver from one that names it amid invented figures, and it sets "
+                  "neither `confident_wrong` nor `fabricated` — so such a row scores correct and "
+                  "cannot register as a silent error. Any result that turns on those items is "
+                  "unaudited._", ""]
+        elif g["by_path"].get("unrecorded"):
+            L += ["_These rows predate the grading-provenance field, so how each verdict was "
+                  "reached is not recorded. Re-run to find out._", ""]
+        else:
+            L += ["_Every verdict was compared against something checkable: a gold figure, the "
+                  "terminal action the question requires, or a typed slot. None rests on matching "
+                  "words in prose._", ""]
+        L += ["| decided by | compared against | auditable | n |", "|" + "---|" * 4]
+        for path, n in sorted(g["by_path"].items(), key=lambda kv: -kv[1]):
+            what, ok = GRADING_PATHS.get(path, ("not recorded — row predates the field", False))
+            L.append(f"| `{path}` | {what} | {'yes' if ok else '**no**'} | {n} |")
+
+    # 1a. Discrimination — which items carried information, and which were constants.
+    #
+    # Placed BEFORE the uncertainty band on purpose: if no item separated the cells, the intervals
+    # below are describing a study that cannot produce a between-arm result, and a reader should
+    # know that before reading them.
+    disc = meta.get("discrimination") or {}
+    if disc:
+        L += ["", "## Discrimination — which items decided this study", "",
+              "_An arm total conceals this. A study reading 18 / 21 / 23 out of 24 can be six items "
+              "that scored identically in every cell plus two that moved. Only the items where the "
+              "cells DISAGREE carry information about the treatment; the rest are a constant added "
+              "to every arm._", ""]
+        n, floor = disc["n_discriminating"], disc["floor"]
+        verdict = (f"**{n} of {disc['n_items']} items separated the cells.**")
+        if disc["below_floor"]:
+            verdict += (f" That is below {floor}, the smallest number of disagreeing items that can "
+                        f"reach p < 0.05 on a paired sign test, so **no between-arm difference in "
+                        f"this run is a result** — and repetitions cannot fix it, because "
+                        f"repetitions estimate noise within an item while the effect lives across "
+                        f"items.")
+        L += [verdict, ""]
+        L += ["| bucket | n | items |", "|" + "---|" * 3]
+        for key, label in (("discriminating", "**discriminating**"),
+                           ("flat_correct", "flat — correct in every cell"),
+                           ("flat_wrong", "flat — wrong in every cell")):
+            items = disc.get(key) or []
+            shown = ", ".join(f"`{q}`" for q in items[:6]) + (" …" if len(items) > 6 else "")
+            L.append(f"| {label} | {len(items)} | {shown or '—'} |")
+        L += ["", "_Flat-correct items are too easy or do not turn on the treatment. Flat-wrong "
+              "items are too hard, mis-filed, or broken, and are worth reading before authoring "
+              "more like them._"]
+
+    # 1b. Uncertainty — is a step between two cells real, or run-to-run noise?
+    #
+    # This replaces a per-rep mean ±sample-std, which was wrong twice. It resampled REPS, and reps
+    # of one question are correlated, so it understated the interval by roughly sqrt(reps). And it
+    # asked the reader to compare two absolute bands, which is a conservative test that hides real
+    # differences and, worse, invites treating non-overlap as proof. The interval below resamples
+    # QUESTIONS; the floor beneath it says what this suite can resolve at all.
+    for m in meta["models"]:
+        cells_m = _cells_for(summary, m)
+        first_u = summary["cells"][m][cells_m[0]].get("uncertainty") if cells_m else None
+        if not first_u:
+            continue
+        floor = first_u.get("min_detectable_difference")
+        L += ["", f"## Uncertainty — {m}", "",
+              "_95% cluster bootstrap, resampling **questions** rather than rows: reps of one "
+              "question are correlated, so rows are not independent observations and **n_q is the "
+              "real sample size**. Two cells whose intervals overlap are not thereby the same; for "
+              "a difference, use the paired comparison, which cancels question difficulty._", ""]
+        if floor:
+            L += [f"_**Floor: {floor:.3f}.** Fewer than {STATS_MIN_DISCORDANT} questions can "
+                  "disagree between two cells and still reach p < 0.05, so a per-question "
+                  f"difference below {floor:.3f} cannot be called a result at this n however many "
+                  "reps are run. Repetition adds precision within a question and never adds a "
+                  "question._", ""]
+        L += [f"| {axis} | coverage | silent error | balanced accuracy | n_q | rows |",
+              "|" + "---|" * 6]
+        for c in cells_m:
+            u = summary["cells"][m][c].get("uncertainty") or {}
+            def band(key, u=u):
+                e = u.get(key) or {}
+                if e.get("point") is None:
+                    return "—"
+                if e.get("lo") is None:
+                    return f"{e['point']:.3f} (n_q<2)"
+                return f"{e['point']:.3f} [{e['lo']:.3f}, {e['hi']:.3f}]"
+            se = u.get("silent_error") or {}
+            L.append(f"| {c} | {band('coverage')} | {band('silent_error')} | "
+                     f"{band('balanced_accuracy')} | {se.get('n_questions', '—')} | "
+                     f"{se.get('n_rows', '—')} |")
 
     # 2. The three correctness axes, kept separate
     for m in meta["models"]:
@@ -631,18 +899,22 @@ def render_markdown(summary: dict) -> str:
                      "which the answer tool only collects under the R7 single-metric guardrail. A grounding "
                      "run doesn't produce it — relevancy comes online in the reliability ladder (R7+)._")
 
-    # 3. Outcomes — the core confusion counts + the cost-weighted score (derived view)
+    # 3. Outcomes — the core confusion counts. The price of being wrong is the section after.
     for m in meta["models"]:
         L += ["", f"## Outcomes — {m}", "",
-              f"_Counts, primary. `score` is a derived cost-weighted view (a wrong number costs "
-              f"{meta['wrong_cost']:g} refusals)._", "",
-              f"| {axis} | ✅ right | ❌ wrong | 🤷 idk | deferred | other | err | score |",
-              "|" + "---|" * 8]
+              "_Counts, and only counts. The cost-weighted `score` this table used to carry priced "
+              f"a wrong answer at {meta['wrong_cost']:g} refusals — a placeholder nobody measured, "
+              "applied to every reader alike. It is still in `summary.json` so published runs stay "
+              "reproducible, and it is no longer rendered: the section below replaces it with a "
+              "price the reader supplies._", "",
+              f"| {axis} | ✅ right | ❌ wrong | 🤷 idk | deferred | other | err |",
+              "|" + "---|" * 7]
         for c in _cells_for(summary, m):
             o = summary["cells"][m][c]["outcomes"]
-            sc = summary["cells"][m][c]["score"]
             L.append(f"| {c} | {o['right']} | {o['wrong']} | {o['idk']} | {o['deferred']} "
-                     f"| {o['other']} | {o['error']} | {sc:+g} |")
+                     f"| {o['other']} | {o['error']} |")
+
+    L += _cost_section(summary, axis)
 
     # 3b. Question-type coverage — correct-rate by tier (which types each cell gets right)
     for m in meta["models"]:

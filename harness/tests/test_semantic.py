@@ -379,7 +379,14 @@ def test_every_measured_field_reaches_the_row():
 
     from agent.runtime.loop import Answer
 
-    src = (Path(__file__).resolve().parent.parent / "evals" / "runner.py").read_text()
+    # THE ROW WRITER MOVED. Every runner used to build its own row dict, and this test held the
+    # sweep runner to the Answer's field list. `evals/row.py` is now the single recorder — the
+    # runners call `measured_row` and write no fields of their own — so checking runner.py alone
+    # asserted nothing about where rows actually come from, and went red the moment the migration
+    # landed. Read the recorder, and keep the runner in the search so a field written only there
+    # still counts.
+    evals = Path(__file__).resolve().parent.parent / "evals"
+    src = (evals / "row.py").read_text() + (evals / "runner.py").read_text()
     carried = {f.name for f in dataclasses.fields(Answer)}
     # Fields the row deliberately renames, derives, or leaves out — each with its reason, so
     # "not written" is always a decision on the record rather than an oversight.

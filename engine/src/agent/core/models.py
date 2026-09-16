@@ -57,6 +57,29 @@ class ModelSpec:
     # and it 400s. That killed 342 rows of a sweep before this was a list.
     efforts: tuple[str, ...] = EFFORT_LADDER
 
+    # A prompt-cache HIT bills at ~10% of the input price (OpenAI's published discount). Kept
+    # beside the prices rather than in the cost report, because it is a fact about what a token
+    # COSTS: two places holding half of one price each is how the per-cell total and the per-run
+    # total came to be computed by different arithmetic.
+    CACHED_INPUT_DISCOUNT = 0.1
+
+    def cost(self, input_tokens: int, output_tokens: int, cached_tokens: int = 0) -> float:
+        """USD for one run's usage.
+
+        `cached_tokens` is a SUBSET of `input_tokens`, not an addition to it — the provider reports
+        how much of the prompt it served from cache — so the fresh share is the difference and the
+        cached share is billed at the discount. A caller that cannot measure cache hits passes 0
+        and gets an upper bound, which is the honest reading of an unmeasured cache rather than a
+        silent assumption that nothing was cached.
+
+        Whether this number may be QUOTED is `price_confirmed`, not something this method can know:
+        the arithmetic is the same for a placeholder price and a real one.
+        """
+        fresh = max(0, input_tokens - (cached_tokens or 0))
+        return (fresh * self.input_price
+                + (cached_tokens or 0) * self.input_price * self.CACHED_INPUT_DISCOUNT
+                + output_tokens * self.output_price) / 1e6
+
     @field_validator("efforts")
     @classmethod
     def _efforts_are_ladder_words(cls, efforts: tuple[str, ...]) -> tuple[str, ...]:

@@ -104,9 +104,9 @@ than advances: `B_prose_swapped` is a control *on* B and stays a B.
 
 ## Where results go
 
-`results/experiments/<timestamp>-<study>/` holds `run.json` (every row: tools called, grade, score)
-and `layers/` (the exact generated YAML each number came from), so a stored result always names a
-treatment you can reconstruct.
+`runs/experiments/<experiment>/<timestamp>-<study>/` holds `run.json` (every row: tools called,
+grade, score), `summary.json`, `summary.md`, and `layers/` (the exact generated YAML each number
+came from), so a stored result always names a treatment you can reconstruct.
 
 `results/probes/` holds twelve pre-migration runs of study 01, still readable with
 `./bench context --run …`, still the evidence behind numbers in the write-ups — but nothing produces

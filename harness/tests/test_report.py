@@ -230,21 +230,38 @@ def test_summary_is_json_serialisable_and_renders():
                     "## Refusals by coded reason", "## Agent behaviour", "## Process hygiene",
                     "## Telemetry"):
         assert section in md, f"missing section: {section}"
-    # single model, single rep -> the comparison + reproducibility sections stay hidden
+    # single model -> the cross-model comparison stays hidden. Uncertainty does NOT: a rate is
+    # published with an interval or it invites being read as exact, however few reps produced it.
     assert "## Model comparison" not in md
-    assert "## Reproducibility across reps" not in md
+    assert "## Uncertainty" in md
 
 
 def test_per_rep_spread_is_measured_per_rep():
     # same answerable question, two reps: rep 0 right, rep 1 wrong -> per-rep precision [1.0, 0.0],
-    # NOT the pooled 0.5 — the spread is what tells a real rung step from run-to-run noise
+    # NOT the pooled 0.5. Still computed and still in summary.json, because published summaries
+    # carry it; it is no longer the uncertainty instrument, for the reason section 1b now states.
     rows = [_row(qid="a", rep=0, correct=True, bucket="right"),
             _row(qid="a", rep=1, correct=False, bucket="wrong", confident_wrong=True, answer="5")]
     s = report.aggregate(rows)
     assert s["meta"]["reps"] == 2
     pr = s["cells"]["m"]["R9"]["per_rep"]
     assert pr["n"] == 2 and pr["precision"] == [1.0, 0.0]
-    assert "## Reproducibility across reps" in report.render_markdown(s)
+
+
+def test_uncertainty_counts_questions_not_rows():
+    """The instrument that replaced the per-rep band. One question asked five times is one
+    observation; reporting five would understate the interval by roughly sqrt(5)."""
+    rows = [_row(qid="a", rep=k, correct=True, bucket="right") for k in range(5)]
+    rows += [_row(qid="b", rep=k, correct=False, bucket="wrong", confident_wrong=True, answer="5")
+             for k in range(5)]
+    s = report.aggregate(rows)
+    u = s["cells"]["m"]["R9"]["uncertainty"]
+    assert u["silent_error"]["n_questions"] == 2, "questions, not rows, are the sample"
+    assert u["silent_error"]["n_rows"] == 10
+    # Two questions cannot resolve anything; the floor says so rather than implying precision.
+    assert u["min_detectable_difference"] == 3.0
+    md = report.render_markdown(s)
+    assert "## Uncertainty" in md and "Floor:" in md
 
 
 def test_cross_model_leaderboard_only_multi_model():
@@ -252,6 +269,69 @@ def test_cross_model_leaderboard_only_multi_model():
             _row(qid="a", model="m2", correct=False, bucket="wrong", confident_wrong=True, answer="5")]
     md = report.render_markdown(report.aggregate(rows))
     assert "## Model comparison" in md and "m1" in md and "m2" in md
+
+
+def test_the_placeholder_price_is_no_longer_rendered_but_is_still_reproducible():
+    """`WRONG_COST = 4.0` priced a wrong answer for every reader alike, and shipped in every
+    report. It stays in summary.json so published runs remain reproducible, and it is gone from
+    the rendered table, which now carries counts and the reader-supplied curve instead."""
+    rows = [_row(qid="q1", config="A"),
+            _row(qid="q2", config="A", correct=False, bucket="wrong", confident_wrong=True),
+            _row(qid="q1", config="B"), _row(qid="q2", config="B")]
+    import json as _json
+    import pathlib as _pl
+    import tempfile as _tf
+    d = _pl.Path(_tf.mkdtemp())
+    report.write(rows, d)
+    md = (d / "summary.md").read_text()
+    js = _json.loads((d / "summary.json").read_text())
+
+    assert "| err | score |" not in md, "the placeholder column is still rendered"
+    assert js["meta"]["wrong_cost"] == 4.0, "published runs must stay reproducible"
+    assert "## Price of being wrong" in md, "nothing replaced it"
+    assert js["meta"]["cost"]["arms"], "the curve must reach summary.json, not only the markdown"
+
+
+def test_an_arm_that_clarified_without_a_follow_up_is_flagged_in_the_report():
+    """A run made without the second turn cannot tell a clarification that worked from one that
+    did not, so it charges only the round trip and biases toward arms that ask. That bias is what
+    second_turn.py exists to remove; until it runs, the report has to say so."""
+    rows = [_row(qid="q1", config="A", outcome="clarify", expected_action="clarify"),
+            _row(qid="q2", config="A"), _row(qid="q1", config="B"), _row(qid="q2", config="B")]
+    import pathlib as _pl
+    import tempfile as _tf
+    d = _pl.Path(_tf.mkdtemp())
+    report.write(rows, d)
+    assert "clarifications not followed up" in (d / "summary.md").read_text()
+
+
+def test_the_report_says_how_many_verdicts_a_reader_cannot_audit():
+    """The exposure is small and bounded. Printing it is what keeps it bounded: a suite that
+    drifts toward prose questions moves this number in front of whoever reads the result."""
+    import pathlib as _pl
+    import tempfile as _tf
+    rows = ([_row(qid=f"n{i}", config="A", graded_by="numeric") for i in range(3)]
+            + [_row(qid="p1", config="A", graded_by="prose")]
+            + [_row(qid=f"n{i}", config="B", graded_by="numeric") for i in range(3)]
+            + [_row(qid="p1", config="B", graded_by="prose")])
+    d = _pl.Path(_tf.mkdtemp())
+    js = report.write(rows, d)
+    md = (d / "summary.md").read_text()
+    assert js["meta"]["grading"]["prose"] == 2 and js["meta"]["grading"]["n"] == 8
+    assert "2 of 8 verdicts (25%)" in md
+    assert "cannot register as a silent error" in md
+
+
+def test_rows_that_predate_the_field_are_not_reported_as_audited():
+    """Absence of evidence is not evidence of a checkable verdict. An old run must not read as
+    though every verdict was compared against a gold."""
+    import pathlib as _pl
+    import tempfile as _tf
+    d = _pl.Path(_tf.mkdtemp())
+    report.write([_row(qid="a", config="A"), _row(qid="a", config="B")], d)
+    md = (d / "summary.md").read_text()
+    assert "predate the grading-provenance field" in md
+    assert "None rests on matching words in prose" not in md
 
 
 if __name__ == "__main__":
@@ -262,6 +342,11 @@ if __name__ == "__main__":
     test_schema_skew_is_detected()
     test_summary_is_json_serialisable_and_renders()
     test_per_rep_spread_is_measured_per_rep()
+    test_uncertainty_counts_questions_not_rows()
     test_cross_model_leaderboard_only_multi_model()
+    test_the_placeholder_price_is_no_longer_rendered_but_is_still_reproducible()
+    test_the_report_says_how_many_verdicts_a_reader_cannot_audit()
+    test_rows_that_predate_the_field_are_not_reported_as_audited()
+    test_an_arm_that_clarified_without_a_follow_up_is_flagged_in_the_report()
     print("OK - report aggregator: arithmetic + process hygiene + dead rows + json + render "
           "+ spread + leaderboard all pass.")

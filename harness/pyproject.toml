@@ -27,6 +27,12 @@ dev = [
 metricflow = [
     "metricflow>=0.211.0",
 ]
+observability = [
+    # The projection onto a trace backend. OPTIONAL BY DESIGN: `make eval` and every test run
+    # with it absent, or the claim that a reader can reproduce every number from this repository
+    # and an API key stops being true.
+    "langfuse>=3",
+]
 
 [tool.uv.sources]
 ai-analytics-engine = { workspace = true }

@@ -47,7 +47,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-__all__ = ["Selective", "selective"]
+__all__ = ["Selective", "selective", "served_wrong"]
 
 
 def _pile(row: dict) -> str:
@@ -211,6 +211,21 @@ class Selective:
                 "over_clarification_rate": round(_rate(self.over_clarified, self.answerable), 4)}
 
 
+def served_wrong(row: dict) -> bool:
+    """A number was handed to the reader and the reader cannot tell it is false.
+
+    THE ONE DEFINITION. It decides `silent_error` here, the slope of the cost line in
+    `utility.py`, and the per-row score in `publish.py`. Three copies of this expression existed
+    before; a fourth reader would have had no way to know which was authoritative, and a change
+    to one would have made two published numbers disagree about the same rows.
+
+    Deliberately NOT `outcome == "answer"`: an unanswerable question answered in prose with no
+    figure is graded "other" and sets none of these flags. The reader sees "I can't", so nothing
+    about it is silent. Counting the outcome instead cost about 9 points at R0.
+    """
+    return bool(row.get("fabricated") or row.get("confident_wrong") or row.get("off_governance"))
+
+
 def selective(rows: list[dict]) -> Selective:
     """Score a set of result rows.
 
@@ -234,8 +249,7 @@ def selective(rows: list[dict]) -> Selective:
     # "abstention prose through the answer channel") and sets none of the three flags for it.
     # Counting `outcome == "answer"` instead swept those in, and they are the opposite kind of
     # failure: the reader sees "I can't", so nothing is silent about it. It cost ~9 points at R0.
-    served = sum(1 for r in b if r.get("fabricated") or r.get("confident_wrong")
-                 or r.get("off_governance"))
+    served = sum(1 for r in b if served_wrong(r))
     # Every SERVED answer that declared a graph, from either pile. An abstention declares nothing
     # to check, and an answer with no claims was never asked for one.
     audited = [r for r in scored if r["outcome"] == "answer" and not r.get("abstained")
@@ -246,8 +260,7 @@ def selective(rows: list[dict]) -> Selective:
     # Pile C, and the asymmetry with pile B is the point. There, anything served is a failure and
     # the refusals are what remains. Here, only ASKING is right: a served number is the invisible
     # miss and a refusal is the visible one, so both are counted rather than one being the residue.
-    contested_served = sum(1 for r in c if r.get("confident_wrong") or r.get("fabricated")
-                           or r.get("off_governance"))
+    contested_served = sum(1 for r in c if served_wrong(r))
     return Selective(
         n=len(scored), errors=len(rows) - len(scored),
         answerable=len(a), answered=len(answered), right=right, wrong=len(answered) - right,

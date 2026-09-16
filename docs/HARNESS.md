@@ -278,6 +278,28 @@ keeps its declared defaults and the surface test that pins what the model sees a
 passes unchanged. That is the proof that adding a mechanism did not move a published number.
 Source: 06 README; `harness/tests/test_surface.py`.
 
+### H-34  Browsing a run needs no account and no cloud.
+Evidence: `observability/docker-compose.yml` brings up Langfuse with its project and API keys
+already provisioned, so the sequence is three commands and no sign-up form:
+
+```
+docker compose -f observability/docker-compose.yml up -d
+export LANGFUSE_HOST=http://localhost:3100
+export LANGFUSE_PUBLIC_KEY=pk-lf-local-harness LANGFUSE_SECRET_KEY=sk-lf-local-harness
+./bench publish --run runs/latest          # --dry-run needs no server at all
+```
+
+Self-hosted is the default because the rows carry every question, every answer, every tool call and
+the measured cost — the material the published articles are built from. Sending that to a hosted
+service by default would be a decision made on the reader's behalf; `LANGFUSE_HOST` is one line for
+whoever wants it.
+
+One dataset per question suite (keyed by the suite hash, so an edited suite cannot be compared
+against the old one by accident), one dataset run per cell, one trace per row. Re-publishing is safe:
+trace and score ids are derived from the run, so a `bench regrade` followed by `bench publish`
+corrects the scores a reader is already looking at instead of adding a second set beside them.
+Source: `harness/evals/publish.py`; `observability/docker-compose.yml`.
+
 ---
 
 ## What I got wrong
