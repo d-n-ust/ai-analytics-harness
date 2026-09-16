@@ -137,6 +137,19 @@ def _seed(run_id: str, row: dict) -> str:
     return "/".join([run_id] + [f"{k}={row.get(k)}" for k in IDENTITY])
 
 
+# What a trace can be FILTERED by, and therefore what a reader can investigate. This matters more
+# than it looks: a dataset run links one trace per question (the backend upserts run items by
+# question id), so a run of 148 rows shows 37 in the experiments table. Every row is still in
+# Tracing, and these fields are how it is reached — "every R7 repetition of this question", "every
+# contested question this model answered", "every row where a guardrail blocked something".
+TRACE_FACETS = ("qid", "model", "config", "arm", "rung", "rrung", "rep", "tier",
+                "expected_action", "outcome", "bucket", "suite", "protocol")
+
+
+def _facets(row: dict) -> dict:
+    return {k: row[k] for k in TRACE_FACETS if row.get(k) is not None}
+
+
 def _row_scores(row: dict) -> dict:
     """The row's fields that become scores.
 
@@ -229,6 +242,7 @@ def render(run_dir: Path) -> dict:
                          "schema_version": rs[0].get("schema_version")},
             "traces": [{"item_id": r["qid"], "rep": r.get("rep", 0),
                         "seed": _seed(Path(run_dir).name, r),
+                        "facets": _facets(r),
                         "elapsed_s": r.get("elapsed_s"),
                         "input": r["question"], "output": r.get("answer"),
                         "spans": _spans(r),
@@ -448,7 +462,8 @@ def _write_trace(client, trace_id: str, t: dict, run: dict) -> None:
     with client.start_as_current_observation(
         trace_context={"trace_id": trace_id},
         name=f"{t['item_id']} · {run['name']}", as_type="span",
-        input=t["input"], output=t["output"], metadata=run["metadata"], end_on_exit=False,
+        input=t["input"], output=t["output"], end_on_exit=False,
+        metadata={**run["metadata"], **t["facets"]},
     ) as root:
         root.set_trace_io(input=t["input"], output=t["output"])
         for span in t["spans"]:

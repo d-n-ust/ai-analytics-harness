@@ -70,6 +70,18 @@ def test_a_run_whose_rows_are_indistinguishable_refuses_to_publish_half_of_itsel
         raise AssertionError("published a run whose rows overwrite each other")
 
 
+def test_a_trace_carries_what_a_reader_would_filter_by():
+    """A dataset run links one trace per QUESTION, so a 148-row run shows 37 in the experiments
+    table. Every row is still in Tracing, and these fields are the only way back to it."""
+    from evals.publish import TRACE_FACETS
+    t = render(written([row("q1", "R7", rung=7, tier="contested")]))["runs"][0]["traces"][0]
+    f = t["facets"]
+    assert f["qid"] == "q1" and f["config"] == "R7" and f["rung"] == 7
+    assert f["tier"] == "contested" and f["expected_action"] == "answer"
+    assert set(f) <= set(TRACE_FACETS)
+    assert "cost_usd" not in f, "a measurement is a score, not a facet"
+
+
 def test_a_cell_is_a_dataset_run_because_a_cell_is_what_the_experiment_varied():
     p = render(written([row("q1", "R7/A"), row("q1", "R7/D")]))
     assert [r["name"] for r in p["runs"]] == ["R7/A", "R7/D"]
@@ -264,6 +276,7 @@ if __name__ == "__main__":
     test_one_dataset_item_per_question_however_many_times_it_was_asked()
     test_two_rows_that_differ_only_by_an_unlisted_dimension_do_not_share_a_trace()
     test_a_run_whose_rows_are_indistinguishable_refuses_to_publish_half_of_itself()
+    test_a_trace_carries_what_a_reader_would_filter_by()
     test_a_cell_is_a_dataset_run_because_a_cell_is_what_the_experiment_varied()
     test_two_models_are_two_dataset_runs_and_never_one_averaged_one()
     test_one_model_is_not_named_in_every_label()
