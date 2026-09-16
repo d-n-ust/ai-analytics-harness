@@ -221,6 +221,59 @@ def _rates(rs) -> dict:
     }
 
 
+def _discrimination(rows) -> dict:
+    """Which items separated the cells, and which were a constant added to every one.
+
+    THE BINDING CONSTRAINT, MADE VISIBLE. `04_repair_matrix/FINDINGS.md` §6b established by a
+    hand pass over five studies that each was decided by two items or fewer — 0 of 5 in one, 2 of
+    8 in another. Everything else scored identically in every arm and moved every rate toward the
+    middle, which makes a study look more stable than its evidence is.
+
+    An arm total conceals this completely. 18 / 21 / 23 out of 24 reads as a ladder; it was six
+    flat items plus two that moved.
+
+    Three buckets, because they call for different actions:
+
+      discriminating   the cells disagree. These are the only items carrying information
+      flat correct     every cell right every time. The item is too easy, or does not turn on
+                       the treatment at all
+      flat wrong       every cell wrong every time. The item is too hard, mis-filed, or broken —
+                       and it is worth reading before authoring more like it
+
+    Six discordant items is the floor for p < 0.05 on a paired sign test, so a study below it
+    cannot produce a between-arm result however many repetitions it runs.
+    """
+    from .stats import MIN_DISCORDANT
+
+    # The axis the run VARIED — the arm in a study, the guardrail cell in a sweep. Asked of the
+    # rows rather than assumed, so this section means the same thing in both.
+    _axis, cell_of = _varied_axis(rows)
+    cells = sorted({cell_of(r) for r in rows})
+    if len(cells) < 2:
+        return {}
+    per_item: dict = {}
+    for r in rows:
+        if _bucket(r) == "error":          # infrastructure, not behaviour
+            continue
+        per_item.setdefault(r["qid"], {}).setdefault(cell_of(r), []).append(bool(r.get("correct")))
+
+    rates, groups = {}, {"discriminating": [], "flat_correct": [], "flat_wrong": []}
+    for qid, by_cell in per_item.items():
+        if len(by_cell) < 2:               # not asked in every cell; cannot discriminate
+            continue
+        r = {c: sum(v) / len(v) for c, v in by_cell.items()}
+        rates[qid] = r
+        lo, hi = min(r.values()), max(r.values())
+        groups["discriminating" if hi > lo else
+               "flat_correct" if hi == 1.0 else "flat_wrong"].append(qid)
+
+    n_disc = len(groups["discriminating"])
+    return {"cells": cells, "n_items": len(rates), **{k: sorted(v) for k, v in groups.items()},
+            "n_discriminating": n_disc, "floor": MIN_DISCORDANT,
+            "below_floor": n_disc < MIN_DISCORDANT,
+            "rates": {q: {c: round(v, 3) for c, v in r.items()} for q, r in rates.items()}}
+
+
 def _uncertainty(rows) -> dict:
     """Cluster-bootstrap intervals for the three selective rates, plus the floor for this suite.
 
@@ -494,6 +547,8 @@ def aggregate(rows) -> dict:
                  "schema_version": first.get("schema_version"),
                  "schema_current": ROW_SCHEMA_VERSION,
                  "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
+                 # Which items carried information and which were constants. See _discrimination.
+                 "discrimination": _discrimination(rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
                  "cache_measured": any(r.get("cached_tokens") for r in rows),
@@ -620,6 +675,38 @@ def render_markdown(summary: dict) -> str:
             L.append(f"| {c} | {_pct(sel['coverage'])} | {_pct(sel['precision_on_answered'])} "
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
+
+    # 1a. Discrimination — which items carried information, and which were constants.
+    #
+    # Placed BEFORE the uncertainty band on purpose: if no item separated the cells, the intervals
+    # below are describing a study that cannot produce a between-arm result, and a reader should
+    # know that before reading them.
+    disc = meta.get("discrimination") or {}
+    if disc:
+        L += ["", "## Discrimination — which items decided this study", "",
+              "_An arm total conceals this. A study reading 18 / 21 / 23 out of 24 can be six items "
+              "that scored identically in every cell plus two that moved. Only the items where the "
+              "cells DISAGREE carry information about the treatment; the rest are a constant added "
+              "to every arm._", ""]
+        n, floor = disc["n_discriminating"], disc["floor"]
+        verdict = (f"**{n} of {disc['n_items']} items separated the cells.**")
+        if disc["below_floor"]:
+            verdict += (f" That is below {floor}, the smallest number of disagreeing items that can "
+                        f"reach p < 0.05 on a paired sign test, so **no between-arm difference in "
+                        f"this run is a result** — and repetitions cannot fix it, because "
+                        f"repetitions estimate noise within an item while the effect lives across "
+                        f"items.")
+        L += [verdict, ""]
+        L += ["| bucket | n | items |", "|" + "---|" * 3]
+        for key, label in (("discriminating", "**discriminating**"),
+                           ("flat_correct", "flat — correct in every cell"),
+                           ("flat_wrong", "flat — wrong in every cell")):
+            items = disc.get(key) or []
+            shown = ", ".join(f"`{q}`" for q in items[:6]) + (" …" if len(items) > 6 else "")
+            L.append(f"| {label} | {len(items)} | {shown or '—'} |")
+        L += ["", "_Flat-correct items are too easy or do not turn on the treatment. Flat-wrong "
+              "items are too hard, mis-filed, or broken, and are worth reading before authoring "
+              "more like them._"]
 
     # 1b. Uncertainty — is a step between two cells real, or run-to-run noise?
     #

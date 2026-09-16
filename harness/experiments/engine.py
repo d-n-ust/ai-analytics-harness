@@ -1390,6 +1390,15 @@ def _persist(study: Study, results: dict, cases, golds, vocab, layers: dict, arg
         # written against one silently failed against the other.
         "rows": [r for a in results for r in results[a]["rows"]],
     }, indent=2, default=str))
+
+    # THE SAME REPORT EVERY OTHER RUN PRODUCES. Until now a study reported to a terminal: 35
+    # print() calls and a run.json. The sweeps produced summary.md and summary.json and the
+    # studies produced neither, so two experiments in the same repo could not be read the same
+    # way, and a study's result could not be re-read at all without re-running it.
+    #
+    # Rows are canonical since v18, so this is a call rather than a conversion.
+    from evals import report
+    report.write([r for a in results for r in results[a]["rows"]], out, mock=args.mock)
     return out
 
 
