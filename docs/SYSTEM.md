@@ -9,67 +9,13 @@ model.** Everything downstream of the answer is deterministic, and everything do
 stored row is a one-way projection. That is what makes a published number reproducible by someone
 who has neither an API key nor a dashboard.
 
-```mermaid
-flowchart TB
-  QUESTION["question + gold<br/>evals/cases · experiments/*/cases.yml"]
+![The harness in three planes: a request path that contains a model, a deterministic measurement path, and a one-way projection onto a trace backend.](system.svg)
 
-  subgraph REQUEST["① REQUEST · a model is in this loop"]
-    ORCH["orchestrator<br/>agent/loop.py"]
-    GUARD["guardrails<br/>action_space · before<br/>disclosure · after"]
-    TOOLS["tools<br/>query_metric · run_sql · check_*<br/>answer | refuse | clarify"]
-    SEM["semantic layer<br/>governed metrics<br/>segments · metric tree"]
-    WH[("warehouse<br/>DuckDB")]
-    MODEL[["model — provider API<br/>OpenAI · Anthropic · DeepSeek"]]
-    ORCH --> GUARD --> TOOLS --> SEM --> WH
-    TOOLS -. "result" .-> ORCH
-    ORCH <-. "tokens · latency · cost" .-> MODEL
-  end
+Read it as three bands. Everything in plane 01 needs an API key and gives a different answer each
+time it runs. Everything below it is reproducible from the files in the middle, by anyone, offline.
 
-  subgraph MEASURE["② MEASUREMENT · deterministic"]
-    ROW["one recorder<br/>evals/row.py"]
-    GRADE["grader<br/>evals/grade.py<br/>imports re, calls no model"]
-    STATS["statistics<br/>stats · selective · utility<br/>bootstrap over questions"]
-    REPORT["report<br/>evals/report.py"]
-    ROW --> GRADE --> STATS --> REPORT
-  end
-
-  RECORD[("system of record<br/>raw.jsonl · summary.json · summary.md")]
-
-  subgraph PROJECT["③ PROJECTION · optional"]
-    PUB["publish<br/>evals/publish.py<br/>render → emit"]
-    OTEL["OpenTelemetry spans<br/>carried by the Langfuse SDK"]
-    LF["Langfuse<br/>self-hosted · localhost:3100"]
-    PUB --> OTEL --> LF
-  end
-
-  QUESTION --> ORCH
-  ORCH -- "typed outcome + telemetry" --> ROW
-  REPORT --> RECORD
-  RECORD -. "replay · never writes back" .-> PUB
-
-  classDef model fill:#fdf0e3,stroke:#c2610c,stroke-width:2px,color:#1b1b1b
-  classDef det fill:#e6f2ea,stroke:#1f4d3d,stroke-width:1.5px,color:#1b1b1b
-  classDef agent fill:#eef1f7,stroke:#41506b,stroke-width:1.5px,color:#1b1b1b
-  classDef store fill:#eceae2,stroke:#6b6659,stroke-width:1.5px,color:#1b1b1b
-  classDef proj fill:#f1eef8,stroke:#5b4a92,stroke-width:1.5px,stroke-dasharray:4 3,color:#1b1b1b
-  class MODEL model
-  class ROW,GRADE,STATS,REPORT det
-  class ORCH,GUARD,TOOLS,SEM agent
-  class RECORD,WH store
-  class PUB,OTEL,LF proj
-
-  style REQUEST fill:#fbfbfa,stroke:#c9c4b6,color:#41506b
-  style MEASURE fill:#fbfbfa,stroke:#c9c4b6,color:#1f4d3d
-  style PROJECT fill:#fbfbfa,stroke:#c9c4b6,color:#5b4a92
-```
-
-| in the diagram | means |
-|---|---|
-| orange, double-bordered | the only component that is not deterministic |
-| green | deterministic: same input, same output, no key required |
-| grey cylinder | durable storage |
-| purple, dashed | optional — absent by default, and nothing depends on it |
-| dotted arrow | a read, or a call that leaves the process |
+The diagram is generated — edit `docs/system.svg` through `scripts/gen_system_svg.py` rather than by
+hand, so the coordinates stay computed.
 
 ## The three planes
 
