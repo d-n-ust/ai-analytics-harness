@@ -7,6 +7,7 @@
     python -m cli run  [--mock] [--models ...] [--rungs ...] [--rrungs ...] [--cells ...] [--repeats N]
     python -m cli regrade [--run DIR]           # re-grade a finished run (no model calls)
     python -m cli report  [--run DIR]           # re-render summary.md/json from stored rows
+    python -m cli publish [--run DIR] [--dry-run]  # project a run onto Langfuse for browsing
     python -m cli test                          # run the no-LLM test suite
 
 Installed as `bench` via the ./bench wrapper. This module is a thin dispatcher — every verb
@@ -320,6 +321,28 @@ def cmd_report(a):
     print(f"re-rendered {run / 'summary.md'} and summary.json")
 
 
+def cmd_publish(a):
+    """Project a finished run onto a trace backend so it can be browsed and compared.
+
+    A projection, not a second write path: `raw.jsonl` stays the system of record, this reads it.
+    An absent backend is reported in one line rather than raised, because every number the run
+    produced is reproducible without one."""
+    import json as _json
+
+    from evals import publish
+    run = _run_dir(a.run)
+    result = publish.emit(run, dry_run=a.dry_run)
+    if a.json:
+        print(_json.dumps(result, indent=2, default=str))
+        return
+    what = (f"{result['traces']} traces · {result['items']} items · "
+            f"{len(result['runs'])} cells → dataset {result['dataset']}")
+    if result["sent"]:
+        print(f"published {what}")
+    else:
+        print(f"not published ({result['reason']}): would send {what}")
+
+
 def cmd_utility(a):
     """Which arm to ship, as a function of the price of a wrong answer."""
     import json as _json
@@ -529,6 +552,15 @@ def main() -> None:
                    help="go live against this model (~$0.01). Default: the mock model, free.")
     g.add_argument("--cell", default=None, help="guardrail cell, e.g. R3+typed_clarify")
     g.set_defaults(func=cmd_gate)
+
+    # The projection onto a trace backend. Optional at every level: optional dependency, optional
+    # credentials, optional verb. Nothing else in the harness calls it.
+    pb = sub.add_parser("publish", help="project a finished run onto Langfuse for browsing")
+    pb.add_argument("--run", default=None, help="run directory (default: runs/latest)")
+    pb.add_argument("--dry-run", action="store_true",
+                    help="build the payload and report it without sending or needing credentials")
+    pb.add_argument("--json", action="store_true", help="print the result as JSON")
+    pb.set_defaults(func=cmd_publish)
 
     # The break-even curve. Replaces the WRONG_COST placeholder with a price the reader supplies.
     u = sub.add_parser("utility", help="which arm to ship, as a function of the price of a wrong answer")

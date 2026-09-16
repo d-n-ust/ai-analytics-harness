@@ -25,28 +25,43 @@ WHAT THE BACKEND DOES NOT GET TO OWN. Two things, and both would be downgrades:
     aggregates scores by mean cannot express that, so the run-level numbers are computed here and
     pushed as facts, never recomputed there.
 
-PROTOTYPE STATUS: `render` builds the payload and is exercised by tests. `emit` is not written
-yet; the mapping below is the thing worth reviewing before any dependency is added.
+`render` is pure and vendor-neutral: files in, dict out, testable with no server and no
+dependency. `emit` is the thin adapter that sends it. Keeping them apart is what lets the mapping
+be reviewed, diffed and tested on its own, and what makes a second backend an adapter rather than
+a rewrite.
 """
 
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 
-__all__ = ["render"]
+__all__ = ["render", "emit"]
 
-# What a row's fields become on the backend. Written out rather than inferred, because a mapping
-# that lives only in code drifts from what a reader of the dashboard thinks they are looking at.
+# What a row's fields become on the backend, and with which type. Written out rather than
+# inferred, because a mapping that lives only in code drifts from what a reader of the dashboard
+# thinks they are looking at — and because the backend's own type inference would make `bucket`
+# numeric on the day someone renames a bucket to "0".
 SCORES = {
-    "correct": "boolean — the grader's verdict",
-    "silent_error": "boolean — a number served that the reader cannot tell is false",
-    "expected_action": "categorical — which pile: answer | refuse | clarify",
-    "bucket": "categorical — right | wrong | idk | other | error",
-    "cost_usd": "numeric — ours, never the backend's price table",
-    "round_trips": "numeric — what a clarification cost the reader",
-    "divergence": "numeric — contested only: how far the served reading sat from its rival",
+    "correct":         ("BOOLEAN",     "the grader's verdict"),
+    "silent_error":    ("BOOLEAN",     "a number served that the reader cannot tell is false"),
+    "expected_action": ("CATEGORICAL", "which pile: answer | refuse | clarify"),
+    "bucket":          ("CATEGORICAL", "right | wrong | idk | other | error"),
+    "cost_usd":        ("NUMERIC",     "ours, never the backend's price table"),
+    "round_trips":     ("NUMERIC",     "what a clarification cost the reader"),
+    "divergence":      ("NUMERIC",     "contested only: how far the served reading sat from its rival"),
 }
+
+# Set-level scores are prefixed, and the prefix is load-bearing. `silent_error` is a BOOLEAN
+# about one row and a RATE over a whole cell; under one name a chart would average a fact with a
+# proportion and the result would mean nothing. The prefix also marks which numbers the backend
+# is being told rather than asked to compute — see the docstring above.
+RUN_PREFIX = "run/"
+
+# A row's stored span kinds, mapped onto the backend's observation types. `guardrail` is a real
+# type there, which is a better fit for an `act` than a generic event would be.
+SPAN_TYPES = {"generation": "generation", "tool": "tool", "event": "guardrail"}
 
 
 def _spans(row: dict) -> list[dict]:
@@ -67,8 +82,47 @@ def _spans(row: dict) -> list[dict]:
                       "level": "ERROR" if step.get("error") else
                                "WARNING" if step.get("blocked_by") else "DEFAULT"})
     for act in row.get("acts") or []:
-        spans.append({"type": "event", "name": f"guardrail: {act}"})
+        # An act is a record, not a string: which guardrail, where it sat, what it decided, and
+        # the value it decided about. Rendering the record itself put a Python dict repr in the
+        # span title, which is the least readable part of the trace made the most prominent.
+        outcome = act.get("outcome", "")
+        spans.append({"type": "event",
+                      "name": f"{act.get('guardrail', 'guardrail')} · {outcome or 'ran'}",
+                      "input": act.get("position"), "output": act.get("detail"),
+                      # A guardrail that stopped an answer is the event a reader scans for.
+                      "level": "WARNING" if outcome in ("blocked", "rejected", "repaired")
+                               else "DEFAULT"})
     return spans
+
+
+def _row_scores(row: dict) -> dict:
+    """The row's fields that become scores.
+
+    `silent_error` is the one that is not a stored field: it is the predicate `selective` counts,
+    evaluated per row. Without it the most important thing a reader would filter a dashboard by —
+    show me the answers nobody could have caught — would be the one thing missing from it.
+    """
+    from .selective import served_wrong
+
+    scores = {k: row.get(k) for k in SCORES if row.get(k) is not None}
+    scores["silent_error"] = served_wrong(row)
+    return scores
+
+
+def _rows(run_dir: Path) -> list[dict]:
+    """A run's stored rows, from whichever of the two files the runner that produced them wrote.
+
+    A grid run writes `raw.jsonl`; an experiment writes `run.json` with the rows under a key. The
+    difference is an artefact of two runners, not a fact about the rows, so it is absorbed here
+    rather than made every caller's problem.
+    """
+    jsonl = run_dir / "raw.jsonl"
+    if jsonl.exists():
+        return [json.loads(line) for line in jsonl.open() if line.strip()]
+    packed = run_dir / "run.json"
+    if packed.exists():
+        return json.loads(packed.read_text())["rows"]
+    raise SystemExit(f"{run_dir} holds neither raw.jsonl nor run.json")
 
 
 def render(run_dir: Path) -> dict:
@@ -78,14 +132,17 @@ def render(run_dir: Path) -> dict:
     server, a network call or a dependency.
     """
     run_dir = Path(run_dir)
-    rows = [json.loads(line) for line in (run_dir / "raw.jsonl").open()]
+    rows = _rows(run_dir)
     summary = json.loads((run_dir / "summary.json").read_text())
     meta = summary["meta"]
 
     # One dataset per question suite, identified by the hash the suite already carries, so a run
     # against an edited suite lands in a different dataset instead of polluting the old one.
+    # Three cases, and they are different facts. One suite is the normal one. No suite at all is a
+    # run recorded before the hash existed, which is not the same as a run that mixed two suites.
     suites = {r.get("suite") for r in rows if r.get("suite")}
-    dataset = f"suite-{suites.pop()}" if len(suites) == 1 else "suite-mixed"
+    dataset = (f"suite-{suites.pop()}" if len(suites) == 1
+               else "suite-unstamped" if not suites else "suite-mixed")
 
     # One dataset RUN per cell. A cell is the thing the experiment varied, so this is the unit a
     # reader compares — arm against arm, rung against rung.
@@ -95,17 +152,22 @@ def render(run_dir: Path) -> dict:
 
     return {
         "dataset": dataset,
-        "items": [{"id": r["qid"], "input": r["question"], "expected": r.get("gold"),
-                   "metadata": {"tier": r.get("tier"), "pile": r.get("expected_action")}}
-                  for r in rows],
+        # One item per QUESTION. A row is one question asked once in one cell, so a suite of 20
+        # questions across 2 arms at rep=3 is 120 rows and still 20 items.
+        "items": list({r["qid"]: {
+            "id": r["qid"], "input": r["question"], "expected": r.get("gold"),
+            "metadata": {"tier": r.get("tier"), "pile": r.get("expected_action")}}
+            for r in rows}.values()),
         "runs": [{
             "name": cell,
             "metadata": {"model": meta.get("models"), "reps": meta.get("reps"),
                          "surface_fingerprint": rs[0].get("surface_fingerprint"),
                          "schema_version": rs[0].get("schema_version")},
-            "traces": [{"item_id": r["qid"], "input": r["question"], "output": r.get("answer"),
+            "traces": [{"item_id": r["qid"], "rep": r.get("rep", 0),
+                        "elapsed_s": r.get("elapsed_s"),
+                        "input": r["question"], "output": r.get("answer"),
                         "spans": _spans(r),
-                        "scores": {k: r.get(k) for k in SCORES if r.get(k) is not None}}
+                        "scores": _row_scores(r)}
                        for r in rs],
             # Computed HERE and pushed as facts. See the module docstring.
             "run_scores": _run_scores(rs, summary, cell),
@@ -128,3 +190,201 @@ def _run_scores(rows, summary, cell) -> dict:
             if e.get("lo") is not None:
                 out[f"{name}_lo"], out[f"{name}_hi"] = e["lo"], e["hi"]
     return out
+
+
+# ---------------------------------------------------------------------------------------------
+# Sending. Everything above this line is pure and runs with no dependency installed.
+# ---------------------------------------------------------------------------------------------
+
+# The credentials the backend needs. Named here so an absent one can be reported by name rather
+# than as a stack trace from inside the SDK.
+_KEYS = ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY")
+
+
+def _client():
+    """The backend client, or None and a sentence saying why there is none.
+
+    ABSENCE IS A NORMAL OUTCOME. The dependency is optional and the credentials belong to whoever
+    checked the repository out. A fresh clone emits nothing, says so in one line, and every number
+    in `summary.json` is still reproducible without it.
+    """
+    import os
+
+    try:
+        from langfuse import Langfuse
+    except ImportError:
+        return None, "langfuse is not installed (uv sync --group observability)"
+    missing = [k for k in _KEYS if not os.environ.get(k)]
+    if missing:
+        return None, f"not configured: {' and '.join(missing)} unset"
+    host = os.environ.get("LANGFUSE_HOST", "https://cloud.langfuse.com")
+    try:
+        client = Langfuse()
+        if not client.auth_check():
+            return None, f"credentials rejected by {host}"
+    except Exception as exc:
+        # An unreachable host, a server that returns HTML, a misconfigured stack: all of them
+        # arrive here as some exception from inside the SDK, and none of them is a reason for a
+        # finished run to fail. The message carries the host so the cause is locatable.
+        return None, f"{host} unreachable or failing: {type(exc).__name__}"
+    return client, ""
+
+
+def _score(name: str, value):
+    """A field's value in the shape its declared score type requires.
+
+    Langfuse types a score by what it is sent, so a boolean arriving as `True` and as `1.0` land
+    as different types on the same score name and stop being comparable. The type comes from
+    SCORES and the value is coerced to match it, rather than the other way round.
+    """
+    data_type = SCORES[name][0]
+    if data_type == "CATEGORICAL":
+        return "CATEGORICAL", str(value)
+    if data_type == "BOOLEAN":
+        return "BOOLEAN", float(bool(value))
+    return "NUMERIC", float(value)
+
+
+def _ns_after(ms: float | None, *, base: int | None = None) -> int | None:
+    """A nanosecond end-stamp `ms` after now, or after `base`.
+
+    Only the END of a span can be set through the SDK, so a replay reproduces each span's
+    DURATION but positions it at publish time rather than at the time of the original run. The
+    duration is the part a reader uses; the absolute clock of a finished run is in the run
+    directory's name.
+    """
+    return None if not ms else (base or time.time_ns()) + int(ms * 1_000_000)
+
+
+def _run_name(run_id: str, cell: str) -> str:
+    """A dataset run's name, restricted to what can survive a URL path segment.
+
+    A cell is named things like `R7/D_declared`, and the backend addresses a run by name in the
+    path — so a slash silently splits the URL and the run becomes one that exists but cannot be
+    fetched back. The characters are replaced here and the untouched cell travels in the run's
+    metadata, so nothing is lost and nothing is unreachable.
+    """
+    safe = "".join(c if (c.isalnum() or c in "-_.") else "-" for c in cell)
+    return f"{run_id}--{safe}"
+
+
+def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
+    """Send one finished run to the backend. Returns what happened, and never raises for absence.
+
+    RE-EMITTING IS SAFE AND IS THE POINT. Every trace id is derived from
+    `run directory / cell / question / rep`, so sending the same run twice updates the same traces
+    instead of doubling them. That is what makes `regrade_run` useful: a regrade recomputes verdicts
+    from the stored model outputs, and re-emitting republishes the corrected scores onto the traces
+    the reader already has open.
+    """
+    run_dir = Path(run_dir)
+    payload = render(run_dir)
+    tally = {"dataset": payload["dataset"],
+             "items": len(payload["items"]),
+             "runs": [r["name"] for r in payload["runs"]],
+             "traces": sum(len(r["traces"]) for r in payload["runs"])}
+    if dry_run:
+        return {"sent": False, "reason": "dry run", **tally}
+
+    client, reason = _client()
+    if client is None:
+        return {"sent": False, "reason": reason, **tally}
+
+    run_id = run_dir.name
+    client.create_dataset(
+        name=payload["dataset"],
+        description=f"Question suite {payload['dataset'].removeprefix('suite-')}. "
+                    "The hash covers every question's id, text, expectation and tier, so an "
+                    "edited suite lands in a different dataset instead of polluting this one.",
+    )
+    for item in payload["items"]:
+        client.create_dataset_item(
+            dataset_name=payload["dataset"], id=item["id"], input=item["input"],
+            expected_output=item["expected"], metadata=item["metadata"])
+
+    # WHY THIS LOOKUP EXISTS. A trace id is derived from the run, so re-sending reaches the same
+    # trace — but each span inside it gets a fresh id, so the body would be APPENDED rather than
+    # replaced and every model call would appear twice. Observations cannot be addressed by id
+    # through this SDK, so the dataset run is made the unit of publication instead: if it is
+    # already there, the bodies are left alone and only the scores are rewritten. That is exactly
+    # what a regrade needs, and it is the only part a regrade changes.
+    published = _existing_runs(client, payload["dataset"])
+    rewritten = 0
+
+    for run in payload["runs"]:
+        # Scoped by run directory: two runs of the same arm are two dataset runs, not one merged.
+        run_name = _run_name(run_id, run["name"])
+        already = run_name in published
+        rewritten += already
+        dataset_run_id = published.get(run_name)
+
+        for t in run["traces"]:
+            trace_id = client.create_trace_id(
+                seed=f"{run_id}/{run['name']}/{t['item_id']}/{t['rep']}")
+            if not already:
+                _write_trace(client, trace_id, t, run)
+                item = client.api.dataset_run_items.create(
+                    run_name=run_name, dataset_item_id=t["item_id"], trace_id=trace_id,
+                    run_description=f"{run['name']} · {run_id}",
+                    # The exact cell, unaltered, because `run_name` had to be made path-safe.
+                    metadata={**run["metadata"], "cell": run["name"], "run_dir": run_id})
+                dataset_run_id = dataset_run_id or getattr(item, "dataset_run_id", None)
+
+            # Always rewritten, and always under the same id, so a regrade corrects the score a
+            # reader is already looking at instead of adding a second one beside it.
+            for name, value in t["scores"].items():
+                data_type, v = _score(name, value)
+                client.create_score(trace_id=trace_id, name=name, value=v, data_type=data_type,
+                                    score_id=client.create_trace_id(seed=f"{trace_id}/{name}"))
+
+        # The set-level numbers, attached to the run rather than to any one trace. See the module
+        # docstring: these are computed here and pushed as facts.
+        if dataset_run_id:
+            for name, value in run["run_scores"].items():
+                if value is not None:
+                    client.create_score(
+                        dataset_run_id=dataset_run_id, name=f"{RUN_PREFIX}{name}",
+                        value=float(value), data_type="NUMERIC",
+                        score_id=client.create_trace_id(seed=f"{run_name}/{name}"))
+
+    client.flush()
+    return {"sent": True, "reason": "", "rescored": rewritten, **tally}
+
+
+def _existing_runs(client, dataset: str) -> dict:
+    """Which dataset runs are already published, and their ids. Empty for a dataset that is new."""
+    found, page = {}, 1
+    while True:
+        try:
+            batch = client.api.datasets.get_runs(dataset, page=page, limit=100)
+        except Exception:
+            return found          # a dataset nobody has written yet has no runs to collide with
+        for r in batch.data:
+            found[r.name] = r.id
+        if len(batch.data) < 100:
+            return found
+        page += 1
+
+
+def _write_trace(client, trace_id: str, t: dict, run: dict) -> None:
+    """One row's trace body: the question, the answer, and every call that happened between."""
+    started = time.time_ns()
+    with client.start_as_current_observation(
+        trace_context={"trace_id": trace_id},
+        name=f"{t['item_id']} · {run['name']}", as_type="span",
+        input=t["input"], output=t["output"], metadata=run["metadata"], end_on_exit=False,
+    ) as root:
+        root.set_trace_io(input=t["input"], output=t["output"])
+        for span in t["spans"]:
+            client.start_observation(
+                name=span["name"], as_type=SPAN_TYPES[span["type"]],
+                input=span.get("input"), output=span.get("output"),
+                level=span.get("level"), model=span.get("model"),
+                metadata={"latency_ms": span.get("latency_ms")},
+                usage_details={k: v for k, v in (span.get("usage") or {}).items()
+                               if v is not None} or None,
+            ).end(end_time=_ns_after(span.get("latency_ms")))
+    # Ended by hand, with the duration the run actually took. A span opened and closed in the same
+    # loop iteration would otherwise report near-zero, and the backend's latency column would
+    # contradict the `elapsed_s` this repository publishes.
+    root.end(end_time=_ns_after((t.get("elapsed_s") or 0) * 1000, base=started))

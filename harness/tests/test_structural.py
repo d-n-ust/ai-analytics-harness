@@ -226,8 +226,19 @@ def test_the_cli_imports_what_it_claims_to():
             continue
         module = importlib.import_module(node.module)
         for alias in node.names:
-            _check(hasattr(module, alias.name),
-                   f"cli imports {alias.name!r} from {node.module!r}, which does not have it")
+            # `from package import submodule` is legal, and a submodule only becomes an attribute
+            # of its package once something imports it. Checking `hasattr` alone made this test
+            # depend on walk order and on which other line happened to import the submodule
+            # first: `from evals import report` passed only because an earlier import had already
+            # pulled it in. Resolve the submodule explicitly instead.
+            ok = hasattr(module, alias.name)
+            if not ok:
+                try:
+                    importlib.import_module(f"{node.module}.{alias.name}")
+                    ok = True
+                except ImportError:
+                    ok = False
+            _check(ok, f"cli imports {alias.name!r} from {node.module!r}, which does not have it")
             checked += 1
     _check(checked >= 8, f"expected the CLI's imports, found {checked}")
 

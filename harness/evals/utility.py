@@ -41,6 +41,10 @@ import random
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+# The same predicate `selective.silent_error` counts with — imported rather than restated, so the
+# cost line and the metric cannot come to disagree about which rows were silently wrong.
+from .selective import served_wrong as _served_wrong
+
 __all__ = ["Profile", "Crossover", "profile", "expected_cost", "crossover", "compare", "render"]
 
 _ITERS = 2000
@@ -50,13 +54,6 @@ DEFAULT_MISS = 1.0
 
 def _qid(row: dict) -> str:
     return row.get("qid") or row["id"]
-
-
-def _served_wrong(row: dict) -> bool:
-    """A number the reader was handed and cannot tell is false. The same definition
-    `selective.silent_error` uses, so the two cannot drift."""
-    return bool(row.get("confident_wrong") or row.get("fabricated")
-                or row.get("off_governance"))
 
 
 def _terms(row: dict, miss: float) -> tuple[float, float]:

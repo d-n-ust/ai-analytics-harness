@@ -195,6 +195,25 @@ while firing 656 times, which no ladder could have shown. If a component is adde
 there, what is measured is what was left over, not the component.
 Source: `published/2026-07-guardrail-shapley/`; `docs/RELIABILITY.md`.
 
+### E-24  A dashboard is a projection of the run, never a second place the run is written.
+Evidence: `bench publish` reads `raw.jsonl` and sends it onward; nothing in `engine/` imports it and
+`make eval` passes with no backend installed. Two write paths can disagree about the same run and a
+projection cannot, and every historical run back-fills for free. The backend is also not allowed to
+own the two things it would get wrong: the price (`ModelSpec.cost` discounts cached input and flags
+an unconfirmed price, so a backend's own model table would contradict every published figure) or
+the metrics (balanced accuracy averages the piles that HAVE questions, which no backend that
+aggregates scores by mean can express).
+Source: `harness/evals/publish.py`; `harness/tests/test_publish.py`.
+
+### E-25  One score name must mean one thing. A per-row fact and a per-set rate are two names.
+Evidence: `silent_error` is a boolean about one answer and a proportion over a whole cell. Published
+under a single name they coexisted happily and any chart over them averaged a fact with a rate. The
+set-level numbers now carry a `run/` prefix, which also marks the numbers the backend is being told
+rather than asked to compute. The same review found `silent_error` had three separate definitions in
+the code; it is now one function, `selective.served_wrong`, used by the metric, the cost model and
+the score.
+Source: `harness/evals/publish.py`; `harness/evals/selective.py`.
+
 ---
 
 ## Interpretation
