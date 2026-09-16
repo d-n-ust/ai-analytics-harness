@@ -127,7 +127,13 @@ A canonical agent, named the way the field names it:
   instrument rather than a second judge, and why its numbers need no gold answers.
 - **Memory** — none, by design: each question is a fresh conversation.
 
-[`docs/ANATOMY.md`](docs/ANATOMY.md) is the full file→component map.
+[`docs/ANATOMY.md`](docs/ANATOMY.md) is the full file→component map, and
+[`docs/SYSTEM.md`](docs/SYSTEM.md) is the layer above it: the three planes — the request path that
+contains a model, the deterministic measurement path, and the one-way projection onto a trace
+backend — with the diagram.
+
+To run an experiment of your own, [`docs/GOLDEN-PATH.md`](docs/GOLDEN-PATH.md) is the end-to-end
+path from a falsifiable question to a defensible result, cheapest checks first.
 
 ## The dataset
 
