@@ -59,9 +59,32 @@ SCORES = {
 # is being told rather than asked to compute — see the docstring above.
 RUN_PREFIX = "run/"
 
+# What distinguishes one row from another WITHIN one run. A trace id is derived from these, so a
+# field missing here silently merges two rows into one trace and halves the run.
+#
+# The mock sweep varied `rung` as well as `config`, and seeding on the cell alone put 888 rows
+# into 444 traces — each overwriting the other, with no error anywhere. `render` now checks that
+# the identity is actually unique, so a future run that varies a new dimension fails loudly
+# instead of publishing half of itself.
+IDENTITY = ("model", "config", "arm", "rung", "rrung", "protocol", "qid", "rep")
+
 # A row's stored span kinds, mapped onto the backend's observation types. `guardrail` is a real
 # type there, which is a better fit for an `act` than a generic event would be.
 SPAN_TYPES = {"generation": "generation", "tool": "tool", "event": "guardrail"}
+
+
+def _turn_cost(model: str | None, turn: dict) -> float | None:
+    """What one model call cost, by the same arithmetic that prices the whole row.
+
+    `row.py`'s own pricing function, called rather than reimplemented, so a turn and the row it
+    belongs to cannot be priced by two different rules. None for a model the catalog has no price
+    for — a zero on a dashboard reads as free.
+    """
+    from .row import _cost_usd
+
+    if turn.get("in") is None:
+        return None
+    return _cost_usd(model, turn.get("in") or 0, turn.get("out") or 0, turn.get("cached") or 0)
 
 
 def _spans(row: dict) -> list[dict]:
@@ -72,9 +95,19 @@ def _spans(row: dict) -> list[dict]:
     """
     spans: list[dict] = []
     for i, turn in enumerate(row.get("turns") or []):
+        # A turn records `in`/`out`/`cached`, not `input_tokens`/`output_tokens`. Reading the
+        # longer names returned None for every call, so the backend showed no usage at all while
+        # the run's own summary reported thousands of tokens.
+        usage = {"input": turn.get("in"), "output": turn.get("out"),
+                 # A SUBSET of `input`, in the backend's own vocabulary for it.
+                 "cache_read_input_tokens": turn.get("cached")}
         spans.append({"type": "generation", "name": f"model call {i + 1}",
-                      "model": row.get("model"), "usage": {
-                          "input": turn.get("input_tokens"), "output": turn.get("output_tokens")},
+                      "model": row.get("model"), "usage": usage,
+                      # Ours. Sending usage and a model name WITHOUT this would let the backend
+                      # price the call from its own table, which is the one thing the module
+                      # docstring says it does not get to own. Same function that prices the row,
+                      # so the turns sum to the row.
+                      "cost_usd": _turn_cost(row.get("model"), turn),
                       "latency_ms": turn.get("ms")})
     for step in row.get("steps") or []:
         spans.append({"type": "tool", "name": step.get("tool"), "input": step.get("args"),
@@ -93,6 +126,15 @@ def _spans(row: dict) -> list[dict]:
                       "level": "WARNING" if outcome in ("blocked", "rejected", "repaired")
                                else "DEFAULT"})
     return spans
+
+
+def _seed(run_id: str, row: dict) -> str:
+    """A stable, unique name for one row, used to derive its trace id.
+
+    Stable across re-publishing, so a regrade corrects the trace a reader already has open; and
+    derived from IDENTITY rather than from content, so a changed verdict does not move the trace.
+    """
+    return "/".join([run_id] + [f"{k}={row.get(k)}" for k in IDENTITY])
 
 
 def _row_scores(row: dict) -> dict:
@@ -144,11 +186,30 @@ def render(run_dir: Path) -> dict:
     dataset = (f"suite-{suites.pop()}" if len(suites) == 1
                else "suite-unstamped" if not suites else "suite-mixed")
 
-    # One dataset RUN per cell. A cell is the thing the experiment varied, so this is the unit a
-    # reader compares — arm against arm, rung against rung.
+    # One dataset RUN per (model, cell). BOTH, because `summary.json` nests its numbers that way
+    # and a dataset run is the unit a reader compares. Keying on the cell alone put two models in
+    # one run, so its coverage and silent-error would have been averaged across models and would
+    # have quietly disagreed with the summary for the same run.
+    #
+    # The cell label comes from `report._varied_axis`, not from a second rule here: the run's
+    # rendered table and its dashboard must name the same thing the same way.
+    from .report import _varied_axis
+
+    _axis, cell_of = _varied_axis(rows)
+    models = {r.get("model") for r in rows}
     by_cell: dict = {}
     for r in rows:
-        by_cell.setdefault(r.get("config") or r.get("arm") or "default", []).append(r)
+        by_cell.setdefault((r.get("model"), cell_of(r)), []).append(r)
+
+    seeds = [_seed(run_dir.name, r) for r in rows]
+    if len(set(seeds)) != len(seeds):
+        import collections
+
+        dup = [k for k, n in collections.Counter(seeds).items() if n > 1]
+        raise SystemExit(
+            f"{run_dir.name}: {len(seeds) - len(set(seeds))} of {len(seeds)} rows are not "
+            f"distinguishable by {IDENTITY}, so they would share a trace and overwrite each "
+            f"other. First: {dup[0]}. Add the varying field to publish.IDENTITY.")
 
     return {
         "dataset": dataset,
@@ -159,36 +220,44 @@ def render(run_dir: Path) -> dict:
             "metadata": {"tier": r.get("tier"), "pile": r.get("expected_action")}}
             for r in rows}.values()),
         "runs": [{
-            "name": cell,
-            "metadata": {"model": meta.get("models"), "reps": meta.get("reps"),
+            # The model is named only when the run has more than one. A single-model run would
+            # otherwise carry it in every label for no information.
+            "name": f"{model} · {cell}" if len(models) > 1 else cell,
+            "metadata": {"model": model, "cell": cell, "axis": _axis,
+                         "reps": meta.get("reps"),
                          "surface_fingerprint": rs[0].get("surface_fingerprint"),
                          "schema_version": rs[0].get("schema_version")},
             "traces": [{"item_id": r["qid"], "rep": r.get("rep", 0),
+                        "seed": _seed(Path(run_dir).name, r),
                         "elapsed_s": r.get("elapsed_s"),
                         "input": r["question"], "output": r.get("answer"),
                         "spans": _spans(r),
                         "scores": _row_scores(r)}
                        for r in rs],
             # Computed HERE and pushed as facts. See the module docstring.
-            "run_scores": _run_scores(rs, summary, cell),
-        } for cell, rs in sorted(by_cell.items())],
+            "run_scores": _run_scores(rs, summary, model, cell),
+        } for (model, cell), rs in sorted(by_cell.items(), key=lambda kv: tuple(map(str, kv[0])))],
     }
 
 
-def _run_scores(rows, summary, cell) -> dict:
-    """The run-level numbers, from our own metrics rather than the backend's aggregation."""
+def _run_scores(rows, summary, model, cell) -> dict:
+    """The run-level numbers, from our own metrics rather than the backend's aggregation.
+
+    The interval is read from the summary at (model, cell), the same address the summary stores it
+    under. Scanning every model and keeping the last match returned another model's interval
+    whenever a run varied both.
+    """
     from .selective import selective
 
     s = selective(rows)
     out = {"coverage": s.coverage, "silent_error": s.silent_error,
            "balanced_accuracy": s.balanced_accuracy, "n_questions": len({r["qid"] for r in rows})}
     # The interval belongs beside the point estimate or the point estimate reads as exact.
-    for model in summary.get("cells", {}).values():
-        u = (model.get(cell) or {}).get("uncertainty") or {}
-        for name in ("coverage", "silent_error", "balanced_accuracy"):
-            e = u.get(name) or {}
-            if e.get("lo") is not None:
-                out[f"{name}_lo"], out[f"{name}_hi"] = e["lo"], e["hi"]
+    u = ((summary.get("cells", {}).get(model) or {}).get(cell) or {}).get("uncertainty") or {}
+    for name in ("coverage", "silent_error", "balanced_accuracy"):
+        e = u.get(name) or {}
+        if e.get("lo") is not None:
+            out[f"{name}_lo"], out[f"{name}_hi"] = e["lo"], e["hi"]
     return out
 
 
@@ -264,8 +333,12 @@ def _run_name(run_id: str, cell: str) -> str:
     fetched back. The characters are replaced here and the untouched cell travels in the run's
     metadata, so nothing is lost and nothing is unreachable.
     """
+    import re
+
     safe = "".join(c if (c.isalnum() or c in "-_.") else "-" for c in cell)
-    return f"{run_id}--{safe}"
+    # `gpt-5.4-mini · R1` would otherwise become `gpt-5.4-mini---R1`: one dash per replaced
+    # character, including the spaces around the separator.
+    return f"{run_id}--{re.sub('-{2,}', '-', safe)}"
 
 
 def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
@@ -319,15 +392,18 @@ def emit(run_dir: Path, *, dry_run: bool = False) -> dict:
         dataset_run_id = published.get(run_name)
 
         for t in run["traces"]:
-            trace_id = client.create_trace_id(
-                seed=f"{run_id}/{run['name']}/{t['item_id']}/{t['rep']}")
+            trace_id = client.create_trace_id(seed=t["seed"])
             if not already:
                 _write_trace(client, trace_id, t, run)
                 item = client.api.dataset_run_items.create(
                     run_name=run_name, dataset_item_id=t["item_id"], trace_id=trace_id,
                     run_description=f"{run['name']} · {run_id}",
-                    # The exact cell, unaltered, because `run_name` had to be made path-safe.
-                    metadata={**run["metadata"], "cell": run["name"], "run_dir": run_id})
+                    # `run["metadata"]` already carries the model and the exact cell, unaltered,
+                    # because `run_name` had to be made path-safe. Overwriting `cell` with the
+                    # display name put the model prefix back into the field whose whole job is to
+                    # hold the bare cell.
+                    metadata={**run["metadata"], "run_dir": run_id,
+                              "display_name": run["name"]})
                 dataset_run_id = dataset_run_id or getattr(item, "dataset_run_id", None)
 
             # Always rewritten, and always under the same id, so a regrade corrects the score a
@@ -383,6 +459,8 @@ def _write_trace(client, trace_id: str, t: dict, run: dict) -> None:
                 metadata={"latency_ms": span.get("latency_ms")},
                 usage_details={k: v for k, v in (span.get("usage") or {}).items()
                                if v is not None} or None,
+                cost_details=(None if span.get("cost_usd") is None
+                              else {"total": span["cost_usd"]}),
             ).end(end_time=_ns_after(span.get("latency_ms")))
     # Ended by hand, with the duration the run actually took. A span opened and closed in the same
     # loop iteration would otherwise report near-zero, and the backend's latency column would
