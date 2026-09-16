@@ -305,6 +305,35 @@ def test_an_arm_that_clarified_without_a_follow_up_is_flagged_in_the_report():
     assert "clarifications not followed up" in (d / "summary.md").read_text()
 
 
+def test_the_report_says_how_many_verdicts_a_reader_cannot_audit():
+    """The exposure is small and bounded. Printing it is what keeps it bounded: a suite that
+    drifts toward prose questions moves this number in front of whoever reads the result."""
+    import pathlib as _pl
+    import tempfile as _tf
+    rows = ([_row(qid=f"n{i}", config="A", graded_by="numeric") for i in range(3)]
+            + [_row(qid="p1", config="A", graded_by="prose")]
+            + [_row(qid=f"n{i}", config="B", graded_by="numeric") for i in range(3)]
+            + [_row(qid="p1", config="B", graded_by="prose")])
+    d = _pl.Path(_tf.mkdtemp())
+    js = report.write(rows, d)
+    md = (d / "summary.md").read_text()
+    assert js["meta"]["grading"]["prose"] == 2 and js["meta"]["grading"]["n"] == 8
+    assert "2 of 8 verdicts (25%)" in md
+    assert "cannot register as a silent error" in md
+
+
+def test_rows_that_predate_the_field_are_not_reported_as_audited():
+    """Absence of evidence is not evidence of a checkable verdict. An old run must not read as
+    though every verdict was compared against a gold."""
+    import pathlib as _pl
+    import tempfile as _tf
+    d = _pl.Path(_tf.mkdtemp())
+    report.write([_row(qid="a", config="A"), _row(qid="a", config="B")], d)
+    md = (d / "summary.md").read_text()
+    assert "predate the grading-provenance field" in md
+    assert "None rests on matching words in prose" not in md
+
+
 if __name__ == "__main__":
     test_aggregate_arithmetic()
     test_rejected_and_blocked_calls_are_never_pooled()
@@ -316,6 +345,8 @@ if __name__ == "__main__":
     test_uncertainty_counts_questions_not_rows()
     test_cross_model_leaderboard_only_multi_model()
     test_the_placeholder_price_is_no_longer_rendered_but_is_still_reproducible()
+    test_the_report_says_how_many_verdicts_a_reader_cannot_audit()
+    test_rows_that_predate_the_field_are_not_reported_as_audited()
     test_an_arm_that_clarified_without_a_follow_up_is_flagged_in_the_report()
     print("OK - report aggregator: arithmetic + process hygiene + dead rows + json + render "
           "+ spread + leaderboard all pass.")

@@ -553,11 +553,17 @@ def aggregate(rows) -> dict:
                  # `wrong_cost` constant above. Computed here so it reaches summary.json and is
                  # reproducible, rather than only existing when somebody runs `bench utility`.
                  "cost": _cost(rows),
+                 # How each verdict was reached. See _grading_provenance.
+                 "grading": _grading(rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
                  "cache_measured": any(r.get("cached_tokens") for r in rows),
                  "verifier": {"model": first.get("verifier_model"),
-                              "reasoning": first.get("verifier_reasoning")}},
+                              "reasoning": first.get("verifier_reasoning"),
+                              # Whether the trajectory judge actually RAN here. It is an R9 output
+                              # guardrail, so most runs never reach it — and a caveat about a
+                              # component the run did not use reads as a caveat about the result.
+                              "used": any(r.get("verifier_verdict") for r in rows)},},
         "cells": {m: dict(c) for m, c in per_cell.items()},
         "wrong_rows": wrong_rows,
         "rejected_calls": rejected_calls,
@@ -600,6 +606,37 @@ def _cells_for(summary, m):
     """Cells for a model, in the run's cell order."""
     present = summary["cells"].get(m, {})
     return [c for c in summary["meta"]["cells"] if c in present]
+
+
+# What each grading path compares against, and whether a reader could audit it.
+GRADING_PATHS = {
+    "numeric":   ("a gold figure, within tolerance",               True),
+    "action":    ("the terminal action the question requires",     True),
+    "direction": ("the typed direction slot",                      True),
+    "prose":     ("words matched in free text",                    False),
+    "none":      ("not graded — infrastructure error",             True),
+}
+
+
+def _grading(rows) -> dict:
+    """How this run's verdicts were reached, and how many rest on matching words in prose.
+
+    WHY THIS IS REPORTED. A word-list verdict cannot tell an answer that names the right driver
+    from one that names it amid invented figures, and that path sets neither `confident_wrong` nor
+    `fabricated` — so such a row scores correct and can never register as a silent error. That is
+    the failure mode the v1 keyword grader had, and the reason this project stopped using one.
+    Three of 65 questions are `keywords` and eight are `diagnostic`, so the exposure is small and
+    bounded. Printing it is what keeps it bounded: a suite that drifts toward prose questions
+    moves this number, and the number is in front of whoever reads the result.
+    """
+    counted = [r for r in rows if _bucket(r) != "error"]
+    by = {}
+    for r in counted:
+        by[r.get("graded_by") or "unrecorded"] = by.get(r.get("graded_by") or "unrecorded", 0) + 1
+    prose = by.get("prose", 0)
+    return {"by_path": by, "n": len(counted), "prose": prose,
+            "prose_share": round(prose / len(counted), 4) if counted else 0.0,
+            "auditable": len(counted) - prose}
 
 
 def _cost(rows) -> dict:
@@ -682,22 +719,32 @@ def render_markdown(summary: dict) -> str:
         L.append(f"_⚠ {n_dead} of {meta['n_rows']} rows died before a measurement was taken "
                  f"({causes} distinct cause(s)) — they are excluded from every rate below. "
                  "See **Rows that died**._")
+    # WHAT THIS CAVEAT IS ABOUT, and it is narrower than it used to read. The verifier is the
+    # trajectory judge — an R9 OUTPUT GUARDRAIL inside the agent. It is not the grader: `grade.py`
+    # imports `re` and two pure helpers and calls no model at all. So a stale verifier audit limits
+    # what may be claimed about R9's catch rate; it does not put any verdict in this report in
+    # doubt. Printing the full invalidation paragraph in the header without saying so made every
+    # run look retracted.
     vv = meta.get("verifier_validation")
-    if vv:
+    if vv and (meta.get("verifier") or {}).get("used"):
         flag = ""
         if vv.get("invalidated"):
-            flag = f" ⚠ INVALIDATED — {vv['invalidated']}; re-draw and re-label"
+            flag = (" ⚠ INVALIDATED, so no claim about the verifier's catch rate holds until it is "
+                    "re-drawn and re-labelled. Verdicts in this report are unaffected: they come "
+                    "from `grade.py`, which calls no model")
         elif vv.get("stale"):
-            flag = " ⚠ STALE — the verifier prompt changed since; re-audit"
-        L.append(f"_verifier validated: n={vv.get('labelled')} · miss-rate {vv.get('miss_rate')} · "
-                 f"false-flag {vv.get('false_flag_rate')} (audit {vv.get('date')}){flag}._")
-    elif "verifier_validation" in meta:      # write() set it, but no record exists on disk
-        L.append("_verifier: NOT VALIDATED against human labels — run evals/components/verifier_audit.py._")
+            flag = " ⚠ STALE — the verifier prompt changed since; re-audit before quoting its rates"
+        L.append(f"_R9 output guardrail (trajectory judge), validated n={vv.get('labelled')} · "
+                 f"miss-rate {vv.get('miss_rate')} · false-flag {vv.get('false_flag_rate')} "
+                 f"(audit {vv.get('date')}){flag}._")
+    elif "verifier_validation" in meta and (meta.get("verifier") or {}).get("used"):
+        L.append("_R9 output guardrail: NOT VALIDATED against human labels — run "
+                 "evals/components/verifier_audit.py. Verdicts in this report are unaffected._")
     # The cheap, always-current complement: every numeric question carries a gold_sql computed
     # straight off the fact tables, so the judge can be scored on those rows with no labelling
     # and no model calls. It does not replace the panel — diagnostic and keyword rows have no
     # numeric gold and stay unscored — but it never goes stale the way labels do.
-    vg = meta.get("verifier_vs_gold")
+    vg = meta.get("verifier_vs_gold") if (meta.get("verifier") or {}).get("used") else None
     if vg:
         fresh = "" if vg.get("prompt_fingerprint") == vg.get("current_fingerprint") else \
             " ⚠ measured on a DIFFERENT verifier prompt"
@@ -738,6 +785,30 @@ def render_markdown(summary: dict) -> str:
             L.append(f"| {c} | {_pct(sel['coverage'])} | {_pct(sel['precision_on_answered'])} "
                      f"({sel['answered']}) | {_pct(sel['risk'])} | "
                      f"{_pct(d['correctness_axes']['groundedness'])} | {d['n']} |")
+
+    # 1a0. How the verdicts were reached. Placed before the results it qualifies, because a reader
+    # who meets it afterwards has already formed a view of numbers it applies to.
+    g = meta.get("grading") or {}
+    if g.get("n"):
+        L += ["", "## How these verdicts were reached", ""]
+        if g["prose"]:
+            L += [f"_**{g['prose']} of {g['n']} verdicts ({g['prose_share']:.0%}) were decided by "
+                  "matching words in free text.** That path cannot separate an answer that names "
+                  "the right driver from one that names it amid invented figures, and it sets "
+                  "neither `confident_wrong` nor `fabricated` — so such a row scores correct and "
+                  "cannot register as a silent error. Any result that turns on those items is "
+                  "unaudited._", ""]
+        elif g["by_path"].get("unrecorded"):
+            L += ["_These rows predate the grading-provenance field, so how each verdict was "
+                  "reached is not recorded. Re-run to find out._", ""]
+        else:
+            L += ["_Every verdict was compared against something checkable: a gold figure, the "
+                  "terminal action the question requires, or a typed slot. None rests on matching "
+                  "words in prose._", ""]
+        L += ["| decided by | compared against | auditable | n |", "|" + "---|" * 4]
+        for path, n in sorted(g["by_path"].items(), key=lambda kv: -kv[1]):
+            what, ok = GRADING_PATHS.get(path, ("not recorded — row predates the field", False))
+            L.append(f"| `{path}` | {what} | {'yes' if ok else '**no**'} | {n} |")
 
     # 1a. Discrimination — which items carried information, and which were constants.
     #

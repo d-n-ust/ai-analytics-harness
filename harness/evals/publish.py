@@ -143,7 +143,10 @@ def _seed(run_id: str, row: dict) -> str:
 # Tracing, and these fields are how it is reached — "every R7 repetition of this question", "every
 # contested question this model answered", "every row where a guardrail blocked something".
 TRACE_FACETS = ("qid", "model", "config", "arm", "rung", "rrung", "rep", "tier",
-                "expected_action", "outcome", "bucket", "suite", "protocol")
+                "expected_action", "outcome", "bucket", "suite", "protocol",
+                # How the verdict was reached. `graded_by=prose` marks a row whose `correct` came
+                # from matching words in free text, which no reader should take on trust.
+                "graded_by")
 
 
 def _facets(row: dict) -> dict:

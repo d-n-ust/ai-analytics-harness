@@ -55,7 +55,7 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 #      round trip was priced at half an episode by assumption, which flattered every arm that buys
 #      safety by asking. None on a run that did not clarify, which is not the same as a round trip
 #      that bought nothing.
-ROW_SCHEMA_VERSION = 20
+ROW_SCHEMA_VERSION = 21
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
