@@ -214,6 +214,26 @@ the code; it is now one function, `selective.served_wrong`, used by the metric, 
 the score.
 Source: `harness/evals/publish.py`; `harness/evals/selective.py`.
 
+### E-26  A verdict must record how it was reached, and the report must say how many cannot be audited.
+Evidence: `diagnostic` and `keywords` questions are graded by matching words in free text, which
+cannot separate an answer naming the right driver from one naming it amid invented figures. That
+path sets neither `confident_wrong` nor `fabricated`, so such a row scores correct and can never
+register as a silent error — the failure mode the v1 keyword grader had. Eleven of 65 questions
+reach it and nothing said so. Rows now carry `graded_by` (numeric / action / direction / prose /
+none) and every report prints the share before the results it qualifies. The exposure is bounded
+only because it is printed: a suite drifting toward prose questions moves the number in front of
+whoever reads the result.
+Source: `harness/evals/grade.py`; `harness/evals/report.py::_grading`.
+
+### E-27  A caveat must say what it scopes to, or it reads as a retraction of everything near it.
+Evidence: the verifier is the trajectory judge, an R9 output guardrail inside the agent, and its
+human-label validation is invalidated. Every report header printed the full invalidation paragraph
+regardless of whether the run reached R9, so a run whose verdicts came entirely from `grade.py` —
+which imports `re` and two pure helpers and calls no model — carried a wall of text about
+corrupted evidence and read as though its own numbers were withdrawn. The note now appears only
+when the verifier ran, names the component, and states that the report's verdicts are unaffected.
+Source: `harness/evals/report.py`; `harness/evals/labels/verifier_validation.json`.
+
 ---
 
 ## Interpretation
