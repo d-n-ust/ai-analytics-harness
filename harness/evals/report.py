@@ -549,6 +549,10 @@ def aggregate(rows) -> dict:
                  "schema_skew": any(r.get("schema_version") not in (None, ROW_SCHEMA_VERSION) for r in rows),
                  # Which items carried information and which were constants. See _discrimination.
                  "discrimination": _discrimination(rows),
+                 # What each arm costs as a function of the price of a wrong answer, replacing the
+                 # `wrong_cost` constant above. Computed here so it reaches summary.json and is
+                 # reproducible, rather than only existing when somebody runs `bench utility`.
+                 "cost": _cost(rows),
                  "main_reasoning": first.get("main_reasoning"),
                  "relevancy_scored": any(r.get("metric_match") is not None for r in rows),
                  "cache_measured": any(r.get("cached_tokens") for r in rows),
@@ -596,6 +600,65 @@ def _cells_for(summary, m):
     """Cells for a model, in the run's cell order."""
     present = summary["cells"].get(m, {})
     return [c for c in summary["meta"]["cells"] if c in present]
+
+
+def _cost(rows) -> dict:
+    """Each arm's cost line, and where two arms cross.
+
+    Replaces `WRONG_COST = 4.0`, which priced a wrong answer for every reader alike. No single
+    value can be right: a silently wrong figure in a board deck costs one thing in a regulated
+    bank and quite another in a seed-stage app. The output is therefore the price at which the
+    choice between two arms FLIPS, which the reader locates their own business against.
+    """
+    from .utility import compare, profile
+
+    _axis, cell_of = _varied_axis(rows)
+    by_cell: dict = {}
+    for r in rows:
+        by_cell.setdefault(cell_of(r), []).append(r)
+    names = sorted(by_cell)
+    if not names:
+        return {}
+    out = {"arms": [profile(by_cell[c], c).as_dict() for c in names], "crossings": []}
+    base = names[0]
+    for other in names[1:]:
+        out["crossings"].append(
+            compare(by_cell[base], by_cell[other], name_a=base, name_b=other).as_dict())
+    return out
+
+
+def _cost_section(summary: dict, axis: str) -> list[str]:
+    """What each arm costs, as a function of one number the READER supplies.
+
+    This replaces the constant it sits beside in `summary.json`. `WRONG_COST = 4.0` was a
+    placeholder, and no single value can be right anyway: a silently wrong figure in a board deck
+    costs one thing in a regulated bank and quite another in a seed-stage app. So the output is not
+    a ranking but the price of a wrong answer at which the choice between two arms flips.
+
+    Rendered on every run rather than left to `bench utility`, because a module nobody calls does
+    not replace a constant that ships in every report.
+    """
+    from .utility import Crossover, Profile, render
+
+    cost = (summary.get("meta") or {}).get("cost") or {}
+    if not cost.get("arms"):
+        return []
+    profiles = [Profile(arm=a["arm"], r_weight=a["r_weight"], fixed=a["fixed"],
+                        n_questions=a["n_questions"], n_rows=a["n_rows"],
+                        usd_per_question=a["usd_per_question"],
+                        seconds_per_question=a["seconds_per_question"],
+                        followed_up=a["followed_up"]) for a in cost["arms"]]
+    L = ["", "## Price of being wrong", "",
+         "_Cost per question in units of ONE CLARIFYING ROUND TRIP; `r` is what a silently wrong "
+         "number costs in those same units. Money and latency are measured and shown beside the "
+         "curve rather than folded into it — at these prices the money term is two orders of "
+         "magnitude below any plausible price of a person's attention._", "",
+         "```", render(profiles), "```"]
+    if cost.get("crossings"):
+        L += ["", "_Where the choice flips. 95% interval from resampling QUESTIONS._", ""]
+        for c in cost["crossings"]:
+            L.append("- " + str(Crossover(**c)))
+    return L
 
 
 def render_markdown(summary: dict) -> str:
@@ -765,18 +828,22 @@ def render_markdown(summary: dict) -> str:
                      "which the answer tool only collects under the R7 single-metric guardrail. A grounding "
                      "run doesn't produce it — relevancy comes online in the reliability ladder (R7+)._")
 
-    # 3. Outcomes — the core confusion counts + the cost-weighted score (derived view)
+    # 3. Outcomes — the core confusion counts. The price of being wrong is the section after.
     for m in meta["models"]:
         L += ["", f"## Outcomes — {m}", "",
-              f"_Counts, primary. `score` is a derived cost-weighted view (a wrong number costs "
-              f"{meta['wrong_cost']:g} refusals)._", "",
-              f"| {axis} | ✅ right | ❌ wrong | 🤷 idk | deferred | other | err | score |",
-              "|" + "---|" * 8]
+              "_Counts, and only counts. The cost-weighted `score` this table used to carry priced "
+              f"a wrong answer at {meta['wrong_cost']:g} refusals — a placeholder nobody measured, "
+              "applied to every reader alike. It is still in `summary.json` so published runs stay "
+              "reproducible, and it is no longer rendered: the section below replaces it with a "
+              "price the reader supplies._", "",
+              f"| {axis} | ✅ right | ❌ wrong | 🤷 idk | deferred | other | err |",
+              "|" + "---|" * 7]
         for c in _cells_for(summary, m):
             o = summary["cells"][m][c]["outcomes"]
-            sc = summary["cells"][m][c]["score"]
             L.append(f"| {c} | {o['right']} | {o['wrong']} | {o['idk']} | {o['deferred']} "
-                     f"| {o['other']} | {o['error']} | {sc:+g} |")
+                     f"| {o['other']} | {o['error']} |")
+
+    L += _cost_section(summary, axis)
 
     # 3b. Question-type coverage — correct-rate by tier (which types each cell gets right)
     for m in meta["models"]:
