@@ -1,0 +1,134 @@
+"""The parameter surface of one metric: which query parameters exist, and which values are legal.
+
+Once a metric is chosen, a query is the metric plus a set of parameter decisions: filters, group-by
+dimensions, time grain and period. This module lists the legal choices for each, so that EXISTENCE
+is a lookup rather than a judgement (is `region` a dimension of this metric? is `android` a member of
+`platform`?). It also carries each dimension's description, which is what the model reads to map a
+phrase such as "by market" onto a real dimension. There are no phrase tables here: the model does
+the open mapping against descriptions, and this module supplies the closed set it is checked against.
+
+A metric can be filtered and grouped by the categorical dimensions of the semantic model its measure
+lives on, and by those of every model whose primary entity is a foreign entity of that model. That
+is MetricFlow's join rule. Omitting the join-reachable dimensions would make the surface incomplete,
+and an incomplete closed set rejects legal values.
+
+Additivity is not decided here. The surface reports the measure's aggregation (`agg`), and the agent
+classifies it (`agent.core.measure`), because the dependency runs agent -> ontology and the rule must
+live in one place.
+
+Design, as in `graph.py`: a pure core and an imperative shell.
+
+  PURE    load_layer(text) -> (models, metrics)          parse MetricFlow's multi-document YAML
+          reachable_dimensions(models, metrics, metric)  the dimensions a metric may use
+          parameter_surface(models, metrics, metric, members) -> dict
+  SHELL   build(cursor, schema, layer_text, metric)      read member sets, then parameter_surface
+"""
+from __future__ import annotations
+
+import yaml
+
+__all__ = ["TIME_GRAINS", "PERIOD_GRAMMAR", "load_layer", "reachable_dimensions",
+           "parameter_surface", "build"]
+
+TIME_GRAINS = ("day", "week", "month")
+PERIOD_GRAMMAR = ("YYYY-MM", "YYYY-Qn", "YYYY-Hn", "last_week", "last_month", "last_quarter",
+                  "ytd", "all")
+
+# A member set longer than this is treated as open (free text): listing it would not help the model,
+# and a closed-set check over a truncated list would reject real values.
+MAX_MEMBERS = 50
+
+
+def load_layer(text: str) -> tuple[dict, dict]:
+    """PURE. (semantic_models, metrics), each keyed by name, from MetricFlow's multi-document YAML:
+    one `semantic_model:` or `metric:` per document."""
+    models, metrics = {}, {}
+    for doc in yaml.safe_load_all(text):
+        if not doc:
+            continue
+        if "semantic_model" in doc:
+            models[doc["semantic_model"]["name"]] = doc["semantic_model"]
+        elif "metric" in doc:
+            metrics[doc["metric"]["name"]] = doc["metric"]
+    return models, metrics
+
+
+def _entities(model: dict, kind: str) -> list[str]:
+    return [e["name"] for e in model.get("entities", []) if str(e["type"]).endswith(kind)]
+
+
+def _measure_home(models: dict, metrics: dict, metric: str) -> tuple[dict, dict]:
+    """The semantic model the metric's measure lives on, and the measure itself. A derived or ratio
+    metric is followed to the first base metric that resolves to a measure."""
+    seen, stack = set(), [metric]
+    while stack:
+        name = stack.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        params = metrics[name].get("type_params", {})
+        base = params.get("measure")
+        if base:
+            for model in models.values():
+                for measure in model.get("measures", []):
+                    if measure["name"] == base:
+                        return model, measure
+        refs = list(params.get("metrics") or [])
+        if "numerator" in params:
+            refs += [params["numerator"], params["denominator"]]
+        stack.extend(r["name"] if isinstance(r, dict) else r for r in refs)
+    raise ValueError(f"metric {metric!r} resolves to no measure in the layer")
+
+
+def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]:
+    """PURE. The categorical dimensions the metric may filter or group by: its own model's, then
+    those of every model whose primary entity is a foreign entity of its own model."""
+    own, _ = _measure_home(models, metrics, metric)
+    foreign = set(_entities(own, "foreign"))
+    homes = [own] + [m for m in models.values() if m is not own and _entities(m, "primary")
+                     and _entities(m, "primary")[0] in foreign]
+    out = []
+    for model in homes:
+        entity = _entities(model, "primary")[0]
+        for d in model.get("dimensions", []):
+            if d.get("type") == "categorical":
+                out.append({"name": f"{entity}__{d['name']}", "entity": entity,
+                            "table": model["node_relation"]["alias"], "column": d["name"],
+                            "description": " ".join((d.get("description") or "").split()),
+                            "joined": model is not own})
+    return out
+
+
+def parameter_surface(models: dict, metrics: dict, metric: str, members: dict) -> dict:
+    """PURE. The whole parameter surface of `metric`. `members` maps (table, column) to that
+    column's member list, or to None where the set is open; a missing key is an open set."""
+    _, measure = _measure_home(models, metrics, metric)
+    dims = [{**d, "members": members.get((d["table"], d["column"]))}
+            for d in reachable_dimensions(models, metrics, metric)]
+    return {
+        "metric": metric,
+        "description": " ".join((metrics[metric].get("description") or "").split()),
+        "agg": measure.get("agg"),
+        "parameters": {
+            "filters": {"how": "equality on any dimension below", "dimensions": dims},
+            "group_by": {"how": "any dimension below, or metric_time for a time series",
+                         "dimensions": [d["name"] for d in dims] + ["metric_time"]},
+            "time_grain": {"how": "bucket a time series", "legal_values": list(TIME_GRAINS)},
+            "period": {"how": "the time window", "grammar": list(PERIOD_GRAMMAR)},
+        },
+    }
+
+
+def _members(cursor, schema: str, table: str, column: str) -> list | None:
+    rows = cursor.execute(f"SELECT DISTINCT {column} FROM {schema}.{table} "
+                          f"WHERE {column} IS NOT NULL ORDER BY 1 LIMIT {MAX_MEMBERS + 1}").fetchall()
+    return None if len(rows) > MAX_MEMBERS else [r[0] for r in rows]
+
+
+def build(cursor, schema: str, layer_text: str, metric: str) -> dict:
+    """The imperative shell: read each reachable dimension's member set from the warehouse, then
+    hand everything to the pure `parameter_surface`."""
+    models, metrics = load_layer(layer_text)
+    members = {(d["table"], d["column"]): _members(cursor, schema, d["table"], d["column"])
+               for d in reachable_dimensions(models, metrics, metric)}
+    return parameter_surface(models, metrics, metric, members)

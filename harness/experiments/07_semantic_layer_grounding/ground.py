@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Grounded parameter selection against the per-metric parameter ontology — schema-enforced.
+"""Grounded parameter selection against the metric's parameter surface. PROTOTYPE.
 
-The metric is chosen; the ontology (ontology/build_ontology.py) is the closed world. Two design
+This file is the prototype for the grounding step, and it moves into `engine/src/agent` as a
+switchable agent variant (`R3+grounding`), so that it runs through the shared runner and is recorded
+by `evals/row.py`. Until then it runs one question and writes an HTML view; it records no row.
+
+The metric is chosen; the parameter surface (`ontology.parameters`) is the closed world. Two design
 rules, both learned the hard way:
 
   1. EMIT STRUCTURE, don't parse prose. The model fills a forced tool whose fields are ENUMS drawn
@@ -28,14 +32,17 @@ import sys
 
 import yaml
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "ontology"))
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3]))
-import build_ontology
+import duckdb
 from agent.core.conversation import Conversation
+from agent.core.measure import _additivity
 from agent.runtime.providers import get_model
+from ontology import parameters
 
 HERE = pathlib.Path(__file__).resolve().parent
-SPINE = HERE.parent / "spine" / "spine.yaml"
+LAYER = HERE / "fixture" / "layer" / "semantic_models.yml"
+GOVERNANCE = HERE / "fixture" / "layer" / "governance.yml"
+WAREHOUSE = HERE.parents[2] / "runs" / "warehouse.duckdb"
+MART_SCHEMA = "wh_06"
 
 
 # ────────────────────────── the forced-tool schema, built from the ontology ──────────────────────────
@@ -98,7 +105,7 @@ def ask(question: str, o: dict, principles: list, model_name="gpt-5-mini"):
     # description of the case, not a word pattern. It names the principle; the protocol applies it.
     prin = "\n".join(f"  - {p['id']} ({p['slot']}): {p.get('when', p.get('rationale',''))}"
                      for p in principles)
-    user = (build_ontology_text(o) + "\n\nGoverned principles you may NAME when a choice is left open "
+    user = (surface_text(o) + "\n\nGoverned principles you may NAME when a choice is left open "
             "(you name it; the protocol fills its value):\n" + prin
             + f"\n\nQUESTION: {question}\n\nCall select_parameters.")
     turn = get_model(model_name, mock=False).respond(
@@ -106,8 +113,8 @@ def ask(question: str, o: dict, principles: list, model_name="gpt-5-mini"):
     return turn.tool_calls[0].args if turn.tool_calls else {}
 
 
-def build_ontology_text(o: dict) -> str:
-    lines = [f"METRIC: {o['metric']} — {o['description']}  (additivity: {o['additivity'].get('kind')})",
+def surface_text(o: dict) -> str:
+    lines = [f"METRIC: {o['metric']} — {o['description']}  (additivity: {_additivity(o['agg'] or '')})",
              "Dimensions (filter or group_by), with descriptions and members:"]
     for d in o["parameters"]["filters"]["dimensions"]:
         mem = ", ".join(map(str, d["members"])) if d["members"] else "(open)"
@@ -262,11 +269,12 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("question")
     ap.add_argument("--metric", default="app_opens")
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default="ground.html")
     args_ = ap.parse_args()
 
-    o = build_ontology.build(args_.metric)
-    principles = yaml.safe_load(SPINE.read_text()).get("methodological_rules", [])
+    con = duckdb.connect(str(WAREHOUSE), read_only=True)
+    o = parameters.build(con, MART_SCHEMA, LAYER.read_text(), args_.metric)
+    principles = yaml.safe_load(GOVERNANCE.read_text()).get("methodological_rules", [])
     by_id = {p["id"]: p for p in principles}
     call = ask(args_.question, o, principles)
     rows = classify(o, by_id, call)
@@ -274,7 +282,7 @@ def main() -> None:
     print(f"QUESTION: {args_.question}\nMETRIC: {args_.metric}\n")
     for r in rows:
         print(f"  {r['parameter']:11} = {str(r['value']):40} [{r['state']}]  {r['why']}")
-    out = pathlib.Path(args_.out or (HERE.parent / "results" / "ground.html"))
+    out = pathlib.Path(args_.out)
     out.write_text(render(args_.question, o, rows, call))
     print(f"\nwrote {out}")
 

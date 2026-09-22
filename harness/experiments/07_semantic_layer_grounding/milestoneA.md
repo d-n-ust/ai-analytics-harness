@@ -79,10 +79,10 @@ all events are recorded in UTC and the period boundaries fall at midnight UTC. W
 every harmless default would be counted as a failure, and the measure would overstate the problem.
 
 Deciding whether a decision changes the number requires computing the alternatives and comparing
-them. Experiment 07 does not yet have a component for this. The exp06 grader copied into
-`fixture/run.py` computes divergence between readings, and can be adapted. For the first run, the
-alternatives are computed once per question and recorded in the question file
-(`expected.decisions[].alternative`).
+them. Experiment 07 does not yet have a component for this; experiment 06's
+`fixture/divergence.py` computes it for a contested pair and can be adapted. For the first run, the
+alternatives are computed once per question and recorded in `01_parameter_grounding/cases.yml`
+(`decisions[].alternative`).
 
 ## Agent reliability and answer trust
 
@@ -93,26 +93,34 @@ The model distinguishes two scopes.
 | agent reliability | only the decisions the agent can select (filters, group-by, time grain, period) | the agent chooses `group_by = channel` |
 | answer trust | every decision behind the number, including decisions fixed by the metric | `app_opens` fixes `is_internal = false`; the agent cannot change it |
 
-`protocol/ground.py` measures agent reliability. The confident-wrong rate is a property of answer
+`ground.py` measures agent reliability. The silent error rate is a property of answer
 trust, the wider scope. When a result is reported, it must state which scope it covers.
 
-## Two measures
+## Measures
 
-Two measures are needed. They are related but not the same.
-
-| measure | what it counts | type |
-|---|---|---|
-| undisclosed-decision rate | answers containing at least one decision that changes the number and is not disclosed | process measure |
-| confident-wrong rate | answers that state a wrong number as fact, without a caveat or a clarifying question | outcome measure |
-
-The hypothesis is that reducing the first reduces the second. That is a claim to test. Defining the
-confident-wrong rate as the undisclosed-decision rate would assume the result.
-
-A third measure checks the disclosures themselves:
+The headline measures are the shared grader's, so a result here sits on the same axis as
+experiments 01 to 06:
 
 | measure | what it counts |
 |---|---|
-| basis accuracy | disclosed decisions whose stated basis is correct |
+| silent error rate | answers that state a wrong number as fact, with no caveat, refusal or clarifying question |
+| balanced accuracy | the mean of per-pile accuracy over the piles present: answerable, unanswerable, contested |
+| coverage | the share of answerable questions the agent answers rather than declines |
+
+The secondary measure is disclosure:
+
+| measure | what it counts | grading |
+|---|---|---|
+| undisclosed-decision rate | answers with at least one labelled decision that changes the number and is not disclosed | the decision's fixed `disclose_words`, matched in the answer text of every arm; prose-graded, so reported as unaudited (E-26) |
+| basis accuracy | disclosed decisions whose stated basis is correct | R3+grounding only, from its structured record: is the quoted basis phrase in the question |
+
+The hypothesis links the two: lowering the undisclosed-decision rate lowers the silent error rate.
+That is a claim to test. Defining one as the other would assume the result.
+
+The same word list is applied to every arm's answer text. A disclosure the grounding step records
+but does not pass into the answer text does not count, because the reader never sees it. A typed
+`decisions` field on every arm's answer was considered and rejected for now: offering the field would
+itself prompt the R3 arm to disclose, so R3 would no longer be the baseline.
 
 An incorrect basis is worse than no disclosure, because the answer appears grounded when it is not.
 The q_004 run already contains an example (see "Known defects").
@@ -125,12 +133,15 @@ decisions that change the number, or that differ from what the reader would reas
 
 | component | file | what it enforces |
 |---|---|---|
-| parameter ontology (closed set) | `ontology/build_ontology.py`, `protocol/ground.py` | a dimension that does not exist cannot be expressed, because the tool schema lists dimensions as an enum; a member is free text, and `classify()` marks a non-existent member as invalid after the call |
-| descriptions and model mapping | `protocol/ground.py` | the model maps the question's wording onto dimensions by reading their descriptions |
-| governed principles | `spine/overlay.yaml`, `protocol/ground.py` | the model names a principle (`trend_granularity`, `canonical_segments`); the protocol applies its value, and the answer discloses it |
-| structural safety | `protocol/structural.py` | the additivity check rejects summing a distinct count over time (June 2026 active users: 1,620 correct versus 3,310 summed by week) |
-| divergence | not built in exp07; `fixture/run.py` (exp06 grader) | would detect whether plausible readings give different numbers |
-| disclosure | `protocol/ground.py` | every decision carries a one-sentence disclosure |
+| parameter surface (closed set) | `ontology/src/ontology/parameters.py`, `ground.py` | a dimension that does not exist cannot be expressed, because the tool schema lists dimensions as an enum; a member is free text, and `classify()` marks a non-existent member as invalid after the call |
+| descriptions and model mapping | `ground.py` | the model maps the question's wording onto dimensions by reading their descriptions |
+| governed principles | `fixture/layer/governance.yml`, `ground.py` | the model names a principle (`trend_granularity`, `canonical_segments`); the protocol applies its value, and the answer discloses it |
+| additivity | `engine/src/agent/core/measure.py` | classifies each aggregation as additive, semi-additive or non-additive; summing a distinct count over time is rejected (June 2026 active users: 1,620 correct versus 3,310 summed by week) |
+| divergence | not built in exp07; experiment 06's `fixture/divergence.py` | would detect whether plausible readings give different numbers |
+| disclosure | `ground.py` | every decision carries a one-sentence disclosure |
+
+`ground.py` is a prototype. It moves into `engine/src/agent` as the `R3+grounding` variant, so that it
+runs through the shared runner and is recorded by `evals/row.py`.
 
 The design lesson from q_003: enforce closed facts (existence, additivity) with deterministic code,
 and leave open semantics (what "by market" means) to the model, checked against descriptions. Fixed
@@ -150,7 +161,7 @@ removed.
       overlay.
    3. Ground each decision in the question, a declaration, or a principle. Otherwise flag it.
    4. Enforce closed facts deterministically. Let the model do the open mapping.
-   5. Measure the undisclosed-decision rate and the confident-wrong rate.
+   5. Measure the silent error rate, and the undisclosed-decision rate beside it.
 
 The overlay is the most concrete practitioner result. Its content is the list of things MetricFlow
 and Cube cannot express but an agent needs: candidate sets, coverage, timezone, additivity per
@@ -160,51 +171,53 @@ dimension, defaults, conventions, and ownership.
 
 ### Three arms
 
+Arms are agent variants on the same rung, named as experiment 06 names them. The letters A, B and C
+are not used: across this repository they mean absent, prose and declared.
+
 | arm | setup | what it isolates |
 |---|---|---|
-| A. raw agent | `fixture/observe.py`: the agent with `query_metric`, no protocol | the baseline |
-| B. raw agent + disclosure instruction | arm A plus one instruction: "state every assumption and default behind the number" | the effect of asking for disclosure, without grounding |
-| C. grounding protocol | `protocol/ground.py` | the effect of grounding |
+| `R3` | the agent at rung 3, with `query_metric` over the MetricFlow layer | the baseline |
+| `R3+disclose` | `R3` plus one instruction: "state every assumption and default behind the number" | the effect of asking for disclosure, without grounding |
+| `R3+grounding` | `R3` plus the grounding step | the effect of grounding |
 
-Arm B is the control for arm C. If arm B closes most of the disclosure gap, the protocol's value is
-in the quality of its grounding, not in the fact that it discloses. Arm B also measures basis
-accuracy for free-text disclosure, which can then be compared with arm C.
+`R3+disclose` is the control for `R3+grounding`. If it closes most of the disclosure gap, the grounding
+step's value must show in the headline measures, not in disclosure.
 
-`ground.py` takes the metric as an input (`--metric`). It does not select the metric. Questions that
-test metric selection (t_001) therefore run in arms A and B only, unless arm C gains a
-metric-selection step.
+The grounding step takes the metric as input. It does not select the metric. The contested cases,
+which test metric selection, therefore measure `R3` and `R3+disclose` only, unless the step gains
+metric selection.
 
 ### Question set
 
-The expected query, the basis of each decision, and whether the decision changes the number are
-recorded in each question file under `expected`, before any run. Field definitions are in
-`questions/README.md`.
+`01_parameter_grounding/cases.yml` holds 14 questions in the shared case format, with a `gold_sql`
+against the raw source tables for each, proven against the governed marts before authoring (E-14).
+Each case also labels its decisions: value, basis, whether the decision changes the number, the
+number under the alternative, and the words that count as disclosing it.
 
-| id | question | failure mode | derived from |
-|---|---|---|---|
-| q_001 | How many times did Android users open the app in June 2026? | none (total) | |
-| q_002 | How did Android app opens change over the first half of 2026? | none (trend, grain left open) | |
-| q_003 | How did Android app opens break down by segment in June 2026? | none (breakdown, dimension left open) | |
-| q_004 | How did app opens break down by acquisition source in Q2 2026? | none (breakdown, synonym) | |
-| t_001 | How many Android users were active in June 2026? | ambiguous metric (contested pair) | q_001 |
-| t_002 | How many active Android customers did we have in the first half of 2026, week by week and in total? | additivity (sum of a distinct count) | q_002 |
-| t_003 | How did app opens from TikTok compare with organic in Q2 2026? | member that does not exist | q_004 |
-| t_004 | How did Android app opens break down by device model in June 2026? | concept not captured | q_003 |
+| pile | ids | failure mode |
+|---|---|---|
+| answerable, calibration | q_001 to q_004 | none: a total, a trend, a breakdown by an unnamed dimension, a breakdown by a synonym |
+| answerable, trap | t_002, t_006 | a distinct count that must not be summed over time |
+| answerable, trap | t_009 | a member reachable only through the dimension description ("SEO" is content_seo) |
+| answerable, trap | t_010 | a governed ratio that must not be averaged over months |
+| unanswerable | t_003, t_007 | a member that does not exist (TikTok, Windows) |
+| unanswerable | t_004 | a dimension that does not exist (device model) |
+| unanswerable | t_008 | a period outside coverage (June 2025) |
+| contested | t_001, t_005 | two governed definitions, no consumer named |
 
-The trap questions are derived from the clean ones, but they are not single-factor pairs. t_001 and
-t_002 change the metric, because `app_opens` is additive and has no contested twin. The comparison
-between the q and t sets is therefore a comparison of question classes, not a controlled pair.
+Ten traps meet the golden-path minimum of ten discriminating items. The traps are derived from the
+calibration questions but are not single-factor pairs, so a comparison between the two groups is a
+comparison of question classes. All 14 were written by the experiment's authors, so this is a
+development suite (E-12).
 
-The four q questions are a calibration set. They are answerable and unambiguous, so query
-correctness is expected to be close to 100% in every arm. They measure disclosure, basis accuracy,
-and run-to-run stability. The four t questions are where a wrong number is possible, so they are
-where the confident-wrong rate can be measured.
+Two case-format extensions are needed before the suite loads: a `breakdown` expectation for q_002 to
+q_004, and the `decisions` block. Both are added with the runner.
 
-### First run
+### Order of work
 
-8 questions × 3 arms × 3 repetitions on `gpt-5-mini` (t_001 in arms A and B only). Report the
-numbers with n stated. Eight self-written questions are not evidence for a general claim. The run
-tests the measurement method and gives a first reading.
+Following `docs/GOLDEN-PATH.md`: move the grounding step into the engine and add the two variants;
+add the case-format extensions; `./bench gate`; a small run of two questions on two arms at one
+repetition; then 14 questions × 3 arms × 3 repetitions on `gpt-5-mini` at concurrency 2.
 
 ## Known defects found during review (2026-09-22)
 
@@ -213,9 +226,8 @@ tests the measurement method and gives a first reading.
 | `classify()` labels every non-principle decision "grounded in the question" without checking the stated basis against the question text | q_004: the model added `activity__is_internal = False` with basis "exclude internal and test accounts", a phrase not in the question, and it was labelled "grounded in the question" | a basis-accuracy failure is reported as grounded |
 | the q_004 filter duplicates the filter `app_opens` already declares | q_004 | an unrequested predicate; the number does not change |
 | `canonical_segments` expands to platform, region and channel even when the question already filters platform | q_003 | a group-by on platform returns one row; redundant, not wrong |
-| the overlay phrase list maps "by device" to `activity__platform` | `spine/overlay.yaml` | `ground.py` does not read this list, but `select.py` does; t_004 ("device model") would be mislabelled there |
 
 ## Status
 
-Have: the model, and the architecture demonstrated on four questions at one repetition each.
-Missing: any measurement. Next: run the three-arm design above.
+Have: the model; the grounding prototype, demonstrated on four questions at one repetition each; a
+14-question suite with proven oracles. Missing: any measurement. Next: the order of work above.

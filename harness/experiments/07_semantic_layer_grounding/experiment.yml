@@ -1,0 +1,44 @@
+# Experiment 7 · semantic layer grounding: is a query to a governed layer governed when only its
+# metric is?
+#
+# Experiment 06 measured what an agent does when two governed definitions both answer a question.
+# This one moves from the metric to the rest of the query. A query is a metric plus parameter
+# decisions (filters, group-by, time grain, period), and the layer governs few of them. The
+# experiment classifies each decision by its basis and whether it was disclosed (milestoneA.md), and
+# measures whether grounding the decisions lowers the silent error rate.
+
+title: "Semantic layer grounding: governing every parameter of the query, not only the metric"
+question: >-
+  Does an agent that grounds each query parameter in the question, a governed declaration or a
+  governed principle, and discloses it, have a lower silent error rate at equal or better coverage
+  and balanced accuracy than the same agent without that step, and than the same agent told only to
+  state its assumptions?
+status: in_progress
+
+article:
+  slug: tbd
+  repo: decisionspine-site
+
+runs: cli
+
+evidence:
+  - milestoneA.md                     # the model of query trust, and the measurement design
+  - findings.md                       # the ledger of what each exploratory run showed
+  - 01_parameter_grounding/cases.yml  # 14 questions, gold_sql proven against the marts
+  - fixture/layer/governance.yml      # what the MetricFlow layer cannot express
+  - probes/                           # single-run outputs from before the shared runner, cited by findings.md
+
+notes:
+  - "ARMS. R3 is the agent at rung 3. R3+disclose adds one instruction to state every assumption and
+     default. R3+grounding adds the grounding step (ground.py, a prototype that moves into
+     engine/src/agent). R3+disclose is the control for R3+grounding: it separates the effect of
+     asking for disclosure from the effect of grounding."
+  - "MEASURES. Headline: silent error rate, balanced accuracy and coverage, from the shared grader.
+     Secondary: disclosure of the decisions each case labels, graded by a fixed word list applied to
+     every arm's answer text, so every disclosure verdict is prose-graded and reported as unaudited."
+  - "SELF-SUFFICIENT FIXTURE. fixture/ is a copy of experiment 06's dbt project and MetricFlow layer,
+     kept here so this experiment runs without another experiment's folder. It is byte-identical to
+     06's at the time of copying; governance.yml is the only addition."
+  - "DEVELOPMENT SUITE. All 14 questions were written by the experiment's authors, so a result on
+     them measures fit, not generalisation (E-12). A held-out suite is required before any number is
+     published."

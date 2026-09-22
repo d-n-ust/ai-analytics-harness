@@ -1,0 +1,366 @@
+# Study 01 · parameter grounding. The question suite for the three-arm comparison.
+#
+#   R3              the agent at rung 3 (MetricFlow layer, query_metric)
+#   R3+disclose     R3 plus one instruction: state every assumption and default behind the number
+#   R3+grounding    R3 plus the grounding step (../ground.py, moving into engine/src/agent)
+#
+# COMPOSITION: 14 questions, written by the experiment's authors, so this is a development suite and
+# not a held-out one (E-12). Four are calibration questions that every arm is expected to answer; ten
+# are traps built to separate the arms. Ten is the golden-path minimum of discriminating items.
+#
+#   pile A  answerable     8   q_001-q_004 (calibration); t_002, t_006, t_009, t_010 (traps)
+#   pile B  unanswerable   4   t_003, t_004, t_007, t_008
+#   pile C  contested      2   t_001, t_005
+#
+# ORACLES. Every gold_sql reads the raw `_source` tables, never the marts or the layer, so a
+# mis-defined metric cannot hide (E-05). Each was run against the governed marts before this file was
+# written, and every value matched (E-14).
+#
+# TWO EXTENSIONS NOT YET IN THE SHARED SCHEMA, added in step 4 with the runner:
+#
+#   expect.type: breakdown   gold_sql returns (label, value) rows; the answer is correct when every
+#                            value appears within tolerance. A LIST of gold_sql is a set of equally
+#                            correct alternatives (q_002: the series at month or at week grain).
+#   decisions:               the per-decision labels behind the secondary disclosure measure (see
+#                            ../milestoneA.md). `disclose_words` is the fixed word list, applied to
+#                            the answer text of every arm, that counts as disclosing the decision.
+#                            Graded from prose, so every such verdict is reported as unaudited (E-26).
+#
+# Until step 4, `evals.gold._validate` rejects the breakdown cases. Nothing loads this file yet.
+
+cases:
+  - id: q_001_android_opens_june
+    tier: answerable
+    tags: [calibration, total]
+    question: How many times did Android users open the app in June 2026?
+    expect:
+      type: metric_answer
+      metric: app_opens
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com'))
+    decisions:
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+         changes_number: true, alternative: "8,474 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
+      - {parameter: group_by, value: null, basis: question, changes_number: false}
+      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+    note: >-
+      A plain total. The one decision a reader cannot see is the filter the metric applies. Proven 8,232.
+
+  - id: q_002_android_opens_trend_h1
+    tier: answerable
+    tags: [calibration, trend]
+    question: How did Android app opens change over the first half of 2026?
+    expect:
+      type: breakdown
+      metric: app_opens
+      tolerance: 0.005
+      gold_sql:
+        - >-
+          SELECT strftime(date_trunc('month', e.ts), '%Y-%m') AS k, count(*) AS v FROM "_source".evt e
+          JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND lower(coalesce(u.plat, '')) =
+          'android' AND e.ts >= DATE '2026-01-01' AND e.ts < DATE '2026-07-01' AND NOT
+          ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER
+          BY 1
+        - >-
+          SELECT strftime(date_trunc('week', e.ts), '%Y-%m-%d') AS k, count(*) AS v FROM "_source".evt e
+          JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND lower(coalesce(u.plat, '')) =
+          'android' AND e.ts >= DATE '2026-01-01' AND e.ts < DATE '2026-07-01' AND NOT
+          ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER
+          BY 1
+    decisions:
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+         changes_number: true, alternative: "27,994 over H1 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
+      - {parameter: group_by, value: [metric_time], basis: question, changes_number: true}
+      - {parameter: time_grain, value: week, basis: governed_principle, changes_number: true,
+         alternative: "month: 6 points; day: 181 points", must_disclose: true,
+         disclose_words: [weekly, week, monthly, month, daily, day]}
+      - {parameter: period, value: "2026-H1", basis: question, changes_number: true}
+    note: >-
+      The grain is left open. trend_granularity gives week (26 points in the 15-40 target), which only
+      the grounding arm knows, so either complete series is graded correct; otherwise the gold would
+      encode one arm's rule. The weekly series has partial first and last buckets (weeks starting
+      2025-12-29 and 2026-06-29). An answer that summarises the trend without listing every value is
+      graded not correct; the small run must show how often that happens. Proven: monthly 1,922 to 8,232.
+
+  - id: q_003_android_opens_by_segment_june
+    tier: answerable
+    tags: [calibration, breakdown]
+    question: How did Android app opens break down by segment in June 2026?
+    expect:
+      type: breakdown
+      metric: app_opens
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT 'region=' || CASE upper(u.ctry) WHEN 'US' THEN 'Americas' WHEN 'BR' THEN 'Americas' WHEN
+        'GB' THEN 'EMEA' WHEN 'DE' THEN 'EMEA' WHEN 'FR' THEN 'EMEA' WHEN 'PH' THEN 'APAC' WHEN 'ID'
+        THEN 'APAC' WHEN 'IN' THEN 'APAC' ELSE 'Other' END AS k, count(*) AS v FROM "_source".evt e JOIN
+        "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND lower(coalesce(u.plat, '')) = 'android' AND
+        e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
+        (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 UNION ALL SELECT 'channel=' || CASE WHEN
+        lower(u.chan) IN ('paid_search','paid search','ppc','paid-search') THEN 'paid_search' WHEN
+        lower(u.chan) IN ('referral','ref') THEN 'referral' WHEN lower(u.chan) IN
+        ('content_seo','content/seo','seo','content') THEN 'content_seo' WHEN lower(u.chan) IN
+        ('partnerships','partner') THEN 'partnerships' ELSE 'organic' END, count(*) FROM "_source".evt e
+        JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND lower(coalesce(u.plat, '')) =
+        'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01' AND NOT
+        ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER
+        BY 1
+    decisions:
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+         changes_number: true, alternative: "8,474 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
+      - {parameter: group_by, value: [activity__region, activity__channel], basis: governed_principle,
+         changes_number: true, must_disclose: true, disclose_words: [region, channel, segment]}
+      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+    note: >-
+      "By segment" names no dimension. canonical_segments gives platform, region and channel; platform
+      is already filtered, so the gold is region and channel. Proven: region EMEA 4,273; channel organic 1,614.
+
+  - id: q_004_opens_by_acquisition_source_q2
+    tier: answerable
+    tags: [calibration, breakdown, synonym]
+    question: How did app opens break down by acquisition source in Q2 2026?
+    expect:
+      type: breakdown
+      metric: app_opens
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT CASE WHEN lower(u.chan) IN ('paid_search','paid search','ppc','paid-search') THEN
+        'paid_search' WHEN lower(u.chan) IN ('referral','ref') THEN 'referral' WHEN lower(u.chan) IN
+        ('content_seo','content/seo','seo','content') THEN 'content_seo' WHEN lower(u.chan) IN
+        ('partnerships','partner') THEN 'partnerships' ELSE 'organic' END AS k, count(*) AS v FROM
+        "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND e.ts >= DATE
+        '2026-04-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
+        (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER BY 1
+    decisions:
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+         changes_number: true, alternative: "61,707 over Q2 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
+      - {parameter: group_by, value: [activity__channel], basis: question, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+    note: >-
+      "Acquisition source" must map to channel from the dimension description. user__channel gives the
+      same values. Proven: content_seo 11,011; organic 13,006; paid_search 11,592; partnerships 11,894;
+      referral 11,351.
+
+  - id: t_001_android_users_active_june
+    tier: contested
+    tags: [trap, contested]
+    question: How many Android users were active in June 2026?
+    expect:
+      type: contested
+      concept: active users
+      candidates:
+        - metric: active_users
+          owner: Product
+          consumer: the weekly product review and the North Star metric tree
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
+            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+            '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+            '%@internal-test.com'))
+        - metric: active_accounts
+          owner: Platform
+          consumer: capacity planning and the support-volume forecast
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
+            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+            '2026-07-01'
+    decisions:
+      - {parameter: metric, value: [active_users, active_accounts], basis: none, changes_number: true,
+         alternative: "active_users 522; active_accounts 538", must_disclose: true,
+         disclose_words: [active_accounts, active_users, internal, definition]}
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+    note: >-
+      Derived from q_001. "Users" has two governed definitions and no consumer is named. The grounding
+      arm takes the metric as input, so this case measures metric selection in R3 and R3+disclose only,
+      unless the grounding step gains metric selection. Proven 522 against 538, 3.0% apart.
+
+  - id: t_002_android_customers_h1
+    tier: answerable
+    tags: [trap, additivity]
+    question: How many active Android customers did we have in the first half of 2026?
+    expect:
+      type: metric_answer
+      metric: active_users
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-01-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com'))
+    decisions:
+      - {parameter: metric, value: active_users, basis: question, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-H1", basis: question, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+         alternative: "3,422 = sum of 27 weekly distinct counts (user-weeks, not users)"}
+    note: >-
+      Derived from q_002. A distinct count read over the whole period, not summed from weeks or months.
+      "Customers" names the customers segment, which active_users applies. Proven 609.
+
+  - id: t_003_tiktok_opens_q2
+    tier: unanswerable
+    tags: [trap, member_does_not_exist]
+    question: How many app opens came from TikTok in Q2 2026?
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    decisions:
+      - {parameter: filter, value: "activity__channel = tiktok", basis: none, changes_number: true,
+         must_disclose: true, disclose_words: [tiktok]}
+    note: >-
+      Derived from q_004. channel has content_seo, organic, paid_search, partnerships and referral. A
+      TikTok figure, a zero, or TikTok folded into paid_search are all wrong.
+
+  - id: t_004_android_opens_by_device_model_june
+    tier: unanswerable
+    tags: [trap, concept_not_captured]
+    question: How did Android app opens break down by device model in June 2026?
+    expect:
+      type: refuse
+      reason: dimension_not_supported
+    decisions:
+      - {parameter: group_by, value: "device model (not captured)", basis: none, changes_number: true,
+         must_disclose: true, disclose_words: [device model]}
+    note: >-
+      Derived from q_003. No dimension records the device model; platform is the operating system. A
+      platform breakdown labelled as device model is wrong.
+
+  - id: t_005_android_habits_june
+    tier: contested
+    tags: [trap, contested]
+    question: How many habits did Android users complete in June 2026?
+    expect:
+      type: contested
+      concept: completed habits
+      candidates:
+        - metric: value_moments
+          owner: Product
+          consumer: the engagement review and the North Star metric tree
+          gold_sql: >-
+            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 2 AND
+            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+            '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+            '%@internal-test.com'))
+        - metric: total_value_moments
+          owner: Platform
+          consumer: write-volume forecasting and storage planning
+          gold_sql: >-
+            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 2 AND
+            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+            '2026-07-01'
+    decisions:
+      - {parameter: metric, value: [value_moments, total_value_moments], basis: none, changes_number: true,
+         alternative: "value_moments 5,041; total_value_moments 5,190", must_disclose: true,
+         disclose_words: [total_value_moments, value_moments, internal, definition]}
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+    note: >-
+      The second contested pair, differing on the same internal-account filter. Proven 5,041 against
+      5,190, 2.9% apart.
+
+  - id: t_006_customers_active_q2
+    tier: answerable
+    tags: [trap, additivity]
+    question: How many customers were active in Q2 2026?
+    expect:
+      type: metric_answer
+      metric: active_users
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.ts
+        >= DATE '2026-04-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
+        (lower(u.email) LIKE '%@internal-test.com'))
+    decisions:
+      - {parameter: metric, value: active_users, basis: question, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+         alternative: "3,758 = sum of three monthly distinct counts"}
+    note: >-
+      The additivity trap at quarter length, with no platform filter. Proven 1,856; the sum of the
+      monthly counts is 3,758.
+
+  - id: t_007_windows_opens_june
+    tier: unanswerable
+    tags: [trap, member_does_not_exist]
+    question: How many times did Windows users open the app in June 2026?
+    expect:
+      type: refuse
+      reason: ungoverned_dimension_value
+    decisions:
+      - {parameter: filter, value: "activity__platform = windows", basis: none, changes_number: true,
+         must_disclose: true, disclose_words: [windows]}
+    note: >-
+      platform has android, ios, web and unknown. The plausible neighbour is web, which is not Windows.
+      Serving the web figure, or any figure, is wrong.
+
+  - id: t_008_android_opens_june_2025
+    tier: unanswerable
+    tags: [trap, out_of_coverage]
+    question: How many times did Android users open the app in June 2025?
+    expect:
+      type: refuse
+      reason: out_of_coverage
+    decisions:
+      - {parameter: period, value: "2025-06", basis: question, changes_number: true,
+         must_disclose: true, disclose_words: [coverage, "no data", september]}
+    note: >-
+      Derived from q_001. Events start on 2025-09-05, so June 2025 has no data. A zero served as a
+      count of opens is wrong: the absence is a coverage limit, not zero activity. Proven 0 rows.
+
+  - id: t_009_seo_opens_q2
+    tier: answerable
+    tags: [trap, member_mapping]
+    question: How many app opens came from SEO in Q2 2026?
+    expect:
+      type: metric_answer
+      metric: app_opens
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        e.ts >= DATE '2026-04-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
+        (lower(u.email) LIKE '%@internal-test.com')) AND lower(u.chan) IN
+        ('content_seo','content/seo','seo','content')
+    decisions:
+      - {parameter: filter, value: "activity__channel = content_seo", basis: question, changes_number: true,
+         alternative: "organic 13,006", must_disclose: true, disclose_words: [content_seo, content]}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+         changes_number: true, alternative: "over Q2 including internal and test accounts: see q_004", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
+      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+    note: >-
+      "SEO" maps to content_seo only through the channel description ("content_seo is content marketing
+      and SEO"). Organic search is the plausible wrong neighbour. Proven 11,011; organic is 13,006.
+
+  - id: t_010_habits_per_android_customer_q2
+    tier: answerable
+    tags: [trap, ratio]
+    question: How many habits did the average active Android customer complete in Q2 2026?
+    expect:
+      type: metric_answer
+      metric: habits_per_active_user
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT (SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype =
+        2 AND lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-04-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com'))) / (SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u
+        ON u.uid = e.uid WHERE lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-04-01' AND
+        e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com')))
+    decisions:
+      - {parameter: metric, value: habits_per_active_user, basis: question, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+         alternative: "9.41 = mean of three monthly ratios"}
+    note: >-
+      A governed ratio read over the whole quarter. Averaging monthly ratios, or dividing by a sum of
+      monthly active counts, gives a wrong number of the right magnitude. Proven 18.92; the mean of
+      monthly ratios is 9.41.
