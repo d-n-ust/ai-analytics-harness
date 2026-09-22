@@ -1,0 +1,87 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Grounded selection — app_opens</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; background:#f4f1ea; color:#211d18; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:#7a6f5f; }
+  .q { font-size:22px; font-weight:600; margin:0 0 4px; }
+  .m { font-size:13px; color:#7a6f5f; margin-bottom:20px; }
+  .m code { color:#2f6f4f; }
+  .verdict { font-size:20px; font-weight:700; letter-spacing:.04em; color:#2f6f4f; margin:0 0 6px; }
+  .ask { font-size:13.5px; color:#7a2a2a; margin:0 0 22px; }
+  .ok { font-size:13.5px; color:#6a5210; margin:0 0 22px; }
+  .disc { font-size:12.5px; color:#8a5320; margin-top:5px; font-style:italic; }
+  .slot { background:#fbf9f4; border:1px solid #e5ddcd; border-radius:9px; padding:12px 14px; margin-bottom:10px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .name { font-weight:600; min-width:130px; }
+  .val { font:13px "SF Mono",Menlo,Consolas,monospace; color:#3a352b; flex:1; }
+  .st { font-size:12px; padding:3px 9px; border-radius:20px; font-weight:600; }
+  .gb { font-size:12.5px; color:#57503f; margin-top:6px; }
+  .gb code { font:12px "SF Mono",Menlo,Consolas,monospace; color:#5a5142; }
+  .why { font-size:12px; color:#6b6252; margin-top:3px; }
+  details { margin-top:22px; } summary { cursor:pointer; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#8a7f6d; }
+  pre { background:#fbf9f4; border:1px solid #e5ddcd; border-radius:8px; padding:12px; overflow:auto; font:12px "SF Mono",Menlo,Consolas,monospace; color:#4a4234; }
+</style></head><body><div class="wrap">
+  <h1>Grounded parameter selection</h1>
+  <div class="q">How did Android app opens change over the first half of 2026?</div>
+  <div class="m">metric selected: <code>app_opens</code> · each slot below was chosen by the agent, with the grounding it cited</div>
+  <div class="verdict">PROCEED</div>
+  <div class="ok">PROCEED with a disclosed default: showing week — the natural granularity for a 181-day span (26 points); the question did not specify a bucket.</div>
+  
+        <div class="slot">
+          <div class="row"><span class="name">filters</span>
+            <span class="val">activity__platform: android</span>
+            <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="gb">source: <code>the question names the governed member &#x27;android&#x27;</code></div>
+          <div class="why">&#x27;android&#x27; is a governed member and appears in the question.</div>
+        </div>
+        <div class="slot">
+          <div class="row"><span class="name">group_by</span>
+            <span class="val">metric_time</span>
+            <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="gb">source: <code>vocabulary: &#x27;change&#x27; → metric_time</code></div>
+          <div class="why">the question says &#x27;change&#x27;, which the spine vocabulary maps to metric_time.</div>
+        </div>
+        <div class="slot">
+          <div class="row"><span class="name">time_grain</span>
+            <span class="val">month &rarr; <b>week</b></span>
+            <span class="st" style="background:#faf0d7;color:#9a6a00">grounded in a rule (disclosed)</span></div>
+          <div class="gb">source: <code>methodological rule &#x27;trend_granularity&#x27;</code></div>
+          <div class="why">no bucket is grounded, so rule &#x27;trend_granularity&#x27; picks week (26 points over 181 days). Agent had guessed month.</div><div class="disc">discloses: &ldquo;showing week — the natural granularity for a 181-day span (26 points); the question did not specify a bucket&rdquo;</div>
+        </div>
+        <div class="slot">
+          <div class="row"><span class="name">period</span>
+            <span class="val">2026-H1</span>
+            <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="gb">source: <code>the question names a time period</code></div>
+          <div class="why">the question contains an explicit period expression.</div>
+        </div>
+  <details><summary>the model&rsquo;s raw JSON</summary><pre>{
+  &quot;slots&quot;: [
+    {
+      &quot;slot&quot;: &quot;filters&quot;,
+      &quot;value&quot;: &quot;activity__platform: android&quot;,
+      &quot;grounded_by&quot;: &quot;\&quot;Android app opens\&quot;&quot;,
+      &quot;reason&quot;: &quot;Question specifically asks about Android app opens so filter to android platform.&quot;
+    },
+    {
+      &quot;slot&quot;: &quot;group_by&quot;,
+      &quot;value&quot;: &quot;metric_time&quot;,
+      &quot;grounded_by&quot;: &quot;\&quot;first half of 2026\&quot;&quot;,
+      &quot;reason&quot;: &quot;To see change over time across the period, group by time.&quot;
+    },
+    {
+      &quot;slot&quot;: &quot;time_grain&quot;,
+      &quot;value&quot;: &quot;month&quot;,
+      &quot;grounded_by&quot;: &quot;\&quot;first half of 2026\&quot;&quot;,
+      &quot;reason&quot;: &quot;First half implies monthly points across Jan–Jun to show the change.&quot;
+    },
+    {
+      &quot;slot&quot;: &quot;period&quot;,
+      &quot;value&quot;: &quot;2026-H1&quot;,
+      &quot;grounded_by&quot;: &quot;\&quot;first half of 2026\&quot;&quot;,
+      &quot;reason&quot;: &quot;Period explicitly refers to the first half (H1) of 2026.&quot;
+    }
+  ]
+}</pre></details>
+</div></body></html>

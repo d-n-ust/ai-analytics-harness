@@ -1,0 +1,85 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Grounded (schema-enforced) — app_opens</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; background:#f4f1ea; color:#211d18; font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .wrap { max-width:900px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:#7a6f5f; }
+  .q { font-size:22px; font-weight:600; margin:0 0 4px; }
+  .m { font-size:13px; color:#7a6f5f; margin-bottom:16px; } .m code { color:#2f6f4f; }
+  .ok { font-size:13.5px; color:#2f6f4f; margin:0 0 12px; } .warn { font-size:13.5px; color:#a33; margin:0 0 12px; }
+  .slot { background:#fbf9f4; border:1px solid #e5ddcd; border-radius:9px; padding:12px 14px; margin-bottom:10px; }
+  .row { display:flex; align-items:center; gap:10px; }
+  .p { font-weight:600; min-width:100px; }
+  .v { font:13px "SF Mono",Menlo,Consolas,monospace; color:#3a352b; flex:1; }
+  .st { font-size:12px; padding:3px 9px; border-radius:20px; font-weight:600; }
+  .b { font-size:12.5px; color:#57503f; margin-top:6px; } .b code { font:12px "SF Mono",Menlo,Consolas,monospace; color:#5a5142; }
+  .why { font-size:12px; color:#6b6252; margin-top:3px; }
+  .disc { font-size:12.5px; color:#8a5320; font-style:italic; margin-top:4px; }
+  details { margin-top:20px; } summary { cursor:pointer; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:#8a7f6d; }
+  pre { background:#fbf9f4; border:1px solid #e5ddcd; border-radius:8px; padding:12px; overflow:auto; font:12px "SF Mono",Menlo,Consolas,monospace; color:#4a4234; }
+</style></head><body><div class="wrap">
+  <h1>Grounded against the ontology · schema-enforced</h1>
+  <div class="q">How did Android app opens change over the first half of 2026?</div>
+  <div class="m">metric: <code>app_opens</code> · the model filled a forced tool whose fields are ontology enums; principles are named by the model and applied by the protocol</div>
+  <div class="ok">Every parameter is enum-valid in the ontology, and grounded or disclosed.</div>
+        <div class="slot"><div class="row"><span class="p">filter</span>
+          <span class="v">activity__platform = android</span>
+          <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="b">basis: <code>Android app opens</code></div>
+          <div class="why">activity__platform=android exists in the ontology</div><div class="disc">discloses: &ldquo;User asked specifically about Android app opens, so filter to activity__platform = android.&rdquo;</div></div>
+        <div class="slot"><div class="row"><span class="p">filter</span>
+          <span class="v">activity__is_internal = False</span>
+          <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="b">basis: <code>excluding internal and test accounts (built in)</code></div>
+          <div class="why">activity__is_internal=False exists in the ontology</div><div class="disc">discloses: &ldquo;Customer-facing figures exclude internal/test accounts, so set activity__is_internal = False.&rdquo;</div></div>
+        <div class="slot"><div class="row"><span class="p">group_by</span>
+          <span class="v">metric_time</span>
+          <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="b">basis: <code>change over the first half of 2026</code></div>
+          <div class="why">dimensions mapped from the question; each exists (enum-enforced)</div><div class="disc">discloses: &ldquo;The question asks how app opens changed over time, so group by metric_time to produce a time series.&rdquo;</div></div>
+        <div class="slot"><div class="row"><span class="p">time_grain</span>
+          <span class="v">week</span>
+          <span class="st" style="background:#faf0d7;color:#9a6a00">grounded in a principle (applied by the protocol)</span></div>
+          <div class="b">basis: <code>first half of 2026 (H1) change over time</code></div>
+          <div class="why">time series requested; the protocol computed week (26 points over 181 days)</div><div class="disc">discloses: &ldquo;showing week — the natural granularity for a 181-day span (26 points)&rdquo;</div></div>
+        <div class="slot"><div class="row"><span class="p">period</span>
+          <span class="v">2026-H1</span>
+          <span class="st" style="background:#e7f1ea;color:#2f6f4f">grounded in the question</span></div>
+          <div class="b">basis: <code>the first half of 2026</code></div>
+          <div class="why">a legal period</div><div class="disc">discloses: &ldquo;The user specified the period as the first half of 2026.&rdquo;</div></div>
+  <details><summary>the tool call the model made</summary><pre>{
+  &quot;filters&quot;: [
+    {
+      &quot;dimension&quot;: &quot;activity__platform&quot;,
+      &quot;member&quot;: &quot;android&quot;,
+      &quot;basis&quot;: &quot;Android app opens&quot;,
+      &quot;disclose&quot;: &quot;User asked specifically about Android app opens, so filter to activity__platform = android.&quot;
+    },
+    {
+      &quot;dimension&quot;: &quot;activity__is_internal&quot;,
+      &quot;member&quot;: &quot;False&quot;,
+      &quot;basis&quot;: &quot;excluding internal and test accounts (built in)&quot;,
+      &quot;disclose&quot;: &quot;Customer-facing figures exclude internal/test accounts, so set activity__is_internal = False.&quot;
+    }
+  ],
+  &quot;group_by&quot;: {
+    &quot;dimensions&quot;: [
+      &quot;metric_time&quot;
+    ],
+    &quot;principle&quot;: &quot;none&quot;,
+    &quot;basis&quot;: &quot;change over the first half of 2026&quot;,
+    &quot;disclose&quot;: &quot;The question asks how app opens changed over time, so group by metric_time to produce a time series.&quot;
+  },
+  &quot;time_grain&quot;: {
+    &quot;value&quot;: &quot;month&quot;,
+    &quot;principle&quot;: &quot;trend_granularity&quot;,
+    &quot;basis&quot;: &quot;first half of 2026 (H1) change over time&quot;,
+    &quot;disclose&quot;: &quot;No bucket was specified for the time series; use trend_granularity to choose month-level granularity for H1.&quot;
+  },
+  &quot;period&quot;: {
+    &quot;value&quot;: &quot;2026-H1&quot;,
+    &quot;basis&quot;: &quot;the first half of 2026&quot;,
+    &quot;disclose&quot;: &quot;The user specified the period as the first half of 2026.&quot;
+  }
+}</pre></details>
+</div></body></html>

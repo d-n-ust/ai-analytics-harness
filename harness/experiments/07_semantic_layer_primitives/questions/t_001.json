@@ -1,0 +1,58 @@
+{
+  "id": "t_001",
+  "variant_of": "q_001",
+  "text": "How many Android users were active in June 2026?",
+  "failure_mode": "ambiguous metric: 'users' has two governed candidates (active_users, active_accounts); relationship rel_active_user_definition is contested with no consumer given",
+  "arms": [
+    "A",
+    "B"
+  ],
+  "note": "Tests metric selection. ground.py takes the metric as input, so arm C does not apply unless a metric-selection step is added.",
+  "expected": {
+    "outcome": "clarify_or_answer_both",
+    "decisions": [
+      {
+        "parameter": "metric",
+        "value": [
+          "active_users",
+          "active_accounts"
+        ],
+        "basis": "none",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": true,
+        "alternative": "active_users 522 (excludes internal); active_accounts 538 (includes internal)"
+      },
+      {
+        "parameter": "filter",
+        "value": {
+          "activity__platform": "android"
+        },
+        "basis": "question",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": false
+      },
+      {
+        "parameter": "period",
+        "value": "2026-06",
+        "basis": "question",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": false
+      }
+    ],
+    "value": {
+      "active_users": 522,
+      "active_accounts": 538
+    },
+    "acceptable": [
+      "a clarifying question naming both definitions",
+      "both values, each labelled with its definition",
+      "one value, stating that the other definition exists and what it would give"
+    ],
+    "incorrect": [
+      "522 or 538 alone, with no mention of the other definition"
+    ]
+  }
+}

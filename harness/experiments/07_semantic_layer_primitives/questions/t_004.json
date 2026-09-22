@@ -1,0 +1,75 @@
+{
+  "id": "t_004",
+  "variant_of": "q_003",
+  "text": "How did Android app opens break down by device model in June 2026?",
+  "failure_mode": "concept not captured: no dimension records device model; platform is the operating system, not the device model",
+  "arms": [
+    "A",
+    "B",
+    "C"
+  ],
+  "note": "spine/overlay.yaml maps the phrase 'by device' to activity__platform. ground.py does not read that list; select.py does, and would mislabel this question.",
+  "expected": {
+    "outcome": "abstain_on_part",
+    "metric": "app_opens",
+    "decisions": [
+      {
+        "parameter": "metric",
+        "value": "app_opens",
+        "basis": "question",
+        "selectable": true,
+        "changes_number": false,
+        "must_disclose": false
+      },
+      {
+        "parameter": "filter",
+        "value": {
+          "activity__platform": "android"
+        },
+        "basis": "question",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": false
+      },
+      {
+        "parameter": "metric_filter",
+        "value": "activity__is_internal = false",
+        "basis": "governed_declaration",
+        "selectable": false,
+        "changes_number": true,
+        "must_disclose": true,
+        "alternative": "8,474 including internal and test accounts",
+        "note": "Declared by the metric. Not selectable, so it counts for answer trust, not agent reliability. Adding it again as a filter is an unrequested, redundant predicate."
+      },
+      {
+        "parameter": "group_by",
+        "value": "device model (not captured)",
+        "basis": "none",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": true,
+        "note": "No dimension exists. Grouping by platform instead is a substitution the reader did not ask for."
+      },
+      {
+        "parameter": "period",
+        "value": "2026-06",
+        "basis": "question",
+        "selectable": true,
+        "changes_number": true,
+        "must_disclose": false
+      }
+    ],
+    "value": {
+      "total": 8232,
+      "by_device_model": null
+    },
+    "acceptable": [
+      "a statement that device model is not recorded, optionally with the total 8,232",
+      "a clarifying question offering the breakdowns that exist"
+    ],
+    "incorrect": [
+      "a platform breakdown presented as a device-model breakdown",
+      "any device-model figures"
+    ]
+  }
+}

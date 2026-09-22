@@ -1,0 +1,291 @@
+# Twelve questions, four to a pile.
+#
+# EVERY QUESTION CARRIES TWO TO FOUR PRIMITIVES, in the vocabulary experiment 04 uses — entity,
+# segment, grain, join path, time window. No bare lookups: `../04_repair_matrix/00_primitive_load`
+# found `gpt-5.6-terra` answering every one-primitive question from an undocumented warehouse, so a
+# suite of them measures the model rather than the grounding. Real analysis is not one primitive.
+#
+# LABELS ARE HAND-VERIFIED. The Pile C candidates were written by reading the layer, not by reading
+# a detector's output; `scan.py` reports the agreement between the two as a number, and where they
+# disagree the hand label wins.
+#
+# ORACLES ARE INDEPENDENT. Every `gold_sql` runs against the raw `_source` tables, so it is
+# independent of the dbt models AND of the semantic layer — the two things under test. Where a
+# metric carries a filter of its own, the oracle inlines the same rule rather than referencing it.
+# TOLERANCE ON THE STATED-SCOPE PILE. Each `ad_*` case names ONE of two governed definitions
+# that answer it, and the pair can be as little as 1.45% apart (mrr against gross_mrr). The
+# 2% default used elsewhere is WIDER than that gap, so serving the definition the question
+# did not ask for would have graded correct. It never did — every stored run served the right
+# figure or one that was plainly wrong — but the pile that measures over-clarification cost
+# must not be gradeable by luck. 0.005 is narrower than every gap in this layer.
+
+cases:
+
+  # ══ PILE A · one right answer ═════════════════════════════════════════════════════════════════
+  # Every metric here is clean in the index, so an ambiguity gate that fires on one of these is
+  # firing on nothing. That is what makes them the over-clarification counterweight.
+
+  - id: a_android_opens_june
+    tier: answerable
+    question: "How many times did Android users open the app in June 2026?"
+    expect:
+      type: metric_answer
+      metric: app_opens
+      tolerance: 0.02
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+        WHERE e.etype = 1 AND lower(coalesce(u.plat, '')) = 'android'
+          AND e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01'
+          AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    note: "entity + segment (platform) + window. `app_opens` excludes internal accounts, so the oracle does too."
+
+  - id: a_paid_search_signups_q2
+    tier: answerable
+    question: "How many people signed up through paid search in the second quarter of 2026?"
+    expect:
+      type: metric_answer
+      metric: new_signups
+      tolerance: 0.02
+      gold_sql: >-
+        SELECT count(*) FROM "_source".u
+        WHERE lower(chan) IN ('paid_search', 'paid search', 'ppc', 'paid-search')
+          AND created >= DATE '2026-04-01' AND created < DATE '2026-07-01'
+    note: "entity + segment (channel) + window. The channel spelling is normalised in staging; the oracle matches every raw spelling."
+
+  - id: a_annual_paying_users
+    tier: answerable
+    question: "How many customers are currently paying us on the annual plan?"
+    expect:
+      type: metric_answer
+      metric: paying_users
+      tolerance: 0.02
+      gold_sql: >-
+        SELECT count(DISTINCT uid) FROM "_source".subs WHERE st = 1 AND p = 'a'
+    note: "entity + segment (plan), point-in-time. Distinct ACCOUNTS, which is what separates it from the next one."
+
+  - id: a_annual_subs_sold_q2
+    tier: answerable
+    question: "How many annual subscriptions that we sold in the second quarter are still live?"
+    expect:
+      type: metric_answer
+      metric: active_subscriptions
+      tolerance: 0.02
+      gold_sql: >-
+        SELECT count(*) FROM "_source".subs
+        WHERE st = 1 AND p = 'a'
+          AND "start" >= DATE '2026-04-01' AND "start" < DATE '2026-07-01'
+    note: "entity + segment (plan) + window. CONTRACTS rather than accounts — the same distinction as above, counted the other way."
+
+  # ══ PILE B · no right answer ══════════════════════════════════════════════════════════════════
+  # None of these is a near miss. No metric defines them and no column anywhere in the warehouse
+  # records the underlying fact, so raw SQL cannot rescue them either — verified against
+  # information_schema for session, duration, feature, screen, ticket, survey, nps and promoter,
+  # all zero.
+
+  - id: b_nps_by_region
+    tier: unanswerable
+    question: "What was our Net Promoter Score by region last quarter?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "entity + segment + window, and nothing records a survey response."
+
+  - id: b_session_length_ios
+    tier: unanswerable
+    question: "How long did the average app session last on iOS in June 2026?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "Events carry a timestamp, not a duration, and nothing groups them into sessions."
+
+  - id: b_support_tickets_annual
+    tier: unanswerable
+    question: "How many support tickets did annual-plan customers raise last month?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "The plan is governed; support contact is not recorded anywhere."
+
+  - id: b_feature_time_last_week
+    tier: unanswerable
+    question: "Which product feature did users spend the most time in last week?"
+    expect:
+      type: refuse
+      reason: no_governed_definition
+    note: "No feature dimension and no time-in-app measure. The question needs both."
+
+  # ══ PILE C · two right answers ════════════════════════════════════════════════════════════════
+  # Four DISTINCT concepts across three axes — internal-account exclusion, test-channel exclusion,
+  # and refund netting — rather than one concept sliced four ways, which would be one data point
+  # wearing four labels. Divergence on the exact slice each question asks about runs from 1.45% to
+  # 13.38%, so the pile spans the range where a swap is invisible and the range where it is loud.
+
+  - id: c_active_users_web_last_week
+    tier: contested
+    question: "How many active users did we have on the web platform last week?"
+    expect:
+      type: contested
+      concept: "active users"
+      candidates:
+        - metric: active_users
+          owner: "Product"
+          consumer: "the weekly product review and the North Star metric tree"
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
+              AND lower(coalesce(u.plat, '')) = 'web'
+              AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))
+        - metric: active_accounts
+          owner: "Platform"
+          consumer: "capacity planning and the support-volume forecast"
+          gold_sql: >-
+            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
+              AND lower(coalesce(u.plat, '')) = 'web'
+    note: "entity + segment (platform) + window. 277 against 289, 4.33% apart."
+
+  - id: c_value_moments_americas_june
+    tier: contested
+    question: "How many habits did users in the Americas complete in June 2026?"
+    expect:
+      type: contested
+      concept: "value moments"
+      candidates:
+        - metric: value_moments
+          owner: "Product"
+          consumer: "the engagement review and the North Star metric tree"
+          gold_sql: >-
+            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE e.etype = 2 AND upper(u.ctry) IN ('US', 'BR')
+              AND e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01'
+              AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))
+        - metric: total_value_moments
+          owner: "Platform"
+          consumer: "write-volume forecasting and storage planning"
+          gold_sql: >-
+            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+            WHERE e.etype = 2 AND upper(u.ctry) IN ('US', 'BR')
+              AND e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01'
+    note: "entity + segment (region, across a join) + window. 5,133 against 5,386, 4.93% apart."
+
+  - id: c_marketing_spend_q2
+    tier: contested
+    question: "What did we spend on marketing over the second quarter of 2026?"
+    expect:
+      type: contested
+      concept: "marketing spend"
+      candidates:
+        - metric: marketing_spend
+          owner: "Finance"
+          consumer: "budget versus actuals, which must reconcile to the ledger"
+          gold_sql: >-
+            SELECT round(sum(amt), 2) FROM "_source".spend
+            WHERE dt >= DATE '2026-04-01' AND dt < DATE '2026-07-01'
+        - metric: acquisition_spend
+          owner: "Growth"
+          consumer: "cost per acquisition and channel efficiency"
+          gold_sql: >-
+            SELECT round(sum(amt), 2) FROM "_source".spend
+            WHERE dt >= DATE '2026-04-01' AND dt < DATE '2026-07-01'
+              AND lower(chan) NOT IN ('partnerships', 'partner')
+    note: >-
+      entity + window, and a third primitive hidden in the concept: `partnerships` is an internal
+      test integration that books spend and buys no customers. 61,233 against 53,042, 13.38% apart —
+      the loud end of the pile.
+
+  - id: c_mrr_sold_this_year
+    tier: contested
+    question: "How much monthly recurring revenue have the subscriptions we sold this year brought in?"
+    expect:
+      type: contested
+      concept: "monthly recurring revenue"
+      candidates:
+        - metric: mrr
+          owner: "Finance"
+          consumer: "the board pack and the revenue forecast"
+          gold_sql: >-
+            SELECT round(sum(CASE WHEN p = 'a' THEN amt / 12.0 ELSE amt END), 2)
+            FROM "_source".subs WHERE st = 1 AND "start" >= DATE '2026-01-01'
+        - metric: gross_mrr
+          owner: "Sales"
+          consumer: "quota attainment and commission, which pay on what was closed"
+          gold_sql: >-
+            SELECT round(sum(CASE WHEN p = 'a' THEN amt / 12.0 ELSE amt END), 2)
+            FROM "_source".subs WHERE st IN (1, 4) AND "start" >= DATE '2026-01-01'
+    note: >-
+      entity + window + the cohort grain (terms SOLD this year, not revenue earned in it). 2,605
+      against 2,643, 1.45% apart — the quiet end, where a swap is invisible to any reader.
+
+  # ══ PILE A′ · one right answer, BECAUSE THE ASKER SAID WHICH ═══════════════════════════════════
+  # The same four contested concepts, asked by someone who named the reading they wanted. There is
+  # nothing to clarify: the question resolved the ambiguity itself.
+  #
+  # THESE EXIST TO FAIL, and the rate is the finding. `ambiguity_check` fires on whether the two
+  # NUMBERS differ for the call, not on whether the QUESTION was ambiguous — and the numbers still
+  # differ here. So the gate should interrupt every one of them, which is over-clarification of the
+  # kind that decides whether it is shippable. The pile A questions above measure a different and
+  # much easier thing: that the gate stays silent on a metric with no competitor at all.
+  #
+  # If the rate is high the design needs a disambiguation channel — something in the CALL recording
+  # that the request already named the scope. It cannot be the agent asserting it; §3 of findings.md
+  # is what the agent's unprompted self-report is worth.
+
+  - id: ad_active_users_web_stated
+    tier: answerable_disambiguated
+    question: >-
+      How many active users, excluding internal and test accounts, did we have on the web platform
+      last week?
+    expect:
+      type: metric_answer
+      metric: active_users
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
+      gold_sql: >-
+        SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+        WHERE CAST(date_trunc('week', e.ts) AS DATE) = DATE '2026-07-06'
+          AND lower(coalesce(u.plat, '')) = 'web'
+          AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    note: "277. The same slice as c_active_users_web_last_week, with the reading named."
+
+  - id: ad_value_moments_americas_stated
+    tier: answerable_disambiguated
+    question: >-
+      How many habits did real customer accounts in the Americas complete in June 2026, excluding
+      internal and test accounts?
+    expect:
+      type: metric_answer
+      metric: value_moments
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid
+        WHERE e.etype = 2 AND upper(u.ctry) IN ('US', 'BR')
+          AND e.ts >= DATE '2026-06-01' AND e.ts < DATE '2026-07-01'
+          AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com'))
+    note: "5,133. The same slice as c_value_moments_americas_june, with the reading named."
+
+  - id: ad_marketing_spend_all_channels_stated
+    tier: answerable_disambiguated
+    question: >-
+      What did we spend on marketing across every channel in the second quarter of 2026, including
+      the partnerships test integration?
+    expect:
+      type: metric_answer
+      metric: marketing_spend
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
+      gold_sql: >-
+        SELECT round(sum(amt), 2) FROM "_source".spend
+        WHERE dt >= DATE '2026-04-01' AND dt < DATE '2026-07-01'
+    note: "61,233.32. The same slice as c_marketing_spend_q2, with the reading named."
+
+  - id: ad_mrr_net_of_refunds_stated
+    tier: answerable_disambiguated
+    question: >-
+      Net of refunds, how much monthly recurring revenue have the subscriptions we sold this year
+      brought in?
+    expect:
+      type: metric_answer
+      metric: mrr
+      tolerance: 0.005   # narrower than the gap to the rival definition (see below)
+      gold_sql: >-
+        SELECT round(sum(CASE WHEN p = 'a' THEN amt / 12.0 ELSE amt END), 2)
+        FROM "_source".subs WHERE st = 1 AND "start" >= DATE '2026-01-01'
+    note: "2,605. The same slice as c_mrr_sold_this_year, with the reading named."
