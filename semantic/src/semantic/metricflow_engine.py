@@ -115,6 +115,10 @@ class MetricFlowLayer:
             raise SystemExit(f"{directory}: the metricflow engine takes a DIRECTORY of YAML "
                              "(semantic_model: / metric: documents), not a single file")
         self.con = con
+        # The directory the manifest was parsed from. Kept so a consumer that needs the layer's
+        # own declarations (ontology.parameters reads entities, joins and metric filters) reads
+        # the same files this engine compiles, not a second copy of them.
+        self.spec_dir = directory
         self._ensure_time_spine()
         result = parse_directory_of_yaml_files_to_semantic_manifest(str(directory))
         self._manifest = result.semantic_manifest

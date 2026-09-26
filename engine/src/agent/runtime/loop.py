@@ -24,7 +24,7 @@ from dataclasses import dataclass, field, replace
 import evidence as claim_audit
 
 from ..core import trace
-from ..core.conversation import Conversation, ToolCall, Turn, Usage
+from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from ..core.numbers import bare_number
 from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from ..core.provenance import ContextLedger
@@ -38,6 +38,7 @@ from ..gates import segments as _g_segments
 from ..gates._common import GRACE, MAX_CORRECTIONS
 from ..guardrails import Act, Position, after, before
 from ..guardrails import classify as _classify
+from ..guardrails import parameters as _parameters
 from .providers import ProviderError
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
@@ -159,7 +160,9 @@ class _Run:
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
     _premise: object = None           # cached presupposition record, once per run (gates/contract)
-    handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
+    handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps
+    # `parameter_grounding`: one grounding per metric per run, so repeated calls agree.
+    grounded: dict = field(default_factory=dict)   # what the AFTER guardrails did to the answer
 
     @property
     def claim_retries(self) -> int:
@@ -183,7 +186,18 @@ class _Run:
         for call in calls:
             self.tool_calls += 1
             t0 = time.perf_counter()
-            result = self.grounding.toolbox.dispatch(call.name, call.args)
+            queries, decisions = self._ground(call)
+            if not queries:
+                # A needed parameter is ungrounded: nothing runs, and the agent is told to ask.
+                args = call.args
+                result = ToolResult(_parameters.note_text(decisions), is_error=True,
+                                    reason="underspecified_request", blocked_by="parameter_grounding")
+            else:
+                args = queries[0]
+                result = self._dispatch_all(call.name, queries)
+            if queries and decisions and not result.is_error:
+                # Before the rows, so the decisions are read before the numbers they qualify.
+                result = replace(result, content=_parameters.note_text(decisions) + "\n" + result.content)
             # Every result that SUCCEEDED gets a HANDLE, printed where the model reads it, so the
             # answer can name what it is reporting instead of leaving the harness to find it by
             # matching numbers. Tool-agnostic on purpose: a governed tool added later is
@@ -200,7 +214,11 @@ class _Run:
                 handle = f"r{len(self.handles) + 1}"
                 self.handles[handle] = len(self.steps)
                 result = replace(result, content=f"[{handle}] {result.content}{_citable(handle, result)}")
-            self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
+            self.steps.append({"tool": call.name, "args": args, "error": result.is_error,
+                               # What the agent asked for, when `parameter_grounding` replaced it,
+                               # and the decision record: value, basis, quoted phrase, state.
+                               **({"requested_args": call.args, "grounding": decisions,
+                                   "grounded_queries": queries} if decisions else {}),
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
                                # The stored result is CLIPPED; these two say so. Without them a
@@ -246,6 +264,37 @@ class _Run:
             results.append(result.for_call(call))
         return results
 
+
+    def _ground(self, call) -> tuple[list, list]:
+        """`parameter_grounding`: the queries a governed call runs as, and the decisions behind
+        them. Any other call, or the flag off, passes through as its own single query. The grounding
+        call's tokens are added to the run's usage, so the arm is charged for what it costs."""
+        tb = self.grounding.toolbox
+        if call.name != "query_metric" or not getattr(tb.g, "parameter_grounding", False):
+            return [call.args], []
+        queries, decisions, usage = _parameters.ground(
+            self.model, self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded)
+        if usage is not None:
+            self.usage += usage
+        return queries, decisions
+
+    def _dispatch_all(self, name: str, queries: list):
+        """One result for one call, however many queries it ran as. Several (a principle that
+        declares separate breakdowns) are concatenated in order, values and labels kept parallel,
+        so the call keeps ONE handle and every figure in it stays citable. The first error wins:
+        a partial breakdown must not read as a whole one."""
+        results = [self.grounding.toolbox.dispatch(name, q) for q in queries]
+        if len(results) == 1:
+            return results[0]
+        failed = next((r for r in results if r.is_error), None)
+        if failed is not None:
+            return failed
+        return replace(results[0],
+                       content="\n\n".join(r.content for r in results),
+                       values=[v for r in results for v in (r.values or [])],
+                       labels=[x for r in results for x in (r.labels or [])],
+                       sql=";\n".join(r.sql for r in results if r.sql) or None,
+                       acts=tuple(a for r in results for a in r.acts))
 
     def needs_correction(self, exit_call):
         """The first fault worth handing this answer back for, or None to serve it.

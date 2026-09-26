@@ -55,7 +55,10 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 #      round trip was priced at half an episode by assumption, which flattered every arm that buys
 #      safety by asking. None on a run that did not clarify, which is not the same as a round trip
 #      that bought nothing.
-ROW_SCHEMA_VERSION = 21
+# v22: `graded_by` — how the verdict was reached (numeric / action / prose). `grade()` has computed
+#      it since v21, but the row never recorded it, so report.py's grading-provenance table read
+#      every row as "unrecorded".
+ROW_SCHEMA_VERSION = 22
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -110,6 +113,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         "off_governance": g.get("off_governance", False),
         "wrong_scope": g.get("wrong_scope", False), "wrong_metric": g["wrong_metric"],
         "needs_judge": g.get("needs_judge", False), "bucket": g["bucket"],
+        "graded_by": g["graded_by"],
         "expected_refuse": g["expected_refuse"], "expected_action": g["expected_action"],
         "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
         "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),

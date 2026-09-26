@@ -37,6 +37,18 @@ Each decision in a query is described by two independent properties.
 The four bases are ordered by strength. A value stated in the question is stronger evidence than a
 value filled by a principle, even though both are grounded.
 
+**The basis decides the action.** This is the policy `parameter_grounding` enforces and the inspector
+checks:
+
+| basis | level | action |
+|---|---|---|
+| question | grounded in the question | proceed; the reader already knows the value |
+| governed principle, governed declaration | grounded in a rule | proceed, and disclose the rule in the answer |
+| none, and the answer depends on it | ungrounded | do not run the query; ask the user |
+
+A value the question names but the layer does not have (TikTok as a channel) is a different case:
+the question grounds it, nothing in the layer answers to it, and the action is to refuse.
+
 **Visibility: was the decision disclosed to the reader?**
 
 | visibility | meaning |
@@ -135,7 +147,7 @@ decisions that change the number, or that differ from what the reader would reas
 |---|---|---|
 | parameter surface (closed set) | `ontology/src/ontology/parameters.py`, `ground.py` | a dimension that does not exist cannot be expressed, because the tool schema lists dimensions as an enum; a member is free text, and `classify()` marks a non-existent member as invalid after the call |
 | descriptions and model mapping | `ground.py` | the model maps the question's wording onto dimensions by reading their descriptions |
-| governed principles | `fixture/layer/governance.yml`, `ground.py` | the model names a principle (`trend_granularity`, `canonical_segments`); the protocol applies its value, and the answer discloses it |
+| governed principles | `fixture/governance.yml`, `ground.py` | the model names a principle (`trend_granularity`, `canonical_segments`); the protocol applies its value, and the answer discloses it |
 | additivity | `engine/src/agent/core/measure.py` | classifies each aggregation as additive, semi-additive or non-additive; summing a distinct count over time is rejected (June 2026 active users: 1,620 correct versus 3,310 summed by week) |
 | divergence | not built in exp07; experiment 06's `fixture/divergence.py` | would detect whether plausible readings give different numbers |
 | disclosure | `ground.py` | every decision carries a one-sentence disclosure |

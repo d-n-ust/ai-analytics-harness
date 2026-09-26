@@ -267,8 +267,98 @@
        "description": "Tighter than elsewhere by default: attributing a served number to one candidate requires a band narrower than the gap between them."
       }
      }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "type",
+      "gold_sql",
+      "metric"
+     ],
+     "description": "A series or breakdown. gold_sql returns (label, value) rows; a list of gold_sql is a set of equally correct alternatives. Correct when every value of one alternative appears.",
+     "properties": {
+      "type": {
+       "const": "breakdown"
+      },
+      "metric": {
+       "type": "string"
+      },
+      "gold_sql": {
+       "oneOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "minItems": 1
+        }
+       ]
+      },
+      "tolerance": {
+       "type": "number",
+       "default": 0.02
+      }
+     }
     }
    ]
+  },
+  "decisions": {
+   "type": "array",
+   "description": "Experiment 07: one entry per decision in the query the question needs. Read by the disclosure measure, not by the grader.",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "parameter",
+     "basis",
+     "action"
+    ],
+    "properties": {
+     "parameter": {
+      "type": "string"
+     },
+     "value": {},
+     "basis": {
+      "enum": [
+       "question",
+       "governed_declaration",
+       "governed_principle",
+       "none"
+      ]
+     },
+     "selectable": {
+      "type": "boolean"
+     },
+     "changes_number": {
+      "type": "boolean"
+     },
+     "alternative": {
+      "type": "string"
+     },
+     "must_disclose": {
+      "type": "boolean"
+     },
+     "disclose_words": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "action": {
+      "enum": [
+       "proceed",
+       "disclose",
+       "clarify",
+       "refuse"
+      ],
+      "description": "What the policy requires for this decision: proceed (grounded in the question), disclose (grounded in a declaration or rule), clarify (ungrounded), refuse (the question names something the layer does not have)."
+     }
+    }
+   }
   }
  }
 }

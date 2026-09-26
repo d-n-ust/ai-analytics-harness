@@ -421,6 +421,21 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
               ("gates/claims.py", "runtime/prompts.py"), in_ladder=False),
+    # Experiment 07's control arm: the instruction alone, with no mechanism behind it. It separates
+    # the effect of ASKING for disclosure from the effect of grounding (`parameter_grounding`).
+    Guardrail("disclose_assumptions", Position.DISCLOSURE,
+              "one prompt line: state every assumption and default behind the number (filter, "
+              "segment, definition, period, grain) in the answer",
+              ("runtime/prompts.py",), in_ladder=False),
+    # Experiment 07's treatment. Keeps the agent's metric and re-derives every other parameter of a
+    # governed query from the question: the model maps the question onto the metric's parameter
+    # surface, the mechanism checks existence and the quoted basis, applies named principles, runs
+    # the grounded query, and appends the decisions for the answer to state.
+    Guardrail("parameter_grounding", Position.BEFORE,
+              "grounds each parameter of a governed query in the question, a governed declaration "
+              "or a governed principle, runs the query with those parameters, and appends the "
+              "decisions to the result for the answer to disclose",
+              ("guardrails/parameters.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -487,6 +502,8 @@ class GuardrailSet:
     scope_segments: bool = False
     scope_classifier: bool = False
     constraint_regression: bool = False
+    disclose_assumptions: bool = False
+    parameter_grounding: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as

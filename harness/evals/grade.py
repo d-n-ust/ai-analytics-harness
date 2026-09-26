@@ -19,6 +19,11 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   where the failure leaves no signature: the served figure is a real governed
                   result of a real metric, so provenance, unit validation and the judge all pass.
 
+  breakdown       a series or breakdown: every value of one acceptable series (`gold_sql` may list
+                  alternatives, e.g. the same trend by month or by week) appears in the answer.
+                  Some gold values but not a whole series is incomplete (`other`), not a wrong
+                  number: a trend summarised in prose states a real figure. Numbers with none of
+                  the gold values in them are a wrong answer.
 Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
 
 A case may also declare `requires` — the injected context its expected answer DEPENDS on.
@@ -93,6 +98,19 @@ def grade_numeric(answer_text: str | None, gold: float | None, tol: float) -> di
     candidates = [gold, gold * 100] if abs(gold) < 1 else [gold]  # rate answered as %
     correct = any(_close(x, g, tol) for x in nums for g in candidates)
     return {"executed": True, "correct": correct, "extracted": nums[0]}
+
+
+def grade_breakdown(answer_text: str | None, alternatives, tol: float) -> dict:
+    """A breakdown against its acceptable series. `complete`: every value of one series appears;
+    `partial`: at least one gold value appears. Each gold value is matched independently, so the
+    order and labels the answer uses do not matter."""
+    nums = _numbers(answer_text)
+    series = [s for s in (alternatives or []) if s]
+    def present(v):
+        return any(_close(x, v, tol) for x in nums)
+    complete = any(all(present(v) for v in s) for s in series)
+    partial = any(present(v) for s in series for v in s)
+    return {"executed": bool(nums), "complete": complete, "partial": partial}
 
 
 def grade_keywords(text: str, keywords: list[str]) -> dict:
@@ -367,6 +385,20 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                                      expect["keywords"])["correct"]
             bucket = "right" if correct else "other"
             graded_by = "prose"
+        elif etype == "breakdown":
+            # The answer AND the explanation: a breakdown's table is usually written out in the
+            # explanation, and the reader receives both.
+            g = grade_breakdown(f"{answer.answer or ''} {answer.explanation or ''}",
+                                expect.get("alternatives"), tol)
+            metric_match = _metric_match(answer, expect)
+            correct = g["complete"] and metric_match is not False
+            if correct:
+                bucket = "right"
+            elif not has_number or g["partial"]:
+                bucket = "other"                     # incomplete, or no figure: not a wrong one
+            else:
+                confident_wrong = True               # figures, none of them in any gold series
+                bucket = "wrong"
         else:                                            # metric_answer
             num_ok = grade_numeric(answer.answer, gold, tol)["correct"]
             metric_match = _metric_match(answer, expect)
@@ -412,7 +444,9 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         # ever written carries that name, and the coverage audit reads all of them. Readers that
         # know about three piles use `expected_action`; readers that do not see exactly what they
         # saw before, and a suite with no contested cases scores identically either way.
-        "expected_action": ("clarify" if etype == "contested"
+        # A `clarify` case (a parameter the answer needs is stated nowhere) belongs with the
+        # contested ones: asking is the right action, and a served number is the silent miss.
+        "expected_action": ("clarify" if etype in ("contested", "clarify")
                             else "refuse" if expects_refusal else "answer"),
         # Contested only: the definition whose figure was actually served, and how far it sits from
         # the ones it was chosen over. Both None everywhere else, and None here when the served

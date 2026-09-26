@@ -5,7 +5,7 @@ the harness code paths named inline. Where a claim rests on something not measur
 
 **Paths in the entries below are as they were when each entry was written.** The 2026-09-22
 restructure removed the exploratory tooling those entries name: `spine/generate.py` and `spine.yaml`
-(the governance part now lives in `fixture/layer/governance.yml`, and the rest is derived at run time
+(the governance part now lives in `fixture/governance.yml`, and the rest is derived at run time
 by `ontology.parameters`), `inspector/` and `protocol/select.py`. The three outputs the entries cite
 are kept in `probes/`: `trace_app_opens.json`, `q_001.html` and `answerable.html`.
 

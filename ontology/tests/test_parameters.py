@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import duckdb
 import pytest
-from ontology.parameters import build, load_layer, parameter_surface, reachable_dimensions
+from ontology.parameters import build, load_layer, metric_filter, parameter_surface, reachable_dimensions
 
 # Two models in MetricFlow's own shape: activity rows carry a foreign `user` entity, so the user
 # model's dimensions are join-reachable from a metric on activity. `spend` joins nothing.
@@ -50,6 +50,7 @@ metric:
     excluding internal accounts."
   type: simple
   type_params: {measure: app_open_count}
+  filter: "{{ Dimension('activity__is_internal') }} = false"
 ---
 metric:
   name: active_users
@@ -97,7 +98,7 @@ def test_missing_member_set_is_open_not_empty():
     # An empty list would mean "no value is legal". A column whose members were not read must not
     # reject every filter value.
     models, metrics = load_layer(LAYER)
-    surface = parameter_surface(models, metrics, "app_opens", {("fct_user_days", "platform"): ["android"]})
+    surface = parameter_surface(models, metrics, "app_opens", {("wh.fct_user_days", "platform"): ["android"]})
     dims = {d["name"]: d["members"] for d in surface["parameters"]["filters"]["dimensions"]}
     assert dims == {"activity__platform": ["android"], "user__channel": None}
     assert surface["description"] == "App opens, excluding internal accounts."
@@ -116,7 +117,15 @@ def test_build_reads_members_from_the_warehouse():
     con.execute("CREATE SCHEMA wh")
     con.execute("CREATE TABLE wh.fct_user_days AS SELECT * FROM (VALUES ('ios'), ('android'), (NULL)) t(platform)")
     con.execute("CREATE TABLE wh.dim_users AS SELECT 'c' || range::VARCHAR AS channel FROM range(60)")
-    surface = build(con, "wh", LAYER, "app_opens")
+    surface = build(con, LAYER, "app_opens")
     dims = {d["name"]: d["members"] for d in surface["parameters"]["filters"]["dimensions"]}
     assert dims["activity__platform"] == ["android", "ios"]
     assert dims["user__channel"] is None        # 60 members exceeds MAX_MEMBERS, so the set is open
+
+
+def test_metric_filter_is_reported_in_readable_form():
+    # The filter a metric applies by definition cannot be changed by the agent, and the reader
+    # never sees it unless told. The surface carries it so it can be disclosed.
+    models, metrics = load_layer(LAYER)
+    assert metric_filter(metrics, "app_opens") == "activity__is_internal = false"
+    assert metric_filter(metrics, "active_users") is None

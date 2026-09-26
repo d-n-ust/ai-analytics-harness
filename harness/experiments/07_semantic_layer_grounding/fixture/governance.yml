@@ -123,6 +123,9 @@ methodological_rules:
     slot: group_by
     when: "an unspecified breakdown is asked ('by segment', 'across the business') with no dimension named"
     default: [activity__platform, activity__region, activity__channel]
+    # One breakdown per dimension, not a cross-table: "the standard segments" means three views an
+    # analyst reads side by side, and a single group_by over all three returns every combination.
+    combine: separate
     disclose: "broken down by the standard business segments: platform (product), region (sales), channel (marketing)"
     rationale: "A senior analyst's first-pass breakdown is the canonical high-level business segments,
       not one arbitrary dimension. Showing all three is the analysis; it is not a fork worth a clarify."

@@ -1,32 +1,36 @@
 # Study 01 · parameter grounding. The question suite for the three-arm comparison.
 #
-#   R3              the agent at rung 3 (MetricFlow layer, query_metric)
-#   R3+disclose     R3 plus one instruction: state every assumption and default behind the number
-#   R3+grounding    R3 plus the grounding step (../ground.py, moving into engine/src/agent)
+#   R3                        the agent at rung 3 (MetricFlow layer, query_metric)
+#   R3+disclose_assumptions   R3 plus one instruction: state every assumption and default
+#   R3+parameter_grounding    R3 plus the grounding step (engine/src/agent/guardrails/parameters.py)
 #
-# COMPOSITION: 14 questions, written by the experiment's authors, so this is a development suite and
-# not a held-out one (E-12). Four are calibration questions that every arm is expected to answer; ten
-# are traps built to separate the arms. Ten is the golden-path minimum of discriminating items.
+# COMPOSITION: 16 questions, written by the experiment's authors, so this is a development suite and
+# not a held-out one (E-12). Four are calibration questions that every arm is expected to answer;
+# twelve are traps built to separate the arms.
 #
 #   pile A  answerable     8   q_001-q_004 (calibration); t_002, t_006, t_009, t_010 (traps)
 #   pile B  unanswerable   4   t_003, t_004, t_007, t_008
-#   pile C  contested      2   t_001, t_005
+#   pile C  ask first      4   t_001, t_005 (contested); u_001, u_002 (a needed parameter is stated nowhere)
+#
+# DECISION POLICY. Each labelled decision carries the action its basis requires:
+#   proceed    grounded in the question
+#   disclose   grounded in a governed declaration or a methodological rule
+#   clarify    ungrounded: the answer depends on it and nothing settles it
+#   refuse     the question names something the layer does not have
 #
 # ORACLES. Every gold_sql reads the raw `_source` tables, never the marts or the layer, so a
 # mis-defined metric cannot hide (E-05). Each was run against the governed marts before this file was
 # written, and every value matched (E-14).
 #
-# TWO EXTENSIONS NOT YET IN THE SHARED SCHEMA, added in step 4 with the runner:
+# TWO CASE-FORMAT EXTENSIONS, both in evals/cases/schema.json:
 #
 #   expect.type: breakdown   gold_sql returns (label, value) rows; the answer is correct when every
 #                            value appears within tolerance. A LIST of gold_sql is a set of equally
 #                            correct alternatives (q_002: the series at month or at week grain).
-#   decisions:               the per-decision labels behind the secondary disclosure measure (see
-#                            ../milestoneA.md). `disclose_words` is the fixed word list, applied to
-#                            the answer text of every arm, that counts as disclosing the decision.
-#                            Graded from prose, so every such verdict is reported as unaudited (E-26).
-#
-# Until step 4, `evals.gold._validate` rejects the breakdown cases. Nothing loads this file yet.
+#   decisions:               the per-decision labels behind the secondary disclosure measure and the
+#                            inspector (see ../milestoneA.md). `disclose_words` is the fixed word
+#                            list, applied to every arm's answer text, that counts as disclosing the
+#                            decision. Prose-graded, so every such verdict is reported as unaudited.
 
 cases:
   - id: q_001_android_opens_june
@@ -43,11 +47,11 @@ cases:
         '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
         '%@internal-test.com'))
     decisions:
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose, selectable: false,
          changes_number: true, alternative: "8,474 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
-      - {parameter: group_by, value: null, basis: question, changes_number: false}
-      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+      - {parameter: group_by, value: null, basis: question, action: proceed, changes_number: false}
+      - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
       A plain total. The one decision a reader cannot see is the filter the metric applies. Proven 8,232.
 
@@ -73,14 +77,14 @@ cases:
           ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER
           BY 1
     decisions:
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose, selectable: false,
          changes_number: true, alternative: "27,994 over H1 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
-      - {parameter: group_by, value: [metric_time], basis: question, changes_number: true}
-      - {parameter: time_grain, value: week, basis: governed_principle, changes_number: true,
+      - {parameter: group_by, value: [metric_time], basis: question, action: proceed, changes_number: true}
+      - {parameter: time_grain, value: week, basis: governed_principle, action: disclose, changes_number: true,
          alternative: "month: 6 points; day: 181 points", must_disclose: true,
          disclose_words: [weekly, week, monthly, month, daily, day]}
-      - {parameter: period, value: "2026-H1", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-H1", basis: question, action: proceed, changes_number: true}
     note: >-
       The grain is left open. trend_granularity gives week (26 points in the 15-40 target), which only
       the grounding arm knows, so either complete series is graded correct; otherwise the gold would
@@ -112,12 +116,12 @@ cases:
         ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER
         BY 1
     decisions:
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose, selectable: false,
          changes_number: true, alternative: "8,474 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
-      - {parameter: group_by, value: [activity__region, activity__channel], basis: governed_principle,
+      - {parameter: group_by, value: [activity__region, activity__channel], basis: governed_principle, action: disclose,
          changes_number: true, must_disclose: true, disclose_words: [region, channel, segment]}
-      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
       "By segment" names no dimension. canonical_segments gives platform, region and channel; platform
       is already filtered, so the gold is region and channel. Proven: region EMEA 4,273; channel organic 1,614.
@@ -139,10 +143,10 @@ cases:
         '2026-04-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
         (lower(u.email) LIKE '%@internal-test.com')) GROUP BY 1 ORDER BY 1
     decisions:
-      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose, selectable: false,
          changes_number: true, alternative: "61,707 over Q2 including internal and test accounts", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
-      - {parameter: group_by, value: [activity__channel], basis: question, changes_number: true}
-      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+      - {parameter: group_by, value: [activity__channel], basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, action: proceed, changes_number: true}
     note: >-
       "Acquisition source" must map to channel from the dimension description. user__channel gives the
       same values. Proven: content_seo 11,011; organic 13,006; paid_search 11,592; partnerships 11,894;
@@ -172,11 +176,11 @@ cases:
             lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
             '2026-07-01'
     decisions:
-      - {parameter: metric, value: [active_users, active_accounts], basis: none, changes_number: true,
+      - {parameter: metric, value: [active_users, active_accounts], basis: none, action: clarify, changes_number: true,
          alternative: "active_users 522; active_accounts 538", must_disclose: true,
          disclose_words: [active_accounts, active_users, internal, definition]}
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
       Derived from q_001. "Users" has two governed definitions and no consumer is named. The grounding
       arm takes the metric as input, so this case measures metric selection in R3 and R3+disclose only,
@@ -185,7 +189,7 @@ cases:
   - id: t_002_android_customers_h1
     tier: answerable
     tags: [trap, additivity]
-    question: How many active Android customers did we have in the first half of 2026?
+    question: How many Android users were active in the first half of 2026, excluding staff and test accounts?
     expect:
       type: metric_answer
       metric: active_users
@@ -196,14 +200,15 @@ cases:
         '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
         '%@internal-test.com'))
     decisions:
-      - {parameter: metric, value: active_users, basis: question, changes_number: true}
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: period, value: "2026-H1", basis: question, changes_number: true}
-      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+      - {parameter: metric, value: active_users, basis: question, action: proceed, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-H1", basis: question, action: proceed, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, action: proceed, changes_number: true,
          alternative: "3,422 = sum of 27 weekly distinct counts (user-weeks, not users)"}
     note: >-
       Derived from q_002. A distinct count read over the whole period, not summed from weeks or months.
-      "Customers" names the customers segment, which active_users applies. Proven 609.
+      Stating the exclusion names active_users and rules out active_accounts. Reworded on
+      2026-09-22 from "active Android customers", which also reads as paying customers. Proven 609.
 
   - id: t_003_tiktok_opens_q2
     tier: unanswerable
@@ -211,13 +216,16 @@ cases:
     question: How many app opens came from TikTok in Q2 2026?
     expect:
       type: refuse
-      reason: ungoverned_dimension_value
+      reason:
+        - ungoverned_dimension_value
+        - segment_undefined
     decisions:
-      - {parameter: filter, value: "activity__channel = tiktok", basis: none, changes_number: true,
+      - {parameter: filter, value: "activity__channel = tiktok", basis: none, action: refuse, changes_number: true,
          must_disclose: true, disclose_words: [tiktok]}
     note: >-
       Derived from q_004. channel has content_seo, organic, paid_search, partnerships and referral. A
-      TikTok figure, a zero, or TikTok folded into paid_search are all wrong.
+      TikTok figure, a zero, or TikTok folded into paid_search are all wrong. Either reason code names
+      the same defect, as in experiment 06's h2_b_instagram_ads (E-30).
 
   - id: t_004_android_opens_by_device_model_june
     tier: unanswerable
@@ -227,7 +235,7 @@ cases:
       type: refuse
       reason: dimension_not_supported
     decisions:
-      - {parameter: group_by, value: "device model (not captured)", basis: none, changes_number: true,
+      - {parameter: group_by, value: "device model (not captured)", basis: none, action: refuse, changes_number: true,
          must_disclose: true, disclose_words: [device model]}
     note: >-
       Derived from q_003. No dimension records the device model; platform is the operating system. A
@@ -257,11 +265,11 @@ cases:
             lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
             '2026-07-01'
     decisions:
-      - {parameter: metric, value: [value_moments, total_value_moments], basis: none, changes_number: true,
+      - {parameter: metric, value: [value_moments, total_value_moments], basis: none, action: clarify, changes_number: true,
          alternative: "value_moments 5,041; total_value_moments 5,190", must_disclose: true,
          disclose_words: [total_value_moments, value_moments, internal, definition]}
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: period, value: "2026-06", basis: question, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
       The second contested pair, differing on the same internal-account filter. Proven 5,041 against
       5,190, 2.9% apart.
@@ -269,7 +277,7 @@ cases:
   - id: t_006_customers_active_q2
     tier: answerable
     tags: [trap, additivity]
-    question: How many customers were active in Q2 2026?
+    question: How many users were active in Q2 2026, excluding staff and test accounts?
     expect:
       type: metric_answer
       metric: active_users
@@ -279,13 +287,15 @@ cases:
         >= DATE '2026-04-01' AND e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR
         (lower(u.email) LIKE '%@internal-test.com'))
     decisions:
-      - {parameter: metric, value: active_users, basis: question, changes_number: true}
-      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
-      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+      - {parameter: metric, value: active_users, basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, action: proceed, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, action: proceed, changes_number: true,
          alternative: "3,758 = sum of three monthly distinct counts"}
     note: >-
       The additivity trap at quarter length, with no platform filter. Proven 1,856; the sum of the
-      monthly counts is 3,758.
+      monthly counts is 3,758. Reworded on 2026-09-22 from "How many customers were active", which the
+      first run showed also reads as paying customers (paying_users, 228), so it tested metric
+      selection rather than additivity.
 
   - id: t_007_windows_opens_june
     tier: unanswerable
@@ -293,9 +303,11 @@ cases:
     question: How many times did Windows users open the app in June 2026?
     expect:
       type: refuse
-      reason: ungoverned_dimension_value
+      reason:
+        - ungoverned_dimension_value
+        - segment_undefined
     decisions:
-      - {parameter: filter, value: "activity__platform = windows", basis: none, changes_number: true,
+      - {parameter: filter, value: "activity__platform = windows", basis: none, action: refuse, changes_number: true,
          must_disclose: true, disclose_words: [windows]}
     note: >-
       platform has android, ios, web and unknown. The plausible neighbour is web, which is not Windows.
@@ -309,7 +321,7 @@ cases:
       type: refuse
       reason: out_of_coverage
     decisions:
-      - {parameter: period, value: "2025-06", basis: question, changes_number: true,
+      - {parameter: period, value: "2025-06", basis: question, action: refuse, changes_number: true,
          must_disclose: true, disclose_words: [coverage, "no data", september]}
     note: >-
       Derived from q_001. Events start on 2025-09-05, so June 2025 has no data. A zero served as a
@@ -329,11 +341,11 @@ cases:
         (lower(u.email) LIKE '%@internal-test.com')) AND lower(u.chan) IN
         ('content_seo','content/seo','seo','content')
     decisions:
-      - {parameter: filter, value: "activity__channel = content_seo", basis: question, changes_number: true,
+      - {parameter: filter, value: "activity__channel = content_seo", basis: question, action: proceed, changes_number: true,
          alternative: "organic 13,006", must_disclose: true, disclose_words: [content_seo, content]}
-      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, selectable: false,
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose, selectable: false,
          changes_number: true, alternative: "over Q2 including internal and test accounts: see q_004", must_disclose: true, disclose_words: [internal, staff, test account, employee]}
-      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, action: proceed, changes_number: true}
     note: >-
       "SEO" maps to content_seo only through the channel description ("content_seo is content marketing
       and SEO"). Organic search is the plausible wrong neighbour. Proven 11,011; organic is 13,006.
@@ -355,12 +367,45 @@ cases:
         e.ts < DATE '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
         '%@internal-test.com')))
     decisions:
-      - {parameter: metric, value: habits_per_active_user, basis: question, changes_number: true}
-      - {parameter: filter, value: "activity__platform = android", basis: question, changes_number: true}
-      - {parameter: period, value: "2026-Q2", basis: question, changes_number: true}
-      - {parameter: time_grain, value: null, basis: question, changes_number: true,
+      - {parameter: metric, value: habits_per_active_user, basis: question, action: proceed, changes_number: true}
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: period, value: "2026-Q2", basis: question, action: proceed, changes_number: true}
+      - {parameter: time_grain, value: null, basis: question, action: proceed, changes_number: true,
          alternative: "9.41 = mean of three monthly ratios"}
     note: >-
       A governed ratio read over the whole quarter. Averaging monthly ratios, or dividing by a sum of
       monthly active counts, gives a wrong number of the right magnitude. Proven 18.92; the mean of
       monthly ratios is 9.41.
+
+  - id: u_001_android_opens_no_period
+    tier: clarify
+    tags: [trap, ungrounded]
+    question: How many times did Android users open the app?
+    expect:
+      type: clarify
+    decisions:
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose,
+         selectable: false, changes_number: true}
+      - {parameter: period, value: null, basis: none, action: clarify, changes_number: true,
+         alternative: "33,247 over all of the data (2025-09-05 to 2026-07-12); 8,232 for June 2026"}
+    note: >-
+      Derived from q_001 with the period removed. No period is stated and no rule supplies one, so
+      the right action is to ask which period. An all-time total, or a month the agent picked, served
+      as the answer is a silent error.
+
+  - id: u_002_android_opens_summer
+    tier: clarify
+    tags: [trap, ungrounded]
+    question: How many times did Android users open the app in the summer?
+    expect:
+      type: clarify
+    decisions:
+      - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
+      - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose,
+         selectable: false, changes_number: true}
+      - {parameter: period, value: null, basis: none, action: clarify, changes_number: true,
+         alternative: "11,636 for June to August 2026, of which data covers only up to 2026-07-12; 0 for summer 2025, before coverage"}
+    note: >-
+      "The summer" names no year and no months. Summer 2025 is before the data starts; summer 2026 is
+      partly after it ends. No rule defines the season, so the right action is to ask.

@@ -19,7 +19,7 @@ from agent.core.outcomes import REFUSAL_REASONS
 
 EVALS_DIR = Path(__file__).resolve().parent / "cases"
 _EXPECT_TYPES = {"metric_answer", "refuse", "ambiguous", "diagnostic", "keywords", "clarify",
-                 "contested"}
+                 "contested", "breakdown"}
 # The context a case may declare it depends on, mirroring agent.rungs.Capabilities.
 _CONTEXT_KINDS = {"star", "semantic", "examples", "knowledge", "tree"}
 
@@ -108,6 +108,12 @@ def _validate(case: dict, where: str) -> None:
                         f"{where}: contested case {case['id']!r} candidate {c.get('metric')!r} "
                         f"declares no {field}. Every candidate needs one: a definition with no "
                         f"owner and no consumer is a leftover to delete, not a fork to gate.")
+    # A BREAKDOWN is graded on a set of values, so its oracle returns rows (label, value). A list of
+    # oracles is a set of equally correct alternatives, which is how a trend whose grain the
+    # question leaves open avoids encoding one arm's convention in the gold.
+    if t == "breakdown":
+        if not e.get("gold_sql") or not e.get("metric"):
+            raise ValueError(f"{where}: breakdown case {case['id']!r} needs gold_sql and metric")
     if t == "diagnostic" and not e.get("driver"):
         raise ValueError(f"{where}: diagnostic case {case['id']!r} needs a driver list")
     if t == "keywords" and not e.get("keywords"):
@@ -186,7 +192,15 @@ def compute_gold(con, cases: list[dict] | None = None) -> dict[str, float | None
             value = con.execute(candidate["gold_sql"]).fetchone()[0]
             candidate["value"] = None if value is None else float(value)
         sql = case["expect"].get("gold_sql")
-        if sql:
+        if case["expect"]["type"] == "breakdown":
+            # No single gold, as for a contested case: each alternative series is resolved onto the
+            # case as `alternatives`, a list of value lists, and the row's `gold` stays None so no
+            # reader that expects one number meets a list.
+            sqls = [sql] if isinstance(sql, str) else list(sql)
+            case["expect"]["alternatives"] = [
+                [float(r[-1]) for r in con.execute(q).fetchall() if r[-1] is not None] for q in sqls]
+            golds[case["id"]] = None
+        elif sql:
             val = con.execute(sql).fetchone()[0]
             golds[case["id"]] = None if val is None else float(val)
         else:

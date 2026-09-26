@@ -21,13 +21,15 @@ Design, as in `graph.py`: a pure core and an imperative shell.
   PURE    load_layer(text) -> (models, metrics)          parse MetricFlow's multi-document YAML
           reachable_dimensions(models, metrics, metric)  the dimensions a metric may use
           parameter_surface(models, metrics, metric, members) -> dict
-  SHELL   build(cursor, schema, layer_text, metric)      read member sets, then parameter_surface
+  SHELL   build(cursor, layer_text, metric)              read member sets, then parameter_surface
 """
 from __future__ import annotations
 
+import re
+
 import yaml
 
-__all__ = ["TIME_GRAINS", "PERIOD_GRAMMAR", "load_layer", "reachable_dimensions",
+__all__ = ["TIME_GRAINS", "PERIOD_GRAMMAR", "load_layer", "metric_filter", "reachable_dimensions",
            "parameter_surface", "build"]
 
 TIME_GRAINS = ("day", "week", "month")
@@ -80,6 +82,18 @@ def _measure_home(models: dict, metrics: dict, metric: str) -> tuple[dict, dict]
     raise ValueError(f"metric {metric!r} resolves to no measure in the layer")
 
 
+# A MetricFlow metric filter is Jinja: `{{ Dimension('activity__is_internal') }} = false`. The raw
+# string is what the engine applies; the readable form is what a reader is told.
+_JINJA_DIM = re.compile(r"\{\{\s*Dimension\(\s*['\"]([\w]+)['\"]\s*\)\s*\}\}")
+
+
+def metric_filter(metrics: dict, metric: str) -> str | None:
+    """PURE. The filter the metric applies by definition, in readable form, or None. The agent
+    cannot change it, and it is exactly the decision a reader does not see unless told."""
+    raw = metrics[metric].get("filter")
+    return _JINJA_DIM.sub(r"\1", " ".join(str(raw).split())) if raw else None
+
+
 def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]:
     """PURE. The categorical dimensions the metric may filter or group by: its own model's, then
     those of every model whose primary entity is a foreign entity of its own model."""
@@ -92,8 +106,10 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
         entity = _entities(model, "primary")[0]
         for d in model.get("dimensions", []):
             if d.get("type") == "categorical":
+                rel = model["node_relation"]
+                table = f"{rel['schema_name']}.{rel['alias']}" if rel.get("schema_name") else rel["alias"]
                 out.append({"name": f"{entity}__{d['name']}", "entity": entity,
-                            "table": model["node_relation"]["alias"], "column": d["name"],
+                            "table": table, "column": d["name"],
                             "description": " ".join((d.get("description") or "").split()),
                             "joined": model is not own})
     return out
@@ -109,6 +125,7 @@ def parameter_surface(models: dict, metrics: dict, metric: str, members: dict) -
         "metric": metric,
         "description": " ".join((metrics[metric].get("description") or "").split()),
         "agg": measure.get("agg"),
+        "filter": metric_filter(metrics, metric),
         "parameters": {
             "filters": {"how": "equality on any dimension below", "dimensions": dims},
             "group_by": {"how": "any dimension below, or metric_time for a time series",
@@ -119,16 +136,16 @@ def parameter_surface(models: dict, metrics: dict, metric: str, members: dict) -
     }
 
 
-def _members(cursor, schema: str, table: str, column: str) -> list | None:
-    rows = cursor.execute(f"SELECT DISTINCT {column} FROM {schema}.{table} "
+def _members(cursor, table: str, column: str) -> list | None:
+    rows = cursor.execute(f"SELECT DISTINCT {column} FROM {table} "
                           f"WHERE {column} IS NOT NULL ORDER BY 1 LIMIT {MAX_MEMBERS + 1}").fetchall()
     return None if len(rows) > MAX_MEMBERS else [r[0] for r in rows]
 
 
-def build(cursor, schema: str, layer_text: str, metric: str) -> dict:
-    """The imperative shell: read each reachable dimension's member set from the warehouse, then
-    hand everything to the pure `parameter_surface`."""
+def build(cursor, layer_text: str, metric: str) -> dict:
+    """The imperative shell: read each reachable dimension's member set from the table the layer
+    names (`node_relation`), then hand everything to the pure `parameter_surface`."""
     models, metrics = load_layer(layer_text)
-    members = {(d["table"], d["column"]): _members(cursor, schema, d["table"], d["column"])
+    members = {(d["table"], d["column"]): _members(cursor, d["table"], d["column"])
                for d in reachable_dimensions(models, metrics, metric)}
     return parameter_surface(models, metrics, metric, members)

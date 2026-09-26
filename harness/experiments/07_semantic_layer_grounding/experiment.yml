@@ -25,7 +25,7 @@ evidence:
   - milestoneA.md                     # the model of query trust, and the measurement design
   - findings.md                       # the ledger of what each exploratory run showed
   - 01_parameter_grounding/cases.yml  # 14 questions, gold_sql proven against the marts
-  - fixture/layer/governance.yml      # what the MetricFlow layer cannot express
+  - fixture/governance.yml      # what the MetricFlow layer cannot express
   - probes/                           # single-run outputs from before the shared runner, cited by findings.md
 
 notes:

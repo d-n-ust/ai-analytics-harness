@@ -31,7 +31,7 @@ PUBLISHED_FIELDS = {
     "source_metric", "declared_value", "typed_value", "value_recovered", "direction",
     "candidates", "sources",
     "correct", "executed", "abstained", "confident_wrong", "fabricated", "off_governance",
-    "wrong_scope", "wrong_metric", "needs_judge", "bucket", "expected_refuse",
+    "wrong_scope", "wrong_metric", "needs_judge", "bucket", "graded_by", "expected_refuse",
     "reason_match", "metric_match", "driver_ok", "cause_ok", "score",
     "steps", "turns", "acts", "claims", "claim_audit", "claim_retries", "hand_backs",
     "repairs", "scope_shadow", "verifier_verdict", "error",

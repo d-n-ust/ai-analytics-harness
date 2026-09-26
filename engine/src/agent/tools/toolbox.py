@@ -108,6 +108,10 @@ class Toolbox:
         self.p = protocol if protocol is not None else Protocol()
         self.semantic = semantic
         self.tree = tree
+        # Governance the layer cannot express (segments, vocabulary, methodological rules), as a
+        # plain dict. Set by the runner that has it; `parameter_grounding` reads its
+        # `methodological_rules`, and None means no governed principles are available.
+        self.governance = None
 
     def specs(self, terminal_only: bool = False, record=None) -> list[dict]:
         """The action space for this configuration — assembled by the ACTION_SPACE guardrails,

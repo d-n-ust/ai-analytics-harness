@@ -17,7 +17,7 @@ The model and the measurement design are in `milestoneA.md`. The ledger of explo
 | `milestoneA.md` | the model of query trust, the measures, and the three-arm design |
 | `findings.md` | what each exploratory run showed, in order |
 | `01_parameter_grounding/cases.yml` | 14 questions with `gold_sql` oracles and per-decision labels |
-| `fixture/` | the dbt project, the MetricFlow layer, and `layer/governance.yml` |
+| `fixture/` | the dbt project, the MetricFlow layer, and `governance.yml` |
 | `ground.py` | the grounding step, as a prototype that runs one question |
 | `probes/` | three single-run outputs cited by `findings.md`, recorded before the shared runner |
 
@@ -31,7 +31,7 @@ Code this experiment depends on lives in the shared packages, not here:
 | `harness/evals/row.py`, `grade.py`, `report.py` | recording, grading and reporting every measured run |
 
 `fixture/` is a copy of experiment 06's fixture, kept here so this experiment does not depend on
-another experiment's folder. `layer/governance.yml` is the only file 06 does not have.
+another experiment's folder. `governance.yml` is the only file 06 does not have.
 
 ## Status
 
