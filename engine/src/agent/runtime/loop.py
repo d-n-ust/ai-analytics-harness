@@ -598,7 +598,8 @@ class _Run:
 
     def _record(self, **kw) -> Answer:
         return Answer(question=self.question, rung=self.grounding.rung,
-                      model=self.model.spec.name, tool_calls=self.tool_calls,
+                      model=self.model.spec.name, route=getattr(self.model, "route", ""),
+                      tool_calls=self.tool_calls,
                       # The run's OWN meter (`_MeteredModel`) — every model call this answer cost:
                       # the main loop, every classifier/gate, the define_measure sub-agent.
                       model_calls=getattr(self.model, "calls", 0),
@@ -676,7 +677,9 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                           "calls": [c.name for c in turn.tool_calls],
                           "exit": turn.exit_call.name if turn.exit_call else None,
                           "in": turn.usage.input, "out": turn.usage.output,
-                          "cached": turn.usage.cached})
+                          "cached": turn.usage.cached,
+                          # The host that served this call, when the route reports one (OpenRouter).
+                          "host": getattr(model, "last_host", None)})
         run.usage += turn.usage
         convo.add(turn)
 

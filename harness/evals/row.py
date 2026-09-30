@@ -58,7 +58,10 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 # v22: `graded_by` — how the verdict was reached (numeric / action / prose). `grade()` has computed
 #      it since v21, but the row never recorded it, so report.py's grading-provenance table read
 #      every row as "unrecorded".
-ROW_SCHEMA_VERSION = 22
+# v23: `route` — which API carried the model calls (openrouter / direct / mock). The same model id
+#      through two routes can differ in upstream, reasoning translation and price, so a row that
+#      does not say which route produced it cannot be compared with one that does.
+ROW_SCHEMA_VERSION = 23
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -94,7 +97,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         # Stamped on the case by `gold.stamp_suite`, so no runner can forget to pass it. None on
         # a case built by hand in a test, which belongs to no suite.
         "qid": case["id"], "tier": case.get("tier"), "question": case["question"],
-        "suite": case.get("suite"), "model": answer.model, "gold": gold,
+        "suite": case.get("suite"), "model": answer.model, "route": answer.route, "gold": gold,
 
         # ---- what the run did --------------------------------------------------------
         "answer": answer.answer, "explanation": answer.explanation,

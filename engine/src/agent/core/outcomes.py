@@ -234,6 +234,8 @@ class Answer:
     output_tokens: int = 0
     cached_tokens: int = 0          # prompt-cache HITS (a subset of input_tokens, billed ~10%)
     error: str | None = None
+    # Which API carried the model calls: "openrouter", "direct" or "mock" (providers.llm_route).
+    route: str = ""
     steps: list = field(default_factory=list)
     turns: list = field(default_factory=list)   # one per model call: latency, cost, what it asked
     acts: list = field(default_factory=list)    # what the AFTER guardrails did to this answer

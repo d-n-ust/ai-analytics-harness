@@ -36,7 +36,7 @@ PUBLISHED_FIELDS = {
     "steps", "turns", "acts", "claims", "claim_audit", "claim_retries", "hand_backs",
     "repairs", "scope_shadow", "verifier_verdict", "error",
     "input_tokens", "output_tokens", "cached_tokens", "tool_calls", "model_calls",
-    "iterations", "elapsed_s", "schema_version",
+    "iterations", "elapsed_s", "schema_version", "route",
 }
 
 # What v18 adds. Named separately so the reason each one exists is recorded next to it.
