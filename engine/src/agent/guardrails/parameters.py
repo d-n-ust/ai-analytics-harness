@@ -62,7 +62,10 @@ principles, not by fixed word patterns:
 4. When the question leaves a choice open, NAME the governed principle that fills it (do not
    reproduce its values yourself). If the answer depends on the choice and no principle applies,
    list the parameter under `ungrounded` with the reason. Never fill it with a guess.
-5. Prefer the simplest query that answers the question.
+5. A value the question NAMES but no member matches (a channel, platform or country the layer does
+   not have) is not ungrounded: the question is clear, the layer lacks it. Record it as a filter
+   with the phrase as the member; the protocol checks it and the agent will decline.
+6. Prefer the simplest query that answers the question.
 
 For each choice, `basis` is the exact phrase from the question you mapped, copied verbatim, or
 'none'. `disclose` is one plain sentence stating the choice."""
