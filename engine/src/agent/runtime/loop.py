@@ -276,20 +276,26 @@ class _Run:
         call's tokens are added to the run's usage, so the arm is charged for what it costs."""
         tb = self.grounding.toolbox
         self._grounding_cost = 0.0
-        if call.name == "query_metric" and getattr(tb.g, "decision_grounding", False):
+        grounding = getattr(tb.g, "decision_grounding", False) or getattr(tb.g, "parameter_grounding", False)
+        if call.name != "query_metric" or not grounding:
+            return [call.args], []
+        # The metric first: a contested one is routed to the requester team's definition.
+        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance)
+        if routed is not None and routed["state"] == "ungrounded":
+            return [], [routed]
+        args = {**call.args, "metric": metric}
+        if getattr(tb.g, "decision_grounding", False):
             # Billed per request by OpenRouter, not per token of the agent's model, so it is kept on
             # the step (`grounding_cost_usd`) rather than folded into the run's token usage.
             queries, decisions, self._grounding_cost = _decisions.ground(
-                self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded)
-            return queries, decisions
-        if call.name != "query_metric" or not getattr(tb.g, "parameter_grounding", False):
-            return [call.args], []
-        queries, decisions, usage = _parameters.ground(
-            self.model, self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded,
-            tolerant=getattr(tb.g, "tolerant_quotes", False), retry=getattr(tb.g, "quote_retry", False))
-        if usage is not None:
-            self.usage += usage
-        return queries, decisions
+                self.question, args, tb.semantic, tb.con, tb.governance, self.grounded)
+        else:
+            queries, decisions, usage = _parameters.ground(
+                self.model, self.question, args, tb.semantic, tb.con, tb.governance, self.grounded,
+                tolerant=getattr(tb.g, "tolerant_quotes", False), retry=getattr(tb.g, "quote_retry", False))
+            if usage is not None:
+                self.usage += usage
+        return queries, ([routed] if routed else []) + decisions
 
     def _dispatch_all(self, name: str, queries: list):
         """One result for one call, however many queries it ran as. Several (a principle that

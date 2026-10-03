@@ -39,6 +39,8 @@ MODEL = "~typesafe/jev-latest"
 # Act on a choice only at or above this probability; below it, ask. 0.7 is where the 120-decision
 # fair test (2026-10-03) had no wrong decision left; it is a starting point, not a tuned value.
 CONFIDENT = 0.7
+# An option counts as a plausible reading of an unsure choice from this probability up.
+PLAUSIBLE = 0.15
 _TIMEOUT = 60
 
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September",
@@ -157,7 +159,8 @@ def resolve(answers: dict, surface: dict, principles: list, members: dict, reque
             lo: dt.date, hi: dt.date) -> tuple[list, list]:
     """PURE. The queries to run and the decision record, from the decision model's answers."""
     by_id = {p["id"]: p for p in principles}
-    decisions, filters = [], {}
+    small = next((p for p in principles if p.get("max_options")), None)    # show_small_choice_sets
+    decisions, filters, alternatives = [], {}, {}
     if surface.get("filter"):
         decisions.append(_decision("metric_filter", surface["filter"], "governed_declaration",
                                    disclose=f"{surface['metric']} applies {surface['filter']} by definition.",
@@ -174,7 +177,19 @@ def resolve(answers: dict, surface: dict, principles: list, members: dict, reque
         if choice in (None, "not_mentioned"):
             continue
         if p < CONFIDENT:
-            decisions.append({**_ungrounded("filter", f"{dim}: unsure ({choice}, p {p:.2f})"), "confidence": p})
+            probs = (answers.get(name) or {}).get("probabilities") or {}
+            readings = [k for k, v in sorted(probs.items(), key=lambda kv: -kv[1])
+                        if v >= PLAUSIBLE and k != "not_in_list"]
+            if small and 1 < len(readings) <= small["max_options"] and not alternatives:
+                # A small choice set: show every reading instead of asking.
+                alternatives[dim] = [None if k == "not_mentioned" else back[k] for k in readings]
+                shown = ", ".join("no filter" if k == "not_mentioned" else f"{dim} = {back[k]}" for k in readings)
+                decisions.append({**_decision("filter", shown, "governed_principle",
+                                              disclose=f"The question does not settle {dim}; showing each "
+                                                       f"reading: {shown}.", why=f"principle {small['id']}"),
+                                  "confidence": p})
+            else:
+                decisions.append({**_ungrounded("filter", f"{dim}: unsure ({choice}, p {p:.2f})"), "confidence": p})
         elif choice == "not_in_list":
             decisions.append({**_refuse("filter", "ungoverned_dimension_value",
                                         f"the question names a {dim} value the layer does not have"),
@@ -250,6 +265,17 @@ def resolve(answers: dict, surface: dict, principles: list, members: dict, reque
     args = {"metric": requested["metric"], **({"filters": filters} if filters else {}),
             **({"group_by": group_by} if group_by else {}), **({"time_grain": time_grain} if time_grain else {}),
             **({"period": period} if period else {})}
+    if alternatives and separate and len(group_by) > 1:
+        return [], decisions + [_ungrounded("filter", "an open filter together with several breakdowns")]
+    if alternatives:
+        (dim, values), = alternatives.items()
+        queries = []
+        for v in values:
+            f = {k: x for k, x in filters.items() if k != dim}
+            if v is not None:
+                f[dim] = v
+            queries.append({**{k: x for k, x in args.items() if k != "filters"}, **({"filters": f} if f else {})})
+        return queries, decisions
     if separate and len(group_by) > 1:
         return [{**args, "group_by": [d]} for d in group_by], decisions
     return [args], decisions

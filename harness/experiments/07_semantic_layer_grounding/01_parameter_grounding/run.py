@@ -42,6 +42,7 @@ from evals import report
 from evals.gold import _validate, compute_gold, stamp_suite
 from evals.row import measured_row
 from evals.runner import regrade_run
+from agent.guardrails.parameters import rules_text
 from evals.second_turn import follow_up
 from evals.selective import selective
 from warehouse.warehouse import open_warehouse
@@ -202,6 +203,9 @@ def main() -> None:
             grounding.semantic.catalogue = CATALOGUE
             grounding.refresh_catalogue()
             grounding.system += "\n\n" + SCHEMA_EXPLANATION
+            if cells[arm].parameter_grounding or cells[arm].decision_grounding:
+                # Runtime governance is part of the grounding arms: the agent reads the rules first.
+                grounding.system += "\n\n" + rules_text(GOVERNANCE)
             grounding.toolbox.governance = GOVERNANCE
 
             def ask(text, _g=grounding):

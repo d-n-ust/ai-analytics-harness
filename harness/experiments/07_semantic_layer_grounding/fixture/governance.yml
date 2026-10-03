@@ -14,6 +14,13 @@
 # Read by: ground.py (methodological_rules). The other sections are the documented overlay and the
 # source for the contested case in 01_parameter_grounding/cases.yml.
 
+# ── who the agent answers for (runtime governance) ─────────────────────────────────────────────
+# When a question's metric belongs to a contested pair, the grounding step uses the member owned by
+# this team and says so (guardrails/parameters.py route_metric). Without a requester the pair stays
+# ambiguous and the agent must ask.
+requester:
+  team: Product
+
 # ── named segments (Cube: segment; MetricFlow: metric filter) ─────────────────────────────────
 # The layer applies `is_internal = false` inside two metrics' filters. What the filter means, who
 # owns it and how firm it is are not declared anywhere, which is how the contested pair came about.
@@ -65,6 +72,10 @@ measures:
     owner: Product
     status: certified
     segment: customers
+  total_value_moments:
+    owner: Platform
+    status: certified
+    segment: all_accounts
 
 # ── per-attribute governance ──────────────────────────────────────────────────────────────────
 attributes:
@@ -82,6 +93,7 @@ vocabulary:
   "opens":          {kind: measure,   candidates: [app_opens]}
   "users":          {kind: measure,   candidates: [active_users, active_accounts]}
   "active users":   {kind: measure,   candidates: [active_users, active_accounts]}
+  "habits":         {kind: measure,   candidates: [value_moments, total_value_moments]}
   "customers":      {kind: segment, candidates: [customers]}
   "android":        {kind: filter,    candidates: ["platform=android"]}
   "ios":            {kind: filter,    candidates: ["platform=ios"]}
@@ -104,6 +116,19 @@ relationships:
         product_review: active_users
         capacity_planning: active_accounts
       note: "No cross-team owner. Absent a consumer, the pair is genuinely ambiguous."
+  - id: rel_completed_habits
+    type: contested
+    members: [value_moments, total_value_moments]
+    differs_in: segment
+    means: "Both count completed habits; they differ only on whether internal/test accounts are in."
+    owner: unassigned
+    evidence: verified
+    status: open
+    policy:
+      default_by_consumer:
+        engagement_review: value_moments
+        storage_planning: total_value_moments
+      note: "No cross-team owner. Absent a requester, the pair is genuinely ambiguous."
 
 # ── methodological rules: a governed default for a parameter the question leaves open ──────────
 # The model names the rule; ground.py applies its value deterministically and discloses it. If no
@@ -134,5 +159,14 @@ methodological_rules:
     disclose: "broken down by the standard business segments: platform (product), region (sales), channel (marketing)"
     rationale: "A senior analyst's first-pass breakdown is the canonical high-level business segments,
       not one arbitrary dimension. Showing all three is the analysis; it is not a fork worth a clarify."
+    owner: analytics
+    status: certified
+  - id: show_small_choice_sets
+    slot: any
+    when: "the question leaves a choice open and there are at most 3 governed options for it"
+    max_options: 3
+    rationale: "With three or fewer readings, showing all of them answers the question in one turn
+      and costs the reader less than a clarifying question. Asking is kept for larger choice sets,
+      for a missing period, and for an unclear shape of answer."
     owner: analytics
     status: certified

@@ -8,9 +8,10 @@
 # not a held-out one (E-12). Four are calibration questions that every arm is expected to answer;
 # twelve are traps built to separate the arms.
 #
-#   pile A  answerable     8   q_001-q_004 (calibration); t_002, t_006, t_009, t_010 (traps)
+#   pile A  answerable    10   q_001-q_004 (calibration); t_002, t_006, t_009, t_010 (traps);
+#                              t_001, t_005 (contested pairs, resolved by owner routing)
 #   pile B  unanswerable   4   t_003, t_004, t_007, t_008
-#   pile C  ask first      4   t_001, t_005 (contested); u_001, u_002 (a needed parameter is stated nowhere)
+#   pile C  ask first      2   u_001, u_002 (a needed parameter is stated nowhere)
 #
 # DECISION POLICY. Each labelled decision carries the action its basis requires:
 #   proceed    grounded in the question
@@ -168,41 +169,32 @@ cases:
       referral 11,351.
 
   - id: t_001_android_users_active_june
-    tier: contested
-    tags: [trap, contested]
+    tier: answerable
+    tags: [trap, contested, owner_routing]
     question: How many Android users were active in June 2026?
     expect:
-      type: contested
+      type: metric_answer
+      metric: active_users
       params:
         platform: android
         period: 2026-06
-      concept: active users
-      candidates:
-        - metric: active_users
-          owner: Product
-          consumer: the weekly product review and the North Star metric tree
-          gold_sql: >-
-            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
-            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
-            '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
-            '%@internal-test.com'))
-        - metric: active_accounts
-          owner: Platform
-          consumer: capacity planning and the support-volume forecast
-          gold_sql: >-
-            SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
-            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
-            '2026-07-01'
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com'))
     decisions:
-      - {parameter: metric, value: [active_users, active_accounts], basis: none, action: clarify, changes_number: true,
-         alternative: "active_users 522; active_accounts 538", must_disclose: true,
-         disclose_words: [active_accounts, active_users, internal, definition]}
+      - {parameter: metric, value: active_users, basis: governed_principle, action: disclose, changes_number: true,
+         alternative: "active_accounts (Platform) 538", must_disclose: true,
+         disclose_words: [active_accounts, Product, internal, definition]}
       - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
       - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
-      Derived from q_001. "Users" has two governed definitions and no consumer is named. The grounding
-      arm takes the metric as input, so this case measures metric selection in R3 and R3+disclose only,
-      unless the grounding step gains metric selection. Proven 522 against 538, 3.0% apart.
+      Derived from q_001. "Users" has two governed definitions (active_users, Product;
+      active_accounts, Platform). Since 2026-10-03 governance declares the requester (Product), so
+      the pair is resolved by owner routing: the answer is Product's active_users, disclosed.
+      Proven 522 against 538, 3.0% apart.
 
   - id: t_002_android_customers_h1
     tier: answerable
@@ -273,39 +265,30 @@ cases:
       platform breakdown labelled as device model is wrong.
 
   - id: t_005_android_habits_june
-    tier: contested
-    tags: [trap, contested]
+    tier: answerable
+    tags: [trap, contested, owner_routing]
     question: How many habits did Android users complete in June 2026?
     expect:
-      type: contested
+      type: metric_answer
+      metric: value_moments
       params:
         platform: android
         period: 2026-06
-      concept: completed habits
-      candidates:
-        - metric: value_moments
-          owner: Product
-          consumer: the engagement review and the North Star metric tree
-          gold_sql: >-
-            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 2 AND
-            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
-            '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
-            '%@internal-test.com'))
-        - metric: total_value_moments
-          owner: Platform
-          consumer: write-volume forecasting and storage planning
-          gold_sql: >-
-            SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 2 AND
-            lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
-            '2026-07-01'
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 2 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE
+        '%@internal-test.com'))
     decisions:
-      - {parameter: metric, value: [value_moments, total_value_moments], basis: none, action: clarify, changes_number: true,
-         alternative: "value_moments 5,041; total_value_moments 5,190", must_disclose: true,
-         disclose_words: [total_value_moments, value_moments, internal, definition]}
+      - {parameter: metric, value: value_moments, basis: governed_principle, action: disclose, changes_number: true,
+         alternative: "total_value_moments (Platform) 5,190", must_disclose: true,
+         disclose_words: [total_value_moments, Product, internal, definition]}
       - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
       - {parameter: period, value: "2026-06", basis: question, action: proceed, changes_number: true}
     note: >-
-      The second contested pair, differing on the same internal-account filter. Proven 5,041 against
+      The second contested pair (value_moments, Product; total_value_moments, Platform), resolved
+      since 2026-10-03 by owner routing to Product's value_moments, disclosed. Proven 5,041 against
       5,190, 2.9% apart.
 
   - id: t_006_customers_active_q2

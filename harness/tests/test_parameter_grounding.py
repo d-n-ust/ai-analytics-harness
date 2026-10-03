@@ -315,3 +315,55 @@ def test_trend_buckets_must_line_up_with_the_period():
     assert "Week buckets were not used" in disclose
     assert P._trend_grain({**rule, "buckets_within_period": False}, "2026-H1")[0] == "week"
     assert P._lines_up("week", __import__("datetime").date(2026, 6, 1), __import__("datetime").date(2026, 6, 28))
+
+
+# ── runtime governance: a contested metric is routed to the requester team's definition ──────────
+GOV = {"requester": {"team": "Product"},
+       "measures": {"active_users": {"owner": "Product"}, "active_accounts": {"owner": "Platform"}},
+       "relationships": [{"id": "rel_active_user_definition", "type": "contested",
+                          "members": ["active_users", "active_accounts"], "means": "Differ on internal accounts."}]}
+
+
+def test_a_contested_metric_is_routed_to_the_requester_teams_definition():
+    for asked in ("active_users", "active_accounts"):
+        metric, decision = P.route_metric(asked, GOV)
+        assert metric == "active_users" and decision["basis"] == "governed_principle"
+        assert "owned by Product" in decision["disclose"]
+
+
+def test_without_a_requester_the_contested_metric_is_ungrounded():
+    metric, decision = P.route_metric("active_accounts", {**GOV, "requester": {}})
+    assert metric == "active_accounts" and decision["state"] == "ungrounded"
+
+
+def test_an_uncontested_metric_passes_through():
+    assert P.route_metric("app_opens", GOV) == ("app_opens", None)
+
+
+def test_a_small_unsure_choice_shows_every_reading_instead_of_asking():
+    """show_small_choice_sets: 'customer' may or may not exclude staff (two readings), so both run."""
+    small = PRINCIPLES + [{"id": "show_small_choice_sets", "slot": "any", "max_options": 3}]
+    members = {**_MEMBERS, "filter:activity__is_internal": {"false": False, "true": True}}
+    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("total", 1.0),
+                    "period": ("2026-06", 0.97)})
+    a["filter:activity__is_internal"] = {"choice": "false", "probabilities": {"false": 0.6, "not_mentioned": 0.38}}
+    queries, decisions = DG.resolve(a, {**SURFACE, "filter": None}, small, members, {"metric": "app_opens"}, _LO, _HI)
+    assert [q["filters"] for q in queries] == [{"activity__platform": "android", "activity__is_internal": False},
+                                               {"activity__platform": "android"}]
+    assert any("show_small_choice_sets" in d["why"] for d in decisions)
+
+
+def test_without_the_rule_an_unsure_choice_still_asks():
+    members = {**_MEMBERS, "filter:activity__is_internal": {"false": False, "true": True}}
+    a = _answers(**{"shape": ("total", 1.0), "period": ("2026-06", 0.97)})
+    a["filter:activity__is_internal"] = {"choice": "false", "probabilities": {"false": 0.6, "not_mentioned": 0.38}}
+    queries, _ = DG.resolve(a, {**SURFACE, "filter": None}, PRINCIPLES, members, {"metric": "app_opens"}, _LO, _HI)
+    assert queries == []
+
+
+def test_the_rules_are_rendered_for_the_agent():
+    text = P.rules_text({"methodological_rules": [{"id": "canonical_segments", "when": "a breakdown names no dimension",
+                                                   "default": ["activity__region", "activity__channel"]},
+                                                  {"id": "show_small_choice_sets", "when": "few options", "max_options": 3}],
+                         "requester": {"team": "Product"}})
+    assert "Use activity__region, activity__channel" in text and "up to 3" in text and "Product" in text
