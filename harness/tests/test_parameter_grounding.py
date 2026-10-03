@@ -79,6 +79,7 @@ def test_trend_granularity_is_computed_by_the_mechanism():
                 "period": {"value": "2026-H1", "basis": "first half of 2026"}}
     queries, decisions = resolve(q, SURFACE, PRINCIPLES, selected, {"metric": "app_opens"})
     assert queries[0]["time_grain"] == "week"          # 181 days: 26 weekly points, inside 15-40
+    # (this rule has no `buckets_within_period`, so a grain that crosses the edges is still allowed)
     assert _by(decisions, "time_grain")[0]["basis"] == "governed_principle"
 
 
@@ -173,3 +174,144 @@ def test_the_model_can_declare_a_parameter_ungrounded():
     queries, decisions = resolve(q, SURFACE, PRINCIPLES, selected, {"metric": "app_opens"})
     assert queries == []
     assert len([d for d in decisions if d["state"] == "ungrounded"]) == 1    # declared once
+
+
+# ── the two variants of the evidence check: tolerant_quotes and quote_retry ──────────────────────
+from agent.core.conversation import ToolCall, Turn, Usage
+from agent.guardrails import parameters as P
+from agent.guardrails import incoherent
+
+
+def test_tolerant_matching_accepts_ordinary_variation_and_still_rejects_other_words():
+    q = "How many times did Andriod users open the app in June of 2026?"
+    for quote in ("Android user", "June 2026", "Jun 2026"):      # typo, plural, gap, abbreviation
+        assert not P._in_question(quote, q)
+        assert P._in_question(quote, q, tolerant=True), quote
+    for quote in ("iOS users", "June 2025", "July 2026", "last month"):
+        assert not P._in_question(quote, q, tolerant=True), quote   # a different value stays out
+
+
+class _Scripted:
+    """Answers the grounding call from a list of selections, one per call, and counts calls."""
+
+    def __init__(self, *selections):
+        self.selections, self.calls, self.prompts = list(selections), 0, []
+
+    def respond(self, convo, tools, force_tool=None, temperature=None):
+        self.prompts.append(convo.entries[0][1])
+        self.calls += 1
+        return Turn.of("", [ToolCall("c", "select_parameters", self.selections.pop(0))], Usage(100, 10, 0))
+
+
+def _ground(model, question, retry):
+    original = P.surface_for
+    P.surface_for = lambda *_: SURFACE
+    try:
+        return P.ground(model, question, {"metric": "app_opens"}, None, None, None, {}, retry=retry)
+    finally:
+        P.surface_for = original
+
+
+Q = "How many times did Android users open the app in June 2026?"
+_MISQUOTED = {"filters": [{"dimension": "activity__platform", "member": "android", "basis": "mobile Android"}],
+              "period": {"value": "2026-06", "basis": "June 2026"}}
+_FIXED = {"filters": [{"dimension": "activity__platform", "member": "android", "basis": "Android"}],
+          "period": {"value": "2026-06", "basis": "June 2026"}}
+
+
+def test_without_retry_a_misquoted_filter_is_dropped_and_the_query_runs_wider():
+    """The current behaviour, kept as the baseline: the number silently covers every platform."""
+    queries, decisions, _ = _ground(_Scripted(_MISQUOTED), Q, retry=False)
+    assert queries == [{"metric": "app_opens", "period": "2026-06"}]
+    assert [d["state"] for d in decisions if d["parameter"] == "filter"] == ["dropped"]
+
+
+def test_retry_recovers_when_the_model_corrects_its_quote():
+    model = _Scripted(_MISQUOTED, _FIXED)
+    queries, decisions, usage = _ground(model, Q, retry=True)
+    assert model.calls == 2 and "you quoted 'mobile Android'" in model.prompts[1]
+    assert queries[0]["filters"] == {"activity__platform": "android"}
+    assert usage.input == 200                                 # both calls are charged
+
+
+def test_retry_asks_instead_of_dropping_when_the_quote_is_still_wrong():
+    queries, decisions, _ = _ground(_Scripted(_MISQUOTED, _MISQUOTED), Q, retry=True)
+    assert queries == []                                      # no query: the agent must ask
+    assert "even after one retry" in [d for d in decisions if d["parameter"] == "filter"][0]["why"]
+
+
+def test_a_quote_of_none_is_not_retried():
+    """'none' means the model itself says the question does not ask for it: a correct drop."""
+    unrequested = {"filters": [{"dimension": "activity__region", "member": "EMEA", "basis": "none"}],
+                   "period": {"value": "2026-06", "basis": "June 2026"}}
+    model = _Scripted(unrequested)
+    queries, _, _ = _ground(model, Q, retry=True)
+    assert model.calls == 1 and queries == [{"metric": "app_opens", "period": "2026-06"}]
+
+
+def test_the_variants_need_parameter_grounding():
+    assert incoherent(parse_cell("R3+tolerant_quotes"))
+    assert incoherent(parse_cell("R3+parameter_grounding+quote_retry")) is None
+
+
+# ── decision_grounding: the policy applied to a decision model's answers ─────────────────────────
+import datetime as _dt
+
+from agent.guardrails import decisions as DG
+
+_LO, _HI = _dt.date(2025, 9, 5), _dt.date(2026, 7, 12)
+_MEMBERS = {"filter:activity__platform": {"android": "android", "ios": "ios", "web": "web"}}
+
+
+def _answers(**choices):
+    """{question: (choice, probability)} in the Decisions API's answer shape."""
+    return {q: {"choice": c, "probabilities": {c: p}} for q, (c, p) in choices.items()}
+
+
+def test_decision_grounding_runs_confident_choices():
+    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("total", 1.0),
+                    "period": ("2026-06", 0.97)})
+    queries, _ = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    assert queries == [{"metric": "app_opens", "filters": {"activity__platform": "android"}, "period": "2026-06"}]
+
+
+def test_decision_grounding_refuses_a_value_the_layer_lacks():
+    a = _answers(**{"filter:activity__platform": ("not_in_list", 0.98), "shape": ("total", 1.0),
+                    "period": ("2026-06", 0.97)})
+    queries, decisions = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["ungoverned_dimension_value"]
+
+
+def test_decision_grounding_asks_when_unsure_or_when_the_period_is_missing():
+    unsure = _answers(**{"filter:activity__platform": ("android", 0.55), "shape": ("total", 1.0),
+                         "period": ("2026-06", 0.97)})
+    missing = _answers(**{"shape": ("total", 1.0), "period": ("not_mentioned", 0.95)})
+    for a in (unsure, missing):
+        queries, decisions = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+        assert queries == [] and any(d["state"] == "ungrounded" for d in decisions)
+
+
+def test_decision_grounding_applies_the_segment_rule_by_code():
+    separate = [dict(p, combine="separate") if p["id"] == "canonical_segments" else p for p in PRINCIPLES]
+    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("breakdown", 1.0),
+                    "breakdown": ("canonical_segments", 0.95), "period": ("2026-06", 0.97)})
+    queries, _ = DG.resolve(a, SURFACE, separate, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    assert [q["group_by"] for q in queries] == [["activity__region"], ["activity__channel"]]
+
+
+def test_period_options_cover_the_window_and_nothing_else():
+    periods = DG._periods(_LO, _HI)
+    assert "2025-09" in periods and "2026-07" in periods and "2025-08" not in periods
+    assert "2026-H1" in periods and "2026-Q2" in periods and "2025-H1" not in periods
+
+
+def test_trend_buckets_must_line_up_with_the_period():
+    """The engine answers "H1 by week" with whole weeks, so its first and last points include days
+    outside the half-year. With `buckets_within_period`, a grain that crosses the edges is not used."""
+    rule = {"id": "trend_granularity", "slot": "time_grain", "target_points": [15, 40],
+            "buckets_within_period": True}
+    grain, points, days, disclose = P._trend_grain(rule, "2026-H1")   # 1 Jan 2026 is a Thursday
+    assert (grain, points, days) == ("month", 6, 181)
+    assert "Week buckets were not used" in disclose
+    assert P._trend_grain({**rule, "buckets_within_period": False}, "2026-H1")[0] == "week"
+    assert P._lines_up("week", __import__("datetime").date(2026, 6, 1), __import__("datetime").date(2026, 6, 28))

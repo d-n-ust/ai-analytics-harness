@@ -436,6 +436,23 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "or a governed principle, runs the query with those parameters, and appends the "
               "decisions to the result for the answer to disclose",
               ("guardrails/parameters.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
+    # Two variants of parameter_grounding's evidence check, separate so each is measured alone.
+    Guardrail("tolerant_quotes", Position.BEFORE,
+              "matches a quoted phrase to the question by word stem, small gaps, a shared prefix or "
+              "one typo, instead of the exact consecutive words",
+              ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
+    # The same job as parameter_grounding with the proposal step replaced: one decision-model request
+    # chooses every parameter from option lists generated from the layer.
+    Guardrail("decision_grounding", Position.BEFORE,
+              "grounds each parameter of a governed query with one decision-model request whose options "
+              "are the layer's own members, periods inside coverage and governed rules; confident choices "
+              "run, `not_in_list` refuses, unsure or missing values ask",
+              ("guardrails/decisions.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
+    Guardrail("quote_retry", Position.BEFORE,
+              "sends a quote that is not in the question back to the model once; if it is still not "
+              "there, the parameter is ungrounded and the agent asks instead of the value being "
+              "dropped silently",
+              ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -504,6 +521,9 @@ class GuardrailSet:
     constraint_regression: bool = False
     disclose_assumptions: bool = False
     parameter_grounding: bool = False
+    tolerant_quotes: bool = False
+    decision_grounding: bool = False
+    quote_retry: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -651,6 +671,12 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.scope_classifier and not g.disclosure_check:
         return ("scope_classifier without disclosure_check: it stands down a check that is not "
                 "running, so it can only cost a model call.")
+    if g.decision_grounding and g.parameter_grounding:
+        return ("decision_grounding with parameter_grounding: two grounding steps would both rewrite "
+                "the same call.")
+    if (g.tolerant_quotes or g.quote_retry) and not g.parameter_grounding:
+        return ("tolerant_quotes or quote_retry without parameter_grounding: both change the grounding "
+                "step's evidence check, which is not running.")
     if g.constraint_regression and not g.coverage_check:
         return ("constraint_regression without coverage_check: raw SQL is still on the table, so a "
                 "restriction can be re-expressed in a query this check cannot read.")

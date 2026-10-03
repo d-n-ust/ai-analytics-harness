@@ -40,6 +40,9 @@ cases:
     expect:
       type: metric_answer
       metric: app_opens
+      params:
+        platform: android
+        period: 2026-06
       tolerance: 0.005
       gold_sql: >-
         SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
@@ -62,6 +65,11 @@ cases:
     expect:
       type: breakdown
       metric: app_opens
+      params:
+        platform: android
+        group_by: [metric_time]
+        time_grain: [week, month]
+        period: 2026-H1
       tolerance: 0.005
       gold_sql:
         - >-
@@ -99,6 +107,10 @@ cases:
     expect:
       type: breakdown
       metric: app_opens
+      params:
+        platform: android
+        group_by: [region, channel]  # two separate breakdowns
+        period: 2026-06
       tolerance: 0.005
       gold_sql: >-
         SELECT 'region=' || CASE upper(u.ctry) WHEN 'US' THEN 'Americas' WHEN 'BR' THEN 'Americas' WHEN
@@ -133,6 +145,9 @@ cases:
     expect:
       type: breakdown
       metric: app_opens
+      params:
+        group_by: [channel]
+        period: 2026-Q2
       tolerance: 0.005
       gold_sql: >-
         SELECT CASE WHEN lower(u.chan) IN ('paid_search','paid search','ppc','paid-search') THEN
@@ -158,6 +173,9 @@ cases:
     question: How many Android users were active in June 2026?
     expect:
       type: contested
+      params:
+        platform: android
+        period: 2026-06
       concept: active users
       candidates:
         - metric: active_users
@@ -193,6 +211,10 @@ cases:
     expect:
       type: metric_answer
       metric: active_users
+      params:
+        platform: android
+        is_internal: "false"
+        period: 2026-H1
       tolerance: 0.005
       gold_sql: >-
         SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE
@@ -216,6 +238,10 @@ cases:
     question: How many app opens came from TikTok in Q2 2026?
     expect:
       type: refuse
+      metric: app_opens
+      params:
+        channel: TikTok  # not a channel: refuse
+        period: 2026-Q2
       reason:
         - ungoverned_dimension_value
         - segment_undefined
@@ -233,6 +259,11 @@ cases:
     question: How did Android app opens break down by device model in June 2026?
     expect:
       type: refuse
+      metric: app_opens
+      params:
+        platform: android
+        group_by: [device model]  # no such dimension: refuse
+        period: 2026-06
       reason: dimension_not_supported
     decisions:
       - {parameter: group_by, value: "device model (not captured)", basis: none, action: refuse, changes_number: true,
@@ -247,6 +278,9 @@ cases:
     question: How many habits did Android users complete in June 2026?
     expect:
       type: contested
+      params:
+        platform: android
+        period: 2026-06
       concept: completed habits
       candidates:
         - metric: value_moments
@@ -281,6 +315,9 @@ cases:
     expect:
       type: metric_answer
       metric: active_users
+      params:
+        is_internal: "false"
+        period: 2026-Q2
       tolerance: 0.005
       gold_sql: >-
         SELECT count(DISTINCT e.uid) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.ts
@@ -303,6 +340,10 @@ cases:
     question: How many times did Windows users open the app in June 2026?
     expect:
       type: refuse
+      metric: app_opens
+      params:
+        platform: Windows  # not a platform: refuse
+        period: 2026-06
       reason:
         - ungoverned_dimension_value
         - segment_undefined
@@ -319,6 +360,10 @@ cases:
     question: How many times did Android users open the app in June 2025?
     expect:
       type: refuse
+      metric: app_opens
+      params:
+        platform: android
+        period: 2025-06  # before the data starts: refuse
       reason: out_of_coverage
     decisions:
       - {parameter: period, value: "2025-06", basis: question, action: refuse, changes_number: true,
@@ -334,6 +379,9 @@ cases:
     expect:
       type: metric_answer
       metric: app_opens
+      params:
+        channel: content_seo
+        period: 2026-Q2
       tolerance: 0.005
       gold_sql: >-
         SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
@@ -357,6 +405,10 @@ cases:
     expect:
       type: metric_answer
       metric: habits_per_active_user
+      params:
+        platform: android
+        is_internal: [none, "false"]  # 'customer' may mean: exclude staff
+        period: 2026-Q2
       tolerance: 0.005
       gold_sql: >-
         SELECT (SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype =
@@ -383,6 +435,10 @@ cases:
     question: How many times did Android users open the app?
     expect:
       type: clarify
+      metric: app_opens
+      params:
+        platform: android
+        period: ask
     decisions:
       - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
       - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose,
@@ -400,6 +456,10 @@ cases:
     question: How many times did Android users open the app in the summer?
     expect:
       type: clarify
+      metric: app_opens
+      params:
+        platform: android
+        period: ask
     decisions:
       - {parameter: filter, value: "activity__platform = android", basis: question, action: proceed, changes_number: true}
       - {parameter: metric_filter, value: "is_internal = false", basis: governed_declaration, action: disclose,

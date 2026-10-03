@@ -114,9 +114,14 @@ methodological_rules:
     when: "a time series is requested (group_by includes metric_time) but no bucket is grounded"
     target_points: [15, 40]
     prefer: coarsest_in_range
+    # Every bucket must lie wholly inside the period. Without this, the engine answers "the first half
+    # of 2026 by week" with whole weeks, so the first and last points silently include 29-31 Dec 2025
+    # and 1-5 Jul 2026 (404 and 2,059 instead of 221 and 615). Among grains that fit, the range applies.
+    buckets_within_period: true
     rationale: "A trend needs enough points to show its shape and few enough to read: 15-40. Day is
       usually too granular, month too coarse over a short span; the rule computes the fit from the
-      span rather than guessing."
+      span rather than guessing. A bucket that crosses the period's edge reports data from outside
+      the period, so only grains whose buckets line up with the period are considered."
     owner: analytics
     status: certified
   - id: canonical_segments

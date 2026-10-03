@@ -323,7 +323,7 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _RRUNG_CONSTRAINT_REGRESSION
     if g.disclose_assumptions:
         system += _RRUNG_DISCLOSE_ASSUMPTIONS
-    if g.parameter_grounding:
+    if g.parameter_grounding or g.decision_grounding:
         system += _RRUNG_PARAMETER_GROUNDING
     if g.check_tools:
         system += _RRUNG_CHECKS

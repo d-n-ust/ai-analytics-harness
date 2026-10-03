@@ -38,6 +38,7 @@ from ..gates import segments as _g_segments
 from ..gates._common import GRACE, MAX_CORRECTIONS
 from ..guardrails import Act, Position, after, before
 from ..guardrails import classify as _classify
+from ..guardrails import decisions as _decisions
 from ..guardrails import parameters as _parameters
 from .providers import ProviderError
 
@@ -162,7 +163,8 @@ class _Run:
     _premise: object = None           # cached presupposition record, once per run (gates/contract)
     handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps
     # `parameter_grounding`: one grounding per metric per run, so repeated calls agree.
-    grounded: dict = field(default_factory=dict)   # what the AFTER guardrails did to the answer
+    grounded: dict = field(default_factory=dict)
+    _grounding_cost: float = 0.0     # decision_grounding: this call's decision-request cost, in USD   # what the AFTER guardrails did to the answer
 
     @property
     def claim_retries(self) -> int:
@@ -188,10 +190,12 @@ class _Run:
             t0 = time.perf_counter()
             queries, decisions = self._ground(call)
             if not queries:
-                # A needed parameter is ungrounded: nothing runs, and the agent is told to ask.
+                # Nothing runs. A value the layer lacks means decline; an ungrounded one means ask.
                 args = call.args
+                refused = next((d for d in decisions if d["state"] == "refuse"), None)
                 result = ToolResult(_parameters.note_text(decisions), is_error=True,
-                                    reason="underspecified_request", blocked_by="parameter_grounding")
+                                    reason=refused["reason"] if refused else "underspecified_request",
+                                    blocked_by="parameter_grounding")
             else:
                 args = queries[0]
                 result = self._dispatch_all(call.name, queries)
@@ -219,6 +223,7 @@ class _Run:
                                # and the decision record: value, basis, quoted phrase, state.
                                **({"requested_args": call.args, "grounding": decisions,
                                    "grounded_queries": queries} if decisions else {}),
+                               **({"grounding_cost_usd": self._grounding_cost} if self._grounding_cost else {}),
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
                                # The stored result is CLIPPED; these two say so. Without them a
@@ -270,10 +275,18 @@ class _Run:
         them. Any other call, or the flag off, passes through as its own single query. The grounding
         call's tokens are added to the run's usage, so the arm is charged for what it costs."""
         tb = self.grounding.toolbox
+        self._grounding_cost = 0.0
+        if call.name == "query_metric" and getattr(tb.g, "decision_grounding", False):
+            # Billed per request by OpenRouter, not per token of the agent's model, so it is kept on
+            # the step (`grounding_cost_usd`) rather than folded into the run's token usage.
+            queries, decisions, self._grounding_cost = _decisions.ground(
+                self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded)
+            return queries, decisions
         if call.name != "query_metric" or not getattr(tb.g, "parameter_grounding", False):
             return [call.args], []
         queries, decisions, usage = _parameters.ground(
-            self.model, self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded)
+            self.model, self.question, call.args, tb.semantic, tb.con, tb.governance, self.grounded,
+            tolerant=getattr(tb.g, "tolerant_quotes", False), retry=getattr(tb.g, "quote_retry", False))
         if usage is not None:
             self.usage += usage
         return queries, decisions

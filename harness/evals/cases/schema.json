@@ -81,6 +81,23 @@
       "no_governed_metric": {
        "type": "boolean",
        "description": "Declares that the layer has NO governed metric for this question, so `metric` is absent on purpose. Study-local only; the frozen set must always name its metric (tests/test_grade.py). Never set alongside `metric`."
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     },
@@ -119,6 +136,27 @@
       "tolerance": {
        "type": "number",
        "default": 0.02
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
+      },
+      "metric": {
+       "type": "string",
+       "description": "The metric the question is about, so its params can be checked."
       }
      }
     },
@@ -145,6 +183,23 @@
        "items": {
         "type": "string"
        }
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     },
@@ -165,6 +220,23 @@
         "type": "string"
        },
        "minItems": 1
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     },
@@ -196,6 +268,23 @@
         "out_of_scope",
         "other"
        ]
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     },
@@ -208,6 +297,27 @@
      "properties": {
       "type": {
        "const": "clarify"
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
+      },
+      "metric": {
+       "type": "string",
+       "description": "The metric the question is about, so its params can be checked."
       }
      }
     },
@@ -265,6 +375,23 @@
        "type": "number",
        "default": 0.005,
        "description": "Tighter than elsewhere by default: attributing a served number to one candidate requires a band narrower than the gap between them."
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     },
@@ -301,6 +428,23 @@
       "tolerance": {
        "type": "number",
        "default": 0.02
+      },
+      "params": {
+       "type": "object",
+       "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+       "additionalProperties": {
+        "oneOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "array",
+          "items": {
+           "type": "string"
+          }
+         }
+        ]
+       }
       }
      }
     }

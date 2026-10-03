@@ -76,12 +76,33 @@ SCHEMA_EXPLANATION = (
     "total as if it were the segment.")
 
 
-def load_cases() -> list[dict]:
-    cases = yaml.safe_load((HERE / "cases.yml").read_text())["cases"]
+def load_cases(name: str = "cases.yml") -> list[dict]:
+    cases = yaml.safe_load((HERE / name).read_text())["cases"]
     for case in cases:
-        _validate(case, "cases.yml")
+        _validate(case, name)
     stamp_suite(cases)
     return cases
+
+
+def check_params(cases: list, con) -> None:
+    """Every labelled value is a real member of its dimension, `ask`, or a list of those, except in
+    a refuse case, where naming something the layer lacks is the point. A typo in a label (`andriod`)
+    would otherwise grade every arm against a value no query can produce."""
+    from ontology import parameters as surface
+    layer = (LAYER / "semantic_models.yml").read_text()
+    for case in cases:
+        e = case["expect"]
+        metric = e.get("metric") or e["candidates"][0]["metric"]
+        members = {d["column"]: {str(m).lower() for m in d["members"] or ()}
+                   for d in surface.build(con, layer, metric)["parameters"]["filters"]["dimensions"]}
+        for key, value in (e.get("params") or {}).items():
+            if key not in members or not members[key] or e["type"] == "refuse":
+                continue
+            bad = [v for v in (value if isinstance(value, list) else [value])
+                   if v.lower() not in members[key] | {"none", "ask"}]
+            if bad:
+                sys.exit(f"{case['id']}: params.{key} = {bad} is not a member of {key} "
+                         f"({sorted(members[key])})")
 
 
 def scoped_cursor(con):
@@ -119,7 +140,9 @@ def summarise(rows: list, arms: list) -> None:
         s = selective(sub).as_dict()
         due = [r for r in sub if r["disclosure_due"]]
         undisclosed = sum(1 for r in due if r["disclosure_missed"])
-        usd = sum(r["cost_usd"] or 0 for r in sub)
+        # Decision-model requests are billed per request, so they are added from the steps.
+        usd = sum((r["cost_usd"] or 0) + sum(s.get("grounding_cost_usd") or 0 for s in r["steps"])
+                  for r in sub)
         print(f"{arm:26} {len(sub):>3} {s['coverage']!s:>9} {s['silent_error']!s:>11} "
               f"{s['balanced_accuracy']!s:>8} {f'{undisclosed}/{len(due)}':>12} {usd:>8.4f}")
 
@@ -131,6 +154,8 @@ def main() -> None:
     ap.add_argument("--arms", default=",".join(ARMS), help="comma-separated guardrail cells")
     ap.add_argument("--reps", type=int, default=1)
     ap.add_argument("--only", default=None, help="comma-separated case ids")
+    ap.add_argument("--cases", default="cases.yml",
+                    help="the suite file in this folder: cases.yml (the measured suite) or a probe set")
     ap.add_argument("--concurrency", type=int, default=2,
                     help="threads over tasks; keep it low (E-20: a rate limiter is not a result)")
     ap.add_argument("--regrade", default=None, metavar="RUN_DIR",
@@ -139,7 +164,8 @@ def main() -> None:
 
     con = open_warehouse(create_star_views=True)
     fixture_build.build(con, drop=True)
-    cases = load_cases()
+    cases = load_cases(args.cases)
+    check_params(cases, con)
     golds = compute_gold(con, cases)
     if args.regrade:
         run_dir = pathlib.Path(args.regrade).resolve()

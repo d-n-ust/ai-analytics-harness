@@ -30,6 +30,16 @@ cannot reproduce it partially.
 One model call per metric per run; the result is cached on the run, so repeated calls to the same
 metric are grounded identically.
 
+Two optional variants of the evidence check, each its own guardrail flag so each can be measured
+alone:
+
+  tolerant_quotes   the quoted phrase matches the question by word stem, allows up to two
+                    intervening words, a shared prefix of three letters or more ("Jun" / "June") and
+                    one typo in a word of five letters or more ("Andriod" / "Android").
+  quote_retry       a quote that is not in the question is sent back to the model once, with the
+                    error. If it is still not in the question, the parameter is treated as
+                    ungrounded and the agent must ask, instead of the value being dropped silently.
+
 Known limit: every call to a metric is grounded against the WHOLE question. A question that needs
 the same metric twice with different parameters (this month against last month) is grounded to one
 reading. None of the experiment 07 suite asks that; a run that needs it should not use this flag.
@@ -146,9 +156,14 @@ def _surface_text(surface: dict, principles: list) -> str:
     return "\n".join(lines)
 
 
-def _select(model, question: str, surface: dict, principles: list) -> tuple[dict, Usage]:
+def _select(model, question: str, surface: dict, principles: list,
+            feedback: str = "") -> tuple[dict, Usage]:
     tool = _tool(surface, principles)
     user = f"{_surface_text(surface, principles)}\n\nQUESTION: {question}\n\nCall select_parameters."
+    if feedback:
+        user += ("\n\nYOUR PREVIOUS SELECTION QUOTED EVIDENCE THAT IS NOT IN THE QUESTION:\n" + feedback
+                 + "\nFor each, quote the exact words of the question that support the value, or "
+                   "use 'none' if the question does not ask for it.")
     turn = model.respond(Conversation.opening(_SYSTEM, user), [tool],
                          force_tool=tool["name"], temperature=0)
     args = next((c.args for c in turn.tool_calls if c.name == tool["name"]), {})
@@ -161,15 +176,65 @@ def _words(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", str(text or "").lower())
 
 
-def _in_question(basis: str, question: str) -> bool:
-    """Is the quoted basis actually in the question? Word-level, so punctuation and case do not
-    matter, but a phrase the question does not contain is not accepted as its basis."""
+def _in_question(basis: str, question: str, tolerant: bool = False) -> bool:
+    """Is the quoted basis actually in the question? Word-level, so punctuation and case never
+    matter. Exact by default: the quote's words, consecutively. With `tolerant` (the
+    `tolerant_quotes` variant) each word may match by stem, prefix or one typo, and up to two
+    question words may sit between consecutive quote words."""
     quoted = _words(basis)
     if not quoted or quoted == ["none"]:
         return False
     asked = _words(question)
-    n = len(quoted)
-    return any(asked[i:i + n] == quoted for i in range(len(asked) - n + 1))
+    if not tolerant:
+        n = len(quoted)
+        return any(asked[i:i + n] == quoted for i in range(len(asked) - n + 1))
+    return any(_follows(quoted, asked, i) for i in range(len(asked)))
+
+
+_MAX_GAP = 2      # question words allowed between two consecutive quote words
+
+
+def _follows(quoted: list, asked: list, start: int) -> bool:
+    """`quoted` matches `asked` beginning exactly at `start`, each later word within the gap."""
+    if not _word_match(quoted[0], asked[start]):
+        return False
+    if len(quoted) == 1:
+        return True
+    return any(_follows(quoted[1:], asked, j)
+               for j in range(start + 1, min(start + 2 + _MAX_GAP, len(asked))))
+
+
+def _stem(w: str) -> str:
+    if len(w) > 4 and w.endswith("ies"):
+        return w[:-3] + "y"
+    if w.endswith(("sses", "xes", "ches", "shes")):
+        return w[:-2]
+    if len(w) > 3 and w.endswith("s") and not w.endswith("ss"):
+        return w[:-1]
+    return w
+
+
+def _one_edit(a: str, b: str) -> bool:
+    """At most one substitution, insertion, deletion or swap of adjacent letters."""
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        diff = [i for i in range(len(a)) if a[i] != b[i]]
+        return len(diff) <= 1 or (len(diff) == 2 and diff[1] == diff[0] + 1
+                                  and a[diff[0]] == b[diff[1]] and a[diff[1]] == b[diff[0]])
+    short, long_ = sorted((a, b), key=len)
+    return any(long_[:i] + long_[i + 1:] == short for i in range(len(long_)))
+
+
+def _word_match(q: str, a: str) -> bool:
+    if q == a or _stem(q) == _stem(a):
+        return True
+    if not (q.isalpha() and a.isalpha()):
+        return False                      # numbers match exactly or not at all: 2026 is not 2025
+    short = min(len(q), len(a))
+    if short >= 3 and (a.startswith(q) or q.startswith(a)):
+        return True
+    return short >= 5 and _one_edit(q, a)
 
 
 def _period_span(value: str):
@@ -188,18 +253,41 @@ def _period_span(value: str):
     return dt.date(year, month, 1), dt.date(year + month // 12, month % 12 + 1, 1) - dt.timedelta(days=1)
 
 
+def _lines_up(grain: str, start: dt.date, end: dt.date) -> bool:
+    """Does every bucket of `grain` lie wholly inside [start, end]? Weeks start on Monday, as the
+    engine buckets them (date_trunc('week'))."""
+    after = end + dt.timedelta(days=1)
+    if grain == "week":
+        return start.weekday() == 0 and after.weekday() == 0
+    if grain == "month":
+        return start.day == 1 and after.day == 1
+    return True
+
+
 def _trend_grain(rule: dict, period: str):
-    """`trend_granularity`: the coarsest grain whose number of points falls in the target range."""
+    """`trend_granularity`: (grain, points, days, disclosure), or None for an unreadable period.
+
+    The coarsest grain whose number of points falls in the target range. With
+    `buckets_within_period`, only grains whose buckets line up with the period are considered, so no
+    point reports data from outside the period; among those, the one nearest the range is taken when
+    none falls inside it. The disclosure sentence is built here, once, for every caller."""
     span = _period_span(period)
     if not span:
         return None
     days = (span[1] - span[0]).days + 1
     points = {"day": days, "week": round(days / 7), "month": round(days / 30)}
+    allowed = [g for g in ("day", "week", "month")
+               if not rule.get("buckets_within_period") or _lines_up(g, *span)]
     lo, hi = rule.get("target_points", [15, 40])
-    fits = [g for g in ("day", "week", "month") if lo <= points[g] <= hi]
+    fits = [g for g in allowed if lo <= points[g] <= hi]
     grain = (min(fits, key=lambda g: points[g]) if fits else
-             min(points, key=lambda g: min(abs(points[g] - lo), abs(points[g] - hi))))
-    return grain, points[grain], days
+             min(allowed, key=lambda g: min(abs(points[g] - lo), abs(points[g] - hi))))
+    excluded = [g for g in ("day", "week", "month") if g not in allowed]
+    disclose = f"Shown by {grain}: {points[grain]} points over the {days}-day period, the governed trend granularity."
+    if excluded:
+        disclose += (f" {' and '.join(excluded).capitalize()} buckets were not used because they would "
+                     f"cross the period's edges.")
+    return grain, points[grain], days, disclose
 
 
 def _ungrounded(parameter: str, why: str) -> dict:
@@ -212,12 +300,21 @@ def _decision(parameter, value, basis, quote="", disclose="", state="applied", w
 
 
 def resolve(question: str, surface: dict, principles: list, selected: dict,
-            requested: dict) -> tuple[list, list]:
+            requested: dict, tolerant: bool = False) -> tuple[list, list]:
     """PURE. The queries to run and the decision record, from the model's selection. Usually one
     query; a group_by principle declared `combine: separate` gives one query per dimension. No
     query at all when a parameter the answer needs is ungrounded: the record then says which, and
-    the agent must ask. `requested` is the agent's own call; only its metric is kept."""
+    the agent must ask. `requested` is the agent's own call; only its metric is kept.
+
+    A value dropped because its quoted evidence is not in the question carries `mismatch: True`
+    when the quote is a real phrase (not 'none'): that is the case `quote_retry` sends back."""
     by_id = {p["id"]: p for p in principles}
+
+    def found(basis: str) -> bool:
+        return _in_question(basis, question, tolerant)
+
+    def mismatch(basis: str) -> bool:
+        return bool(_words(basis)) and _words(basis) != ["none"] and not found(basis)
     dims = {d["name"]: d for d in surface["parameters"]["filters"]["dimensions"]}
     decisions, filters = [], {}
 
@@ -235,9 +332,10 @@ def resolve(question: str, surface: dict, principles: list, selected: dict,
             decisions.append(_decision("filter", value, "none", f.get("basis", ""), state="dropped",
                                        why="the metric already applies this filter"))
             continue
-        if not _in_question(f.get("basis", ""), question):
-            decisions.append(_decision("filter", value, "none", f.get("basis", ""), state="dropped",
-                                       why="the stated basis is not in the question: an unrequested filter"))
+        if not found(f.get("basis", "")):
+            decisions.append({**_decision("filter", value, "none", f.get("basis", ""), state="dropped",
+                                          why="the stated basis is not in the question: an unrequested filter"),
+                              "mismatch": mismatch(f.get("basis", ""))})
             continue
         state, why = "applied", ""
         members = dims.get(dim, {}).get("members")
@@ -276,37 +374,39 @@ def resolve(question: str, surface: dict, principles: list, selected: dict,
         decisions.append(_decision("group_by", group_by, "governed_principle", gb.get("basis", ""),
                                    rule.get("disclose", ""), why=f"principle {rule['id']}"))
     elif gb.get("dimensions"):
-        if _in_question(gb.get("basis", ""), question):
+        if found(gb.get("basis", "")):
             group_by = list(gb["dimensions"])
             decisions.append(_decision("group_by", group_by, "question", gb.get("basis", ""),
                                        gb.get("disclose", "")))
         else:
-            decisions.append(_decision("group_by", gb["dimensions"], "none", gb.get("basis", ""),
-                                       state="dropped", why="the stated basis is not in the question"))
+            decisions.append({**_decision("group_by", gb["dimensions"], "none", gb.get("basis", ""),
+                                          state="dropped", why="the stated basis is not in the question"),
+                              "mismatch": mismatch(gb.get("basis", ""))})
 
     period_sel = selected.get("period") or {}
     period = period_sel.get("value") or ""
-    grounded_period = _in_question(period_sel.get("basis", ""), question)
+    grounded_period = found(period_sel.get("basis", ""))
     if (_period_span(period) or period == "current") and grounded_period:
         decisions.append(_decision("period", period, "question", period_sel.get("basis", ""),
                                    period_sel.get("disclose", "")))
         period = "" if period == "current" else period       # omitted period = the current value
     else:
+        stated = (_period_span(period) or period == "current") and mismatch(period_sel.get("basis", ""))
         period = ""
-        decisions.append(_ungrounded("period", "the question states no period that can be read "
-                                     "as a calendar range, and no rule supplies one"))
+        decisions.append({**_ungrounded("period", "the question states no period that can be read "
+                                        "as a calendar range, and no rule supplies one"),
+                          "mismatch": stated, "value_proposed": period_sel.get("value"),
+                          "quote": period_sel.get("basis", "")})
 
     time_grain = None
     tg = selected.get("time_grain") or {}
     trule = by_id.get(tg.get("principle", "none"), {})
     if "metric_time" in group_by:
         if trule.get("slot") == "time_grain" and period and _trend_grain(trule, period):
-            time_grain, points, days = _trend_grain(trule, period)
-            decisions.append(_decision(
-                "time_grain", time_grain, "governed_principle", tg.get("basis", ""),
-                f"Shown by {time_grain}: {points} points over the {days}-day period, the governed "
-                f"trend granularity.", why=f"principle {trule['id']}"))
-        elif tg.get("value") in _surface.TIME_GRAINS and _in_question(tg.get("basis", ""), question):
+            time_grain, _points, _days, disclose = _trend_grain(trule, period)
+            decisions.append(_decision("time_grain", time_grain, "governed_principle", tg.get("basis", ""),
+                                       disclose, why=f"principle {trule['id']}"))
+        elif tg.get("value") in _surface.TIME_GRAINS and found(tg.get("basis", "")):
             time_grain = tg["value"]
             decisions.append(_decision("time_grain", time_grain, "question", tg.get("basis", ""),
                                        tg.get("disclose", "")))
@@ -341,6 +441,13 @@ def note_text(decisions: list) -> str:
     not run and asks for a clarification. Otherwise it lists the parameters the query ran with and
     marks for disclosure the ones a reader would not otherwise know were chosen: those grounded in a
     declaration or a rule."""
+    refused = [d for d in decisions if d["state"] == "refuse"]
+    if refused:
+        lines = ["[parameter grounding] The query did NOT run. The question names something the layer "
+                 "does not have, so no governed number exists. Decline with `refuse`, using the reason "
+                 "below; do not answer from a neighbouring value."]
+        lines += [f"  - REFUSE ({d['reason']}): {d['why']}" for d in refused]
+        return "\n".join(lines)
     missing = [d for d in decisions if d["state"] == "ungrounded"]
     if missing:
         lines = ["[parameter grounding] The query did NOT run. The answer depends on a parameter "
@@ -355,7 +462,9 @@ def note_text(decisions: list) -> str:
             lines.append(f"  - not applied: {d['parameter']} {d['value']} ({d['why']})")
             continue
         mark = "DISCLOSE: " if d["basis"] != "question" or d["state"] == "invalid" else ""
-        where = {"question": f"from the question (\"{d['quote']}\")",
+        source = (f"\"{d['quote']}\"" if d.get("quote") else
+                  f"decision model, p {d['confidence']:.2f}" if d.get("confidence") is not None else "")
+        where = {"question": f"from the question ({source})",
                  "governed_declaration": "declared by the metric",
                  "governed_principle": f"governed principle ({d['why']})",
                  "none": "no basis in the question"}[d["basis"]]
@@ -369,10 +478,11 @@ def note_text(decisions: list) -> str:
 
 
 def ground(model, question: str, requested: dict, semantic, cursor, governance: dict | None,
-           cache: dict) -> tuple[list, list, Usage | None]:
-    """The grounded queries, the decision record, and the grounding call's token usage (None when
+           cache: dict, tolerant: bool = False, retry: bool = False) -> tuple[list, list, Usage | None]:
+    """The grounded queries, the decision record, and the grounding calls' token usage (None when
     the result came from the cache or the guardrail stood down). When no surface can be built, the
-    agent's own call stands and the record is empty."""
+    agent's own call stands and the record is empty. `tolerant` is `tolerant_quotes`; `retry` is
+    `quote_retry`."""
     metric = requested.get("metric", "")
     if metric in cache:
         return (*cache[metric], None)
@@ -381,6 +491,23 @@ def ground(model, question: str, requested: dict, semantic, cursor, governance: 
         return [requested], [], None
     principles = list((governance or {}).get("methodological_rules") or [])
     selected, usage = _select(model, question, surface, principles)
-    queries, decisions = resolve(question, surface, principles, selected, requested)
+    queries, decisions = resolve(question, surface, principles, selected, requested, tolerant)
+    bad = [d for d in decisions if d.get("mismatch")]
+    if retry and bad:
+        feedback = "\n".join(f"  - {d['parameter']} {d.get('value_proposed', d['value'])}: you quoted "
+                              f"{d['quote']!r}" for d in bad)
+        selected, again = _select(model, question, surface, principles, feedback)
+        usage = usage + again
+        queries, decisions = resolve(question, surface, principles, selected, requested, tolerant)
+        still = [d for d in decisions if d.get("mismatch")]
+        for d in still:
+            # A value the model still claims the question asks for, with evidence that is not
+            # there. Dropping it would change the number silently, so the agent asks instead.
+            d.update(state="ungrounded", basis="none",
+                     why=f"the quoted evidence {d['quote']!r} is not in the question, even after one retry")
+        if still:
+            queries = []
+        for d in decisions:
+            d["retried"] = True
     cache[metric] = (queries, decisions)
     return queries, decisions, usage
