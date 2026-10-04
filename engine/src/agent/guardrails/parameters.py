@@ -497,6 +497,13 @@ def note_text(decisions: list) -> str:
                  "below; do not answer from a neighbouring value."]
         lines += [f"  - REFUSE ({d['reason']}): {d['why']}" for d in refused]
         return "\n".join(lines)
+    outside = [d for d in decisions if d["state"] == "outside"]
+    if outside:
+        lines = ["[parameter grounding] The query did NOT run: it asks for values the question does not "
+                 "ask about. Nothing was changed for you. Call again with values the question allows, or "
+                 "leave a parameter out to have it filled from the question or a governed rule."]
+        lines += [f"  - {part}" for d in outside for part in d["why"].split("; ")]
+        return "\n".join(lines)
     missing = [d for d in decisions if d["state"] == "ungrounded"]
     if missing:
         lines = ["[parameter grounding] The query did NOT run. The answer depends on a parameter "
@@ -520,7 +527,7 @@ def note_text(decisions: list) -> str:
         text = f"  - {mark}{d['parameter']} = {d['value']}: {where}"
         if mark and d["disclose"]:
             text += f". {d['disclose']}"
-        if d["state"] == "invalid":
+        if d["state"] == "invalid" or (d["basis"] == "question" and d.get("why")):
             text += f". {d['why']}"
         lines.append(text)
     return "\n".join(lines)

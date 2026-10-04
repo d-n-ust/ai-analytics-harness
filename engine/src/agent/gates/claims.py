@@ -41,10 +41,14 @@ def malformed_claims(run, exit_call: ToolCall):
     model never heard about it. That is why 22% of references named a container rather than a
     number: not because the model could not do better, but because nothing ever told it.
 
-    Only UNRESOLVED is handed back. A reference that points at nothing is objectively broken,
-    the way a bad argument is. Whether a claim is mislabelled, or states a figure its evidence
-    does not support, are judgements about the ANALYSIS — those stay in the audit, where they
-    are measured rather than corrected away.
+    Two faults are handed back, both about the claim's FORM. A reference that points at nothing
+    is objectively broken, the way a bad argument is. A LIST is the other: a claim that cites
+    three or more figures, or two with a figure that is neither of them nor a relation between
+    them, is several measurements written as one. The schema holds one figure per claim, so the
+    model fills it with something (0, in the stored q_003 run), and the reader and the grader both
+    read that number. Whether a claim is mislabelled, or states a figure its single cited value
+    does not support, are judgements about the ANALYSIS — those stay in the audit, where they are
+    measured rather than corrected away.
 
     Gated on `protocol.repair`, not on `protocol.claims`: asking for an account is a
     treatment and correcting one is an enforcement, and while they shared a flag no cell could
@@ -59,18 +63,30 @@ def malformed_claims(run, exit_call: ToolCall):
     audited = claim_audit.audit(declared, run.steps, exit_call.args.get("source_metric"),
                                 **run._audit_context())
     broken = [f for f in audited["findings"] if f["unresolved"]]
-    if not broken:
+    lists = [f for f in audited["findings"] if not f["unresolved"] and
+             (len(f["sources"]) >= 3 or (len(f["sources"]) == 2 and not f["bound"]))]
+    if not broken and not lists:
         return None
     # Truncated: this is here to be RECOGNISED in the final answer, not re-read. A prefix is
     # enough to tell a surviving sentence from a deleted one, and the full text is already in
     # the turn log for anyone who wants it.
     run.repairs.append({"claims": len(declared),
                          "broken": [{"text": str(f["text"] or "")[:_REPAIR_TEXT],
-                                     "cites": list(f["unresolved"])} for f in broken]})
-    lines = ["Your answer was not accepted: some claims cite evidence that does not exist."]
+                                     "cites": list(f["unresolved"])} for f in broken],
+                         **({"lists": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "cites": f["sources"]}
+                                       for f in lists]} if lists else {})})
+    # Under decision_grounding the governed layer is the whole action space, so a figure that cites no
+    # governed result is not unverified but illegal: marked [policy], it becomes a refusal if the
+    # budget runs out, instead of being served with a caveat (r_001 served 112,345 citing a call
+    # that never ran).
+    policy = getattr(run.grounding.toolbox.g, "decision_grounding", False)
+    lines = [("[policy] " if policy else "") + "Your answer was not accepted: some claims are malformed."]
     for f in broken:
         for ref in f["unresolved"]:
             lines.append(f"  claim {f['id']} cites {ref!r} — {run._why_unresolved(ref)}")
+    for f in lists:
+        lines.append(f"  claim {f['id']} cites {len(f['sources'])} figures but states one value "
+                     f"({f['value']}) — write one claim per figure, each with its own value and source")
     lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
                  "Every governed result printed its citable fields on a [cite] line.")
     # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
@@ -78,8 +94,9 @@ def malformed_claims(run, exit_call: ToolCall):
     # the ANSWER, which no step owns.
     run.acts.append(Act("repair", str(Position.REPAIR), "handed back",
                          f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
-                         f"nothing; correction {run.claim_retries} of 2").as_dict())
-    return ToolResult("\n".join(lines), is_error=True)
+                         f"nothing, {len(lists)} list-shaped claim(s); "
+                         f"correction {run.claim_retries} of 2").as_dict())
+    return ToolResult("\n".join(lines), is_error=True, reason="other" if policy else None)
 
 
 def dropped_constraint(run, exit_call):

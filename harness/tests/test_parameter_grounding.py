@@ -260,43 +260,118 @@ import datetime as _dt
 from agent.guardrails import decisions as DG
 
 _LO, _HI = _dt.date(2025, 9, 5), _dt.date(2026, 7, 12)
-_MEMBERS = {"filter:activity__platform": {"android": "android", "ios": "ios", "web": "web"}}
 
 
-def _answers(**choices):
-    """{question: (choice, probability)} in the Decisions API's answer shape."""
-    return {q: {"choice": c, "probabilities": {c: p}} for q, (c, p) in choices.items()}
+_BACK = {"mode:activity__platform": ("activity__platform", "mode"),
+         "lacks:activity__platform": ("activity__platform", "lacks"),
+         **{f"named:activity__platform:{i}": ("activity__platform", m) for i, m in enumerate(["android", "ios", "web", "unknown"])},
+         "mode:activity__is_internal": ("activity__is_internal", "mode"),
+         **{f"named:activity__is_internal:{i}": ("activity__is_internal", m) for i, m in enumerate([False, True])},
+         **{f"period:{p}": ("period", p) for p in ("2026-04", "2026-05", "2026-06", "2026-Q2", "2026-H1")}}
 
 
-def test_decision_grounding_runs_confident_choices():
-    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("total", 1.0),
-                    "period": ("2026-06", 0.97)})
-    queries, _ = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
-    assert queries == [{"metric": "app_opens", "filters": {"activity__platform": "android"}, "period": "2026-06"}]
+_ONLY = ("only", 0.99)
+
+
+def _read(yes=None, shape=("total", 1.0), principles=PRINCIPLES, surface=SURFACE, platform=None, **choices):
+    """A reading from decision-model answers: `yes` maps a yes/no question to its probability, and
+    `platform` is how the question restricts the platform (only / except / none / unlisted)."""
+    answers = {k: {"noul": p} for k, p in (yes or {}).items()}
+    if platform is None and any(k.startswith("named:activity__platform") for k in yes or {}):
+        platform = _ONLY
+    for q, (c, p) in {"shape": shape, **({"mode:activity__platform": platform} if platform else {}),
+                      **choices}.items():
+        answers[q] = {"choice": c, "probabilities": {c: p}}
+    return DG.read(answers, surface, principles, _BACK, _LO, _HI)
+
+
+_ANDROID_JUNE = {"named:activity__platform:0": 0.99, "period:2026-06": 0.97}
+
+
+def test_a_call_the_question_allows_runs_as_asked_and_missing_values_are_filled():
+    reading = _read(_ANDROID_JUNE)
+    asked = {"metric": "app_opens", "filters": {"activity__platform": "Android"}, "period": "2026-06"}
+    assert DG.check(reading, asked)[0] == [{"metric": "app_opens", "filters": {"activity__platform": "android"},
+                                            "period": "2026-06"}]
+    assert DG.check(reading, {"metric": "app_opens"})[0] == DG.check(reading, asked)[0]
+
+
+def test_two_periods_are_both_allowed_and_a_call_for_either_runs_as_asked():
+    """r_007: "June compared with May". The second call ran as June when one reading replaced every
+    call; now each call keeps its own period, and a call naming no period runs once per period."""
+    reading = _read({"named:activity__platform:0": 0.99, "period:2026-06": 0.96, "period:2026-05": 0.95})
+    may = DG.check(reading, {"metric": "app_opens", "period": "2026-05"})[0]
+    assert [q["period"] for q in may] == ["2026-05"]
+    assert sorted(q["period"] for q in DG.check(reading, {"metric": "app_opens"})[0]) == ["2026-05", "2026-06"]
+
+
+def test_a_value_outside_the_question_blocks_the_call_and_names_what_is_allowed():
+    reading = _read(_ANDROID_JUNE)
+    for asked in ({"metric": "app_opens", "period": "2026-04"},
+                  {"metric": "app_opens", "filters": {"activity__platform": "ios"}},
+                  {"metric": "app_opens", "group_by": ["activity__country"]}):
+        queries, decisions = DG.check(reading, asked)
+        assert queries == [] and [d["state"] for d in decisions][-1] == "outside"
+    assert "2026-06" in DG.check(reading, {"metric": "app_opens", "period": "2026-04"})[1][-1]["why"]
+
+
+def test_not_android_reads_as_one_filter_over_every_other_platform():
+    """r_006: "users not on Android" names Android to leave out. One number is asked for, so the
+    reading is ONE filter, an IN list, rather than three readings to show separately."""
+    reading = _read({"named:activity__platform:0": 0.98, "period:2026-06": 0.97}, platform=("except", 1.0))
+    others = ["ios", "web", "unknown"]
+    assert reading["filters"]["activity__platform"] == [others]
+    assert DG.check(reading, {"metric": "app_opens", "filters": {"activity__platform": "android"}})[0] == []
+    assert DG.check(reading, {"metric": "app_opens"})[0] == [
+        {"metric": "app_opens", "filters": {"activity__platform": others}, "period": "2026-06"}]
+    assert DG.check(reading, {"metric": "app_opens", "filters": {"activity__platform": ["web", "iOS", "unknown"]}})[0]
+
+
+def test_two_named_values_are_two_readings():
+    reading = _read({"named:activity__platform:0": 0.98, "named:activity__platform:1": 0.97, "period:2026-06": 0.97})
+    assert sorted(q["filters"]["activity__platform"] for q in DG.check(reading, {"metric": "app_opens"})[0]) == ["android", "ios"]
+
+
+def test_a_period_and_the_periods_that_fill_it_are_one_period():
+    """A yes to Q2 and to its three months is Q2 said twice; a yes to Q2 beside June and May only
+    is a longer period that overlaps them, and is dropped."""
+    q2 = _read({"period:2026-Q2": 0.95, "period:2026-04": 0.9, "period:2026-05": 0.9, "period:2026-06": 0.9})
+    assert q2["periods"] == ["2026-Q2"]
+    pair = _read({"period:2026-Q2": 0.8, "period:2026-05": 0.9, "period:2026-06": 0.9})
+    assert pair["periods"] == ["2026-05", "2026-06"]
 
 
 def test_decision_grounding_refuses_a_value_the_layer_lacks():
-    a = _answers(**{"filter:activity__platform": ("not_in_list", 0.98), "shape": ("total", 1.0),
-                    "period": ("2026-06", 0.97)})
-    queries, decisions = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    reading = _read({"period:2026-06": 0.97}, platform=("unlisted", 0.98))
+    queries, decisions = DG.check(reading, {"metric": "app_opens"})
     assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["ungoverned_dimension_value"]
 
 
 def test_decision_grounding_asks_when_unsure_or_when_the_period_is_missing():
-    unsure = _answers(**{"filter:activity__platform": ("android", 0.55), "shape": ("total", 1.0),
-                         "period": ("2026-06", 0.97)})
-    missing = _answers(**{"shape": ("total", 1.0), "period": ("not_mentioned", 0.95)})
-    for a in (unsure, missing):
-        queries, decisions = DG.resolve(a, SURFACE, PRINCIPLES, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    for reading in (_read({"named:activity__platform:0": 0.55, "period:2026-06": 0.97}), _read({})):
+        queries, decisions = DG.check(reading, {"metric": "app_opens", "period": "2026-06"})
         assert queries == [] and any(d["state"] == "ungrounded" for d in decisions)
 
 
 def test_decision_grounding_applies_the_segment_rule_by_code():
     separate = [dict(p, combine="separate") if p["id"] == "canonical_segments" else p for p in PRINCIPLES]
-    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("breakdown", 1.0),
-                    "breakdown": ("canonical_segments", 0.95), "period": ("2026-06", 0.97)})
-    queries, _ = DG.resolve(a, SURFACE, separate, _MEMBERS, {"metric": "app_opens"}, _LO, _HI)
+    reading = _read(_ANDROID_JUNE, shape=("breakdown", 1.0), principles=separate,
+                    breakdown=("canonical_segments", 0.95))
+    queries, _ = DG.check(reading, {"metric": "app_opens"})
     assert [q["group_by"] for q in queries] == [["activity__region"], ["activity__channel"]]
+    asked_both = DG.check(reading, {"metric": "app_opens", "group_by": ["activity__channel", "activity__region"]})[0]
+    assert sorted(q["group_by"][0] for q in asked_both) == ["activity__channel", "activity__region"]
+
+
+def test_uncovered_names_what_the_used_calls_leave_out():
+    """The answer-side check: the calls an answer used must cover every value the question names."""
+    reading = _read({"named:activity__platform:0": 0.99, "period:2026-06": 0.96, "period:2026-05": 0.95})
+    june = {"metric": "app_opens", "filters": {"activity__platform": "android"}, "period": "2026-06"}
+    assert DG.uncovered(reading, [june]) == [("period 2026-05", {**june, "period": "2026-05"})]
+    assert DG.uncovered(reading, [june, {**june, "period": "2026-05"}]) == []
+    segments = _read(_ANDROID_JUNE, shape=("breakdown", 1.0), breakdown=("canonical_segments", 0.95))
+    by_channel = {**june, "group_by": ["activity__channel"]}
+    assert DG.uncovered(segments, [by_channel]) == [("the breakdown by region", {**june, "group_by": ["activity__region"]})]
 
 
 def test_period_options_cover_the_window_and_nothing_else():
@@ -343,22 +418,24 @@ def test_an_uncontested_metric_passes_through():
 def test_a_small_unsure_choice_shows_every_reading_instead_of_asking():
     """show_small_choice_sets: 'customer' may or may not exclude staff (two readings), so both run."""
     small = PRINCIPLES + [{"id": "show_small_choice_sets", "slot": "any", "max_options": 3}]
-    members = {**_MEMBERS, "filter:activity__is_internal": {"false": False, "true": True}}
-    a = _answers(**{"filter:activity__platform": ("android", 0.99), "shape": ("total", 1.0),
-                    "period": ("2026-06", 0.97)})
-    a["filter:activity__is_internal"] = {"choice": "false", "probabilities": {"false": 0.6, "not_mentioned": 0.38}}
-    queries, decisions = DG.resolve(a, {**SURFACE, "filter": None}, small, members, {"metric": "app_opens"}, _LO, _HI)
+    reading = _read({**_ANDROID_JUNE, "named:activity__is_internal:0": 0.6}, principles=small,
+                    surface={**SURFACE, "filter": None}, **{"mode:activity__is_internal": ("only", 0.6)})
+    assert reading["filters"]["activity__is_internal"] == [False], "'none' was not plausible: no such reading"
+    answers_none = {"mode:activity__is_internal": {"choice": "only", "probabilities": {"only": 0.6, "none": 0.4}},
+                    "named:activity__is_internal:0": {"noul": 0.6}, "named:activity__platform:0": {"noul": 0.99},
+                    "mode:activity__platform": {"choice": "only", "probabilities": {"only": 0.99}},
+                    "period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}}}
+    reading = DG.read(answers_none, {**SURFACE, "filter": None}, small, _BACK, _LO, _HI)
+    queries, decisions = DG.check(reading, {"metric": "app_opens"})
     assert [q["filters"] for q in queries] == [{"activity__platform": "android", "activity__is_internal": False},
                                                {"activity__platform": "android"}]
     assert any("show_small_choice_sets" in d["why"] for d in decisions)
 
 
 def test_without_the_rule_an_unsure_choice_still_asks():
-    members = {**_MEMBERS, "filter:activity__is_internal": {"false": False, "true": True}}
-    a = _answers(**{"shape": ("total", 1.0), "period": ("2026-06", 0.97)})
-    a["filter:activity__is_internal"] = {"choice": "false", "probabilities": {"false": 0.6, "not_mentioned": 0.38}}
-    queries, _ = DG.resolve(a, {**SURFACE, "filter": None}, PRINCIPLES, members, {"metric": "app_opens"}, _LO, _HI)
-    assert queries == []
+    reading = _read({**_ANDROID_JUNE, "named:activity__is_internal:0": 0.6}, surface={**SURFACE, "filter": None},
+                    **{"mode:activity__is_internal": ("only", 0.6)})
+    assert DG.check(reading, {"metric": "app_opens"})[0] == []
 
 
 def test_the_rules_are_rendered_for_the_agent():
@@ -367,3 +444,177 @@ def test_the_rules_are_rendered_for_the_agent():
                                                   {"id": "show_small_choice_sets", "when": "few options", "max_options": 3}],
                          "requester": {"team": "Product"}})
     assert "Use activity__region, activity__channel" in text and "up to 3" in text and "Product" in text
+
+
+# ── decision_plan: the terminal action is written by the mechanism ────────────────────────────────
+from agent.core.conversation import ToolResult as _TR
+
+
+def test_the_answer_copies_every_returned_value_and_states_the_filter_in_plain_words():
+    gov = {"measures": {"app_opens": {"segment": "customers"}},
+           "segments": {"customers": {"means": "real customers, excluding staff and test accounts."}}}
+    q = {"metric": "app_opens", "filters": {"activity__platform": "android"}, "group_by": ["metric_time"],
+         "time_grain": "month", "period": "2026-H1"}
+    r = _TR("", values=[5674.0, 1922.0], labels=["2026-05-01 00:00:00", "2026-01-01 00:00:00"])
+    d = [{"parameter": "metric_filter", "basis": "governed_declaration", "disclose": "app_opens applies x"}]
+    text = DG.answer_text("app_opens", [q], [r], d, gov)
+    assert "2026-01 1,922; 2026-05 5,674" in text              # copied, sorted, month labels
+    assert "excluding staff and test accounts" in text         # plain words, from governance
+
+
+def test_the_refusal_quotes_the_question_and_names_plain_dimensions():
+    d = [{"parameter": "filter", "state": "refuse", "reason": "ungoverned_dimension_value",
+          "why": "it names a channel value the layer does not have"}]
+    reason, text = DG.refusal_text(d, None, "How many app opens came from TikTok?")
+    assert reason == "ungoverned_dimension_value" and '"How many app opens came from TikTok?"' in text
+
+
+def test_a_cause_question_is_declined_not_answered():
+    queries, decisions = DG.check(_read(_ANDROID_JUNE, shape=("cause", 0.95)), {"metric": "app_opens"})
+    assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["no_causal_evidence"]
+
+
+# ── the answer side: a list written as one claim, and a value the answer leaves out ────────────────
+from types import SimpleNamespace as _NS
+
+from agent.gates import claims as _claims_gate
+from agent.gates import reading as _coverage_gate
+
+
+def _gate_run(steps, grounded=None, repair=True):
+    return _NS(steps=steps, repairs=[], acts=[], claim_retries=0, grounded=grounded or {},
+               _audit_context=lambda: {},
+               grounding=_NS(protocol=_NS(repair=repair),
+                             toolbox=_NS(g=_NS(decision_grounding=True))))
+
+
+_BY_REGION = {"tool": "query_metric", "handle": "r1", "error": False,
+              "args": {"metric": "app_opens", "group_by": ["activity__region"], "period": "2026-06"},
+              "result_values": [4273.0, 2562.0, 1397.0], "result_labels": ["EMEA", "Americas", "APAC"]}
+
+
+def test_a_claim_that_lists_several_figures_is_handed_back():
+    """q_003 (claims on): one claim cited three regions and stated 0, which the reader and the grader
+    both read as the figure. A claim holds one figure, so a list is handed back as a form error."""
+    listed = _NS(name="answer", args={"answer": "See below.", "claims": [
+        {"text": "EMEA 4,273; Americas 2,562; APAC 1,397", "sources": ["r1:EMEA", "r1:Americas", "r1:APAC"],
+         "value": 0}]})
+    run = _gate_run([_BY_REGION])
+    handed = _claims_gate.malformed_claims(run, listed)
+    assert handed is not None and "one claim per figure" in handed.content
+    one_each = _NS(name="answer", args={"answer": "See below.", "claims": [
+        {"text": "EMEA 4,273", "sources": ["r1:EMEA"], "value": 4273}]})
+    assert _claims_gate.malformed_claims(_gate_run([_BY_REGION]), one_each) is None
+
+
+def test_an_answer_leaving_out_a_value_the_question_names_is_handed_back_once():
+    reading = _read({"named:activity__platform:0": 0.99, "period:2026-06": 0.96, "period:2026-05": 0.95})
+    june = {"tool": "query_metric", "handle": "r1", "error": False,
+            "args": {"metric": "app_opens", "filters": {"activity__platform": "android"}, "period": "2026-06"},
+            "result_values": [8232.0], "result_labels": [""]}
+    exit_call = _NS(name="answer", args={"answer": "8,232 in June.",
+                                         "claims": [{"text": "June", "sources": ["r1"], "value": 8232}]})
+    run = _gate_run([june], grounded={"app_opens": reading})
+    supplied = []
+
+    def execute(calls):
+        """The loop's own execute: it runs each call through grounding and records a handled step."""
+        for c in calls:
+            supplied.append(c.args)
+            run.steps.append({"tool": c.name, "handle": f"r{len(run.steps) + 1}", "args": c.args})
+        return [_NS(content=f"[r{len(run.steps)}] 5,674") for _ in calls]
+    run.execute = execute
+    handed = _coverage_gate.uncovered_values(run, exit_call)
+    assert handed is not None and "period 2026-05" in handed.content and "[r2] 5,674" in handed.content
+    assert supplied == [{**june["args"], "period": "2026-05"}], "the covering query is run, not requested"
+    assert _coverage_gate.uncovered_values(run, exit_call) is None, "once per run"
+
+
+def test_a_list_filter_of_real_members_is_not_flagged_as_matching_nothing():
+    """The IN filter for "not Android" returned 16,956 and was still told EMPTY RESULT, because the
+    member check compared the whole list as one string. The agent then refused."""
+    from agent.tools.query import _unknown_filter_values
+    tb = _NS(semantic=_NS(dimension_members=lambda: {"activity__platform": ["android", "ios", "web", "unknown"]}))
+    assert _unknown_filter_values(tb, {"filters": {"activity__platform": ["ios", "web", "unknown"]}}) == []
+    assert _unknown_filter_values(tb, {"filters": {"activity__platform": ["ios", "windows"]}})[0][1] == ["windows"]
+
+
+def test_noise_beside_a_confident_value_does_not_force_a_question():
+    """t_009: "SEO" read content_seo 0.78 and organic 0.45, the trap's wrong neighbour; Q2 0.98 with
+    March 0.18. Beside a confident value, another competes only when the model leans towards it."""
+    reading = _read({"named:activity__platform:0": 0.78, "named:activity__platform:1": 0.45,
+                     "period:2026-Q2": 0.98, "period:2026-03": 0.18})
+    assert reading["filters"]["activity__platform"] == ["android"] and reading["periods"] == ["2026-Q2"]
+    leaning = _read({"named:activity__platform:0": 0.78, "named:activity__platform:1": 0.6, "period:2026-Q2": 0.98})
+    assert DG.check(leaning, {"metric": "app_opens"})[0] == []
+
+
+def test_a_restriction_with_no_identifiable_value_asks_and_never_drops_the_filter():
+    """r_001: "Europe" read as restricting the region (p 0.64) with no region named. Turning that into
+    "no filter" blocked the agent's EMEA call and served the all-region total as Europe's."""
+    small = PRINCIPLES + [{"id": "show_small_choice_sets", "slot": "any", "max_options": 3}]
+    reading = _read({"period:2026-06": 0.99}, principles=small, platform=("only", 0.64))
+    queries, decisions = DG.check(reading, {"metric": "app_opens", "period": "2026-06"})
+    assert queries == [] and any(d["state"] == "ungrounded" for d in decisions)
+
+
+# ── the final action: a clarifying question must be legal under the reading ─────────────────────────
+
+def test_a_named_value_the_layer_lacks_wins_over_a_governed_one_named_beside_it():
+    """r_004: "TikTok, using the paid_search figure" names a missing channel AND a governed one. The
+    missing one decides: no governed number answers it, so the reading refuses."""
+    reading = _read({"named:activity__platform:0": 0.95, "lacks:activity__platform": 0.9, "period:2026-Q2": 0.98},
+                    platform=("only", 0.9))
+    assert [d["reason"] for d in reading["decisions"] if d["state"] == "refuse"] == ["ungoverned_dimension_value"]
+    assert DG.check(reading, {"metric": "app_opens", "filters": {"activity__platform": "android"}})[0] == []
+
+
+def test_a_clarifying_question_is_held_to_the_reading():
+    lacking = _read({"lacks:activity__platform": 0.9, "period:2026-Q2": 0.98}, platform=("only", 0.9))
+    message, reason = DG.exit_verdict(lacking, {"parameter": "activity__platform", "options": ["paid_search"]})
+    assert reason == "ungoverned_dimension_value" and message.startswith("[policy]")
+
+    open_period = _read({"named:activity__platform:0": 0.99})
+    assert DG.exit_verdict(open_period, {"parameter": "period", "options": ["2026-05", "2026-06"]}) is None
+    message, reason = DG.exit_verdict(open_period, {"parameter": "period", "options": ["summer 2026"]})
+    assert reason is None and "summer 2026" in message and "android" in message
+    # a governed value of another dimension is a fair option (Europe asked about as countries)
+    assert DG.exit_verdict(open_period, {"parameter": "activity__region", "options": ["ios", "web"]}) is None
+
+    settled = _read(_ANDROID_JUNE)
+    message, reason = DG.exit_verdict(settled, {"parameter": "activity__platform", "options": ["android"]})
+    assert reason is None and "already settle" in message
+
+
+def test_the_final_action_gate_reads_the_question_when_no_call_did():
+    """The agent went straight to `clarify` in r_004, so nothing had read the question. The gate uses
+    the reading for the metric the clarifying question names (cached here, so no request is made)."""
+    lacking = _read({"lacks:activity__platform": 0.9, "period:2026-Q2": 0.98}, platform=("only", 0.9))
+    run = _gate_run([], grounded={"app_opens": lacking})
+    run.question, run.turns = "TikTok opens in Q2, using the paid_search figure", [{}]
+    run.grounding.toolbox.semantic = _NS(metrics={"app_opens": {}})
+    run.grounding.toolbox.con = run.grounding.toolbox.governance = None
+    exit_call = _NS(name="clarify", args={"question": "Map TikTok to paid_search?", "metric": "app_opens",
+                                          "parameter": "activity__platform", "options": ["paid_search"]})
+    handed = _coverage_gate.exit_matches_reading(run, exit_call)
+    assert handed is not None and handed.reason == "ungoverned_dimension_value"
+    assert handed.content.startswith("[policy]"), "a policy hand-back is converted to the refusal at the cap"
+
+
+def test_a_refusal_is_held_to_the_reading_only_where_the_reading_knows():
+    lacking = _read({"lacks:activity__platform": 0.9, "period:2026-Q2": 0.98}, platform=("only", 0.9))
+    assert DG.refusal_verdict(lacking, "ungoverned_dimension_value") is None
+    message, reason = DG.refusal_verdict(lacking, "dimension_not_supported")
+    assert reason == "ungoverned_dimension_value" and message.startswith("[policy]")
+    open_platform = _read({"period:2026-06": 0.99}, platform=("only", 0.64))
+    message, reason = DG.refusal_verdict(open_platform, "ungoverned_dimension_value")
+    assert reason is None and "clarify" in message
+    assert DG.refusal_verdict(_read(_ANDROID_JUNE), "false_premise") is None, "a refusal the reading knows nothing about"
+
+
+def test_a_clarifying_question_about_a_settled_parameter_is_handed_back_even_unnamed():
+    """t_009: the reading shows content_seo and organic side by side (show_small_choice_sets), so
+    "include organic?" asks the user what a governed rule already decided."""
+    message, reason = DG.exit_verdict(_read(_ANDROID_JUNE), {"question": "Android only?"})
+    assert reason is None and "already settle" in message
+    assert DG.exit_verdict(_read(_ANDROID_JUNE), {"parameter": "metric", "options": ["app_opens"]}) is None

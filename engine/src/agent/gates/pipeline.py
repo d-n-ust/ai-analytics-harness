@@ -16,7 +16,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from . import claims, contract, disclosure, measure, segments
+from . import claims, contract, disclosure, measure, reading, segments
 
 SUPPLY, VERIFY, CONSTRUCT = "supply", "verify", "construct"
 
@@ -36,6 +36,9 @@ PIPELINE = (
     Gate("segment_gate",         VERIFY,    segments.segment_gate),
     Gate("ungrounded_unit",      VERIFY,    segments.ungrounded_unit),
     Gate("malformed_claims",     VERIFY,    claims.malformed_claims),
+    # After the citations are sound, because it reads which calls the claims cite.
+    Gate("uncovered_values",     VERIFY,    reading.uncovered_values),
+    Gate("exit_matches_reading", VERIFY,    reading.exit_matches_reading),
     Gate("dropped_constraint",   VERIFY,    claims.dropped_constraint),
     Gate("ungrounded_candidates", VERIFY,   claims.ungrounded_candidates),
     Gate("direction_vs_evidence", VERIFY,   contract.direction_vs_evidence),

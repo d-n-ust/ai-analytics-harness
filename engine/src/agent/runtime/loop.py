@@ -193,8 +193,10 @@ class _Run:
                 # Nothing runs. A value the layer lacks means decline; an ungrounded one means ask.
                 args = call.args
                 refused = next((d for d in decisions if d["state"] == "refuse"), None)
+                outside = any(d["state"] == "outside" for d in decisions)
                 result = ToolResult(_parameters.note_text(decisions), is_error=True,
-                                    reason=refused["reason"] if refused else "underspecified_request",
+                                    reason=(refused["reason"] if refused else
+                                            "outside_question" if outside else "underspecified_request"),
                                     blocked_by="parameter_grounding")
             else:
                 args = queries[0]
@@ -630,6 +632,31 @@ class _Run:
                       acts=self.acts, **kw)
 
 
+def _planned_answer(run, question: str):
+    """The run's answer from `decisions.plan`, recorded as steps so the trace shows the plan and
+    every query it ran; None when the plan cannot be formed."""
+    tb = run.grounding.toolbox
+    planned = _decisions.plan(question, tb, tb.governance)
+    if planned is None:
+        return None
+    run.steps.append({"tool": "plan", "args": {"question": question}, "error": False, "handle": "",
+                      "result": planned["text"][:_TRACE_LIMIT], "grounding": planned["decisions"],
+                      "grounded_queries": planned["queries"], "grounding_cost_usd": planned["cost"],
+                      "blocked_reason": planned["reason"] if planned["action"] != "answer" else "",
+                      "blocked_by": "decision_plan" if planned["action"] != "answer" else ""})
+    for q, r in zip(planned["queries"], planned["results"]):
+        run.steps.append({"tool": "query_metric", "args": q, "error": r.is_error, "handle": "",
+                          "result": r.content[:_TRACE_LIMIT], "result_values": r.values,
+                          "result_labels": r.labels, "blocked_reason": r.reason, "blocked_by": r.blocked_by})
+    if planned["action"] == "answer":
+        values = [v for r in planned["results"] for v in (r.values or [])]
+        return run._record(answer=planned["text"], explanation="Planned and executed by decision_plan.",
+                           outcome="answer", abstained=False, source_metric=planned["metric"],
+                           declared_value=values[0] if len(values) == 1 else None, iterations=0)
+    return run._record(answer=None, explanation=planned["text"], outcome=planned["action"].replace("ask", "clarify"),
+                       reason=planned["reason"], abstained=True, iterations=0)
+
+
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
               record_context: bool = False) -> Answer:
     # One meter per run, wrapped HERE so every consumer counts through it — the loop below, the
@@ -648,6 +675,12 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         run.scope_shadow = _classify.read_scope(model, question)
     # scope_segments: the record's spans licensed at entry (gates/segments.entry_mappings). The
     # notes ride the MESSAGE, not run.question — quote verifiers read the original words.
+    # decision_plan: ground first, then construct the terminal action. A planned question never
+    # reaches the generative loop; one the plan cannot form falls through to it unchanged.
+    if getattr(grounding.toolbox.g, "decision_plan", False):
+        planned = _planned_answer(run, question)
+        if planned is not None:
+            return planned
     opening_text = question
     if getattr(grounding.toolbox.g, "scope_segments", False) and run.scope_shadow:
         opening_text += _g_segments.entry_mappings(run.scope_shadow, grounding.semantic)
@@ -734,12 +767,15 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                 # names. (The wired spec_authoring's first full-suite run produced exactly this:
                 # an authored computable served-with-caveat under strict governance.)
                 if str(correction.content or "").startswith("[policy]"):
+                    # The correction names its refusal code when it has one (exit_matches_reading:
+                    # `ungoverned_dimension_value` for a value the layer lacks).
                     refusal = ToolCall(turn.exit_call.id, "refuse", {
-                        "reason": "no_governed_definition",
+                        "reason": correction.reason or "no_governed_definition",
                         "missing": "a governed definition for the computed measure",
-                        "explanation": "Converted at the correction cap: the served figure was "
-                                       "computable but has no governed definition, and this "
-                                       "configuration's policy is strict governance."})
+                        "explanation": "Converted at the correction cap: " + (
+                            correction.content.removeprefix("[policy] ")[:300] if correction.reason else
+                            "the served figure was computable but has no governed definition, and "
+                            "this configuration's policy is strict governance.")})
                     run.acts.append(Act("answerability_gate", str(Position.REPAIR), "converted",
                                          "policy violation at the cap: the answer became the "
                                          "refusal the policy names").as_dict())

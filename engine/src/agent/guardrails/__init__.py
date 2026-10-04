@@ -448,6 +448,12 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "are the layer's own members, periods inside coverage and governed rules; confident choices "
               "run, `not_in_list` refuses, unsure or missing values ask",
               ("guardrails/decisions.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
+    # decision_grounding moved to the start of the run, with the output written by the mechanism.
+    Guardrail("decision_plan", Position.BEFORE,
+              "before the agent acts, one decision-model request chooses the metric and every "
+              "parameter from layer-generated options; code decides refuse, ask or answer and writes "
+              "the refusal, the question, or the answer from the returned values",
+              ("guardrails/decisions.py", "runtime/loop.py"), in_ladder=False),
     Guardrail("quote_retry", Position.BEFORE,
               "sends a quote that is not in the question back to the model once; if it is still not "
               "there, the parameter is ungrounded and the agent asks instead of the value being "
@@ -523,6 +529,7 @@ class GuardrailSet:
     parameter_grounding: bool = False
     tolerant_quotes: bool = False
     decision_grounding: bool = False
+    decision_plan: bool = False
     quote_retry: bool = False
 
     def label(self) -> str:
@@ -671,6 +678,9 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.scope_classifier and not g.disclosure_check:
         return ("scope_classifier without disclosure_check: it stands down a check that is not "
                 "running, so it can only cost a model call.")
+    if g.decision_plan and g.parameter_grounding:
+        return ("decision_plan with parameter_grounding: a planned question never reaches the "
+                "grounding step it would configure.")
     if g.decision_grounding and g.parameter_grounding:
         return ("decision_grounding with parameter_grounding: two grounding steps would both rewrite "
                 "the same call.")
