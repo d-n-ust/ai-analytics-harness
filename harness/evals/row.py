@@ -55,7 +55,7 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 #      round trip was priced at half an episode by assumption, which flattered every arm that buys
 #      safety by asking. None on a run that did not clarify, which is not the same as a round trip
 #      that bought nothing.
-# v22: `graded_by` — how the verdict was reached (numeric / action / prose). `grade()` has computed
+# v22: `graded_by` — how the verdict was reached (numeric / numeric+claims / action / prose). `grade()` has computed
 #      it since v21, but the row never recorded it, so report.py's grading-provenance table read
 #      every row as "unrecorded".
 # v23: `route` — which API carried the model calls (openrouter / direct / mock). The same model id

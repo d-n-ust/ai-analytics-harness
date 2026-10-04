@@ -166,6 +166,29 @@ def test_a_breakdown_with_no_gold_value_is_wrong():
     assert g["confident_wrong"] and g["bucket"] == "wrong"
 
 
+def _claims(*values):
+    return tuple({"text": "figure", "value": v, "sources": ["r1"]} for v in values)
+
+
+def test_a_breakdown_stated_only_in_the_claims_is_graded_on_the_claims():
+    """With protocol `claims` the prose often says "see the breakdown below" and every figure is in
+    the claims. The reader receives both, so the grade reads both, and says it did."""
+    g = grade(_answer("answer", answer="See the breakdown below.",
+                      claims=_claims(1922.0, 2701.0, 4022.0)), _BREAKDOWN, None)
+    assert g["correct"] and g["graded_by"] == "numeric+claims"
+
+
+def test_a_wrong_figure_stated_only_in_the_claims_is_still_a_silent_error():
+    """Reading the metadata must not open a way to serve a number unseen by the grade: a figure
+    stated only in a claim counts as served."""
+    case = {"id": "q", "question": "?", "expect": {"type": "metric_answer", "metric": "m"}}
+    g = grade(_answer("answer", answer="See below.", claims=_claims(6.31)), case, 18.92)
+    assert g["confident_wrong"] and g["bucket"] == "wrong"
+    clarify = {"id": "q", "question": "?", "expect": {"type": "clarify"}}
+    assert not grade(_answer("answer", answer="See below.", claims=_claims(61209.0)),
+                     clarify, None)["correct"]
+
+
 def test_a_clarify_case_belongs_to_the_clarify_pile():
     """A question whose answer needs a parameter stated nowhere: asking is right, and a served
     number is a silent miss, exactly as for a contested question."""

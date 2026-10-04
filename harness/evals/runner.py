@@ -249,7 +249,9 @@ def regrade_run(run_dir: Path, questions: list | None = None, extra=None) -> Non
                      # were stored reads typed_value False and falls back to the prose scan,
                      # which is exactly how it was graded when it was written.
                      declared_value=r.get("declared_value"),
-                     typed_value=bool(r.get("typed_value", False)))
+                     typed_value=bool(r.get("typed_value", False)),
+                     # the claims are part of what the reader receives, so the grade reads them
+                     claims=tuple(r.get("claims") or ()))
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
                                     "wrong_metric",

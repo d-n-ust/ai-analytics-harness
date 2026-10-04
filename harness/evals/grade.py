@@ -91,8 +91,27 @@ def _close(x: float, gold: float, tol: float) -> bool:
     return abs(x - gold) / max(abs(gold), 1e-9) <= tol
 
 
-def grade_numeric(answer_text: str | None, gold: float | None, tol: float) -> dict:
-    nums = _numbers(answer_text)
+def declared_figures(answer) -> list[float]:
+    """The figures an answer declares in its metadata: the value of each typed claim.
+
+    An answer carries its numbers in two places: the prose, and the claims list (protocol
+    `claims`), where each figure is stated with the call it came from. Both reach the reader, and
+    a model asked for claims often writes "see the breakdown below" and leaves every figure to the
+    claims. Grading the prose alone marked five correct figures as no answer at all. Every
+    number-reading path below therefore reads prose and metadata together, including the test for
+    whether a number was served: a figure stated only in metadata is still served, and a wrong one
+    there is still a silent error."""
+    out = []
+    for claim in getattr(answer, "claims", None) or ():
+        value = claim.get("value") if isinstance(claim, dict) else None
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            out.append(float(value))
+    return out
+
+
+def grade_numeric(answer_text: str | None, gold: float | None, tol: float,
+                  declared: list[float] = ()) -> dict:
+    nums = _numbers(answer_text) + list(declared)
     if not nums or gold is None:
         return {"executed": bool(nums), "correct": False, "extracted": None}
     candidates = [gold, gold * 100] if abs(gold) < 1 else [gold]  # rate answered as %
@@ -100,11 +119,12 @@ def grade_numeric(answer_text: str | None, gold: float | None, tol: float) -> di
     return {"executed": True, "correct": correct, "extracted": nums[0]}
 
 
-def grade_breakdown(answer_text: str | None, alternatives, tol: float) -> dict:
+def grade_breakdown(answer_text: str | None, alternatives, tol: float,
+                    declared: list[float] = ()) -> dict:
     """A breakdown against its acceptable series. `complete`: every value of one series appears;
     `partial`: at least one gold value appears. Each gold value is matched independently, so the
     order and labels the answer uses do not matter."""
-    nums = _numbers(answer_text)
+    nums = _numbers(answer_text) + list(declared)
     series = [s for s in (alternatives or []) if s]
     def present(v):
         return any(_close(x, v, tol) for x in nums)
@@ -143,7 +163,7 @@ def _candidate_served(answer, expect: dict, tol: float) -> dict | None:
     is holding the number rather than the label. The declared name is a second, weaker signal and
     is not needed to decide this.
     """
-    nums = _numbers(answer.answer)
+    nums = _numbers(answer.answer) + declared_figures(answer)
     declared = getattr(answer, "declared_value", None)
     if declared is not None:
         nums = [declared, *nums]
@@ -165,7 +185,7 @@ def _disclosed_both(answer, expect: dict, tol: float) -> bool:
     if len(values) < 2 or any(v is None for v in values):
         return False
     text = f"{getattr(answer, 'answer', '') or ''} {getattr(answer, 'explanation', '') or ''}"
-    found = _numbers(text)
+    found = _numbers(text) + declared_figures(answer)
     return all(any(_close(n, v, tol) for n in found) for v in values)
 
 
@@ -246,8 +266,9 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # as a fabrication. Below R7 there is no such field, so the prose is all there is — and there
     # the scan must stay, because a real answer is usually a sentence ("5386 value moments came
     # from the Americas") that a bare-number pattern would drop.
+    declared = declared_figures(answer)
     has_number = (answer.declared_value is not None if getattr(answer, "typed_value", False)
-                  else asserts_number(answer.answer))
+                  else asserts_number(answer.answer)) or bool(declared)
 
     # `needs_judge` IS NOW ALWAYS FALSE and is kept only so the persisted schema does not change
     # under existing result sets. Nothing sets it: the one branch that did — false premise — is
@@ -365,7 +386,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                     wrong_scope = True
                 else:
                     fabricated = True                # no valid number exists -> pure fabrication
-            elif not grade_numeric(answer.answer, gold, tol)["correct"]:
+            elif not grade_numeric(answer.answer, gold, tol, declared)["correct"]:
                 confident_wrong = True               # served a WRONG number
             else:
                 off_governance = True                # the provenance value, but reached off the
@@ -389,7 +410,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
             # The answer AND the explanation: a breakdown's table is usually written out in the
             # explanation, and the reader receives both.
             g = grade_breakdown(f"{answer.answer or ''} {answer.explanation or ''}",
-                                expect.get("alternatives"), tol)
+                                expect.get("alternatives"), tol, declared)
             metric_match = _metric_match(answer, expect)
             correct = g["complete"] and metric_match is not False
             if correct:
@@ -400,7 +421,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                 confident_wrong = True               # figures, none of them in any gold series
                 bucket = "wrong"
         else:                                            # metric_answer
-            num_ok = grade_numeric(answer.answer, gold, tol)["correct"]
+            num_ok = grade_numeric(answer.answer, gold, tol, declared)["correct"]
             metric_match = _metric_match(answer, expect)
             correct = num_ok and metric_match is not False   # only a KNOWN metric mismatch fails
             if correct:
@@ -430,6 +451,8 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # costs what a wrong answer costs. Splitting it out changes what the failure is CALLED, and
     # therefore what you would fix; it does not make it cheaper.
     wrong_number = confident_wrong or fabricated or wrong_scope or wrong_metric
+    if graded_by == "numeric" and declared:
+        graded_by = "numeric+claims"                 # the figures compared include the metadata's
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         # Both terminal declines abstain: neither serves a number, which is what the
