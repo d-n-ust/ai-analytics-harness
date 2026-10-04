@@ -390,7 +390,7 @@ cases:
       metric: habits_per_active_user
       params:
         platform: android
-        is_internal: [none, "false"]  # 'customer' may mean: exclude staff
+        is_internal: "false"  # built into the metric, so 'customer' needs no extra filter
         period: 2026-Q2
       tolerance: 0.005
       gold_sql: >-

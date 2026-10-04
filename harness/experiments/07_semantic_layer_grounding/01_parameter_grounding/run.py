@@ -1,9 +1,16 @@
 #!/usr/bin/env python3
 """Study 01 · parameter grounding: run the suite across the three arms and record every row.
 
-    R3                        the agent at rung 3 on this experiment's MetricFlow layer
-    R3+disclose_assumptions   R3 plus one instruction to state every assumption and default
-    R3+parameter_grounding    R3 plus the grounding step (agent/guardrails/parameters.py)
+    R4                        the agent at rung 3 on this experiment's MetricFlow layer, with raw SQL
+                              withdrawn (tool_restriction): every number comes from a governed metric
+    R4+disclose_assumptions   R4 plus one instruction to state every assumption and default
+    R4+parameter_grounding    R4 plus the grounding step (agent/guardrails/parameters.py)
+    R4+decision_grounding     R4 plus grounding by a decision model (agent/guardrails/decisions.py)
+
+Raw SQL is off in every arm because the experiment measures how a governed call's parameters are
+chosen. With run_sql available, the agent can go around the governed layer (t_004 grouped app opens
+by an unrelated column renamed `device_model`), and that failure belongs to a different experiment.
+Runs before 2026-10-04 used R3 cells, with raw SQL available.
 
 Every row is built by `evals.row.measured_row`, so it carries the shared grade, tokens, cost and
 latency, and `bench report` / `bench publish` read the run directory like any other. Two fields are
@@ -19,7 +26,12 @@ measures and never folded into them.
     python run.py --mock --only q_001_android_opens_june                 # plumbing, no cost
     python run.py --model gpt-5-mini --reps 3 --concurrency 2            # the full suite
     python run.py --model gpt-5-mini --only q_001_android_opens_june,t_003_tiktok_opens_q2
+    python run.py --arms R4+decision_grounding --protocols none,claims    # with and without claims
     python run.py --regrade <run dir>    # re-grade stored answers: no model calls, seconds
+
+The summary's second table is the governed calls behind the answers (evals/calls.py): which calls
+the answer used, the spend on the ones it did not, whether the used calls' parameters match the
+labels, and, with the claims protocol, how many claims state a figure their cited call did not return.
 """
 from __future__ import annotations
 
@@ -34,6 +46,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 
 import yaml
+from agent.core.protocol import Protocol
 from agent.guardrails import parse_cell
 from agent.runtime.grounding import build_grounding
 from agent.runtime.loop import Answer, run_agent
@@ -44,6 +57,7 @@ from evals.row import measured_row
 from evals.runner import regrade_run
 from agent.guardrails.parameters import rules_text
 from evals.second_turn import follow_up
+from evals.calls import call_use
 from evals.selective import selective
 from warehouse.warehouse import open_warehouse
 
@@ -57,7 +71,7 @@ GOVERNANCE = yaml.safe_load((EXPERIMENT / "fixture" / "governance.yml").read_tex
 RUNS = EXPERIMENT.parents[2] / "runs" / "experiments" / EXPERIMENT.name
 MARTS = "wh_06"
 RUNG = 3
-ARMS = ("R3", "R3+disclose_assumptions", "R3+parameter_grounding")
+ARMS = ("R4", "R4+disclose_assumptions", "R4+parameter_grounding", "R4+decision_grounding")
 
 # The catalogue layout and schema note experiment 06 settled on, copied so this experiment runs
 # without 06's folder. Identical in every arm: only the guardrail cell varies.
@@ -93,7 +107,9 @@ def check_params(cases: list, con) -> None:
     layer = (LAYER / "semantic_models.yml").read_text()
     for case in cases:
         e = case["expect"]
-        metric = e.get("metric") or e["candidates"][0]["metric"]
+        metric = e.get("metric") or (e.get("candidates") or [{}])[0].get("metric")
+        if not metric:
+            continue
         members = {d["column"]: {str(m).lower() for m in d["members"] or ()}
                    for d in surface.build(con, layer, metric)["parameters"]["filters"]["dimensions"]}
         for key, value in (e.get("params") or {}).items():
@@ -133,19 +149,155 @@ def disclosure_fields(answer: Answer, case: dict) -> dict:
     return {"disclosure_due": due, "disclosure_missed": missed, "disclosure_graded_by": "prose"}
 
 
-def summarise(rows: list, arms: list) -> None:
-    print(f"\n{'arm':26} {'n':>3} {'coverage':>9} {'silent_err':>11} {'bal_acc':>8} "
+_HALVES = {"H1": range(1, 7), "H2": range(7, 13)}
+
+
+def _months(period) -> set | None:
+    """The calendar months a period names: '2026-06', '2026-Q2', '2026-H1', '2026'. None for a
+    form this grader does not read (a relative period, explicit dates)."""
+    m = re.fullmatch(r"(\d{4})(?:-(\d{2})|-Q([1-4])|-(H[12]))?", str(period or ""))
+    if not m:
+        return None
+    year, month, quarter, half = m.groups()
+    months = ([int(month)] if month else range(3 * int(quarter) - 2, 3 * int(quarter) + 1)
+              if quarter else _HALVES[half] if half else range(1, 13))
+    return {(int(year), x) for x in months}
+
+
+def _dim(key: str) -> str:
+    return str(key).split("__")[-1].lower()
+
+
+def _built_in(metric: str) -> dict:
+    """The filters a metric applies by definition, e.g. {'is_internal': 'false'}. They count as set
+    on every call to that metric: the reader's number excludes staff whether or not the call says so."""
+    from ontology import parameters as surface
+    _, metrics = surface.load_layer((LAYER / "semantic_models.yml").read_text())
+    text = surface.metric_filter(metrics, metric) or ""
+    own = {_dim(k): v.lower() for k, v in re.findall(r"([\w.]+)\s*=\s*'?(\w+)'?", text)}
+    # A ratio applies a filter when both its numerator and its denominator apply it.
+    parts = metrics[metric].get("type_params") or {}
+    if "numerator" in parts and "denominator" in parts:
+        num, den = (_built_in(parts[p]["name"]) for p in ("numerator", "denominator"))
+        own |= {k: v for k, v in num.items() if den.get(k) == v}
+    return own
+
+
+def used_call_errors(row: dict, case: dict) -> list | None:
+    """Grade the parameters of the governed calls the answer rests on, one labelled decision at a
+    time. None when there is nothing to grade: the row did not answer, or the case has no params.
+
+    Calls the answer did not use are exploration and are not graded here (evals/calls.py). The
+    check is per decision, not per call shape, so routes that reach the same numbers grade the
+    same: six monthly calls cover a half-year trend at month grain exactly as one call grouped by
+    metric_time does. A list label means every listed value must be covered, by separate calls or
+    by grouping on that dimension, except `time_grain`: a series has one grain, so a list there
+    names the acceptable grains."""
+    want, metric = case["expect"].get("params"), case["expect"].get("metric")
+    if row["outcome"] != "answer" or not want or not metric:
+        return None
+    steps = row["steps"]
+    queries = [q for i in call_use(row)["used"]
+               for q in (steps[i].get("grounded_queries") or [steps[i]["args"]])]
+    if not queries:
+        return ["the answer rests on no governed call"]
+    errors = []
+    called = {q.get("metric") for q in queries}
+    if called != {metric}:
+        errors.append(f"metric {sorted(map(str, called))} instead of {metric}")
+    built_in = _built_in(metric) if metric in called else {}
+    grouped = {_dim(g) for q in queries for g in q.get("group_by") or []}
+    periods = [_months(q.get("period")) for q in queries]
+    # Several calls that differ only in period form one series over the periods they cover.
+    split = len({json.dumps({k: v for k, v in q.items() if k != "period"}, sort_keys=True)
+                 for q in queries}) == 1 and len(queries) > 1
+    if split:
+        grouped.add("metric_time")
+    # Grouping one month by month (or a call per month) is one figure per period, not a split the
+    # question did not ask for.
+    one_bucket = "metric_time" not in {_dim(g) for g in want.get("group_by") or []} and all(
+        len(_months(q.get("period")) or ()) == 1 and q.get("time_grain") in (None, "month") for q in queries)
+    if one_bucket:
+        grouped.discard("metric_time")
+    # A list filter value (one IN filter) counts as each of its members.
+    filters = [{**{k: [v] for k, v in built_in.items()},
+                **{_dim(k): [str(x).lower() for x in (v if isinstance(v, list) else [v])]
+                   for k, v in (q.get("filters") or {}).items()}} for q in queries]
+    for key, value in want.items():
+        if value == "ask" or key in ("group_by", "time_grain", "period"):
+            continue
+        need = {str(v).lower() for v in (value if isinstance(value, list) else [value])}
+        got = {x for f in filters for x in f.get(key, ["none"])}
+        if not (got == need or (key in grouped and len(need) > 1)):
+            errors.append(f"{key} {sorted(got)} instead of {sorted(need)}")
+    unasked = {k for f in filters for k in f} - set(want) - set(built_in)
+    if unasked:
+        errors.append(f"filters on {sorted(unasked)}, which the question does not ask for")
+    # The requested breakdown must be covered, and at least one call must answer at that breakdown
+    # or a part of it. A supplementary call (the quarter's figure plus a monthly view) is not an
+    # error; a call that splits by a dimension nobody asked for, with nothing else, is.
+    # Grouping by a dimension whose label lists several values is one way to show all of them.
+    want_gb = {_dim(g) for g in want.get("group_by") or []}
+    allowed = want_gb | {k for k, v in want.items() if isinstance(v, list) and k != "time_grain"}
+    own = [({_dim(g) for g in q.get("group_by") or []} | ({"metric_time"} if split else set()))
+           - ({"metric_time"} if one_bucket else set()) for q in queries]
+    if not want_gb <= grouped or not any(g <= allowed for g in own):
+        errors.append(f"group_by {sorted(grouped)} instead of {sorted(want_gb)}")
+    if "time_grain" in want and "metric_time" in grouped:
+        grains = {"month" if split and all(p and len(p) == 1 for p in periods) else q.get("time_grain")
+                  for q in queries}
+        if not grains <= set(want["time_grain"]):
+            errors.append(f"time_grain {sorted(map(str, grains))} instead of one of {want['time_grain']}")
+    if want.get("period") not in (None, "ask"):
+        need = set().union(*[_months(p) or set() for p in
+                             (want["period"] if isinstance(want["period"], list) else [want["period"]])])
+        got = set().union(*[p or set() for p in periods])
+        if None in periods or got != need:
+            errors.append(f"period {sorted({str(q.get('period')) for q in queries})} "
+                          f"instead of {want['period']}")
+    return errors
+
+
+
+def summarise(rows: list, arms: list, cases: list) -> None:
+    print(f"\n{'arm':30} {'n':>3} {'coverage':>9} {'silent_err':>11} {'bal_acc':>8} "
           f"{'undisclosed':>12} {'usd':>8}")
     for arm in arms:
         sub = [r for r in rows if r["config"] == arm]
         s = selective(sub).as_dict()
         due = [r for r in sub if r["disclosure_due"]]
         undisclosed = sum(1 for r in due if r["disclosure_missed"])
-        # Decision-model requests are billed per request, so they are added from the steps.
-        usd = sum((r["cost_usd"] or 0) + sum(s.get("grounding_cost_usd") or 0 for s in r["steps"])
+        # Decision-model requests are billed per request, so they are added from the steps (a call's
+        # grounding) and the turns (a reading made at the final action).
+        usd = sum((r["cost_usd"] or 0) + sum(x.get("grounding_cost_usd") or 0 for x in r["steps"] + r["turns"])
                   for r in sub)
-        print(f"{arm:26} {len(sub):>3} {s['coverage']!s:>9} {s['silent_error']!s:>11} "
+        print(f"{arm:30} {len(sub):>3} {s['coverage']!s:>9} {s['silent_error']!s:>11} "
               f"{s['balanced_accuracy']!s:>8} {f'{undisclosed}/{len(due)}':>12} {usd:>8.4f}")
+    calls_table(rows, arms, cases)
+
+
+def calls_table(rows: list, arms: list, cases: list) -> None:
+    """The governed calls behind the answers. A used call is graded on its parameters; an unused
+    one is exploration, counted only as spend. `basis` says how use was decided (evals/calls.py).
+    Spend is the cost of the turns that issued the calls, not the whole run's cost."""
+    by_id = {c["id"]: c for c in cases}
+    print(f"\n{'arm':30} {'basis':>7} {'answers':>8} {'calls/ans':>9} {'used':>5} {'unused':>7} "
+          f"{'unused usd':>11} {'params right':>13} {'unbound claims':>15}")
+    for arm in arms:
+        # Answered rows only: calls made before a refusal or a question are what led to it.
+        sub = [r for r in rows if r["config"] == arm and r["qid"] in by_id and r["outcome"] == "answer"]
+        uses = [call_use(r) for r in sub]
+        graded = [e for r in sub if (e := used_call_errors(r, by_id[r["qid"]])) is not None]
+        spent = sum(u["used_usd"] + u["unused_usd"] for u in uses)
+        bases = "/".join(sorted({u["basis"] for u in uses}))
+        # A claim that cites a call but states a figure the call did not return (claim audit).
+        audits = [r["claim_audit"] for r in sub if r.get("claim_audit")]
+        unbound = (f"{sum(a['n'] - a['bound'] for a in audits)}/{sum(a['n'] for a in audits)}"
+                   if audits else "-")
+        print(f"{arm:30} {bases:>7} {len(sub):>8} {sum(len(u['used']) + len(u['unused']) for u in uses) / max(len(sub), 1):>9.2f} "
+              f"{sum(len(u['used']) for u in uses):>5} {sum(len(u['unused']) for u in uses):>7} "
+              f"{sum(u['unused_usd'] for u in uses):>6.4f}/{spent:.4f} "
+              f"{f'{sum(not e for e in graded)}/{len(graded)}':>8} {unbound:>15}")
 
 
 def main() -> None:
@@ -153,6 +305,9 @@ def main() -> None:
     ap.add_argument("--model", default="gpt-5-mini")
     ap.add_argument("--mock", action="store_true", help="scripted model: no API key, no cost")
     ap.add_argument("--arms", default=",".join(ARMS), help="comma-separated guardrail cells")
+    ap.add_argument("--protocols", default="none",
+                    help="comma-separated declaration protocols crossed with every arm: none, claims "
+                         "(typed claims citing each call, which the governed-calls table reads)")
     ap.add_argument("--reps", type=int, default=1)
     ap.add_argument("--only", default=None, help="comma-separated case ids")
     ap.add_argument("--cases", default="cases.yml",
@@ -172,7 +327,7 @@ def main() -> None:
         run_dir = pathlib.Path(args.regrade).resolve()
         regrade_run(run_dir, cases, extra=disclosure_fields)
         rows = [json.loads(line) for line in (run_dir / "raw.jsonl").open()]
-        summarise(rows, list(dict.fromkeys(r["config"] for r in rows)))
+        summarise(rows, list(dict.fromkeys(r["config"] for r in rows)), cases)
         return
     if args.only:
         wanted = args.only.split(",")
@@ -180,30 +335,33 @@ def main() -> None:
         missing = set(wanted) - {c["id"] for c in cases}
         if missing:
             sys.exit(f"unknown case id(s): {sorted(missing)}")
-    arms = args.arms.split(",")
-    cells = {arm: parse_cell(arm) for arm in arms}
+    cells = {arm: parse_cell(arm) for arm in args.arms.split(",")}
+    # A config is a guardrail cell crossed with a protocol, labelled as the shared runner labels it.
+    configs = [(arm, Protocol.parse(p)) for arm in cells for p in args.protocols.split(",")]
+    labels = [cells[arm].label() + proto.label() for arm, proto in configs]
 
     model = get_model(args.model, mock=args.mock)
     verifier = get_verifier(args.model, mock=args.mock)
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir = RUNS / f"{stamp}-{HERE.name}"
     run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"model {model.spec.name}  rung {RUNG}  arms {', '.join(arms)}  "
+    print(f"model {model.spec.name}  rung {RUNG}  configs {', '.join(labels)}  "
           f"questions {len(cases)}  reps {args.reps}\n-> {run_dir}\n")
 
     cursor_lock, print_lock = threading.Lock(), threading.Lock()
 
     def one(task):
-        arm, rep, idx, case = task
+        (arm, proto), rep, idx, case = task
         with cursor_lock:
             cur = scoped_cursor(con)
         try:
             grounding = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow",
-                                        semantic_layer=True, guardrails=cells[arm], schema=MARTS)
+                                        semantic_layer=True, guardrails=cells[arm], schema=MARTS,
+                                        protocol=proto)
             grounding.semantic.catalogue = CATALOGUE
             grounding.refresh_catalogue()
             grounding.system += "\n\n" + SCHEMA_EXPLANATION
-            if cells[arm].parameter_grounding or cells[arm].decision_grounding:
+            if cells[arm].parameter_grounding or cells[arm].decision_grounding or cells[arm].decision_plan:
                 # Runtime governance is part of the grounding arms: the agent reads the rules first.
                 grounding.system += "\n\n" + rules_text(GOVERNANCE)
             grounding.toolbox.governance = GOVERNANCE
@@ -225,17 +383,18 @@ def main() -> None:
         finally:
             cur.close()
         row = measured_row(answer, case, golds[case["id"]], elapsed_s=elapsed_s,
-                           rung=RUNG, config=cells[arm].label(), rep=rep,
+                           rung=RUNG, config=labels[configs.index((arm, proto))], rep=rep,
+                           protocol=proto.label().lstrip("/") or "none",
                            second_turn=follow, resolution=(follow or {}).get("resolution"),
                            **disclosure_fields(answer, case))
         missed, due = row["disclosure_missed"], row["disclosure_due"]
         with print_lock:
             mark = "OK  " if row["correct"] else ("SILENT" if row["confident_wrong"] else "MISS")
-            print(f"  {arm:24} rep {rep + 1}  {case['id']:42} {answer.outcome:8} {mark:6} "
+            print(f"  {labels[configs.index((arm, proto))]:30} rep {rep + 1}  {case['id']:42} {answer.outcome:8} {mark:6} "
                   f"undisclosed {len(missed)}/{len(due)}" + (f"  {answer.error}" if answer.error else ""))
-        return (arms.index(arm), rep, idx), row
+        return (configs.index((arm, proto)), rep, idx), row
 
-    tasks = [(arm, rep, i, c) for arm in arms for rep in range(args.reps) for i, c in enumerate(cases)]
+    tasks = [(cfg, rep, i, c) for cfg in configs for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:
         results = [one(t) for t in tasks]
     else:
@@ -248,7 +407,7 @@ def main() -> None:
             fh.write(json.dumps(row, default=str) + "\n")
     report.write(rows, run_dir, mock=args.mock)
 
-    summarise(rows, [cells[a].label() for a in arms])
+    summarise(rows, labels, cases)
     print(f"\nwrote {run_dir / 'raw.jsonl'} and summary.md")
 
 

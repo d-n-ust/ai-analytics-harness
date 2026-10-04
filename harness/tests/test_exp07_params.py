@@ -14,7 +14,7 @@ from ontology.parameters import load_layer, reachable_dimensions
 
 EXP = Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding"
 MODELS, METRICS = load_layer((EXP / "fixture" / "layer" / "semantic_models.yml").read_text())
-SUITES = ("cases.yml", "probes_quotes.yml")
+SUITES = ("cases.yml", "probes_quotes.yml", "redteam.yml")
 
 
 def _cases():
@@ -22,8 +22,9 @@ def _cases():
         yield from yaml.safe_load((EXP / "01_parameter_grounding" / name).read_text())["cases"]
 
 
-def _metric(expect: dict) -> str:
-    return expect.get("metric") or expect["candidates"][0]["metric"]
+def _metric(expect: dict) -> str | None:
+    """The metric the case is about; None for a question no governed metric covers."""
+    return expect.get("metric") or (expect.get("candidates") or [{}])[0].get("metric")
 
 
 def _expected_keys(metric: str) -> set:
@@ -35,6 +36,9 @@ def _expected_keys(metric: str) -> set:
 def test_every_case_has_params_and_only_real_parameters_of_its_metric():
     for case in _cases():
         expect = case["expect"]
+        if _metric(expect) is None:          # no governed metric covers it, so it has no parameters
+            assert not expect.get("params"), f"{case['id']}: params without a metric"
+            continue
         assert expect.get("params"), f"{case['id']}: no params"
         unknown = set(expect["params"]) - _expected_keys(_metric(expect))
         assert not unknown, f"{case['id']}: {sorted(unknown)} are not parameters of {_metric(expect)}"
@@ -43,7 +47,7 @@ def test_every_case_has_params_and_only_real_parameters_of_its_metric():
 def test_values_use_the_documented_forms():
     """A value, `ask`, or a list of accepted values. A bare `none` is redundant: leave the key out."""
     for case in _cases():
-        for key, value in case["expect"]["params"].items():
+        for key, value in (case["expect"].get("params") or {}).items():
             values = value if isinstance(value, list) else [value]
             assert values and all(isinstance(v, str) and v.strip() for v in values), (case["id"], key)
             assert value != "none", f"{case['id']}: {key}: none — omit the key instead"
