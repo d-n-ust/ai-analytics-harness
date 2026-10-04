@@ -41,7 +41,7 @@ from ..core.conversation import ToolResult  # noqa: F401  (re-exported for the l
 from .parameters import _decision, _lines_up, _period_span, _trend_grain, _ungrounded, surface_for
 
 __all__ = ["ground", "read", "check", "uncovered", "reading_for", "choose_metric", "exit_verdict",
-           "refusal_verdict",
+           "refusal_verdict", "reading_text",
            "CONFIDENT", "MODEL"]
 
 MODEL = "~typesafe/jev-latest"
@@ -596,6 +596,41 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     answers, cost = _ask(questions, question)
     cache[metric] = read(answers, surface, principles, back, lo, hi)
     return cache[metric], cost
+
+
+def reading_text(metric: str, reading: dict, routed: dict | None = None) -> str:
+    """The reading as the agent reads it before its first call: what the question allows, what it
+    leaves open, and what the layer lacks. The same reading every call and the final action are
+    checked against, so a call written from it runs on the first try."""
+    lines = ["[question reading] Before you act: how the governed layer reads this question. Every "
+             "query_metric call is checked against it; a value it does not allow will not run.",
+             f"  - metric: {metric}" + (f" ({routed['disclose']})" if routed and routed.get("disclose") else "")]
+    refusals = [d for d in reading["decisions"] if d["state"] == "refuse"]
+    open_ = [d for d in reading["decisions"] if d["state"] == "ungrounded"]
+    for dim, values in reading["filters"].items():
+        how = (f"one figure for {_shown(dim, values)}" if len(values) == 1 else
+               f"one figure for EACH of {_shown(dim, values)}")
+        literal = " or ".join(f"filters={{'{dim}': {v!r}}}" for v in values if v is not None)
+        lines.append(f"  - filter {dim}: {how}" + (f"; call with {literal}" if literal else "")
+                     + ("; a list is ONE query and one figure, never a sum of separate queries"
+                        if any(isinstance(v, list) for v in values) else ""))
+    if reading["periods"]:
+        lines.append(f"  - period: {' and '.join(reading['periods'])}"
+                     + (" (one figure for each)" if len(reading["periods"]) > 1 else ""))
+    if reading["group_by"]:
+        lines.append(f"  - breakdown: {', '.join(reading['group_by'])}"
+                     + (" (each dimension in its own query)" if reading["separate"] else ""))
+    lines += [f"  - not filtered: every other dimension. Filtering or splitting by one the question "
+              f"does not name will not run."]
+    lines += [f"  - {d['parameter']}: {d['disclose']}" for d in reading["decisions"]
+              if d["state"] == "applied" and d.get("disclose")]
+    if refusals:
+        lines += [f"  - REFUSE ({d['reason']}): {d['why']}. No governed number answers the question; do "
+                  f"not offer another value's figure or a mapping." for d in refusals]
+    if open_:
+        lines += [f"  - OPEN {d['parameter']}: {d['why']}. Ask the user with `clarify`, offering governed "
+                  f"values." for d in open_]
+    return "\n".join(lines)
 
 
 def choose_metric(question: str, metrics: dict) -> tuple[str | None, float, float]:

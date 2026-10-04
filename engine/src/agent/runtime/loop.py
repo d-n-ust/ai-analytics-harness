@@ -34,6 +34,7 @@ from ..gates import contract as _g_contract
 from ..gates import disclosure as _g_disclosure
 from ..gates import measure as _g_measure
 from ..gates import pipeline as _pipeline
+from ..gates import reading as _g_reading
 from ..gates import segments as _g_segments
 from ..gates._common import GRACE, MAX_CORRECTIONS
 from ..guardrails import Act, Position, after, before
@@ -684,6 +685,8 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
     opening_text = question
     if getattr(grounding.toolbox.g, "scope_segments", False) and run.scope_shadow:
         opening_text += _g_segments.entry_mappings(run.scope_shadow, grounding.semantic)
+    if getattr(grounding.toolbox.g, "reading_first", False):
+        opening_text += "\n\n" + _g_reading.opening_reading(run)
     convo = Conversation.opening(grounding.system, opening_text)
 
     def done(answer: Answer) -> Answer:
@@ -732,6 +735,10 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                           "cached": turn.usage.cached,
                           # The host that served this call, when the route reports one (OpenRouter).
                           "host": getattr(model, "last_host", None)})
+        if it == 0 and getattr(run, "opening_reading", None):
+            # reading_first: what the agent was shown, and the decision-model requests behind it.
+            text, cost = run.opening_reading
+            run.turns[-1].update({"reading": text, **({"grounding_cost_usd": cost} if cost else {})})
         run.usage += turn.usage
         convo.add(turn)
 

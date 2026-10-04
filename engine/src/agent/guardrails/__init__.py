@@ -459,6 +459,12 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "there, the parameter is ungrounded and the agent asks instead of the value being "
               "dropped silently",
               ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
+    # decision_grounding's reading, shown to the agent before its first call instead of discovered
+    # one blocked call at a time. The checks are unchanged; only what the agent knows first moves.
+    Guardrail("reading_first", Position.ACTION_SPACE,
+              "reads the question before the first turn (metric from the catalogue, then the allowed "
+              "values, open parameters and missing values) and puts that reading in the opening message",
+              ("gates/reading.py", "runtime/loop.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -531,6 +537,7 @@ class GuardrailSet:
     decision_grounding: bool = False
     decision_plan: bool = False
     quote_retry: bool = False
+    reading_first: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -539,6 +546,7 @@ class GuardrailSet:
         for n, preset in LADDER.items():
             if preset == self:
                 return f"R{n}"
+        plus = []
         for n, preset in LADDER.items():                   # a preset with one guardrail moved
             missing = [f.name for f in fields(self)
                        if getattr(preset, f.name) and not getattr(self, f.name)]
@@ -546,12 +554,15 @@ class GuardrailSet:
                      if getattr(self, f.name) and not getattr(preset, f.name)]
             if len(missing) == 1 and not added:
                 return f"R{n}-{missing[0]}"
-            # The mirror, and it arrived with the guardrails outside the ladder: a preset PLUS one.
-            # Without it `R3+typed_clarify` labelled itself by listing all five of its flags, which
-            # is a cell name that has to be decoded rather than read, and which no longer says
-            # which base it is a variation of.
-            if len(added) == 1 and not missing:
-                return f"R{n}+{added[0]}"
+            if not missing:
+                plus.append((len(added), n, added))
+        # The mirror, and it arrived with the guardrails outside the ladder: a preset PLUS some.
+        # Without it `R3+typed_clarify` labelled itself by listing all five of its flags, which is a
+        # cell name that has to be decoded rather than read, and which no longer says which base it
+        # is a variation of. The base is the preset needing the fewest additions.
+        if plus:
+            _, n, added = min(plus)
+            return f"R{n}+" + "+".join(added)
         return "+".join(on) if on else "none"
 
     def without(self, *names: str) -> GuardrailSet:
@@ -681,6 +692,9 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.decision_plan and g.parameter_grounding:
         return ("decision_plan with parameter_grounding: a planned question never reaches the "
                 "grounding step it would configure.")
+    if g.reading_first and not g.decision_grounding:
+        return ("reading_first without decision_grounding: the reading it shows is the one the "
+                "grounding step enforces, and that step is not running.")
     if g.decision_grounding and g.parameter_grounding:
         return ("decision_grounding with parameter_grounding: two grounding steps would both rewrite "
                 "the same call.")

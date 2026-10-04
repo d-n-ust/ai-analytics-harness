@@ -6,6 +6,9 @@
     R4+disclose_assumptions   R4 plus one instruction to state every assumption and default
     R4+parameter_grounding    R4 plus the grounding step (agent/guardrails/parameters.py)
     R4+decision_grounding     R4 plus grounding by a decision model (agent/guardrails/decisions.py)
+    R4+decision_grounding+reading_first
+                              the same, with the decision model's reading of the question shown to the
+                              agent before its first call instead of discovered one blocked call at a time
 
 Raw SQL is off in every arm because the experiment measures how a governed call's parameters are
 chosen. With run_sql available, the agent can go around the governed layer (t_004 grouped app opens

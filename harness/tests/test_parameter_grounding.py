@@ -618,3 +618,18 @@ def test_a_clarifying_question_about_a_settled_parameter_is_handed_back_even_unn
     message, reason = DG.exit_verdict(_read(_ANDROID_JUNE), {"question": "Android only?"})
     assert reason is None and "already settle" in message
     assert DG.exit_verdict(_read(_ANDROID_JUNE), {"parameter": "metric", "options": ["app_opens"]}) is None
+
+
+def test_the_reading_shown_first_names_what_runs_what_is_open_and_what_to_refuse():
+    """reading_first: the agent reads, before its first call, the reading every call is checked
+    against, so a call written from it runs on the first try."""
+    two_months = _read({"named:activity__platform:0": 0.99, "period:2026-06": 0.96, "period:2026-05": 0.95})
+    text = DG.reading_text("app_opens", two_months)
+    assert "activity__platform = android" in text and "2026-05 and 2026-06" in text and "one figure for each" in text
+    not_android = DG.reading_text("app_opens", _read({"named:activity__platform:0": 0.98, "period:2026-06": 0.97},
+                                                     platform=("except", 1.0)))
+    assert "in (ios, web, unknown)" in not_android
+    lacking = DG.reading_text("app_opens", _read({"lacks:activity__platform": 0.9, "period:2026-Q2": 0.98},
+                                                 platform=("only", 0.9)))
+    assert "REFUSE (ungoverned_dimension_value)" in lacking
+    assert "OPEN period" in DG.reading_text("app_opens", _read({"named:activity__platform:0": 0.99}))

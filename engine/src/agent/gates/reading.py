@@ -74,6 +74,42 @@ def uncovered_values(run, exit_call):
         is_error=True)
 
 
+def opening_reading(run) -> str:
+    """`reading_first`: the reading, made before the first turn and shown in the opening message.
+
+    The metric comes from the decision model's choice over the catalogue (a contested one routed to
+    the requester team's definition), then the question is read for it. The reading is cached on
+    the run, so the calls and the final action are checked against the same reading at no further
+    cost. When the metric is not settled the agent is told so, with the likeliest candidates, and
+    left to judge; only a confident "no governed metric measures this" is stated as a refusal."""
+    tb = run.grounding.toolbox
+    metrics = getattr(tb.semantic, "metrics", None) or {}
+    answers, cost = _decisions._ask(_decisions._metric_questions(metrics), run.question)
+    probs = (answers.get("metric") or {}).get("probabilities") or {}
+    choice = (answers.get("metric") or {}).get("choice")
+    p = probs.get(choice, 0.0)
+    head = "[question reading] Before you act: how the governed layer reads this question."
+    text = ""
+    if choice == "not_in_list" and p >= _decisions.CONFIDENT:
+        text = (f"{head}\n  - REFUSE (no_governed_definition): no governed metric measures what the "
+                f"question asks for. Do not compute it from other metrics.")
+    elif choice == "not_mentioned" and p >= _decisions.CONFIDENT:
+        text = (f"{head}\n  - OPEN metric: the question names no measure. Ask the user with `clarify`, "
+                f"offering governed metrics.")
+    elif choice in metrics and p >= _decisions.CONFIDENT:
+        metric, routed = route_metric(choice, tb.governance)
+        if routed is None or routed["state"] != "ungrounded":
+            reading, more = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
+                                                   run.grounded)
+            cost += more
+            text = _decisions.reading_text(metric, reading, routed) if reading else ""
+    if not text:
+        likely = ", ".join(f"{k} ({v:.2f})" for k, v in sorted(probs.items(), key=lambda kv: -kv[1])[:3])
+        text = f"{head}\n  - metric: not settled by the question; likeliest readings: {likely}."
+    run.opening_reading = (text, cost)
+    return text
+
+
 def _reading_at_exit(run):
     """(reading, refusal) for the final-action check. `refusal` is set when the catalogue itself
     answers: the question names a measure no governed metric counts."""
