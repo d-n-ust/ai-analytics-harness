@@ -313,30 +313,15 @@ def rules_text(governance: dict | None) -> str:
     return "\n".join(lines)
 
 
-def route_metric(metric: str, governance: dict | None) -> tuple[str, dict | None]:
-    """Runtime governance for a contested metric: (the metric to query, the decision behind it).
+def route_metric(metric: str, governance: dict | None, semantic=None) -> tuple[str, dict | None]:
+    """Runtime governance for a metric in a fork: (the metric to query, the decision behind it).
 
-    When `metric` belongs to a contested relationship, the member owned by the requester's team
-    (`governance.requester.team`, matched against `measures.<metric>.owner`) is used and disclosed.
-    With no requester, or no member owned by it, the choice is ungrounded and the agent must ask. A
-    metric in no contested relationship passes through with no decision."""
-    governance = governance or {}
-    for rel in governance.get("relationships") or ():
-        members = rel.get("members") or []
-        if rel.get("type") != "contested" or metric not in members:
-            continue
-        team = (governance.get("requester") or {}).get("team")
-        owners = {m: (governance.get("measures") or {}).get(m, {}).get("owner") for m in members}
-        routed = next((m for m in members if team and owners.get(m) == team), None)
-        if routed is None:
-            return metric, _ungrounded("metric", f"{' and '.join(members)} both answer this question and "
-                                                 f"no requester is declared to choose between them")
-        return routed, _decision(
-            "metric", routed, "governed_principle",
-            disclose=(f"Two governed definitions answer this question ({', '.join(members)}). Using "
-                      f"{routed}, owned by {team}, the team this answer is for. {rel.get('means', '')}").strip(),
-            why=f"owner routing: {rel['id']}")
-    return metric, None
+    The fork and its resolution are declared in the semantic layer, on the metrics (`meta.terms`),
+    and decided by preflight (guardrails/forks.py). Governance supplies only who is asking
+    (`requester.team`). A metric in no declared fork passes through with no decision."""
+    from .forks import resolve
+    team = ((governance or {}).get("requester") or {}).get("team")
+    return resolve(metric, team, semantic)
 
 
 def _ungrounded(parameter: str, why: str) -> dict:

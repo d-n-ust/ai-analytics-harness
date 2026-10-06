@@ -392,27 +392,44 @@ def test_trend_buckets_must_line_up_with_the_period():
     assert P._lines_up("week", __import__("datetime").date(2026, 6, 1), __import__("datetime").date(2026, 6, 28))
 
 
-# ── runtime governance: a contested metric is routed to the requester team's definition ──────────
-GOV = {"requester": {"team": "Product"},
-       "measures": {"active_users": {"owner": "Product"}, "active_accounts": {"owner": "Platform"}},
-       "relationships": [{"id": "rel_active_user_definition", "type": "contested",
-                          "members": ["active_users", "active_accounts"], "means": "Differ on internal accounts."}]}
+# ── runtime governance: a fork declared in the layer (meta.terms), resolved by preflight ───────────
+from pathlib import Path as _Path
+from types import SimpleNamespace
+
+from agent.guardrails import forks as F
+
+_LAYER = SimpleNamespace(spec_dir=_Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding"
+             / "fixture" / "layer")
 
 
-def test_a_contested_metric_is_routed_to_the_requester_teams_definition():
+def _gov(team):
+    return {"requester": {"team": team}} if team else {}
+
+
+def test_a_declared_fork_is_routed_to_the_requester_teams_reading():
+    """"users": active_users answers for Product, active_accounts for Platform (meta.terms)."""
     for asked in ("active_users", "active_accounts"):
-        metric, decision = P.route_metric(asked, GOV)
+        metric, decision = P.route_metric(asked, _gov("Product"), _LAYER)
         assert metric == "active_users" and decision["basis"] == "governed_principle"
-        assert "owned by Product" in decision["disclose"]
+        assert "For the Product team it means active_users" in decision["disclose"]
+        assert "active_accounts" in decision["disclose"], "the other governed reading is disclosed"
+    assert P.route_metric("active_users", _gov("Platform"), _LAYER)[0] == "active_accounts"
 
 
-def test_without_a_requester_the_contested_metric_is_ungrounded():
-    metric, decision = P.route_metric("active_accounts", {**GOV, "requester": {}})
+def test_without_a_requester_the_declared_fork_is_the_users_choice():
+    metric, decision = P.route_metric("active_accounts", _gov(None), _LAYER)
     assert metric == "active_accounts" and decision["state"] == "ungrounded"
 
 
-def test_an_uncontested_metric_passes_through():
-    assert P.route_metric("app_opens", GOV) == ("app_opens", None)
+def test_a_fork_declared_show_all_keeps_the_metric_and_names_the_other_reading():
+    """h_018: both spend metrics answer "marketing spend" always, so both figures are shown."""
+    metric, decision = P.route_metric("marketing_spend", _gov("Product"), _LAYER)
+    assert metric == "marketing_spend" and "show every one" in decision["disclose"]
+    assert [m for m, _r, _t in F.companions("marketing_spend", "Product", _LAYER)] == ["acquisition_spend"]
+
+
+def test_a_metric_in_no_declared_fork_passes_through():
+    assert P.route_metric("app_opens", _gov("Product"), _LAYER) == ("app_opens", None)
 
 
 def test_a_small_unsure_choice_shows_every_reading_instead_of_asking():
@@ -654,3 +671,25 @@ def test_an_ungoverned_figure_is_a_policy_violation_under_decision_grounding():
     off = _gate_run([monthly]); off.grounding.toolbox.g.decision_grounding = False
     exit_call = _NS(name="answer", args={"answer": "9.41", "claims": [{"text": "a", "value": 9.41, "sources": []}]})
     assert _claims_gate.malformed_claims(off, exit_call) is None, "without decision_grounding it is measured, not corrected"
+
+
+def test_an_answer_giving_one_reading_of_a_show_all_fork_gets_the_other_supplied():
+    """h_018: the answer reported marketing spend alone. The declared rule is to show both, so the
+    gate runs acquisition spend with the same parameters and hands the result back."""
+    spend = {"tool": "query_metric", "handle": "r1", "error": False,
+             "args": {"metric": "marketing_spend", "period": "2026-Q2"},
+             "result_values": [61233.32], "result_labels": [""]}
+    run = _gate_run([spend])
+    run.grounding.toolbox.semantic, run.grounding.toolbox.governance = _LAYER, _gov("Product")
+    supplied = []
+
+    def execute(calls):
+        supplied.extend(c.args for c in calls)
+        run.steps.extend({"tool": c.name, "handle": f"r{len(run.steps) + 1}", "args": c.args} for c in calls)
+        return [_NS(content="[r2] 53,041.55") for _ in calls]
+    run.execute = execute
+    exit_call = _NS(name="answer", args={"answer": "61,233.32",
+                                         "claims": [{"text": "spend", "sources": ["r1"], "value": 61233.32}]})
+    handed = _coverage_gate.uncovered_values(run, exit_call)
+    assert handed is not None and "acquisition_spend" in handed.content
+    assert supplied == [{"metric": "acquisition_spend", "period": "2026-Q2"}]

@@ -843,7 +843,7 @@ def plan(question: str, toolbox, governance: dict | None) -> dict | None:
         decisions.append({**_ungrounded("metric", f"unsure ({choice}, p {p:.2f})"), "confidence": p})
         return {"action": "ask", "decisions": decisions, "cost": cost, "metric": None, "reason": "underspecified_request",
                 "queries": [], "results": [], "text": question_text(decisions, None, None, options or list(metrics)[:5])}
-    metric, routed = route_metric(choice, governance)
+    metric, routed = route_metric(choice, governance, semantic)
     decisions.append({**_decision("metric", choice, "question"), "confidence": p})
     if routed is not None:
         decisions.append(routed)

@@ -54,26 +54,21 @@ segments:
     evidence: decided
     status: certified
 
-# ── per-measure governance: owner, status, and the segment its filter applies ──────────────────
+# ── per-measure governance: status, and the segment its filter applies (owner: on the metric) ──
 measures:
   app_opens:
-    owner: Product
     status: certified
     segment: customers
   active_users:
-    owner: Product
     status: certified
     segment: customers
   active_accounts:
-    owner: Platform
     status: certified
     segment: all_accounts
   value_moments:
-    owner: Product
     status: certified
     segment: customers
   total_value_moments:
-    owner: Platform
     status: certified
     segment: all_accounts
 
@@ -91,44 +86,17 @@ attributes:
 vocabulary:
   "app opens":      {kind: measure,   candidates: [app_opens]}
   "opens":          {kind: measure,   candidates: [app_opens]}
-  "users":          {kind: measure,   candidates: [active_users, active_accounts]}
-  "active users":   {kind: measure,   candidates: [active_users, active_accounts]}
-  "habits":         {kind: measure,   candidates: [value_moments, total_value_moments]}
   "customers":      {kind: segment, candidates: [customers]}
   "android":        {kind: filter,    candidates: ["platform=android"]}
   "ios":            {kind: filter,    candidates: ["platform=ios"]}
   "web":            {kind: filter,    candidates: ["platform=web"]}
   "paid search":    {kind: filter,    candidates: ["channel=paid_search"]}
 
-# ── relationships between definitions ─────────────────────────────────────────────────────────
-# A contested pair carries a policy: which definition each consumer gets by default.
-relationships:
-  - id: rel_active_user_definition
-    type: contested
-    members: [active_users, active_accounts]
-    differs_in: segment
-    means: "Both count distinct active accounts; they differ only on whether internal/test are in."
-    owner: unassigned
-    evidence: verified
-    status: open
-    policy:
-      default_by_consumer:
-        product_review: active_users
-        capacity_planning: active_accounts
-      note: "No cross-team owner. Absent a consumer, the pair is genuinely ambiguous."
-  - id: rel_completed_habits
-    type: contested
-    members: [value_moments, total_value_moments]
-    differs_in: segment
-    means: "Both count completed habits; they differ only on whether internal/test accounts are in."
-    owner: unassigned
-    evidence: verified
-    status: open
-    policy:
-      default_by_consumer:
-        engagement_review: value_moments
-        storage_planning: total_value_moments
-      note: "No cross-team owner. Absent a requester, the pair is genuinely ambiguous."
+# ── relationships between definitions: moved to the semantic layer ───────────────────────────
+# Which metric answers a word that several governed metrics answer ("users", "habits",
+# "marketing spend", "revenue") is declared on the metrics themselves, in `config.meta.terms` in
+# layer/semantic_models.yml, and decided by preflight (engine/src/agent/guardrails/forks.py). Each
+# metric's owner moved there too (`config.meta.owner`). This file keeps who is asking (`requester`).
 
 # ── methodological rules: a governed default for a parameter the question leaves open ──────────
 # The model names the rule; ground.py applies its value deterministically and discloses it. If no

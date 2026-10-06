@@ -115,6 +115,14 @@ metric:
   type: simple
   type_params: {measure: active_account_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
+  config:
+    meta:
+      owner: Product
+      terms:
+        - term: users
+          synonyms: [active users]
+          reading: "real customers: staff and test accounts excluded"
+          when: {for: [Product]}
 ---
 metric:
   name: active_users_growth
@@ -148,6 +156,14 @@ metric:
     which care about load rather than about customers.
   type: simple
   type_params: {measure: active_account_count}
+  config:
+    meta:
+      owner: Platform
+      terms:
+        - term: users
+          synonyms: [active users]
+          reading: "every account: staff and test accounts included"
+          when: {for: [Platform]}
 
 # ── everything else, so the layer is not a two-metric toy ─────────────────────────────────────
 # ── contested · engagement volume ─────────────────────────────────────────────────────────────
@@ -163,6 +179,14 @@ metric:
   type: simple
   type_params: {measure: value_moment_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
+  config:
+    meta:
+      owner: Product
+      terms:
+        - term: habits
+          synonyms: [completed habits]
+          reading: "habits completed by real customers"
+          when: {for: [Product]}
 ---
 metric:
   name: total_value_moments
@@ -171,6 +195,14 @@ metric:
     for write-volume forecasting and storage planning, which care about rows rather than customers.
   type: simple
   type_params: {measure: value_moment_count}
+  config:
+    meta:
+      owner: Platform
+      terms:
+        - term: habits
+          synonyms: [completed habits]
+          reading: "every completed habit, staff and test accounts included"
+          when: {for: [Platform]}
 ---
 metric:
   name: app_opens
@@ -182,6 +214,9 @@ metric:
   type: simple
   type_params: {measure: app_open_count}
   filter: "{{ Dimension('activity__is_internal') }} = false"
+  config:
+    meta:
+      owner: Product
 ---
 metric:
   name: new_signups
@@ -204,6 +239,14 @@ metric:
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
+  config:
+    meta:
+      owner: Finance
+      terms:
+        - term: revenue
+          synonyms: [mrr, monthly recurring revenue]
+          reading: "active subscriptions, net of refunds"
+          when: always
 ---
 metric:
   name: gross_mrr
@@ -215,6 +258,14 @@ metric:
   type: simple
   type_params: {measure: mrr_amount}
   filter: "{{ Dimension('subscription__status') }} != 'canceled'"
+  config:
+    meta:
+      owner: Sales
+      terms:
+        - term: revenue
+          synonyms: [mrr, monthly recurring revenue]
+          reading: "every subscription not cancelled, gross of refunds"
+          when: {for: [Sales]}
 
 # ── clean · the subscription book ─────────────────────────────────────────────────────────────
 ---
@@ -245,6 +296,14 @@ metric:
     the budget-versus-actuals report, which must reconcile to the ledger.
   type: simple
   type_params: {measure: spend_amount}
+  config:
+    meta:
+      owner: Finance
+      terms:
+        - term: marketing spend
+          synonyms: [total marketing spend, spend]
+          reading: "every channel, including partnerships"
+          when: always
 ---
 metric:
   name: acquisition_spend
@@ -255,6 +314,14 @@ metric:
   type: simple
   type_params: {measure: spend_amount}
   filter: "{{ Dimension('spend_row__channel') }} != 'partnerships'"
+  config:
+    meta:
+      owner: Growth
+      terms:
+        - term: marketing spend
+          synonyms: [total marketing spend, spend]
+          reading: "acquisition channels only, partnerships left out"
+          when: always
 ---
 metric:
   name: habits_per_active_user

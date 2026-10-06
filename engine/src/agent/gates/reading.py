@@ -6,7 +6,8 @@ here, when the agent ends the run:
 
   uncovered_values      an answer whose used calls leave out a value the question names. "June
                         compared with May" answered with June alone passes every call check.
-                        The covering queries are run here and handed back with the correction.
+                        Also a declared fork whose rule is to show every reading (meta.terms),
+                        answered with one. The covering queries are run here and handed back.
   exit_matches_reading  a clarifying question or refusal where the reading says something else. The
                         governed layer is the whole action space, and a clarifying question is an
                         action: it may ask only about a parameter the reading leaves open, and offer
@@ -26,6 +27,7 @@ from ..core.conversation import ToolCall, ToolResult
 from ..core.outcomes import declared_handles
 from ..guardrails import Act, Position
 from ..guardrails import decisions as _decisions
+from ..guardrails import forks as _forks
 from ..guardrails.parameters import route_metric
 
 
@@ -60,6 +62,15 @@ def uncovered_values(run, exit_call):
         reading = run.grounded.get(metric)
         if isinstance(reading, dict) and "periods" in reading:
             missing += _decisions.uncovered(reading, queries)
+    # A declared fork whose rule is to show every reading (meta.terms): the other metrics are run
+    # with the parameters the agent chose for this one, so the figures are comparable.
+    tb = run.grounding.toolbox
+    team = ((getattr(tb, "governance", None) or {}).get("requester") or {}).get("team")
+    for metric, queries in by_metric.items():
+        for other, reading_text, term in _forks.companions(metric, team, getattr(tb, "semantic", None)):
+            if other not in by_metric and not any(q.get("metric") == other for _, q in missing):
+                missing.append((f"'{term}' as {other}" + (f" ({reading_text})" if reading_text else ""),
+                                {**queries[0], "metric": other}))
     if not missing:
         return None
     results = run.execute([ToolCall(f"supplied-{i}", "query_metric", query) for i, (_, query) in enumerate(missing)])
@@ -95,7 +106,7 @@ def opening_reading(run) -> str:
         text = (f"{head}\n  - OPEN metric: the question names no measure. Ask the user with `clarify`, "
                 f"offering governed metrics.")
     elif choice in metrics and p >= _decisions.CONFIDENT:
-        metric, routed = route_metric(choice, tb.governance)
+        metric, routed = route_metric(choice, tb.governance, tb.semantic)
         if routed is None or routed["state"] != "ungrounded":
             reading, more = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
                                                    run.grounded)
@@ -124,7 +135,7 @@ def _reading_at_exit(run):
                           "`no_governed_definition`.", "no_governed_definition")
         if choice not in metrics or p < _decisions.CONFIDENT:
             return None, None                    # the metric itself is open: asking about it is legal
-        metric = route_metric(choice, tb.governance)[0]
+        metric = route_metric(choice, tb.governance, tb.semantic)[0]
     reading, cost = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
                                            run.grounded)
     _charge(run, cost)

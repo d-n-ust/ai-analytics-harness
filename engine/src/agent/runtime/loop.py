@@ -283,7 +283,7 @@ class _Run:
         if call.name != "query_metric" or not grounding:
             return [call.args], []
         # The metric first: a contested one is routed to the requester team's definition.
-        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance)
+        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance, tb.semantic)
         if routed is not None and routed["state"] == "ungrounded":
             return [], [routed]
         args = {**call.args, "metric": metric}
