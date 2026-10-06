@@ -61,7 +61,10 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 # v23: `route` — which API carried the model calls (openrouter / direct / mock). The same model id
 #      through two routes can differ in upstream, reasoning translation and price, so a row that
 #      does not say which route produced it cannot be compared with one that does.
-ROW_SCHEMA_VERSION = 23
+# v24: `readings` — under decision_grounding, the reading of the question per metric, with the decision
+#      model's raw answers and the version that served them, and the metric choice. Without it a
+#      row kept only the decisions derived from the reading, so no decision could be replayed.
+ROW_SCHEMA_VERSION = 24
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -130,6 +133,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         "claims": list(answer.claims), "claim_audit": answer.claim_audit,
         "claim_retries": answer.claim_retries, "hand_backs": answer.hand_backs,
         "repairs": list(answer.repairs), "scope_shadow": answer.scope_shadow,
+        "readings": getattr(answer, "readings", None),
         "verifier_verdict": answer.verifier_verdict, "error": answer.error,
 
         # ---- telemetry ----------------------------------------------------------------

@@ -17,7 +17,7 @@ and on a 19-question red-team suite. Every number in them comes from questions t
 then fixed failures on, so none is a held-out result (E-12, E-13). Section 18 records a 19-question
 held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it. Model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
-(`decisions.MODEL`), which is not pinned (section 20).
+until 2026-10-06 and pinned since; every reading now records the version that served it.
 
 ---
 
@@ -574,8 +574,9 @@ repetitions each, 2026-10-05 (runs `20261005-010615`, `20261005-011029`):
 - The main-suite p95 rose; with 48 rows it is one or two slow rows.
 - The one silent error, in the arm without the reading, is the t_010 trap: the agent split Q2 by month
   and averaged the monthly ratios (9.41 against 18.92). Two gaps allowed it: splitting by month is
-  allowed in any call, and the 9.41 was stated in a claim with no source, which is not handed back
-  (section 20).
+  allowed in any call, and the 9.41 was stated in a claim with no source, which was not handed back.
+  Since 2026-10-06, under `decision_grounding`, a claim stating a figure that cites nothing, or that
+  none of its cited values supports, is a policy violation (`gates/claims.py`).
 
 ## 18 · The held-out suite
 
@@ -632,12 +633,9 @@ Writing the suite found three problems before any run, all in our own setup:
   the project is still the stronger test.
 - The four subscription metrics crash the parameter surface (`cohort_month` is declared but never
   built), so no question about revenue or subscriptions can be grounded.
-- A claim that states a figure and cites nothing is not handed back (the t_010 9.41). Under
-  `decision_grounding` it should be a policy violation, like a claim citing a call that does not exist.
-- Pin the decision model: `decisions.MODEL` is the alias `~typesafe/jev-latest`, so results can change
-  when the provider ships a new version. Record the resolved version on each row.
-- Store the full reading (probabilities and model version) on each row, and evaluate it as a
-  component against `expect.params`. Today only the decisions derived from it are stored.
+- Evaluate the reading as a component against `expect.params`. Since 2026-10-06 every row stores the
+  reading with the decision model's raw answers and serving version (row schema v24), so this needs
+  no new request.
 - Define the fallback when the reading fails. A timeout of the Decisions API (an alpha endpoint) now
   produces an error row; the intended behaviour is plain R4 with a disclosure that parameters were not
   checked.

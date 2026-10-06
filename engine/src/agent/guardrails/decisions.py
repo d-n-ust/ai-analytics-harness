@@ -44,7 +44,9 @@ __all__ = ["ground", "read", "check", "uncovered", "reading_for", "choose_metric
            "refusal_verdict", "reading_text",
            "CONFIDENT", "MODEL"]
 
-MODEL = "~typesafe/jev-latest"
+# Pinned: the alias `~typesafe/jev-latest` moves when the provider ships a version, and a reading
+# must be reproducible. Every request also records the version that served it (reading["model"]).
+MODEL = "typesafe/jev-1.13-20260917"
 # Act on a choice only at or above this probability; below it, ask. 0.7 is where the 120-decision
 # fair test (2026-10-03) had no wrong decision left; it is a starting point, not a tuned value.
 CONFIDENT = 0.7
@@ -180,7 +182,8 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
 
 # ── the request ───────────────────────────────────────────────────────────────────────────────
 
-def _ask(questions: dict, state: str) -> tuple[dict, float]:
+def _ask(questions: dict, state: str) -> tuple[dict, float, str]:
+    """(answers, cost in USD, the model version that served the request)."""
     from ..runtime.providers import ProviderError, load_env
     load_env()
     base = (os.environ.get("OPEN_ROUTER_BASE_URL") or "").rstrip("/").removesuffix("/v1")
@@ -197,7 +200,7 @@ def _ask(questions: dict, state: str) -> tuple[dict, float]:
             raise
         exc.status_code = exc.code
         raise ProviderError(exc) from exc
-    return r["answers"], float((r.get("usage") or {}).get("cost") or 0.0)
+    return r["answers"], float((r.get("usage") or {}).get("cost") or 0.0), str(r.get("model") or MODEL)
 
 
 # ── the policy, applied by code ───────────────────────────────────────────────────────────────
@@ -593,8 +596,10 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
         return None, 0.0
     principles = list((governance or {}).get("methodological_rules") or [])
     questions, back = _questions(surface, principles, lo, hi)
-    answers, cost = _ask(questions, question)
-    cache[metric] = read(answers, surface, principles, back, lo, hi)
+    answers, cost, model = _ask(questions, question)
+    # The raw answers and the serving version are kept with the reading, so a stored row can be
+    # replayed and the reading evaluated as a component without a new request.
+    cache[metric] = {**read(answers, surface, principles, back, lo, hi), "answers": answers, "model": model}
     return cache[metric], cost
 
 
@@ -633,13 +638,15 @@ def reading_text(metric: str, reading: dict, routed: dict | None = None) -> str:
     return "\n".join(lines)
 
 
-def choose_metric(question: str, metrics: dict) -> tuple[str | None, float, float]:
-    """(choice, probability, cost): which governed metric the question asks for, read by the decision
-    model from the catalogue. `not_in_list` and `not_mentioned` are returned as such."""
-    answers, cost = _ask(_metric_questions(metrics), question)
+def choose_metric(question: str, metrics: dict) -> dict:
+    """Which governed metric the question asks for, read by the decision model from the catalogue:
+    {choice, p, probabilities, cost, model}. `not_in_list` and `not_mentioned` are returned as such."""
+    answers, cost, model = _ask(_metric_questions(metrics), question)
     a = answers.get("metric") or {}
+    probabilities = a.get("probabilities") or {}
     choice = a.get("choice")
-    return choice, (a.get("probabilities") or {}).get(choice, 0.0), cost
+    return {"choice": choice, "p": probabilities.get(choice, 0.0), "probabilities": probabilities,
+            "cost": cost, "model": model}
 
 
 def exit_verdict(reading: dict, args: dict) -> tuple[str, str | None] | None:
@@ -813,7 +820,7 @@ def plan(question: str, toolbox, governance: dict | None) -> dict | None:
     metrics = getattr(semantic, "metrics", None) or {}
     if not metrics:
         return None
-    answers, cost = _ask(_metric_questions(metrics), question)
+    answers, cost, _model = _ask(_metric_questions(metrics), question)
     choice = (answers.get("metric") or {}).get("choice")
     probs = (answers.get("metric") or {}).get("probabilities") or {}
     p = probs.get(choice, 0.0)

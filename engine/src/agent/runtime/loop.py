@@ -628,6 +628,7 @@ class _Run:
                       # The shadow Scope is a property of the QUESTION, so it rides the common
                       # construction — a refusal's row needs it exactly as much as an answer's.
                       scope_shadow=self.scope_shadow,
+                      readings={k: v for k, v in self.grounded.items() if isinstance(v, dict)} or None,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
                       cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
                       acts=self.acts, **kw)

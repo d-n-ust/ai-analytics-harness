@@ -84,10 +84,8 @@ def opening_reading(run) -> str:
     left to judge; only a confident "no governed metric measures this" is stated as a refusal."""
     tb = run.grounding.toolbox
     metrics = getattr(tb.semantic, "metrics", None) or {}
-    answers, cost = _decisions._ask(_decisions._metric_questions(metrics), run.question)
-    probs = (answers.get("metric") or {}).get("probabilities") or {}
-    choice = (answers.get("metric") or {}).get("choice")
-    p = probs.get(choice, 0.0)
+    chosen = _metric_choice(run, metrics)
+    choice, p, probs, cost = chosen["choice"], chosen["p"], chosen["probabilities"], chosen["cost"]
     head = "[question reading] Before you act: how the governed layer reads this question."
     text = ""
     if choice == "not_in_list" and p >= _decisions.CONFIDENT:
@@ -117,8 +115,9 @@ def _reading_at_exit(run):
     metrics = getattr(tb.semantic, "metrics", None) or {}
     metric = next((m for m, r in run.grounded.items() if isinstance(r, dict) and "periods" in r), "")
     if metric not in metrics:
-        choice, p, cost = _decisions.choose_metric(run.question, metrics)
-        _charge(run, cost)
+        chosen = _metric_choice(run, metrics)
+        choice, p = chosen["choice"], chosen["p"]
+        _charge(run, chosen["cost"])
         if choice == "not_in_list" and p >= _decisions.CONFIDENT:
             return None, ("[policy] Your clarifying question was not accepted: no governed metric measures "
                           "what the question asks for, so there is nothing to clarify. Refuse with "
@@ -130,6 +129,15 @@ def _reading_at_exit(run):
                                            run.grounded)
     _charge(run, cost)
     return reading, None
+
+
+def _metric_choice(run, metrics: dict) -> dict:
+    """The decision model's choice of metric for this question, made once per run and kept with the
+    readings (key `_metric`), so it is stored on the row. A second ask returns it at no cost."""
+    if "_metric" in run.grounded:
+        return {**run.grounded["_metric"], "cost": 0.0}
+    run.grounded["_metric"] = _decisions.choose_metric(run.question, metrics)
+    return run.grounded["_metric"]
 
 
 def _charge(run, cost: float) -> None:

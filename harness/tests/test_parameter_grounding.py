@@ -633,3 +633,24 @@ def test_the_reading_shown_first_names_what_runs_what_is_open_and_what_to_refuse
                                                  platform=("only", 0.9)))
     assert "REFUSE (ungoverned_dimension_value)" in lacking
     assert "OPEN period" in DG.reading_text("app_opens", _read({"named:activity__platform:0": 0.99}))
+
+
+def test_an_ungoverned_figure_is_a_policy_violation_under_decision_grounding():
+    """t_010: 9.41, the mean of three monthly ratios, stated with no source; and 6.31, a figure none of
+    the cited values is. Under decision_grounding both are actions the agent may not take. A claim
+    stating 0 is a statement, not a figure, and is left alone."""
+    monthly = {"tool": "query_metric", "handle": "r1", "error": False,
+               "args": {"metric": "habits_per_active_user", "group_by": ["metric_time"], "period": "2026-Q2"},
+               "result_values": [9.277, 9.302, 9.657], "result_labels": ["2026-04", "2026-05", "2026-06"]}
+    for claims in ([{"text": "average 9.41", "value": 9.41, "sources": []}],
+                   [{"text": "average 9.41", "value": 9.41, "sources": ["r1:2026-04"]}]):
+        exit_call = _NS(name="answer", args={"answer": "9.41", "claims": claims})
+        handed = _claims_gate.malformed_claims(_gate_run([monthly]), exit_call)
+        assert handed is not None and handed.content.startswith("[policy]") and "9.41" in handed.content
+    statement = _NS(name="answer", args={"answer": "x", "claims": [
+        {"text": "April 9.277", "value": 9.277, "sources": ["r1:2026-04"]},
+        {"text": "the metric excludes staff", "value": 0, "sources": []}]})
+    assert _claims_gate.malformed_claims(_gate_run([monthly]), statement) is None
+    off = _gate_run([monthly]); off.grounding.toolbox.g.decision_grounding = False
+    exit_call = _NS(name="answer", args={"answer": "9.41", "claims": [{"text": "a", "value": 9.41, "sources": []}]})
+    assert _claims_gate.malformed_claims(off, exit_call) is None, "without decision_grounding it is measured, not corrected"

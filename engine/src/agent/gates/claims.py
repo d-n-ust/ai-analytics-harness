@@ -50,6 +50,13 @@ def malformed_claims(run, exit_call: ToolCall):
     does not support, are judgements about the ANALYSIS — those stay in the audit, where they are
     measured rather than corrected away.
 
+    Under `decision_grounding` there is a third fault, and it is not about form: an UNGOVERNED
+    FIGURE, one the claim states while citing nothing, or one that none of its cited values is and
+    that no difference, ratio or percent change of two of them gives. There the governed layer is
+    the whole action space, so such a figure is not an analysis to measure but an action the agent
+    may not take (t_010: 9.41, the mean of three monthly ratios, stated with no source). A zero is
+    left alone: the model writes 0 into claims that are statements, not figures.
+
     Gated on `protocol.repair`, not on `protocol.claims`: asking for an account is a
     treatment and correcting one is an enforcement, and while they shared a flag no cell could
     say which of them moved a number.
@@ -65,7 +72,11 @@ def malformed_claims(run, exit_call: ToolCall):
     broken = [f for f in audited["findings"] if f["unresolved"]]
     lists = [f for f in audited["findings"] if not f["unresolved"] and
              (len(f["sources"]) >= 3 or (len(f["sources"]) == 2 and not f["bound"]))]
-    if not broken and not lists:
+    policy = getattr(run.grounding.toolbox.g, "decision_grounding", False)
+    ungoverned = [f for f in audited["findings"] if f not in lists and not f["unresolved"]
+                  and isinstance(f["value"], (int, float)) and not isinstance(f["value"], bool) and f["value"]
+                  and {"unsourced", "value_mismatch", "composed"} & set(f["why"])] if policy else []
+    if not broken and not lists and not ungoverned:
         return None
     # Truncated: this is here to be RECOGNISED in the final answer, not re-read. A prefix is
     # enough to tell a surviving sentence from a deleted one, and the full text is already in
@@ -74,12 +85,13 @@ def malformed_claims(run, exit_call: ToolCall):
                          "broken": [{"text": str(f["text"] or "")[:_REPAIR_TEXT],
                                      "cites": list(f["unresolved"])} for f in broken],
                          **({"lists": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "cites": f["sources"]}
-                                       for f in lists]} if lists else {})})
+                                       for f in lists]} if lists else {}),
+                         **({"ungoverned": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "value": f["value"],
+                                             "cites": f["sources"]} for f in ungoverned]} if ungoverned else {})})
     # Under decision_grounding the governed layer is the whole action space, so a figure that cites no
     # governed result is not unverified but illegal: marked [policy], it becomes a refusal if the
     # budget runs out, instead of being served with a caveat (r_001 served 112,345 citing a call
     # that never ran).
-    policy = getattr(run.grounding.toolbox.g, "decision_grounding", False)
     lines = [("[policy] " if policy else "") + "Your answer was not accepted: some claims are malformed."]
     for f in broken:
         for ref in f["unresolved"]:
@@ -87,6 +99,13 @@ def malformed_claims(run, exit_call: ToolCall):
     for f in lists:
         lines.append(f"  claim {f['id']} cites {len(f['sources'])} figures but states one value "
                      f"({f['value']}) — write one claim per figure, each with its own value and source")
+    for f in ungoverned:
+        lines.append(f"  claim {f['id']} states {f['value']}, which "
+                     + ("cites no governed result" if "unsourced" in f["why"] else
+                        "is none of the values it cites and no difference, ratio or percent change of two of "
+                        "them") + " — every figure must be a governed result: cite the result that IS this "
+                     "figure, or query it with query_metric (a ratio over a period is read whole, not "
+                     "averaged from smaller periods)")
     lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
                  "Every governed result printed its citable fields on a [cite] line.")
     # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
@@ -94,7 +113,8 @@ def malformed_claims(run, exit_call: ToolCall):
     # the ANSWER, which no step owns.
     run.acts.append(Act("repair", str(Position.REPAIR), "handed back",
                          f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
-                         f"nothing, {len(lists)} list-shaped claim(s); "
+                         f"nothing, {len(lists)} list-shaped claim(s), {len(ungoverned)} ungoverned "
+                         f"figure(s); "
                          f"correction {run.claim_retries} of 2").as_dict())
     return ToolResult("\n".join(lines), is_error=True, reason="other" if policy else None)
 
