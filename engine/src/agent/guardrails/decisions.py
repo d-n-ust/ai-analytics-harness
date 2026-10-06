@@ -614,8 +614,63 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     answers, cost, model = _ask(questions, question)
     # The raw answers and the serving version are kept with the reading, so a stored row can be
     # replayed and the reading evaluated as a component without a new request.
-    cache[metric] = {**read(answers, surface, principles, back, lo, hi), "answers": answers, "model": model}
+    reading = {**read(answers, surface, principles, back, lo, hi), "answers": answers, "model": model}
+    if not any(d["state"] == "refuse" for d in reading["decisions"]):
+        residual, more, _model = _ask(residual_question(metric, reading, (governance or {}).get("segments")), question)
+        cost += more
+        reading = with_residual(reading, residual)
+    cache[metric] = reading
     return cache[metric], cost
+
+
+def summary(metric: str, reading: dict) -> str:
+    """What the reading found, in plain words, for the residual question to compare against."""
+    parts = [f"the metric {metric}"]
+    for dim, values in reading["filters"].items():
+        shown = [("in (" + ", ".join(map(str, v)) + ")") if isinstance(v, list) else "any" if v is None else f"= {v}"
+                 for v in values]
+        parts.append(f"{dim.split('__')[-1]} " + " or ".join(shown))
+    if reading["periods"]:
+        parts.append("period " + " and ".join(reading["periods"]))
+    if reading["group_by"]:
+        parts.append("split by " + ", ".join(g.split("__")[-1] for g in reading["group_by"]))
+    if reading.get("builtin"):
+        parts.append(f"always {reading['builtin'].split('__')[-1]}")
+    return "; ".join(parts)
+
+
+def residual_question(metric: str, reading: dict, segments: dict | None = None) -> dict:
+    """The residual, asked AFTER the reading and conditioned on it.
+
+    Every other question asks about a value the layer has, so a group it does not have ("emerging
+    markets", "power users") is never asked about and reads as no restriction (h_015 and h_019 served
+    the unrestricted totals). Asked in general, the question also fired on restrictions the reading
+    had expressed ("countries other than the US" 0.75, above the bar); asked about what lies BEYOND the
+    reading, the two targets scored 0.85 and 0.86 and no question with an answer scored above 0.48."""
+    governed = "; ".join(f"{name} ({' '.join(str((s or {}).get('means') or '').split())})"
+                         for name, s in (segments or {}).items())
+    return {"beyond": {
+        "type": "noul",
+        "instructions": f"The question has been read as asking for: {summary(metric, reading)}. Does it ALSO "
+                        "narrow down who or what is counted by something this reading does not include?"
+                        + (f" Governed segments that exist: {governed}." if governed else ""),
+        "criteria": {"true": "Yes: it limits the count to a group, kind or condition (a market, a tier, a "
+                             "behaviour, a cohort) that the reading above leaves out.",
+                     "false": "No: every restriction it makes is in the reading above, or it makes none "
+                              "beyond it."}}}
+
+
+def with_residual(reading: dict, answers: dict) -> dict:
+    """PURE. The reading with the residual's verdict: a restriction it leaves out is open. Open, not
+    refused: the group may map onto governed values the user can name ("emerging markets" as
+    countries), or onto nothing; asking covers both, and a refusal stays legal."""
+    p = _yes(answers, "beyond")
+    decisions = list(reading["decisions"])
+    if p >= CONFIDENT:
+        decisions.append({**_ungrounded("group", "the question narrows who or what is counted by something the "
+                                        "reading does not include, and no dimension value or governed segment "
+                                        "expresses it"), "confidence": p})
+    return {**reading, "decisions": decisions, "residual": {"p": p, "answers": answers}}
 
 
 # ── the question as a whole: which fork word it uses, and whether it asks to bend the rules ───────
@@ -694,8 +749,9 @@ def reading_text(metric: str, reading: dict, routed: dict | None = None) -> str:
     if reading["group_by"]:
         lines.append(f"  - breakdown: {', '.join(reading['group_by'])}"
                      + (" (each dimension in its own query)" if reading["separate"] else ""))
-    lines += [f"  - not filtered: every other dimension. Filtering or splitting by one the question "
-              f"does not name will not run."]
+    lines += ["  - not read as a restriction: every other dimension. If the question names or narrows by "
+              "anything not listed here, the layer may not have it: ask the user or refuse, and do not "
+              "answer for everyone instead."]
     lines += [f"  - {d['parameter']}: {d['disclose']}" for d in reading["decisions"]
               if d["state"] == "applied" and d.get("disclose")]
     if refusals:

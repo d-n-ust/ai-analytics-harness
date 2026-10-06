@@ -781,3 +781,20 @@ def test_a_region_the_question_names_stays_a_filter_beside_the_countries():
                    country=("except", 1.0), region=("only", 0.98))
     assert reading["filters"]["activity__region"] == ["EMEA"]
     assert reading["filters"]["activity__country"] == [["US", "BR", "DE"]]
+
+
+# ── the residual: a restriction the reading leaves out ─────────────────────────────────────────────
+def test_the_residual_is_asked_about_what_the_reading_found_and_opens_the_question_when_yes():
+    """h_015 "emerging markets", h_019 "power users": nothing in the layer expresses the group, so the
+    reading found no restriction and the totals were served. Asked conditioned on the reading, the
+    residual separates them (0.85, 0.86) from every question with an answer (at most 0.48)."""
+    reading = _read({"named:activity__platform:0": 0.99, "period:2026-06": 0.97})
+    assert DG.summary("app_opens", reading) == ("the metric app_opens; platform = android; period 2026-06; "
+                                                "always is_internal = false")
+    q = DG.residual_question("app_opens", reading, {"customers": {"means": "real customers"}})
+    assert "platform = android" in q["beyond"]["instructions"] and "customers (real customers)" in q["beyond"]["instructions"]
+    flagged = DG.with_residual(reading, {"beyond": {"noul": 0.85}})
+    assert [d["parameter"] for d in flagged["decisions"] if d["state"] == "ungrounded"] == ["group"]
+    assert DG.check(flagged, {"metric": "app_opens"})[0] == []
+    calm = DG.with_residual(reading, {"beyond": {"noul": 0.48}})
+    assert DG.check(calm, {"metric": "app_opens"})[0], "below the bar the call runs"
