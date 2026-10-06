@@ -66,8 +66,10 @@ def uncovered_values(run, exit_call):
     # with the parameters the agent chose for this one, so the figures are comparable.
     tb = run.grounding.toolbox
     team = ((getattr(tb, "governance", None) or {}).get("requester") or {}).get("team")
+    asked = run.grounded.get("_question") or {}
+    word = asked.get("term") if asked.get("term_known") else _forks.ANY
     for metric, queries in by_metric.items():
-        for other, reading_text, term in _forks.companions(metric, team, getattr(tb, "semantic", None)):
+        for other, reading_text, term in _forks.companions(metric, team, getattr(tb, "semantic", None), word):
             if other not in by_metric and not any(q.get("metric") == other for _, q in missing):
                 missing.append((f"'{term}' as {other}" + (f" ({reading_text})" if reading_text else ""),
                                 {**queries[0], "metric": other}))
@@ -97,6 +99,8 @@ def opening_reading(run) -> str:
     metrics = getattr(tb.semantic, "metrics", None) or {}
     chosen = _metric_choice(run, metrics)
     choice, p, probs, cost = chosen["choice"], chosen["p"], chosen["probabilities"], chosen["cost"]
+    asked, more = _decisions.question_level(run.grounded, run.question, tb.semantic)
+    cost += more
     head = "[question reading] Before you act: how the governed layer reads this question."
     text = ""
     if choice == "not_in_list" and p >= _decisions.CONFIDENT:
@@ -106,12 +110,16 @@ def opening_reading(run) -> str:
         text = (f"{head}\n  - OPEN metric: the question names no measure. Ask the user with `clarify`, "
                 f"offering governed metrics.")
     elif choice in metrics and p >= _decisions.CONFIDENT:
-        metric, routed = route_metric(choice, tb.governance, tb.semantic)
+        metric, routed = route_metric(choice, tb.governance, tb.semantic, asked["term"], asked["term_known"])
         if routed is None or routed["state"] != "ungrounded":
             reading, more = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
                                                    run.grounded)
             cost += more
             text = _decisions.reading_text(metric, reading, routed) if reading else ""
+    if asked["substitution"] >= _decisions.CONFIDENT and "REFUSE (" not in text:
+        # A more specific refusal (a value the layer lacks) is kept; otherwise this is the reason.
+        text = (f"{head}\n  - REFUSE (other): the question asks to present one figure as a different one, or to "
+                f"set the governance rules aside. No governed number answers that; do not run it.")
     if not text:
         likely = ", ".join(f"{k} ({v:.2f})" for k, v in sorted(probs.items(), key=lambda kv: -kv[1])[:3])
         text = f"{head}\n  - metric: not settled by the question; likeliest readings: {likely}."
@@ -135,7 +143,9 @@ def _reading_at_exit(run):
                           "`no_governed_definition`.", "no_governed_definition")
         if choice not in metrics or p < _decisions.CONFIDENT:
             return None, None                    # the metric itself is open: asking about it is legal
-        metric = route_metric(choice, tb.governance, tb.semantic)[0]
+        asked = run.grounded.get("_question") or {}
+        metric = route_metric(choice, tb.governance, tb.semantic, asked.get("term"),
+                              bool(asked.get("term_known")))[0]
     reading, cost = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
                                            run.grounded)
     _charge(run, cost)
@@ -158,18 +168,45 @@ def _charge(run, cost: float) -> None:
         run.turns[-1]["grounding_cost_usd"] = run.turns[-1].get("grounding_cost_usd", 0.0) + cost
 
 
+def _substitution(run, exit_call):
+    """A question asking to present one figure as another, or to set the rules aside, has one legal
+    reply: a refusal with `other`. Read once per run (decisions.question_level)."""
+    asked, cost = _decisions.question_level(run.grounded, run.question, run.grounding.toolbox.semantic)
+    _charge(run, cost)                           # 0.0 when already read this run
+    if asked["substitution"] < _decisions.CONFIDENT:
+        return None
+    if exit_call.name == "refuse" and str((exit_call.args or {}).get("reason") or "") == "other":
+        return None
+    return ("[policy] Your reply was not accepted: the question asks to present one figure as a different "
+            "one, or to set the governance rules aside. No governed number answers that, and asking which "
+            "figure to relabel does not either. Refuse with `other`.", "other")
+
+
 def exit_matches_reading(run, exit_call):
-    """Hand back a clarifying question or a refusal the reading does not allow. A [policy] hand-back
-    (the reading refuses) is converted to that refusal if the budget runs out."""
-    if exit_call.name not in ("clarify", "refuse") or not getattr(run.grounding.toolbox.g, "decision_grounding", False):
+    """Hand back a reply the reading does not allow. A [policy] hand-back (the reading refuses) is
+    converted to that refusal if the budget runs out.
+
+    Every reply is first held to the question as a whole (a request to bend the rules is refused);
+    a clarifying question or a refusal is then held to the reading of its metric."""
+    if exit_call.name not in ("answer", "clarify", "refuse") or not getattr(run.grounding.toolbox.g,
+                                                                             "decision_grounding", False):
         return None
     args = exit_call.args or {}
-    reading, verdict = _reading_at_exit(run)
-    if verdict is not None and exit_call.name == "refuse":
-        verdict = None                           # no governed metric: a refusal is the legal reply
-    if verdict is None and reading is not None:
-        verdict = (_decisions.exit_verdict(reading, args) if exit_call.name == "clarify" else
-                   _decisions.refusal_verdict(reading, str(args.get("reason") or "")))
+    asked, cost = _decisions.question_level(run.grounded, run.question, run.grounding.toolbox.semantic)
+    _charge(run, cost)                           # first, so routing below uses the question's word
+    verdict, reading_refuses = None, False
+    if exit_call.name != "answer":
+        reading, verdict = _reading_at_exit(run)
+        if verdict is not None and exit_call.name == "refuse":
+            verdict = None                       # no governed metric: a refusal is the legal reply
+        reading_refuses = reading is not None and any(d["state"] == "refuse" for d in reading["decisions"])
+        if verdict is None and reading is not None:
+            verdict = (_decisions.exit_verdict(reading, args) if exit_call.name == "clarify" else
+                       _decisions.refusal_verdict(reading, str(args.get("reason") or "")))
+    # Precedence: a refusal the reading makes (a value the layer lacks, r_004) keeps its own code;
+    # otherwise a request to bend the rules (h_013) outranks any other hand-back.
+    if not reading_refuses and not (verdict is not None and verdict[1] is not None):
+        verdict = _substitution(run, exit_call) or verdict
     if verdict is None:
         return None
     message, reason = verdict

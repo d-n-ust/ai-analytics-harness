@@ -313,15 +313,17 @@ def rules_text(governance: dict | None) -> str:
     return "\n".join(lines)
 
 
-def route_metric(metric: str, governance: dict | None, semantic=None) -> tuple[str, dict | None]:
+def route_metric(metric: str, governance: dict | None, semantic=None, term=None,
+                 term_known: bool = False) -> tuple[str, dict | None]:
     """Runtime governance for a metric in a fork: (the metric to query, the decision behind it).
 
     The fork and its resolution are declared in the semantic layer, on the metrics (`meta.terms`),
     and decided by preflight (guardrails/forks.py). Governance supplies only who is asking
-    (`requester.team`). A metric in no declared fork passes through with no decision."""
-    from .forks import resolve
+    (`requester.team`). A metric in no declared fork passes through with no decision. With
+    `term_known`, only the fork word the question uses (`term`, None for none) is routed."""
+    from .forks import ANY, resolve
     team = ((governance or {}).get("requester") or {}).get("team")
-    return resolve(metric, team, semantic)
+    return resolve(metric, team, semantic, term if term_known else ANY)
 
 
 def _ungrounded(parameter: str, why: str) -> dict:

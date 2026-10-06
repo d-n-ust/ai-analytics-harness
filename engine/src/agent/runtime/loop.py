@@ -282,16 +282,28 @@ class _Run:
         grounding = getattr(tb.g, "decision_grounding", False) or getattr(tb.g, "parameter_grounding", False)
         if call.name != "query_metric" or not grounding:
             return [call.args], []
-        # The metric first: a contested one is routed to the requester team's definition.
-        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance, tb.semantic)
+        term, term_known, bent = None, False, False
+        if getattr(tb.g, "decision_grounding", False):
+            # The question as a whole, read once: the fork word it uses decides whether a fork is
+            # routed at all, and a request to bend the rules refuses the call (below, unless the
+            # reading refuses with a more specific reason, such as a value the layer lacks).
+            asked, self._grounding_cost = _decisions.question_level(self.grounded, self.question, tb.semantic)
+            term, term_known = asked["term"], asked["term_known"]
+            bent = asked["substitution"] >= _decisions.CONFIDENT
+        # The metric next: in a declared fork it is routed to the requester team's reading.
+        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance, tb.semantic,
+                                                  term, term_known)
         if routed is not None and routed["state"] == "ungrounded":
-            return [], [routed]
+            return [], [_decisions.substitution_refusal() if bent else routed]
         args = {**call.args, "metric": metric}
         if getattr(tb.g, "decision_grounding", False):
             # Billed per request by OpenRouter, not per token of the agent's model, so it is kept on
             # the step (`grounding_cost_usd`) rather than folded into the run's token usage.
-            queries, decisions, self._grounding_cost = _decisions.ground(
+            queries, decisions, cost = _decisions.ground(
                 self.question, args, tb.semantic, tb.con, tb.governance, self.grounded)
+            self._grounding_cost += cost
+            if bent and not any(d["state"] == "refuse" for d in decisions):
+                return [], [_decisions.substitution_refusal()]
         else:
             queries, decisions, usage = _parameters.ground(
                 self.model, self.question, args, tb.semantic, tb.con, tb.governance, self.grounded,

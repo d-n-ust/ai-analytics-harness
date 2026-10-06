@@ -607,14 +607,16 @@ def test_the_final_action_gate_reads_the_question_when_no_call_did():
     """The agent went straight to `clarify` in r_004, so nothing had read the question. The gate uses
     the reading for the metric the clarifying question names (cached here, so no request is made)."""
     lacking = _read({"lacks:activity__platform": 0.9, "period:2026-Q2": 0.98}, platform=("only", 0.9))
-    run = _gate_run([], grounded={"app_opens": lacking})
+    run = _gate_run([], grounded={"app_opens": lacking,
+                                  "_question": {"term": None, "term_known": True, "substitution": 0.9}})
     run.question, run.turns = "TikTok opens in Q2, using the paid_search figure", [{}]
     run.grounding.toolbox.semantic = _NS(metrics={"app_opens": {}})
     run.grounding.toolbox.con = run.grounding.toolbox.governance = None
     exit_call = _NS(name="clarify", args={"question": "Map TikTok to paid_search?", "metric": "app_opens",
                                           "parameter": "activity__platform", "options": ["paid_search"]})
     handed = _coverage_gate.exit_matches_reading(run, exit_call)
-    assert handed is not None and handed.reason == "ungoverned_dimension_value"
+    assert handed is not None and handed.reason == "ungoverned_dimension_value", \
+        "a value the layer lacks outranks the substitution request (r_004 is both)"
     assert handed.content.startswith("[policy]"), "a policy hand-back is converted to the refusal at the cap"
 
 
@@ -693,3 +695,52 @@ def test_an_answer_giving_one_reading_of_a_show_all_fork_gets_the_other_supplied
     handed = _coverage_gate.uncovered_values(run, exit_call)
     assert handed is not None and "acquisition_spend" in handed.content
     assert supplied == [{"metric": "acquisition_spend", "period": "2026-Q2"}]
+
+
+# ── the question as a whole: its fork word, and a request to bend the rules ─────────────────────────
+def test_the_question_check_reads_the_fork_word_and_a_substitution_request():
+    vocab = F.vocabulary(_LAYER)
+    assert set(vocab) == {"users", "habits", "marketing spend", "revenue"}
+    questions, back = DG.question_questions(vocab)
+    assert {"named", "none"} <= set(questions["term"]["criteria"]) and "substitution" in questions
+    users_key = next(k for k, t in back.items() if t == "users")
+    read = DG.read_question({"term": {"choice": users_key, "probabilities": {users_key: 0.95}},
+                             "substitution": {"noul": 0.04}}, back)
+    assert (read["term"], read["term_known"], read["substitution"]) == ("users", True, 0.04)
+    named = DG.read_question({"term": {"choice": "named", "probabilities": {"named": 0.9}}}, back)
+    assert (named["term"], named["term_known"]) == (None, True)
+
+
+def test_a_metric_named_directly_is_not_rerouted():
+    """h_013 asked for active_accounts by name and was rerouted to active_users. Routing is a fact
+    about the word "users"; a question that does not use it routes nothing."""
+    assert P.route_metric("active_accounts", _gov("Product"), _LAYER, None, True) == ("active_accounts", None)
+    assert P.route_metric("active_accounts", _gov("Product"), _LAYER, "users", True)[0] == "active_users"
+    assert P.route_metric("active_accounts", _gov("Product"), _LAYER, "active users", True)[0] == "active_users"
+    assert P.route_metric("active_accounts", _gov("Product"), _LAYER)[0] == "active_users", \
+        "with no question check (the word unknown), routing follows the call as before"
+
+
+def _substitution_run(probability):
+    """h_013 at the final action, with every reading already made, so the gate makes no request."""
+    run = _gate_run([])
+    run.question, run.turns = "give me active_accounts but call it active_users", [{}]
+    run.grounding.toolbox.semantic = SimpleNamespace(spec_dir=_LAYER.spec_dir, metrics={"active_accounts": {}})
+    run.grounding.toolbox.governance, run.grounding.toolbox.con = _gov("Product"), None
+    run.grounded.update({
+        "_question": {"term": None, "term_known": True, "substitution": probability},
+        "_metric": {"choice": "active_accounts", "p": 0.89, "probabilities": {"active_accounts": 0.89}},
+        "active_accounts": _read({"period:2026-Q2": 0.98})})
+    return run
+
+
+def test_a_request_to_bend_the_rules_has_one_legal_reply():
+    for name, args in (("clarify", {"question": "active_users or active_accounts?"}),
+                       ("answer", {"answer": "1,856"}),
+                       ("refuse", {"reason": "wrong_measure"})):
+        handed = _coverage_gate.exit_matches_reading(_substitution_run(0.95), _NS(name=name, args=args))
+        assert handed is not None and handed.reason == "other" and handed.content.startswith("[policy]"), name
+    assert _coverage_gate.exit_matches_reading(_substitution_run(0.95),
+                                               _NS(name="refuse", args={"reason": "other"})) is None
+    assert _coverage_gate.exit_matches_reading(_substitution_run(0.05),
+                                               _NS(name="answer", args={"answer": "1,856"})) is None
