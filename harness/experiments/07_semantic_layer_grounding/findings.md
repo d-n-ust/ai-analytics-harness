@@ -15,7 +15,8 @@ the grounding arms and their measured runs on a 16-question development suite. S
 (2026-10-03 to 2026-10-05) record the redesign of the decision arm, measured on the same 16 questions
 and on a 19-question red-team suite. Every number in them comes from questions the authors wrote and
 then fixed failures on, so none is a held-out result (E-12, E-13). Section 18 records a 19-question
-held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it. Model throughout: `gpt-5-mini`;
+held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it;
+section 19 records the first and only held-out result, on frozen code. Model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
 until 2026-10-06 and pinned since; every reading now records the version that served it.
 
@@ -370,7 +371,7 @@ report's 95% cluster bootstrap over questions (n_q = 16).
 | R3+decision_grounding | 47 / 48 | 0.021 [0.000, 0.062] | 0.989 [0.963, 1.000] | 1.000 | 3 / 33 | $0.054 | 2.88 |
 
 The silent error column is the report's set-level rate. By the row-level definition (`served_wrong`)
-the values are 0.146, 0.167, 0.042 and 0.000 (section 19).
+the values are 0.146, 0.167, 0.042 and 0.000 (section 20).
 
 10 of 16 questions separated the arms; 6 were correct in every arm (q_001, t_001, t_002, t_005,
 t_008, t_009). Correct out of 3, on the separating questions:
@@ -613,7 +614,68 @@ Writing the suite found three problems before any run, all in our own setup:
   emit (added); a refuse-or-ask case could not name its metric although refuse and ask cases can
   (fixed); it lists `out_of_scope`, which the agent's vocabulary does not define (open).
 
-## 19 · Measurement issues found along the way
+## 19 · Held-out results
+
+Run `runs/experiments/07_semantic_layer_grounding/20261006-194504-01_parameter_grounding`, 2026-10-06:
+the code tagged `exp07-code-v1`, the suite tagged `exp07-heldout-v1`, five arms x 19 questions x 3
+repetitions = 285 rows, `gpt-5-mini` via OpenRouter, claims with hand-backs (`claims+repair`) in every
+arm, no error rows, $0.49. Intervals are the report's 95% cluster bootstrap over questions (n_q = 19).
+
+| arm | correct | silent error | balanced accuracy | coverage | model calls / question | cost |
+|---|---|---|---|---|---|---|
+| R4 | 36 / 57 | 0.298 [0.140, 0.491] | 0.633 [0.458, 0.795] | 0.952 | 3.33 | $0.084 |
+| R4+disclose_assumptions | 38 / 57 | 0.298 [0.140, 0.491] | 0.651 [0.489, 0.807] | 1.000 | 3.37 | $0.091 |
+| R4+parameter_grounding | 31 / 57 | 0.193 [0.053, 0.368] | 0.643 [0.492, 0.831] | 0.762 | 3.75 | $0.110 |
+| R4+decision_grounding | 42 / 57 | 0.053 [0.000, 0.158] | 0.837 [0.612, 0.978] | 0.762 | 3.53 | $0.121 |
+| R4+decision_grounding+reading_first | 38 / 57 | 0.193 [0.053, 0.368] | 0.742 [0.497, 0.922] | 0.809 | 2.58 | $0.086 |
+
+What the held-out suite shows:
+
+- **The development results were fit.** The decision arm's balanced accuracy was 1.00 on both
+  development suites (sections 16 and 17) and is 0.84 here; its silent error was 0 and is 0.05.
+- **Decision grounding still has the lowest silent error**, 0.05 against 0.30 for the plain agent, at
+  a cost in coverage (0.95 to 0.76). At n_q = 19 the report's floor for a per-question difference is
+  0.316, so this difference (0.245) is a direction on this suite alone, not a significant result.
+- **Showing the reading first made the arm worse** (silent error 0.05 to 0.19). It still saved model
+  calls (3.53 to 2.58 per question) and cost.
+
+Correct out of 3 for the two decision arms, on the questions where either missed:
+
+| question | expected | decision grounding | + reading first |
+|---|---|---|---|
+| h_001 users "across the business" | answer | 3 | 2 (1 refused) |
+| h_004 weekly app opens over H1 | answer | 2 (1 refused) | 3 |
+| h_005 signups Q1 vs Q2 | answer | 2 (1 refused) | 3 |
+| h_007 countries other than the US | answer | 0 (asked) | 0 (asked) |
+| h_012 false premise | refuse | 0 (refused, code `other` at the cap, not `false_premise`) | 0 (1 silent) |
+| h_013 "give me active_accounts" | refuse | 0 (asked) | 0 (1 silent) |
+| h_015 "emerging markets" | refuse or ask | 2 (1 asked through the answer tool, no figure) | 0 (3 silent) |
+| h_018 total marketing spend | contested | 0 (3 silent) | 0 (3 silent) |
+| h_019 "power users" | refuse or ask | 3 | 0 (3 silent) |
+
+**The reading as a component.** Every row now stores the reading (section 17 onwards), so it can be
+scored without a new request. The action the reading implies (refuse when it refuses, ask when a
+parameter is open, answer otherwise) matches the label on 12 of 19 questions. The misses fall into
+six kinds:
+
+| question | what the reading does not see |
+|---|---|
+| h_015 "emerging markets", h_019 "power users" | a group that is no dimension's value. The reading asks only about dimension members, so it finds no restriction at all |
+| h_018 total marketing spend | two governed metrics that governance does not declare as rivals; the metric choice is certain (`marketing_spend`, 1.00) |
+| h_013 "give me the active_accounts number" | owner routing replaces a metric the user names explicitly with Product's `active_users`; routing should apply only to the ambiguous word ("users") |
+| h_012 "now that referral signups have stopped" | a false premise; the reading has no premise check and includes referral as a named value |
+| h_007 "countries other than the US" | alongside the correct country exclusion, a "region: except" reading with nothing named (0.96), which makes the arm ask |
+
+**Why showing the reading first is worse.** On h_015 and h_019 the reading found nothing to flag. The
+arm without it left the judgement to the agent, which asked which region and which segment. With
+it, the agent read "not filtered: every other dimension" and served the unrestricted totals (1,856
+active users; 35,617 habits) in every run. The reading text states its completeness, so a reading
+that misses something overrides an agent that would have caught it.
+
+The held-out suite has now been used. Any change made after reading these misses is fitted to it, and
+needs a new held-out suite to be measured.
+
+## 20 · Measurement issues found along the way
 
 | issue | effect | status |
 |---|---|---|
@@ -626,11 +688,15 @@ Writing the suite found three problems before any run, all in our own setup:
 | a list filter was reported as matching no rows | the agent refused a correct `IN` query (section 15) | fixed |
 | the case schema lists `out_of_scope`, which the agent's refusal vocabulary does not define | a case expecting it could never be graded correct | open |
 
-## 20 · Open
+## 21 · Open
 
-- Run every arm on the held-out suite (section 18), three repetitions, on a frozen and tagged commit
-  (E-12, E-13). Its author was an independent agent, not a person; a suite written by a person outside
-  the project is still the stronger test.
+- Address the six reading misses of section 19 in general terms, not per question: a reading question
+  for a group no dimension expresses; reading text that does not claim completeness; owner routing
+  only for the ambiguous word; ignore a restriction with nothing named when another dimension's named
+  value explains it; a premise check. Undeclared rival metrics (h_018) need a governance declaration
+  or a catalogue-level overlap detector.
+- Measure those changes on a second held-out suite (v2) from another independent author, since v1 has
+  now been seen. A suite written by a person outside the project is still the stronger test.
 - The four subscription metrics crash the parameter surface (`cohort_month` is declared but never
   built), so no question about revenue or subscriptions can be grounded.
 - Evaluate the reading as a component against `expect.params`. Since 2026-10-06 every row stores the
