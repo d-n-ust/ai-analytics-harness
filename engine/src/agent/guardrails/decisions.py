@@ -308,10 +308,25 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
             entry["maybe"].append((value, p))
     for e in dims.values():
         e["unsure"] = [v for v, p in e["maybe"] if p >= (LEAN if e["named"] else PLAUSIBLE)]
+    # A dimension confidently restricted to named values settles every dimension it determines in
+    # the data (each country has one region): a restriction there that names nothing is implied by it,
+    # not open (h_007: "countries other than the US" also read as "region: leaves something out").
+    determines = surface["parameters"]["filters"].get("determines") or {}
+    settled = {dim for dim, e in dims.items() if e["named"]
+               and _pick(answers, f"mode:{dim}")[0] in ("only", "except")
+               and _pick(answers, f"mode:{dim}")[1] >= CONFIDENT}
+    implied_by = {child: parent for parent in settled for child in determines.get(parent, ()) if child != parent}
     for dim, e in dims.items():
         name = dim.split("__")[-1]
         mode, p_mode = _pick(answers, f"mode:{dim}")
         mode = mode or "none"                    # no answer: the request did not ask about it
+        if dim in implied_by and not e["named"]:
+            parent = implied_by[dim].split("__")[-1]
+            if mode in ("only", "except") or e["unsure"]:
+                decisions.append(_decision("filter", f"{name}: implied", "none", state="dropped",
+                                           why=f"implied by the {parent} filter: each {parent} belongs to one "
+                                               f"{name}"))
+            continue
         # A term with no counterpart counts against THIS dimension only when the question restricts
         # it: asked alone, the model files an unmatched word under every dimension ("iPhone" read as
         # a channel with no counterpart, 0.82).

@@ -115,9 +115,11 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
     return out
 
 
-def parameter_surface(models: dict, metrics: dict, metric: str, members: dict) -> dict:
+def parameter_surface(models: dict, metrics: dict, metric: str, members: dict,
+                      determines: dict | None = None) -> dict:
     """PURE. The whole parameter surface of `metric`. `members` maps (table, column) to that
-    column's member list, or to None where the set is open; a missing key is an open set."""
+    column's member list, or to None where the set is open; a missing key is an open set.
+    `determines` maps a dimension name to the dimensions it determines (see `build`)."""
     _, measure = _measure_home(models, metrics, metric)
     dims = [{**d, "members": members.get((d["table"], d["column"]))}
             for d in reachable_dimensions(models, metrics, metric)]
@@ -127,7 +129,8 @@ def parameter_surface(models: dict, metrics: dict, metric: str, members: dict) -
         "agg": measure.get("agg"),
         "filter": metric_filter(metrics, metric),
         "parameters": {
-            "filters": {"how": "equality on any dimension below", "dimensions": dims},
+            "filters": {"how": "equality on any dimension below", "dimensions": dims,
+                        "determines": dict(determines or {})},
             "group_by": {"how": "any dimension below, or metric_time for a time series",
                          "dimensions": [d["name"] for d in dims] + ["metric_time"]},
             "time_grain": {"how": "bucket a time series", "legal_values": list(TIME_GRAINS)},
@@ -142,10 +145,27 @@ def _members(cursor, table: str, column: str) -> list | None:
     return None if len(rows) > MAX_MEMBERS else [r[0] for r in rows]
 
 
+def _determines(cursor, table: str, a: str, b: str) -> bool:
+    """Does each value of `a` come with exactly one value of `b` in the data (country -> region)?
+    Read from the rows, not from a description, so it holds for the warehouse as it is."""
+    row = cursor.execute(f"SELECT max(n) FROM (SELECT {a}, count(DISTINCT {b}) AS n FROM {table} "
+                         f"WHERE {a} IS NOT NULL GROUP BY {a})").fetchone()
+    return bool(row) and row[0] == 1
+
+
 def build(cursor, layer_text: str, metric: str) -> dict:
     """The imperative shell: read each reachable dimension's member set from the table the layer
-    names (`node_relation`), then hand everything to the pure `parameter_surface`."""
+    names (`node_relation`), and which closed dimensions determine which within a table, then hand
+    everything to the pure `parameter_surface`."""
     models, metrics = load_layer(layer_text)
-    members = {(d["table"], d["column"]): _members(cursor, d["table"], d["column"])
-               for d in reachable_dimensions(models, metrics, metric)}
-    return parameter_surface(models, metrics, metric, members)
+    dims = reachable_dimensions(models, metrics, metric)
+    members = {(d["table"], d["column"]): _members(cursor, d["table"], d["column"]) for d in dims}
+    closed = [d for d in dims if members.get((d["table"], d["column"]))]
+    determines: dict = {}
+    for a in closed:
+        for b in closed:
+            if (a is not b and a["table"] == b["table"]
+                    and len(members[(a["table"], a["column"])]) > len(members[(b["table"], b["column"])])
+                    and _determines(cursor, a["table"], a["column"], b["column"])):
+                determines.setdefault(a["name"], []).append(b["name"])
+    return parameter_surface(models, metrics, metric, members, determines)

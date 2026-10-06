@@ -744,3 +744,40 @@ def test_a_request_to_bend_the_rules_has_one_legal_reply():
                                                _NS(name="refuse", args={"reason": "other"})) is None
     assert _coverage_gate.exit_matches_reading(_substitution_run(0.05),
                                                _NS(name="answer", args={"answer": "1,856"})) is None
+
+
+# ── a dimension the data determines from another ──────────────────────────────────────────────────
+_GEO = {**SURFACE, "parameters": {"filters": {
+    "dimensions": [{"name": "activity__country", "members": ["US", "BR", "GB", "DE"], "description": ""},
+                   {"name": "activity__region", "members": ["Americas", "EMEA"], "description": ""}],
+    "determines": {"activity__country": ["activity__region"]}}}}
+_GEO_BACK = {"mode:activity__country": ("activity__country", "mode"),
+             **{f"named:activity__country:{i}": ("activity__country", m) for i, m in enumerate(["US", "BR", "GB", "DE"])},
+             "mode:activity__region": ("activity__region", "mode"),
+             **{f"named:activity__region:{i}": ("activity__region", m) for i, m in enumerate(["Americas", "EMEA"])},
+             "period:2026-Q2": ("period", "2026-Q2")}
+
+
+def _geo(yes, **modes):
+    answers = {k: {"noul": p} for k, p in yes.items()}
+    answers["shape"] = {"choice": "total", "probabilities": {"total": 1.0}}
+    for dim, (c, p) in modes.items():
+        answers[f"mode:activity__{dim}"] = {"choice": c, "probabilities": {c: p}}
+    return DG.read(answers, _GEO, PRINCIPLES, _GEO_BACK, _LO, _HI)
+
+
+def test_a_restriction_implied_by_a_finer_dimension_is_not_an_open_question():
+    """h_007: "countries other than the US" also read as "region: leaves something out" with no region
+    named, and the arm asked. Each country has one region, so the country filter settles it."""
+    reading = _geo({"named:activity__country:0": 0.99, "named:activity__region:0": 0.15, "period:2026-Q2": 0.98},
+                   country=("except", 1.0), region=("except", 0.97))
+    assert not [d for d in reading["decisions"] if d["state"] == "ungrounded"]
+    assert reading["filters"] == {"activity__country": [["BR", "GB", "DE"]]}
+
+
+def test_a_region_the_question_names_stays_a_filter_beside_the_countries():
+    """"EMEA countries other than the UK": the region is named, so both filters apply."""
+    reading = _geo({"named:activity__country:2": 0.98, "named:activity__region:1": 0.97, "period:2026-Q2": 0.98},
+                   country=("except", 1.0), region=("only", 0.98))
+    assert reading["filters"]["activity__region"] == ["EMEA"]
+    assert reading["filters"]["activity__country"] == [["US", "BR", "DE"]]
