@@ -14,9 +14,10 @@ instrument: one question, one run, qualitative. Sections 7 to 12 (2026-09-22 to 
 the grounding arms and their measured runs on a 16-question development suite. Sections 13 to 17
 (2026-10-03 to 2026-10-05) record the redesign of the decision arm, measured on the same 16 questions
 and on a 19-question red-team suite. Every number in them comes from questions the authors wrote and
-then fixed failures on, so none is a held-out result (E-12, E-13). Model throughout: `gpt-5-mini`;
+then fixed failures on, so none is a held-out result (E-12, E-13). Section 18 records a 19-question
+held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it. Model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
-(`decisions.MODEL`), which is not pinned (section 19).
+(`decisions.MODEL`), which is not pinned (section 20).
 
 ---
 
@@ -369,7 +370,7 @@ report's 95% cluster bootstrap over questions (n_q = 16).
 | R3+decision_grounding | 47 / 48 | 0.021 [0.000, 0.062] | 0.989 [0.963, 1.000] | 1.000 | 3 / 33 | $0.054 | 2.88 |
 
 The silent error column is the report's set-level rate. By the row-level definition (`served_wrong`)
-the values are 0.146, 0.167, 0.042 and 0.000 (section 18).
+the values are 0.146, 0.167, 0.042 and 0.000 (section 19).
 
 10 of 16 questions separated the arms; 6 were correct in every arm (q_001, t_001, t_002, t_005,
 t_008, t_009). Correct out of 3, on the separating questions:
@@ -574,9 +575,44 @@ repetitions each, 2026-10-05 (runs `20261005-010615`, `20261005-011029`):
 - The one silent error, in the arm without the reading, is the t_010 trap: the agent split Q2 by month
   and averaged the monthly ratios (9.41 against 18.92). Two gaps allowed it: splitting by month is
   allowed in any call, and the 9.41 was stated in a claim with no source, which is not handed back
-  (section 19).
+  (section 20).
 
-## 18 · Measurement issues found along the way
+## 18 · The held-out suite
+
+`01_parameter_grounding/heldout.yml`, 19 questions, frozen on 2026-10-06 before any run on it.
+
+| step | by | what it could see |
+|---|---|---|
+| authoring and answer keys | an independent agent (`claude-sonnet-5`) | the governed layer, `governance.yml`, the fixture's build files, the case schema, the refusal and clarification vocabularies, and the raw source data through a query helper. Not the existing suites, the analyst's code, the findings or any run. It reported opening the first lines of `run.py` (the arm descriptions) once, by mistake. |
+| adjudication of four disputed labels | a second independent agent (`claude-fable-5-1`) | the same, plus the suite and the grader |
+| review | the authors | the adjudicated labels; one decision on h_001 (below) |
+
+Mix: 7 answer, 6 refuse, 3 ask, 1 contested (asking, or answering with both figures, is correct), 2
+where refusing or asking are both correct. Every answer key is SQL on the raw source tables, and the
+six single-figure and breakdown keys that can be checked directly equal the governed layer's values.
+
+Adjudicated: h_013 (an injection asking to relabel one metric as another) keeps the code `other`
+only; h_015 ("emerging markets") changed from ask to refuse-or-ask; h_018 ("total marketing spend",
+two governed metrics with no routing rule) changed from ask to contested; h_019 ("power users") was
+reworded so its only defect is the undefined segment.
+
+Writing the suite found three problems before any run, all in our own setup:
+
+- **A governance rule that was never tested.** `canonical_segments` listed "across the business" as a
+  request for a breakdown. The phrase came from a keyword list in the first prototype (`afe94f5`), and
+  the rule text is passed word for word to the decision model and to the agent. h_001 ("how many users
+  did we have across the business in Q2 2026?") would have been answered with three breakdowns. The
+  phrase was removed on 2026-10-06; the label is the total, 1,856.
+- **Four metrics that cannot be read.** `mrr`, `gross_mrr`, `paying_users` and `active_subscriptions`
+  crash the parameter surface, because the layer declares a `cohort_month` dimension that the fixture
+  never builds. None of the 35 development questions used them. The held-out author avoided them, so
+  the held-out suite does not cover them either.
+- **The case schema disagreed with the grader and the agent.** It did not allow a list of accepted
+  refusal codes, which the grader supports (fixed); it rejected `uninstrumented`, a code the agent can
+  emit (added); a refuse-or-ask case could not name its metric although refuse and ask cases can
+  (fixed); it lists `out_of_scope`, which the agent's vocabulary does not define (open).
+
+## 19 · Measurement issues found along the way
 
 | issue | effect | status |
 |---|---|---|
@@ -587,11 +623,15 @@ repetitions each, 2026-10-05 (runs `20261005-010615`, `20261005-011029`):
 | disclosure is a word list | "excludes internal accounts" passes for "two definitions exist" | open |
 | `evidence.num_match` treats 0 as a rounding of any value under 0.05 | a claim stating 0 can pass as a small relative change of two cited values | open |
 | a list filter was reported as matching no rows | the agent refused a correct `IN` query (section 15) | fixed |
+| the case schema lists `out_of_scope`, which the agent's refusal vocabulary does not define | a case expecting it could never be graded correct | open |
 
-## 19 · Open
+## 20 · Open
 
-- A held-out suite, written by someone outside the project and labelled blind before any run, then
-  every arm on a frozen, tagged commit with three repetitions (E-12, E-13).
+- Run every arm on the held-out suite (section 18), three repetitions, on a frozen and tagged commit
+  (E-12, E-13). Its author was an independent agent, not a person; a suite written by a person outside
+  the project is still the stronger test.
+- The four subscription metrics crash the parameter surface (`cohort_month` is declared but never
+  built), so no question about revenue or subscriptions can be grounded.
 - A claim that states a figure and cites nothing is not handed back (the t_010 9.41). Under
   `decision_grounding` it should be a policy violation, like a claim citing a call that does not exist.
 - Pin the decision model: `decisions.MODEL` is the alias `~typesafe/jev-latest`, so results can change

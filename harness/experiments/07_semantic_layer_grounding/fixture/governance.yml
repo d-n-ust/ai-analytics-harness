@@ -151,7 +151,11 @@ methodological_rules:
     status: certified
   - id: canonical_segments
     slot: group_by
-    when: "an unspecified breakdown is asked ('by segment', 'across the business') with no dimension named"
+    # "across the business" was listed here until 2026-10-06. It came from a keyword list in the first
+    # prototype and was never tested; this text is shown to the decision model and the agent, so it
+    # taught them that "how many users across the business" asks for a breakdown. It usually means
+    # a total (held-out h_001).
+    when: "an unspecified breakdown is asked ('by segment') with no dimension named"
     default: [activity__platform, activity__region, activity__channel]
     # One breakdown per dimension, not a cross-table: "the standard segments" means three views an
     # analyst reads side by side, and a single group_by over all three returns every combination.

@@ -14,7 +14,7 @@ from ontology.parameters import load_layer, reachable_dimensions
 
 EXP = Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding"
 MODELS, METRICS = load_layer((EXP / "fixture" / "layer" / "semantic_models.yml").read_text())
-SUITES = ("cases.yml", "probes_quotes.yml", "redteam.yml")
+SUITES = ("cases.yml", "probes_quotes.yml", "redteam.yml", "heldout.yml")
 
 
 def _cases():

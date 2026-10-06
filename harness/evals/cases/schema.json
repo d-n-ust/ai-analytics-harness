@@ -113,20 +113,47 @@
        "const": "refuse"
       },
       "reason": {
-       "enum": [
-        "no_governed_definition",
-        "out_of_coverage",
-        "segment_undefined",
-        "no_causal_evidence",
-        "false_premise",
-        "wrong_measure",
-        "wrong_grain",
-        "dimension_not_supported",
-        "ungoverned_dimension_value",
-        "result_empty",
-        "implausible_value",
-        "out_of_scope",
-        "other"
+       "anyOf": [
+        {
+         "enum": [
+          "no_governed_definition",
+          "out_of_coverage",
+          "segment_undefined",
+          "no_causal_evidence",
+          "false_premise",
+          "wrong_measure",
+          "wrong_grain",
+          "dimension_not_supported",
+          "ungoverned_dimension_value",
+          "result_empty",
+          "implausible_value",
+          "out_of_scope",
+          "other",
+          "uninstrumented"
+         ]
+        },
+        {
+         "type": "array",
+         "minItems": 2,
+         "items": {
+          "enum": [
+           "no_governed_definition",
+           "out_of_coverage",
+           "segment_undefined",
+           "no_causal_evidence",
+           "false_premise",
+           "wrong_measure",
+           "wrong_grain",
+           "dimension_not_supported",
+           "ungoverned_dimension_value",
+           "result_empty",
+           "implausible_value",
+           "out_of_scope",
+           "other",
+           "uninstrumented"
+          ]
+         }
+        }
        ]
       },
       "gold_sql": {
@@ -253,20 +280,47 @@
       },
       "reason": {
        "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
-       "enum": [
-        "no_governed_definition",
-        "out_of_coverage",
-        "segment_undefined",
-        "no_causal_evidence",
-        "false_premise",
-        "wrong_measure",
-        "wrong_grain",
-        "dimension_not_supported",
-        "ungoverned_dimension_value",
-        "result_empty",
-        "implausible_value",
-        "out_of_scope",
-        "other"
+       "anyOf": [
+        {
+         "enum": [
+          "no_governed_definition",
+          "out_of_coverage",
+          "segment_undefined",
+          "no_causal_evidence",
+          "false_premise",
+          "wrong_measure",
+          "wrong_grain",
+          "dimension_not_supported",
+          "ungoverned_dimension_value",
+          "result_empty",
+          "implausible_value",
+          "out_of_scope",
+          "other",
+          "uninstrumented"
+         ]
+        },
+        {
+         "type": "array",
+         "minItems": 2,
+         "items": {
+          "enum": [
+           "no_governed_definition",
+           "out_of_coverage",
+           "segment_undefined",
+           "no_causal_evidence",
+           "false_premise",
+           "wrong_measure",
+           "wrong_grain",
+           "dimension_not_supported",
+           "ungoverned_dimension_value",
+           "result_empty",
+           "implausible_value",
+           "out_of_scope",
+           "other",
+           "uninstrumented"
+          ]
+         }
+        }
        ]
       },
       "params": {
@@ -285,6 +339,10 @@
          }
         ]
        }
+      },
+      "metric": {
+       "type": "string",
+       "description": "The metric the question is about, so its params can be checked."
       }
      }
     },

@@ -104,7 +104,7 @@ def load_cases(name: str = "cases.yml") -> list[dict]:
 
 def check_params(cases: list, con) -> None:
     """Every labelled value is a real member of its dimension, `ask`, or a list of those, except in
-    a refuse case, where naming something the layer lacks is the point. A typo in a label (`andriod`)
+    a refuse or refuse-or-ask case, where naming something the layer lacks is the point. A typo in a label (`andriod`)
     would otherwise grade every arm against a value no query can produce."""
     from ontology import parameters as surface
     layer = (LAYER / "semantic_models.yml").read_text()
@@ -116,7 +116,7 @@ def check_params(cases: list, con) -> None:
         members = {d["column"]: {str(m).lower() for m in d["members"] or ()}
                    for d in surface.build(con, layer, metric)["parameters"]["filters"]["dimensions"]}
         for key, value in (e.get("params") or {}).items():
-            if key not in members or not members[key] or e["type"] == "refuse":
+            if key not in members or not members[key] or e["type"] in ("refuse", "ambiguous"):
                 continue
             bad = [v for v in (value if isinstance(value, list) else [value])
                    if v.lower() not in members[key] | {"none", "ask"}]
