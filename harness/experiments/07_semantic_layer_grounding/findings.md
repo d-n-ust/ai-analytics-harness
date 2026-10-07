@@ -16,8 +16,12 @@ the grounding arms and their measured runs on a 16-question development suite. S
 and on a 19-question red-team suite. Every number in them comes from questions the authors wrote and
 then fixed failures on, so none is a held-out result (E-12, E-13). Section 18 records a 19-question
 held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it;
-section 19 records the first and only held-out result, on frozen code. Section 20 (2026-10-06 to
-2026-10-07) records the fixes made after reading its misses; they are fitted to that suite. Model throughout: `gpt-5-mini`;
+section 19 records the first held-out result, on frozen code. Section 20 (2026-10-06 to
+2026-10-07) records the fixes made after reading its misses; they are fitted to that suite. Section
+22 records a second held-out suite (v2, another independent author) and its result on frozen code,
+the only held-out result for the section 20 fixes; section 23 records the fixes made after it, which
+are fitted to v2. Section 24 records the design and review of a semantic-layer readiness audit; it
+has not been run. Model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
 until 2026-10-06 and pinned since; every reading now records the version that served it.
 
@@ -845,8 +849,76 @@ h2_005 still asks for the period (the layer gap). The probe also exposed two thi
 These are fitted to v2's failures. v2 is a development set from here on; the next measurement needs
 a suite no fix has seen.
 
-## 24 · Open
+## 24 · A semantic-layer readiness audit: prior art and review
 
+**Why.** After v2 the question was whether the remaining failures are parameters the layer does not
+ground, and whether a systematic check of the layer would find them before a run. The proposal: build
+an inventory of every slot of the layer, rate each slot against criteria (value set, names for
+values, default when omitted, hierarchy and additivity, meaning, coverage, ownership) as structural /
+prose only / missing, annotate the questions phrase by phrase, split gaps into those of the layer and
+those of the runtime, and test per slot rather than per question.
+
+**Prior art** (five research agents, sources checked, 2026-10-07). The method is a recombination,
+not a new method. Every part has an established name, and the audit should use them:
+
+| part of the method | established name |
+|---|---|
+| "grounded" | related to, and narrower than, semantic tractability (PRECISE, Popescu et al. 2003), which has no defaults or rules |
+| inventory from the layer | interface-based input domain model (Ammann and Offutt) |
+| question annotation | competency questions and their presuppositions (Grüninger and Fox 1995; Ren et al. 2014) |
+| layer gap vs runtime gap | STPA causes of an inadequate process model (Leveson and Thomas 2018) |
+| tests per slot | category-partition with base-choice coverage; CheckList invariance and directional tests; metamorphic relations |
+| value set, value meaning | enumerated vs described value domain, value meaning (ISO/IEC 11179) |
+| names for values | lexicalisation; SKOS preferred and alternative labels; synonym and ambiguity control (ISO 25964) |
+| default when omitted | required vs optional slot with a default (Schema-Guided Dialogue, Rastogi et al. 2020) |
+| coverage, ownership | population completeness; data ownership and stewardship (DAMA) |
+
+Not found in any source: the three-level rating applied to every criterion of every slot, and the
+audit of a semantic layer itself from the side of a natural-language consumer. Vendors (Snowflake,
+Databricks, Power BI, ThoughtSpot, Looker, dbt, Cube) give fields and tips and evaluate whole
+questions; none audits per slot or per cause. Counter-evidence to test, not assume: Snowflake's guide
+says synonyms "doesn't add significant value" except for unique or industry-specific terms, and LLMs
+gain little from lexical knowledge given to them (Schmidt et al. 2024). Both concern synonyms given to
+the model as context, not used in a lookup by code. The closest published neighbour of this
+experiment's silent-error measure is "Beyond Correctness: Resolving Underspecification in Agentic
+Text-to-SQL" (Li et al., arXiv 2610.02739, October 2026).
+
+**Review** (eight reviewers working on the repository, 2026-10-07):
+
+| step | verdict | main correction |
+|---|---|---|
+| units | mixed | rate layer elements (metric, measure, dimension by entity path, time dimension); period, grain and breakdown are query parameters |
+| inventory | sound | generate it by script; add checks for words that reach several metrics, one concept on two entity paths (`activity__region` and `user__region`), description-code conflicts, the source of each value set |
+| rubric | cannot be applied consistently as written (one reviewer disagreed with itself on about a third of 40 cells) | four levels (validated by the engine / machine-readable outside it / prose / missing), rate declarations only, written decision rules, additivity per measure and dimension, four further criteria (one path per concept, the time anchor of a period, metric-type legality, segment consistency) |
+| annotation | misses unstated slots | annotate per slot of the target query; record the resolution and the outcome separately; mechanical lookup and rule passes, people blind to the labels for the rest |
+| gap classes | only 1 of 5 v2 failures fitted one class | add STPA's "inadequate control algorithm"; classify each causal factor; store what the model was shown (done, section 23) |
+| tests | right structure, wrong details | gold from raw SQL, never from the governed query (that oracle cannot see a wrong layer); subtraction holds when the dimension partitions the counted entities, including distinct counts, not ratios; the full agent where the oracle is the final action; generated items never in the headline |
+| validation | the novel claim cannot be shown by observation on this layer (about 45 independent cells, levels clustered by criterion, raters who know the outcomes) | a controlled intervention as the primary test: the same alias or default as missing, as prose and as structural, with code frozen (about 120 test pairs); one blind second rater on about 90 judgement cells. Claim: "the representation level changes failure rates under controlled change", not "the audit predicts failures" |
+| final measurement | underspecified | at least 60 questions × 3 repetitions, written by a person outside the project, labelled against a frozen layer |
+
+The back-test against the eleven held-out failures: the rubric finds 3 to 5 of them; the rest came
+from the reader, the checks and the claims protocol (section 22), which the audit does not examine.
+The review therefore ordered the work as runtime fixes first (section 23), the audit second.
+
+**A proposed dimensional model** for the fixture, drawn as a page (private to the author) and revised
+after review: three stars (activity, subscription as a daily periodic snapshot with
+`non_additive_dimension`, spend); a wide `dim_users` with platform, country, region and language
+flattened from reference tables `dim_platform` and `dim_country`; `dim_channel` kept as a conformed
+dimension, joined by spend and by accounts; `fct_subscriptions` becomes `dim_subscription`, so facts
+join only dimensions; `dim_subscription_status` with `is_active` and `counts_in_gross`; alias seeds per
+reference table, used by staging and by the question check; `dim_date.half_year` as a custom
+granularity. Metric `meta` keeps only `owner` and `terms`. The deepest join, activity to the account's
+channel, is two hops, MetricFlow's limit (`MAX_JOIN_HOPS = 2`). Not built: every frozen run would
+then be on a different layer, so it waits for the audit.
+
+The board gained three experts for this work (test design, data governance, measurement validity),
+and two were extended (`.claude/experts/` in the site repository).
+
+## 25 · Open
+
+- Rewrite the audit method with the review's corrections; build the inventory script; write the
+  anchors and decision rules; rate today's layer with a second rater.
+- The controlled intervention: missing / prose / structural for the same alias or default, code frozen.
 - A held-out suite written by a person outside the project, labelled against a frozen layer, at least
   60 questions with three repetitions, covering elements no suite has exercised (the monthly plan,
   status, the United States, active_users_growth, total_value_moments, gross_mrr,
@@ -867,6 +939,6 @@ a suite no fix has seen.
 - Ask only when an unsure value changes the number, including the filters of a ratio's components.
 - Questions that state a bucket that does not line up with the period ("weekly over H1", h_004).
 
-Closed since section 22 of the earlier notes: preflight 0.5.0 is released and used from PyPI; the
+Closed since the previous open list: preflight 0.5.0 is released and used from PyPI; the
 subscription metrics no longer crash the parameter surface; the reading is graded as a component; a
 decision-model failure now runs the call unchecked with a disclosure.
