@@ -1061,3 +1061,25 @@ def test_new_users_are_signups():
     q = "Now that referral signups have stopped, how many new users did we get through paid search in Q2 2026?"
     assert F.longest_term(q, "users", _LAYER) == "signups"
     assert P.route_metric("active_users", _gov("Product"), _LAYER, "signups", True)[0] == "new_signups"
+
+
+def test_an_answer_to_a_question_split_between_two_measures_is_handed_back_as_a_question():
+    """"How often did Android users use the app?" read 0.40 habits per active user, 0.32 app opens.
+    Neither "no measure named" nor "none in the list" fired, so the agent's pick went unchecked."""
+    run = _answer_run({"choice": "habits_per_active_user", "p": 0.40, "probabilities": {
+        "habits_per_active_user": 0.40, "app_opens": 0.32, "not_in_list": 0.12, "not_mentioned": 0.08}})
+    run.grounded["_question"] = {"term": None, "term_known": True, "substitution": 0.0}
+    run.grounding.toolbox.semantic = _NS(metrics=run.grounding.toolbox.semantic.metrics, spec_dir=_LAYER.spec_dir)
+    handed = _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "9.45"}))
+    assert handed is not None and handed.ask["candidates"] == ["habits_per_active_user", "app_opens"]
+    # A declared word read from the question settles it: no hand-back.
+    run.grounded["_question"] = {"term": "app opens", "term_known": True, "substitution": 0.0}
+    assert _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "8,232"})) is None
+
+
+def test_a_split_between_metrics_the_layer_already_decides_is_not_handed_back():
+    """h2_007: mrr 0.70, gross_mrr 0.29. Both claim "revenue", so the layer decides."""
+    run = _answer_run({"choice": "mrr", "p": 0.62, "probabilities": {"mrr": 0.62, "gross_mrr": 0.29}})
+    run.grounded["_question"] = {"term": None, "term_known": True, "substitution": 0.0}
+    run.grounding.toolbox.semantic = _NS(metrics={"mrr": {}, "gross_mrr": {}}, spec_dir=_LAYER.spec_dir)
+    assert _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "81.71"})) is None

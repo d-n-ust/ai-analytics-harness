@@ -239,6 +239,32 @@ def _exit_check(run, exit_call):
     return ToolResult(message, is_error=True, reason=reason, ask=ask)
 
 
+# A question whose reading is split between two metrics names neither. Measured on the 73 labelled
+# questions on 2026-10-08: on every question labelled to be answered the second-best metric scored
+# at most 0.06, except h2_007 (mrr 0.70, gross_mrr 0.29), a pair the layer already declares and the
+# rule therefore skips. "How often did Android users use the app?" split 0.40 / 0.32.
+_SPLIT = 0.25
+
+
+def _split(run, metrics: dict, probabilities: dict):
+    """Hand an answer back to ask when the question reads as two metrics and nothing declared
+    settles it: no declared word was read from the question, and the two metrics share no declared
+    word (a pair that does is decided by the layer, guardrails/forks.py)."""
+    ranked = sorted(((p, m) for m, p in probabilities.items() if m in metrics), reverse=True)
+    if len(ranked) < 2:
+        return None, None
+    (p1, first), (p2, second) = ranked[:2]
+    asked = run.grounded.get("_question") or {}
+    if (p1 >= _decisions.CONFIDENT or p2 < _SPLIT or (asked.get("term_known") and asked.get("term"))
+            or _forks.rivals(first, second, run.grounding.toolbox.semantic)):
+        return None, None
+    return ("[policy] Your answer was not accepted: the question reads as two different measures, "
+            f"{first} or {second}, and nothing in the layer decides between them. Ask which one is meant "
+            "with `clarify` (reason `undefined_term`).", None), {
+        "question": f"Which measure do you mean: {first} or {second}?",
+        "reason": "undefined_term", "candidates": [first, second]}
+
+
 def _measure_named(run):
     """An answer rests on a measure, and the question has to name one. h2_015 ("How is engagement
     looking for June 2026?") was answered with habits per active user, and no check asked whether
@@ -259,7 +285,7 @@ def _measure_named(run):
     absent = probabilities.get("not_in_list") or 0.0
     vague = probabilities.get("not_mentioned") or 0.0
     if absent + vague < _decisions.LEAN:
-        return None, None
+        return _split(run, metrics, probabilities)
     if absent > vague:
         return ("[policy] Your answer was not accepted: no governed metric measures what the question "
                 "asks for, so any figure would be a substitute. Refuse with `no_governed_definition`.",

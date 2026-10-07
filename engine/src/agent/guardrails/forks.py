@@ -99,6 +99,13 @@ def longest_term(question: str, term: str, semantic) -> str:
     return best
 
 
+def rivals(a: str, b: str, semantic) -> bool:
+    """Do two metrics claim a word in common? Then the layer already decides between them."""
+    facts = facts_of(semantic)
+    words = lambda m: {w for f in facts if f.label == m for c in f.claims for w in c.words}  # noqa: E731
+    return bool(words(a) & words(b))
+
+
 def _decision(parameter, value, basis, disclose="", state="applied", why=""):
     return {"parameter": parameter, "value": value, "basis": basis, "quote": "", "disclose": disclose,
             "state": state, "why": why}
