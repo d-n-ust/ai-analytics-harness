@@ -675,25 +675,61 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     None when the metric's surface or coverage cannot be read."""
     if metric in cache:
         return cache[metric], 0.0
-    surface = surface_for(semantic, cursor, metric)
-    lo, hi = (semantic.coverage_window(metric) if hasattr(semantic, "coverage_window") else (None, None))
-    if surface is None or not lo or not hi:
+    context = _context(metric, semantic, cursor, governance)
+    if context is None:
         return None, 0.0
-    principles = list((governance or {}).get("methodological_rules") or [])
-    questions, back = _questions(surface, principles, lo, hi)
+    questions, _back = _questions(*context)
     answers, cost, model = _ask(questions, question)
     # The raw answers and the serving version are kept with the reading, so a stored row can be
-    # replayed and the reading evaluated as a component without a new request.
-    reading = {**read(answers, surface, principles, back, lo, hi), "answers": answers, "model": model}
-    verdict = premise_verdict(reading, metric, _premise_observed(semantic, metric, reading))
-    if verdict is not None:
-        reading = {**reading, "decisions": reading["decisions"] + [verdict]}
-    if not any(d["state"] == "refuse" for d in reading["decisions"]):
+    # replayed (`replay`) and the reading evaluated as a component without a new request.
+    reading = {**_decide(answers, metric, semantic, context), "model": model}
+    if not _refuses(reading):
         residual, more, _model = _ask(residual_question(metric, reading, (governance or {}).get("segments")), question)
         cost += more
         reading = with_residual(reading, residual)
     cache[metric] = reading
     return cache[metric], cost
+
+
+def replay(stored: dict, metric: str, semantic, cursor, governance: dict | None) -> dict | None:
+    """The stored reading decided again from its stored answers by the current code: no request, so
+    a change to the reading logic is checked on past runs at no cost. None when the metric can no
+    longer be read. `residual_stale` is set when the residual question the current reading would ask
+    is not the one that was answered (it is conditioned on the reading); its stored answer is then
+    applied as it stands, and the result is a guess for that part."""
+    context = _context(metric, semantic, cursor, governance)
+    if context is None:
+        return None
+    reading = _decide(stored["answers"], metric, semantic, context)
+    if _refuses(reading):
+        return reading
+    asked = stored.get("residual")
+    if asked is None:          # the stored reading refused, so the residual was never asked
+        return {**reading, "residual_stale": True}
+    return {**with_residual(reading, asked["answers"]), "residual_stale": summary(metric, reading) != summary(metric, stored)}
+
+
+def _context(metric: str, semantic, cursor, governance: dict | None) -> tuple | None:
+    """(surface, principles, lo, hi): what a reading of `metric` is made against. None when the
+    surface or the coverage window cannot be read."""
+    surface = surface_for(semantic, cursor, metric)
+    lo, hi = (semantic.coverage_window(metric) if hasattr(semantic, "coverage_window") else (None, None))
+    if surface is None or not lo or not hi:
+        return None
+    return surface, list((governance or {}).get("methodological_rules") or []), lo, hi
+
+
+def _decide(answers: dict, metric: str, semantic, context: tuple) -> dict:
+    """The reading from the decision model's answers, with the premise checked against the data."""
+    surface, principles, lo, hi = context
+    _, back = _questions(surface, principles, lo, hi)
+    reading = {**read(answers, surface, principles, back, lo, hi), "answers": answers}
+    verdict = premise_verdict(reading, metric, _premise_observed(semantic, metric, reading))
+    return {**reading, "decisions": reading["decisions"] + [verdict]} if verdict is not None else reading
+
+
+def _refuses(reading: dict) -> bool:
+    return any(d["state"] == "refuse" for d in reading["decisions"])
 
 
 def _premise_observed(semantic, metric: str, reading: dict) -> dict:

@@ -31,6 +31,7 @@ measures and never folded into them.
     python run.py --model gpt-5-mini --only q_001_android_opens_june,t_003_tiktok_opens_q2
     python run.py --arms R4+decision_grounding --protocols none,claims    # with and without claims
     python run.py --regrade <run dir>    # re-grade stored answers: no model calls, seconds
+    python run.py --replay <run dir>     # re-decide stored readings with the current code: no requests
 
 The summary's second table is the governed calls behind the answers (evals/calls.py): which calls
 the answer used, the spend on the ones it did not, whether the used calls' parameters match the
@@ -50,7 +51,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import yaml
 from agent.core.protocol import Protocol
-from agent.guardrails import parse_cell
+from agent.guardrails import decisions, parse_cell
 from agent.runtime.grounding import build_grounding
 from agent.runtime.loop import Answer, run_agent
 from agent.runtime.providers import get_model, get_verifier
@@ -303,6 +304,41 @@ def calls_table(rows: list, arms: list, cases: list) -> None:
               f"{f'{sum(not e for e in graded)}/{len(graded)}':>8} {unbound:>15}")
 
 
+def _action(reading: dict) -> str:
+    states = {d["state"] for d in reading["decisions"]}
+    return "refuse" if "refuse" in states else "ask" if "ungrounded" in states else "answer"
+
+
+def replay_run(run_dir: pathlib.Path, con) -> None:
+    """Decide every stored reading again with the current code and print what changed. The decision
+    model is not called: its stored answers are read again, and the premise check queries the fixture.
+    A change to decisions.py is thereby checked against past runs before any paid run."""
+    cur = scoped_cursor(con)
+    semantic = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow", semantic_layer=True,
+                               guardrails=parse_cell("R4"), schema=MARTS).toolbox.semantic
+    seen, unavailable = {}, 0
+    for line in (run_dir / "raw.jsonl").open():
+        row = json.loads(line)
+        readings = row.get("readings") or {}
+        unavailable += "_unavailable" in readings
+        for metric, stored in readings.items():
+            if metric.startswith("_") or "answers" not in stored or (row["qid"], metric) in seen:
+                continue
+            now = decisions.replay(stored, metric, semantic, cur, GOVERNANCE)
+            seen[(row["qid"], metric)] = (_action(stored), "unreadable" if now is None else _action(now),
+                                          bool(now and now.get("residual_stale")), now)
+    cur.close()
+    changed = 0
+    print(f"{'question':44} {'metric':24} {'stored':7}    {'now':10}")
+    for (qid, metric), (before, after, stale, now) in sorted(seen.items()):
+        changed += before != after
+        why = [d["why"][:100] for d in (now or {}).get("decisions", []) if d["state"] in ("ungrounded", "refuse")]
+        print(f"{qid:44} {metric:24} {before:7} -> {after:10}" + ("  CHANGED" if before != after else "")
+              + ("  (residual answer is for a different reading)" if stale else "")
+              + (f"  {'; '.join(why)}" if before != after and why else ""))
+    print(f"\n{len(seen)} readings, {changed} changed" + (f"; {unavailable} rows ran without a reading" if unavailable else ""))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--model", default="gpt-5-mini")
@@ -319,10 +355,15 @@ def main() -> None:
                     help="threads over tasks; keep it low (E-20: a rate limiter is not a result)")
     ap.add_argument("--regrade", default=None, metavar="RUN_DIR",
                     help="re-grade a stored run against the current cases and grader; no model calls")
+    ap.add_argument("--replay", default=None, metavar="RUN_DIR",
+                    help="decide a stored run's readings again with the current code; no requests")
     args = ap.parse_args()
 
     con = open_warehouse(create_star_views=True)
     fixture_build.build(con, drop=True)
+    if args.replay:
+        replay_run(pathlib.Path(args.replay).resolve(), con)
+        return
     cases = load_cases(args.cases)
     check_params(cases, con)
     golds = compute_gold(con, cases)

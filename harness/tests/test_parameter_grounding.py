@@ -872,3 +872,21 @@ def test_when_the_question_cannot_be_read_the_reply_is_not_held_to_a_reading(mon
     assert _coverage_gate.exit_matches_reading(run, _NS(name="clarify", args={"question": "which?"})) is None
     assert run.grounded["_unavailable"] == {"why": "decision model unavailable: TimeoutError"}
     assert "not checked" in DG.unchecked("x")["disclose"]
+
+
+# ── replaying a stored reading ────────────────────────────────────────────────────────────────────
+def test_a_stored_reading_replays_to_the_same_decisions_without_a_request(monkeypatch):
+    """`run.py --replay` decides stored readings again with the current code. It must agree with the
+    live reading when the code has not changed, and it must not call the decision model."""
+    monkeypatch.setattr(DG, "_context", lambda *_a: (SURFACE, PRINCIPLES, _LO, _HI))
+    monkeypatch.setattr(DG, "_questions", lambda *_a: ({}, _BACK))
+    first = {"shape": {"choice": "total", "probabilities": {"total": 1.0}},
+             "mode:activity__platform": {"choice": "only", "probabilities": {"only": 0.99}},
+             "named:activity__platform:0": {"noul": 0.99}, "period:2026-06": {"noul": 0.97}}
+    replies = iter([(first, 0.001, "m"), ({"beyond": {"noul": 0.9}}, 0.001, "m")])
+    monkeypatch.setattr(DG, "_ask", lambda *_a: next(replies))
+    live, _cost = DG.reading_for("Android app opens in June 2026?", "app_opens", None, None, {}, {})
+    monkeypatch.setattr(DG, "_ask", lambda *_a: (_ for _ in ()).throw(AssertionError("a request")))
+    again = DG.replay(live, "app_opens", None, None, {})
+    assert again["decisions"] == live["decisions"] and again["residual_stale"] is False
+    assert any(d["parameter"] == "group" for d in again["decisions"])       # the residual answer applied
