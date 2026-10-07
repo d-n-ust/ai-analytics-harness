@@ -914,7 +914,40 @@ then be on a different layer, so it waits for the audit.
 The board gained three experts for this work (test design, data governance, measurement validity),
 and two were extended (`.claude/experts/` in the site repository).
 
-## 25 · Open
+## 25 · Which number: the question's declared word decides
+
+**The problem.** "How many customers did we have in June 2026?" The governance file certifies
+"customers" as external accounts (owner Product), which is active_users: 1,620. The paying_users
+description uses the same word for payers: 371. The decision model sent the question to
+paying_users (0.49); active_users was not in its top three, so neither the "no measure named" rule
+nor any rule on its probabilities could see the conflict. Six of fourteen metrics declared no words,
+and five of them no owner.
+
+**What was built** (commits `bf36377`, `bc24ce3`, `baf1d44`; preflight branch `wt-undeclared`):
+
+| item | what it does |
+|---|---|
+| words in the layer | every metric declares the words it answers and an owner (`meta.terms`, `meta.owner`); "customers" on active_users for Product and on paying_users for Finance and Sales. Owners set where none was stated are provisional, as is "subscribers" → paying_users |
+| the word decides | the question check reads which declared word names the counted thing (the model's judgement); code applies the layer's decision for that word whichever metric the agent called. The longest declared phrase containing the chosen word wins ("paying customers", "new users"); a word never moves a ratio to one of its own inputs |
+| a split asks | an answer is handed back to ask when the metric choice reads two metrics (top below 0.7, second at least 0.25) and nothing declared decides between them |
+| the choice sees the words | the metric-choice request shows each metric's declared words; it had read "revenue" as no metric (0.48) |
+| the wording sweep | `sweep.py` runs `wordings.yml` (34 wordings, a development set) through the same decision without the agent, about $0.0001 per wording |
+| the build check | preflight `UNDECLARED_TERMS`: once a project declares words, a metric that declares none fails CI. On the layer as it stood that morning: 6 unresolved findings; now none |
+
+**Measured, all at no or near-zero cost, no agent:**
+
+| check | result |
+|---|---|
+| routing on the 73 labelled questions plus two new ones | first version: 3 wrong routes (h_006, t_010: a ratio; h_012: "new users"); with the two rules: 62 routed, 0 wrong |
+| metric-choice bars, re-measured with declared words | "no measure named" at most 0.11 on every question to be answered (0.35 before), at least 0.64 on every question naming none; second metric at most 0.07 |
+| wording sweep | 29 of 34 at first; the misses led to declaring "gross mrr", "acquisition spend", "subscribers" and to showing words in the metric choice; then 33 of 34 |
+
+**Live, full agent** (8 questions, one repetition, about $0.02): "How many customers did we have in
+June 2026?" answered 1,620 (correct; 371 before the declaration). q_001, t_010, h_006, h_012 and
+h2_008 correct. "Paying customers right now" and "subscribers right now" asked for a period: the
+metric is right, and the gap is the undeclared default for a current-state metric (h2_005).
+
+## 26 · Open
 
 - Rewrite the audit method with the review's corrections; build the inventory script; write the
   anchors and decision rules; rate today's layer with a second rater.
@@ -928,6 +961,11 @@ and two were extended (`.claude/experts/` in the site repository).
   the runtime members; region falls back to an undocumented `Other`; the same concept on two entity
   paths (`activity__region` and `user__region`); `paying_users` has no owner. These belong to the
   semantic-layer readiness audit and the proposed dimensional model.
+- An explicit population in the question ("habits, counting staff and test accounts too") loses to
+  the team's default reading of the word; the sweep's one remaining miss.
+- A current-state metric needs no period ("right now"): declare it, so the question is not asked
+  for one (h2_005; the paying-customers and subscribers probes).
+- Release preflight `UNDECLARED_TERMS` (branch `wt-undeclared`).
 - A premise about a direction of change ("dropped in June vs May"): the premise question offers only
   `stopped` and `other`, so the reader cannot check it (h2_012).
 - Re-measure `reading_first` against the arm without it.

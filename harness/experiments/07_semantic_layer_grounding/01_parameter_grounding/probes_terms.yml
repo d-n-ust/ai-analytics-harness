@@ -1,0 +1,43 @@
+# Probe questions for the declared-word routing (2026-10-08). Written by the authors after the
+# "customers" finding, so development evidence. Requester: Product (governance.yml).
+cases:
+  - id: w_customers_june
+    tier: answer
+    tags: [probe, declared_word]
+    question: "How many customers did we have in June 2026?"
+    expect:
+      type: metric_answer
+      metric: active_users
+      params: {period: "2026-06"}
+      tolerance: 0.005
+      gold_sql: |
+        with u as (select uid, ((coalesce(internal, 0) = 1) or lower(email) like '%@internal-test.com') as is_internal from "_source".u)
+        select count(distinct e.uid) as value from "_source".evt e join u using (uid)
+        where not u.is_internal and cast(e.ts as date) between date '2026-06-01' and date '2026-06-30'
+    note: >-
+      For Product, "customers" is the certified segment (external accounts), declared on active_users.
+      Paying accounts are 371; the answer is 1,620. Before the declaration the model sent this to paying_users.
+  - id: w_paying_customers_now
+    tier: answer
+    tags: [probe, declared_word]
+    question: "How many paying customers do we have right now?"
+    expect:
+      type: metric_answer
+      metric: paying_users
+      params: {status: active}
+      tolerance: 0.005
+      gold_sql: |
+        select count(distinct uid) as value from "_source".subs where st = 1
+    note: "\"paying customers\" is declared on paying_users for everyone; the longer phrase beats \"customers\"."
+  - id: w_subscribers_now
+    tier: answer
+    tags: [probe, declared_word]
+    question: "How many subscribers do we have right now?"
+    expect:
+      type: metric_answer
+      metric: paying_users
+      params: {status: active}
+      tolerance: 0.005
+      gold_sql: |
+        select count(distinct uid) as value from "_source".subs where st = 1
+    note: "\"subscribers\" declared on paying_users (accounts), a provisional decision; active_subscriptions also returns 371 today."
