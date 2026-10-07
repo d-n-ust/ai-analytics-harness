@@ -644,6 +644,12 @@ class _Run:
                             iterations=iterations, error="provider_refused")
 
     def _record(self, **kw) -> Answer:
+        # The repair history rides every exit, not only a served answer: a run converted to a
+        # refusal at the correction cap was stored with no repairs and zero retries, so the
+        # hand-backs that caused the conversion were invisible (h2_003).
+        kw.setdefault("repairs", tuple(self.repairs))
+        kw.setdefault("claim_retries", self.claim_retries)
+        kw.setdefault("hand_backs", self.hand_backs)
         return Answer(question=self.question, rung=self.grounding.rung,
                       model=self.model.spec.name, route=getattr(self.model, "route", ""),
                       tool_calls=self.tool_calls,

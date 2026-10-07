@@ -64,7 +64,11 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 # v24: `readings` — under decision_grounding, the reading of the question per metric, with the decision
 #      model's raw answers and the version that served them, and the metric choice. Without it a
 #      row kept only the decisions derived from the reading, so no decision could be replayed.
-ROW_SCHEMA_VERSION = 24
+# v25: `clarify_accepted` — whether a clarifying question is a correct reply to the case. Pile B
+#      had scored every clarification as a refusal, so an agent that always asked scored 0.67
+#      balanced accuracy. Also, refusals converted at the correction cap now keep `repairs`,
+#      `claim_retries` and `hand_backs`, and each claims repair keeps the whole attempt.
+ROW_SCHEMA_VERSION = 25
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -121,6 +125,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         "needs_judge": g.get("needs_judge", False), "bucket": g["bucket"],
         "graded_by": g["graded_by"],
         "expected_refuse": g["expected_refuse"], "expected_action": g["expected_action"],
+        "clarify_accepted": g["clarify_accepted"],
         "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
         "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
         "served_candidate": g.get("served_candidate"), "divergence": g.get("divergence"),

@@ -350,3 +350,34 @@ if __name__ == "__main__":
     test_an_arm_that_clarified_without_a_follow_up_is_flagged_in_the_report()
     print("OK - report aggregator: arithmetic + process hygiene + dead rows + json + render "
           "+ spread + leaderboard all pass.")
+
+
+def test_asking_where_only_a_refusal_is_right_is_not_a_correct_decline():
+    """An agent that asks on every question scored 0.67 balanced accuracy with no answer at all:
+    pile B counted each clarification as a refusal. A question is a correct decline only where the
+    case accepts one (`ambiguous`); on a `refuse` case it is visible but wrong."""
+    import math
+
+    from evals.selective import selective
+    refuse = dict(expected_refuse=True, expected_action="refuse", gold=None, outcome="clarify",
+                  correct=False, abstained=True, answer=None, declared_value=None)
+    s = selective([_row(**refuse, clarify_accepted=False),                     # asked; must refuse
+                   _row(**{**refuse, "correct": True}, clarify_accepted=True),  # ambiguous: asking is fine
+                   _row(**{**refuse, "outcome": "refuse", "correct": True}, clarify_accepted=False)])
+    assert (s.unanswerable, s.refused, s.asked_instead, s.served) == (3, 2, 1, 0)
+    assert math.isclose(s.balanced_accuracy, 2 / 3)
+    assert s.silent_error == 0                    # asking is visible, so never silent
+    # a row graded before the field existed keeps its old reading until it is regraded
+    assert selective([_row(**refuse)]).asked_instead == 0
+
+
+def test_a_visibly_incomplete_answer_is_wrong_but_not_silent():
+    """Silent error uses the one row-level definition (`served_wrong`). An answered breakdown that
+    is missing a segment is wrong, but a reader can see the gap, so it is not a silent error."""
+    import math
+
+    from evals.selective import selective
+    s = selective([_row(correct=False, bucket="wrong", confident_wrong=False),   # visibly incomplete
+                   _row(correct=False, bucket="wrong", confident_wrong=True)])   # a false number
+    assert (s.wrong, s.wrong_silent) == (2, 1)
+    assert math.isclose(s.silent_error, 1 / 2)

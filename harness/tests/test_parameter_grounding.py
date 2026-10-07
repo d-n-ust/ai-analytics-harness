@@ -890,3 +890,19 @@ def test_a_stored_reading_replays_to_the_same_decisions_without_a_request(monkey
     again = DG.replay(live, "app_opens", None, None, {})
     assert again["decisions"] == live["decisions"] and again["residual_stale"] is False
     assert any(d["parameter"] == "group" for d in again["decisions"])       # the residual answer applied
+
+
+def test_a_handed_back_answer_keeps_its_claims_and_a_converted_refusal_keeps_its_repairs():
+    """h2_003: two answers were handed back for their claims and the cap converted the third to a
+    refusal. The row stored no claims, no repairs and zero retries, so the cause was invisible."""
+    from agent.runtime.loop import _Run
+    attempt = [{"text": "iOS came out ahead", "sources": ["r1:ios", "r1:android"], "value": 0}]
+    run = _gate_run([_BY_REGION | {"result_labels": ["ios", "android", "web"]}])
+    _claims_gate.malformed_claims(run, _NS(name="answer", args={"answer": "iOS.", "claims": attempt}))
+    assert run.repairs and run.repairs[0]["attempt"] == attempt
+    fake = _NS(question="q", grounding=_NS(rung=3), model=_NS(spec=_NS(name="m"), route=""), tool_calls=0,
+               scope_shadow=None, grounded={}, usage=_NS(input=0, output=0, cached=0), steps=[], turns=[],
+               acts=[], repairs=run.repairs, claim_retries=1, hand_backs=1)
+    refused = _Run._record(fake, answer=None, explanation="converted", outcome="refuse", reason="other",
+                           abstained=True, iterations=3)
+    assert (len(refused.repairs), refused.claim_retries, refused.hand_backs) == (1, 1, 1)

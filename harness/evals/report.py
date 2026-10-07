@@ -611,6 +611,7 @@ def _cells_for(summary, m):
 # What each grading path compares against, and whether a reader could audit it.
 GRADING_PATHS = {
     "numeric":   ("a gold figure, within tolerance",               True),
+    "numeric+claims": ("a gold figure, read from the answer and its claims", True),
     "action":    ("the terminal action the question requires",     True),
     "direction": ("the typed direction slot",                      True),
     "prose":     ("words matched in free text",                    False),

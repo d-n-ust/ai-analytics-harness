@@ -257,7 +257,7 @@ def regrade_run(run_dir: Path, questions: list | None = None, extra=None) -> Non
                                     "wrong_metric",
                                     "fabricated", "off_governance", "wrong_scope",
                                     "needs_judge", "bucket", "graded_by",
-                                    "expected_refuse", "expected_action", "reason_match",
+                                    "expected_refuse", "expected_action", "clarify_accepted", "reason_match",
                                     "metric_match", "driver_ok", "cause_ok", "score")})
         if extra is not None:
             r.update(extra(ans, qmap[r["qid"]]))

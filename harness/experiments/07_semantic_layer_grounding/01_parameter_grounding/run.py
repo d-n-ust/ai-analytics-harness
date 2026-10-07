@@ -49,6 +49,8 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+import hashlib
+
 import yaml
 from agent.core.protocol import Protocol
 from agent.guardrails import decisions, parse_cell
@@ -75,6 +77,10 @@ GOVERNANCE = yaml.safe_load((EXPERIMENT / "fixture" / "governance.yml").read_tex
 RUNS = EXPERIMENT.parents[2] / "runs" / "experiments" / EXPERIMENT.name
 MARTS = "wh_06"
 RUNG = 3
+# What a row ran against: a change to the layer or the governance file changes this, so two runs
+# are comparable only when it matches (v1 and v2 were five commits apart and nothing recorded it).
+LAYER_SHA = hashlib.sha256(b"".join(f.read_bytes() for f in sorted(
+    [*LAYER.glob("*.yml"), *LAYER.glob("*.yaml"), EXPERIMENT / "fixture" / "governance.yml"]))).hexdigest()[:12]
 ARMS = ("R4", "R4+disclose_assumptions", "R4+parameter_grounding", "R4+decision_grounding")
 
 # The catalogue layout and schema note experiment 06 settled on, copied so this experiment runs
@@ -263,7 +269,115 @@ def used_call_errors(row: dict, case: dict) -> list | None:
 
 
 
-def summarise(rows: list, arms: list, cases: list) -> None:
+# The actions a case's label allows the reader to imply. A reading that refuses or asks where the
+# label expects an answer is the reader's error, whatever the agent did afterwards.
+_READER_ACTIONS = {"metric_answer": {"answer"}, "breakdown": {"answer"}, "refuse": {"refuse"},
+                   "clarify": {"ask"}, "ambiguous": {"refuse", "ask"}, "contested": {"answer", "ask"}}
+
+
+def reader_action(reading: dict) -> str:
+    states = {d["state"] for d in reading["decisions"]}
+    return "refuse" if "refuse" in states else "ask" if "ungrounded" in states else "answer"
+
+
+def reading_errors(readings: dict | None, case: dict, determines: dict | None = None) -> dict | None:
+    """The question reader graded as a component, against the case's labels: the action its reading
+    implies, and the values it allows for every labelled parameter. This grades the reader alone, so
+    a reader error is visible even when the agent recovered from it, and an agent error is not
+    charged to the reader. None when no reading of the case's metric was made.
+
+    `determines` maps a dimension to the dimensions its value fixes (country -> region), as the layer
+    derives it from data. A filter the label does not set is accepted when a labelled dimension
+    determines it: it cannot change the number. On a metric whose time dimension is the start date,
+    a period of one month IS the cohort month, so the two labels are read as one."""
+    expect = case["expect"]
+    usable = {m: r for m, r in (readings or {}).items() if not m.startswith("_") and "decisions" in r}
+    reading = usable.get(expect.get("metric")) or (next(iter(usable.values())) if len(usable) == 1 else None)
+    if reading is None:
+        return None
+    action, etype = reader_action(reading), expect["type"]
+    # A request to relabel a figure or set the rules aside is refused for the whole question
+    # (decisions.question_level), not in any one metric's reading.
+    asked = (readings or {}).get("_question") or {}
+    if (asked.get("substitution") or 0) >= 0.7:
+        action = "refuse"
+    errors: list[str] = []
+    want = expect.get("params") or {}
+    answer_shaped = etype in ("metric_answer", "breakdown", "clarify")
+    opened = {d["parameter"] for d in reading["decisions"] if d["state"] == "ungrounded"}
+    filters: dict[str, set] = {}
+    for dim, values in reading["filters"].items():
+        flat = {str(x).lower() for v in values for x in (v if isinstance(v, list) else [v]) if x is not None}
+        if flat:
+            filters[_dim(dim)] = flat
+    built = _built_in(expect["metric"]) if expect.get("metric") else {}
+    for key, value in built.items():                 # the metric's own filter sets its value
+        filters.setdefault(key, {str(value).lower()})
+    want_gb = {_dim(g) for g in (want.get("group_by") if isinstance(want.get("group_by"), list)
+                                 else [want["group_by"]] if want.get("group_by") else [])}
+    got_gb = {_dim(g) for g in reading["group_by"]}
+    cohort = want.get("cohort_month")
+    if cohort and [str(p) for p in reading["periods"]] == [str(cohort)]:
+        # The period read as the cohort, alone or beside the cohort filter: one restriction.
+        filters.setdefault("cohort_month", {str(cohort).lower()})
+        reading = {**reading, "periods": []}
+    for key, value in want.items():
+        if key in ("period", "group_by", "time_grain"):
+            continue
+        if value == "ask":
+            if action != "ask":
+                errors.append(f"{key}: settled, label is ask")
+            continue
+        need = {str(v).lower() for v in (value if isinstance(value, list) else [value])}
+        # Grouping by the dimension shows every listed value, so it covers a list label.
+        covered = key in got_gb and len(need) > 1 and not filters.get(key)
+        if answer_shaped and filters.get(key, set()) != need and not covered:
+            errors.append(f"{key} {sorted(filters.get(key, set()))} instead of {sorted(need)}")
+    if answer_shaped:
+        fixed = {d for k in want for d in (determines or {}).get(k, ())}
+        extra = set(filters) - set(want) - set(built) - fixed
+        if extra:
+            errors.append(f"filters on {sorted(extra)}, which the label does not set")
+        period = want.get("period")
+        got = set().union(*[_months(p) or set() for p in reading["periods"]]) if reading["periods"] else set()
+        if period == "ask":
+            if "period" not in opened:
+                errors.append("period: settled, label is ask")
+        elif period is None:
+            if reading["periods"] or "period" in opened:
+                errors.append(f"period {reading['periods'] or 'left open'}, label has none")
+        else:
+            need = set().union(*[_months(p) or set() for p in (period if isinstance(period, list) else [period])])
+            if got != need or "period" in opened:
+                errors.append(f"period {reading['periods']}{' (left open)' if 'period' in opened else ''} "
+                              f"instead of {period}")
+        # Several listed values (or periods) may be read as a list filter or as a breakdown; both
+        # show every one of them.
+        listed = {k for k, v in want.items() if isinstance(v, list) and k not in ("time_grain",)}
+        if isinstance(want.get("period"), list) and len(want["period"]) > 1:
+            listed.add("metric_time")
+        if got_gb != want_gb and not (want_gb - got_gb <= listed and got_gb - want_gb <= listed):
+            errors.append(f"group_by {sorted(got_gb)} instead of {sorted(want_gb)}")
+    return {"action": action, "action_ok": action in _READER_ACTIONS.get(etype, {action}), "errors": errors}
+
+
+def layer_determines(con) -> dict:
+    """Which dimensions fix which, by short name (country -> region), merged over every metric's
+    parameter surface. The layer derives it from data (ontology.parameters.build)."""
+    from agent.guardrails.parameters import surface_for
+    cur = scoped_cursor(con)
+    semantic = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow", semantic_layer=True,
+                               guardrails=parse_cell("R4"), schema=MARTS).toolbox.semantic
+    out: dict[str, set] = {}
+    for metric in semantic.metrics:
+        surface = surface_for(semantic, cur, metric) or {}
+        for a, bs in ((surface.get("parameters") or {}).get("filters") or {}).get("determines", {}).items():
+            out.setdefault(_dim(a), set()).update(_dim(b) for b in bs)
+    cur.close()
+    return out
+
+
+def summarise(rows: list, arms: list, cases: list, determines: dict | None = None) -> None:
     print(f"\n{'arm':30} {'n':>3} {'coverage':>9} {'silent_err':>11} {'bal_acc':>8} "
           f"{'undisclosed':>12} {'usd':>8}")
     for arm in arms:
@@ -278,6 +392,28 @@ def summarise(rows: list, arms: list, cases: list) -> None:
         print(f"{arm:30} {len(sub):>3} {s['coverage']!s:>9} {s['silent_error']!s:>11} "
               f"{s['balanced_accuracy']!s:>8} {f'{undisclosed}/{len(due)}':>12} {usd:>8.4f}")
     calls_table(rows, arms, cases)
+    reader_table(rows, arms, cases, determines)
+
+
+def reader_table(rows: list, arms: list, cases: list, determines: dict | None = None) -> None:
+    """The question reader against the labels, per arm, for rows that made a reading: how often its
+    implied action is one the label allows, and how many readings set a labelled value wrongly."""
+    by_id = {c["id"]: c for c in cases}
+    graded = [(r, reading_errors(r.get("readings"), by_id[r["qid"]], determines)) for r in rows if r["qid"] in by_id]
+    graded = [(r, g) for r, g in graded if g is not None]
+    if not graded:
+        return
+    print(f"\n{'arm':30} {'readings':>8} {'action ok':>10} {'values ok':>10}   reader errors")
+    for arm in arms:
+        sub = [(r, g) for r, g in graded if r["config"] == arm]
+        if not sub:
+            continue
+        wrong = [f"{r['qid']}: {g['action'] if not g['action_ok'] else ''}{'; '.join(g['errors'])}"
+                 for r, g in sub if not g["action_ok"] or g["errors"]]
+        print(f"{arm:30} {len(sub):>8} {sum(g['action_ok'] for _, g in sub):>6}/{len(sub):<3} "
+              f"{sum(not g['errors'] for _, g in sub):>6}/{len(sub):<3}   " + (wrong[0] if wrong else ""))
+        for line in wrong[1:]:
+            print(f"{'':66}{line}")
 
 
 def calls_table(rows: list, arms: list, cases: list) -> None:
@@ -371,7 +507,7 @@ def main() -> None:
         run_dir = pathlib.Path(args.regrade).resolve()
         regrade_run(run_dir, cases, extra=disclosure_fields)
         rows = [json.loads(line) for line in (run_dir / "raw.jsonl").open()]
-        summarise(rows, list(dict.fromkeys(r["config"] for r in rows)), cases)
+        summarise(rows, list(dict.fromkeys(r["config"] for r in rows)), cases, layer_determines(con))
         return
     if args.only:
         wanted = args.only.split(",")
@@ -412,7 +548,7 @@ def main() -> None:
 
             def ask(text, _g=grounding):
                 try:
-                    return run_agent(text, _g, model, verifier_model=verifier)
+                    return run_agent(text, _g, model, verifier_model=verifier, record_context=True)
                 except Exception as exc:                                   # noqa: BLE001
                     return Answer(text, RUNG, model.spec.name, None, outcome="error",
                                   error=f"{type(exc).__name__}: {exc}"[:200])
@@ -430,13 +566,16 @@ def main() -> None:
                            rung=RUNG, config=labels[configs.index((arm, proto))], rep=rep,
                            protocol=proto.label().lstrip("/") or "none",
                            second_turn=follow, resolution=(follow or {}).get("resolution"),
+                           # What the model was shown, by hash; the texts go to context_blobs.json.
+                           context=answer.context.digest() if answer.context else [],
+                           layer_sha=LAYER_SHA,
                            **disclosure_fields(answer, case))
         missed, due = row["disclosure_missed"], row["disclosure_due"]
         with print_lock:
             mark = "OK  " if row["correct"] else ("SILENT" if row["confident_wrong"] else "MISS")
             print(f"  {labels[configs.index((arm, proto))]:30} rep {rep + 1}  {case['id']:42} {answer.outcome:8} {mark:6} "
                   f"undisclosed {len(missed)}/{len(due)}" + (f"  {answer.error}" if answer.error else ""))
-        return (configs.index((arm, proto)), rep, idx), row
+        return (configs.index((arm, proto)), rep, idx), row, (answer.context.blobs if answer.context else {})
 
     tasks = [(cfg, rep, i, c) for cfg in configs for rep in range(args.reps) for i, c in enumerate(cases)]
     if args.concurrency <= 1:
@@ -444,14 +583,16 @@ def main() -> None:
     else:
         with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
             results = list(pool.map(one, tasks))
-    rows = [row for _, row in sorted(results, key=lambda t: t[0])]
+    rows = [row for _, row, _b in sorted(results, key=lambda t: t[0])]
+    blobs = {sha: text for *_, b in results for sha, text in b.items()}
 
     with (run_dir / "raw.jsonl").open("w") as fh:
         for row in rows:
             fh.write(json.dumps(row, default=str) + "\n")
+    (run_dir / "context_blobs.json").write_text(json.dumps(blobs, indent=1))
     report.write(rows, run_dir, mock=args.mock)
 
-    summarise(rows, labels, cases)
+    summarise(rows, labels, cases, layer_determines(con))
     print(f"\nwrote {run_dir / 'raw.jsonl'} and summary.md")
 
 

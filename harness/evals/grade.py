@@ -461,6 +461,10 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "wrong_metric": wrong_metric,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        # Whether a clarifying question is a correct reply. Pile B holds both `refuse` cases (only a
+        # refusal is right) and `ambiguous` ones (a refusal or a question), and without this the
+        # scorer could not tell them apart: it counted every clarification there as a refusal.
+        "clarify_accepted": accepts_clarify,
         "graded_by": graded_by,
         # WHICH terminal action this question calls for, as a field rather than a boolean, because
         # there are now three. `expected_refuse` is kept beside it and unchanged: every stored row

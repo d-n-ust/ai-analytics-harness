@@ -51,3 +51,54 @@ def test_values_use_the_documented_forms():
             values = value if isinstance(value, list) else [value]
             assert values and all(isinstance(v, str) and v.strip() for v in values), (case["id"], key)
             assert value != "none", f"{case['id']}: {key}: none — omit the key instead"
+
+
+# ── the question reader graded against the labels (run.reading_errors) ─────────────────────────
+def _runner():
+    import importlib.util
+    import sys
+    path = EXP / "01_parameter_grounding" / "run.py"
+    sys.path.insert(0, str(path.parent))
+    spec = importlib.util.spec_from_file_location("exp07_run", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _reading(filters=None, periods=(), group_by=(), states=()):
+    return {"filters": filters or {}, "periods": list(periods), "group_by": list(group_by),
+            "decisions": [{"parameter": p, "state": s} for p, s in states]}
+
+
+def test_the_reader_is_graded_on_its_action_and_its_values():
+    run = _runner()
+    case = {"expect": {"type": "breakdown", "metric": "app_opens",
+                       "params": {"platform": ["android", "ios"], "period": "2026-06",
+                                  "group_by": "activity__platform"}}}
+    by_list = _reading({"activity__platform": [["android", "ios"]]}, ["2026-06"])
+    by_split = _reading({}, ["2026-06"], ["activity__platform"])
+    one_value = _reading({"activity__platform": ["android"]}, ["2026-06"])
+    assert run.reading_errors({"app_opens": by_list}, case)["errors"] == []      # a list covers it
+    assert run.reading_errors({"app_opens": by_split}, case)["errors"] == []     # so does a split
+    assert run.reading_errors({"app_opens": one_value}, case)["errors"]         # h2_003: iOS lost
+    opened = _reading({}, ["2026-01", "2026-06"], states=[("period", "ungrounded")])
+    graded = run.reading_errors({"app_opens": opened}, case)
+    assert (graded["action"], graded["action_ok"]) == ("ask", False)
+
+
+def test_the_metric_filter_and_the_cohort_period_count_as_the_labelled_values():
+    run = _runner()
+    customers = {"expect": {"type": "metric_answer", "metric": "active_users",
+                            "params": {"is_internal": "false", "period": "2026-Q2"}}}
+    assert run.reading_errors({"active_users": _reading({}, ["2026-Q2"])}, customers)["errors"] == []
+    cohort = {"expect": {"type": "metric_answer", "metric": "mrr",
+                         "params": {"plan": "annual", "cohort_month": "2026-03"}}}
+    read = _reading({"subscription__plan": ["annual"]}, ["2026-03"])     # the cohort read as a period
+    assert run.reading_errors({"mrr": read}, cohort)["errors"] == []
+
+
+def test_a_substitution_request_is_refused_for_the_whole_question():
+    run = _runner()
+    case = {"expect": {"type": "refuse", "metric": "active_accounts", "params": {"period": "2026-Q2"}}}
+    readings = {"active_accounts": _reading({}, ["2026-Q2"]), "_question": {"substitution": 0.9}}
+    assert run.reading_errors(readings, case)["action_ok"]

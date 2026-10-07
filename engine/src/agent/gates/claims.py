@@ -84,6 +84,10 @@ def malformed_claims(run, exit_call: ToolCall):
     # enough to tell a surviving sentence from a deleted one, and the full text is already in
     # the turn log for anyone who wants it.
     run.repairs.append({"claims": len(declared),
+                         # The whole attempt, so a handed-back answer that never served can still
+                         # be read: the cap can convert it to a refusal, and then nothing else
+                         # keeps the claims the model wrote.
+                         "attempt": [dict(c) for c in declared],
                          "broken": [{"text": str(f["text"] or "")[:_REPAIR_TEXT],
                                      "cites": list(f["unresolved"])} for f in broken],
                          **({"lists": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "cites": f["sources"]}
