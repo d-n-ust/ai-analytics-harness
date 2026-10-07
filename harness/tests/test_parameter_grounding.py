@@ -986,3 +986,21 @@ def test_an_answer_about_a_measure_no_metric_counts_is_handed_back_as_a_refusal(
     run = _answer_run({"choice": "not_in_list", "p": 0.98, "probabilities": {"not_in_list": 0.98}})
     handed = _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "12 minutes"}))
     assert handed.reason == "no_governed_definition" and handed.ask is None
+
+
+def test_a_dimension_the_metric_filter_determines_is_not_an_open_question():
+    """h2_005: paying_users fixes status = 'active', and status determines is_active in the data. The
+    reader still asked how the question restricts is_active (only, 0.63) and the arm asked the user."""
+    subs = {**SURFACE, "filter": "subscription__status = 'active'", "parameters": {"filters": {
+        "dimensions": [{"name": "subscription__status", "members": ["active", "canceled"], "description": ""},
+                       {"name": "subscription__is_active", "members": [True, False], "description": ""}],
+        "determines": {"subscription__status": ["subscription__is_active"]}}}}
+    back = {"mode:subscription__is_active": ("subscription__is_active", "mode"),
+            "named:subscription__is_active:0": ("subscription__is_active", True),
+            "period:2026-Q2": ("period", "2026-Q2")}
+    answers = {"named:subscription__is_active:0": {"noul": 0.6}, "period:2026-Q2": {"noul": 0.98},
+               "shape": {"choice": "total", "probabilities": {"total": 1.0}},
+               "mode:subscription__is_active": {"choice": "only", "probabilities": {"only": 0.63}}}
+    reading = DG.read(answers, subs, PRINCIPLES, back, _LO, _HI)
+    assert not [d for d in reading["decisions"] if d["state"] == "ungrounded"]
+    assert any("metric's own status filter" in d["why"] for d in reading["decisions"])

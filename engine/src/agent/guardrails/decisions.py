@@ -352,6 +352,10 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     settled = {dim for dim, e in dims.items() if e["named"]
                and _pick(answers, f"mode:{dim}")[0] in ("only", "except")
                and _pick(answers, f"mode:{dim}")[1] >= CONFIDENT}
+    # The metric's own filter settles a dimension too (paying_users fixes status = 'active'), and so
+    # every dimension it determines (is_active): h2_005 asked about is_active, which no question can
+    # change on this metric.
+    settled |= {dim for dim in determines if _fixed_by_metric(builtin, dim)}
     implied_by = {child: parent for parent in settled for child in determines.get(parent, ()) if child != parent}
     for dim, e in dims.items():
         name = dim.split("__")[-1]
@@ -360,8 +364,9 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
         if dim in implied_by and not e["named"]:
             parent = implied_by[dim].split("__")[-1]
             if mode in ("only", "except") or e["unsure"]:
+                by = "the metric's own" if _fixed_by_metric(builtin, implied_by[dim]) else "the"
                 decisions.append(_decision("filter", f"{name}: implied", "none", state="dropped",
-                                           why=f"implied by the {parent} filter: each {parent} belongs to one "
+                                           why=f"implied by {by} {parent} filter: each {parent} has one "
                                                f"{name}"))
             continue
         # A term with no counterpart counts against THIS dimension only when the question restricts
