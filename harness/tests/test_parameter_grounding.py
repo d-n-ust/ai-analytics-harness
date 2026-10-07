@@ -918,3 +918,19 @@ def test_a_named_half_year_absorbs_its_months_and_a_compared_month_pair_drops_th
     pair = DG._settle(["2026-Q2", "2026-05", "2026-06"], {"2026-Q2": 0.72, "2026-05": 0.97, "2026-06": 0.98})
     assert pair == ["2026-05", "2026-06"]
     assert DG._settle(["2026-Q2", "2026-04", "2026-05", "2026-06"]) == ["2026-Q2"]      # filled: kept
+
+
+def test_a_split_over_a_listed_set_of_values_runs():
+    """h2_006 "every channel apart from partnerships": the reading allowed the four channels as one
+    list, and a call splitting by channel over that list showed each of them. It was blocked; it now
+    runs. A split by a dimension the question does not name is still outside the question."""
+    four = ["content_seo", "organic", "paid_search", "referral"]
+    reading = {"filters": {"user__channel": [four]}, "periods": ["2026-Q2"], "group_by": [], "separate": False,
+               "builtin": None, "decisions": [], "values": {}, "period_options": []}
+    queries, decisions = DG.check(reading, {"metric": "new_signups", "period": "2026-Q2",
+                                            "filters": {"user__channel": four}, "group_by": ["user__channel"]})
+    assert queries == [{"metric": "new_signups", "period": "2026-Q2", "filters": {"user__channel": four},
+                        "group_by": ["user__channel"]}]
+    _, other = DG.check(reading, {"metric": "new_signups", "period": "2026-Q2", "filters": {"user__channel": four},
+                                  "group_by": ["user__region"]})
+    assert any(d["state"] == "outside" for d in other)

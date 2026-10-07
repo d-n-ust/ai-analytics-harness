@@ -558,7 +558,12 @@ def check(reading: dict, requested: dict) -> tuple[list, list]:
             filters[dim] = allowed[0]
         else:
             fan.append((dim, allowed))
-    may_split = set(reading["group_by"]) | {d for d, a in reading["filters"].items() if len(a) > 1} | {"metric_time"}
+    # A split by a dimension the question names several values of shows each of them, whether the
+    # values were read as separate figures or as one list ("every channel apart from partnerships",
+    # h2_006: the list was allowed and the split over it was blocked four times).
+    may_split = set(reading["group_by"]) | {"metric_time"} | {
+        d for d, a in reading["filters"].items()
+        if len(a) > 1 or any(isinstance(x, list) and len(x) > 1 for x in a)}
     outside += [f"group_by {g}: the question does not ask to split by {g.split('__')[-1]}"
                 for g in group_by if g not in may_split]
     group_by = group_by or list(reading["group_by"])
