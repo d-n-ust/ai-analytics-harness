@@ -227,10 +227,47 @@ def _exit_check(run, exit_call):
     # otherwise a request to bend the rules (h_013) outranks any other hand-back.
     if not reading_refuses and not (verdict is not None and verdict[1] is not None):
         verdict = _substitution(run, exit_call) or verdict
+    ask = None
+    if verdict is None and exit_call.name == "answer":
+        verdict, ask = _measure_named(run)
     if verdict is None:
         return None
     message, reason = verdict
     run.repairs.append({"exit_reading": message[:200], "refuse": reason})
     run.acts.append(Act("exit_matches_reading", str(Position.REPAIR), "handed back",
                         message[:160]).as_dict())
-    return ToolResult(message, is_error=True, reason=reason)
+    return ToolResult(message, is_error=True, reason=reason, ask=ask)
+
+
+def _measure_named(run):
+    """An answer rests on a measure, and the question has to name one. h2_015 ("How is engagement
+    looking for June 2026?") was answered with habits per active user, and no check asked whether
+    the question named that measure: the metric choice was read only for a clarification or a
+    refusal. Returns (verdict, clarify args) or (None, None).
+
+    Read from the decision model's metric choice (`_metric`, made once per run). The bar is the
+    probability that the question names no governed measure, or one no metric counts. Measured on
+    all 73 labelled questions on 2026-10-07: at most 0.35 on every question labelled to be answered
+    (h_001, the word "users"), and at least 0.68 on every question that names no measure (h_016,
+    h2_015). The 0.5 bar sits between; h2_015 is among the 73, so it is a development figure."""
+    metrics = getattr(run.grounding.toolbox.semantic, "metrics", None) or {}
+    if not metrics:
+        return None, None
+    chosen = _metric_choice(run, metrics)
+    _charge(run, chosen["cost"])
+    probabilities = chosen.get("probabilities") or {}
+    absent = probabilities.get("not_in_list") or 0.0
+    vague = probabilities.get("not_mentioned") or 0.0
+    if absent + vague < _decisions.LEAN:
+        return None, None
+    if absent > vague:
+        return ("[policy] Your answer was not accepted: no governed metric measures what the question "
+                "asks for, so any figure would be a substitute. Refuse with `no_governed_definition`.",
+                "no_governed_definition"), None
+    likely = [m for _, m in sorted(((p, m) for m, p in probabilities.items() if m in metrics), reverse=True)][:4]
+    offered = ", ".join(likely) or ", ".join(list(metrics)[:4])
+    return ("[policy] Your answer was not accepted: the question names no governed measure, so the "
+            "metric you answered with is an assumption. Ask which measure is meant with `clarify` "
+            f"(reason `undefined_term`), offering governed metrics: {offered}.", None), {
+        "question": f"The question does not say which measure it means. Which of these: {offered}?",
+        "reason": "undefined_term", "candidates": likely}

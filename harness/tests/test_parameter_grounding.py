@@ -950,3 +950,39 @@ def test_a_comparison_of_figures_that_have_their_own_claims_is_not_a_list():
     assert _claims_gate.malformed_claims(_gate_run([by_platform]), with_figures) is None
     alone = _NS(name="answer", args={"answer": "iOS.", "claims": [compared]})
     assert _claims_gate.malformed_claims(_gate_run([by_platform]), alone) is not None
+
+
+def _answer_run(metric_choice):
+    run = _gate_run([], grounded={"_question": {"term": None, "term_known": True, "substitution": 0.0},
+                                  "_metric": {**metric_choice, "cost": 0.0}})
+    run.question, run.turns = "How is engagement looking for June 2026?", [{}]
+    run.grounding.toolbox.semantic = _NS(metrics={"value_moments": {}, "active_users": {},
+                                                  "habits_per_active_user": {}, "app_opens": {}})
+    run.grounding.toolbox.governance = {}
+    return run
+
+
+def test_an_answer_to_a_question_that_names_no_measure_is_handed_back_as_a_question():
+    """h2_015: "How is engagement looking?" was answered with habits per active user. The metric
+    choice said the question names no measure (0.63, plus 0.06 for none in the list); the answer is
+    handed back, and the cap converts it to the clarifying question, not to a refusal."""
+    run = _answer_run({"choice": "not_mentioned", "p": 0.63, "probabilities": {
+        "not_mentioned": 0.63, "not_in_list": 0.06, "habits_per_active_user": 0.2, "value_moments": 0.11}})
+    handed = _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "9.45"}))
+    assert handed is not None and handed.content.startswith("[policy]")
+    assert handed.ask["reason"] == "undefined_term"
+    assert handed.ask["candidates"][:2] == ["habits_per_active_user", "value_moments"]
+
+
+def test_an_answer_whose_measure_the_question_names_is_not_handed_back():
+    """h_001 ("users") scored 0.35 for "no measure named", the highest of every question labelled to
+    be answered; it stays below the 0.5 bar."""
+    run = _answer_run({"choice": "active_users", "p": 0.60, "probabilities": {
+        "active_users": 0.60, "not_mentioned": 0.35, "active_accounts": 0.05}})
+    assert _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "1,620"})) is None
+
+
+def test_an_answer_about_a_measure_no_metric_counts_is_handed_back_as_a_refusal():
+    run = _answer_run({"choice": "not_in_list", "p": 0.98, "probabilities": {"not_in_list": 0.98}})
+    handed = _coverage_gate.exit_matches_reading(run, _NS(name="answer", args={"answer": "12 minutes"}))
+    assert handed.reason == "no_governed_definition" and handed.ask is None

@@ -805,6 +805,12 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                 # not be able to serve it — the cap CONVERTS the exit to the refusal the policy
                 # names. (The wired spec_authoring's first full-suite run produced exactly this:
                 # an authored computable served-with-caveat under strict governance.)
+                if str(correction.content or "").startswith("[policy]") and correction.ask:
+                    asked = ToolCall(turn.exit_call.id, "clarify", dict(correction.ask))
+                    run.acts.append(Act("answerability_gate", str(Position.REPAIR), "converted",
+                                         "policy violation at the cap: the answer became the "
+                                         "question the policy names").as_dict())
+                    return done(run.finish(asked, it + 1))
                 if str(correction.content or "").startswith("[policy]"):
                     # The correction names its refusal code when it has one (exit_matches_reading:
                     # `ungoverned_dimension_value` for a value the layer lacks).
