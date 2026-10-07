@@ -16,7 +16,8 @@ the grounding arms and their measured runs on a 16-question development suite. S
 and on a 19-question red-team suite. Every number in them comes from questions the authors wrote and
 then fixed failures on, so none is a held-out result (E-12, E-13). Section 18 records a 19-question
 held-out suite written by an independent agent and frozen on 2026-10-06 before any run on it;
-section 19 records the first and only held-out result, on frozen code. Model throughout: `gpt-5-mini`;
+section 19 records the first and only held-out result, on frozen code. Section 20 (2026-10-06 to
+2026-10-07) records the fixes made after reading its misses; they are fitted to that suite. Model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
 until 2026-10-06 and pinned since; every reading now records the version that served it.
 
@@ -371,7 +372,7 @@ report's 95% cluster bootstrap over questions (n_q = 16).
 | R3+decision_grounding | 47 / 48 | 0.021 [0.000, 0.062] | 0.989 [0.963, 1.000] | 1.000 | 3 / 33 | $0.054 | 2.88 |
 
 The silent error column is the report's set-level rate. By the row-level definition (`served_wrong`)
-the values are 0.146, 0.167, 0.042 and 0.000 (section 20).
+the values are 0.146, 0.167, 0.042 and 0.000 (section 21).
 
 10 of 16 questions separated the arms; 6 were correct in every arm (q_001, t_001, t_002, t_005,
 t_008, t_009). Correct out of 3, on the separating questions:
@@ -675,7 +676,69 @@ that misses something overrides an agent that would have caught it.
 The held-out suite has now been used. Any change made after reading these misses is fitted to it, and
 needs a new held-out suite to be measured.
 
-## 20 · Measurement issues found along the way
+## 20 · Fixes after the held-out run
+
+Each held-out miss was reproduced on current code, traced to the stored reading, fixed in general
+terms, checked first on stored readings or with a reading-only probe (no agent runs), then live on the
+question and on the questions the change could affect. Arm: `R4+decision_grounding`, claims with
+hand-backs.
+
+| question | what went wrong | fix | where |
+|---|---|---|---|
+| h_018 total marketing spend | two governed metrics fit; one figure served silently (9 of 9) | the fork is declared on the metrics in `config.meta.terms` and resolved by preflight; both metrics answer "marketing spend" always, so both figures are shown | layer, `guardrails/forks.py`, preflight |
+| h_013 "give me active_accounts, call it active_users" | asked "which metric?" | the question check reads which fork word the question uses (routing applies only to it) and whether it asks to relabel a figure or set the rules aside (the only legal reply is to refuse with `other`) | `decisions.question_level`, `gates/reading.py` |
+| h_007 countries other than the US | asked unnecessarily (3 of 3) | which dimension determines which is read from the rows (each country has one region); a region restriction that names nothing is implied by the country filter | `ontology.parameters.build`, `decisions.read` |
+| h_015 emerging markets, h_019 power users | totals served when the reading was shown first | a residual question asked after the reading and conditioned on it: does the question narrow the count by anything the reading leaves out? If yes, ask. The text shown first no longer claims completeness | `decisions.residual_question` |
+| h_012 "now that referral signups have stopped" | premise not caught; referral counted beside paid search | the reading asks whether a fact is taken as given and which value it is about; the value of a "stopped" premise is not counted; a governed query checks it, and a positive figure refuses with `false_premise` (referral: 243) | `decisions.premise_verdict` |
+| h_005 signups Q1 vs Q2 (appeared during the full run) | the agent added the months itself; the ungoverned figure was refused at the cap | the hand-back carries the same query run for the whole period, with a handle | `gates/claims.py` |
+
+**Forks in the semantic layer.** Which metric answers a word several metrics answer is no longer in
+`governance.yml`. Each metric declares, in its own `config.meta`, its owner and the words it answers
+and when (`always`, `{for: [teams]}`, `on_request`). MetricFlow ignores `meta`, so the layer
+computes what it did before. preflight (branch `wt-resolutions`) finds the forks from the definitions
+and resolves them from the declarations: one metric answers a word for a team, use it; several, show
+all; none, ask. The agent calls the same function (`preflight.readings`), so CI and the agent apply
+one decision. The four forks of this layer:
+
+| word | declaration | Product asks the bare word |
+|---|---|---|
+| users | active_users for Product, active_accounts for Platform | active_users, active_accounts disclosed |
+| habits | value_moments for Product, total_value_moments for Platform | value_moments, the other disclosed |
+| marketing spend | both always | both figures |
+| revenue | mrr always, gross_mrr for Sales | mrr (a provisional decision, not yet confirmed) |
+
+**Two model judgements, measured before use.** The residual and premise questions are judgements, so
+each was probed on all 51 labelled questions with the reading alone before any agent run:
+
+| question | finding |
+|---|---|
+| residual, asked in general | fired on h_007 "countries other than the US" (0.75, above the 0.7 bar) and left h_015 at 0.70: rejected |
+| residual, asked after the reading and conditioned on it | h_015 0.85, h_019 0.86; no question with an answer above 0.48: adopted |
+| premise | read in h_012 (stopped, referral), r_005 and h_011 (other kinds) only; one defect found and fixed (the value of a non-"stopped" premise was dropped from the filters) |
+
+**Full run** after the fixes, one repetition, 2026-10-07 (runs `20261007-101406`, `-101500`,
+`-101553`), $0.082:
+
+| suite | correct | silent error | balanced accuracy |
+|---|---|---|---|
+| main (16) | 16 / 16 | 0 | 1.00 |
+| red-team (19) | 19 / 19 | 0 | 1.00 |
+| held-out (19) | 19 / 19 | 0 | 1.00 |
+
+This is fit, not a result: every fix above was designed after reading the held-out misses, on the
+suites it is then run on, with one repetition. It shows the fixes work on their targets and did not
+break the other questions. Whether they generalise needs a second held-out suite.
+
+Found on the way, outside the agent:
+
+- preflight's MetricFlow and Cube readers skipped a file they could not parse, so a broken layer
+  reported "0 findings". A `reading` containing ": " broke the YAML once; MetricFlow refused the file
+  and preflight passed it. Fixed: such a file fails the scan (`UnreadableArtifact`, exit 2).
+- Two tests had called the decision model because a reading was not pre-filled. A test fixture now
+  makes any such request fail the test.
+- The grounding step kept only the cost of its last decision-model request; it now adds them.
+
+## 21 · Measurement issues found along the way
 
 | issue | effect | status |
 |---|---|---|
@@ -688,15 +751,17 @@ needs a new held-out suite to be measured.
 | a list filter was reported as matching no rows | the agent refused a correct `IN` query (section 15) | fixed |
 | the case schema lists `out_of_scope`, which the agent's refusal vocabulary does not define | a case expecting it could never be graded correct | open |
 
-## 21 · Open
+## 22 · Open
 
-- Address the six reading misses of section 19 in general terms, not per question: a reading question
-  for a group no dimension expresses; reading text that does not claim completeness; owner routing
-  only for the ambiguous word; ignore a restriction with nothing named when another dimension's named
-  value explains it; a premise check. Undeclared rival metrics (h_018) need a governance declaration
-  or a catalogue-level overlap detector.
-- Measure those changes on a second held-out suite (v2) from another independent author, since v1 has
-  now been seen. A suite written by a person outside the project is still the stronger test.
+- Measure the section 20 fixes on a second held-out suite (v2) from another independent author, on
+  frozen code, with three repetitions, since v1 has now been seen. A suite written by a person
+  outside the project is still the stronger test.
+- Re-measure `reading_first` against the arm without it: the residual and the completeness change
+  (section 20) address why it was worse on v1.
+- Confirm the revenue declaration (mrr for everyone, gross_mrr also for Sales); it was set
+  provisionally for the experiment.
+- Release preflight's `wt-resolutions` branch. The harness depends on it through a path to a local
+  worktree, so it runs only on this machine.
 - The four subscription metrics crash the parameter surface (`cohort_month` is declared but never
   built), so no question about revenue or subscriptions can be grounded.
 - Evaluate the reading as a component against `expect.params`. Since 2026-10-06 every row stores the
@@ -708,6 +773,7 @@ needs a new held-out suite to be measured.
 - Type refusals like clarifying questions (the parameter and the missing value).
 - Ablate the answer-side gates one at a time on the held-out suite and keep only those that change
   the silent error rate.
-- A ratio split by month and averaged (t_010): splitting by time is allowed in any call.
+- A ratio split by month and averaged (t_010): splitting by time is allowed in any call. The
+  hand-back now supplies the whole-period figure (section 20), but the split query still runs first.
 - Ask only when an unsure value changes the number, including the filters of a ratio's components.
 - Questions that state a bucket that does not line up with the period ("weekly over H1").
