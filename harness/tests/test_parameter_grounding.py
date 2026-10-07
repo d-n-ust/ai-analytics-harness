@@ -798,3 +798,62 @@ def test_the_residual_is_asked_about_what_the_reading_found_and_opens_the_questi
     assert DG.check(flagged, {"metric": "app_opens"})[0] == []
     calm = DG.with_residual(reading, {"beyond": {"noul": 0.48}})
     assert DG.check(calm, {"metric": "app_opens"})[0], "below the bar the call runs"
+
+
+# ── a fact the question takes as given ────────────────────────────────────────────────────────────
+def _premise_read(premise=("stopped", 0.95), about=("p:activity__platform:1", 0.9)):
+    """"Now that iOS opens have stopped, how many Android opens in June 2026?" read with a premise."""
+    back = {**_BACK, "p:activity__platform:1": ("activity__platform", "ios")}
+    answers = {"named:activity__platform:0": {"noul": 0.99}, "named:activity__platform:1": {"noul": 0.97},
+               "period:2026-06": {"noul": 0.98},
+               "mode:activity__platform": {"choice": "only", "probabilities": {"only": 0.98}},
+               "shape": {"choice": "total", "probabilities": {"total": 1.0}},
+               "premise": {"choice": premise[0], "probabilities": {premise[0]: premise[1]}},
+               "premise_about": {"choice": about[0], "probabilities": {about[0]: about[1]}}}
+    return DG.read(answers, SURFACE, PRINCIPLES, back, _LO, _HI)
+
+
+def test_the_value_a_premise_is_about_is_not_counted():
+    """h_012 counted referral beside paid search and added them up: referral is what the premise is
+    about ("now that referral signups have stopped"), not what the question asks to count."""
+    reading = _premise_read()
+    assert reading["premise"] == {"kind": "stopped", "about": ("activity__platform", "ios"), "p": 0.95}
+    assert reading["filters"] == {"activity__platform": ["android"]}
+
+
+def test_a_premise_the_data_contradicts_is_refused_with_the_figure_and_one_it_confirms_is_disclosed():
+    reading = _premise_read()
+    false = DG.premise_verdict(reading, "app_opens", {"2026-06": 8786.0})
+    assert (false["state"], false["reason"]) == ("refuse", "false_premise") and "8,786" in false["why"]
+    true = DG.premise_verdict(reading, "app_opens", {"2026-06": None})
+    assert true["state"] == "applied" and "zero in 2026-06" in true["disclose"]
+    assert DG.premise_verdict(_premise_read(premise=("none", 0.99)), "app_opens", {"2026-06": 1.0}) is None
+    assert DG.premise_verdict(_premise_read(about=("none", 0.9)), "app_opens", {"2026-06": 1.0}) is None, \
+        "a premise whose subject is not identified is not checked"
+
+
+def test_a_premise_of_another_kind_keeps_its_value_counted():
+    """r_005 "why did Android app opens drop": the premise is about Android, and Android is counted."""
+    reading = _premise_read(premise=("other", 0.99))
+    assert reading["filters"] == {"activity__platform": ["android", "ios"]}
+
+
+def test_a_figure_built_from_a_split_query_is_handed_back_with_the_whole_period_run():
+    """h_005 added three months (637) and t_010 averaged three monthly ratios (9.41 against 18.92).
+    The hand-back carries the governed figure for the whole period, run by the mechanism."""
+    monthly = {"tool": "query_metric", "handle": "r1", "error": False,
+               "args": {"metric": "new_signups", "group_by": ["metric_time"], "time_grain": "month",
+                        "period": "2026-Q1"},
+               "result_values": [240.0, 202.0, 195.0], "result_labels": ["2026-01", "2026-02", "2026-03"]}
+    run = _gate_run([monthly])
+    supplied = []
+
+    def execute(calls):
+        supplied.extend(c.args for c in calls)
+        return [_NS(content="[r2] 637") for _ in calls]
+    run.execute = execute
+    exit_call = _NS(name="answer", args={"answer": "637", "claims": [
+        {"text": "Q1 signups 637", "value": 637, "sources": ["r1:2026-01", "r1:2026-02"]}]})
+    handed = _claims_gate.malformed_claims(run, exit_call)
+    assert handed is not None and "[r2] 637" in handed.content
+    assert supplied == [{"metric": "new_signups", "period": "2026-Q1"}]

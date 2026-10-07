@@ -156,6 +156,24 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
                                  "it compares.",
                          "false": "The question names a different period, a longer or shorter one that only "
                                   "overlaps this one, or no period at all."}}
+    # A stated fact about the data ("now that referral signups have stopped"): which kind, and which
+    # value it is about. The value it is about is not what the question asks to count (h_012 counted
+    # referral beside paid search and added them up), and whether the fact holds is checked by a
+    # governed query, not judged (reading_for).
+    questions["premise"] = {
+        "type": "choice", "instructions": "Does the question take something about the data as already given?",
+        "criteria": {"none": "No: it only asks for figures.",
+                     "stopped": "Yes: it states as given that something stopped, ended, dried up or had none.",
+                     "other": "Yes: it states as given some other fact (a rise, a fall, a launch, a cause)."}}
+    about = {"none": "The stated fact, if any, is about none of these values."}
+    for d in _dimensions(surface):
+        label = d["column"].replace("_", " ")
+        for i, m in enumerate(d["members"]):
+            about[f"p:{d['name']}:{i}"] = f"The stated fact is about {label} {m}."
+            back[f"p:{d['name']}:{i}"] = (d["name"], m)
+    questions["premise_about"] = {"type": "choice", "criteria": about,
+                                  "instructions": "If the question takes a fact as given, which value is that fact "
+                                                  "about?"}
     questions["outside"] = {
         "type": "noul", "instructions": f"Does the question name a period outside the data, which covers "
                                         f"{lo} to {hi}?",
@@ -295,9 +313,10 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
                                    disclose=f"{surface['metric']} applies {builtin} by definition.",
                                    why="declared by the metric; not selectable"))
 
+    premise = _premise(answers, back)
     dims: dict = {}
     for key, (dim, value) in back.items():
-        if dim == "period" or value in ("mode", "lacks"):
+        if dim == "period" or value in ("mode", "lacks") or key.startswith("p:"):
             continue
         entry = dims.setdefault(dim, {"members": [], "named": [], "maybe": []})
         entry["members"].append(value)
@@ -368,8 +387,15 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
             decisions.append(_ungrounded("filter", f"{name}: the question restricts it, but not to a value "
                                          f"that can be identified"))
         elif mode == "only":
-            filters[dim] = e["named"]
-            decisions.append({**_decision("filter", _shown(dim, e["named"]), "question"), "confidence": p_mode})
+            # Only a "stopped" premise names a value that is not counted ("now that referral has
+            # stopped, how many through paid search"); in "why did Android opens drop" the value the
+            # premise is about is the one counted (r_005).
+            counted = [m for m in e["named"]
+                       if not (premise.get("kind") == "stopped" and (dim, m) == premise.get("about"))]
+            if not counted:                     # only the premise names this dimension: no restriction
+                continue
+            filters[dim] = counted
+            decisions.append({**_decision("filter", _shown(dim, counted), "question"), "confidence": p_mode})
         elif mode == "except":
             # One reading: everything but the named values, as ONE filter (an IN list), because "not
             # Android" asks for one number. Values named to include are each their own reading.
@@ -428,12 +454,45 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
         decisions.append(_decision("period", " or ".join(periods), "question"))
 
     grain, p_grain = _pick(answers, "time_grain")
-    return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate,
+    return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": premise,
             "values": {dim: e["members"] for dim, e in dims.items()},
             "period_options": [p for _, (k, p) in back.items() if k == "period"],
             "grain": grain if grain not in (None, "not_mentioned") and p_grain >= CONFIDENT else None,
             "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
             "builtin": builtin, "decisions": decisions}
+
+
+def _premise(answers: dict, back: dict) -> dict:
+    """PURE. {kind, about: (dim, value) | None, p}: a fact the question takes as given, when the decision
+    model reads one with confidence; {} otherwise."""
+    kind, p = _pick(answers, "premise")
+    if kind in (None, "none") or p < CONFIDENT:
+        return {}
+    key, p_about = _pick(answers, "premise_about")
+    about = back.get(key) if key and key.startswith("p:") and p_about >= CONFIDENT else None
+    return {"kind": kind, "about": about, "p": p}
+
+
+def premise_verdict(reading: dict, metric: str, observed: dict) -> dict | None:
+    """PURE. The decision a checked premise leads to. `observed` maps each period checked to the
+    governed value for the premise's subject (None for an empty result). A "stopped" premise is
+    false when any period shows a positive value: refuse with `false_premise`, naming the figure. It
+    holds when every period shows nothing: the reading proceeds, and the check is disclosed."""
+    premise = reading.get("premise") or {}
+    if premise.get("kind") != "stopped" or not premise.get("about") or not observed:
+        return None
+    dim, value = premise["about"]
+    name = dim.split("__")[-1]
+    positive = {p: v for p, v in observed.items() if v}
+    if positive:
+        period, v = next(iter(positive.items()))
+        figure = f"{v:,.0f}" if float(v).is_integer() else f"{v:,.2f}"
+        return {**_refuse("premise", "false_premise",
+                          f"the question takes as given that {name} {value} stopped, but {metric} for {name} = "
+                          f"{value} in {period} is {figure}"), "confidence": premise["p"]}
+    return _decision("premise", f"{name} = {value} stopped", "governed_declaration",
+                     disclose=f"Checked: {metric} for {name} = {value} is zero in {', '.join(observed)}, as the "
+                              f"question says.", why="premise checked by a governed query")
 
 
 def _span_of(args: dict):
@@ -615,12 +674,33 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     # The raw answers and the serving version are kept with the reading, so a stored row can be
     # replayed and the reading evaluated as a component without a new request.
     reading = {**read(answers, surface, principles, back, lo, hi), "answers": answers, "model": model}
+    verdict = premise_verdict(reading, metric, _premise_observed(semantic, metric, reading))
+    if verdict is not None:
+        reading = {**reading, "decisions": reading["decisions"] + [verdict]}
     if not any(d["state"] == "refuse" for d in reading["decisions"]):
         residual, more, _model = _ask(residual_question(metric, reading, (governance or {}).get("segments")), question)
         cost += more
         reading = with_residual(reading, residual)
     cache[metric] = reading
     return cache[metric], cost
+
+
+def _premise_observed(semantic, metric: str, reading: dict) -> dict:
+    """The governed value for the premise's subject in each period the question names: the data,
+    not the model, decides whether the premise holds. {} when there is nothing to check."""
+    premise = reading.get("premise") or {}
+    if premise.get("kind") != "stopped" or not premise.get("about") or not reading["periods"] \
+            or not hasattr(semantic, "query_with_sql"):
+        return {}
+    dim, value = premise["about"]
+    observed = {}
+    for period in reading["periods"]:
+        try:
+            _sql, cols, rows = semantic.query_with_sql(metric, filters={dim: value}, period=period)
+        except Exception:                                       # noqa: BLE001 — a check that cannot run decides nothing
+            return {}
+        observed[period] = rows[0][-1] if rows and rows[0] else None
+    return observed
 
 
 def summary(metric: str, reading: dict) -> str:

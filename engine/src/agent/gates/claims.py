@@ -8,6 +8,8 @@ the answer back, or None (standing down, or after constructing into the exit cal
 """
 from __future__ import annotations
 
+import json
+
 import re  # noqa: F401
 
 import evidence as claim_audit  # noqa: F401
@@ -108,6 +110,12 @@ def malformed_claims(run, exit_call: ToolCall):
                      "averaged from smaller periods)")
     lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
                  "Every governed result printed its citable fields on a [cite] line.")
+    # A list-shaped claim citing the buckets of one split query is the same move written differently.
+    supplied = _whole_period_results(run, lists + ungoverned) if policy else []
+    if supplied:
+        lines.append("The governed figure for each whole period was run for you. Cite it instead of adding "
+                     "or averaging the smaller periods:")
+        lines += supplied
     # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
     # its own verb. Recorded on the run rather than on a step: the thing being handed back is
     # the ANSWER, which no step owns.
@@ -117,6 +125,38 @@ def malformed_claims(run, exit_call: ToolCall):
                          f"figure(s); "
                          f"correction {run.claim_retries} of 2").as_dict())
     return ToolResult("\n".join(lines), is_error=True, reason="other" if policy else None)
+
+
+def _whole_period_results(run, ungoverned: list) -> list[str]:
+    """The governed figure a split query was standing in for, run by the mechanism.
+
+    An agent that queried a period by month and then added (h_005: 240 + 202 + 195 = 637) or averaged
+    (t_010: three monthly ratios averaged to 9.41 against the quarter's 18.92) the buckets states a
+    figure no governed call returned, and is handed back. Telling it to "query it" on the last turn
+    leaves it nothing to do but refuse; the mechanism knows the call, so it runs it: the same query
+    without the time split, for the same period. The figure then IS a governed result, with a
+    handle, and for a non-additive metric it is the only correct one."""
+    if not ungoverned or not hasattr(run, "execute"):
+        return []
+    by_handle = {st.get("handle"): st for st in run.steps if st.get("handle")}
+    queries: dict = {}
+    for f in ungoverned:
+        for ref in f["sources"]:
+            step = by_handle.get(str(ref).strip().strip("[]").partition(":")[0])
+            if step is None or step.get("tool") != "query_metric":
+                continue
+            for q in step.get("grounded_queries") or [step["args"]]:
+                if "metric_time" not in (q.get("group_by") or []):
+                    continue
+                whole = {k: v for k, v in q.items() if k not in ("group_by", "time_grain", "because")}
+                rest = [g for g in q.get("group_by") or [] if g != "metric_time"]
+                if rest:
+                    whole["group_by"] = rest
+                queries.setdefault(json.dumps(whole, sort_keys=True, default=str), whole)
+    if not queries:
+        return []
+    results = run.execute([ToolCall(f"whole-{i}", "query_metric", q) for i, q in enumerate(queries.values())])
+    return [r.content for r in results]
 
 
 def dropped_constraint(run, exit_call):
