@@ -751,29 +751,109 @@ Found on the way, outside the agent:
 | a list filter was reported as matching no rows | the agent refused a correct `IN` query (section 15) | fixed |
 | the case schema lists `out_of_scope`, which the agent's refusal vocabulary does not define | a case expecting it could never be graded correct | open |
 
-## 22 · Open
+## 22 · Held-out v2: the result on new questions
 
-- Measure the section 20 fixes on a second held-out suite (v2) from another independent author, on
-  frozen code, with three repetitions, since v1 has now been seen. A suite written by a person
-  outside the project is still the stronger test.
-- Re-measure `reading_first` against the arm without it: the residual and the completeness change
-  (section 20) address why it was worse on v1.
+A second held-out suite of 19 questions (`heldout2.yml`, tag `exp07-heldout-v2`) was written by an
+independent agent (`claude-fable-5-1`, the model that also adjudicated the v1 labels) from the
+fixture, the case schema and the outcome vocabularies only. Every gold value was cross-checked against
+the governed layer. One label changed at review: h2_018 became ambiguous, to match v1 h_015.
+
+**Result, target arm, one repetition, code `540bb2f`** (run `20261007-161555`), $0.036:
+
+| measure | held-out v1 after the fixes (fit) | held-out v2 (new questions) |
+|---|---|---|
+| correct | 19 / 19 | 14 / 19 |
+| silent error | 0 | 1 (h2_015) |
+| balanced accuracy | 1.00 | 0.73 |
+
+This is the held-out result for that code. Before the section 20 fixes, the arm scored 0.74 on v1
+(42 of 57 rows); after them it scored 0.74 on v2. The fixes did not raise the rate on new questions.
+The two runs are five commits apart (the vocabulary removal, the expression-dimension fix and the PyPI
+preflight), and h_004 was never fixed, so "all v1 misses fixed" in earlier notes is not accurate.
+
+**Where the eleven held-out failures came from** (traced in code and stored rows by an eight-reviewer
+panel on 2026-10-07):
+
+| cause | failures |
+|---|---|
+| a declaration missing from the layer | h_018 (fork), h_007 (country determines region), h2_005 (no default period for a current-state metric); partly h2_015 ("engagement"), h_013 |
+| a defect in the question reader | h2_002: `_settle` dropped 2026-H1 (0.98) because January and June passed 0.7 and the months between did not |
+| a defect in the per-call check | h2_006: a split over a listed set of channels was blocked four times |
+| the claims protocol | h2_003 (a comparison claim handed back twice, then converted to a refusal; the "iPhone" misreading did not change the outcome), h_005 |
+| no check of the metric when the agent answers | h2_015 |
+| premise or a group no dimension holds | h_012, h_015, h_019 |
+
+Two earlier explanations were wrong and are withdrawn. h2_002 was not the model being unsure of the
+months: the model was right and the code discarded its reading. "Any one of ~57 answers in the
+0.15–0.7 band triggers ask" is false: every v2 reading had such an answer and 7 of 19 left a
+parameter open, because only period, filter-mode and named-value answers can open one.
+
+## 23 · Measurement and mechanism fixes after v2
+
+**Measurement** (commit `d5d6ade`, row schema v25):
+
+| issue | fix |
+|---|---|
+| pile B counted a clarifying question as a correct refusal, so an agent that always asked scored 0.67 balanced accuracy | the grader records `clarify_accepted`; a question counts as a decline only where the case accepts one |
+| pile-A silent error counted every wrong answer, not the row-level definition | it uses `served_wrong`; a visibly incomplete answer is wrong but not silent |
+| a refusal converted at the correction cap kept no repairs, no claims, zero retries (h2_003) | every exit keeps the repair history; each claims repair keeps the whole attempt |
+| a row did not say what the model was shown or which layer it ran on | exp07 rows record the context digest (texts in `context_blobs.json`) and a hash of the layer and governance files |
+| the report labelled `numeric+claims` grading "not recorded" | labelled |
+| the question reader was never graded against `expect.params` | `reading_errors` grades its implied action and values from stored rows, at no cost; a summary table per arm |
+
+None of the four runs of 2026-10-07 changed its silent error or balanced accuracy on regrade: none of
+them asked where only a refusal was right.
+
+**The reader as a component** (stored readings, no requests):
+
+| suite | action allowed by the label | values match the label |
+|---|---|---|
+| development (main, red-team, held-out v1) | 45 / 45 | 44 / 45 (t_009 read "SEO" as content_seo or organic) |
+| held-out v2, as run | 12 / 15 | 12 / 15 |
+| held-out v2, replayed on the fixes below | 13 / 15 | 13 / 15 |
+
+The two remaining v2 reader errors are h2_005 (the period, a layer gap) and h2_012 (a premise about a
+direction of change, which the premise question cannot express; the agent refused it correctly).
+
+**Thresholds are not the explanation.** Every stored, labelled reading was re-decided with the
+confidence bar from 0.6 to 0.8 and the lean bar at 0.4 and 0.5: the share of readings whose action
+the label allows moved between 57 and 58 of 60, and v2 between 12 and 13 of 15.
+
+**Mechanism fixes**, each replayed on every stored run with readings (25 runs) before any paid run:
+
+| commit | fix | replay |
+|---|---|---|
+| `37c91d6` | a named longer period absorbs the periods inside it when it scores higher (h2_002); "June compared with May" still drops the quarter | only h2_002 changes (ask → answer) |
+| `c3a5903` | a split over a listed set of values runs (h2_006) | not replayable (agent calls); unit test |
+| `3b4125c` | a comparison claim citing figures that each have their own claim is accepted (h2_003) | unit test |
+| `13c13fc` | an answer is held to the measure the question names (h2_015): handed back to ask when the question names none, to refuse when no metric counts it; at the cap it becomes the question | the bar was measured on all 73 labelled questions ($0.004): "no measure named" at most 0.35 on every question to be answered, at least 0.68 on every question naming none |
+| `1703845` | a dimension the metric's own filter determines is settled (is_active on paying_users, h2_005) | no final action changes |
+
+These are fitted to v2's failures. v2 is a development set from here on; the next measurement needs
+a suite no fix has seen.
+
+## 24 · Open
+
+- A held-out suite written by a person outside the project, labelled against a frozen layer, at least
+  60 questions with three repetitions, covering elements no suite has exercised (the monthly plan,
+  status, the United States, active_users_growth, total_value_moments, gross_mrr,
+  active_subscriptions).
+- The layer gaps the review found: no default period for a current-state metric (h2_005); no aliases
+  for values ("iPhone", "yearly"); `paused` is a declared status with zero rows, so it is missing from
+  the runtime members; region falls back to an undocumented `Other`; the same concept on two entity
+  paths (`activity__region` and `user__region`); `paying_users` has no owner. These belong to the
+  semantic-layer readiness audit and the proposed dimensional model.
+- A premise about a direction of change ("dropped in June vs May"): the premise question offers only
+  `stopped` and `other`, so the reader cannot check it (h2_012).
+- Re-measure `reading_first` against the arm without it.
 - Confirm the revenue declaration (mrr for everyone, gross_mrr also for Sales); it was set
   provisionally for the experiment.
-- Release preflight's `wt-resolutions` branch. The harness depends on it through a path to a local
-  worktree, so it runs only on this machine.
-- The four subscription metrics crash the parameter surface (`cohort_month` is declared but never
-  built), so no question about revenue or subscriptions can be grounded.
-- Evaluate the reading as a component against `expect.params`. Since 2026-10-06 every row stores the
-  reading with the decision model's raw answers and serving version (row schema v24), so this needs
-  no new request.
-- Define the fallback when the reading fails. A timeout of the Decisions API (an alpha endpoint) now
-  produces an error row; the intended behaviour is plain R4 with a disclosure that parameters were not
-  checked.
 - Type refusals like clarifying questions (the parameter and the missing value).
-- Ablate the answer-side gates one at a time on the held-out suite and keep only those that change
-  the silent error rate.
-- A ratio split by month and averaged (t_010): splitting by time is allowed in any call. The
-  hand-back now supplies the whole-period figure (section 20), but the split query still runs first.
+- Ablate the answer-side gates one at a time and keep only those that change the silent error rate.
+- A ratio split by month and averaged (t_010): splitting by time is allowed in any call.
 - Ask only when an unsure value changes the number, including the filters of a ratio's components.
-- Questions that state a bucket that does not line up with the period ("weekly over H1").
+- Questions that state a bucket that does not line up with the period ("weekly over H1", h_004).
+
+Closed since section 22 of the earlier notes: preflight 0.5.0 is released and used from PyPI; the
+subscription metrics no longer crash the parameter surface; the reading is graded as a component; a
+decision-model failure now runs the call unchecked with a disclosure.
