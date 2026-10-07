@@ -34,9 +34,6 @@ members = ["engine", "harness", "warehouse", "semantic", "ontology"]
 exclude = ["troodos"]
 
 [tool.uv.sources]
-# preflight's `meta.terms` resolution is on an unreleased branch (wt-resolutions). Switch this to the
-# git or PyPI source once it is released; the path only works on a machine with that worktree.
-preflight-analytics = { path = "../../preflight-analytics__wt/resolutions", editable = true }
 ai-analytics-engine = { workspace = true }
 ai-analytics-harness = { workspace = true }
 ai-analytics-ontology = { workspace = true }
