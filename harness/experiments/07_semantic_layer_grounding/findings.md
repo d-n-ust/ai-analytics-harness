@@ -829,6 +829,19 @@ the label allows moved between 57 and 58 of 60, and v2 between 12 and 13 of 15.
 | `13c13fc` | an answer is held to the measure the question names (h2_015): handed back to ask when the question names none, to refuse when no metric counts it; at the cap it becomes the question | the bar was measured on all 73 labelled questions ($0.004): "no measure named" at most 0.35 on every question to be answered, at least 0.68 on every question naming none |
 | `1703845` | a dimension the metric's own filter determines is settled (is_active on paying_users, h2_005) | no final action changes |
 
+**Live check of the fixes** (run `20261007-213847`, the five v2 failures and three passing controls,
+one repetition, $0.022): 7 of 8 correct, no silent error. h2_002, h2_003 and h2_015 now pass;
+h2_005 still asks for the period (the layer gap). The probe also exposed two things, both fixed:
+
+- With the split allowed, the agent split h2_006 by channel with no filter, and the query served
+  partnerships beside the four channels asked about. A split by a dimension the question restricts
+  now keeps the restriction as a filter.
+- The answer was the four per-channel figures (253, 255, 232, 243), which sum to the gold 983, and it
+  was graded as a silent error. "From every channel apart from partnerships" reads as one total or as
+  one figure per channel (the reader scored the two shapes 0.50 / 0.50). A metric-answer case may now
+  declare a second raw-SQL oracle (`breakdown_sql`); every figure is correct, some of them is
+  incomplete rather than wrong. h2_006 has one; the change is recorded on the case.
+
 These are fitted to v2's failures. v2 is a development set from here on; the next measurement needs
 a suite no fix has seen.
 

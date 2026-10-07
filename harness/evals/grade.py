@@ -423,10 +423,16 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         else:                                            # metric_answer
             num_ok = grade_numeric(answer.answer, gold, tol, declared)["correct"]
             metric_match = _metric_match(answer, expect)
+            # Where the case declares the shape open (`breakdown_sql`), the per-member figures are
+            # the same answer written out: every one of them is correct, some of them incomplete.
+            parts = (grade_breakdown(f"{answer.answer or ''} {answer.explanation or ''}",
+                                     expect.get("alternatives"), tol, declared)
+                     if not num_ok and expect.get("alternatives") else None)
+            num_ok = num_ok or bool(parts and parts["complete"])
             correct = num_ok and metric_match is not False   # only a KNOWN metric mismatch fails
             if correct:
                 bucket = "right"
-            elif not has_number:
+            elif not has_number or (parts and parts["partial"]):
                 bucket = "other"
             elif num_ok:
                 # THE RIGHT NUMBER, REACHED THROUGH A METRIC THE CASE DID NOT NAME. Not the same

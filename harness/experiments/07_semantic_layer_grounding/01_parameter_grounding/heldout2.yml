@@ -145,10 +145,25 @@ cases:
         select count(*) as value from u
         where u.channel <> 'partnerships'
           and u.signup_date between date '2026-04-01' and date '2026-06-30'
+      breakdown_sql: |
+        with u as (select uid, cast(created as date) as signup_date,
+              case when lower(chan) in ('paid_search', 'paid search', 'ppc', 'paid-search') then 'paid_search'
+                   when lower(chan) in ('referral', 'ref') then 'referral'
+                   when lower(chan) in ('content_seo', 'content/seo', 'seo', 'content') then 'content_seo'
+                   when lower(chan) in ('partnerships', 'partner') then 'partnerships' else 'organic' end as channel
+              from "_source".u)
+        select u.channel as label, count(*) as value from u
+        where u.channel <> 'partnerships'
+          and u.signup_date between date '2026-04-01' and date '2026-06-30'
+        group by 1 order by 1
     note: >-
       An exclusion: the four governed channels other than partnerships. new_signups counts all
       accounts (internal included) by definition. A blank raw channel is organic in staging, so it
       is inside the count. Proven 983 (1,214 in total, of which 231 partnerships).
+      Changed 2026-10-07, after v2 became a development set: "from every channel apart from
+      partnerships" reads as one total or as one figure per channel (the reader scored the two
+      shapes 0.50 / 0.50, and two reviewers called the single-figure label debatable). The four
+      per-channel figures (breakdown_sql) are also correct; they sum to 983.
 
   - id: h2_007
     tier: answer

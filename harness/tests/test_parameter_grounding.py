@@ -1004,3 +1004,14 @@ def test_a_dimension_the_metric_filter_determines_is_not_an_open_question():
     reading = DG.read(answers, subs, PRINCIPLES, back, _LO, _HI)
     assert not [d for d in reading["decisions"] if d["state"] == "ungrounded"]
     assert any("metric's own status filter" in d["why"] for d in reading["decisions"])
+
+
+def test_a_split_by_a_restricted_dimension_keeps_the_restriction():
+    """h2_006, once the split was allowed: the agent split by channel with no filter, and the query
+    served partnerships beside the four channels the question asked about."""
+    four = ["content_seo", "organic", "paid_search", "referral"]
+    reading = {"filters": {"user__channel": [four]}, "periods": ["2026-Q2"], "group_by": [], "separate": False,
+               "builtin": None, "decisions": [], "values": {}, "period_options": []}
+    queries, _ = DG.check(reading, {"metric": "new_signups", "period": "2026-Q2", "group_by": ["user__channel"]})
+    assert queries == [{"metric": "new_signups", "period": "2026-Q2", "filters": {"user__channel": four},
+                        "group_by": ["user__channel"]}]

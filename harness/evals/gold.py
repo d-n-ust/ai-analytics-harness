@@ -203,6 +203,11 @@ def compute_gold(con, cases: list[dict] | None = None) -> dict[str, float | None
         elif sql:
             val = con.execute(sql).fetchone()[0]
             golds[case["id"]] = None if val is None else float(val)
+            # A metric answer whose shape the question leaves open also accepts the per-member
+            # figures; they are resolved onto the case the way a breakdown's series are.
+            if case["expect"].get("breakdown_sql"):
+                case["expect"]["alternatives"] = [[float(r[-1]) for r in con.execute(
+                    case["expect"]["breakdown_sql"]).fetchall() if r[-1] is not None]]
         else:
             golds[case["id"]] = None
     return golds

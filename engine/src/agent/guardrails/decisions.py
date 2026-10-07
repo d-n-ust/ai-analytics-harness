@@ -557,7 +557,15 @@ def check(reading: dict, requested: dict) -> tuple[list, list]:
             else:
                 filters[dim] = match
     for dim, allowed in reading["filters"].items():
-        if dim in filters or dim in group_by or dim in (requested.get("filters") or {}):
+        if dim in filters or dim in (requested.get("filters") or {}):
+            continue
+        if dim in group_by:
+            # A split by a dimension the question restricts keeps the restriction: "every channel
+            # apart from partnerships" split by channel ran over all five channels and served the
+            # excluded one beside the others (h2_006 after the split was allowed).
+            listed = [x for v in allowed if v is not None for x in (v if isinstance(v, list) else [v])]
+            if listed and None not in allowed:
+                filters[dim] = listed if len(listed) > 1 else listed[0]
             continue
         if len(allowed) == 1 and allowed[0] is not None:
             filters[dim] = allowed[0]

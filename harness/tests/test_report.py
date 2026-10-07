@@ -381,3 +381,23 @@ def test_a_visibly_incomplete_answer_is_wrong_but_not_silent():
                    _row(correct=False, bucket="wrong", confident_wrong=True)])   # a false number
     assert (s.wrong, s.wrong_silent) == (2, 1)
     assert math.isclose(s.silent_error, 1 / 2)
+
+
+def test_a_metric_answer_with_an_open_shape_accepts_the_per_member_figures():
+    """h2_006 "new signups from every channel apart from partnerships": one total (983) or one
+    figure per channel. Every figure is correct; some of them is incomplete, not a wrong number."""
+    from types import SimpleNamespace
+
+    from evals.grade import grade
+    case = {"id": "h2_006", "expect": {"type": "metric_answer", "metric": "new_signups", "tolerance": 0.005,
+                                       "gold_sql": "-", "breakdown_sql": "-",
+                                       "alternatives": [[253.0, 255.0, 232.0, 243.0]]}}
+    def answer(text):
+        return SimpleNamespace(outcome="answer", answer=text, explanation="", declared_value=None,
+                               typed_value=False, claims=(), source_metric="new_signups", rung=3,
+                               reason=None, refused_by="")
+    full = grade(answer("content_seo 253, organic 255, paid_search 232, referral 243"), case, 983.0)
+    assert full["correct"] and not full["confident_wrong"]
+    some = grade(answer("content_seo 253 and organic 255"), case, 983.0)
+    assert not some["correct"] and some["bucket"] == "other" and not some["confident_wrong"]
+    assert grade(answer("983 new signups"), case, 983.0)["correct"]
