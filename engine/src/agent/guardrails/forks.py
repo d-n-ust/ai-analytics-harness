@@ -99,6 +99,15 @@ def longest_term(question: str, term: str, semantic) -> str:
     return best
 
 
+def words_by_metric(semantic) -> dict[str, list[str]]:
+    """Every word each metric declares (terms and synonyms), for the metric-choice request."""
+    out: dict[str, list[str]] = {}
+    for f in facts_of(semantic):
+        for c in f.claims:
+            out.setdefault(f.label, []).extend(w for w in c.words if w not in out.get(f.label, []))
+    return out
+
+
 def rivals(a: str, b: str, semantic) -> bool:
     """Do two metrics claim a word in common? Then the layer already decides between them."""
     facts = facts_of(semantic)

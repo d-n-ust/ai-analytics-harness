@@ -286,6 +286,10 @@ metric:
     meta:
       owner: Sales
       terms:
+        - term: gross mrr
+          synonyms: [gross monthly recurring revenue, mrr before refunds]
+          reading: "the running figure gross of refunds"
+          when: always
         - term: revenue
           synonyms: [mrr, monthly recurring revenue]
           reading: "every subscription not cancelled, gross of refunds"
@@ -307,7 +311,7 @@ metric:
       owner: Finance
       terms:
         - term: paying customers
-          synonyms: [paying users, payers, paid accounts]
+          synonyms: [paying users, payers, paid accounts, subscribers]
           reading: "accounts holding a live paid subscription"
           when: always
         - term: customers
@@ -362,6 +366,10 @@ metric:
     meta:
       owner: Growth
       terms:
+        - term: acquisition spend
+          synonyms: [spend on acquisition channels, acquisition channel spend]
+          reading: "spend on real acquisition channels, partnerships excluded"
+          when: always
         - term: marketing spend
           synonyms: [total marketing spend, spend]
           reading: "acquisition channels only, partnerships left out"

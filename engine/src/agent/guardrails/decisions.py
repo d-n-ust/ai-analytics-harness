@@ -929,10 +929,10 @@ def reading_text(metric: str, reading: dict, routed: dict | None = None) -> str:
     return "\n".join(lines)
 
 
-def choose_metric(question: str, metrics: dict) -> dict:
+def choose_metric(question: str, metrics: dict, words: dict | None = None) -> dict:
     """Which governed metric the question asks for, read by the decision model from the catalogue:
     {choice, p, probabilities, cost, model}. `not_in_list` and `not_mentioned` are returned as such."""
-    answers, cost, model = _ask(_metric_questions(metrics), question)
+    answers, cost, model = _ask(_metric_questions(metrics, words), question)
     a = answers.get("metric") or {}
     probabilities = a.get("probabilities") or {}
     choice = a.get("choice")
@@ -1019,8 +1019,13 @@ def refusal_verdict(reading: dict, reason: str) -> tuple[str, str | None] | None
 # When a plan cannot be formed (no surface, no coverage), `plan` returns None and the run continues
 # through the agent loop as before.
 
-def _metric_questions(metrics: dict) -> dict:
+def _metric_questions(metrics: dict, words: dict | None = None) -> dict:
+    """The metric-choice request. Each option carries the words the layer declares for the metric
+    (`meta.terms`): without them the model read "revenue" as no metric (0.48) and "subscribers" as
+    active_subscriptions, though the layer declares both (2026-10-08 wording sweep)."""
+    words = words or {}
     crit = {name: f"{name}: {' '.join((m.get('description') or '').split())[:260]}"
+                  + (f" Answers to: {', '.join(words[name])}." if words.get(name) else "")
             for name, m in metrics.items()}
     crit["not_mentioned"] = ("The question names no measure, or one too vague to choose between these "
                              "(for example 'how are we doing' or 'the numbers').")
@@ -1111,7 +1116,8 @@ def plan(question: str, toolbox, governance: dict | None) -> dict | None:
     metrics = getattr(semantic, "metrics", None) or {}
     if not metrics:
         return None
-    answers, cost, _model = _ask(_metric_questions(metrics), question)
+    from .forks import words_by_metric
+    answers, cost, _model = _ask(_metric_questions(metrics, words_by_metric(semantic)), question)
     choice = (answers.get("metric") or {}).get("choice")
     probs = (answers.get("metric") or {}).get("probabilities") or {}
     p = probs.get(choice, 0.0)

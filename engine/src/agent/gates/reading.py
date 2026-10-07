@@ -167,7 +167,8 @@ def _metric_choice(run, metrics: dict) -> dict:
     readings (key `_metric`), so it is stored on the row. A second ask returns it at no cost."""
     if "_metric" in run.grounded:
         return {**run.grounded["_metric"], "cost": 0.0}
-    run.grounded["_metric"] = _decisions.choose_metric(run.question, metrics)
+    run.grounded["_metric"] = _decisions.choose_metric(run.question, metrics,
+                                                       _forks.words_by_metric(run.grounding.toolbox.semantic))
     return run.grounded["_metric"]
 
 
@@ -246,54 +247,53 @@ def _exit_check(run, exit_call):
 _SPLIT = 0.25
 
 
-def _split(run, metrics: dict, probabilities: dict):
-    """Hand an answer back to ask when the question reads as two metrics and nothing declared
-    settles it: no declared word was read from the question, and the two metrics share no declared
-    word (a pair that does is decided by the layer, guardrails/forks.py)."""
-    ranked = sorted(((p, m) for m, p in probabilities.items() if m in metrics), reverse=True)
+def which_measure(probabilities: dict, metrics, asked: dict, semantic) -> tuple[str | None, list]:
+    """PURE except for reading the layer's declarations. What the decision model's metric choice
+    allows: ("refuse", []) when the question names a measure no metric counts; ("ask", candidates)
+    when it names none, or reads as two metrics nothing declared decides between; (None, []) when
+    one metric is read clearly enough to let the answer stand.
+
+    The bars were measured on all 73 labelled questions (2026-10-07 and -08). "No measure named" or
+    "none in the list" together at least 0.5: every question labelled to be answered scored at most
+    0.35 there, every question naming no measure at least 0.68. A split: the top metric below 0.7
+    and the second at least 0.25, which no question labelled to be answered reached except a pair
+    the layer declares."""
+    absent = probabilities.get("not_in_list") or 0.0
+    vague = probabilities.get("not_mentioned") or 0.0
+    ranked = [m for _, m in sorted(((p, m) for m, p in probabilities.items() if m in metrics), reverse=True)]
+    if absent + vague >= _decisions.LEAN:
+        return ("refuse", []) if absent > vague else ("ask", ranked[:4])
     if len(ranked) < 2:
-        return None, None
-    (p1, first), (p2, second) = ranked[:2]
-    asked = run.grounded.get("_question") or {}
-    if (p1 >= _decisions.CONFIDENT or p2 < _SPLIT or (asked.get("term_known") and asked.get("term"))
-            or _forks.rivals(first, second, run.grounding.toolbox.semantic)):
-        return None, None
-    return ("[policy] Your answer was not accepted: the question reads as two different measures, "
-            f"{first} or {second}, and nothing in the layer decides between them. Ask which one is meant "
-            "with `clarify` (reason `undefined_term`).", None), {
-        "question": f"Which measure do you mean: {first} or {second}?",
-        "reason": "undefined_term", "candidates": [first, second]}
+        return None, []
+    first, second = ranked[0], ranked[1]
+    if (probabilities[first] >= _decisions.CONFIDENT or probabilities[second] < _SPLIT
+            or (asked.get("term_known") and asked.get("term")) or _forks.rivals(first, second, semantic)):
+        return None, []
+    return "ask", [first, second]
 
 
 def _measure_named(run):
     """An answer rests on a measure, and the question has to name one. h2_015 ("How is engagement
     looking for June 2026?") was answered with habits per active user, and no check asked whether
     the question named that measure: the metric choice was read only for a clarification or a
-    refusal. Returns (verdict, clarify args) or (None, None).
-
-    Read from the decision model's metric choice (`_metric`, made once per run). The bar is the
-    probability that the question names no governed measure, or one no metric counts. Measured on
-    all 73 labelled questions on 2026-10-07: at most 0.35 on every question labelled to be answered
-    (h_001, the word "users"), and at least 0.68 on every question that names no measure (h_016,
-    h2_015). The 0.5 bar sits between; h2_015 is among the 73, so it is a development figure."""
-    metrics = getattr(run.grounding.toolbox.semantic, "metrics", None) or {}
+    refusal. Returns (verdict, clarify args) or (None, None). The rules are `which_measure`."""
+    tb = run.grounding.toolbox
+    metrics = getattr(tb.semantic, "metrics", None) or {}
     if not metrics:
         return None, None
     chosen = _metric_choice(run, metrics)
     _charge(run, chosen["cost"])
-    probabilities = chosen.get("probabilities") or {}
-    absent = probabilities.get("not_in_list") or 0.0
-    vague = probabilities.get("not_mentioned") or 0.0
-    if absent + vague < _decisions.LEAN:
-        return _split(run, metrics, probabilities)
-    if absent > vague:
+    action, candidates = which_measure(chosen.get("probabilities") or {}, metrics,
+                                       run.grounded.get("_question") or {}, tb.semantic)
+    if action is None:
+        return None, None
+    if action == "refuse":
         return ("[policy] Your answer was not accepted: no governed metric measures what the question "
                 "asks for, so any figure would be a substitute. Refuse with `no_governed_definition`.",
                 "no_governed_definition"), None
-    likely = [m for _, m in sorted(((p, m) for m, p in probabilities.items() if m in metrics), reverse=True)][:4]
-    offered = ", ".join(likely) or ", ".join(list(metrics)[:4])
-    return ("[policy] Your answer was not accepted: the question names no governed measure, so the "
-            "metric you answered with is an assumption. Ask which measure is meant with `clarify` "
-            f"(reason `undefined_term`), offering governed metrics: {offered}.", None), {
-        "question": f"The question does not say which measure it means. Which of these: {offered}?",
-        "reason": "undefined_term", "candidates": likely}
+    offered = ", ".join(candidates) or ", ".join(list(metrics)[:4])
+    return ("[policy] Your answer was not accepted: the question does not settle which governed measure "
+            "it means, so the metric you answered with is an assumption. Ask which measure is meant with "
+            f"`clarify` (reason `undefined_term`), offering governed metrics: {offered}.", None), {
+        "question": f"Which measure do you mean: {offered}?", "reason": "undefined_term",
+        "candidates": candidates}
