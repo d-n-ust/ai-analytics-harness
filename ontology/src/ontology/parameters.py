@@ -110,6 +110,9 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
                 table = f"{rel['schema_name']}.{rel['alias']}" if rel.get("schema_name") else rel["alias"]
                 out.append({"name": f"{entity}__{d['name']}", "entity": entity,
                             "table": table, "column": d["name"],
+                            # A dimension may be an expression over the table (cohort_month is
+                            # strftime(started_date, ...)); its members are read through it.
+                            "expr": d.get("expr") or d["name"],
                             "description": " ".join((d.get("description") or "").split()),
                             "joined": model is not own})
     return out
@@ -159,13 +162,13 @@ def build(cursor, layer_text: str, metric: str) -> dict:
     everything to the pure `parameter_surface`."""
     models, metrics = load_layer(layer_text)
     dims = reachable_dimensions(models, metrics, metric)
-    members = {(d["table"], d["column"]): _members(cursor, d["table"], d["column"]) for d in dims}
+    members = {(d["table"], d["column"]): _members(cursor, d["table"], d["expr"]) for d in dims}
     closed = [d for d in dims if members.get((d["table"], d["column"]))]
     determines: dict = {}
     for a in closed:
         for b in closed:
             if (a is not b and a["table"] == b["table"]
                     and len(members[(a["table"], a["column"])]) > len(members[(b["table"], b["column"])])
-                    and _determines(cursor, a["table"], a["column"], b["column"])):
+                    and _determines(cursor, a["table"], a["expr"], b["expr"])):
                 determines.setdefault(a["name"], []).append(b["name"])
     return parameter_surface(models, metrics, metric, members, determines)
