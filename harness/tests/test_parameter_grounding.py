@@ -934,3 +934,19 @@ def test_a_split_over_a_listed_set_of_values_runs():
     _, other = DG.check(reading, {"metric": "new_signups", "period": "2026-Q2", "filters": {"user__channel": four},
                                   "group_by": ["user__region"]})
     assert any(d["state"] == "outside" for d in other)
+
+
+def test_a_comparison_of_figures_that_have_their_own_claims_is_not_a_list():
+    """h2_003 "Android vs iPhone, which came out ahead?": a claim citing both figures with no value
+    of its own was handed back as a list twice and converted to a refusal. When each cited figure
+    has its own claim, the comparison is a statement about them and is accepted; alone, it is
+    still the q_003 list."""
+    by_platform = _BY_REGION | {"args": {"metric": "app_opens", "group_by": ["activity__platform"], "period": "2026-06"},
+                                "result_values": [8786.0, 8232.0], "result_labels": ["ios", "android"]}
+    compared = {"text": "iOS came out ahead of Android", "sources": ["r1:ios", "r1:android"], "value": 0}
+    with_figures = _NS(name="answer", args={"answer": "iOS.", "claims": [
+        {"text": "iOS 8,786", "sources": ["r1:ios"], "value": 8786},
+        {"text": "Android 8,232", "sources": ["r1:android"], "value": 8232}, compared]})
+    assert _claims_gate.malformed_claims(_gate_run([by_platform]), with_figures) is None
+    alone = _NS(name="answer", args={"answer": "iOS.", "claims": [compared]})
+    assert _claims_gate.malformed_claims(_gate_run([by_platform]), alone) is not None

@@ -34,6 +34,19 @@ _scalar = trace.scalar
 _REPAIR_TEXT = 200
 
 
+def _comparison(finding: dict, findings: list) -> bool:
+    """A claim that cites several figures and states none of its own ("iOS came out ahead") is a
+    comparison, not a list, when every figure it cites is also stated by a claim citing it alone.
+    One footnote per number still holds: each number has its own claim. Without those, it is the
+    list q_003 wrote (three regions cited, 0 stated) and is handed back (h2_003 was handed back
+    for a comparison and converted to a refusal at the cap)."""
+    value = finding["value"]
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value:
+        return False
+    single = {g["sources"][0] for g in findings if g is not finding and len(g["sources"]) == 1}
+    return len(finding["sources"]) >= 2 and set(finding["sources"]) <= single
+
+
 def malformed_claims(run, exit_call: ToolCall):
     """A citation that names nothing is a MALFORMED CALL, and is handed back as one.
 
@@ -72,7 +85,8 @@ def malformed_claims(run, exit_call: ToolCall):
     audited = claim_audit.audit(declared, run.steps, exit_call.args.get("source_metric"),
                                 **run._audit_context())
     broken = [f for f in audited["findings"] if f["unresolved"]]
-    lists = [f for f in audited["findings"] if not f["unresolved"] and
+    findings = audited["findings"]
+    lists = [f for f in findings if not f["unresolved"] and not _comparison(f, findings) and
              (len(f["sources"]) >= 3 or (len(f["sources"]) == 2 and not f["bound"]))]
     policy = getattr(run.grounding.toolbox.g, "decision_grounding", False)
     ungoverned = [f for f in audited["findings"] if f not in lists and not f["unresolved"]
@@ -104,7 +118,9 @@ def malformed_claims(run, exit_call: ToolCall):
             lines.append(f"  claim {f['id']} cites {ref!r} — {run._why_unresolved(ref)}")
     for f in lists:
         lines.append(f"  claim {f['id']} cites {len(f['sources'])} figures but states one value "
-                     f"({f['value']}) — write one claim per figure, each with its own value and source")
+                     f"({f['value']}) — write one claim per figure, each with its own value and source. "
+                     "A comparison of those figures (which is larger) may then be its own claim citing them, "
+                     "with no value of its own")
     for f in ungoverned:
         lines.append(f"  claim {f['id']} states {f['value']}, which "
                      + ("cites no governed result" if "unsourced" in f["why"] else
