@@ -857,3 +857,18 @@ def test_a_figure_built_from_a_split_query_is_handed_back_with_the_whole_period_
     handed = _claims_gate.malformed_claims(run, exit_call)
     assert handed is not None and "[r2] 637" in handed.content
     assert supplied == [{"metric": "new_signups", "period": "2026-Q1"}]
+
+
+# ── the decision model unavailable ────────────────────────────────────────────────────────────────
+def test_when_the_question_cannot_be_read_the_reply_is_not_held_to_a_reading(monkeypatch):
+    """A timeout of the decision model falls back to the plain agent for the question, recorded on
+    the run; it does not become an error row or a refusal."""
+    def unavailable(*_a, **_k):
+        raise DG.ReadingUnavailable("decision model unavailable: TimeoutError")
+    monkeypatch.setattr("agent.guardrails.decisions._ask", unavailable)
+    run = _gate_run([])
+    run.question, run.turns = "How many users were active in June 2026?", [{}]
+    run.grounding.toolbox.semantic, run.grounding.toolbox.governance = _LAYER, _gov("Product")
+    assert _coverage_gate.exit_matches_reading(run, _NS(name="clarify", args={"question": "which?"})) is None
+    assert run.grounded["_unavailable"] == {"why": "decision model unavailable: TimeoutError"}
+    assert "not checked" in DG.unchecked("x")["disclose"]

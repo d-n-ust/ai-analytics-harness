@@ -41,6 +41,7 @@ from ..core.conversation import ToolResult  # noqa: F401  (re-exported for the l
 from .parameters import _decision, _lines_up, _period_span, _trend_grain, _ungrounded, surface_for
 
 __all__ = ["ground", "read", "check", "uncovered", "reading_for", "choose_metric", "exit_verdict",
+           "ReadingUnavailable",
            "refusal_verdict", "reading_text", "question_level", "read_question", "substitution_refusal",
            "CONFIDENT", "MODEL"]
 
@@ -200,9 +201,18 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
 
 # ── the request ───────────────────────────────────────────────────────────────────────────────
 
+class ReadingUnavailable(Exception):
+    """The decision model could not answer this time: a timeout, a server error, a network failure,
+    or a malformed reply. The run falls back to the plain agent for the question and says so; it is
+    not an error row. A configuration fault (no key, rejected credentials, unknown model) is NOT this:
+    it would fail every row the same way, and a run that silently fell back on every question would
+    measure the plain agent under the grounded arm's name, so it stays a hard error."""
+
+
 def _ask(questions: dict, state: str) -> tuple[dict, float, str]:
-    """(answers, cost in USD, the model version that served the request)."""
-    from ..runtime.providers import ProviderError, load_env
+    """(answers, cost in USD, the model version that served the request). Raises ReadingUnavailable
+    for a transient failure; a configuration fault propagates."""
+    from ..runtime.providers import load_env
     load_env()
     base = (os.environ.get("OPEN_ROUTER_BASE_URL") or "").rstrip("/").removesuffix("/v1")
     key = os.environ.get("OPEN_ROUTER_API_KEY")
@@ -213,12 +223,13 @@ def _ask(questions: dict, state: str) -> tuple[dict, float, str]:
         "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
     try:
         r = json.load(urllib.request.urlopen(req, timeout=_TIMEOUT))
+        return r["answers"], float((r.get("usage") or {}).get("cost") or 0.0), str(r.get("model") or MODEL)
     except urllib.error.HTTPError as exc:
         if exc.code in (401, 403, 404):
             raise
-        exc.status_code = exc.code
-        raise ProviderError(exc) from exc
-    return r["answers"], float((r.get("usage") or {}).get("cost") or 0.0), str(r.get("model") or MODEL)
+        raise ReadingUnavailable(f"decision model HTTP {exc.code}") from exc
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError) as exc:
+        raise ReadingUnavailable(f"decision model unavailable: {type(exc).__name__}") from exc
 
 
 # ── the policy, applied by code ───────────────────────────────────────────────────────────────
@@ -800,6 +811,14 @@ def question_level(cache: dict, question: str, semantic) -> tuple[dict, float]:
     answers, cost, model = _ask(questions, question)
     cache["_question"] = {**read_question(answers, back), "answers": answers, "model": model}
     return cache["_question"], cost
+
+
+def unchecked(why: str) -> dict:
+    """The decision recorded when the question could not be read: the call runs as written, and the
+    reader is told so."""
+    return _decision("parameters", "as the agent wrote them", "none", why=why,
+                     disclose="The question could not be read this time, so this query's parameters were "
+                              "not checked against it.")
 
 
 def substitution_refusal() -> dict:

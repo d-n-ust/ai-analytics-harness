@@ -95,6 +95,16 @@ def opening_reading(run) -> str:
     the run, so the calls and the final action are checked against the same reading at no further
     cost. When the metric is not settled the agent is told so, with the likeliest candidates, and
     left to judge; only a confident "no governed metric measures this" is stated as a refusal."""
+    try:
+        return _opening(run)
+    except _decisions.ReadingUnavailable as exc:
+        run.grounded["_unavailable"] = {"why": str(exc)}
+        run.opening_reading = ("", 0.0)
+        return ("[question reading] The question could not be read this time. Work as usual, and say in "
+                "the answer that its parameters were not checked against the question.")
+
+
+def _opening(run) -> str:
     tb = run.grounding.toolbox
     metrics = getattr(tb.semantic, "metrics", None) or {}
     chosen = _metric_choice(run, metrics)
@@ -191,6 +201,16 @@ def exit_matches_reading(run, exit_call):
     if exit_call.name not in ("answer", "clarify", "refuse") or not getattr(run.grounding.toolbox.g,
                                                                              "decision_grounding", False):
         return None
+    if "_unavailable" in run.grounded:
+        return None                              # nothing was read, so nothing to hold the reply to
+    try:
+        return _exit_check(run, exit_call)
+    except _decisions.ReadingUnavailable as exc:
+        run.grounded["_unavailable"] = {"why": str(exc)}
+        return None
+
+
+def _exit_check(run, exit_call):
     args = exit_call.args or {}
     asked, cost = _decisions.question_level(run.grounded, run.question, run.grounding.toolbox.semantic)
     _charge(run, cost)                           # first, so routing below uses the question's word

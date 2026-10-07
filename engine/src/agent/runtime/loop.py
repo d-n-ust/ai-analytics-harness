@@ -276,9 +276,22 @@ class _Run:
     def _ground(self, call) -> tuple[list, list]:
         """`parameter_grounding`: the queries a governed call runs as, and the decisions behind
         them. Any other call, or the flag off, passes through as its own single query. The grounding
-        call's tokens are added to the run's usage, so the arm is charged for what it costs."""
-        tb = self.grounding.toolbox
+        call's tokens are added to the run's usage, so the arm is charged for what it costs.
+
+        When the decision model cannot read the question this time, the call runs as the agent
+        wrote it and the reader is told its parameters were not checked; the run records why
+        (`_unavailable`). The question is not read again in this run."""
         self._grounding_cost = 0.0
+        if "_unavailable" in self.grounded:
+            return [call.args], [_decisions.unchecked(self.grounded["_unavailable"]["why"])]
+        try:
+            return self._ground_checked(call)
+        except _decisions.ReadingUnavailable as exc:
+            self.grounded["_unavailable"] = {"why": str(exc)}
+            return [call.args], [_decisions.unchecked(str(exc))]
+
+    def _ground_checked(self, call) -> tuple[list, list]:
+        tb = self.grounding.toolbox
         grounding = getattr(tb.g, "decision_grounding", False) or getattr(tb.g, "parameter_grounding", False)
         if call.name != "query_metric" or not grounding:
             return [call.args], []
