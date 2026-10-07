@@ -906,3 +906,15 @@ def test_a_handed_back_answer_keeps_its_claims_and_a_converted_refusal_keeps_its
     refused = _Run._record(fake, answer=None, explanation="converted", outcome="refuse", reason="other",
                            abstained=True, iterations=3)
     assert (len(refused.repairs), refused.claim_retries, refused.hand_backs) == (1, 1, 1)
+
+
+def test_a_named_half_year_absorbs_its_months_and_a_compared_month_pair_drops_the_quarter():
+    """h2_002 "month by month for the first half of 2026": H1 0.98, January 0.75, June 0.74. The
+    half-year is the period; dropping it (because two months do not fill it) left February to May
+    open and the reader asked. r_007 "June compared with May" with Q2 also said: the months score
+    above the quarter, which only overlaps them and is dropped."""
+    half = DG._settle(["2026-H1", "2026-01", "2026-06"], {"2026-H1": 0.98, "2026-01": 0.75, "2026-06": 0.74})
+    assert half == ["2026-H1"]
+    pair = DG._settle(["2026-Q2", "2026-05", "2026-06"], {"2026-Q2": 0.72, "2026-05": 0.97, "2026-06": 0.98})
+    assert pair == ["2026-05", "2026-06"]
+    assert DG._settle(["2026-Q2", "2026-04", "2026-05", "2026-06"]) == ["2026-Q2"]      # filled: kept

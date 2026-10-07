@@ -290,18 +290,25 @@ def _within(span, spans: list) -> bool:
     return any(a <= span[0] and span[1] <= b for a, b in _merged(spans))
 
 
-def _settle(periods: list) -> list:
+def _settle(periods: list, scores: dict | None = None) -> list:
     """The periods the question names, once each. A reading may say yes to a period and to the
     periods inside it. When those inside periods fill it exactly (April, May and June for Q2), they
-    are the same period said twice and the longer one is kept; when they do not ("June compared with
-    May" read together with Q2), the longer one only overlaps them and is dropped."""
+    are the same period said twice and the longer one is kept.
+
+    When they do not fill it, the scores decide which the question names. "June compared with May"
+    read together with Q2 scores the two months above the quarter: the quarter only overlaps them
+    and is dropped (r_007). "Month by month for the first half of 2026" scores H1 at 0.98 and
+    January and June at 0.75: the half-year is the period and the months are its parts, so it is
+    kept and they are absorbed (h2_002, where dropping H1 left February to May open). Without
+    scores the longer period is dropped, as before."""
     spans = {p: _period_span(p) for p in periods}
     keep = set(periods)
     for p in sorted(periods, key=lambda p: spans[p][0] - spans[p][1]):     # longest first
         inside = [q for q in keep if q != p and spans[p][0] <= spans[q][0] and spans[q][1] <= spans[p][1]]
         if p not in keep or not inside:
             continue
-        if _within(spans[p], [spans[q] for q in inside]):
+        if _within(spans[p], [spans[q] for q in inside]) or (
+                scores and scores.get(p, 0) > max(scores.get(q, 0) for q in inside)):
             keep -= set(inside)
         else:
             keep.discard(p)
@@ -450,7 +457,7 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
         decisions.append({**_decision("group_by", group_by, "question"), "confidence": p_shape})
 
     said = {p: _yes(answers, f"period:{p}") for _, (k, p) in back.items() if k == "period"}
-    periods = _settle([p for p, v in said.items() if v >= CONFIDENT])
+    periods = _settle([p for p, v in said.items() if v >= CONFIDENT], said)
     unsure = [p for p, v in said.items() if (LEAN if periods else PLAUSIBLE) <= v < CONFIDENT
               and not any(_within(_period_span(q), [_period_span(p)]) or _within(_period_span(p), [_period_span(q)])
                           for q in periods)]
