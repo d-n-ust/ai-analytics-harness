@@ -119,6 +119,9 @@ metric:
     meta:
       owner: Product
       terms:
+        - term: customers
+          reading: "real customers active in the period: staff and test accounts excluded"
+          when: {for: [Product]}
         - term: users
           synonyms: [active users]
           reading: "real customers: staff and test accounts excluded"
@@ -147,6 +150,14 @@ metric:
       - name: active_users
         alias: prior_period
         offset_window: 1 week
+  config:
+    meta:
+      owner: Product
+      terms:
+        - term: active user growth
+          synonyms: [growth in active users, change in active users]
+          when: always
+
 ---
 metric:
   name: active_accounts
@@ -217,6 +228,11 @@ metric:
   config:
     meta:
       owner: Product
+      terms:
+        - term: app opens
+          synonyms: [app launches, app visits, times the app was opened]
+          when: always
+
 ---
 metric:
   name: new_signups
@@ -224,6 +240,14 @@ metric:
   type: simple
   type_params: {measure: signup_count}
 # ── contested · recurring revenue ─────────────────────────────────────────────────────────────
+  config:
+    meta:
+      owner: Growth
+      terms:
+        - term: signups
+          synonyms: [sign-ups, new signups, new users, registrations, new accounts]
+          when: always
+
 ---
 metric:
   name: mrr
@@ -278,6 +302,18 @@ metric:
   type: simple
   type_params: {measure: paying_user_count}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
+  config:
+    meta:
+      owner: Finance
+      terms:
+        - term: paying customers
+          synonyms: [paying users, payers, paid accounts]
+          reading: "accounts holding a live paid subscription"
+          when: always
+        - term: customers
+          reading: "accounts holding a live paid subscription"
+          when: {for: [Finance, Sales]}
+
 ---
 metric:
   name: active_subscriptions
@@ -286,6 +322,14 @@ metric:
   type_params: {measure: subscription_count}
   filter: "{{ Dimension('subscription__status') }} = 'active'"
 # ── contested · marketing spend ───────────────────────────────────────────────────────────────
+  config:
+    meta:
+      owner: Finance
+      terms:
+        - term: active subscriptions
+          synonyms: [subscriptions, live subscriptions]
+          when: always
+
 ---
 metric:
   name: marketing_spend
@@ -334,3 +378,10 @@ metric:
   type_params:
     numerator: {name: value_moments}
     denominator: {name: active_users}
+  config:
+    meta:
+      owner: Product
+      terms:
+        - term: habits per active user
+          synonyms: [habits per user, average habits per user]
+          when: always

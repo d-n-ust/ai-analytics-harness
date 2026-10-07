@@ -830,9 +830,10 @@ def with_residual(reading: dict, answers: dict) -> dict:
 def question_questions(vocabulary: dict[str, tuple[str, ...]]) -> tuple[dict, dict]:
     """The question-level request. Two things are properties of the question, not of any metric:
 
-      term          which declared fork word it uses ("users", "marketing spend"), or a metric named
-                    directly, or none. A fork is a fact about a word, so routing applies only when
-                    the question uses that word (guardrails/forks.py).
+      term          which declared word it uses for what it counts ("customers", "app opens",
+                    "marketing spend"), or a metric named directly, or none. The layer declares what
+                    each word means for each team, so the word decides the metric
+                    (guardrails/forks.py).
       substitution  whether it asks to present one figure as another, or to set the rules aside.
                     No governed number answers such a request, whatever else it names (h_013)."""
     back = {f"t{i}": term for i, term in enumerate(vocabulary)}
@@ -867,10 +868,15 @@ def question_level(cache: dict, question: str, semantic) -> tuple[dict, float]:
     is stored on the row. A later ask returns it at no cost."""
     if "_question" in cache:
         return cache["_question"], 0.0
-    from .forks import vocabulary
+    from .forks import longest_term, vocabulary
     questions, back = question_questions(vocabulary(semantic))
     answers, cost, model = _ask(questions, question)
-    cache["_question"] = {**read_question(answers, back), "answers": answers, "model": model}
+    read = read_question(answers, back)
+    if read["term"]:
+        # The model judges which declared word names the counted thing; code settles which declared
+        # phrase that word belongs to ("paying customers" over "customers").
+        read = {**read, "chosen": read["term"], "term": longest_term(question, read["term"], semantic)}
+    cache["_question"] = {**read, "answers": answers, "model": model}
     return cache["_question"], cost
 
 

@@ -413,7 +413,11 @@ def test_a_declared_fork_is_routed_to_the_requester_teams_reading():
         assert metric == "active_users" and decision["basis"] == "governed_principle"
         assert "For the Product team it means active_users" in decision["disclose"]
         assert "active_accounts" in decision["disclose"], "the other governed reading is disclosed"
-    assert P.route_metric("active_users", _gov("Platform"), _LAYER)[0] == "active_accounts"
+    # For Platform the metric's two fork words disagree ("users" -> active_accounts; "customers" is
+    # not declared for Platform, so ask). Without the question's word, asking is the safe outcome;
+    # with it, the word decides.
+    assert P.route_metric("active_users", _gov("Platform"), _LAYER)[1]["state"] == "ungrounded"
+    assert P.route_metric("active_users", _gov("Platform"), _LAYER, "users", True)[0] == "active_accounts"
 
 
 def test_without_a_requester_the_declared_fork_is_the_users_choice():
@@ -700,7 +704,8 @@ def test_an_answer_giving_one_reading_of_a_show_all_fork_gets_the_other_supplied
 # ── the question as a whole: its fork word, and a request to bend the rules ─────────────────────────
 def test_the_question_check_reads_the_fork_word_and_a_substitution_request():
     vocab = F.vocabulary(_LAYER)
-    assert set(vocab) == {"users", "habits", "marketing spend", "revenue"}
+    # Every declared word, not only the fork words: a word one metric claims routes to it too.
+    assert {"users", "habits", "marketing spend", "revenue", "customers", "paying customers", "app opens"} <= set(vocab)
     questions, back = DG.question_questions(vocab)
     assert {"named", "none"} <= set(questions["term"]["criteria"]) and "substitution" in questions
     users_key = next(k for k, t in back.items() if t == "users")
@@ -1015,3 +1020,44 @@ def test_a_split_by_a_restricted_dimension_keeps_the_restriction():
     queries, _ = DG.check(reading, {"metric": "new_signups", "period": "2026-Q2", "group_by": ["user__channel"]})
     assert queries == [{"metric": "new_signups", "period": "2026-Q2", "filters": {"user__channel": four},
                         "group_by": ["user__channel"]}]
+
+
+def test_the_question_word_decides_the_metric_whichever_metric_the_agent_called():
+    """"How many customers did we have in June 2026?" Product's certified "customers" are the real
+    customers active in the period (1,620); paying accounts are 371. The model sent the question to
+    paying_users, and no check could see the conflict. The layer now declares "customers" on both,
+    for Product and for Finance and Sales, so the word decides."""
+    assert P.route_metric("paying_users", _gov("Product"), _LAYER, "customers", True)[0] == "active_users"
+    assert P.route_metric("active_users", _gov("Finance"), _LAYER, "customers", True)[0] == "paying_users"
+    _m, asked = P.route_metric("paying_users", _gov("Growth"), _LAYER, "customers", True)
+    assert asked["state"] == "ungrounded"
+    # A word one metric claims routes to it, and says so; called directly, nothing to disclose.
+    routed, why = P.route_metric("active_users", _gov("Product"), _LAYER, "paying customers", True)
+    assert routed == "paying_users" and "declares for paying_users" in why["disclose"]
+    assert P.route_metric("paying_users", _gov("Product"), _LAYER, "paying customers", True) == ("paying_users", None)
+
+
+def test_the_longest_declared_phrase_wins_over_the_word_inside_it():
+    """The model reads which word names the counted thing; code settles the phrase it belongs to."""
+    q = "How many of our paying customers are on the team plan at the moment?"
+    assert F.longest_term(q, "customers", _LAYER) == "paying customers"
+    assert F.longest_term("How many customers did we have in June 2026?", "customers", _LAYER) == "customers"
+    assert F.longest_term("How many App-Launches did Android users have?", "app opens", _LAYER) == "app opens"
+
+
+def test_a_word_never_moves_a_ratio_to_one_of_its_own_inputs():
+    """h_006, t_010: "how many habits did each active customer complete, on average" counts a ratio
+    built on value_moments and active_users. The question check chose "habits", and routing on it
+    moved the question to value_moments. A word names part of what a ratio counts."""
+    assert P.route_metric("habits_per_active_user", _gov("Product"), _LAYER, "habits", True) == \
+        ("habits_per_active_user", None)
+    assert P.route_metric("habits_per_active_user", _gov("Product"), _LAYER, "customers", True) == \
+        ("habits_per_active_user", None)
+
+
+def test_new_users_are_signups():
+    """h_012 "how many new users did we get through paid search": the counted thing is sign-ups. The
+    question check chose "users"; "new users", declared on new_signups, is the longer phrase."""
+    q = "Now that referral signups have stopped, how many new users did we get through paid search in Q2 2026?"
+    assert F.longest_term(q, "users", _LAYER) == "signups"
+    assert P.route_metric("active_users", _gov("Product"), _LAYER, "signups", True)[0] == "new_signups"
