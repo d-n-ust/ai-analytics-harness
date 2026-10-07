@@ -81,16 +81,10 @@ attributes:
     status: certified
     note: "unknown is a real member: accounts whose raw platform was blank or unrecognised."
 
-# ── vocabulary: a term maps to a SET of candidates, never to one object ────────────────────────
-# A term with two measure candidates is a question that has two governed answers.
-vocabulary:
-  "app opens":      {kind: measure,   candidates: [app_opens]}
-  "opens":          {kind: measure,   candidates: [app_opens]}
-  "customers":      {kind: segment, candidates: [customers]}
-  "android":        {kind: filter,    candidates: ["platform=android"]}
-  "ios":            {kind: filter,    candidates: ["platform=ios"]}
-  "web":            {kind: filter,    candidates: ["platform=web"]}
-  "paid search":    {kind: filter,    candidates: ["channel=paid_search"]}
+# ── vocabulary: removed 2026-10-07 ────────────────────────────────────────────────────────────
+# No code read it. Words that reach more than one metric are declared on the metrics
+# (`config.meta.terms` in layer/semantic_models.yml); words for single values are read from the
+# layer's members and descriptions by the question check.
 
 # ── relationships between definitions: moved to the semantic layer ───────────────────────────
 # Which metric answers a word that several governed metrics answer ("users", "habits",
