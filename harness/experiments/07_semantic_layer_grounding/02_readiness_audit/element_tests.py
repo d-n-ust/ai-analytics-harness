@@ -32,7 +32,7 @@ sys.path.insert(0, str(HERE.parent / "01_parameter_grounding"))
 import run as R  # noqa: E402
 
 
-def run_test(test: dict, semantic, cursor, determines: dict) -> dict:
+def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None) -> dict:
     expect = test["expect"]
     if test["element"] == "metric":
         choice = decisions.choose_metric(test["q"], semantic.metrics, forks.words_by_metric(semantic))
@@ -43,7 +43,7 @@ def run_test(test: dict, semantic, cursor, determines: dict) -> dict:
                 [f"{got} instead of {expect['outcome']}"], "cost": cost + choice["cost"]}
     cache: dict = {}
     reading, cost = decisions.reading_for(test["q"], expect.get("metric", "app_opens"), semantic, cursor,
-                                          R.GOVERNANCE, cache)
+                                          R.GOVERNANCE if governance is None else governance, cache)
     graded = R.reading_errors(cache, {"expect": expect}, determines)
     return {"result": graded["action"], "ok": graded["action_ok"] and not graded["errors"],
             "errors": ([] if graded["action_ok"] else [f"action {graded['action']}"]) + graded["errors"],

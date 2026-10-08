@@ -1,0 +1,334 @@
+[
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "What was the number of app opens on mobile in May 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "ask",
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android', 'ios']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "How often did mobile users open the app in April 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "ask",
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android', 'ios']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "Give me app opens from mobile devices for Q1 2026.",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "ask",
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android', 'ios']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "Mobile app opens, March 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "ask",
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android', 'ios']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-03"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "What were non-mobile app opens in May 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "ask",
+  "errors": [
+   "action ask",
+   "platform [] instead of ['unknown', 'web']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "How many app opens came from everything except mobile in April 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "wrong refusal or ask",
+  "action": "refuse",
+  "errors": [
+   "action refuse",
+   "platform [] instead of ['unknown', 'web']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "How many Android app opens were there in May 2026?",
+  "control": true,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "answer",
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "mobile",
+  "arm": "prose",
+  "q": "How many app opens were there in May 2026?",
+  "control": true,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "answer",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in July 2025?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "refuse",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "What were app opens in Q1 2025?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "refuse",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens did we have in November 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "refuse",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in 2024?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "refuse",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in summer 2025?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "refuse",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in winter 2026?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "ask",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in autumn 2025?",
+  "control": false,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "ask",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in October 2025?",
+  "control": true,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "answer",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2025-10"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in Q1 2026?",
+  "control": true,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "answer",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ },
+ {
+  "fact": "coverage",
+  "arm": "declared_model",
+  "q": "How many app opens were there in June 2026?",
+  "control": true,
+  "rep": 0,
+  "outcome": "correct",
+  "action": "answer",
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "one_figure": false
+ }
+]

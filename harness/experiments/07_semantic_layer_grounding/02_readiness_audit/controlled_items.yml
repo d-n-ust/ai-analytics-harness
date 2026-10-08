@@ -1,0 +1,49 @@
+# Items for the controlled test (controlled.md). Written 2026-10-08, before any arm was run.
+# Each fact has items that need it and controls where it must change nothing. Wordings differ from
+# tests_dev.yml and from the sealed set. Labels follow the existing suites (an outside period refuses;
+# a season, which has no calendar meaning here, asks).
+facts:
+  mobile:
+    kind: vocabulary
+    statement: '"mobile" means the platform values android and ios, as one figure'
+    items:
+    - {q: "What was the number of app opens on mobile in May 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: 2026-05}}}
+    - {q: "How often did mobile users open the app in April 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: 2026-04}}}
+    - {q: "Give me app opens from mobile devices for Q1 2026.",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: 2026-Q1}}}
+    - {q: "Mobile app opens, March 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: 2026-03}}}
+    - {q: "What were non-mobile app opens in May 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [web, unknown], period: 2026-05}}}
+    - {q: "How many app opens came from everything except mobile in April 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: [web, unknown], period: 2026-04}}}
+    - {control: true, q: "How many Android app opens were there in May 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {platform: android, period: 2026-05}}}
+    - {control: true, q: "How many app opens were there in May 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {period: 2026-05}}}
+  coverage:
+    kind: operation
+    statement: "the data covers 2025-09-05 to 2026-07-12; a period with no day inside it has no figure"
+    items:
+    - {q: "How many app opens were there in July 2025?",
+       expect: {type: refuse, metric: app_opens, params: {}}}
+    - {q: "What were app opens in Q1 2025?",
+       expect: {type: refuse, metric: app_opens, params: {}}}
+    - {q: "How many app opens did we have in November 2026?",
+       expect: {type: refuse, metric: app_opens, params: {}}}
+    - {q: "How many app opens were there in 2024?",
+       expect: {type: refuse, metric: app_opens, params: {}}}
+    - {q: "How many app opens were there in summer 2025?",
+       expect: {type: refuse, metric: app_opens, params: {}}}
+    - {q: "How many app opens were there in winter 2026?",
+       expect: {type: clarify, metric: app_opens, params: {period: ask}}}
+    - {q: "How many app opens were there in autumn 2025?",
+       expect: {type: clarify, metric: app_opens, params: {period: ask}}}
+    - {control: true, q: "How many app opens were there in October 2025?",
+       expect: {type: metric_answer, metric: app_opens, params: {period: 2025-10}}}
+    - {control: true, q: "How many app opens were there in Q1 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {period: 2026-Q1}}}
+    - {control: true, q: "How many app opens were there in June 2026?",
+       expect: {type: metric_answer, metric: app_opens, params: {period: 2026-06}}}

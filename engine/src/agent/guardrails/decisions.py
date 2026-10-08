@@ -76,6 +76,20 @@ def _dimensions(surface: dict) -> list:
     return out
 
 
+# Who consumes two facts the reading depends on. The defaults are the production setting; governance
+# `fact_consumers` overrides them for the readiness audit's controlled test, which holds the code
+# fixed and varies only this (02_readiness_audit/controlled.py):
+#   value_words  code: looked up in the question and applied; model: shown to the decision model
+#   coverage     code: periods placed on the calendar, coverage decided by code; model: the decision
+#                model is asked whether the period is outside the data (the reader before D5); none:
+#                not checked by the reader
+CONSUMERS = {"value_words": "code", "coverage": "code"}
+
+
+def _consumer(surface: dict, fact: str) -> str:
+    return (surface.get("consumers") or CONSUMERS)[fact]
+
+
 def _with_value_words(surface: dict, cursor, governance: dict | None) -> dict:
     """The surface with each dimension's declared value words and value meanings, read from the
     reference tables governance names (`value_vocabulary`). Only words for real members are kept:
@@ -101,12 +115,17 @@ def _with_value_words(surface: dict, cursor, governance: dict | None) -> dict:
     return {**surface, "parameters": {**surface["parameters"], "filters": filters}}
 
 
+def _with_consumers(surface: dict, governance: dict | None) -> dict:
+    return {**surface, "consumers": {**CONSUMERS, **((governance or {}).get("fact_consumers") or {})}}
+
+
 def claimed(question: str, surface: dict) -> dict:
     """PURE. {dimension: [(word, [values])]}: the declared value words the question contains, found by
     code before any model reads the question. The longest phrase wins where phrases overlap. A word
     declared for two dimensions is left out: which one it means is a judgement, not a lookup."""
     from .forks import _tokens
-    if not any(d.get("words") for d in surface["parameters"]["filters"]["dimensions"]):
+    if _consumer(surface, "value_words") != "code" or \
+            not any(d.get("words") for d in surface["parameters"]["filters"]["dimensions"]):
         return {}
     words = _tokens(question)
     found = []                                            # (start, end, dimension, word, values)
@@ -163,13 +182,14 @@ def _clause(member, description: str) -> str:
     return ""
 
 
-def _periods(lo: dt.date, hi: dt.date) -> dict:
+def _periods(lo: dt.date, hi: dt.date, coverage: str = "code") -> dict:
     """Every month, quarter and half-year of the calendar years the coverage window touches, as
     query_metric periods. Periods outside the window are offered too, so that the question's period
     is placed on the calendar by the reader and its coverage is then decided by code (`read`): a
     model asked "is this outside the data?" refused "summer 2026", which is partly inside, also when
     asked whether it lies wholly outside (p 0.70). A period no option fits ("in 2019", "summer") is
-    therefore asked about, with the coverage window shown, rather than judged."""
+    therefore asked about, with the coverage window shown, rather than judged. With the coverage fact
+    consumed by the model, only the periods that overlap the window are offered, as before D5."""
     out = {}
     for y in range(lo.year, hi.year + 1):
         for m in range(1, 13):
@@ -179,7 +199,7 @@ def _periods(lo: dt.date, hi: dt.date) -> dict:
         for h in (1, 2):
             out[f"{y}-H{h}"] = (f"The {'first' if h == 1 else 'second'} half of {y}: "
                                 f"{'January to June' if h == 1 else 'July to December'} {y}.")
-    return out
+    return {p: t for p, t in out.items() if coverage != "model" or _covered(p, lo, hi)}
 
 
 def _covered(period: str, lo: dt.date, hi: dt.date) -> bool:
@@ -196,15 +216,19 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
     platform. A single choice per parameter could hold only one of them, and a second call for
     May then ran as June."""
     questions, back = {}, {}
+    shown = _consumer(surface, "value_words") == "model"
     for d in _dimensions(surface):
         label, members = d["column"].replace("_", " "), ", ".join(map(str, d["members"]))
+        words = d.get("words") if shown else {}
+        glossary = (" Declared words for these values: " + "; ".join(
+            f"{w} = {' and '.join(map(str, vs))}" for w, vs in words.items()) + ".") if words else ""
         # How the question restricts the dimension, asked once: naming values to keep and naming
         # values to leave out are different readings of the same names ("Android users" against
         # "users not on Android"), and a yes/no on each value alone cannot tell them apart.
         back[f"mode:{d['name']}"] = (d["name"], "mode")
         questions[f"mode:{d['name']}"] = {
             "type": "choice", "instructions": f"How does the question restrict the {label}? The values are: "
-                                              f"{members}. Layer description: {d['description']}",
+                                              f"{members}. Layer description: {d['description']}{glossary}",
             "criteria": {"only": f"It names the {label} value or values to include.",
                          "except": f"It names a {label} value or values to leave out (not X, except X, "
                                    f"excluding X, non-X).",
@@ -224,6 +248,9 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
                                   f"a region, for example), or a group of them; or it names no {label}."}}
         for i, m in enumerate(d["members"]):
             clause = _clause(m, d["description"])
+            own = [w for w, vs in (words or {}).items() if m in vs]
+            if own:
+                clause = (f"{clause}; " if clause else "") + f"declared words that mean or include {m}: {', '.join(own)}"
             key = f"named:{d['name']}:{i}"
             back[key] = (d["name"], m)
             questions[key] = {
@@ -234,7 +261,8 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
                                      f"region, for example), or a group that contains {m}, as a {label} to "
                                      f"include or to leave out.",
                              "false": f"It does not name {m}."}}
-    for p, text in _periods(lo, hi).items():
+    coverage = _consumer(surface, "coverage")
+    for p, text in _periods(lo, hi, coverage).items():
         key = f"period:{p}"
         back[key] = ("period", p)
         questions[key] = {
@@ -261,6 +289,11 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
     questions["premise_about"] = {"type": "choice", "criteria": about,
                                   "instructions": "If the question takes a fact as given, which value is that fact "
                                                   "about?"}
+    if coverage == "model":                     # the reader before D5, kept as the controlled test's arm
+        questions["outside"] = {
+            "type": "noul", "instructions": f"Does the question name a period outside the data, which covers "
+                                            f"{lo} to {hi}?",
+            "criteria": {"true": "Yes, at least one period it names lies outside that range.", "false": "No."}}
     questions["shape"] = {"type": "choice", "instructions": "What shape of answer does the question ask for?",
                           "criteria": {"total": "A single number, or one number for each of a few named "
                                                 "values or periods being compared.",
@@ -575,10 +608,13 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
                           for q in periods)]
     # A period with no day in the data is refused, also beside a covered one: "June 2026 against June
     # 2025" cannot be compared. A period partly inside reaches the coverage check on the call.
-    uncovered = [p for p in periods if not _covered(p, lo, hi)]
+    coverage = _consumer(surface, "coverage")
+    uncovered = [p for p in periods if coverage == "code" and not _covered(p, lo, hi)]
     if uncovered:
         decisions.append(_refuse("period", "out_of_coverage", f"{' and '.join(uncovered)} "
                                  f"{'is' if len(uncovered) == 1 else 'are'} outside the data ({lo} to {hi})"))
+    elif coverage == "model" and not periods and _yes(answers, "outside") >= CONFIDENT:
+        decisions.append(_refuse("period", "out_of_coverage", f"the period asked about is outside the data ({lo} to {hi})"))
     elif unsure:
         decisions.append(_ungrounded("period", f"unsure whether the question includes {', '.join(unsure)}"))
     elif not periods:
@@ -590,7 +626,8 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     grain, p_grain = _pick(answers, "time_grain")
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": premise,
             "values": {dim: e["members"] for dim, e in dims.items()},
-            "period_options": [p for _, (k, p) in back.items() if k == "period" and _covered(p, lo, hi)],
+            "period_options": [p for _, (k, p) in back.items() if k == "period"
+                               and (coverage == "none" or _covered(p, lo, hi))],
             "grain": grain if grain not in (None, "not_mentioned") and p_grain >= CONFIDENT else None,
             "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
             "builtin": builtin, "decisions": decisions}
@@ -898,7 +935,8 @@ def _context(metric: str, semantic, cursor, governance: dict | None) -> tuple | 
     lo, hi = (semantic.coverage_window(metric) if hasattr(semantic, "coverage_window") else (None, None))
     if surface is None or not lo or not hi:
         return None
-    return _with_value_words(surface, cursor, governance), list((governance or {}).get("methodological_rules") or []), lo, hi
+    surface = _with_consumers(_with_value_words(surface, cursor, governance), governance)
+    return surface, list((governance or {}).get("methodological_rules") or []), lo, hi
 
 
 def _decide(answers: dict, metric: str, semantic, context: tuple, found: dict) -> dict:
