@@ -190,6 +190,9 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
     crit = {d["name"]: f"Split by {d['column'].replace('_', ' ')}. ({d['description']})" for d in _dimensions(surface)}
     if segments:
         crit[segments["id"]] = f"The question asks for a breakdown without naming the dimension: {segments['when']}"
+    # Time is an option too: "month by month" read as a breakdown would otherwise have no dimension to
+    # split by, and be refused as one the layer lacks. metric_time is the group_by a trend takes.
+    crit["metric_time"] = "Split by time: one number per day, week or month (\"month by month\", \"over time\")."
     crit["not_in_list"] = "The question asks to split by something that is not one of the listed options."
     questions["breakdown"] = {"type": "choice", "criteria": crit,
                               "instructions": "If the question asks for a breakdown, by what?"}
@@ -255,6 +258,11 @@ def _pick(answers: dict, name: str) -> tuple:
     a = answers.get(name) or {}
     choice = a.get("choice")
     return choice, (a.get("probabilities") or {}).get(choice, 0.0)
+
+
+def _p(answers: dict, name: str, option: str) -> float:
+    """The probability the reader gave one option of a choice, whether or not it was the one chosen."""
+    return float(((answers.get(name) or {}).get("probabilities") or {}).get(option) or 0.0)
 
 
 def _norm(value):
@@ -430,11 +438,17 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
 
     shape, p_shape = _pick(answers, "shape")
     group_by, separate = [], False
+    # "Week by week" is a trend and a breakdown by time at once, and the reader splits its confidence
+    # between the two (0.62 and 0.30). Both mean one number per time bucket, so they are added.
+    p_series = _p(answers, "shape", "trend") + _p(answers, "shape", "breakdown") * _p(answers, "breakdown", "metric_time")
     if shape == "cause" and p_shape >= CONFIDENT:
         # A governed metric reports what happened, not why; the layer holds no causal evidence.
         decisions.append({**_refuse("group_by", "no_causal_evidence",
                                     "the question asks why something happened, and the governed layer "
                                     "holds no causal evidence"), "confidence": p_shape})
+    elif p_series >= CONFIDENT:
+        group_by = ["metric_time"]
+        decisions.append({**_decision("group_by", group_by, "question"), "confidence": p_series})
     elif p_shape < CONFIDENT:
         # The shape only decides what to fill into a call that names no breakdown. Unsure, nothing
         # is filled and the agent's own call stands; asking the user would be about our form, not
@@ -457,9 +471,6 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
         else:
             group_by = [dim]
             decisions.append({**_decision("group_by", group_by, "question"), "confidence": p})
-    elif shape == "trend":
-        group_by = ["metric_time"]
-        decisions.append({**_decision("group_by", group_by, "question"), "confidence": p_shape})
 
     said = {p: _yes(answers, f"period:{p}") for _, (k, p) in back.items() if k == "period"}
     periods = _settle([p for p, v in said.items() if v >= CONFIDENT], said)

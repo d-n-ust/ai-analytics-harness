@@ -495,6 +495,18 @@ def test_a_cause_question_is_declined_not_answered():
     assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["no_causal_evidence"]
 
 
+def test_a_series_read_partly_as_a_trend_and_partly_as_a_breakdown_by_time_is_a_series():
+    """"Week by week over the first half of 2026": the reader gave trend 0.62 and breakdown 0.30
+    (by time 0.98). Neither shape reaches the bar alone; together they are one series."""
+    answers = {"period:2026-06": {"noul": 0.97}, "mode:activity__platform": {"choice": "only", "probabilities": {"only": 1.0}},
+               "named:activity__platform:0": {"noul": 0.98},
+               "shape": {"choice": "trend", "probabilities": {"trend": 0.62, "breakdown": 0.30, "total": 0.08}},
+               "breakdown": {"choice": "metric_time", "probabilities": {"metric_time": 0.98, "activity__platform": 0.02}}}
+    assert DG.read(answers, SURFACE, PRINCIPLES, _BACK, _LO, _HI)["group_by"] == ["metric_time"]
+    answers["shape"]["probabilities"] = {"trend": 0.30, "breakdown": 0.30, "total": 0.40}
+    assert DG.read(answers, SURFACE, PRINCIPLES, _BACK, _LO, _HI)["group_by"] == []
+
+
 # ── the answer side: a list written as one claim, and a value the answer leaves out ────────────────
 from types import SimpleNamespace as _NS
 
