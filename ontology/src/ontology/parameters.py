@@ -32,7 +32,9 @@ import yaml
 __all__ = ["TIME_GRAINS", "PERIOD_GRAMMAR", "load_layer", "metric_filter", "reachable_dimensions",
            "parameter_surface", "build"]
 
-TIME_GRAINS = ("day", "week", "month")
+# The same tuple as warehouse.config.TIME_GRAINS, which this package cannot import (it depends on
+# nothing project-internal); harness/tests/test_parameter_grounding.py fails when the two differ.
+TIME_GRAINS = ("day", "week", "month", "quarter", "year")
 PERIOD_GRAMMAR = ("YYYY-MM", "YYYY-Qn", "YYYY-Hn", "last_week", "last_month", "last_quarter",
                   "ytd", "all")
 

@@ -47,8 +47,9 @@ stage 7 on the sealed set.
 | D2 | fixed | "mobile" = android and ios, one figure, disclosed (owner's decision); the development test is relabelled | c8ebeae |
 | D3 | fixed | `value_meanings.csv`; a figure that includes `unknown` without the question naming it discloses the meaning | c8ebeae |
 | D4 | fixed | the other dimensions are read on the question with the exclusion phrase masked ("on [platform]"); a prompt note did not work (0.90 lacks) | c8ebeae |
-| D11 | waiting for a decision | quarter and year change the agent's tool schema, which `engine/tests/test_surface.py` pins for every experiment | patch kept, not committed |
-| D10 | recommended: no change | `segments` is the standard term (TERMINOLOGY.md). Renaming the rule `canonical_segments` breaks the replay of 55 stored runs, and no wrong answer was seen | — |
+| D11 | fixed | quarter and year grains in the runtime, the reader and the trend rule. The agent's tool schema changed (owner's decision); the pinned surface is updated | see below |
+| D10 | closed, no change (owner's decision) | `segments` is the standard term (TERMINOLOGY.md). Renaming the rule `canonical_segments` breaks the replay of 55 stored runs, and no wrong answer was seen | — |
+| D13 | new, open | a grain the question states is applied without the edge check: "week by week for the first half of 2026" counts 29-31 December and 1-5 July, and "yearly" over the same half counts 1-12 July (30,449 instead of 27,045). The engine returns whole buckets | — |
 
 Development tests: 23/28 before stage 6, 28/28 after. A replay of every stored run changes no action
 except six readings made before the new period options existed (re-read live: all four

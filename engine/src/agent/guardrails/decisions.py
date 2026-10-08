@@ -279,6 +279,7 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
                               "instructions": "If the question asks for a breakdown, by what?"}
     questions["time_grain"] = {"type": "choice", "instructions": "Does the question state the size of time buckets?",
                                "criteria": {"day": "Daily.", "week": "Weekly.", "month": "Monthly.",
+                                            "quarter": "Quarterly.", "year": "Yearly.",
                                             "not_mentioned": "The question does not state a bucket size."}}
     return questions, back
 

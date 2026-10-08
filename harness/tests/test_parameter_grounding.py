@@ -400,6 +400,18 @@ def test_trend_buckets_must_line_up_with_the_period():
     assert P._lines_up("week", __import__("datetime").date(2026, 6, 1), __import__("datetime").date(2026, 6, 28))
 
 
+def test_quarter_and_year_buckets_line_up_only_on_their_own_edges():
+    """D11: the runtime had day, week and month only, so a quarterly trend could not be asked for."""
+    import datetime as _d
+    assert P._lines_up("quarter", _d.date(2026, 1, 1), _d.date(2026, 6, 30))
+    assert not P._lines_up("quarter", _d.date(2026, 2, 1), _d.date(2026, 6, 30))
+    assert P._lines_up("year", _d.date(2025, 1, 1), _d.date(2026, 12, 31))
+    assert not P._lines_up("year", _d.date(2026, 1, 1), _d.date(2026, 6, 30))
+    from ontology.parameters import TIME_GRAINS as ONTOLOGY
+    from warehouse.config import TIME_GRAINS as WAREHOUSE
+    assert ONTOLOGY == WAREHOUSE            # one list, kept twice only because ontology imports nothing
+
+
 # ── runtime governance: a fork declared in the layer (meta.terms), resolved by preflight ───────────
 from pathlib import Path as _Path
 from types import SimpleNamespace

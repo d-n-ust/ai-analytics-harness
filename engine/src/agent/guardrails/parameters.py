@@ -261,6 +261,10 @@ def _lines_up(grain: str, start: dt.date, end: dt.date) -> bool:
         return start.weekday() == 0 and after.weekday() == 0
     if grain == "month":
         return start.day == 1 and after.day == 1
+    if grain == "quarter":
+        return start.day == after.day == 1 and start.month % 3 == after.month % 3 == 1
+    if grain == "year":
+        return (start.month, start.day) == (after.month, after.day) == (1, 1)
     return True
 
 
@@ -275,14 +279,16 @@ def _trend_grain(rule: dict, period: str):
     if not span:
         return None
     days = (span[1] - span[0]).days + 1
-    points = {"day": days, "week": round(days / 7), "month": round(days / 30)}
-    allowed = [g for g in ("day", "week", "month")
+    points = {"day": days, "week": round(days / 7), "month": round(days / 30), "quarter": round(days / 91),
+              "year": round(days / 365)}
+    allowed = [g for g in _surface.TIME_GRAINS
                if not rule.get("buckets_within_period") or _lines_up(g, *span)]
     lo, hi = rule.get("target_points", [15, 40])
     fits = [g for g in allowed if lo <= points[g] <= hi]
     grain = (min(fits, key=lambda g: points[g]) if fits else
              min(allowed, key=lambda g: min(abs(points[g] - lo), abs(points[g] - hi))))
-    excluded = [g for g in ("day", "week", "month") if g not in allowed]
+    # Only a grain that would make a series (two points or more) is worth saying it was not used.
+    excluded = [g for g in _surface.TIME_GRAINS if g not in allowed and points[g] >= 2]
     disclose = f"Shown by {grain}: {points[grain]} points over the {days}-day period, the governed trend granularity."
     if excluded:
         disclose += (f" {' and '.join(excluded).capitalize()} buckets were not used because they would "
