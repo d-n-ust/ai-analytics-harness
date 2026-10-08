@@ -286,6 +286,7 @@ def _read(yes=None, shape=("total", 1.0), principles=PRINCIPLES, surface=SURFACE
 
 
 _ANDROID_JUNE = {"named:activity__platform:0": 0.99, "period:2026-06": 0.97}
+_ANDROID_H1 = {"named:activity__platform:0": 0.99, "period:2026-H1": 0.97}
 
 
 def test_a_call_the_question_allows_runs_as_asked_and_missing_values_are_filled():
@@ -398,6 +399,15 @@ def test_trend_buckets_must_line_up_with_the_period():
     assert "Week buckets were not used" in disclose
     assert P._trend_grain({**rule, "buckets_within_period": False}, "2026-H1")[0] == "week"
     assert P._lines_up("week", __import__("datetime").date(2026, 6, 1), __import__("datetime").date(2026, 6, 28))
+
+
+def test_a_grain_the_question_states_is_kept_and_its_partial_edge_buckets_are_disclosed():
+    """D13: "week by week for the first half of 2026". The engine cuts the buckets at the period;
+    the answer must say the first and last weeks are partial."""
+    reading = _read(_ANDROID_H1, shape=("trend", 1.0), time_grain=("week", 0.99))
+    queries, decisions = DG.check(reading, {"metric": "app_opens", "group_by": ["metric_time"], "period": "2026-H1"})
+    assert [q["time_grain"] for q in queries] == ["week"]
+    assert "first and last week buckets are partial" in _by(decisions, "time_grain")[0]["disclose"]
 
 
 def test_quarter_and_year_buckets_line_up_only_on_their_own_edges():

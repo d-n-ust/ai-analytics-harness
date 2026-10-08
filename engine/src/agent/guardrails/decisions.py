@@ -763,6 +763,13 @@ def check(reading: dict, requested: dict) -> tuple[list, list]:
             if q.get("time_grain") and q["time_grain"] != reading["grain"]:
                 outside.append(f"time_grain {q['time_grain']}: the question asks for {reading['grain']} buckets")
             q["time_grain"] = reading["grain"]
+            if span and not _lines_up(q["time_grain"], *span):
+                # The grain is the user's, so it is kept; the engine cuts the edge buckets at the
+                # period, and the answer says they are partial (D13).
+                decisions.append(_decision("time_grain", q["time_grain"], "question",
+                                           disclose=f"The first and last {q['time_grain']} buckets are partial: "
+                                                    f"they count only the days from {span[0]} to {span[1]}.",
+                                           why="the question's grain does not line up with the period"))
         elif q.get("time_grain"):
             if rule and rule.get("buckets_within_period") and span and not _lines_up(q["time_grain"], *span):
                 outside.append(f"time_grain {q['time_grain']}: its buckets cross the edges of the period "

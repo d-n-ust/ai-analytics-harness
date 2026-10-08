@@ -49,7 +49,7 @@ stage 7 on the sealed set.
 | D4 | fixed | the other dimensions are read on the question with the exclusion phrase masked ("on [platform]"); a prompt note did not work (0.90 lacks) | c8ebeae |
 | D11 | fixed | quarter and year grains in the runtime, the reader and the trend rule. The agent's tool schema changed (owner's decision); the pinned surface is updated | see below |
 | D10 | closed, no change (owner's decision) | `segments` is the standard term (TERMINOLOGY.md). Renaming the rule `canonical_segments` breaks the replay of 55 stored runs, and no wrong answer was seen | — |
-| D13 | new, open | a grain the question states is applied without the edge check: "week by week for the first half of 2026" counts 29-31 December and 1-5 July, and "yearly" over the same half counts 1-12 July (30,449 instead of 27,045). The engine returns whole buckets | — |
+| D13 | fixed (owner's decision: cut at the period) | a grain the question states was applied without the edge check, and MetricFlow widens the period to whole buckets: "yearly" over the first half of 2026 counted 1-12 July (30,449 instead of 27,045), "week by week" counted 29-31 December and 1-5 July. The adapter now filters rows by day as the native engine does (every grain sums to 27,045), and the answer discloses the partial edge buckets. The grader ignores extra values, so it could not see the inflated edge weeks | see the commit after D11 |
 
 Development tests: 23/28 before stage 6, 28/28 after. A replay of every stored run changes no action
 except six readings made before the new period options existed (re-read live: all four
