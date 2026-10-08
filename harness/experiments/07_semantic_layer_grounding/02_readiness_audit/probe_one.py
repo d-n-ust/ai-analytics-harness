@@ -20,8 +20,9 @@ for arg in sys.argv[1:]:          # "question" or "metric::question"
     for v in cache.values():
         ans = v.get("answers") if isinstance(v, dict) else None
         for k, a in (ans or {}).items():
-            if k.split(":")[0] in ("shape", "breakdown", "time_grain") or (k.startswith("period:") and a.get("noul", 0) > 0.15):
+            if k.split(":")[0] in ("shape", "breakdown", "time_grain", "mode", "lacks") or (k.startswith(("period:", "named:")) and a.get("noul", 0) > 0.15):
                 print("  ", k, json.dumps(a)[:200])
+    print("  claimed", reading.get("claimed"), "filters", reading["filters"])
     print("  periods", reading["periods"], "group_by", reading["group_by"], "grain", reading["grain"])
     for d in reading["decisions"]:
         print("   decision", json.dumps(d, default=str)[:220])

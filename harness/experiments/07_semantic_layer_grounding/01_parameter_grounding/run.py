@@ -80,7 +80,8 @@ RUNG = 3
 # What a row ran against: a change to the layer or the governance file changes this, so two runs
 # are comparable only when it matches (v1 and v2 were five commits apart and nothing recorded it).
 LAYER_SHA = hashlib.sha256(b"".join(f.read_bytes() for f in sorted(
-    [*LAYER.glob("*.yml"), *LAYER.glob("*.yaml"), EXPERIMENT / "fixture" / "governance.yml"]))).hexdigest()[:12]
+    [*LAYER.glob("*.yml"), *LAYER.glob("*.yaml"), EXPERIMENT / "fixture" / "governance.yml",
+     *(EXPERIMENT / "fixture" / "seeds").glob("*.csv")]))).hexdigest()[:12]
 ARMS = ("R4", "R4+disclose_assumptions", "R4+parameter_grounding", "R4+decision_grounding")
 
 # The catalogue layout and schema note experiment 06 settled on, copied so this experiment runs
@@ -460,7 +461,7 @@ def replay_run(run_dir: pathlib.Path, con) -> None:
         for metric, stored in readings.items():
             if metric.startswith("_") or "answers" not in stored or (row["qid"], metric) in seen:
                 continue
-            now = decisions.replay(stored, metric, semantic, cur, GOVERNANCE)
+            now = decisions.replay(stored, metric, semantic, cur, GOVERNANCE, row.get("question") or "")
             seen[(row["qid"], metric)] = (_action(stored), "unreadable" if now is None else _action(now),
                                           bool(now and now.get("residual_stale")), now)
     cur.close()

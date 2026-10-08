@@ -34,6 +34,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
+import re
 import urllib.error
 import urllib.request
 
@@ -73,6 +74,86 @@ def _dimensions(surface: dict) -> list:
             seen.add(d["column"])
             out.append(d)
     return out
+
+
+def _with_value_words(surface: dict, cursor, governance: dict | None) -> dict:
+    """The surface with each dimension's declared value words and value meanings, read from the
+    reference tables governance names (`value_vocabulary`). Only words for real members are kept:
+    a word for a value the data does not hold cannot be filtered on. Unchanged when none is named."""
+    where = (governance or {}).get("value_vocabulary") or {}
+    if not where or cursor is None:
+        return surface
+    words: dict = {}
+    for column, word, value in cursor.execute(f"SELECT dimension, word, value FROM {where['words']}").fetchall():
+        words.setdefault(column, {}).setdefault(word.lower(), []).append(value)
+    meanings: dict = {}
+    if where.get("meanings"):
+        for column, value, meaning in cursor.execute(
+                f"SELECT dimension, value, meaning FROM {where['meanings']}").fetchall():
+            meanings.setdefault(column, {})[value] = meaning
+    dims = []
+    for d in surface["parameters"]["filters"]["dimensions"]:
+        members = {str(m): m for m in d["members"] or ()}
+        own = {w: [members[v] for v in vs if v in members] for w, vs in words.get(d["column"], {}).items()}
+        dims.append({**d, "words": {w: vs for w, vs in own.items() if vs},
+                     "meanings": {members[v]: m for v, m in meanings.get(d["column"], {}).items() if v in members}})
+    filters = {**surface["parameters"]["filters"], "dimensions": dims}
+    return {**surface, "parameters": {**surface["parameters"], "filters": filters}}
+
+
+def claimed(question: str, surface: dict) -> dict:
+    """PURE. {dimension: [(word, [values])]}: the declared value words the question contains, found by
+    code before any model reads the question. The longest phrase wins where phrases overlap. A word
+    declared for two dimensions is left out: which one it means is a judgement, not a lookup."""
+    from .forks import _tokens
+    if not any(d.get("words") for d in surface["parameters"]["filters"]["dimensions"]):
+        return {}
+    words = _tokens(question)
+    found = []                                            # (start, end, dimension, word, values)
+    for d in _dimensions(surface):
+        for word, values in (d.get("words") or {}).items():
+            phrase = _tokens(word)
+            found += [(i, i + len(phrase), d["name"], word, values) for i in range(len(words) - len(phrase) + 1)
+                      if phrase and words[i:i + len(phrase)] == phrase]
+    owners: dict = {}
+    for *_span, dim, word, _v in found:
+        owners.setdefault(word, set()).add(dim)
+    taken, out = set(), {}
+    for start, end, dim, word, values in sorted(found, key=lambda f: (f[0] - f[1], f[0])):
+        if len(owners[word]) > 1 or taken & set(range(start, end)):
+            continue
+        taken |= set(range(start, end))
+        if (word, values) not in out.get(dim, []):
+            out.setdefault(dim, []).append((word, values))
+    return out
+
+
+def _dimension_of(key: str) -> str | None:
+    """The dimension a filter question is about ("mode:", "lacks:", "named:"); None for the others."""
+    kind, _, rest = key.partition(":")
+    return rest.split(":")[0] if kind in ("mode", "lacks", "named") else None
+
+
+# The words that turn a value into an exclusion, and the quantifier before them ("on every platform
+# except web"). Told in the prompt that "web" is a platform value, the model still read that phrase as
+# leaving out a channel the layer lacks (0.90), and with only the value masked as well (0.68). With the
+# whole phrase masked, "on [platform]", it did not (0.93 no restriction). A plain mention is left as
+# written: masking "Android" in "Google Android phones" made "Google" read as a channel (3 of 3).
+_EXCLUDING = r"(?:except(?:\s+for)?|excluding|but\s+not|but|other\s+than|apart\s+from|besides|without|not(?:\s+(?:on|from|in))?)"
+
+
+def _masked(question: str, found: dict) -> str:
+    """The question with each exclusion of a declared word ("on every platform except web",
+    "non-web") replaced by the word's dimension in brackets: "on [platform]". The dimensions the
+    lookup did not settle are read on this text. Unchanged when nothing is excluded."""
+    for dim, words in found.items():
+        label = dim.split("__")[-1]
+        every = rf"(?:(?:every|all|any|each)\s+(?:of\s+)?(?:the\s+|our\s+)?{label}s?\s*,?\s*)?"
+        for word, _values in words:
+            value = r"[\s_-]+".join(map(re.escape, word.split())) + "s?"
+            question = re.sub(rf"\b(?:{every}{_EXCLUDING}\s+(?:the\s+)?{value}|non-?{value})\b", f"[{label}]",
+                              question, flags=re.I)
+    return question
 
 
 def _clause(member, description: str) -> str:
@@ -323,13 +404,20 @@ def _settle(periods: list, scores: dict | None = None) -> list:
     return [p for p in periods if p in keep]
 
 
-def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date, hi: dt.date) -> dict:
+def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date, hi: dt.date,
+         found: dict | None = None) -> dict:
     """PURE. What the question asks for, from the decision model's answers.
 
     Returns {filters: {dim: [values]}, periods: [...], group_by: [...], separate, grain, rule,
     builtin, decisions}. A value list holds every value the question names; `None` in it is the
     reading "no filter", which only a small choice set produces. `decisions` records the basis of
-    each value and any refusal or open parameter; a reading with either lets no call run."""
+    each value and any refusal or open parameter; a reading with either lets no call run.
+
+    `found` holds the declared value words the question contains (`claimed`). Their values are
+    named by code, not by the model, and a dimension with one is restricted: only whether the
+    question keeps or leaves out those values is the model's reading. A word declared for several
+    values ("mobile") is one figure over all of them."""
+    found = found or {}
     by_id = {p["id"]: p for p in principles}
     small = next((p for p in principles if p.get("max_options")), None)    # show_small_choice_sets
     builtin = surface.get("filter")
@@ -347,7 +435,9 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
         entry = dims.setdefault(dim, {"members": [], "named": [], "maybe": []})
         entry["members"].append(value)
         p = _yes(answers, key)
-        if p >= CONFIDENT:
+        if any(value in vs for _w, vs in found.get(dim, ())):
+            entry["named"].append(value)
+        elif p >= CONFIDENT:
             entry["named"].append(value)
         elif p >= PLAUSIBLE:
             entry["maybe"].append((value, p))
@@ -357,9 +447,9 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     # the data (each country has one region): a restriction there that names nothing is implied by it,
     # not open (h_007: "countries other than the US" also read as "region: leaves something out").
     determines = surface["parameters"]["filters"].get("determines") or {}
+    modes = {dim: _restriction(answers, dim, dim in found) for dim in dims}
     settled = {dim for dim, e in dims.items() if e["named"]
-               and _pick(answers, f"mode:{dim}")[0] in ("only", "except")
-               and _pick(answers, f"mode:{dim}")[1] >= CONFIDENT}
+               and modes[dim][0] in ("only", "except") and modes[dim][1] >= CONFIDENT}
     # The metric's own filter settles a dimension too (paying_users fixes status = 'active'), and so
     # every dimension it determines (is_active): h2_005 asked about is_active, which no question can
     # change on this metric.
@@ -367,8 +457,7 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     implied_by = {child: parent for parent in settled for child in determines.get(parent, ()) if child != parent}
     for dim, e in dims.items():
         name = dim.split("__")[-1]
-        mode, p_mode = _pick(answers, f"mode:{dim}")
-        mode = mode or "none"                    # no answer: the request did not ask about it
+        mode, p_mode = modes[dim]
         if dim in implied_by and not e["named"]:
             parent = implied_by[dim].split("__")[-1]
             if mode in ("only", "except") or e["unsure"]:
@@ -421,17 +510,23 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
             # Only a "stopped" premise names a value that is not counted ("now that referral has
             # stopped, how many through paid search"); in "why did Android opens drop" the value the
             # premise is about is the one counted (r_005).
-            counted = [m for m in e["named"]
+            counted = [m for m in _readings(e["named"], found.get(dim, ()))
                        if not (premise.get("kind") == "stopped" and (dim, m) == premise.get("about"))]
             if not counted:                     # only the premise names this dimension: no restriction
                 continue
             filters[dim] = counted
-            decisions.append({**_decision("filter", _shown(dim, counted), "question"), "confidence": p_mode})
+            groups = "; ".join(f"\"{w}\" is declared to mean {name} {' and '.join(map(str, vs))}"
+                               for w, vs in found.get(dim, ()) if len(vs) > 1)
+            decisions.append({**_decision("filter", _shown(dim, counted), "question",
+                                          disclose=f"{groups}." if groups else "",
+                                          why="declared value words" if dim in found else ""),
+                              "confidence": p_mode})
         elif mode == "except":
             # One reading: everything but the named values, as ONE filter (an IN list), because "not
             # Android" asks for one number. Values named to include are each their own reading.
             filters[dim] = [[m for m in e["members"] if m not in e["named"]]]
             decisions.append({**_decision("filter", _shown(dim, filters[dim]), "question",
+                                          disclose=_meanings(dim, filters[dim][0], surface),
                                           why=f"the question asks for every {name} except "
                                               f"{', '.join(map(str, e['named']))}: this filter IS that, one figure"),
                               "confidence": p_mode})
@@ -498,6 +593,36 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
             "grain": grain if grain not in (None, "not_mentioned") and p_grain >= CONFIDENT else None,
             "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
             "builtin": builtin, "decisions": decisions}
+
+
+def _restriction(answers: dict, dim: str, declared: bool) -> tuple[str, float]:
+    """(mode, p): how the question restricts a dimension. With a declared word for it in the
+    question, it is restricted, and the model only decides between keeping and leaving out."""
+    mode, p = _pick(answers, f"mode:{dim}")
+    if not declared:
+        return mode or "none", p                 # no answer: the request did not ask about it
+    keep, leave = _p(answers, f"mode:{dim}", "only"), _p(answers, f"mode:{dim}", "except")
+    return ("except", leave / (keep + leave)) if leave > keep else ("only", keep / (keep + leave) if keep else 1.0)
+
+
+def _readings(named: list, words) -> list:
+    """The values the question keeps, as readings: a word declared for several values is one reading
+    (an IN list), and every other named value is a reading of its own."""
+    grouped = {v for _w, vs in words for v in vs}
+    out: list = []
+    for r in [vs[0] if len(vs) == 1 else list(vs) for _w, vs in words] + [m for m in named if m not in grouped]:
+        if r not in out:
+            out.append(r)
+    return out
+
+
+def _meanings(dim: str, values, surface: dict) -> str:
+    """The declared meaning of each value a figure includes, as one sentence for the answer."""
+    column = dim.split("__")[-1]
+    meanings = next((d.get("meanings") or {} for d in surface["parameters"]["filters"]["dimensions"]
+                     if d["name"] == dim), {})
+    said = [f"{column} {v} ({meanings[v]})" for v in values if v in meanings]
+    return f"The figure includes {' and '.join(said)}." if said else ""
 
 
 def _premise(answers: dict, back: dict) -> dict:
@@ -718,11 +843,19 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     context = _context(metric, semantic, cursor, governance)
     if context is None:
         return None, 0.0
+    found = claimed(question, context[0])
     questions, _back = _questions(*context)
-    answers, cost, model = _ask(questions, question)
+    # The dimensions the lookup did not settle are read without an exclusion of a declared word
+    # (`_masked`): "every platform except web" was read as leaving out a channel too.
+    masked = _masked(question, found)
+    other = {k: q for k, q in questions.items() if masked != question and _dimension_of(k) not in (None, *found)}
+    answers, cost, model = _ask({k: q for k, q in questions.items() if k not in other}, question)
+    if other:
+        more, extra, _model = _ask(other, masked)
+        answers, cost = {**answers, **more}, cost + extra
     # The raw answers and the serving version are kept with the reading, so a stored row can be
     # replayed (`replay`) and the reading evaluated as a component without a new request.
-    reading = {**_decide(answers, metric, semantic, context), "model": model}
+    reading = {**_decide(answers, metric, semantic, context, found), "model": model}
     if not _refuses(reading):
         residual, more, _model = _ask(residual_question(metric, reading, (governance or {}).get("segments")), question)
         cost += more
@@ -731,16 +864,17 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     return cache[metric], cost
 
 
-def replay(stored: dict, metric: str, semantic, cursor, governance: dict | None) -> dict | None:
+def replay(stored: dict, metric: str, semantic, cursor, governance: dict | None, question: str = "") -> dict | None:
     """The stored reading decided again from its stored answers by the current code: no request, so
     a change to the reading logic is checked on past runs at no cost. None when the metric can no
     longer be read. `residual_stale` is set when the residual question the current reading would ask
     is not the one that was answered (it is conditioned on the reading); its stored answer is then
-    applied as it stands, and the result is a guess for that part."""
+    applied as it stands, and the result is a guess for that part. With the question, its declared
+    value words are looked up again; the stored answers were given without the notes about them."""
     context = _context(metric, semantic, cursor, governance)
     if context is None:
         return None
-    reading = _decide(stored["answers"], metric, semantic, context)
+    reading = _decide(stored["answers"], metric, semantic, context, claimed(question, context[0]) if question else {})
     if _refuses(reading):
         return reading
     asked = stored.get("residual")
@@ -756,14 +890,16 @@ def _context(metric: str, semantic, cursor, governance: dict | None) -> tuple | 
     lo, hi = (semantic.coverage_window(metric) if hasattr(semantic, "coverage_window") else (None, None))
     if surface is None or not lo or not hi:
         return None
-    return surface, list((governance or {}).get("methodological_rules") or []), lo, hi
+    return _with_value_words(surface, cursor, governance), list((governance or {}).get("methodological_rules") or []), lo, hi
 
 
-def _decide(answers: dict, metric: str, semantic, context: tuple) -> dict:
-    """The reading from the decision model's answers, with the premise checked against the data."""
+def _decide(answers: dict, metric: str, semantic, context: tuple, found: dict) -> dict:
+    """The reading from the decision model's answers and the question's declared value words, with
+    the premise checked against the data."""
     surface, principles, lo, hi = context
     _, back = _questions(surface, principles, lo, hi)
-    reading = {**read(answers, surface, principles, back, lo, hi), "answers": answers}
+    reading = {**read(answers, surface, principles, back, lo, hi, found), "answers": answers,
+               "claimed": {dim: [list(wv) for wv in ws] for dim, ws in found.items()}}
     verdict = premise_verdict(reading, metric, _premise_observed(semantic, metric, reading))
     return {**reading, "decisions": reading["decisions"] + [verdict]} if verdict is not None else reading
 

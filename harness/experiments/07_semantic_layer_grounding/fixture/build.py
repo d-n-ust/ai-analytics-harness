@@ -11,6 +11,7 @@ a dialect of dbt; it is a subset of it, and the subset is stated:
 
     {{ source('raw', 'x') }}   ->  "_source".x        the generated warehouse, untouched
     {{ ref('y') }}             ->  wh_06.y            a model in this project
+    seeds/x.csv                ->  wh_06_ref.x        a table (`dbt seed`, with `+schema: ref`)
 
     python build.py            # create or replace every model
     python build.py --drop     # drop the schema first, so a renamed model cannot outlive its file
@@ -25,6 +26,7 @@ from warehouse.warehouse import open_warehouse
 
 HERE = pathlib.Path(__file__).resolve().parent
 MODELS = HERE / "models"
+SEEDS = HERE / "seeds"
 SCHEMA = "wh_06"
 
 _SOURCE = re.compile(r"\{\{\s*source\(\s*['\"](\w+)['\"]\s*,\s*['\"](\w+)['\"]\s*\)\s*\}\}")
@@ -101,7 +103,20 @@ def build(con, drop: bool = False, root=None, schema: str = SCHEMA) -> list[str]
                     f"{_compile(models[name], schema, target)}")
         built.append(name)
     _apply_docs(con, root or MODELS, schema)
+    if root is None:
+        _seed(con, schema + "_ref", drop)
     return built
+
+
+def _seed(con, schema: str, drop: bool) -> None:
+    """Load every CSV under seeds/ as a table of text columns: `dbt seed`. Its own schema, because
+    the agent's search path is the marts and this is reference data for the question check."""
+    if drop:
+        con.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
+    con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+    for path in sorted(SEEDS.glob("*.csv")):
+        con.execute(f"CREATE OR REPLACE TABLE {schema}.{path.stem} AS "
+                    f"SELECT * FROM read_csv('{path}', header = true, all_varchar = true)")
 
 
 def _apply_docs(con, root: pathlib.Path, schema: str) -> None:

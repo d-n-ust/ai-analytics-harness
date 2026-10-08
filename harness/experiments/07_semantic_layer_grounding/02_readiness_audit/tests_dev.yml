@@ -80,14 +80,19 @@ tests:
       - android
       - ios
       period: 2026-06
+# Relabelled 2026-10-08 (stage 6, D2): the owner decided "mobile" means android and ios, answered as one
+# figure with a disclosure; the layer now declares it (fixture/seeds/value_words.csv). Was: ambiguous.
 - element: platform
-  block: undeclared parent group
-  type: invalid?
+  block: declared parent group
+  type: MFT
   q: How many mobile app opens were there in June 2026?
   expect:
-    type: ambiguous
+    type: metric_answer
     metric: app_opens
     params:
+      platform:
+      - android
+      - ios
       period: 2026-06
 - element: platform
   block: absent value

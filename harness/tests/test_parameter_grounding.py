@@ -503,6 +503,59 @@ def test_a_cause_question_is_declined_not_answered():
     assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["no_causal_evidence"]
 
 
+_WORDS = {"android": ["android"], "iphone": ["ios"], "web": ["web"], "mobile": ["android", "ios"],
+          "mobile web": ["web"]}
+
+
+def _with_words(words=_WORDS, meanings=None):
+    dims = [{**d, "column": d["name"].split("__")[-1], "joined": False,
+             **({"words": words, "meanings": meanings or {"unknown": "no recorded platform"}}
+                if d["name"] == "activity__platform" else {})}
+            for d in SURFACE["parameters"]["filters"]["dimensions"]]
+    return {**SURFACE, "parameters": {"filters": {"dimensions": dims}}}
+
+
+def test_declared_value_words_are_found_by_code_and_the_longest_phrase_wins():
+    surface = _with_words()
+    assert DG.claimed("Mobile app opens vs iPhones in June", surface) == \
+        {"activity__platform": [("mobile", ["android", "ios"]), ("iphone", ["ios"])]}
+    assert DG.claimed("opens on mobile web", surface) == {"activity__platform": [("mobile web", ["web"])]}
+    two = {**_WORDS, "organic": ["android"]}
+    clash = _with_words(two)
+    dims = clash["parameters"]["filters"]["dimensions"]
+    dims[2] = {**dims[2], "words": {"organic": ["organic"]}}        # the same word for two dimensions
+    assert DG.claimed("organic Android opens", clash) == {"activity__platform": [("android", ["android"])]}
+
+
+def test_a_declared_group_word_is_one_figure_and_is_disclosed_even_when_the_model_reads_no_restriction():
+    """D2: "mobile app opens" was answered for every platform. The word is declared as android and
+    ios, so code names both values and the dimension is restricted, whatever the model read."""
+    surface = _with_words()
+    answers = {"period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}},
+               "mode:activity__platform": {"choice": "none", "probabilities": {"none": 0.8, "only": 0.2}}}
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK, _LO, _HI, DG.claimed("mobile app opens", surface))
+    assert reading["filters"] == {"activity__platform": [["android", "ios"]]}
+    assert '"mobile" is declared to mean platform android and ios' in _by(reading["decisions"], "filter")[0]["disclose"]
+
+
+def test_a_figure_that_includes_a_value_the_question_did_not_name_discloses_its_meaning():
+    """D3: "every platform except web" includes unknown, whose meaning only a note stated."""
+    surface = _with_words()
+    answers = {"period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}},
+               "mode:activity__platform": {"choice": "except", "probabilities": {"except": 1.0}}}
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK, _LO, _HI, DG.claimed("every platform except web", surface))
+    assert reading["filters"] == {"activity__platform": [["android", "ios", "unknown"]]}
+    assert "unknown (no recorded platform)" in _by(reading["decisions"], "filter")[0]["disclose"]
+
+
+def test_other_dimensions_are_read_without_an_exclusion_of_a_declared_word():
+    """D4: "every platform except web" was read as leaving out a channel the layer lacks."""
+    found = {"activity__platform": [("web", ["web"])]}
+    assert DG._masked("App opens in June on every platform except web?", found) == "App opens in June on [platform]?"
+    assert DG._masked("Non-web opens from referral", found) == "[platform] opens from referral"
+    assert DG._masked("web and referral opens", found) == "web and referral opens"      # a plain mention stays
+
+
 def test_a_series_read_partly_as_a_trend_and_partly_as_a_breakdown_by_time_is_a_series():
     """"Week by week over the first half of 2026": the reader gave trend 0.62 and breakdown 0.30
     (by time 0.98). Neither shape reaches the bar alone; together they are one series."""

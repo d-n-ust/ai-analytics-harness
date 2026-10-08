@@ -1,0 +1,32 @@
+# Reference data the question check reads (dbt seeds; build.py loads them into wh_06_ref).
+#
+# value_words maps a word a user may type to a dimension value. A word that maps to several values
+# names a group ("mobile" is android and ios) and is read as one figure over all of them. A value
+# code is listed as its own word when users type it ("android"): a code is not matched otherwise,
+# because short codes collide with ordinary words (the country IN and the word "in").
+# value_meanings states what a value means when its code does not say it ("unknown"). The answer
+# discloses it when a figure includes the value without the question naming it ("every platform
+# except web" includes unknown). Values whose code is their meaning ("android") are not listed.
+version: 2
+seeds:
+  - name: value_words
+    columns:
+      - name: dimension
+        tests: [not_null]
+      - name: word
+        tests: [not_null]
+      - name: value
+        tests:
+          - not_null
+          # Every row is a platform today; a second dimension needs a test per dimension.
+          - relationships: {to: ref('dim_users'), field: platform}
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [dimension, word, value]
+  - name: value_meanings
+    columns:
+      - name: value
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [dimension, value]
