@@ -11,7 +11,7 @@ models (claude-fable-5-1, claude-sonnet-5, claude-opus-5-5).
 | both | 12 of 17 | — |
 
 The second axis is below the usual 0.67 bar. Every split traced to a gap in the rubric, which the
-raters named; the gaps are closed by rules 7 to 10 in `rubric.md`. Splits, and the decisions taken:
+raters named; the gaps are closed by rules 7 to 11 in `rubric.md`. Splits, and the decisions taken:
 
 | fact | split | decided | reason |
 |---|---|---|---|
