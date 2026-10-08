@@ -1,0 +1,277 @@
+# Development tests for the elements of q_001-q_003 (stage 4). Written 2026-10-08 by claude-opus-5-5
+# with the layer in view: development evidence. The sealed set is tests_heldout.yml.
+tests:
+- element: platform
+  block: governed code
+  type: MFT
+  q: How many times did Android users open the app in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+  group: P
+- element: platform
+  block: case variant
+  type: INV
+  q: how many times did ANDROID users open the app in june 2026
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+  group: P
+- element: platform
+  block: typo
+  type: INV
+  q: How many times did Andriod users open the app in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+  group: P
+- element: platform
+  block: undeclared synonym
+  type: INV
+  q: How many app opens came from Google Android phones in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+  group: P
+- element: platform
+  block: undeclared synonym (other value)
+  type: MFT
+  q: How many app opens came from iPhone users in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: ios
+      period: 2026-06
+- element: platform
+  block: exclusion
+  type: DIR
+  q: How many app opens were there in June 2026 on every platform except web?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      - unknown
+      period: 2026-06
+- element: platform
+  block: list
+  type: MFT
+  q: How many app opens did Android and iOS users have together in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-06
+- element: platform
+  block: undeclared parent group
+  type: invalid?
+  q: How many mobile app opens were there in June 2026?
+  expect:
+    type: ambiguous
+    metric: app_opens
+    params:
+      period: 2026-06
+- element: platform
+  block: absent value
+  type: invalid
+  q: How many app opens came from Windows users in June 2026?
+  expect:
+    type: refuse
+    metric: app_opens
+    params:
+      platform: windows
+- element: platform
+  block: omitted
+  type: base
+  q: How many app opens were there in June 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      period: 2026-06
+- element: period
+  block: quarter
+  type: MFT
+  q: How many times did Android users open the app in Q2 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-Q2
+- element: period
+  block: half-year
+  type: MFT
+  q: How many times did Android users open the app in the first half of 2026?
+  expect:
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-H1
+- element: period
+  block: season (no calendar meaning)
+  type: invalid
+  q: How many times did Android users open the app in summer 2026?
+  expect:
+    type: clarify
+    metric: app_opens
+    params:
+      platform: android
+      period: ask
+- element: period
+  block: outside coverage
+  type: invalid
+  q: How many times did Android users open the app in August 2025?
+  expect:
+    type: refuse
+    metric: app_opens
+    params:
+      platform: android
+- element: period
+  block: omitted
+  type: base
+  q: How many times did Android users open the app?
+  expect:
+    type: clarify
+    metric: app_opens
+    params:
+      platform: android
+      period: ask
+- element: grain
+  block: omitted (rule)
+  type: base
+  q: How did Android app opens change over the first half of 2026?
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-H1
+      group_by:
+      - metric_time
+- element: grain
+  block: explicit week
+  type: MFT
+  q: Show Android app opens week by week for the first half of 2026.
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-H1
+      group_by:
+      - metric_time
+- element: grain
+  block: explicit month
+  type: MFT
+  q: Show Android app opens month by month for the first half of 2026.
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-H1
+      group_by:
+      - metric_time
+- element: breakdown
+  block: unnamed ('by segment', rule)
+  type: base
+  q: How did Android app opens break down by segment in June 2026?
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+      group_by:
+      - region
+      - channel
+- element: breakdown
+  block: named dimension
+  type: MFT
+  q: Break down Android app opens in June 2026 by region.
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+      group_by:
+      - region
+- element: breakdown
+  block: named dimension
+  type: MFT
+  q: Break down Android app opens in June 2026 by country.
+  expect:
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-06
+      group_by:
+      - country
+- element: breakdown
+  block: homograph ('customer segment')
+  type: invalid?
+  q: Break down Android app opens in June 2026 by customer segment.
+  expect:
+    type: contested
+    metric: app_opens
+    params: {}
+- element: breakdown
+  block: absent dimension
+  type: invalid
+  q: Break down Android app opens in June 2026 by device model.
+  expect:
+    type: refuse
+    metric: app_opens
+    params: {}
+- element: metric
+  block: governed term
+  type: MFT
+  q: How many times did Android users open the app in June 2026?
+  expect:
+    outcome: app_opens
+- element: metric
+  block: undeclared synonym
+  type: MFT
+  q: How many app launches did Android users have in June 2026?
+  expect:
+    outcome: app_opens
+- element: metric
+  block: absent measure
+  type: MFT
+  q: How many sessions did Android users have in June 2026?
+  expect:
+    outcome: refuse
+- element: metric
+  block: absent measure
+  type: MFT
+  q: How much time did Android users spend in the app in June 2026?
+  expect:
+    outcome: refuse
+- element: metric
+  block: vague measure
+  type: MFT
+  q: How engaged were Android users in June 2026?
+  expect:
+    outcome: ask

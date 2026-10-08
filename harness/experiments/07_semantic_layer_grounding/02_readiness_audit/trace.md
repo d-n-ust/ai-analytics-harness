@@ -24,7 +24,7 @@ Run `20261007-101406-01_parameter_grounding`. One row per slot of each question'
 | filter platform | activity__platform = android | the question (decision model), 1.00 | proceed |
 | group_by | ['metric_time'] | the question (decision model), 1.00 | proceed |
 | period | 2026-H1 | the question (decision model), 0.98 | proceed |
-| time grain | month | the agent alone | proceed (governed rule not applied) |
+| time grain | month | the agent; the governed rule gives month | proceed |
 
 ## q_003_android_opens_by_segment_june
 

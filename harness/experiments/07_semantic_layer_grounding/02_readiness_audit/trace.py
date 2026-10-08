@@ -10,7 +10,8 @@ value the system used, what settled it, and what the system did with it:
     outcome      proceed · disclose · ask · refuse
 
 A slot the agent filled while the reading left it open, or set against a governed rule, is the
-finding this stage exists for (q_002: the agent chose a monthly grain where the rule asks for weekly).
+finding this stage exists for. (q_002's monthly grain is the governed one: weekly buckets would cross
+the edges of 2026-H1, which starts on a Thursday.)
 
     python trace.py <run dir>        # writes trace.md beside this file
 """
@@ -21,6 +22,7 @@ import pathlib
 import sys
 
 import yaml
+from agent.guardrails.parameters import _trend_grain
 
 HERE = pathlib.Path(__file__).resolve().parent
 SETTLED = {"question": "the question (decision model)", "governed_principle": "a governance rule (code)",
@@ -54,13 +56,16 @@ def trace(row: dict, case: dict) -> list[dict]:
         rows.append({"slot": slot, "value": str(d["value"]),
                      "settled_by": SETTLED.get(d["basis"], d["basis"]) + (f", {conf:.2f}" if conf else ""),
                      "outcome": _outcome(d)})
-    # The grain: a governed rule fills it only when the call leaves it out.
+    # The grain: the governed rule's grain for the period, against the grain the agent's call set.
     grains = {q.get("time_grain") for q in ran if q.get("time_grain")}
     if any("metric_time" in (q.get("group_by") or []) for q in ran):
-        rule = next((r for r in (reading.get("rule") or {},) if r), None)
-        rows.append({"slot": "time grain", "value": ", ".join(sorted(grains)) or "-",
-                     "settled_by": "the agent alone" if grains and rule else "a governance rule (code)",
-                     "outcome": "proceed" + (" (governed rule not applied)" if grains and rule else "")})
+        rule = reading.get("rule") or {}
+        governed = _trend_grain(rule, reading["periods"][0])[0] if rule and reading["periods"] else None
+        same = bool(grains) and grains == {governed}
+        rows.append({"slot": "time grain", "value": ", ".join(sorted(grains)) or governed or "-",
+                     "settled_by": (f"the agent; the governed rule gives {governed}" if grains else
+                                    "a governance rule (code)"),
+                     "outcome": "proceed" + ("" if same or not grains else " (differs from the governed grain)")})
     return rows
 
 
