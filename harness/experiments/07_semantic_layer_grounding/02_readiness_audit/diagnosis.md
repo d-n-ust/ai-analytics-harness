@@ -35,3 +35,21 @@ today only by a model's judgement, or a capability is missing; **low** = no wron
 
 Then the controlled test on two facts (D2 "mobile" for vocabulary, D11 or D6 for operation) and
 stage 7 on the sealed set.
+
+## Stage 6 status (2026-10-08)
+
+| id | status | what changed | commit |
+|---|---|---|---|
+| D6 | fixed | the breakdown choice offers "split by time" (metric_time) | ae2b97b |
+| D7 | fixed | "trend" and "breakdown by time" are added together: P(trend) + P(breakdown) x P(by time). The reader had split 0.62 / 0.30 between them, so neither reached 0.7 | ae2b97b |
+| D5 | fixed | every month, quarter and half-year of the calendar years the data touches is offered; code refuses a placed period with no day in the data. The model's "is this outside the data?" question is removed: worded as "wholly outside", it still refused "summer 2026" (0.70). A period no option fits is asked about | d6a578d |
+| D1 | fixed | `fixture/seeds/value_words.csv`, loaded like `dbt seed` into `wh_06_ref`; code looks the words up before the model reads the question | c8ebeae |
+| D2 | fixed | "mobile" = android and ios, one figure, disclosed (owner's decision); the development test is relabelled | c8ebeae |
+| D3 | fixed | `value_meanings.csv`; a figure that includes `unknown` without the question naming it discloses the meaning | c8ebeae |
+| D4 | fixed | the other dimensions are read on the question with the exclusion phrase masked ("on [platform]"); a prompt note did not work (0.90 lacks) | c8ebeae |
+| D11 | waiting for a decision | quarter and year change the agent's tool schema, which `engine/tests/test_surface.py` pins for every experiment | patch kept, not committed |
+| D10 | recommended: no change | `segments` is the standard term (TERMINOLOGY.md). Renaming the rule `canonical_segments` breaks the replay of 55 stored runs, and no wrong answer was seen | — |
+
+Development tests: 23/28 before stage 6, 28/28 after. A replay of every stored run changes no action
+except six readings made before the new period options existed (re-read live: all four
+out-of-coverage questions still refuse, now by code).
