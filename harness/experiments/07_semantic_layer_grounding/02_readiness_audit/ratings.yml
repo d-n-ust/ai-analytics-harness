@@ -1,0 +1,57 @@
+# Agreed ratings for the 17 facts. Where the four raters split (1, 3, 7, 14, 16), the decision is
+# the project owner's, 2026-10-08.
+1:
+  where: declared
+  who: code
+2:
+  where: modelled
+  who: code
+3:
+  where: prose
+  who: model
+  note: 'ideal: declared words for values, looked up by code (stage 6)'
+4:
+  where: missing
+  who: '-'
+5:
+  where: missing
+  who: '-'
+6:
+  where: modelled
+  who: code
+7:
+  where: prose
+  who: '-'
+  note: 'stage 6: declare the value''s meaning, and disclose it when ''unknown'' is
+    part of a figure'
+8:
+  where: prose
+  who: model
+9:
+  where: in our code only
+  who: code
+10:
+  where: in our code only
+  who: code
+11:
+  where: modelled
+  who: code
+12:
+  where: declared
+  who: code
+13:
+  where: declared
+  who: code
+14:
+  where: declared
+  who: model
+15:
+  where: modelled
+  who: code
+16:
+  where: in our code only
+  who: code
+  note: 'reworded: which of the two region paths a question means'
+17:
+  where: modelled
+  who: code

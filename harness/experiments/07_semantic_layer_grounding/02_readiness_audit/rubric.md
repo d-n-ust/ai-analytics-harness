@@ -37,3 +37,8 @@ axis: in experiment 04 it moved results by at most one point (harness note F-27)
 4. A rule written in governance.yml and applied by the harness is **declared · code**. If the harness applies it only in some cases (for example only when the agent's call leaves the value out), say so in a note.
 5. When a fact lives in two places, rate the strongest: code over model; within axis 1, declared or modelled over prose.
 6. "Fixed by definition" is not a rating: it is the outcome for a dimension the metric's own filter settles. Rate the filter itself.
+7. When a word equals a value code ("Android" for `android`), rate how the **word is mapped to the value**, not where the value list comes from.
+8. **—** on axis 2 also covers a fact that is written somewhere but read by nothing (an unread governance note).
+9. Code that only copies a fact into text that a model or a person reads (a disclosure sentence, a prompt) counts as **model**. **Code** means the fact changes a query, blocks or rewrites a call, or resolves a word.
+10. Transformation code upstream of the layer (staging SQL) counts for which values exist, not for what they mean.
+11. If a fact as worded is false, rate the true fact it points to, and correct the wording.

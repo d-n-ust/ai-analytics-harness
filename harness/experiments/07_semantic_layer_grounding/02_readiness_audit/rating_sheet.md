@@ -18,11 +18,11 @@ code, the description in the "where to look" column.
 | 9 | a question with no period must be asked for one | vocabulary | harness code (`decisions.read`): not in the layer | | | |
 | 10 | the first half of 2026 contains January to June | operation | harness period code; MetricFlow has no half-year grain | | | |
 | 11 | the dates the data covers (2025-09-05 to 2026-07-12) | operation | computed at run time from the data | | | |
-| 12 | a trend over half a year uses weekly points | vocabulary | governance `trend_granularity`; the harness fills it only when the agent's call has no grain | | | |
-| 13 | "by segment" means by region and by channel | vocabulary | governance `canonical_segments` | | | |
+| 12 | a trend's grain follows the governed rule (monthly over the first half of 2026: weekly buckets would cross its edges) | vocabulary | governance `trend_granularity`; the harness fills it only when the agent's call has no grain | | | |
+| 13 | "by segment" means by platform, region and channel (platform dropped when the question fixes it) | vocabulary | governance `canonical_segments` | | | |
 | 14 | "segments" also names customer populations | vocabulary | governance key `segments` | | | |
 | 15 | each country belongs to one region | operation | region description; derived from data at run time | | | |
-| 16 | region can be reached by only one path | operation | `activity__region` and `user__region` both exist | | | |
+| 16 | which of the two region paths (`activity__region`, `user__region`) a question means | operation | `activity__region` and `user__region` both exist | | | |
 | 17 | app opens add up across days and platforms | operation | measure `agg: sum` | | | |
 
 Levels — where it lives: missing · prose · prose, prescriptive · declared · modelled · in our code only.
