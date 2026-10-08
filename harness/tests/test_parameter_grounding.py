@@ -267,7 +267,7 @@ _BACK = {"mode:activity__platform": ("activity__platform", "mode"),
          **{f"named:activity__platform:{i}": ("activity__platform", m) for i, m in enumerate(["android", "ios", "web", "unknown"])},
          "mode:activity__is_internal": ("activity__is_internal", "mode"),
          **{f"named:activity__is_internal:{i}": ("activity__is_internal", m) for i, m in enumerate([False, True])},
-         **{f"period:{p}": ("period", p) for p in ("2026-04", "2026-05", "2026-06", "2026-Q2", "2026-H1")}}
+         **{f"period:{p}": ("period", p) for p in ("2025-06", "2025-09", "2026-04", "2026-05", "2026-06", "2026-Q2", "2026-H1")}}
 
 
 _ONLY = ("only", 0.99)
@@ -374,10 +374,18 @@ def test_uncovered_names_what_the_used_calls_leave_out():
     assert DG.uncovered(segments, [by_channel]) == [("the breakdown by region", {**june, "group_by": ["activity__region"]})]
 
 
-def test_period_options_cover_the_window_and_nothing_else():
+def test_periods_around_the_window_are_offered_and_code_decides_their_coverage():
+    """"June 2025" is placed on the calendar by the reader and refused by code, not by a model asked
+    whether it is outside the data (which also refused "summer 2026", partly inside)."""
     periods = DG._periods(_LO, _HI)
-    assert "2025-09" in periods and "2026-07" in periods and "2025-08" not in periods
-    assert "2026-H1" in periods and "2026-Q2" in periods and "2025-H1" not in periods
+    assert {"2025-01", "2025-H1", "2026-12", "2026-Q4"} <= set(periods) and "2024-12" not in periods
+    june_2025 = _read({"period:2025-06": 0.97})
+    assert [d["reason"] for d in june_2025["decisions"] if d["state"] == "refuse"] == ["out_of_coverage"]
+    assert "2025-06" not in june_2025["period_options"] and "2025-09" in june_2025["period_options"]
+    compared = _read({"period:2025-06": 0.97, "period:2026-06": 0.97})
+    assert [d["reason"] for d in compared["decisions"] if d["state"] == "refuse"] == ["out_of_coverage"]
+
+
 
 
 def test_trend_buckets_must_line_up_with_the_period():

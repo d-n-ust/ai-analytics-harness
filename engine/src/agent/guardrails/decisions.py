@@ -8,10 +8,10 @@ generated from the layer by code, so the model can only name a value that exists
   each categorical filter   how the question restricts it (names values to keep / names values
                             to leave out / does not / names a value the layer lacks), and one
                             yes/no per member: does the question name it?
-  period                    one yes/no per month, quarter and half-year inside the metric's
-                            coverage, plus "a period outside the data"
+  period                    one yes/no per month, quarter and half-year of the calendar years the
+                            metric's coverage touches; code decides whether a period is covered
   shape                     total / breakdown / trend / cause (a choice)
-  breakdown dimension       the dimensions, the governed `canonical_segments` rule, `not_in_list`
+  breakdown dimension       the dimensions, time, the governed `canonical_segments` rule, `not_in_list`
   time grain                day / week / month / `not_mentioned`
 
 Asking per value makes the reading a SET: "June compared with May" is yes to two months, and "not
@@ -83,23 +83,28 @@ def _clause(member, description: str) -> str:
 
 
 def _periods(lo: dt.date, hi: dt.date) -> dict:
-    """Every month, quarter and half-year that overlaps the coverage window, as query_metric periods."""
+    """Every month, quarter and half-year of the calendar years the coverage window touches, as
+    query_metric periods. Periods outside the window are offered too, so that the question's period
+    is placed on the calendar by the reader and its coverage is then decided by code (`read`): a
+    model asked "is this outside the data?" refused "summer 2026", which is partly inside, also when
+    asked whether it lies wholly outside (p 0.70). A period no option fits ("in 2019", "summer") is
+    therefore asked about, with the coverage window shown, rather than judged."""
     out = {}
-    y, m = lo.year, lo.month
-    while (y, m) <= (hi.year, hi.month):
-        out[f"{y}-{m:02d}"] = f"{_MONTHS[m - 1]} {y}."
-        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
     for y in range(lo.year, hi.year + 1):
+        for m in range(1, 13):
+            out[f"{y}-{m:02d}"] = f"{_MONTHS[m - 1]} {y}."
         for q in range(1, 5):
-            first, last = dt.date(y, 3 * q - 2, 1), dt.date(y + (q == 4), 1 if q == 4 else 3 * q + 1, 1)
-            if first <= hi and last > lo:
-                out[f"{y}-Q{q}"] = f"Q{q} {y}: {_MONTHS[3 * q - 3]} to {_MONTHS[3 * q - 1]} {y}."
+            out[f"{y}-Q{q}"] = f"Q{q} {y}: {_MONTHS[3 * q - 3]} to {_MONTHS[3 * q - 1]} {y}."
         for h in (1, 2):
-            first, last = dt.date(y, 1 if h == 1 else 7, 1), dt.date(y + (h == 2), 7 if h == 1 else 1, 1)
-            if first <= hi and last > lo:
-                out[f"{y}-H{h}"] = (f"The {'first' if h == 1 else 'second'} half of {y}: "
-                                    f"{'January to June' if h == 1 else 'July to December'} {y}.")
+            out[f"{y}-H{h}"] = (f"The {'first' if h == 1 else 'second'} half of {y}: "
+                                f"{'January to June' if h == 1 else 'July to December'} {y}.")
     return out
+
+
+def _covered(period: str, lo: dt.date, hi: dt.date) -> bool:
+    """Does any day of the period lie inside the coverage window?"""
+    first, last = _period_span(period)
+    return first <= hi and last >= lo
 
 
 def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tuple[dict, dict]:
@@ -175,11 +180,6 @@ def _questions(surface: dict, principles: list, lo: dt.date, hi: dt.date) -> tup
     questions["premise_about"] = {"type": "choice", "criteria": about,
                                   "instructions": "If the question takes a fact as given, which value is that fact "
                                                   "about?"}
-    questions["outside"] = {
-        "type": "noul", "instructions": f"Does the question name a period outside the data, which covers "
-                                        f"{lo} to {hi}?",
-        "criteria": {"true": "Yes, at least one period it names lies outside that range.",
-                     "false": "No."}}
     questions["shape"] = {"type": "choice", "instructions": "What shape of answer does the question ask for?",
                           "criteria": {"total": "A single number, or one number for each of a few named "
                                                 "values or periods being compared.",
@@ -477,8 +477,12 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     unsure = [p for p, v in said.items() if (LEAN if periods else PLAUSIBLE) <= v < CONFIDENT
               and not any(_within(_period_span(q), [_period_span(p)]) or _within(_period_span(p), [_period_span(q)])
                           for q in periods)]
-    if not periods and _yes(answers, "outside") >= CONFIDENT:
-        decisions.append(_refuse("period", "out_of_coverage", f"the period asked about is outside the data ({lo} to {hi})"))
+    # A period with no day in the data is refused, also beside a covered one: "June 2026 against June
+    # 2025" cannot be compared. A period partly inside reaches the coverage check on the call.
+    uncovered = [p for p in periods if not _covered(p, lo, hi)]
+    if uncovered:
+        decisions.append(_refuse("period", "out_of_coverage", f"{' and '.join(uncovered)} "
+                                 f"{'is' if len(uncovered) == 1 else 'are'} outside the data ({lo} to {hi})"))
     elif unsure:
         decisions.append(_ungrounded("period", f"unsure whether the question includes {', '.join(unsure)}"))
     elif not periods:
@@ -490,7 +494,7 @@ def read(answers: dict, surface: dict, principles: list, back: dict, lo: dt.date
     grain, p_grain = _pick(answers, "time_grain")
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": premise,
             "values": {dim: e["members"] for dim, e in dims.items()},
-            "period_options": [p for _, (k, p) in back.items() if k == "period"],
+            "period_options": [p for _, (k, p) in back.items() if k == "period" and _covered(p, lo, hi)],
             "grain": grain if grain not in (None, "not_mentioned") and p_grain >= CONFIDENT else None,
             "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
             "builtin": builtin, "decisions": decisions}

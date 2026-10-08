@@ -12,14 +12,15 @@ R.fixture_build.build(con, drop=True)
 cursor = R.scoped_cursor(con)
 semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                            guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
-for q in sys.argv[1:]:
+for arg in sys.argv[1:]:          # "question" or "metric::question"
+    metric, q = arg.split("::") if "::" in arg else ("app_opens", arg)
     cache: dict = {}
-    reading, cost = decisions.reading_for(q, "app_opens", semantic, cursor, R.GOVERNANCE, cache)
+    reading, cost = decisions.reading_for(q, metric, semantic, cursor, R.GOVERNANCE, cache)
     print("Q:", q)
     for v in cache.values():
         ans = v.get("answers") if isinstance(v, dict) else None
         for k, a in (ans or {}).items():
-            if k.split(":")[0] in ("shape", "breakdown", "time_grain", "outside") or (k.startswith("period:") and a.get("noul", 0) > 0.15):
+            if k.split(":")[0] in ("shape", "breakdown", "time_grain") or (k.startswith("period:") and a.get("noul", 0) > 0.15):
                 print("  ", k, json.dumps(a)[:200])
     print("  periods", reading["periods"], "group_by", reading["group_by"], "grain", reading["grain"])
     for d in reading["decisions"]:
