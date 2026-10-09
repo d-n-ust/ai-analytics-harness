@@ -19,12 +19,6 @@ select
         else 'unknown'
     end                                                          as platform,
     upper(ctry)                                                  as country,
-    case upper(ctry)
-        when 'US' then 'Americas' when 'BR' then 'Americas'
-        when 'GB' then 'EMEA'     when 'DE' then 'EMEA'  when 'FR' then 'EMEA'
-        when 'PH' then 'APAC'     when 'ID' then 'APAC'  when 'IN' then 'APAC'
-        else 'Other'
-    end                                                          as region,
     case
         when lower(chan) in ('paid_search', 'paid search', 'ppc', 'paid-search') then 'paid_search'
         when lower(chan) in ('referral', 'ref')                                  then 'referral'

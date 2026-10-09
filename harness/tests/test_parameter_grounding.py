@@ -12,10 +12,10 @@ SURFACE = {
     "metric": "app_opens", "description": "App opens.", "agg": "sum",
     "filter": "activity__is_internal = false",
     "parameters": {"filters": {"dimensions": [
-        {"name": "activity__platform", "members": ["android", "ios", "web", "unknown"], "description": ""},
-        {"name": "activity__region", "members": ["APAC", "Americas", "EMEA"], "description": ""},
-        {"name": "activity__channel", "members": ["organic", "referral"], "description": ""},
-        {"name": "activity__is_internal", "members": [False, True], "description": ""}]}},
+        {"name": "activity__platform", "column": "platform", "members": ["android", "ios", "web", "unknown"], "description": "", "joined": False},
+        {"name": "activity__region", "column": "region", "members": ["APAC", "Americas", "EMEA"], "description": "", "joined": False},
+        {"name": "activity__channel", "column": "channel", "members": ["organic", "referral"], "description": "", "joined": False},
+        {"name": "activity__is_internal", "column": "is_internal", "members": [False, True], "description": "", "joined": False}]}},
 }
 PRINCIPLES = [
     {"id": "trend_granularity", "slot": "time_grain", "target_points": [15, 40]},
@@ -525,47 +525,83 @@ def test_a_cause_question_is_declined_not_answered():
     assert queries == [] and [d["reason"] for d in decisions if d["state"] == "refuse"] == ["no_causal_evidence"]
 
 
-_WORDS = {"android": ["android"], "iphone": ["ios"], "web": ["web"], "mobile": ["android", "ios"],
-          "mobile web": ["web"]}
+_PLATFORM_DEVICE = {"android": "mobile", "ios": "mobile", "web": "desktop", "unknown": "unknown"}
 
 
-def _with_words(words=_WORDS, meanings=None):
+def _with_attributes():
+    """SURFACE with the modelled attribute device_type beside platform, as the layer exposes them:
+    values, their definitions (`config.meta.values`), and the value map platform -> device_type."""
+    unknown = "no recorded platform"
     dims = [{**d, "column": d["name"].split("__")[-1], "joined": False,
-             **({"words": words, "meanings": meanings or {"unknown": "no recorded platform"}}
-                if d["name"] == "activity__platform" else {})}
+             "meanings": {"unknown": unknown} if d["name"] == "activity__platform" else {}}
             for d in SURFACE["parameters"]["filters"]["dimensions"]]
-    return {**SURFACE, "parameters": {"filters": {"dimensions": dims}}}
+    dims.insert(1, {"name": "activity__device_type", "column": "device_type", "joined": False, "description": "",
+                    "members": ["desktop", "mobile", "unknown"],
+                    "meanings": {"mobile": "platforms android and ios", "desktop": "platform web", "unknown": unknown}})
+    dims.append({"name": "activity__country", "column": "country", "joined": False, "description": "",
+                 "members": ["DE", "IN", "US"], "meanings": {}})
+    return {**SURFACE, "parameters": {"filters": {
+        "dimensions": dims, "determines": {"activity__platform": {"activity__device_type": _PLATFORM_DEVICE}}}}}
 
 
-def test_declared_value_words_are_found_by_code_and_the_longest_phrase_wins():
-    surface = _with_words()
-    assert DG.claimed("Mobile app opens vs iPhones in June", surface) == \
-        {"activity__platform": [("mobile", ["android", "ios"]), ("iphone", ["ios"])]}
-    assert DG.claimed("opens on mobile web", surface) == {"activity__platform": [("mobile web", ["web"])]}
-    two = {**_WORDS, "organic": ["android"]}
-    clash = _with_words(two)
-    dims = clash["parameters"]["filters"]["dimensions"]
-    dims[2] = {**dims[2], "words": {"organic": ["organic"]}}        # the same word for two dimensions
-    assert DG.claimed("organic Android opens", clash) == {"activity__platform": [("android", ["android"])]}
+_BACK_ATTR = {**_BACK, "mode:activity__device_type": ("activity__device_type", "mode"),
+              **{f"named:activity__device_type:{i}": ("activity__device_type", m)
+                 for i, m in enumerate(["desktop", "mobile", "unknown"])}}
 
 
-def test_a_declared_group_word_is_one_figure_and_is_disclosed_even_when_the_model_reads_no_restriction():
-    """D2: "mobile app opens" was answered for every platform. The word is declared as android and
-    ios, so code names both values and the dimension is restricted, whatever the model read."""
-    surface = _with_words()
+def test_the_values_of_closed_dimensions_are_found_by_code():
+    """The closed lists are the values of modelled attributes, so a word for a value is the value."""
+    surface = _with_attributes()
+    assert DG.claimed("Mobile app opens vs Android in June", surface) == \
+        {"activity__device_type": [("mobile", ["mobile"])], "activity__platform": [("android", ["android"])]}
+    # A value of two dimensions is a judgement, not a lookup.
+    assert DG.claimed("opens with an unknown platform", surface) == {}
+    # A two-letter code matches only as written in capitals.
+    assert DG.claimed("opens in June from IN", surface) == {"activity__country": [("IN", ["IN"])]}
+    # Booleans are not words.
+    assert "activity__is_internal" not in DG.claimed("is it true", surface)
+
+
+def test_a_group_value_is_one_figure_and_the_same_rows_on_a_finer_dimension_are_not_a_second_filter():
+    """D2: "mobile app opens" was answered for every platform. "mobile" is a value of device_type, so
+    code restricts device_type whatever the model read, and discloses what the value holds. The model
+    also reads platform android and ios ("a group that contains android"); that filter keeps the same
+    rows and is dropped."""
+    surface = _with_attributes()
     answers = {"period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}},
-               "mode:activity__platform": {"choice": "none", "probabilities": {"none": 0.8, "only": 0.2}}}
-    reading = DG.read(answers, surface, PRINCIPLES, _BACK, _LO, _HI, DG.claimed("mobile app opens", surface))
-    assert reading["filters"] == {"activity__platform": [["android", "ios"]]}
-    assert '"mobile" is declared to mean platform android and ios' in _by(reading["decisions"], "filter")[0]["disclose"]
+               "mode:activity__device_type": {"choice": "none", "probabilities": {"none": 0.8, "only": 0.2}},
+               "mode:activity__platform": {"choice": "only", "probabilities": {"only": 0.95}},
+               "named:activity__platform:0": {"noul": 0.9}, "named:activity__platform:1": {"noul": 0.9}}
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK_ATTR, _LO, _HI, DG.claimed("mobile app opens", surface))
+    assert reading["filters"] == {"activity__device_type": ["mobile"]}
+    dropped, kept = (_by([d for d in reading["decisions"] if (d["state"] == "dropped") == x], "filter") for x in (True, False))
+    assert "device_type mobile (platforms android and ios)" in kept[0]["disclose"]
+    assert dropped[0]["why"] == "the device_type filter already keeps only these rows"
+
+
+def test_a_coarser_filter_that_keeps_every_row_of_a_finer_one_is_dropped():
+    """"Mobile users on iPhone": every ios row is mobile, so platform ios is the whole restriction."""
+    surface = _with_attributes()
+    answers = {"period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}},
+               "mode:activity__device_type": {"choice": "only", "probabilities": {"only": 0.95}},
+               "mode:activity__platform": {"choice": "only", "probabilities": {"only": 0.95}},
+               "named:activity__platform:1": {"noul": 0.9}}
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK_ATTR, _LO, _HI, DG.claimed("mobile users on iPhone", surface))
+    assert reading["filters"] == {"activity__platform": ["ios"]}
+    answers["named:activity__platform:0"] = {"noul": 0.9}           # android read too: still all mobile
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK_ATTR, _LO, _HI, DG.claimed("mobile users on iPhone", surface))
+    assert reading["filters"] == {"activity__device_type": ["mobile"]}
+    answers["named:activity__platform:0"], answers["named:activity__platform:2"] = {"noul": 0.0}, {"noul": 0.9}
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK_ATTR, _LO, _HI, DG.claimed("mobile users on iPhone", surface))
+    assert reading["filters"] == {"activity__device_type": ["mobile"], "activity__platform": ["ios", "web"]}
 
 
 def test_a_figure_that_includes_a_value_the_question_did_not_name_discloses_its_meaning():
     """D3: "every platform except web" includes unknown, whose meaning only a note stated."""
-    surface = _with_words()
+    surface = _with_attributes()
     answers = {"period:2026-06": {"noul": 0.97}, "shape": {"choice": "total", "probabilities": {"total": 1.0}},
                "mode:activity__platform": {"choice": "except", "probabilities": {"except": 1.0}}}
-    reading = DG.read(answers, surface, PRINCIPLES, _BACK, _LO, _HI, DG.claimed("every platform except web", surface))
+    reading = DG.read(answers, surface, PRINCIPLES, _BACK_ATTR, _LO, _HI, DG.claimed("every platform except web", surface))
     assert reading["filters"] == {"activity__platform": [["android", "ios", "unknown"]]}
     assert "unknown (no recorded platform)" in _by(reading["decisions"], "filter")[0]["disclose"]
 
@@ -850,7 +886,8 @@ def test_a_request_to_bend_the_rules_has_one_legal_reply():
 _GEO = {**SURFACE, "parameters": {"filters": {
     "dimensions": [{"name": "activity__country", "members": ["US", "BR", "GB", "DE"], "description": ""},
                    {"name": "activity__region", "members": ["Americas", "EMEA"], "description": ""}],
-    "determines": {"activity__country": ["activity__region"]}}}}
+    "determines": {"activity__country": {"activity__region": {"US": "Americas", "BR": "Americas", "GB": "EMEA",
+                                                              "DE": "EMEA"}}}}}}
 _GEO_BACK = {"mode:activity__country": ("activity__country", "mode"),
              **{f"named:activity__country:{i}": ("activity__country", m) for i, m in enumerate(["US", "BR", "GB", "DE"])},
              "mode:activity__region": ("activity__region", "mode"),
@@ -987,7 +1024,7 @@ def test_a_stored_reading_replays_to_the_same_decisions_without_a_request(monkey
     monkeypatch.setattr(DG, "_ask", lambda *_a: next(replies))
     live, _cost = DG.reading_for("Android app opens in June 2026?", "app_opens", None, None, {}, {})
     monkeypatch.setattr(DG, "_ask", lambda *_a: (_ for _ in ()).throw(AssertionError("a request")))
-    again = DG.replay(live, "app_opens", None, None, {})
+    again = DG.replay(live, "app_opens", None, None, {}, question="Android app opens in June 2026?")
     assert again["decisions"] == live["decisions"] and again["residual_stale"] is False
     assert any(d["parameter"] == "group" for d in again["decisions"])       # the residual answer applied
 
@@ -1094,7 +1131,7 @@ def test_a_dimension_the_metric_filter_determines_is_not_an_open_question():
     subs = {**SURFACE, "filter": "subscription__status = 'active'", "parameters": {"filters": {
         "dimensions": [{"name": "subscription__status", "members": ["active", "canceled"], "description": ""},
                        {"name": "subscription__is_active", "members": [True, False], "description": ""}],
-        "determines": {"subscription__status": ["subscription__is_active"]}}}}
+        "determines": {"subscription__status": {"subscription__is_active": {"active": True, "canceled": False}}}}}}
     back = {"mode:subscription__is_active": ("subscription__is_active", "mode"),
             "named:subscription__is_active:0": ("subscription__is_active", True),
             "period:2026-Q2": ("period", "2026-Q2")}

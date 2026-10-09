@@ -116,6 +116,8 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
                             # strftime(started_date, ...)); its members are read through it.
                             "expr": d.get("expr") or d["name"],
                             "description": " ".join((d.get("description") or "").split()),
+                            # What a value means when its name does not say it ("unknown").
+                            "meanings": ((d.get("config") or {}).get("meta") or {}).get("values") or {},
                             "joined": model is not own})
     return out
 
@@ -124,7 +126,8 @@ def parameter_surface(models: dict, metrics: dict, metric: str, members: dict,
                       determines: dict | None = None) -> dict:
     """PURE. The whole parameter surface of `metric`. `members` maps (table, column) to that
     column's member list, or to None where the set is open; a missing key is an open set.
-    `determines` maps a dimension name to the dimensions it determines (see `build`)."""
+    `determines` maps a dimension name to the dimensions it determines, each with the value map
+    {its value: their value} (see `build`)."""
     _, measure = _measure_home(models, metrics, metric)
     dims = [{**d, "members": members.get((d["table"], d["column"]))}
             for d in reachable_dimensions(models, metrics, metric)]
@@ -150,12 +153,14 @@ def _members(cursor, table: str, column: str) -> list | None:
     return None if len(rows) > MAX_MEMBERS else [r[0] for r in rows]
 
 
-def _determines(cursor, table: str, a: str, b: str) -> bool:
-    """Does each value of `a` come with exactly one value of `b` in the data (country -> region)?
-    Read from the rows, not from a description, so it holds for the warehouse as it is."""
-    row = cursor.execute(f"SELECT max(n) FROM (SELECT {a}, count(DISTINCT {b}) AS n FROM {table} "
-                         f"WHERE {a} IS NOT NULL GROUP BY {a})").fetchone()
-    return bool(row) and row[0] == 1
+def _determines(cursor, table: str, a: str, b: str) -> dict | None:
+    """{value of a: value of b} when each value of `a` comes with exactly one value of `b` in the data
+    (country -> region), else None. Read from the rows, not from a description, so it holds for the
+    warehouse as it is. The map lets a reader see that two filters keep the same rows ("platform in
+    android, ios" and "device_type = mobile")."""
+    rows = cursor.execute(f"SELECT {a}, min({b}), count(DISTINCT {b}) FROM {table} "
+                          f"WHERE {a} IS NOT NULL GROUP BY {a}").fetchall()
+    return {va: vb for va, vb, _n in rows} if rows and all(n == 1 for *_v, n in rows) else None
 
 
 def build(cursor, layer_text: str, metric: str) -> dict:
@@ -166,11 +171,15 @@ def build(cursor, layer_text: str, metric: str) -> dict:
     dims = reachable_dimensions(models, metrics, metric)
     members = {(d["table"], d["column"]): _members(cursor, d["table"], d["expr"]) for d in dims}
     closed = [d for d in dims if members.get((d["table"], d["column"]))]
+    size = lambda d: len(members[(d["table"], d["column"])])            # noqa: E731
     determines: dict = {}
-    for a in closed:
-        for b in closed:
+    # A pair with as many values on each side (country and country_name) determines both ways; it is
+    # recorded once, from the first in layer order, so that neither reads as implied by the other.
+    for i, a in enumerate(closed):
+        for j, b in enumerate(closed):
             if (a is not b and a["table"] == b["table"]
-                    and len(members[(a["table"], a["column"])]) > len(members[(b["table"], b["column"])])
-                    and _determines(cursor, a["table"], a["expr"], b["expr"])):
-                determines.setdefault(a["name"], []).append(b["name"])
+                    and (size(a) > size(b) or size(a) == size(b) and i < j)):
+                values = _determines(cursor, a["table"], a["expr"], b["expr"])
+                if values is not None:
+                    determines.setdefault(a["name"], {})[b["name"]] = values
     return parameter_surface(models, metrics, metric, members, determines)

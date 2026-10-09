@@ -81,7 +81,8 @@ tests:
       - ios
       period: 2026-06
 # Relabelled 2026-10-08 (stage 6, D2): the owner decided "mobile" means android and ios, answered as one
-# figure with a disclosure; the layer now declares it (fixture/seeds/value_words.csv). Was: ambiguous.
+# figure with a disclosure. Was: ambiguous. Relabelled 2026-10-09: "mobile" is a value of the modelled
+# attribute device_type (dim_platform), which replaced the word table. Was: platform [android, ios].
 - element: platform
   block: declared parent group
   type: MFT
@@ -90,9 +91,7 @@ tests:
     type: metric_answer
     metric: app_opens
     params:
-      platform:
-      - android
-      - ios
+      device_type: mobile
       period: 2026-06
 - element: platform
   block: absent value

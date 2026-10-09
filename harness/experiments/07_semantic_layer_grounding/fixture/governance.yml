@@ -82,13 +82,9 @@ attributes:
 
 # ── vocabulary: words for metrics, words for values ───────────────────────────────────────────
 # Words that reach more than one metric are declared on the metrics (`config.meta.terms` in
-# layer/semantic_models.yml). Words for dimension values, and what each value means, are reference
-# data: two dbt seeds (seeds/), loaded as tables. The question check looks the words up in code
-# before the decision model judges the question (agent/guardrails/decisions.py, `vocabulary`).
-# The platform note that `unknown` means "no recorded platform" moved to value_meanings.
-value_vocabulary:
-  words: wh_06_ref.value_words          # dimension, word, value
-  meanings: wh_06_ref.value_meanings    # dimension, value, meaning
+# layer/semantic_models.yml). Words for dimension values are the values of modelled attributes
+# (dim_platform.device_type, dim_country.country_name, dim_date.season), and what a value means, when
+# its name does not say it, is on the dimension (`config.meta.values`). No word list is kept here.
 
 # ── relationships between definitions: moved to the semantic layer ───────────────────────────
 # Which metric answers a word that several governed metrics answer ("users", "habits",

@@ -10,13 +10,7 @@ config-version: 2
 profile: habit_tracker
 
 model-paths: ["models"]
-seed-paths: ["seeds"]
 
 models:
   habit_tracker:
     +materialized: view
-
-# Reference data lands beside the marts, not in them: the agent's search path is the marts alone.
-seeds:
-  habit_tracker:
-    +schema: ref

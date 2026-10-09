@@ -7,6 +7,10 @@ and the governance setting `fact_consumers`. Readings run one at a time (element
 
     python controlled.py --reps 1 --only mobile:code     # a probe: one arm, one repetition
     python controlled.py --reps 3                         # every arm; about $0.10
+
+A record, not a runnable test, since 2026-10-09: the "mobile" arms vary the word table
+(wh_06_ref.value_words), which modelled attributes replaced (dim_platform.device_type). The results
+in controlled.md were produced at commit db7b317; check that commit out to run it again.
 """
 from __future__ import annotations
 

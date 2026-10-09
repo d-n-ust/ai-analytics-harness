@@ -6,13 +6,38 @@ models:
   # ── conformed dimensions ─────────────────────────────────────────────────────────────────────
   - name: dim_date
     description: >-
-      Conformed calendar. One row per day from 2025-09-01 to 2026-07-12. Join any fact's date to this
-      to group by week, month, or quarter consistently. Example: join fct_value_moments.completed_date
-      = dim_date.date_day, group by month_start.
+      Conformed calendar. One row per day from 2024-12-01 to 2027-02-28: wider than the data, and
+      every season in it whole. Join any fact's date to this to group by week, month, or quarter consistently. Example: join
+      fct_value_moments.completed_date = dim_date.date_day, group by month_start.
     columns:
-      - {name: date_day, description: "The day. Primary key. Every fact's date column joins here."}
+      - {name: date_day, description: "The day. Primary key. Every fact's date column joins here.", tests: [unique, not_null]}
       - {name: quarter_start, description: "First day of the calendar quarter — group by this for quarterly figures."}
       - {name: is_month_end, description: "True on the last day of a month; the row to read for a month-end balance."}
+      - name: season
+        description: "Meteorological season, northern hemisphere: spring (March to May), summer (June to August), autumn (September to November), winter (December to February). Owner: Analytics, provisional."
+        tests: [not_null, {accepted_values: {values: [spring, summer, autumn, winter]}}]
+      - {name: season_year, description: "The year a season is named by. A winter is named by the year of its January: winter 2026 is December 2025 to February 2026.", tests: [not_null]}
+
+  - name: dim_platform
+    description: >-
+      Conformed platform dimension. One row per client platform. Its attributes are the closed lists a
+      question about platforms is read against: a value a question names must be a value of one of
+      them. Owner: Product.
+    columns:
+      - {name: platform, description: "The registered client platform. Primary key.", tests: [unique, not_null, {accepted_values: {values: [android, ios, web, unknown]}}]}
+      - name: device_type
+        description: "The kind of device: mobile (android and ios), desktop (web), unknown (no recorded platform). Owner: Product (2026-10-08)."
+        tests: [not_null, {accepted_values: {values: [mobile, desktop, unknown]}}]
+
+  - name: dim_country
+    description: >-
+      Conformed country dimension. One row per account country, keyed by its ISO code. Owner: Sales.
+    columns:
+      - {name: country, description: "ISO 3166-1 alpha-2 code. Primary key.", tests: [unique, not_null]}
+      - {name: country_name, description: "The country's English short name, as a question writes it (Germany, not DE).", tests: [unique, not_null]}
+      - name: region
+        description: "Sales territory: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."
+        tests: [not_null, {accepted_values: {values: [Americas, EMEA, APAC]}}]
 
   - name: dim_users
     description: >-
@@ -123,5 +148,7 @@ models:
     columns:
       - {name: active_date, description: "The activity day. Joins dim_date."}
       - {name: is_internal, description: "Staff/test flag, denormalised from dim_users so a metric can exclude them without a join."}
+      - {name: device_type, description: "The account platform's device type, from dim_platform."}
+      - {name: country_name, description: "The account country's name, from dim_country."}
       - {name: value_moments, description: "Count of habit completions by this account on this day."}
       - {name: app_opens, description: "Count of app opens by this account on this day."}

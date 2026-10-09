@@ -77,11 +77,12 @@ GOVERNANCE = yaml.safe_load((EXPERIMENT / "fixture" / "governance.yml").read_tex
 RUNS = EXPERIMENT.parents[2] / "runs" / "experiments" / EXPERIMENT.name
 MARTS = "wh_06"
 RUNG = 3
-# What a row ran against: a change to the layer or the governance file changes this, so two runs
-# are comparable only when it matches (v1 and v2 were five commits apart and nothing recorded it).
+# What a row ran against: a change to the layer, the governance file or a model changes this, so two
+# runs are comparable only when it matches (v1 and v2 were five commits apart and nothing recorded
+# it). The models are included because the closed value lists are the values of their attributes.
 LAYER_SHA = hashlib.sha256(b"".join(f.read_bytes() for f in sorted(
     [*LAYER.glob("*.yml"), *LAYER.glob("*.yaml"), EXPERIMENT / "fixture" / "governance.yml",
-     *(EXPERIMENT / "fixture" / "seeds").glob("*.csv")]))).hexdigest()[:12]
+     *(EXPERIMENT / "fixture" / "models").rglob("*.sql")]))).hexdigest()[:12]
 ARMS = ("R4", "R4+disclose_assumptions", "R4+parameter_grounding", "R4+decision_grounding")
 
 # The catalogue layout and schema note experiment 06 settled on, copied so this experiment runs

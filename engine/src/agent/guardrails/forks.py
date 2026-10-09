@@ -64,11 +64,13 @@ def vocabulary(semantic) -> dict[str, tuple[str, ...]]:
     return {t: tuple(sorted(s)) for t, s in sorted(out.items())}
 
 
-def _tokens(text: str) -> list[str]:
+def _tokens(text: str, cased: bool = False) -> list[str]:
     """Words as compared: lower case, hyphens and underscores as spaces, punctuation dropped, a
-    plural s ignored on words longer than three letters."""
-    words = re.sub(r"[^a-z0-9 ]", " ", str(text).lower().replace("-", " ").replace("_", " ")).split()
-    return [w[:-1] if len(w) > 3 and w.endswith("s") else w for w in words]
+    plural s ignored on words longer than three letters. `cased` keeps the case as written, so a code
+    ("IN") can be told from an ordinary word ("in"); the words are the same otherwise."""
+    text = str(text) if cased else str(text).lower()
+    words = re.sub(r"[^A-Za-z0-9 ]", " ", text.replace("-", " ").replace("_", " ")).split()
+    return [w[:-1] if len(w) > 3 and w.lower().endswith("s") else w for w in words]
 
 
 def _occurs(phrase: list[str], words: list[str]) -> bool:
