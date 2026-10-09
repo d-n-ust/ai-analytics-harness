@@ -1135,14 +1135,80 @@ refuses.
 These are development tests, written with the layer in view and used to fix the reader. The
 replication sealed set decides (section 31).
 
-## 31 · Open
+## 31 · The head-to-head on a replication sealed set
+
+**Procedure** (`02_readiness_audit/replication/`). An agent with no project context wrote 24 intents
+with labels from `author_brief.md` (the layer's values, coverage, rules and the label policy; no
+code, design or development tests). `gemini-3.8-flash` wrote three wordings per intent, one intent at
+a time. Only the files' hashes were committed with the predictions and the adoption rule
+(`preregistration.md`, commit 42b1552); the files were read after the run. Each reader read each
+wording 3 times: 216 readings per reader, $0.10 per reader.
+
+| reader | labels | correct | silent wrong | safe miss | wrong refusal |
+|---|---|---|---|---|---|
+| questionnaire | as written | 123 (57%) | 39 (18%) | 54 | 0 |
+| typed | as written | 140 (65%) | 20 (9%) | 53 | 3 |
+| questionnaire | corrected (`label_audit.md`) | 135 (63%) | 27 (12.5%) | 54 | 0 |
+| typed | corrected | 158 (73%) | 2 (0.9%) | 53 | 3 |
+
+**Adoption rule: met** under both label sets (silent wrong no higher; correct not lower).
+
+**Predictions against results:**
+
+| prediction | result (corrected labels) | held |
+|---|---|---|
+| questionnaire correct 65% to 85% | 63% | no, slightly lower |
+| questionnaire silent wrong 5% or more | 12.5% | yes |
+| typed correct 75% to 92% | 73% | no, slightly lower |
+| typed silent wrong 3% or less | 0.9% | yes (as written: 9%, no) |
+
+Four label problems (two intents' labels used an undefined `grain` key; two wordings drifted to a
+listed value) account for 18 of the typed reader's 20 silent wrong readings as written.
+
+**Where the questionnaire is wrong without saying so:** several values asked for as one number are
+served as separate numbers (i00, i08: 18 readings); "the States" answered as US where the policy
+asks (3); a split by a dimension the layer lacks answered as a total (i21, 2). It cannot place a
+season, a year or a range of months, so it asks where the label refuses or answers (i07, i14, i16,
+i17, i23: 45 readings).
+
+**Where the typed reader is wrong without saying so:** "Samsung phone app opens May 2026", the terse
+wording, 2 of 3 times. The proposal did not mark "Samsung phone", no list knows "Samsung", so
+accounting did not flag it, and the "beyond" confirmation did not either. The total over every
+platform was served. This is the failure the design named as the largest risk: a restriction that
+no check can see because no list holds its word.
+
+**Why the typed reader asks too often (53 safe misses, 25%):**
+
+| cause | intents | readings | part |
+|---|---|---|---|
+| the figure confirmation asks "restricted to organic users?" when two values are compared; the answer is no, because the question asks for both | i07 | 9 | confirmation wording |
+| leftover words around a value ("Linux desktop app", "users acquired via referral") not confirmed as "nothing narrower" | i04, i06 | 11 | confirmation, by design |
+| "side by side" read by the accounting regex as a split "by side" | i01 | 9 | accounting |
+| "Japan": the "not in the list" choice is split between `country` and `country_name`, so neither reaches 0.7 and the reader asks instead of refusing | i11 | 7 | suggestion |
+| a range of months proposed as two separate months; "app" or "by country" marked as a term | i06, i17, i19 | 11 | proposal |
+| a series flagged on "split by segment"; the trend not confirmed for EMEA | i13, i18 | 6 | confirmation |
+| total | | 53 | |
+
+Each cause has a plain fix (a per-figure confirmation that names every compared value; "side by
+side" excluded from the split pattern; the "not in the list" probability summed over dimensions that
+determine each other; one more bakery example for a range). Every fix is development work on this
+set's failures, so its effect must be measured on a new sealed set, not on this one.
+
+**Recording gap.** The comparison stored each reading's filters, periods and group_by, but not its
+grain or decision record, so the i02 correction could not be fully regraded. The runner now stores
+both.
+
+## 32 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.
 - **The typed reader, phase 2:** check stated premises; show a small set of readings instead of
   asking (the questionnaire's `show_small_choice_sets`); true synonyms ("iPhone", design draft 5).
-- **A sealed set by an author outside the work,** built by the same procedure; then the head-to-head
-  of today's reader and the typed reader, run once with written predictions. This closes stage 7.
+- **The typed reader's safe misses** (section 31): the per-figure confirmation for compared values,
+  the "side by side" pattern, the "not in the list" choice across linked dimensions, a range of months
+  in the proposal. Measured on a new sealed set built by the same procedure.
+- **A restriction no list holds** ("Samsung phones"): the one silent wrong of the typed reader. A
+  check that every content word of the question is accounted for, not only the known ones.
 - **The rubric:** replace the "kind of fact" column with what the controlled test showed (does the
   fact reach the decision, can the output express it, who computes it).
 - **Partly covered periods:** ask and offer the covered interval; comparisons, growth and distinct
@@ -1158,4 +1224,4 @@ replication sealed set decides (section 31).
 Closed since the previous open list: the audit method is rewritten and run on one slice (section
 26); the controlled intervention is done (section 27); a bucket that does not line up with the
 period is cut at the period and disclosed (D13); design draft 4; the spike of the language step (section 29); the modelled attributes and the
-typed reader (section 30).
+typed reader (section 30); the head-to-head on a replication sealed set, which closes stage 7 (section 31).
