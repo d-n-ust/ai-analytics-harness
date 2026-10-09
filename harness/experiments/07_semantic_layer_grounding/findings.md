@@ -976,7 +976,7 @@ Results, all on the reader alone:
 
 | check | before | after |
 |---|---|---|
-| development wordings | 23 of 28 | 28 of 28 |
+| development wordings | 23 of 28 | 28 of 28; 27 of 28 with the grader fixed below |
 | replay of every stored run | — | no action changes except six readings made before the new period options existed; the four labelled out-of-coverage questions among them were re-read live and still refuse |
 | D13, app opens on Android over 2026-H1 by year | 30,449 (counted 1 to 12 July) | 27,045, the same total as by quarter, month or week |
 
@@ -985,10 +985,16 @@ is fit, not evidence. The sealed set has not been run. Its intents file was in t
 context during stage 6, so it measures robustness to wording, not generalisation to new requests;
 the "except the website" intent is affected by the word table added for D1.
 
-The answer grader has three blind spots, found during this work and not yet fixed: a list of values
-is graded flat, so one combined figure and several figures score the same; a "no filter" reading
-inside a list is dropped; a breakdown with extra numbers still passes, which is how the D13 edge
-weeks went unseen.
+The reader grader had two blind spots, found during this work and fixed (`run.py`, `_shape_errors`):
+a list of values was graded flat, so one combined figure and several figures scored the same, and a
+"no filter" reading inside a list was dropped. The labels already carry the shape: a list on a
+`metric_answer` is one figure ("countries other than the US"), a list on a `breakdown` is one figure
+per value ("Android vs iOS"). A stated grain is now graded too. Regraded at no cost: none of the 252
+stored readings changes; one development wording now fails, "How many app opens did Android and iOS
+users have together in June 2026?", read as two figures. The per-value reading cannot express one
+figure over two named values; this is the limitation the target reader addresses (section 28). Not
+yet fixed on the answer side: a breakdown answer with extra numbers still passes (how the D13 edge
+weeks went unseen; D13 itself is fixed in the engine), and date ranges are not graded.
 
 ## 27 · The controlled test: one fact held four ways
 
@@ -1040,9 +1046,8 @@ version of the whole method.
 
 ## 29 · Open
 
-- **Grader:** grade one figure against several, keep "no filter" inside a list of readings, check a
-  breakdown's values against the restriction and that series buckets lie inside the period, grade
-  the grain, accept date ranges. Regrade the stored rows.
+- **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
+  today); accept date ranges once a reader produces them.
 - **The typed reader:** a spike of the language step with its two checks on the development
   wordings, with extraction labels written first; then the resolvers and the attributes.
 - **The data model:** add `device_type`, `country_name` and `season` to the fixture's dimensions and

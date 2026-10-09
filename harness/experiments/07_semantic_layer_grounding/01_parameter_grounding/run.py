@@ -307,6 +307,10 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
     answer_shaped = etype in ("metric_answer", "breakdown", "clarify")
     opened = {d["parameter"] for d in reading["decisions"] if d["state"] == "ungrounded"}
     filters: dict[str, set] = {}
+    # The figures behind each filter: one set of values per reading, None for "no filter". The flat
+    # set below cannot tell one combined figure from several, nor see a "no filter" reading.
+    shapes = {_dim(dim): [None if v is None else frozenset(str(x).lower() for x in (v if isinstance(v, list) else [v]))
+                          for v in values] for dim, values in reading["filters"].items()}
     for dim, values in reading["filters"].items():
         flat = {str(x).lower() for v in values for x in (v if isinstance(v, list) else [v]) if x is not None}
         if flat:
@@ -334,6 +338,12 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
         covered = key in got_gb and len(need) > 1 and not filters.get(key)
         if answer_shaped and filters.get(key, set()) != need and not covered:
             errors.append(f"{key} {sorted(filters.get(key, set()))} instead of {sorted(need)}")
+        elif answer_shaped and key in shapes:
+            errors += _shape_errors(key, shapes[key], need, etype, covered)
+    if answer_shaped and want.get("time_grain") and reading.get("grain"):
+        grains = {str(g).lower() for g in (want["time_grain"] if isinstance(want["time_grain"], list) else [want["time_grain"]])}
+        if str(reading["grain"]).lower() not in grains:
+            errors.append(f"time_grain {reading['grain']} instead of {sorted(grains)}")
     if answer_shaped:
         fixed = {d for k in want for d in (determines or {}).get(k, ())}
         extra = set(filters) - set(want) - set(built) - fixed
@@ -360,6 +370,22 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
         if got_gb != want_gb and not (want_gb - got_gb <= listed and got_gb - want_gb <= listed):
             errors.append(f"group_by {sorted(got_gb)} instead of {sorted(want_gb)}")
     return {"action": action, "action_ok": action in _READER_ACTIONS.get(etype, {action}), "errors": errors}
+
+
+def _shape_errors(key: str, readings: list, need: set, etype: str, covered: bool) -> list[str]:
+    """PURE. Whether the figures match the label's shape. A list on a `metric_answer` is one figure
+    over all its values ("countries other than the US", "Android and iOS together"); a list on a
+    `breakdown` is one figure per value ("Android vs iOS"). A "no filter" reading beside a value
+    would also show the unfiltered total."""
+    errors = []
+    if None in readings:
+        errors.append(f"{key}: also read as no filter")
+    figures = [r for r in readings if r is not None]
+    if len(need) > 1 and etype == "metric_answer" and len(figures) != 1:
+        errors.append(f"{key}: {len(figures)} separate figures, label is one figure")
+    if len(need) > 1 and etype == "breakdown" and not covered and any(len(r) > 1 for r in figures):
+        errors.append(f"{key}: one combined figure, label is one figure per value")
+    return errors
 
 
 def layer_determines(con) -> dict:

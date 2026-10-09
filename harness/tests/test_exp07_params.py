@@ -75,11 +75,13 @@ def test_the_reader_is_graded_on_its_action_and_its_values():
     case = {"expect": {"type": "breakdown", "metric": "app_opens",
                        "params": {"platform": ["android", "ios"], "period": "2026-06",
                                   "group_by": "activity__platform"}}}
-    by_list = _reading({"activity__platform": [["android", "ios"]]}, ["2026-06"])
+    each = _reading({"activity__platform": ["android", "ios"]}, ["2026-06"])
     by_split = _reading({}, ["2026-06"], ["activity__platform"])
+    combined = _reading({"activity__platform": [["android", "ios"]]}, ["2026-06"])
     one_value = _reading({"activity__platform": ["android"]}, ["2026-06"])
-    assert run.reading_errors({"app_opens": by_list}, case)["errors"] == []      # a list covers it
+    assert run.reading_errors({"app_opens": each}, case)["errors"] == []         # one figure per value
     assert run.reading_errors({"app_opens": by_split}, case)["errors"] == []     # so does a split
+    assert run.reading_errors({"app_opens": combined}, case)["errors"]          # one sum cannot compare them
     assert run.reading_errors({"app_opens": one_value}, case)["errors"]         # h2_003: iOS lost
     opened = _reading({}, ["2026-01", "2026-06"], states=[("period", "ungrounded")])
     graded = run.reading_errors({"app_opens": opened}, case)
@@ -102,3 +104,26 @@ def test_a_substitution_request_is_refused_for_the_whole_question():
     case = {"expect": {"type": "refuse", "metric": "active_accounts", "params": {"period": "2026-Q2"}}}
     readings = {"active_accounts": _reading({}, ["2026-Q2"]), "_question": {"substitution": 0.9}}
     assert run.reading_errors(readings, case)["action_ok"]
+
+
+def test_the_grader_sees_one_figure_against_several_and_a_hidden_no_filter():
+    """A list label on a metric answer is one figure; the flat set of values could not tell it from
+    two figures, nor see a "no filter" reading beside the value."""
+    run = _runner()
+    together = {"expect": {"type": "metric_answer", "metric": "app_opens",
+                           "params": {"platform": ["android", "ios"], "period": "2026-06"}}}
+    assert run.reading_errors({"app_opens": _reading({"activity__platform": [["android", "ios"]]}, ["2026-06"])}, together)["errors"] == []
+    assert "2 separate figures" in " ".join(run.reading_errors(
+        {"app_opens": _reading({"activity__platform": ["android", "ios"]}, ["2026-06"])}, together)["errors"])
+    android = {"expect": {"type": "metric_answer", "metric": "app_opens", "params": {"platform": "android", "period": "2026-06"}}}
+    assert "also read as no filter" in " ".join(run.reading_errors(
+        {"app_opens": _reading({"activity__platform": ["android", None]}, ["2026-06"])}, android)["errors"])
+
+
+def test_a_stated_grain_is_graded():
+    run = _runner()
+    weekly = {"expect": {"type": "breakdown", "metric": "app_opens",
+                         "params": {"period": "2026-H1", "group_by": "metric_time", "time_grain": "week"}}}
+    monthly = {**_reading({}, ["2026-H1"], ["metric_time"]), "grain": "month"}
+    assert "time_grain month" in " ".join(run.reading_errors({"app_opens": monthly}, weekly)["errors"])
+    assert run.reading_errors({"app_opens": {**monthly, "grain": "week"}}, weekly)["errors"] == []
