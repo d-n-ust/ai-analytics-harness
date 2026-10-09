@@ -1,10 +1,11 @@
-# Typed reader: design (draft 3, 2026-10-09)
+# Typed reader: design (draft 4, 2026-10-09)
 
 A new question reader for `decision_grounding`, built beside the current one. It produces the same
 reading as today, so the call check, the planner and the answer gates do not change. Draft 1 was
 reviewed by five experts (question-to-SQL architecture, agentic-systems architecture, test design
 with measurement validity, semantic modelling with data governance, and the challenger); section 12
-lists what changed and why. Draft 3 makes the closed world strict (the owner's decision).
+lists what changed and why. Draft 3 makes the closed world strict; draft 4 makes the closed lists the
+values of modelled dimension attributes and lets a misspelling be corrected (both the owner's decisions).
 
 ## 0. The idea this serves
 
@@ -14,7 +15,7 @@ allowed values, so that the value is found deterministically. For `app_opens`:
 | parameter | closed world | how the value is found |
 |---|---|---|
 | metric | governed metrics and their declared words (`meta.terms`) | lookup |
-| platform filter | values read from the data; word table; groups (`mobile`: android, ios) | lookup, set operations |
+| platform filter | values of `dim_platform.platform`, and of grouping attributes such as `dim_platform.device_type` (mobile, desktop) | lookup, set operations |
 | region, country, channel filters | values read from the data; words; country under region | lookup, set operations |
 | staff filter | fixed by the metric's definition | not a choice |
 | period | the calendar (date table) and the dates the data covers | calendar arithmetic, coverage |
@@ -69,7 +70,7 @@ Lessons from the earlier arms (findings.md):
 |---|---|---|
 | 1. propose | a general language model, structured output, no knowledge of the layer | marks which words do what, and writes each time expression in a typed form |
 | 2. account | code | every declared word and every date word in the question must be covered by the proposal |
-| 3. resolve | code | word tables, set operations, calendar, coverage, rules |
+| 3. resolve | code | values of modelled attributes, set operations, calendar, coverage, rules |
 | 4. suggest | the decision model, closed choice | only for a word no table has: what to say back; never applied |
 | 5. confirm | the decision model, yes/no per judgement | each judgement the proposal made, with a probability |
 
@@ -116,8 +117,8 @@ android). Terms on two dimensions are combined with AND.
 
 ## 4. Steps 2 and 3, accounting and resolution (code only)
 
-**Accounting (recall check).** Code scans the whole question for every declared value word, domain
-word and date expression (month and season names, years, quarter and half forms), as `claimed()`
+**Accounting (recall check).** Code scans the whole question for every value of a modelled
+attribute, every dimension name and every date expression (month and season names, years, quarter and half forms), as `claimed()`
 does today. Each hit must fall inside a proposed quote. A hit outside every quote triggers one
 re-extraction that names the uncovered words; if they are still uncovered, the outcome is
 `quote_unaccounted` (ask). This check does not depend on the model. It is the tractability
@@ -127,20 +128,20 @@ condition of PRECISE: every content word maps to one element or the question is 
 that does not occur triggers one re-extraction, then `quote_not_found` (ask). The match confirms that
 the words occur; their role is confirmed in step 5.
 
-**Values.** A term's quote is looked up in the word table of every value domain in scope (section 8):
-normalised tokens, plural ignored, longest phrase first. Misspellings are not matched by edit
-distance; they are stored as hidden labels, or end in `word_unknown` with a suggestion.
+**Values.** A term's quote is matched against the values of every dimension attribute in scope
+(section 8): normalised tokens, plural ignored, longest phrase first. The attribute that holds the
+value decides the parameter; the filter is on that attribute, which the semantic layer exposes as a
+dimension (`platform__device_type = mobile`).
 
 | lookup result | outcome |
 |---|---|
-| one domain, one value | resolved |
-| a group value ("mobile") | its members, by `broader`, as one set |
+| a value of one attribute | resolved |
 | words left over ("Google" in "Google Android phones") | `word_unknown` (ask, naming the words; section 6) |
-| the word is in two domains | `ambiguous_value` (ask, naming both) |
-| nothing found | `word_unknown` or `unlisted_value` (section 6) |
+| a value of two attributes | `ambiguous_value` (ask, naming both) |
+| nothing found | section 6: a misspelling of one value is corrected and disclosed; otherwise `word_unknown` or `unlisted_value` |
 
-`keep: false` takes the complement inside the domain; the complement of a group needs every value to
-have a parent, which the declarations guarantee. A dimension the metric's own filter fixes keeps
+`keep: false` becomes "not equal" on the same attribute (`device_type != mobile`); a grouping
+attribute has a value for every row, so the complement is defined. A dimension the metric's own filter fixes keeps
 today's rule (`_fixed_by_metric`). A dimension the question does not mention is not restricted;
 today's `determines` logic is no longer needed, because no dimension is restricted unless a word
 resolves to it.
@@ -200,13 +201,16 @@ have", once per dimension; and "something else".
 
 | suggestion | what the analyst says |
 |---|---|
-| the same thing as one value, p ≥ 0.7, no other option ≥ 0.15 | `word_unknown` (ask): "Did you mean android?" |
+| the same thing as one value, p ≥ 0.7, no other option ≥ 0.15, and code confirms a spelling variant (at most two letters apart) | corrected: the answer uses the value and says so ("read 'Andriod' as android") |
+| the same thing as one value, p ≥ 0.7, no other option ≥ 0.15, not a spelling variant | `word_unknown` (ask): "Did you mean ios?" |
 | a value the layer does not have, for one dimension, p ≥ 0.7 | `unlisted_value` (refuse): "There is no TikTok channel. The channels are …" |
 | anything else | `word_unknown` (ask), offering the plausible values, or none |
 
-When the user confirms a suggestion, the pair goes to the proposals table (section 8) for the owner;
-only an accepted row enters the word table. A misspelling the owner expects to recur is stored as a
-hidden label. The model's choice changes the wording of a non-answer and nothing else.
+A corrected misspelling stays inside the closed world: it can only land on a listed value, code
+checks the distance, and the confirmation step asks about the corrected value like any other. Nothing
+is stored. Beyond spelling, the model's choice changes the wording of a non-answer and nothing else.
+When a user confirms a suggestion, it is logged for the dimension's owner as evidence for a new
+attribute value or label; nothing enters the model without the owner.
 
 ## 7. Outcomes
 
@@ -228,43 +232,40 @@ schema after one retry: `ReadingUnavailable`, so the run falls back to the plain
 as today. A suggestion or confirmation failure after a valid extraction: ask. A configuration fault
 (no key, unknown model) is a hard error, as in `_ask` today.
 
-## 8. Declarations (the layer side)
+## 8. The closed lists: values of modelled attributes (the layer side)
 
-Words are keyed by a **value domain** (ISO/IEC 11179), the list of allowed values a dimension draws
-from, not by the dimension's name: `channel` appears in two semantic models with different
-descriptions, `region` in two. Each semantic dimension names its domain (`config.meta.value_domain`).
+Each parameter's closed list is the set of values of an attribute of a dimension table, exposed by
+the semantic layer as a dimension. Missing meaning is added by modelling an attribute, not by a word
+table beside the model (the owner's decision, 2026-10-09):
 
-```
-seeds/value_domains.csv       value_domain, label, steward, parent_domain
-seeds/permissible_values.csv  value_domain, value, label, definition, broader
-seeds/value_words.csv         value_domain, word, value, label_type (alt|hidden), warrant (owner|user), added_on
-seeds/domain_words.csv        value_domain, word
-value_word_proposals          value_domain, word, proposed_value, p, question_id, status, decided_by, decided_on
-```
+| question word | attribute | values |
+|---|---|---|
+| "mobile", "desktop" | `dim_platform.device_type` | android, ios → mobile; web → desktop; unknown → unknown |
+| "Germany", "France" | `dim_country.country_name` | DE → Germany, FR → France, … |
+| "spring", "summer" | `dim_date.season` | each date → its season (hemisphere declared) |
+| "EMEA", "APAC" | `dim_country.region` | replaces the CASE in `stg_users.sql`, which emits an undocumented `Other` |
 
-- **A group is a value.** `mobile` is a value of a `device_type` domain; `android` and `ios` point
-  to it through `broader` (SKOS). Each word maps to exactly one value, so a group and a collision can
-  no longer look the same.
-- **Region is a group over country**, by the same pattern. Staging joins the table instead of the
-  CASE in `stg_users.sql`, which today emits `Other`, a value no description lists. The channel code
-  mapping (`ppc`, `ref`) moves into the same reference data.
-- **Every allowed value has a label and a definition** (replaces `value_meanings.csv`, which listed
-  only unclear values, so "done" and "missing" looked the same).
-- **Calendar.** Seasons and any fiscal periods are columns of the date table, which extends beyond
-  the data. Governance keeps the reference-date rule (`ANALYSIS_DATE`), the hemisphere, and the year
-  a winter belongs to.
-- **Tests run in the build:** unique (domain, normalised word); a word in two domains is a warning
-  that feeds `ambiguous_value`; relationships from words and from mart columns to the allowed
-  values; `broader` not null where a domain has a parent.
-- The group-by rule's words use the key the metric terms already use: `synonyms:`.
+- **An attribute does more than a word list.** `device_type` also answers "app opens by device type"
+  as a breakdown, which no word list can.
+- **Every value has a definition** in the model's documentation; a figure that includes a value the
+  question did not name discloses it (D3, `unknown`).
+- **Tests run in the build:** `accepted_values` on each attribute; a grouping attribute is not null
+  for any row; a value string that appears in two attributes' value sets is a warning that feeds
+  `ambiguous_value`.
+- **Owners.** Each dimension has an owner. The audit proposes an attribute from the failures it
+  traces; the owner decides, because a group or a season is a business definition.
+- **Open for draft 5:** true synonyms that are not values of any attribute ("iPhone" for ios,
+  "Deutschland"). Options: a label attribute on the dimension, a short alias list owned with the
+  dimension, or ask. Misspellings are not part of this question (section 6).
 
-This replaces the two tables chosen for D1 (`value_words` keyed by dimension, `value_meanings` for
-unclear values only). The data-modelling expert's earlier `device_class` suggestion is this model.
+This supersedes the word-table seeds built for D1 (`fixture/seeds/value_words.csv`,
+`value_meanings.csv`) and draft 3's value domains, permissible values and proposals tables.
 
-What the readiness audit then checks: every dimension in scope has a domain; the mart's values are a
-subset of the allowed values; every value has a definition; every group is declared and every child
-has a parent; every domain has a steward; the share of value mentions resolved by the tables versus
-questions back; the calendar extends beyond the data; each test runs.
+What the readiness audit then reports: for each parameter, whether its closed list is the value set
+of a modelled attribute; whether every value has a definition; the share of question phrases resolved
+by attribute values; that the calendar extends beyond the data; that each test runs. Every failure it
+traces is sorted into one of three causes, each with an owner: the data model, the AI agent, or a
+business decision.
 
 ## 9. Integration
 
@@ -341,4 +342,6 @@ adoption decision is taken on the replication set.
 | value domains, groups as values, permissible values, proposals, calendar in the date table, tests in the build | governance | a group and a collision looked the same; words keyed by a name used twice; tests never ran |
 | spike first; pre-registered rule; grader fixes; replication sealed set | architect, test design | the comparison had no decision rule, and the sealed set is contaminated |
 | strict closed world: the linker only suggests; section 0 states the parameter framing | owner (draft 3) | the original idea: every value is found deterministically in a closed world |
+| closed lists are values of modelled dimension attributes; the word-table seeds are retired | owner (draft 4) | a word table beside the model is a patch; an attribute is part of the model and also serves breakdowns |
+| a misspelling is corrected onto a listed value when code confirms a spelling variant, and disclosed | owner (draft 4) | asking "did you mean android?" for a typo is an unnecessary question; the correction cannot leave the closed world |
 | section 1 wording | challenger | "every fragility" was wrong; the controlled-test row described an arm, not production |
