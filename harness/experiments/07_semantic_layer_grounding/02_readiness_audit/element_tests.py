@@ -33,6 +33,17 @@ sys.path.insert(0, str(HERE.parent / "01_parameter_grounding"))
 import run as R  # noqa: E402
 
 
+def _patient(fn, *args, **kwargs):
+    """The call, retried after a transient failure such as a rate limit (HTTP 429): 5, 20 and 60 seconds."""
+    for wait in (5, 20, 60, None):
+        try:
+            return fn(*args, **kwargs)
+        except decisions.ReadingUnavailable:
+            if wait is None:
+                raise
+            time.sleep(wait)
+
+
 def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None,
              typed: bool = False) -> dict:
     expect = test["expect"]

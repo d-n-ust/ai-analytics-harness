@@ -31,7 +31,7 @@ from warehouse.warehouse import open_warehouse
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "01_parameter_grounding"))
 import run as R  # noqa: E402
-from element_tests import run_test  # noqa: E402
+from element_tests import _patient, run_test  # noqa: E402
 
 PROSE = "Mobile means android and ios together."
 NO_MOBILE = "wh_06_ref.value_words_without_mobile"
@@ -72,18 +72,6 @@ def _governance(table: str | None, consumers: dict) -> dict:
     if consumers:
         gov["fact_consumers"] = consumers
     return gov
-
-
-def _patient(fn, *args):
-    """The call, retried after a rate limit (HTTP 429): 5, 20 and 60 seconds."""
-    from agent.guardrails.decisions import ReadingUnavailable
-    for wait in (5, 20, 60, None):
-        try:
-            return fn(*args)
-        except ReadingUnavailable:
-            if wait is None:
-                raise
-            time.sleep(wait)
 
 
 def _outcome(result: dict, expect: dict) -> str:

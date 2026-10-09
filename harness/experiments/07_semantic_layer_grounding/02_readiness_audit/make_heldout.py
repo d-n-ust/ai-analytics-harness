@@ -5,9 +5,13 @@ The writer sees one intent at a time and nothing else: not the layer, not the la
 intents. Its wordings and the intent's expected outcome become tests_heldout.yml.
 
     python make_heldout.py            # gemini-3.8-flash through OpenRouter; about $0.01
+    python make_heldout.py --intents replication/intents.yml --out replication/tests.yml
+
+Prints counts only, so the person running it stays blind to the wordings and labels.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import pathlib
@@ -37,15 +41,21 @@ def ask(intent: str) -> list[str]:
 
 
 def main() -> None:
-    intents = yaml.safe_load((HERE / "intents_heldout.yml").read_text())["intents"]
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--intents", default="intents_heldout.yml")
+    ap.add_argument("--out", default="tests_heldout.yml")
+    args = ap.parse_args()
+    from agent.runtime.providers import load_env
+    load_env()
+    intents = yaml.safe_load((HERE / args.intents).read_text())["intents"]
     tests = []
     for n, it in enumerate(intents):
         for q in ask(it["intent"]):
             tests.append({"element": it["element"], "block": it["block"], "type": "heldout", "q": q,
                           "expect": it["expect"], "group": f"i{n:02d}"})
-    header = (f"# Sealed held-out tests (stage 7). Wordings written by {WRITER} from intents_heldout.yml,\n"
+    header = (f"# Sealed held-out tests (stage 7). Wordings written by {WRITER} from {args.intents},\n"
               "# one intent at a time, without the layer. Do not read the failures before stage 7.\n")
-    (HERE / "tests_heldout.yml").write_text(header + yaml.safe_dump({"tests": tests}, sort_keys=False,
+    (HERE / args.out).write_text(header + yaml.safe_dump({"tests": tests}, sort_keys=False,
                                                                     allow_unicode=True, width=120))
     print(f"{len(tests)} tests from {len(intents)} intents")
 

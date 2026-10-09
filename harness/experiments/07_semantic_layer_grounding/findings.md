@@ -1086,14 +1086,61 @@ wordings were written by the same people who wrote the labels and the few-shot e
 were tuned on these 45 (run 3 is the third look), and the confirmation wording is the part that
 failed twice. The sealed set by an outside author is the test that counts.
 
-## 30 · Open
+## 30 · Closed lists as modelled attributes, and the typed reader built
+
+**The data model.** The word-table seeds are retired. The closed lists are values of attributes in
+the marts, exposed by the layer as dimensions of the activity:
+
+| attribute | values | replaces |
+|---|---|---|
+| `dim_platform.device_type` | mobile (android, ios), desktop (web), unknown | the "mobile" rows of `value_words` |
+| `dim_country.country_name` | United States, Brazil, …, India | nothing: country names were in prose only |
+| `dim_country.region` | Americas, EMEA, APAC | the CASE in `stg_users.sql`, whose `Other` branch no document mentioned |
+| `dim_date.season`, `season_year` | spring, summer, autumn, winter (northern hemisphere) | nothing: seasons were asked about |
+
+A value whose name does not say what it holds has its definition on the dimension
+(`config.meta.values`), which the answer discloses. The calendar now runs from 2024-12-01 to
+2027-02-28, so a period without data is placed and then refused for coverage, and every season in it
+is whole. The rebuild changes no existing number (activity totals, every region, platform and country
+split, account counts).
+
+The layer's "one dimension determines another" now carries the value map from the data
+(android → mobile). The questionnaire uses it to drop a filter that adds no restriction to a linked
+one: "mobile app opens" was read as `device_type = mobile` and also `platform in (android, ios)`.
+
+**The typed reader** (`engine/src/agent/guardrails/typed_reader/`, guardrail option `typed_reader`)
+follows design draft 4. Differences from the design, decided while building:
+
+| point | decision | why |
+|---|---|---|
+| a phrase with words beside a value ("Google Android phones") | resolved to the value, and the leftover words are confirmed with one yes/no | asking on every leftover word would ask about "Android users" |
+| a misspelling inside a phrase ("Andriod users") | compared word by word | the whole phrase is not a spelling variant of "android" |
+| a split phrase holding a known word among others ("customer segment") | ask, naming the candidate | the label accepts answer or ask; a refusal is wrong |
+| a period partly inside the data | refused by the reader | the engine refuses that call; the design refuses it during the comparison |
+| a stated premise | ask | the typed reader does not check stated facts yet (phase 1) |
+| a year, a season, a relative period | an explicit range, run as `start`/`end` | the call grammar has no year or season |
+| replay | every model request stored with its exact input; reused only for an identical request | the design's replay rule |
+
+**Development tests (28), with two labels changed before the typed reader's first full run** because
+their basis changed: "iPhone users" (the retired word table mapped it to ios; iPhone is narrower than
+ios) now asks; "summer 2026" (seasons are declared; the period is partly outside the data) now
+refuses.
+
+| reader | pass | failures | cost |
+|---|---|---|---|
+| questionnaire | 25 / 28 | "iPhone" answered as ios; "Android and iOS together" read as two figures; "summer 2026" asked | $0.011 |
+| typed, run 1 | 26 / 28 | "break down by segment" also marked a series (caught: ask); "customer segment" refused (fixed: ask) | $0.012 |
+| typed, run 2 | 28 / 28 | — | $0.011 |
+
+These are development tests, written with the layer in view and used to fix the reader. The
+replication sealed set decides (section 31).
+
+## 31 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.
-- **The typed reader:** the resolvers, suggestions with misspelling correction and the confirmation
-  step, as engine code behind the guardrail option `typed_reader`, on the spike's language step.
-- **The data model:** add `device_type`, `country_name`, `season` and `region` to the fixture's
-  dimensions and retire the word-table seeds.
+- **The typed reader, phase 2:** check stated premises; show a small set of readings instead of
+  asking (the questionnaire's `show_small_choice_sets`); true synonyms ("iPhone", design draft 5).
 - **A sealed set by an author outside the work,** built by the same procedure; then the head-to-head
   of today's reader and the typed reader, run once with written predictions. This closes stage 7.
 - **The rubric:** replace the "kind of fact" column with what the controlled test showed (does the
@@ -1110,4 +1157,5 @@ failed twice. The sealed set by an outside author is the test that counts.
 
 Closed since the previous open list: the audit method is rewritten and run on one slice (section
 26); the controlled intervention is done (section 27); a bucket that does not line up with the
-period is cut at the period and disclosed (D13); design draft 4; the spike of the language step (section 29).
+period is cut at the period and disclosed (D13); design draft 4; the spike of the language step (section 29); the modelled attributes and the
+typed reader (section 30).
