@@ -1,10 +1,33 @@
-# Typed reader: design (draft 2, 2026-10-09)
+# Typed reader: design (draft 3, 2026-10-09)
 
 A new question reader for `decision_grounding`, built beside the current one. It produces the same
 reading as today, so the call check, the planner and the answer gates do not change. Draft 1 was
 reviewed by five experts (question-to-SQL architecture, agentic-systems architecture, test design
 with measurement validity, semantic modelling with data governance, and the challenger); section 12
-lists what changed and why.
+lists what changed and why. Draft 3 makes the closed world strict (the owner's decision).
+
+## 0. The idea this serves
+
+For each metric, the parameters that must be set to query it; for each parameter, a closed world of
+allowed values, so that the value is found deterministically. For `app_opens`:
+
+| parameter | closed world | how the value is found |
+|---|---|---|
+| metric | governed metrics and their declared words (`meta.terms`) | lookup |
+| platform filter | values read from the data; word table; groups (`mobile`: android, ios) | lookup, set operations |
+| region, country, channel filters | values read from the data; words; country under region | lookup, set operations |
+| staff filter | fixed by the metric's definition | not a choice |
+| period | the calendar (date table) and the dates the data covers | calendar arithmetic, coverage |
+| time grain | day, week, month, quarter, year; the trend rule when none is stated | lookup or rule |
+| breakdown | the metric's dimensions, time, the standard-breakdown rule | lookup or rule |
+
+The parameter surface is built today by `ontology.parameters.build`. The one step that cannot be
+deterministic is reading which words of the question refer to which parameter. This design is about
+making that step as small as possible and checking it, while everything else stays a lookup.
+
+**Strict closed world.** A number is served only when every parameter value comes from the closed
+world. A word outside it is never given a meaning by a model; the model may only help word the
+question back ("Did you mean android?") or the refusal.
 
 ## 1. Why
 
@@ -36,7 +59,7 @@ Lessons from the earlier arms (findings.md):
 | finding | consequence here |
 |---|---|
 | Exact quote matching rejected 11 of 18 legitimate quotes; a rejected quote dropped a requested trend, and the agent then served invented figures (section 8; the 33 test pairs are not in the repository) | a quote is never dropped; the quote check is not trusted as evidence of a role (it confirms that words occur, not what they do) |
-| The decision model chose among closed options well: 18/18 values including "Andriod" and "SEO", on 20 questions with labels written by the authors; "not in the layer" rests on 2 items (section 11) | the decision model confirms closed judgements; its linker role is new and is measured separately |
+| The decision model chose among closed options well: 18/18 values including "Andriod" and "SEO", on 20 questions with labels written by the authors; "not in the layer" rests on 2 items (section 11) | the decision model confirms closed judgements; its suggestion role is new and is measured separately |
 | GLiNER found 35 of 37 value phrases, 0 of 4 structural requests (section 11) | structure needs a general language model |
 | A reading that claimed completeness made the agent miss what it missed (section 19) | every open point is a typed outcome; nothing unresolved is presented as settled |
 
@@ -47,15 +70,15 @@ Lessons from the earlier arms (findings.md):
 | 1. propose | a general language model, structured output, no knowledge of the layer | marks which words do what, and writes each time expression in a typed form |
 | 2. account | code | every declared word and every date word in the question must be covered by the proposal |
 | 3. resolve | code | word tables, set operations, calendar, coverage, rules |
-| 4. link | the decision model, closed choice | only for a word no table has |
+| 4. suggest | the decision model, closed choice | only for a word no table has: what to say back; never applied |
 | 5. confirm | the decision model, yes/no per judgement | each judgement the proposal made, with a probability |
 
 Three rules:
 
 1. **Every unresolved or unconfirmed element ends in a typed outcome** that quotes the words it is
    about. No silent default, no dropped element.
-2. **Set meaning comes only from declarations.** The linker may read a word as one equal value. A
-   group, part of a value, an exclusion, a default or a season must be declared.
+2. **Every meaning comes from the closed world.** A word, a group, an exclusion, a default or a
+   season resolves only through a declaration. A word no declaration has is asked about.
 3. **One idea, one field.** A series is one field with a unit, so equivalent readings cannot split.
 
 ## 3. Step 1, the proposal (model output, schema-validated)
@@ -106,15 +129,15 @@ the words occur; their role is confirmed in step 5.
 
 **Values.** A term's quote is looked up in the word table of every value domain in scope (section 8):
 normalised tokens, plural ignored, longest phrase first. Misspellings are not matched by edit
-distance; they are stored as hidden labels, or reach the linker.
+distance; they are stored as hidden labels, or end in `word_unknown` with a suggestion.
 
 | lookup result | outcome |
 |---|---|
 | one domain, one value | resolved |
 | a group value ("mobile") | its members, by `broader`, as one set |
-| words left over ("Google" in "Google Android phones") | the linker, restricted to "a modifier of the resolved value" or "a further restriction" (section 6) |
+| words left over ("Google" in "Google Android phones") | `word_unknown` (ask, naming the words; section 6) |
 | the word is in two domains | `ambiguous_value` (ask, naming both) |
-| nothing found | the linker |
+| nothing found | `word_unknown` or `unlisted_value` (section 6) |
 
 `keep: false` takes the complement inside the domain; the complement of a group needs every value to
 have a parent, which the declarations guarantee. A dimension the metric's own filter fixes keeps
@@ -140,8 +163,8 @@ a named period.
 follow D13. A series adds `metric_time` to `group_by`.
 
 **Breakdown.** A breakdown quote is looked up in the domain words (the dimension's names) and in the
-synonyms of the group-by rule ("segment" for `canonical_segments`). Not found: the linker over
-dimensions; no match: `dimension_not_supported` (refuse).
+synonyms of the group-by rule ("segment" for `canonical_segments`). Not found:
+`dimension_not_supported` (refuse), with a suggestion when one dimension is close (section 6).
 
 **Premise.** `about` resolves as a value and goes to today's premise check (a governed query).
 
@@ -168,29 +191,29 @@ asked about.
 This keeps the questionnaire's property where it matters: the questions are about the few judgements
 this question needs, not about every value of the layer.
 
-## 6. Step 4, the linker (only for words no table has)
+## 6. Step 4, suggestions (only for words no table has)
 
-The decision model, given the question and the quote, chooses among: each value of each domain in
-scope as **the same thing**, as **a part of it**, or as **containing it**; the named segments; "a
-{dimension} value the layer does not have", once per dimension; and "a group or condition the layer
-does not have". For leftover words the choice is only "a modifier of the resolved value" or "a further
-restriction".
+The closed world has no entry for the word, so no number is served for it. The decision model only
+decides **what the analyst says back**. Given the question, the quote and the values of every domain
+in scope, it chooses among: each value as **the same thing**; "a {dimension} value the layer does not
+have", once per dimension; and "something else".
 
-| linker result | action |
+| suggestion | what the analyst says |
 |---|---|
-| the same thing as one value, p ≥ 0.7, no other option ≥ 0.15, and the domain's link policy is `apply` | applied, and the answer says how the word was read ("read 'Andriod' as android") |
-| a modifier, p ≥ 0.7 | ignored, and the answer says so |
-| "a value the layer does not have" for one dimension, p ≥ 0.7 | `unlisted_value` (refuse, naming the word and the dimension's values) |
-| anything else, including "part of" and "containing" | ask, offering the plausible values |
+| the same thing as one value, p ≥ 0.7, no other option ≥ 0.15 | `word_unknown` (ask): "Did you mean android?" |
+| a value the layer does not have, for one dimension, p ≥ 0.7 | `unlisted_value` (refuse): "There is no TikTok channel. The channels are …" |
+| anything else | `word_unknown` (ask), offering the plausible values, or none |
 
-Each applied link is written to a proposals table (section 8). A rejected proposal is never applied
-again.
+When the user confirms a suggestion, the pair goes to the proposals table (section 8) for the owner;
+only an accepted row enters the word table. A misspelling the owner expects to recur is stored as a
+hidden label. The model's choice changes the wording of a non-answer and nothing else.
 
 ## 7. Outcomes
 
 | outcome | action | type in prior taxonomies |
 |---|---|---|
 | `quote_unaccounted`, `quote_not_found` | ask | — |
+| `word_unknown` | ask, with a suggestion when there is one | PRACTIQ ambiguous / nonexistent value |
 | `ambiguous_value` | ask | PRACTIQ ambiguous value |
 | `unlisted_value` | refuse | PRACTIQ nonexistent value |
 | `dimension_not_supported` | refuse | PRACTIQ nonexistent column |
@@ -202,7 +225,7 @@ again.
 
 **Failures of the reader itself.** Extractor timeout, server error, or output invalid against the
 schema after one retry: `ReadingUnavailable`, so the run falls back to the plain agent and says so,
-as today. A linker or confirmation failure after a valid extraction: ask. A configuration fault
+as today. A suggestion or confirmation failure after a valid extraction: ask. A configuration fault
 (no key, unknown model) is a hard error, as in `_ask` today.
 
 ## 8. Declarations (the layer side)
@@ -212,7 +235,7 @@ from, not by the dimension's name: `channel` appears in two semantic models with
 descriptions, `region` in two. Each semantic dimension names its domain (`config.meta.value_domain`).
 
 ```
-seeds/value_domains.csv       value_domain, label, steward, parent_domain, link_policy (apply|ask)
+seeds/value_domains.csv       value_domain, label, steward, parent_domain
 seeds/permissible_values.csv  value_domain, value, label, definition, broader
 seeds/value_words.csv         value_domain, word, value, label_type (alt|hidden), warrant (owner|user), added_on
 seeds/domain_words.csv        value_domain, word
@@ -241,17 +264,17 @@ unclear values only). The data-modelling expert's earlier `device_class` suggest
 What the readiness audit then checks: every dimension in scope has a domain; the mart's values are a
 subset of the allowed values; every value has a definition; every group is declared and every child
 has a parent; every domain has a steward; the share of value mentions resolved by the tables versus
-the linker; the calendar extends beyond the data; each test runs.
+questions back; the calendar extends beyond the data; each test runs.
 
 ## 9. Integration
 
 - New package `agent/guardrails/reader/`: `propose.py` (model), `account.py`, `resolve.py`,
-  `calendar.py` (pure), `link.py` and `confirm.py` (decision model).
+  `calendar.py` (pure), `suggest.py` and `confirm.py` (decision model).
 - One entry with today's signature and return, `reading_for(...) -> (reading, cost)`. The proposal is
   cached per question and runs beside `question_level`; resolution runs per metric.
 - The guardrail option `typed_reader` selects it (cell `R4+decision_grounding+typed_reader`). The
   metric choice is unchanged in phase 1.
-- Stored with the reading: the proposal, every linker and confirmation request with its exact input
+- Stored with the reading: the proposal, every suggestion and confirmation request with its exact input
   and answers. Replay recomputes code steps and reuses a stored answer only when its input is
   identical; otherwise it marks the reading stale, as `residual_stale` does today.
 - The proposal model is configurable, is not the agent's model, and is chosen on the development
@@ -265,7 +288,7 @@ the red-team suites, with extraction labels written before the run. Count per fi
 omissions caught by accounting, omissions caught by confirmation, and false asks on items labelled
 as answers. Build the rest only if omissions that pass both checks are near zero.
 
-**Then:** declarations (section 8), resolvers with unit tests and no model, the linker.
+**Then:** declarations (section 8), resolvers with unit tests and no model, the suggestions.
 
 **Input domain model and coverage.** Characteristics: restriction form, number of restricted
 dimensions, time form, coverage, number of periods, series, breakdown, premise (blocks as in the
@@ -299,7 +322,7 @@ adoption decision is taken on the replication set.
 | question | answer |
 |---|---|
 | Should the proposal see dimension names? | No, nothing about the layer (all reviewers). |
-| Apply a 1:1 link or ask? | Apply with disclosure only for "the same thing", p ≥ 0.7, no rival ≥ 0.15, domain policy `apply`; contested domains (channel, staff flag) are `ask` |
+| Apply a 1:1 link or ask? | Never apply: strict closed world (owner's decision, draft 3). The model only suggests what to ask |
 | Is `quotes` + `keep` enough? | Yes, with `keep` per quote and AND inside a figure; no nesting |
 | Partly covered periods | Refuse during the head-to-head, so only the reader changes. Afterwards: ask, offering the covered interval; a series answers its covered buckets with a disclosure; comparisons, growth and distinct counts refuse |
 
@@ -317,4 +340,5 @@ adoption decision is taken on the replication set.
 | `measure`, `premise.kind`, `other` removed | architect | nothing read them; `other` made the field choose between refuse and ask |
 | value domains, groups as values, permissible values, proposals, calendar in the date table, tests in the build | governance | a group and a collision looked the same; words keyed by a name used twice; tests never ran |
 | spike first; pre-registered rule; grader fixes; replication sealed set | architect, test design | the comparison had no decision rule, and the sealed set is contaminated |
+| strict closed world: the linker only suggests; section 0 states the parameter framing | owner (draft 3) | the original idea: every value is found deterministically in a closed world |
 | section 1 wording | challenger | "every fragility" was wrong; the controlled-test row described an arm, not production |
