@@ -1,0 +1,59 @@
+# Extraction labels for the spike of the typed reader's language step (design.md, section 10).
+# Written 2026-10-09, before the extractor was built or run. One entry per development wording
+# (02_readiness_audit/tests_dev.yml, 28) and controlled-test item (controlled_items.yml, 18).
+#
+# figures:   one item per separate number asked for; an item lists its terms as [quote, keep].
+#            keep: false = "everything except". The thing counted (the metric) and time words are
+#            not terms. A quote matches when one of the two contains the other (case ignored).
+# time:      TIMEX3-style values: YYYY-MM, YYYY-Qn, YYYY-Hn, YYYY, YYYY-SP|SU|FA|WI (seasons).
+#            Empty when the question names no period.
+# series:    null (one number per figure), "trend" (change over time, no unit stated), or a unit.
+# breakdown: quotes naming a category to split by.
+labels:
+  # tests_dev.yml
+  - {q: "How many times did Android users open the app in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "how many times did ANDROID users open the app in june 2026", figures: [[[ANDROID, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many times did Andriod users open the app in June 2026?", figures: [[[Andriod, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens came from Google Android phones in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens came from iPhone users in June 2026?", figures: [[[iPhone, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens were there in June 2026 on every platform except web?", figures: [[[web, false]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens did Android and iOS users have together in June 2026?", figures: [[[Android, true], [iOS, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many mobile app opens were there in June 2026?", figures: [[[mobile, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens came from Windows users in June 2026?", figures: [[[Windows, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many app opens were there in June 2026?", figures: [], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many times did Android users open the app in Q2 2026?", figures: [[[Android, true]]], time: [2026-Q2], series: null, breakdown: []}
+  - {q: "How many times did Android users open the app in the first half of 2026?", figures: [[[Android, true]]], time: [2026-H1], series: null, breakdown: []}
+  - {q: "How many times did Android users open the app in summer 2026?", figures: [[[Android, true]]], time: [2026-SU], series: null, breakdown: []}
+  - {q: "How many times did Android users open the app in August 2025?", figures: [[[Android, true]]], time: [2025-08], series: null, breakdown: []}
+  - {q: "How many times did Android users open the app?", figures: [[[Android, true]]], time: [], series: null, breakdown: []}
+  - {q: "How did Android app opens change over the first half of 2026?", figures: [[[Android, true]]], time: [2026-H1], series: trend, breakdown: []}
+  - {q: "Show Android app opens week by week for the first half of 2026.", figures: [[[Android, true]]], time: [2026-H1], series: week, breakdown: []}
+  - {q: "Show Android app opens month by month for the first half of 2026.", figures: [[[Android, true]]], time: [2026-H1], series: month, breakdown: []}
+  - {q: "How did Android app opens break down by segment in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: [segment]}
+  - {q: "Break down Android app opens in June 2026 by region.", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: [region]}
+  - {q: "Break down Android app opens in June 2026 by country.", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: [country]}
+  - {q: "Break down Android app opens in June 2026 by customer segment.", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: [customer segment]}
+  - {q: "Break down Android app opens in June 2026 by device model.", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: [device model]}
+  - {q: "How many app launches did Android users have in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How many sessions did Android users have in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How much time did Android users spend in the app in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  - {q: "How engaged were Android users in June 2026?", figures: [[[Android, true]]], time: [2026-06], series: null, breakdown: []}
+  # controlled_items.yml
+  - {q: "What was the number of app opens on mobile in May 2026?", figures: [[[mobile, true]]], time: [2026-05], series: null, breakdown: []}
+  - {q: "How often did mobile users open the app in April 2026?", figures: [[[mobile, true]]], time: [2026-04], series: null, breakdown: []}
+  - {q: "Give me app opens from mobile devices for Q1 2026.", figures: [[[mobile, true]]], time: [2026-Q1], series: null, breakdown: []}
+  - {q: "Mobile app opens, March 2026?", figures: [[[Mobile, true]]], time: [2026-03], series: null, breakdown: []}
+  - {q: "What were non-mobile app opens in May 2026?", figures: [[[mobile, false]]], time: [2026-05], series: null, breakdown: []}
+  - {q: "How many app opens came from everything except mobile in April 2026?", figures: [[[mobile, false]]], time: [2026-04], series: null, breakdown: []}
+  - {q: "How many Android app opens were there in May 2026?", figures: [[[Android, true]]], time: [2026-05], series: null, breakdown: []}
+  - {q: "How many app opens were there in May 2026?", figures: [], time: [2026-05], series: null, breakdown: []}
+  - {q: "How many app opens were there in July 2025?", figures: [], time: [2025-07], series: null, breakdown: []}
+  - {q: "What were app opens in Q1 2025?", figures: [], time: [2025-Q1], series: null, breakdown: []}
+  - {q: "How many app opens did we have in November 2026?", figures: [], time: [2026-11], series: null, breakdown: []}
+  - {q: "How many app opens were there in 2024?", figures: [], time: ["2024"], series: null, breakdown: []}
+  - {q: "How many app opens were there in summer 2025?", figures: [], time: [2025-SU], series: null, breakdown: []}
+  - {q: "How many app opens were there in winter 2026?", figures: [], time: [2026-WI], series: null, breakdown: []}
+  - {q: "How many app opens were there in autumn 2025?", figures: [], time: [2025-FA], series: null, breakdown: []}
+  - {q: "How many app opens were there in October 2025?", figures: [], time: [2025-10], series: null, breakdown: []}
+  - {q: "How many app opens were there in Q1 2026?", figures: [], time: [2026-Q1], series: null, breakdown: []}
+  - {q: "How many app opens were there in June 2026?", figures: [], time: [2026-06], series: null, breakdown: []}
