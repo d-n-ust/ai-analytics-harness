@@ -1044,14 +1044,56 @@ ground, reported with the number of silent-wrong risks, per metric and overall. 
 exist as private pages: one question followed from phrases to a graded answer, and a one-minute
 version of the whole method.
 
-## 29 · Open
+## 29 · The spike of the language step
+
+**What was tested.** Only the first step of the typed reader (`03_typed_reader/spike.py`): a model
+marks the phrases of a question (the separate figures asked for, each figure's terms with keep or
+exclude, the period, a series, a breakdown). It is taught with examples from an unrelated domain (a
+bakery) and sees nothing of the layer. Two checks follow. Accounting is code: every known value word,
+date word, series word and "by ..." phrase must be inside a marked phrase; if one is not, the model is
+asked once more, naming the missed words. Confirmation is the decision model, one yes/no per
+judgement. Extraction labels for the 27 development wordings and the 18 controlled-test items (45) were
+written and committed before the first run (`spike_labels.yml`).
+
+| run | extractor | proposal correct | errors that could serve a wrong number | caught | silent | false asks | cost |
+|---|---|---|---|---|---|---|---|
+| 1 | `gpt-5.4-mini` | 37 / 45 | 8 | 8 (7 by accounting) | 0 | 4 | $0.016 |
+| 1 | `gemini-3.8-flash` | 43 / 45 | 2 | 2 | 0 | 7 | $0.26 |
+| 2: retry after accounting, shape check reworded | `gpt-5.4-mini` | 42 / 45 | 3 | 3 | 0 | many (0.73 to 0.86 on single-period questions) | $0.019 |
+| 3: shape check reworded again | `gpt-5.4-mini` | 44 / 45 | 1 | 1 | 0 | 0 / 44 | $0.019 |
+
+Results: `03_typed_reader/results/` (the file at 21:32 is a seven-question smoke test).
+
+**What changed between runs.**
+
+- Run 1's false asks came from one confirmation question per term about polarity and from a
+  question about "a single total or a series". "Android and iOS together" scored 0.09 on polarity.
+  The check now asks one question per figure.
+- Run 2 asked "Does the question ask how the number changes over time, or for one number per day,
+  week, month or other period?". The model read "in May 2026" as one number per month and flagged
+  nearly every question. Run 3 asks whether the question wants "several numbers over time ... rather
+  than one number for the whole period".
+- In runs 2 and 3, accounting sent 8 proposals back once; the retry cost no question to the user.
+
+**The remaining error** is "How often" in "How often did mobile users open the app in April 2026?",
+marked as a series with no unit. The shape check catches it, so the reader would ask instead of
+serving a monthly series.
+
+**Reading.** The language step with its two checks served no wrong number on 45 wordings, at about
+$0.0004 a question with `gpt-5.4-mini`. That model is the extractor for the build; `gemini-3.8-flash`
+proposed more correctly in run 1 but cost 16 times as much, and the checks close the gap. Limits: the
+wordings were written by the same people who wrote the labels and the few-shot examples, the checks
+were tuned on these 45 (run 3 is the third look), and the confirmation wording is the part that
+failed twice. The sealed set by an outside author is the test that counts.
+
+## 30 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.
-- **The typed reader:** a spike of the language step with its two checks on the development
-  wordings, with extraction labels written first; then the resolvers and the attributes.
-- **The data model:** add `device_type`, `country_name` and `season` to the fixture's dimensions and
-  retire the word-table seeds; update the design to draft 4 accordingly.
+- **The typed reader:** the resolvers, suggestions with misspelling correction and the confirmation
+  step, as engine code behind the guardrail option `typed_reader`, on the spike's language step.
+- **The data model:** add `device_type`, `country_name`, `season` and `region` to the fixture's
+  dimensions and retire the word-table seeds.
 - **A sealed set by an author outside the work,** built by the same procedure; then the head-to-head
   of today's reader and the typed reader, run once with written predictions. This closes stage 7.
 - **The rubric:** replace the "kind of fact" column with what the controlled test showed (does the
@@ -1068,4 +1110,4 @@ version of the whole method.
 
 Closed since the previous open list: the audit method is rewritten and run on one slice (section
 26); the controlled intervention is done (section 27); a bucket that does not line up with the
-period is cut at the period and disclosed (D13).
+period is cut at the period and disclosed (D13); design draft 4; the spike of the language step (section 29).
