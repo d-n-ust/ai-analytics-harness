@@ -86,6 +86,11 @@ attributes:
 # (dim_platform.device_type, dim_country.country_name, dim_date.season), and what a value means, when
 # its name does not say it, is on the dimension (`config.meta.values`). No word list is kept here.
 
+# ── the calendar: where seasons are declared ──────────────────────────────────────────────────
+# MetricFlow's time spine holds days only. The conformed date table holds the calendar attributes a
+# question uses (`season`, `season_year`); the typed reader places a season on it. Owner: Analytics.
+calendar: wh_06.dim_date
+
 # ── relationships between definitions: moved to the semantic layer ───────────────────────────
 # Which metric answers a word that several governed metrics answer ("users", "habits",
 # "marketing spend", "revenue") is declared on the metrics themselves, in `config.meta.terms` in
@@ -119,6 +124,9 @@ methodological_rules:
     # a total (held-out h_001).
     when: "an unspecified breakdown is asked ('by segment') with no dimension named"
     default: [activity__platform, activity__region, activity__channel]
+    # The words that ask for this rule's breakdown, for a reader that matches words rather than
+    # judging the `when` sentence (the typed reader).
+    words: [segment, segments]
     # One breakdown per dimension, not a cross-table: "the standard segments" means three views an
     # analyst reads side by side, and a single group_by over all three returns every combination.
     combine: separate

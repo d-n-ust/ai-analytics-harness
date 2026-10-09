@@ -700,6 +700,14 @@ def _span_of(args: dict):
     return _period_span(str(args.get("period") or ""))
 
 
+def _as_call(period: str) -> dict:
+    """A period as query_metric takes it: a named period, or start and end for a range."""
+    if "/" in period:
+        start, end = period.split("/")
+        return {"start": start, "end": end}
+    return {"period": period}
+
+
 def check(reading: dict, requested: dict) -> tuple[list, list]:
     """PURE. The queries one call runs as, and the decision record.
 
@@ -761,7 +769,7 @@ def check(reading: dict, requested: dict) -> tuple[list, list]:
             asked = requested.get("period") or f"{requested.get('start')}..{requested.get('end')}"
             outside.append(f"period {asked}: the question asks about {' and '.join(periods)}")
     elif len(periods) == 1:
-        base["period"] = periods[0]
+        base.update(_as_call(periods[0]))
     else:
         fan.append(("period", periods))
     if outside:
@@ -775,7 +783,7 @@ def check(reading: dict, requested: dict) -> tuple[list, list]:
         for q in queries:
             for v in values:
                 if key == "period":
-                    out.append({**q, "period": v})
+                    out.append({**q, **_as_call(v)})
                 else:
                     f = {**(q.get("filters") or {}), **({key: v} if v is not None else {})}
                     out.append({**{k: x for k, x in q.items() if k != "filters"}, **({"filters": f} if f else {})})
@@ -860,13 +868,13 @@ def uncovered(reading: dict, queries: list) -> list:
 
 
 def ground(question: str, requested: dict, semantic, cursor, governance: dict | None,
-           cache: dict) -> tuple[list, list, float]:
+           cache: dict, typed: bool = False) -> tuple[list, list, float]:
     """The queries this call runs as, the decision record, and the decision request's cost in USD.
 
     The question is read once per metric (the reading is cached; every later call costs nothing) and
     each call is checked against the reading. When no surface or coverage can be read, the agent's
     own call stands."""
-    reading, cost = reading_for(question, requested.get("metric", ""), semantic, cursor, governance, cache)
+    reading, cost = reading_for(question, requested.get("metric", ""), semantic, cursor, governance, cache, typed)
     if reading is None:
         return [requested], [], 0.0
     queries, decisions = check(reading, requested)
@@ -874,9 +882,13 @@ def ground(question: str, requested: dict, semantic, cursor, governance: dict | 
 
 
 def reading_for(question: str, metric: str, semantic, cursor, governance: dict | None,
-                cache: dict) -> tuple[dict | None, float]:
+                cache: dict, typed: bool = False) -> tuple[dict | None, float]:
     """The reading of the question for one metric, and the request's cost (0.0 from the cache).
-    None when the metric's surface or coverage cannot be read."""
+    None when the metric's surface or coverage cannot be read. `typed` reads it with the typed reader
+    (guardrail `typed_reader`) instead of the questionnaire below."""
+    if typed:
+        from . import typed_reader
+        return typed_reader.reading_for(question, metric, semantic, cursor, governance, cache)
     if metric in cache:
         return cache[metric], 0.0
     context = _context(metric, semantic, cursor, governance)

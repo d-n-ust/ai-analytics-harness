@@ -238,6 +238,14 @@ def _word_match(q: str, a: str) -> bool:
 
 
 def _period_span(value: str):
+    """(first day, last day) of a period: a month, quarter or half ('2026-06', '2026-Q2', '2026-H1'), a
+    year ('2026'), or an explicit range ('2025-12-01/2026-02-28', which a season or a relative period
+    becomes). None for any other form."""
+    rng = re.fullmatch(r"(\d{4}-\d{2}-\d{2})/(\d{4}-\d{2}-\d{2})", value or "")
+    if rng:
+        return dt.date.fromisoformat(rng.group(1)), dt.date.fromisoformat(rng.group(2))
+    if re.fullmatch(r"\d{4}", value or ""):
+        return dt.date(int(value), 1, 1), dt.date(int(value), 12, 31)
     m = re.match(r"(\d{4})-(H[12]|Q[1-4]|\d{2})$", value or "", re.I)
     if not m:
         return None

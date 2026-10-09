@@ -123,7 +123,7 @@ def _opening(run) -> str:
         metric, routed = route_metric(choice, tb.governance, tb.semantic, asked["term"], asked["term_known"])
         if routed is None or routed["state"] != "ungrounded":
             reading, more = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
-                                                   run.grounded)
+                                                   run.grounded, getattr(tb.g, "typed_reader", False))
             cost += more
             text = _decisions.reading_text(metric, reading, routed) if reading else ""
     if asked["substitution"] >= _decisions.CONFIDENT and "REFUSE (" not in text:
@@ -157,7 +157,7 @@ def _reading_at_exit(run):
         metric = route_metric(choice, tb.governance, tb.semantic, asked.get("term"),
                               bool(asked.get("term_known")))[0]
     reading, cost = _decisions.reading_for(run.question, metric, tb.semantic, tb.con, tb.governance,
-                                           run.grounded)
+                                           run.grounded, getattr(tb.g, "typed_reader", False))
     _charge(run, cost)
     return reading, None
 

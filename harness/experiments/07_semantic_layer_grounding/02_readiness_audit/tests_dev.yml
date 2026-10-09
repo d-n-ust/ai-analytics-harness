@@ -45,15 +45,19 @@ tests:
       platform: android
       period: 2026-06
   group: P
+# Relabelled 2026-10-09, before the typed reader's first run on this set: "iphone" -> ios was a row of
+# the retired word table. No modelled attribute holds "iPhone", and iPhone is narrower than ios (iPads),
+# so under the strict closed world the reader asks. True synonyms are open (design draft 5).
+# Was: metric_answer, platform ios.
 - element: platform
   block: undeclared synonym (other value)
   type: MFT
   q: How many app opens came from iPhone users in June 2026?
   expect:
-    type: metric_answer
+    type: clarify
     metric: app_opens
     params:
-      platform: ios
+      platform: ask
       period: 2026-06
 - element: platform
   block: exclusion
@@ -131,16 +135,19 @@ tests:
     params:
       platform: android
       period: 2026-H1
+# Relabelled 2026-10-09, before the typed reader's first run on this set: seasons are declared in the
+# calendar (dim_date.season, northern hemisphere). Summer 2026 is June to August; the data ends on
+# 12 July, so the period is partly outside the data, which is refused (design section 11).
+# Was: clarify, period ask (a season had no calendar meaning).
 - element: period
-  block: season (no calendar meaning)
-  type: invalid
+  block: season (declared, partly covered)
+  type: MFT
   q: How many times did Android users open the app in summer 2026?
   expect:
-    type: clarify
+    type: refuse
     metric: app_opens
     params:
       platform: android
-      period: ask
 - element: period
   block: outside coverage
   type: invalid

@@ -313,7 +313,8 @@ class _Run:
             # Billed per request by OpenRouter, not per token of the agent's model, so it is kept on
             # the step (`grounding_cost_usd`) rather than folded into the run's token usage.
             queries, decisions, cost = _decisions.ground(
-                self.question, args, tb.semantic, tb.con, tb.governance, self.grounded)
+                self.question, args, tb.semantic, tb.con, tb.governance, self.grounded,
+                typed=getattr(tb.g, "typed_reader", False))
             self._grounding_cost += cost
             if bent and not any(d["state"] == "refuse" for d in decisions):
                 return [], [_decisions.substitution_refusal()]

@@ -459,6 +459,13 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "there, the parameter is ungrounded and the agent asks instead of the value being "
               "dropped silently",
               ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
+    # The same reading with the questionnaire replaced: a language model marks the phrases and code
+    # resolves them against the layer's value lists (experiment 07, 03_typed_reader/design.md).
+    Guardrail("typed_reader", Position.BEFORE,
+              "reads the question for decision_grounding by marking its phrases with a language model that "
+              "sees no part of the layer, resolving each phrase against the layer's value lists and the "
+              "calendar in code, and confirming each judgement with one yes/no question",
+              ("guardrails/typed_reader/__init__.py", "guardrails/decisions.py", "runtime/loop.py"), in_ladder=False),
     # decision_grounding's reading, shown to the agent before its first call instead of discovered
     # one blocked call at a time. The checks are unchanged; only what the agent knows first moves.
     Guardrail("reading_first", Position.ACTION_SPACE,
@@ -537,6 +544,7 @@ class GuardrailSet:
     decision_grounding: bool = False
     decision_plan: bool = False
     quote_retry: bool = False
+    typed_reader: bool = False
     reading_first: bool = False
 
     def label(self) -> str:
@@ -692,6 +700,9 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.decision_plan and g.parameter_grounding:
         return ("decision_plan with parameter_grounding: a planned question never reaches the "
                 "grounding step it would configure.")
+    if g.typed_reader and not g.decision_grounding:
+        return ("typed_reader without decision_grounding: it replaces the reading that step makes, and "
+                "that step is not running.")
     if g.reading_first and not g.decision_grounding:
         return ("reading_first without decision_grounding: the reading it shows is the one the "
                 "grounding step enforces, and that step is not running.")

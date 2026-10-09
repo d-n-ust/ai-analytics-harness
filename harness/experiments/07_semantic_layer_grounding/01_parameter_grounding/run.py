@@ -165,8 +165,15 @@ _HALVES = {"H1": range(1, 7), "H2": range(7, 13)}
 
 
 def _months(period) -> set | None:
-    """The calendar months a period names: '2026-06', '2026-Q2', '2026-H1', '2026'. None for a
-    form this grader does not read (a relative period, explicit dates)."""
+    """The calendar months a period names: '2026-06', '2026-Q2', '2026-H1', '2026', or a range of
+    whole months ('2025-12-01/2026-02-28', a season). None for a form this grader does not read (a
+    relative period, a range that cuts a month)."""
+    rng = re.fullmatch(r"(\d{4})-(\d{2})-01/(\d{4})-(\d{2})-(\d{2})", str(period or ""))
+    if rng:
+        y, m, y2, m2, d2 = map(int, rng.groups())
+        if (dt.date(y2, m2, d2) + dt.timedelta(days=1)).day != 1:
+            return None
+        return {(y + (m - 1 + i) // 12, (m - 1 + i) % 12 + 1) for i in range((y2 - y) * 12 + m2 - m + 1)}
     m = re.fullmatch(r"(\d{4})(?:-(\d{2})|-Q([1-4])|-(H[12]))?", str(period or ""))
     if not m:
         return None

@@ -1,0 +1,165 @@
+[
+ {
+  "element": "platform",
+  "block": "governed code",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00037384399999999997,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "typo",
+  "type": "INV",
+  "q": "How many times did Andriod users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "ungrounded: \"Andriod users\" is not a listed value; did you mean platform android?"
+  ],
+  "cost": 0.00042824,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "DIR",
+  "q": "How many app opens were there in June 2026 on every platform except web?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "unknown"
+    ],
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "unknown"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000370454,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "declared parent group",
+  "type": "MFT",
+  "q": "How many mobile app opens were there in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000705078,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "absent value",
+  "type": "invalid",
+  "q": "How many app opens came from Windows users in June 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "windows"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: \"Windows\" names a platform the layer does not have; the governed values are android, ios, unknown, web"
+  ],
+  "cost": 0.000417962,
+  "reader": "typed"
+ }
+]

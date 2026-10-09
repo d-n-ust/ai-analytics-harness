@@ -8,6 +8,7 @@ metric slot go through the metric choice instead (gates/reading.which_measure). 
 invariance group must all read the same.
 
     python element_tests.py tests_dev.yml            # about $0.0007 per test
+    python element_tests.py tests_dev.yml --reader typed --only 1,8,9
     python element_tests.py tests_heldout.yml --totals-only
 
 Readings run one at a time: they read the warehouse through one cursor, and readings sharing a
@@ -32,7 +33,8 @@ sys.path.insert(0, str(HERE.parent / "01_parameter_grounding"))
 import run as R  # noqa: E402
 
 
-def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None) -> dict:
+def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None,
+             typed: bool = False) -> dict:
     expect = test["expect"]
     if test["element"] == "metric":
         choice = decisions.choose_metric(test["q"], semantic.metrics, forks.words_by_metric(semantic))
@@ -43,11 +45,12 @@ def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | 
                 [f"{got} instead of {expect['outcome']}"], "cost": cost + choice["cost"]}
     cache: dict = {}
     reading, cost = decisions.reading_for(test["q"], expect.get("metric", "app_opens"), semantic, cursor,
-                                          R.GOVERNANCE if governance is None else governance, cache)
+                                          R.GOVERNANCE if governance is None else governance, cache, typed)
     graded = R.reading_errors(cache, {"expect": expect}, determines)
     return {"result": graded["action"], "ok": graded["action_ok"] and not graded["errors"],
             "errors": ([] if graded["action_ok"] else [f"action {graded['action']}"]) + graded["errors"],
             "reading": {"filters": reading["filters"], "periods": reading["periods"], "group_by": reading["group_by"]},
+            "open": [f"{d['state']}: {d['why']}" for d in reading["decisions"] if d["state"] in ("refuse", "ungrounded")],
             "cost": cost}
 
 
@@ -56,15 +59,20 @@ def main() -> None:
     ap.add_argument("tests")
     ap.add_argument("--totals-only", action="store_true",
                     help="print counts per element only: for a sealed set whose failures must not be read")
+    ap.add_argument("--reader", choices=("questionnaire", "typed"), default="questionnaire")
+    ap.add_argument("--only", default="", help="comma-separated 1-based test numbers: a probe")
     args = ap.parse_args()
     tests = yaml.safe_load((HERE / args.tests).read_text())["tests"]
+    if args.only:
+        tests = [tests[int(i) - 1] for i in args.only.split(",")]
     con = open_warehouse(create_star_views=True)
     R.fixture_build.build(con, drop=True)
     cursor = R.scoped_cursor(con)
     semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                                guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
     determines = R.layer_determines(con)
-    results = [{**t, **run_test(t, semantic, cursor, determines)} for t in tests]
+    results = [{**t, **run_test(t, semantic, cursor, determines, typed=args.reader == "typed"),
+                "reader": args.reader} for t in tests]
     groups: dict = {}
     for r in results:
         if r.get("group"):
@@ -81,8 +89,10 @@ def main() -> None:
     if not args.totals_only:
         for r in results:
             if not r["ok"]:
-                print(f"  FAIL [{r['element']} · {r['block']}] {r['q']}\n       {'; '.join(r['errors'])}")
-    out = HERE / "results" / f"{time.strftime('%Y%m%d-%H%M%S')}-{pathlib.Path(args.tests).stem}.json"
+                print(f"  FAIL [{r['element']} · {r['block']}] {r['q']}\n       {'; '.join(r['errors'])}"
+                      + "".join(f"\n         {o}" for o in r.get("open") or []))
+    tag = "" if args.reader == "questionnaire" else f"-{args.reader}"
+    out = HERE / "results" / f"{time.strftime('%Y%m%d-%H%M%S')}-{pathlib.Path(args.tests).stem}{tag}.json"
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(results, indent=1, default=str))
     print(f"\nwrote {out.relative_to(HERE)}")
