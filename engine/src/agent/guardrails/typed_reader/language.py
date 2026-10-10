@@ -209,3 +209,14 @@ def inner_questions(quote: str, inner: list) -> dict:
     """One yes/no per narrower value the model also found plausible: is the phrase wholly inside it?"""
     return {f"in{i}": _yn(f"Does everything \"{quote}\" refers to fall within the "
                           f"{dim.split('__')[-1].replace('_', ' ')} {value}?") for i, (dim, value) in enumerate(inner)}
+
+
+def leftover_questions(words: list) -> dict:
+    """One yes/no per word of the question that no part of the reading uses: does the word name the
+    kind of thing a filter is on? Asked per word, about its category, because asked about the list as a
+    whole ("does any of them narrow what is counted?") the model said yes to ordinary words ("Compare",
+    "show", "number") at 0.73 to 0.85. Per word, on 14 development readings: unmarked restrictions
+    ("Germani", "Samsung", "phone", "smartwatch", "German") 0.82 to 0.93; other words 0.53 or less, most
+    0.10 or less."""
+    return {f"lw{i}": _yn(f"In this question, does the word \"{w}\" name a place, a device or platform, a product, "
+                          "a kind of customer, or an acquisition channel?") for i, w in enumerate(words)}

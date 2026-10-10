@@ -165,11 +165,22 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
             "period", "the season named is for the northern hemisphere, and the figure lies in the southern one; "
                       "ask which months are meant"))
     if not any(d["state"] in ("refuse", "ungrounded") for d in reading["decisions"]):
-        questions = language.roundtrip_question(reading, metric)
-        p = _decisions._yes(lang.decide("confirm", questions, question), "roundtrip")
+        # Two checks in one request: the reading as a whole, and every word of the question that no
+        # part of it uses. Code lists those words, so a restriction no list knows and the proposal left
+        # unmarked ("Germani") is put in front of the decision model by name, not left to a general
+        # "is anything missing?" (third replication set, i09).
+        words = resolve.leftover_words(question, proposal, surface)
+        questions = {**language.roundtrip_question(reading, metric), **language.leftover_questions(words)}
+        answers = lang.decide("confirm", questions, question)
+        p = _decisions._yes(answers, "roundtrip")
         if p < ROUNDTRIP:
             reading["decisions"].append({**_decisions._ungrounded(
                 "reading", f"not confirmed: {language.described(reading, metric)}"), "confidence": p})
+        named = [w for i, w in enumerate(words) if _decisions._yes(answers, f"lw{i}") >= _decisions.CONFIDENT]
+        if named:
+            reading["decisions"].append(_decisions._ungrounded(
+                "filter", f"the question names {', '.join(chr(34) + w + chr(34) for w in named)}, which the reading "
+                          f"does not use; ask what it means"))
     return {**reading, "proposal": proposal, "language": lang.used,
             "seconds": round(sum(e.get("seconds", 0) for e in lang.used.values()), 2)}
 

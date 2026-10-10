@@ -121,6 +121,37 @@ def normalised(proposal: dict, surface: dict, principles: list, question: str = 
     return {**proposal, "figures": figures, "breakdown": kept}
 
 
+# Closed grammatical classes: articles, prepositions, conjunctions, pronouns, auxiliary and modal verbs,
+# question words, and the words that shape figures ("except", "together"), which the reading states.
+# They never narrow what is counted, and the classes do not grow with new questions.
+_GRAMMAR = set("""a an the this that these those some any each every all both either neither no of in on at
+by for from to into onto over under during within without about across through per than as and or but nor
+so if then i me my we us our you your he him his she her it its they them their what which who whom whose
+when where why how many much is are was were be been being am do does did done have has had having will
+would shall should can could may might must there here not
+except excluding besides apart other only also just together combined versus vs""".split())
+
+
+def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
+    """PURE. The question's words that no marked phrase holds, without grammar words, numbers, date and
+    series words, and the words the layer itself defines (the metric, its dimensions and their entities).
+    A restriction the proposal left unmarked ("Germani", "Samsung") is among these whether or not any
+    list knows the word; the confirmation asks whether any of them narrows what is counted."""
+    spans = [(i, i + len(q)) for q in _quotes(proposal) for i in [question.lower().find(q.lower())] if i >= 0]
+    taken = [(m.start(), m.end()) for rx in (DATE_WORDS, SERIES_WORDS) for m in rx.finditer(question)] + spans
+    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
+    own |= {w for d in surface["parameters"]["filters"]["dimensions"]
+            for w in _tokens(d.get("entity") or "") + _tokens(d.get("column") or "")}       # "users", "platform"
+    out = []
+    for m in re.finditer(r"[A-Za-z][A-Za-z'-]*", question):
+        word = m.group()
+        if any(a <= m.start() < b for a, b in taken) or word.lower() in _GRAMMAR \
+                or set(_tokens(word)) <= own or word not in out and word.lower() in (w.lower() for w in out):
+            continue
+        out.append(word)
+    return out
+
+
 def missing_quotes(question: str, proposal: dict) -> list[str]:
     """PURE. Marked phrases that do not occur in the question: the proposal invented them."""
     return [q for q in _quotes(proposal) if q.lower() not in question.lower()]

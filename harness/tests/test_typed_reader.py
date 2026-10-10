@@ -177,7 +177,7 @@ def _run(monkeypatch, question, proposals, suggestion=None, confirm=None):
         asked.append(sorted(questions))
         if any(k.startswith("sug") for k in questions):
             return suggestion or {}, 0.001, "m"
-        return {**{k: {"noul": 0.95} for k in questions}, **(confirm or {})}, 0.001, "m"
+        return {**{k: {"noul": 0.05 if k.startswith("lw") else 0.95} for k in questions}, **(confirm or {})}, 0.001, "m"
     monkeypatch.setattr(DG, "_ask", ask)
     monkeypatch.setattr(DG, "_context", lambda *_a: (SURFACE, PRINCIPLES, LO, HI))
     cache: dict = {}
@@ -193,7 +193,7 @@ def test_an_unmarked_word_gets_one_retry_and_a_misspelling_is_corrected(monkeypa
                                        suggestion={"sug0": {"probabilities": {"value:activity__platform=android": 0.95}}})
     assert reading["filters"] == {"activity__platform": ["android"]} and _states(reading) == {"applied"}
     assert "Read \"Andriod\" as platform android" in [d for d in reading["decisions"] if d["parameter"] == "filter"][0]["disclose"]
-    assert asked[-1] == ["roundtrip"]                          # the corrected reading is confirmed
+    assert "roundtrip" in asked[-1]                            # the corrected reading is confirmed
     assert TR.replay(reading, q, "app_opens", None, None, {})["filters"] == reading["filters"]
     assert cache["_typed"] and round(cost, 3) == 0.004
     served = {e["kind"]: e["served"] for e in reading["language"].values()}
@@ -346,3 +346,26 @@ def test_a_misspelled_value_word_must_be_marked_too():
     assert R.unaccounted(q, quoted, surface) == ["Germani"]
     assert R.unaccounted("How many app opens were there in June 2026?",
                          {**_proposal(time=()), "time": [{"quote": "June 2026", "value": "2026-06"}]}, surface) == []
+
+
+def test_leftover_words_are_every_unmarked_word_but_grammar_dates_and_the_layers_own():
+    q = "Please provide the trend of app opens in Germani during the first quarter of 2026."
+    marked = {**_proposal(time=()), "time": [{"quote": "the first quarter of 2026", "value": "2026-Q1"}],
+              "series": {"quote": "trend", "unit": None}}
+    assert R.leftover_words(q, marked, SURFACE) == ["Please", "provide", "Germani"]
+    android = {**_proposal([[("Android", True)]], time=()), "time": [{"quote": "June 2026", "value": "2026-06"}]}
+    assert R.leftover_words("How many app opens on every platform except web, in June 2026?",
+                            {**_proposal([[("web", False)]], time=()), "time": [{"quote": "June 2026", "value": "2026-06"}]},
+                            SURFACE) == []                       # "platform" and "except" are the reading's own
+    assert R.leftover_words("How many times did Android users open the app in June 2026?", android,
+                            {**SURFACE, "parameters": {"filters": {"dimensions": [{**_dim("x", ["y"]), "entity": "user"}]}}}) \
+        == ["times"]                                     # "open" is the metric's own word
+
+
+def test_an_unmarked_restriction_word_makes_the_reader_ask(monkeypatch):
+    q = "Please provide the trend of app opens in Germani during the first quarter of 2026."
+    proposal = {**_proposal(time=()), "time": [{"quote": "the first quarter of 2026", "value": "2026-Q1"}],
+                "series": {"quote": "trend", "unit": None}}
+    reading, _cost, asked, _cache = _run(monkeypatch, q, [proposal, proposal], confirm={"lw2": {"noul": 0.93}})
+    assert reading["filters"] == {} and "ungrounded" in _states(reading)
+    assert any('names "Germani"' in d["why"] for d in reading["decisions"]) and {"lw0", "lw1", "lw2"} <= set(asked[-1])
