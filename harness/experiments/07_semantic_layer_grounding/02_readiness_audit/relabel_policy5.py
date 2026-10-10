@@ -38,8 +38,13 @@ RULES = {
                           partial=True),
     ("r2", "i19"): {"type": "clarify", "metric": "app_opens", "params": {"country_name": "Brazil", "period": "ask"}},
     ("r2", "i21"): answer({"period": "2026-07", "group_by": ["platform", "region", "channel"]}, "breakdown", partial=True),
+    # 2026-10-10, later: only lists the owner declares complete support a refusal (country, platform,
+    # device type). Channel is not declared complete, so an unlisted channel ("TikTok") is asked about.
+    ("r2", "i12"): {"type": "clarify", "metric": "app_opens", "params": {"channel": "ask", "period": "2026-06"}},
+    ("r3", "i15"): {"type": "clarify", "metric": "app_opens", "params": {"channel": "ask", "period": "2026-Q1"}},
 }
-SETS = {"dev": "tests_dev.yml", "r1": "replication/tests_corrected.yml", "r2": "replication2/tests_corrected.yml"}
+SETS = {"dev": "tests_dev.yml", "r1": "replication/tests_corrected.yml", "r2": "replication2/tests_corrected.yml",
+        "r3": "replication3/tests_corrected.yml"}
 
 
 def main() -> None:

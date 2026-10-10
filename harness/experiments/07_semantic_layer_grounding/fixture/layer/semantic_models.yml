@@ -29,8 +29,12 @@ semantic_model:
     - {name: active_date, type: time, type_params: {time_granularity: day}}
     - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
     - {name: region, type: categorical, description: "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."}
-    - {name: country, type: categorical, description: "The account country, as an ISO code: US (the United States); BR (Brazil); GB (the United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); IN (India)."}
-    - {name: country_name, type: categorical, description: "The account country, by name: United States, Brazil, United Kingdom, Germany, France, Philippines, Indonesia, India."}
+    # `config.meta.complete: true` declares the list of values complete (the owner's decision,
+    # 2026-10-10): a value of this kind outside the list is not in the data, so a question about it is
+    # refused rather than asked about (Snowflake `is_enum`; a categorical slot in Schema-Guided Dialogue).
+    # Channel is not declared complete: marketing adds channels, so an unlisted one is asked about.
+    - {name: country, type: categorical, description: "The account country, as an ISO code: US (the United States); BR (Brazil); GB (the United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); IN (India).", config: {meta: {complete: true}}}
+    - {name: country_name, type: categorical, description: "The account country, by name: United States, Brazil, United Kingdom, Germany, France, Philippines, Indonesia, India.", config: {meta: {complete: true}}}
     # `config.meta.values` defines a value whose name does not say what it holds. An answer whose
     # figure includes such a value without the question naming it says so ("every platform except
     # web" includes unknown).
@@ -41,6 +45,7 @@ semantic_model:
       description: "The client platform the account registered on: android, ios, web, or unknown. Not the device of each open: the events record no device."
       config:
         meta:
+          complete: true
           disclose: "Platform is the platform each account registered on, not the device used for each app open."
           values: {unknown: "no recorded platform: the raw value was blank or unrecognised"}
     - name: device_type
@@ -48,6 +53,7 @@ semantic_model:
       description: "The kind of device of the platform the account registered on: mobile (android and ios), desktop (web), or unknown."
       config:
         meta:
+          complete: true
           disclose: "Device type follows the platform each account registered on, not the device used for each app open."
           values:
             mobile: "platforms android and ios"

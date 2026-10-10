@@ -21,6 +21,10 @@ from .resolve import readable
 # The proposal model. Not the agent's model; chosen on the spike's 45 development wordings, where it
 # matched `gemini-3.8-flash` on errors that pass both checks at a sixteenth of the cost.
 PROPOSAL_MODEL = "gpt-5.4-mini"
+# A second, independent proposal from another model family (the owner's decision, 2026-10-10). Where
+# the two disagree, narrow questions settle each point (`reconcile_questions`), instead of rules written
+# to repair one model's misfiled phrases.
+SECOND_MODEL = "gemini-3.8-flash"
 
 SYSTEM = """You read a business question and mark what each phrase of it does. You are not told what \
 data exists, so do not judge whether a value exists; only say what the question asks.
@@ -201,6 +205,11 @@ def structure_questions(proposal: dict, reading: dict, terms: list) -> dict:
                                                 "one combined number?")
         for j, t in enumerate(t for t in figure if not t["keep"]):
             out[f"except{i}_{j}"] = _yn(f"Does the question ask for everything except {t['quote']}?")
+        # The other direction: a value marked as kept may be one the question leaves out ("all countries
+        # with the exception of IN" was marked as IN). Without this, nothing asks.
+        for j, t in enumerate(t for t in figure if t["keep"]):
+            out[f"include{i}_{j}"] = _yn(f"Does the question ask to include {t['quote']}, rather than to leave "
+                                         f"{t['quote']} out?")
     if len(terms) > 1:
         # Only what differs between the figures is named: "Android and iOS", not "Germany and Android ...".
         shared = set.intersection(*({t["quote"].lower() for t in f} for f in terms))
@@ -243,4 +252,41 @@ def kind_questions(quotes: list, surface: dict) -> dict:
                 what = (d.get("description") or "").split(". ")[0].rstrip(".")
                 out[f"kind{i}:{d['name']}"] = _yn(f"In this question, is \"{quote}\" a {d['column'].replace('_', ' ')}"
                                                   + (f" ({what})" if what else "") + "?")
+    return out
+
+
+def reconcile_questions(a: dict, b: dict, surface: dict | None = None) -> dict:
+    """One narrow yes/no per point on which two independent proposals disagree (design: self-consistency;
+    findings section 37). Each is decided by majority: the two proposals already disagree, so the
+    question settles which of two readings the question supports."""
+    from .resolve import _tokens, canonical, period_of, term_key
+    ca, cb = canonical(a, surface), canonical(b, surface)
+    out = {}
+    if ca["series"][0] != cb["series"][0]:
+        out["series"] = _yn("Does the question ask for several numbers over time (a trend, or one number per day, "
+                            "week or month), rather than one number for the whole period?")
+    for v in sorted(set(ca["time"]) ^ set(cb["time"])):
+        period = period_of(v, {})[0]
+        out[f"time:{v}"] = _yn(f"Does the question ask about {readable(period) if period else v}?")
+    quotes = {" ".join(_tokens(x["quote"])): x["quote"] for p in (a, b) for x in p.get("breakdown") or []}
+    for key in sorted(set(ca["breakdown"]) ^ set(cb["breakdown"])):
+        quote = next((q for k, q in quotes.items() if key in k or k in key), key)
+        out[f"split:{key}"] = _yn(f"Does the question ask to split the number {quote}?")
+    if ca["premise"] != cb["premise"]:
+        stated = (a.get("premise") or b.get("premise") or {}).get("quote", "")
+        out["premise"] = _yn(f"Does the question state as already true that \"{stated}\"?")
+    keep, said = {}, {}
+    for p in (a, b):
+        for f in p.get("figures") or []:
+            for t in f.get("terms") or []:
+                k = "|".join(term_key(t, surface))
+                keep.setdefault(k, set()).add(t["keep"])
+                said.setdefault(k, t["quote"])
+    for k, ways in keep.items():
+        if len(ways) > 1:
+            out[f"include:{k}"] = _yn(f"Does the question ask to include {said[k]}, rather than to leave {said[k]} out?")
+    if len(ca["figures"]) != len(cb["figures"]):
+        kept = sorted({q for p in (a, b) for f in p.get("figures") or [] for t in f.get("terms") or [] if t["keep"]
+                       for q in [t["quote"]]}, key=str.lower)
+        out["separate"] = _yn(f"Does the question ask for a separate number for each of {' and '.join(kept)}?")
     return out

@@ -1448,7 +1448,45 @@ blind set measures this version.
 judged restrictions ("originating", "driven", "acquired"); run-to-run variation of the proposal
 ("Androd", "Google Android phones").
 
-## 37 · Open
+## 37 · Without hard-coding: two proposals, declared complete lists, alternatives (development only)
+
+**The audit of the reader's fixed constants** sorted them into three kinds: domain facts in code (none);
+English language resources (grammar words, month names, "daily" → day), acceptable if declared in one
+tested place; and patches written for one failure each ("side by side", "every … except …", split
+verbs, "no category" words). The panel (systems architect, NL-to-SQL architect, semantic modelling,
+test design, cofounder) agreed the patches are the hard-coding to remove, by verifying the proposal
+structurally instead of repairing its output.
+
+**The owner's decisions (2026-10-10):** the lists of country, country name, platform and device type
+are declared complete (`config.meta.complete: true`); channel is not, so an unlisted channel
+("TikTok") is asked about. A second proposal comes from another model family (`gemini-3.8-flash`).
+
+**Built** (351 unit tests):
+
+| piece | what it does | the method's rule |
+|---|---|---|
+| include or exclude, per kept value | "Does the question ask to include IN, rather than to leave IN out?"; the checks run on every reading that is not refused | one narrow question per item |
+| complete lists | "is it a country?" at 0.7 or more, with no plausible value of that list or its one-to-one twin, refuses; a coarser dimension (region) does not block it | a declaration with an owner |
+| two proposals | compared by what each phrase resolves to ("organic" and "organic users" agree); each disagreement is one narrow question, by majority; a term only one has goes to the figure it belongs to | independence, then narrow questions |
+| alternatives | a vetoed two-way judgement (combined, kept, left out, a series, compared) is flipped, the alternative is checked by its own narrow questions and adopted only if all pass at 0.7 | narrow questions decide |
+| the layer's own words by stem | "acquired" shares its stem with "acquisition" in the channel's description | derived from the layer |
+
+**A silent error found and fixed during the round:** the first version of the merge compared quotes as
+text; "organic" against "organic users" read as a disagreement, both channels were added to both
+figures, and one combined number was served for "organic vs paid search, separate figures". Comparing
+resolved values removed it.
+
+**Targeted development run** (50 readings: every miss of the previous full run, all TikTok wordings, one
+wording per intent of the third set, two development failures): 45 correct, no silent wrong, one answer
+graded correct as a stated broader value. Fixed in this round: "compare US and GB" (both proposal models
+combined them; the alternative is adopted), "all countries with the exception of IN" (kept → left out),
+Canada and Japan (refused), "Google Android phones", "break down by segment". Left, all asks: "the Linux
+desktop app" (kind below 0.7), "Samsung phone" (split by the proposal), "driven", "Androd" (varies).
+
+**Not done yet:** removing the one-failure patches and measuring that nothing regresses; one tested file
+for the English language resources; a metamorphic template suite; a fresh blind set.
+
+## 38 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.

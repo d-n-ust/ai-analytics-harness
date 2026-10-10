@@ -8,7 +8,7 @@ from agent.guardrails.typed_reader import resolve as R
 
 def _dim(name, members, meanings=None):
     return {"name": f"activity__{name}", "column": name, "members": members, "description": "",
-            "joined": False, "meanings": meanings or {}}
+            "joined": False, "meanings": meanings or {}, "complete": name in ("platform", "device_type", "country")}
 
 
 UNKNOWN = "no recorded platform"
@@ -168,8 +168,15 @@ def test_the_call_check_runs_a_range_as_start_and_end():
 
 # ── the whole reader, with the models replaced ─────────────────────────────────────────────────────
 def _run(monkeypatch, question, proposals, suggestion=None, confirm=None):
-    replies = iter(proposals)
-    monkeypatch.setattr(TR.language, "propose", lambda _req: (next(replies), 0.001, "openai/gpt-5.4-mini-20260301"))
+    replies, last = iter(proposals), {}
+
+    def propose(req):
+        # The second model agrees with the first: these tests are about the steps after the proposal.
+        if req["model"] != "openai/gpt-5.4-mini":
+            return last["p"], 0.001, req["model"]
+        last["p"] = next(replies)
+        return last["p"], 0.001, "openai/gpt-5.4-mini-20260301"
+    monkeypatch.setattr(TR.language, "propose", propose)
     asked = []
 
     def ask(questions, _q):
@@ -194,7 +201,7 @@ def test_an_unmarked_word_gets_one_retry_and_a_misspelling_is_corrected(monkeypa
     assert "Read \"Andriod\" as platform android" in [d for d in reading["decisions"] if d["parameter"] == "filter"][0]["disclose"]
     assert "lw0" in asked[-1]                                  # the confirmation ran
     assert TR.replay(reading, q, "app_opens", None, None, {})["filters"] == reading["filters"]
-    assert cache["_typed"] and round(cost, 3) == 0.004
+    assert cache["_typed"] and round(cost, 3) == 0.005
     served = {e["kind"]: e["served"] for e in reading["language"].values()}
     assert served["propose"] == "openai/gpt-5.4-mini-20260301" and served["confirm"] == "m"
 
@@ -354,7 +361,7 @@ def test_an_unmarked_restriction_word_makes_the_reader_ask(monkeypatch):
 def test_a_thing_of_a_listed_kind_that_no_value_names_is_refused():
     other = {"probabilities": {"other": 0.6, "absent:activity__country": 0.4}}
     assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.92})["kind"] == "refuse"
-    assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.7})["kind"] == "ask"      # below the bar
+    assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.6})["kind"] == "ask"      # below the bar
     elsewhere = {"probabilities": {"other": 0.5, "part:activity__region=Americas": 0.3, "absent:activity__country": 0.2}}
     assert R.judged("Canada", [], elsewhere, SURFACE, {"activity__country": 0.89})["kind"] == "refuse"
     plausible = {"probabilities": {"other": 0.6, "value:activity__country=US": 0.3}}
@@ -374,9 +381,10 @@ def test_each_structural_judgement_gets_one_narrow_question():
     def checks(proposal):
         terms = [[{**t, **R.lookup(t["quote"], SURFACE)} for t in f["terms"]] for f in proposal["figures"]]
         return set(TR.language.structure_questions(proposal, _build(proposal), terms))
-    assert checks(_proposal([[("Android", True), ("iOS", True)]])) == {"combined0:activity__platform"}
-    assert checks(_proposal([[("mobile", True), ("DE", True)]])) == set()          # two filters, not a sum
-    assert checks(_proposal([[("Android", True)], [("iOS", True)]])) == {"separate"}
+    assert checks(_proposal([[("Android", True), ("iOS", True)]])) == {"combined0:activity__platform", "include0_0",
+                                                                        "include0_1"}
+    assert checks(_proposal([[("mobile", True), ("DE", True)]])) == {"include0_0", "include0_1"}   # two filters, no sum
+    assert checks(_proposal([[("Android", True)], [("iOS", True)]])) == {"separate", "include0_0", "include1_0"}
     assert checks({**_proposal([[("web", False)]]), "series": {"quote": "weekly", "unit": "week"}}) == {"series", "except0_0"}
     assert "periods" in checks({**_proposal(), "time": [{"quote": "Nov 2025", "value": "2025-11"}, {"quote": "Apr 2026", "value": "2026-04"}]})
     shared = _proposal([[("DE", True), ("Android", True)], [("DE", True), ("iOS", True)]])
@@ -399,3 +407,96 @@ def test_a_short_value_is_found_as_a_whole_word_only():
     assert R.unaccounted(q, marked, SURFACE) == []
     assert R.marked_by_code("daily app-open trend from referal in April 2026", _proposal(), ["trend"], SURFACE)["series"] == \
         {"quote": "trend", "unit": None}
+
+
+def test_two_proposals_that_disagree_are_settled_by_narrow_questions():
+    a = _proposal([[("US", True), ("GB", True)]])                      # one combined figure
+    b = _proposal([[("US", True)], [("GB", True)]])                    # two figures
+    asked = TR.language.reconcile_questions(a, b)
+    assert set(asked) == {"separate"}
+    assert R.canonical(R.reconciled(a, b, {"separate": {"noul": 0.9}})) == R.canonical(b)
+    assert R.canonical(R.reconciled(a, b, {"separate": {"noul": 0.1}})) == R.canonical(a)
+    c = {**_proposal([[("IN", True)]]), "series": {"quote": "How did", "unit": None}}
+    d = _proposal([[("IN", False)]])
+    asked = TR.language.reconcile_questions(c, d)
+    assert set(asked) == {"series", "include:words:in"}             # no surface given: compared by words
+    merged = R.reconciled(c, d, {"series": {"noul": 0.2}, "include:words:in": {"noul": 0.1}})
+    assert merged["series"] is None and merged["figures"] == [{"terms": [{"quote": "IN", "keep": False}]}]
+
+
+def test_only_a_list_declared_complete_supports_a_refusal():
+    other = {"probabilities": {"other": 0.6, "absent:activity__region": 0.4}}
+    assert R.judged("Atlantis", [], other, SURFACE, {"activity__region": 0.95})["kind"] == "ask"   # region: not complete
+    assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.75})["kind"] == "refuse"
+
+
+def test_a_word_sharing_a_stem_with_the_layers_own_words_is_not_a_leftover():
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": [
+        {**_dim("channel", ["organic", "referral"]), "description": "The acquisition channel of the account."}]}}}
+    q = "app opens from users acquired through referral in June 2026"
+    marked = {**_proposal([[("referral", True)]], time=()), "time": [{"quote": "June 2026", "value": "2026-06"}]}
+    assert "acquired" not in R.leftover_words(q, marked, surface)
+
+
+def test_a_coarser_dimension_does_not_block_a_refusal():
+    """Canada: "not a listed country" 0.59 against "inside the Americas region" 0.38. The region is
+    coarser than the country list; only the country list (and a one-to-one twin) counts."""
+    surface = {**SURFACE, "parameters": {"filters": {**SURFACE["parameters"]["filters"],
+        "determines": {"activity__country": {"activity__region": {"DE": "EMEA", "IN": "EMEA", "US": "Americas"}}}}}}
+    split = {"probabilities": {"absent:activity__country": 0.59, "part:activity__region=Americas": 0.38}}
+    assert R.judged("Canada", [], split, surface, {"activity__country": 0.91})["kind"] == "refuse"
+
+
+def test_two_proposals_quoting_the_same_values_differently_agree_and_merge_nothing():
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": SURFACE["parameters"]["filters"]["dimensions"]
+                                                     + [_dim("channel", ["organic", "paid_search"])]}}}
+    a = _proposal([[("organic", True)], [("paid search", True)]])
+    b = _proposal([[("organic users", True)], [("paid search users", True)]])
+    assert R.canonical(a, surface) == R.canonical(b, surface)
+    merged = R.reconciled(a, b, {}, surface)                       # even if asked to merge, nothing doubles
+    assert merged["figures"] == a["figures"]
+    c = _proposal([[("organic", True)], [("paid search", True), ("DE", True)]])
+    merged = R.reconciled(a, c, {}, surface)                       # DE belongs to the second figure only
+    assert [[t["quote"] for t in f["terms"]] for f in merged["figures"]] == [["organic"], ["paid search", "DE"]]
+
+
+def test_unresolved_terms_that_differ_by_the_layers_own_words_are_one_term():
+    surface = {**SURFACE, "entities": ["account", "user"]}
+    assert R.term_key({"quote": "Androd accounts", "keep": True}, surface) == R.term_key({"quote": "Androd", "keep": True}, surface)
+
+
+def test_a_vetoed_two_way_judgement_has_one_alternative():
+    terms = [[{"quote": "US", "keep": True, "values": [("activity__country", "US")], "rest": [], "ambiguous": []},
+              {"quote": "GB", "keep": True, "values": [("activity__country", "GB")], "rest": [], "ambiguous": []}]]
+    proposal, figures = R.flipped(_proposal([[("US", True), ("GB", True)]]), terms, ["combined0:activity__country"])
+    assert [[t["quote"] for t in f] for f in figures] == [["US"], ["GB"]]
+    _p, figures = R.flipped(_proposal([[("IN", True)]]), [[{**terms[0][0], "quote": "IN"}]], ["include0_0"])
+    assert figures[0][0]["keep"] is False
+    assert R.flipped({**_proposal(), "series": {"quote": "How did", "unit": None}}, [], ["series"])[0]["series"] is None
+    assert R.flipped(_proposal(), [], ["periods"]) is None
+
+
+def test_the_alternative_is_adopted_only_when_its_checks_confirm_it(monkeypatch):
+    """"Compare US and GB" marked as one combined figure: the combined check says no, the alternative
+    (two figures) is built and adopted when its own checks confirm it, and asked about when they do not."""
+    q = "Compare app opens: US and DE during the first quarter of 2026."
+    combined = {**_proposal([[("US", True), ("DE", True)]], time=()),
+                "time": [{"quote": "the first quarter of 2026", "value": "2026-Q1"}]}
+    monkeypatch.setattr(TR.language, "propose", lambda req: (combined, 0.0, req["model"]))
+    monkeypatch.setattr(DG, "_context", lambda *_a: (SURFACE, PRINCIPLES, LO, HI))
+
+    def ask(separate):
+        def answer(questions, _q):
+            out = {k: {"noul": 0.05 if k.startswith("lw") else 0.9} for k in questions}
+            if any(k.startswith("combined") for k in questions):
+                out.update({k: {"noul": 0.1} for k in questions if k.startswith("combined")})
+            if "separate" in questions:
+                out["separate"] = {"noul": separate}
+            return out, 0.0, "m"
+        return answer
+    monkeypatch.setattr(DG, "_ask", ask(0.9))
+    reading, _cost = TR.reading_for(q, "app_opens", None, None, {}, {})
+    assert sorted(reading["filters"]["activity__country"]) == ["DE", "US"] and _states(reading) == {"applied"}
+    monkeypatch.setattr(DG, "_ask", ask(0.6))                          # the alternative not confirmed
+    reading, _cost = TR.reading_for(q, "app_opens", None, None, {}, {})
+    assert "ungrounded" in _states(reading)

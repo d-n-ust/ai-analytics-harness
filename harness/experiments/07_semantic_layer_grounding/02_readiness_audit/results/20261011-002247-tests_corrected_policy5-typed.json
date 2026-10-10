@@ -1,0 +1,538 @@
+[
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "Can you help me compare app opens from the US and GB during the first quarter of 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "GB",
+     "US"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = GB or activity__country = US",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 8.33
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0043756839999999995,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "Compare app opens: US and GB during the first quarter of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "GB",
+     "US"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = GB or activity__country = US",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.58
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0028508080000000002,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "I would like to compare app opens from the US and GB during the first quarter of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "GB",
+     "US"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = GB or activity__country = US",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 7.13
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.002500684,
+  "reader": "typed"
+ },
+ {
+  "element": "region",
+  "block": "combined group values and partial range",
+  "type": "heldout",
+  "q": "Can you pull up app opens from EMEA and APAC together driven by paid search from June to August 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "region": [
+     "EMEA",
+     "APAC"
+    ],
+    "channel": "paid_search",
+    "period": "2026-06-01/2026-08-31"
+   }
+  },
+  "group": "i05",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__region": [
+     [
+      "EMEA",
+      "APAC"
+     ]
+    ],
+    "activity__channel": [
+     "paid_search"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__region in (EMEA, APAC)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = paid_search",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"driven\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "EMEA",
+        "keep": true
+       },
+       {
+        "quote": "APAC",
+        "keep": true
+       },
+       {
+        "quote": "paid search",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June to August 2026",
+      "value": "2026-06/2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 5.1
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the question names \"driven\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.0026251300000000003,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "misspelling with named breakdown",
+  "type": "heldout",
+  "q": "app opens from Androd accounts in April 2026 by channel",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "android",
+    "period": "2026-04",
+    "group_by": [
+     "channel"
+    ]
+   },
+   "group_by": [
+    "channel"
+   ]
+  },
+  "group": "i08",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": [
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Androd\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-04",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__channel"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Androd",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "April 2026",
+      "value": "2026-04"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by channel"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 4.7
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"Androd\" matches no value of the layer"
+  ],
+  "cost": 0.002000918,
+  "reader": "typed"
+ }
+]

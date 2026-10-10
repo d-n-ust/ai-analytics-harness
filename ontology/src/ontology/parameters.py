@@ -120,6 +120,8 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
                             # what to say whenever a figure is restricted by the dimension.
                             "meanings": ((d.get("config") or {}).get("meta") or {}).get("values") or {},
                             "disclose": ((d.get("config") or {}).get("meta") or {}).get("disclose") or "",
+                            # The owner declares the list complete: an unlisted value is not in the data.
+                            "complete": bool(((d.get("config") or {}).get("meta") or {}).get("complete")),
                             "joined": model is not own})
     return out
 

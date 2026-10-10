@@ -1,0 +1,194 @@
+[
+ {
+  "element": "platform",
+  "block": "undeclared synonym",
+  "type": "INV",
+  "q": "How many app opens came from Google Android phones in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Google Android phones",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.17
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0024773580000000003,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unnamed ('by segment', rule)",
+  "type": "base",
+  "q": "How did Android app opens break down by segment in June 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "region",
+     "channel"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "keep": true,
+        "quote": "Android"
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 5.67
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.002159312,
+  "reader": "typed"
+ }
+]

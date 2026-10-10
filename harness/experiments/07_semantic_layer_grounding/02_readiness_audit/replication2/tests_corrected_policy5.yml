@@ -410,22 +410,24 @@ tests:
   block: unavailable channel value
   type: heldout
   q: Hey, can you check how many app opens came from TikTok in June 2026?
-  expect:
-    type: refuse
+  expect: &id004
+    type: clarify
+    metric: app_opens
+    params:
+      channel: ask
+      period: 2026-06
   group: i12
 - element: channel
   block: unavailable channel value
   type: heldout
   q: How many app opens from TikTok in June 2026?
-  expect:
-    type: refuse
+  expect: *id004
   group: i12
 - element: channel
   block: unavailable channel value
   type: heldout
   q: Could you please specify how many app opens came from TikTok in June 2026?
-  expect:
-    type: refuse
+  expect: *id004
   group: i12
 - element: country
   block: named breakdown in quarter
@@ -629,7 +631,7 @@ tests:
   block: exclusion partly outside coverage
   type: heldout
   q: Can you tell me how many app opens came from every channel except referral in 2026?
-  expect: &id004
+  expect: &id005
     type: metric_answer
     metric: app_opens
     params:
@@ -645,19 +647,19 @@ tests:
   block: exclusion partly outside coverage
   type: heldout
   q: app opens from every channel except referral in 2026
-  expect: *id004
+  expect: *id005
   group: i18
 - element: channel
   block: exclusion partly outside coverage
   type: heldout
   q: Please provide the total number of app opens that came from every channel except referral in 2026.
-  expect: *id004
+  expect: *id005
   group: i18
 - element: period
   block: southern hemisphere season
   type: heldout
   q: Hey, can you tell me how many app opens there were in Brazil during summer 2026?
-  expect: &id005
+  expect: &id006
     type: clarify
     metric: app_opens
     params:
@@ -668,13 +670,13 @@ tests:
   block: southern hemisphere season
   type: heldout
   q: Total app opens in Brazil during summer 2026?
-  expect: *id005
+  expect: *id006
   group: i19
 - element: period
   block: southern hemisphere season
   type: heldout
   q: Could you please provide the total number of app opens recorded in Brazil during summer 2026?
-  expect: *id005
+  expect: *id006
   group: i19
 - element: breakdown
   block: unavailable breakdown dimension outside coverage
@@ -701,7 +703,7 @@ tests:
   block: standard segments
   type: heldout
   q: Can you show app opens by segment in July 2026?
-  expect: &id006
+  expect: &id007
     type: breakdown
     metric: app_opens
     params:
@@ -716,13 +718,13 @@ tests:
   block: standard segments
   type: heldout
   q: app opens by segment in July 2026
-  expect: *id006
+  expect: *id007
   group: i21
 - element: breakdown
   block: standard segments
   type: heldout
   q: Kindly show app opens by segment in July 2026.
-  expect: *id006
+  expect: *id007
   group: i21
 - element: breakdown
   block: contested segment phrase

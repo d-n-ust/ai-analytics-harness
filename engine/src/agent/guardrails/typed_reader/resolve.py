@@ -152,6 +152,11 @@ would shall should can could may might must there here not
 except excluding besides apart other only also just together combined versus vs with via side""".split())
 
 
+def _stem(word: str) -> str:
+    """The first five letters of a longer word: "acquired" and "acquisition" share "acqui"."""
+    return word.lower()[:5] if len(word) >= 6 else word.lower()
+
+
 def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
     """PURE. The question's words that no marked phrase holds, without grammar words, numbers, date and
     series words, and the words the layer itself defines (the metric, its dimensions and their entities).
@@ -160,11 +165,15 @@ def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
     spans = _spans(question, _quotes(proposal))
     taken = [(m.start(), m.end()) for rx in (DATE_WORDS, SERIES_WORDS) for m in rx.finditer(question)] + spans
     own = own_words(surface)
+    # A word sharing its stem with a word the layer uses to name a dimension ("acquired", from "the
+    # acquisition channel") is the layer's own word in another form.
+    stems = {_stem(w) for w in own if len(w) >= 6}
     out = []
     for m in re.finditer(r"[A-Za-z][A-Za-z'-]*", question):
         word = m.group()
         if any(a <= m.start() < b for a, b in taken) or word.lower() in _GRAMMAR \
-                or set(_tokens(word)) <= own or word not in out and word.lower() in (w.lower() for w in out):
+                or set(_tokens(word)) <= own or _stem(word) in stems \
+                or word not in out and word.lower() in (w.lower() for w in out):
             continue
         out.append(word)
     return out
@@ -294,11 +303,6 @@ def _containing(surface: dict) -> dict:
     return closed
 
 
-# A narrow yes/no is reliable only near its ends: answers between 0.3 and 0.6 were common noise in
-# calibration. A refusal on a phrase's kind alone needs this much.
-KIND = 0.85
-
-
 def judged(quote: str, values: list, answer: dict, surface: dict, kinds: dict | None = None) -> dict:
     """PURE. The reader's reply for a phrase the lists do not settle alone, from the decision model's
     choice among, per value, "the same thing as" and "one kind of" (narrower), per dimension "one the
@@ -362,8 +366,10 @@ def judged(quote: str, values: list, answer: dict, surface: dict, kinds: dict | 
     # reached the bar and the reader asked. Not in any list, with no listed value plausible, refuses.
     absent = {k[len("absent:"):]: v for k, v in probs.items() if k.startswith("absent:")}
     listed = {k: v for k, v in probs.items() if k.startswith(("value:", "part:"))}
-    if (kind == "absent" and p >= CONFIDENT) or (
-            sum(absent.values()) >= CONFIDENT and all(v < PLAUSIBLE for v in listed.values())):
+    complete = {d["name"] for d in _dimensions(surface) if d.get("complete")}
+    if ((kind == "absent" and p >= CONFIDENT) or (
+            sum(absent.values()) >= CONFIDENT and all(v < PLAUSIBLE for v in listed.values()))) \
+            and max(absent, key=absent.get) in complete:
         dim = max(absent, key=absent.get)
         members = next((d["members"] for d in _dimensions(surface) if d["name"] == dim), [])
         return {"kind": "refuse", "dim": dim,
@@ -371,14 +377,19 @@ def judged(quote: str, values: list, answer: dict, surface: dict, kinds: dict | 
                        f"{dim.split('__')[-1]} values are {', '.join(map(str, members))}"}
     # The closed world: a thing of a kind the layer lists, named by no value of that kind, is not in the
     # data ("Japan" is a country; the countries are eight others).
-    kind = max((kinds or {}).items(), key=lambda kv: kv[1], default=(None, 0.0))
+    # Only a list its owner declared complete supports a refusal: a channel the list lacks may be a new
+    # one, so it is asked about (the owner's decision, 2026-10-10). With the declaration, a clear kind
+    # (0.7) is enough: the completeness is declared, not guessed.
+    kind = max(((k, v) for k, v in (kinds or {}).items() if k in complete), key=lambda kv: kv[1], default=(None, 0.0))
     # Only values of that dimension, or of one that holds the same rows (country and country_name),
     # count against the refusal: "Canada" read as inside the Americas region is world knowledge, and the
     # layer's Americas is US and BR.
-    same_rows = {kind[0]} | {b for (a, _v), held in holds.items() if a == kind[0] for b, _w in held} \
-        | {a for (a, _v), held in holds.items() for b, _w in held if b == kind[0]}
+    # Twins only: dimensions whose values map one to one (country and country_name). A coarser one
+    # (region) holds the country's rows but is not the list the refusal is about.
+    rolls_up = {(x, d) for (x, _v), held in holds.items() for d, _w in held if d != x}    # x's rows inside d's
+    same_rows = {kind[0]} | {d for x, d in rolls_up if x == kind[0] and (d, kind[0]) in rolls_up}
     own_values = [v for k, v in listed.items() if k.partition(":")[2].partition("=")[0] in same_rows]
-    if kind[1] >= KIND and all(v < PLAUSIBLE for v in own_values):
+    if kind[1] >= CONFIDENT and all(v < PLAUSIBLE for v in own_values):
         members = next((d["members"] for d in _dimensions(surface) if d["name"] == kind[0]), [])
         return {"kind": "refuse", "dim": kind[0],
                 "why": f"\"{quote}\" is a {kind[0].split('__')[-1].replace('_', ' ')} the layer does not have; the "
@@ -594,3 +605,101 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
             "builtin": builtin, "decisions": decisions}
+
+
+def term_key(term: dict, surface: dict | None) -> tuple:
+    """What a term names, for comparing two proposals: the values it resolves to ("organic" and
+    "organic users" are both channel organic), or its words when it resolves to none."""
+    values = lookup(term["quote"], surface)["values"] if surface else []
+    own = own_words(surface) if surface else set()
+    words = [w for w in _tokens(term["quote"]) if w not in own] or _tokens(term["quote"])   # "Androd accounts": androd
+    return tuple(sorted(f"{d}={v}" for d, v in values)) or ("words:" + " ".join(words),)
+
+
+def canonical(proposal: dict, surface: dict | None = None) -> dict:
+    """PURE. What a proposal says, in a form two proposals can be compared in: the figures as sets of
+    (what each term names, keep), the period values, the series and its unit, the split phrases, the
+    stated fact. Quoted differently, the same value is the same term: two proposals that marked
+    "organic" and "organic users" agree."""
+    return {"figures": sorted(sorted((term_key(t, surface), t["keep"]) for t in f.get("terms") or [])
+                              for f in proposal.get("figures") or []),
+            "time": sorted(str(t.get("value")).upper() for t in proposal.get("time") or []),
+            "series": (bool(proposal.get("series")), (proposal.get("series") or {}).get("unit")),
+            "breakdown": sorted(" ".join(_tokens(_SPLIT_LEAD.sub("", b["quote"]))) for b in proposal.get("breakdown") or []),
+            "premise": bool(proposal.get("premise"))}
+
+
+def reconciled(a: dict, b: dict, answers: dict, surface: dict | None = None) -> dict:
+    """PURE. One proposal from two that disagree, using the decision model's answers to the narrow
+    questions of `language.reconcile_questions` (majority: 0.5). Where they agree, that stands. A term
+    only one proposal has, by what it names, is added to the figure it belongs to (the one sharing most
+    terms with it), and the checks after this one judge it. A term both have, quoted differently, is
+    not added twice: added by its quote, "organic users" beside "organic" put both channels in both
+    figures and one combined number was served (development run, 2026-10-11)."""
+    yes = lambda k: float((answers.get(k) or {}).get("noul") or 0.0) >= 0.5          # noqa: E731
+    key = lambda t: term_key(t, surface)                                              # noqa: E731
+    ca, cb = canonical(a, surface), canonical(b, surface)
+    base, other = (a, b)
+    if "separate" in answers:
+        apart = yes("separate")
+        if (len(ca["figures"]) > len(cb["figures"])) != apart:
+            base, other = b, a
+    out = {**base, "figures": [{"terms": [dict(t) for t in f.get("terms") or []]} for f in base.get("figures") or []]}
+    for f in other.get("figures") or []:
+        keys = {key(t) for t in f.get("terms") or []}
+        target = max(out["figures"], key=lambda g: len(keys & {key(t) for t in g["terms"]}), default=None)
+        for t in f.get("terms") or []:
+            if not any(key(t) == key(x) for g in out["figures"] for x in g["terms"]):
+                if target is None:
+                    target = {"terms": []}
+                    out["figures"].append(target)
+                target["terms"].append(dict(t))
+    for f in out["figures"]:
+        for t in f["terms"]:
+            name = "include:" + "|".join(key(t))
+            if name in answers:
+                t["keep"] = yes(name)
+    if "series" in answers:
+        out["series"] = (a.get("series") or b.get("series")) if yes("series") else None
+    elif a.get("series") and b.get("series") and not (out.get("series") or {}).get("unit"):
+        out["series"] = a["series"] if a["series"].get("unit") else b["series"]
+    both = set(ca["time"]) & set(cb["time"])
+    times = {str(t.get("value")).upper(): t for p in (a, b) for t in p.get("time") or []}
+    out["time"] = [t for v, t in times.items() if v in both or yes(f"time:{v}")]
+    splits = {" ".join(_tokens(_SPLIT_LEAD.sub("", x["quote"]))): x for p in (a, b) for x in p.get("breakdown") or []}
+    out["breakdown"] = [x for k, x in splits.items() if (k in ca["breakdown"] and k in cb["breakdown"]) or yes(f"split:{k}")]
+    if "premise" in answers:
+        out["premise"] = (a.get("premise") or b.get("premise")) if yes("premise") else None
+    return out
+
+
+def flipped(proposal: dict, terms: list, vetoed: list) -> tuple[dict, list] | None:
+    """PURE. The alternative reading for vetoed two-way judgements, or None when a vetoed judgement has no
+    single alternative. A narrow check said no to: a series (alternative: one number), values of one
+    dimension added together (one figure per value), values compared (one combined figure), a value
+    kept (left out), a value left out (kept). The caller adopts the alternative only when its own
+    narrow checks confirm it."""
+    figures = [[dict(t) for t in f] for f in terms]
+    out = dict(proposal)
+    for key in vetoed:
+        if key == "series":
+            out["series"] = None
+        elif key.startswith("combined"):
+            i, dim = int(key[len("combined"):].split(":")[0]), key.split(":", 1)[1]
+            on = [t for t in figures[i] if t["keep"] and t["values"] and t["values"][0][0] == dim]
+            rest = [t for t in figures[i] if t not in on]
+            figures[i:i + 1] = [rest + [t] for t in on]
+        elif key.startswith(("include", "except")):
+            i, j = (int(x) for x in key.lstrip("includeexcept").split("_"))
+            kept = key.startswith("include")
+            same = [t for t in figures[i] if t["keep"] == kept]
+            same[j]["keep"] = not kept
+        elif key == "separate":
+            merged: list = []
+            for f in figures:
+                merged += [t for t in f if t["quote"].lower() not in {x["quote"].lower() for x in merged}]
+            figures = [merged]
+        else:
+            return None
+    out["figures"] = [{"terms": [{"quote": t["quote"], "keep": t["keep"]} for t in f]} for f in figures]
+    return out, figures

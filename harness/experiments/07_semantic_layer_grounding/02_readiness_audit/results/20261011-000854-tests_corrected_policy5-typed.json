@@ -1,0 +1,993 @@
+[
+ {
+  "element": "platform",
+  "block": "narrower word",
+  "type": "heldout",
+  "q": "How many times was our app opened on Samsung phones throughout May 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-05"
+   },
+   "assumption": true
+  },
+  "group": "i03",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios). Read \"Samsung phones\" as device_type mobile, which is broader: it includes more than \"Samsung phones\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Samsung phones",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 23.9
+  },
+  "broader": [
+   "platform answered as device_type ['mobile']"
+  ],
+  "open": [],
+  "cost": 0.004202792,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower word",
+  "type": "heldout",
+  "q": "Samsung phone app opens May 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-05"
+   },
+   "assumption": true
+  },
+  "group": "i03",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Samsung\" matches no value of the layer"
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"phone\" matches no value of the layer"
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Samsung phone\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Samsung",
+        "keep": true
+       },
+       {
+        "quote": "phone",
+        "keep": true
+       },
+       {
+        "keep": true,
+        "quote": "Samsung phone"
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 8.61
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"Samsung\" matches no value of the layer",
+   "ungrounded: \"phone\" matches no value of the layer",
+   "ungrounded: \"Samsung phone\" matches no value of the layer"
+  ],
+  "cost": 0.004583928000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "value not in layer",
+  "type": "heldout",
+  "q": "How many app opens did we get on the Linux desktop app during the second quarter of 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i04",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "desktop"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = desktop",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type desktop (platform web: the web client, including web browsers on phones).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Linux desktop app",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.44
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop"
+  ],
+  "cost": 0.0028348899999999996,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "value not in layer",
+  "type": "heldout",
+  "q": "Linux desktop app opens Q2 2026",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i04",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "desktop"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop"
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"Linux\" is a platform the layer does not have; the governed values are android, ios, unknown, web",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = desktop",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type desktop (platform web: the web client, including web browsers on phones).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Linux desktop app",
+        "keep": true
+       },
+       {
+        "quote": "Linux",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "Q2 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 22.18
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop",
+   "refuse: \"Linux\" is a platform the layer does not have; the governed values are android, ios, unknown, web"
+  ],
+  "cost": 0.003122522,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "value not in layer",
+  "type": "heldout",
+  "q": "Please provide the total number of app opens recorded for the Linux desktop app during the second quarter of 2026.",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i04",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "desktop"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = desktop",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type desktop (platform web: the web client, including web browsers on phones).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Linux desktop app",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.41
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"Linux desktop app\" holds device_type desktop and other words; ask whether it means device_type desktop"
+  ],
+  "cost": 0.0027796379999999996,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "several values compared over a season",
+  "type": "heldout",
+  "q": "Winter 2026 app opens, organic users vs paid search users, separate figures.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "channel": [
+     "organic",
+     "paid_search"
+    ],
+    "period": "2025-12-01/2026-02-28",
+    "group_by": [
+     "channel"
+    ]
+   }
+  },
+  "group": "i07",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     "organic",
+     "paid_search"
+    ]
+   },
+   "periods": [
+    "2025-12-01/2026-02-28"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = organic or activity__channel = paid_search",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-12-01/2026-02-28",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Winter 2026 is read as December 2025 to February 2026 (the company calendar).",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "organic users",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "paid search users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "Winter 2026",
+      "value": "2026-WI"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 4.56
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0023296780000000004,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "exclusion with no period",
+  "type": "heldout",
+  "q": "Please provide the aggregate count of app opens across all countries with the exception of IN.",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "BR",
+     "GB",
+     "DE",
+     "FR",
+     "PH",
+     "ID"
+    ],
+    "period": "ask"
+   }
+  },
+  "group": "i09",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "country ['in'] instead of ['br', 'de', 'fr', 'gb', 'id', 'ph', 'us']"
+  ],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "IN"
+    ]
+   },
+   "periods": [],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = IN",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: Does the question ask to include IN, rather than to leave IN out?",
+     "confidence": 0.03
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "IN",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.1
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one",
+   "ungrounded: not confirmed: Does the question ask to include IN, rather than to leave IN out?"
+  ],
+  "cost": 0.00262829,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "value not in layer with two dimensions",
+  "type": "heldout",
+  "q": "How many app opens did we get from users in Japan on iOS in January 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i11",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-01"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"users in Japan\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-01",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "users in Japan",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "January 2026",
+      "value": "2026-01"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 5.79
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: \"users in Japan\" matches no value of the layer"
+  ],
+  "cost": 0.001960112,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "value not in layer with two dimensions",
+  "type": "heldout",
+  "q": "iOS app opens Japan January 2026",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i11",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-01"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"Japan\" is a country the layer does not have; the governed values are BR, DE, FR, GB, ID, IN, PH, US",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-01",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iOS app opens",
+        "keep": true
+       },
+       {
+        "quote": "Japan",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "January 2026",
+      "value": "2026-01"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 9.98
+  },
+  "broader": [],
+  "open": [
+   "refuse: \"Japan\" is a country the layer does not have; the governed values are BR, DE, FR, GB, ID, IN, PH, US"
+  ],
+  "cost": 0.004903932000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "value not in layer with two dimensions",
+  "type": "heldout",
+  "q": "Please provide the total number of app opens on iOS from users located in Japan for January 2026.",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens"
+  },
+  "group": "i11",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-01"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"Japan\" is a country the layer does not have; the governed values are BR, DE, FR, GB, ID, IN, PH, US",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-01",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iOS",
+        "keep": true
+       },
+       {
+        "quote": "Japan",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "January 2026",
+      "value": "2026-01"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 5.56
+  },
+  "broader": [],
+  "open": [
+   "refuse: \"Japan\" is a country the layer does not have; the governed values are BR, DE, FR, GB, ID, IN, PH, US"
+  ],
+  "cost": 0.0024690240000000002,
+  "reader": "typed"
+ }
+]

@@ -7,7 +7,8 @@ The same signature and the same reading as `decisions.reading_for`, so `decision
 call against it unchanged. The guardrail option `typed_reader` selects it.
 
 The steps (03_typed_reader/design.md in experiment 07):
-  1. propose   the proposal model marks the phrases (language.py); it sees no part of the layer
+  1. propose   two proposal models of different families mark the phrases (language.py); neither
+               sees any part of the layer; where they disagree, one narrow question settles each point
   2. account   every value word, date word, series word and "by ..." phrase must be marked; one retry
                names the words that are not, then the reader asks (resolve.py)
   3. resolve   each phrase against the values of the layer's dimensions and the calendar (resolve.py)
@@ -63,8 +64,8 @@ class _Language:
         self.used[key] = self.store[key]
         return self.store[key]["output"]
 
-    def propose(self, question: str, missed: list) -> dict:
-        request = language.proposal_request(question, missed)
+    def propose(self, question: str, missed: list, model: str = language.PROPOSAL_MODEL) -> dict:
+        request = language.proposal_request(question, missed, model)
         out = self._get("propose", request, lambda: language.propose(request), {"missed": missed})
         return {"figures": out.get("figures") or [], "time": out.get("time") or [], "series": out.get("series"),
                 "breakdown": out.get("breakdown") or [], "premise": out.get("premise")}
@@ -111,6 +112,11 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
     surface, principles, lo, hi = context
     outcomes = []
     proposal = resolve.normalised(lang.propose(question, []), surface, principles, question)
+    second = resolve.normalised(lang.propose(question, [], language.SECOND_MODEL), surface, principles, question)
+    if resolve.canonical(proposal, surface) != resolve.canonical(second, surface):
+        asked = language.reconcile_questions(proposal, second, surface)
+        answers = lang.decide("reconcile", asked, question) if asked else {}
+        proposal = resolve.normalised(resolve.reconciled(proposal, second, answers, surface), surface, principles, question)
     missed = resolve.unaccounted(question, proposal, surface) + resolve.missing_quotes(question, proposal)
     if missed:
         proposal = resolve.normalised(lang.propose(question, missed), surface, principles, question)
@@ -172,25 +178,52 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
         reading["decisions"].append(_decisions._ungrounded(
             "period", "the season named is for the northern hemisphere, and the figure lies in the southern one; "
                       "ask which months are meant"))
-    if not any(d["state"] in ("refuse", "ungrounded") for d in reading["decisions"]):
-        # Narrow checks in one request: each structural judgement of the proposal, and each word of the
-        # question that no part of the reading uses. Code lists the words, so a restriction no list
-        # knows and the proposal left unmarked ("Germani") is put before the decision model by name.
-        words = resolve.leftover_words(question, proposal, surface)
-        questions = {**language.structure_questions(proposal, reading, terms), **language.leftover_questions(words)}
-        answers = lang.decide("confirm", questions, question) if questions else {}
-        for key in (k for k in questions if not k.startswith("lw")):
-            p = _decisions._yes(answers, key)
-            if p < VETO:
-                reading["decisions"].append({**_decisions._ungrounded(
-                    "reading", f"not confirmed: {questions[key]['instructions']}"), "confidence": p})
-        named = [w for i, w in enumerate(words) if _decisions._yes(answers, f"lw{i}") >= _decisions.CONFIDENT]
-        if named:
-            reading["decisions"].append(_decisions._ungrounded(
-                "filter", f"the question names {', '.join(chr(34) + w + chr(34) for w in named)}, which the reading "
-                          f"does not use; ask what it means"))
+    # The checks run on every reading that is not refused, also one that already asks (about a missing
+    # period, say): the user's reply settles the period, and a misread value must not survive it.
+    if not any(d["state"] == "refuse" for d in reading["decisions"]):
+        reading, vetoed, answers = _checked(question, proposal, terms, reading, surface, lang, "confirm")
+        # A vetoed two-way judgement has one alternative ("US and GB" combined -> compared). It is built,
+        # checked by its own narrow questions, and adopted only if every check passes and each flipped
+        # judgement is confirmed (0.7). "Compare US and GB" was combined by both proposal models.
+        alternative = resolve.flipped(proposal, terms, vetoed) if vetoed else None
+        if alternative is not None:
+            alt_proposal, alt_terms = alternative
+            alt = resolve.build(alt_proposal, alt_terms, surface, principles, lo, hi, _seasons(cursor, governance),
+                                list(outcomes))
+            checked, _alt_vetoed, alt_answers = _checked(question, alt_proposal, alt_terms, alt, surface, lang, "recheck")
+            structural = [k for k in alt_answers if not k.startswith("lw")]
+            series_gone = "series" not in vetoed or _decisions._yes(answers, "series") <= 1 - _decisions.CONFIDENT
+            unexplained = len(checked["decisions"]) > len(alt["decisions"]) + 0 and any(
+                d["parameter"] == "filter" and "does not use" in d.get("why", "") for d in checked["decisions"])
+            if series_gone and not unexplained and all(_decisions._yes(alt_answers, k) >= _decisions.CONFIDENT
+                                                       for k in structural):
+                reading, proposal, terms = checked, alt_proposal, alt_terms
     return {**reading, "proposal": proposal, "language": lang.used,
             "seconds": round(sum(e.get("seconds", 0) for e in lang.used.values()), 2)}
+
+
+def _checked(question: str, proposal: dict, terms: list, reading: dict, surface: dict, lang: _Language,
+             kind: str) -> tuple[dict, list, dict]:
+    """(reading with the checks' results, the vetoed structural judgements, the answers). Narrow checks
+    in one request: each structural judgement, and each word of the question no part of the reading
+    uses. Code lists the words, so a restriction no list knows and the proposal left unmarked
+    ("Germani") is put before the decision model by name."""
+    words = resolve.leftover_words(question, proposal, surface)
+    questions = {**language.structure_questions(proposal, reading, terms), **language.leftover_questions(words)}
+    answers = lang.decide(kind, questions, question) if questions else {}
+    decisions, vetoed = list(reading["decisions"]), []
+    for key in (k for k in questions if not k.startswith("lw")):
+        p = _decisions._yes(answers, key)
+        if p < VETO:
+            vetoed.append(key)
+            decisions.append({**_decisions._ungrounded("reading", f"not confirmed: {questions[key]['instructions']}"),
+                              "confidence": p})
+    named = [w for i, w in enumerate(words) if _decisions._yes(answers, f"lw{i}") >= _decisions.CONFIDENT]
+    if named:
+        decisions.append(_decisions._ungrounded(
+            "filter", f"the question names {', '.join(chr(34) + w + chr(34) for w in named)}, which the reading "
+                      f"does not use; ask what it means"))
+    return {**reading, "decisions": decisions}, vetoed, answers
 
 
 def reading_for(question: str, metric: str, semantic, cursor, governance: dict | None,
