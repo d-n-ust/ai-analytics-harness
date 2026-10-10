@@ -1,0 +1,27 @@
+# Sealed intents written by gpt-5.6-terra from replication2/author_brief.md, which is all it saw. Do not read before
+# the run is recorded.
+intents:
+  - {element: device_type, block: single value in month, intent: "How many app opens came from mobile customers in May 2026?", expect: {type: metric_answer, metric: app_opens, params: {device_type: mobile, period: "2026-05"}}}
+  - {element: country, block: two restrictions in quarter, intent: "How many app opens were there from desktop accounts in Germany during the first quarter of 2026?", expect: {type: metric_answer, metric: app_opens, params: {device_type: desktop, country_name: Germany, period: "2026-Q1"}}}
+  - {element: platform, block: combined values in half-year, intent: "What was the combined number of app opens from Android and iOS in the first half of 2026?", expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: "2026-H1"}}}
+  - {element: platform, block: compared values partly outside coverage, intent: "Compare Android and iOS app opens separately for 2025.", expect: {type: refuse}}
+  - {element: platform, block: exclusion in season, intent: "How many app opens came from every platform except unknown during winter 2026?", expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios, web], period: "2025-12-01/2026-02-28"}}}
+  - {element: region, block: group value with no period, intent: "Show the trend of app opens from EMEA.", expect: {type: clarify, metric: app_opens, params: {region: EMEA, period: ask}}}
+  - {element: country, block: country code in range, intent: "How many app opens came from DE from December 2025 through February 2026?", expect: {type: metric_answer, metric: app_opens, params: {country: DE, period: "2025-12-01/2026-02-28"}}}
+  - {element: platform, block: misspelling with automatic trend grain, intent: "Show the app-open trend for Andriod during the first quarter of 2026.", expect: {type: metric_answer, metric: app_opens, params: {platform: android, period: "2026-Q1", group_by: [metric_time]}}}
+  - {element: channel, block: misspelling with daily trend, intent: "Show the daily app-open trend from referal in April 2026.", expect: {type: metric_answer, metric: app_opens, params: {channel: referral, period: "2026-04", group_by: [metric_time], time_grain: day}}}
+  - {element: device_type, block: narrower device word, intent: "How many app opens came from iPhone users in May 2026?", expect: {type: clarify, metric: app_opens, params: {device_type: ask, period: "2026-05"}}}
+  - {element: country, block: translated country name, intent: "How many app opens came from Deutschland in the second quarter of 2026?", expect: {type: clarify, metric: app_opens, params: {country_name: ask, period: "2026-Q2"}}}
+  - {element: country, block: unavailable country outside coverage, intent: "How many app opens came from Canada in 2024?", expect: {type: refuse}}
+  - {element: channel, block: unavailable channel value, intent: "How many app opens came from TikTok in June 2026?", expect: {type: refuse}}
+  - {element: country, block: named breakdown in quarter, intent: "Break down app opens in the second quarter of 2026 by country.", expect: {type: breakdown, metric: app_opens, params: {period: "2026-Q2", group_by: [country]}}}
+  - {element: period, block: weekly seasonal trend, intent: "Show the weekly trend of app opens in spring 2026.", expect: {type: metric_answer, metric: app_opens, params: {period: "2026-03-01/2026-05-31", group_by: [metric_time], time_grain: week}}}
+  - {element: channel, block: combined values in month range, intent: "What was the combined number of app opens from organic and partnerships from March to May 2026?", expect: {type: metric_answer, metric: app_opens, params: {channel: [organic, partnerships], period: "2026-03-01/2026-05-31"}}}
+  - {element: period, block: no period trend, intent: "Show the trend of all app opens.", expect: {type: clarify, metric: app_opens, params: {period: ask}}}
+  - {element: device_type, block: compared values with regional restriction, intent: "Compare mobile and desktop app opens separately for APAC in the first half of 2026.", expect: {type: breakdown, metric: app_opens, params: {region: APAC, device_type: [mobile, desktop], period: "2026-H1", group_by: [device_type]}}}
+  - {element: channel, block: exclusion partly outside coverage, intent: "How many app opens came from every channel except referral in 2026?", expect: {type: refuse}}
+  - {element: period, block: southern hemisphere season, intent: "How many app opens were there in Brazil during summer 2026?", expect: {type: clarify, metric: app_opens, params: {country_name: Brazil, period: ask}}}
+  - {element: breakdown, block: unavailable breakdown dimension outside coverage, intent: "Break down app opens in August 2026 by device model.", expect: {type: refuse}}
+  - {element: breakdown, block: standard segments, intent: "Show app opens by segment in July 2026.", expect: {type: breakdown, metric: app_opens, params: {period: "2026-07", group_by: [platform, region, channel]}}}
+  - {element: breakdown, block: contested segment phrase, intent: "Show app opens by customer segment in the first quarter of 2026.", expect: {type: contested, metric: app_opens, params: {period: "2026-Q1"}}}
+  - {element: breakdown, block: unavailable native app and split, intent: "Break down app opens from the Linux desktop app in August 2026 by operating system.", expect: {type: refuse}}
