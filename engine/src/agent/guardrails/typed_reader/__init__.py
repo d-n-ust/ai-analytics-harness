@@ -11,8 +11,9 @@ The steps (03_typed_reader/design.md in experiment 07):
   2. account   every value word, date word, series word and "by ..." phrase must be marked; one retry
                names the words that are not, then the reader asks (resolve.py)
   3. resolve   each phrase against the values of the layer's dimensions and the calendar (resolve.py)
-  4. suggest   a phrase no list holds: a misspelling of a listed value is corrected and disclosed;
-               anything else is asked about or refused (the decision model chooses only the reply)
+  4. judge     a phrase the lists do not settle alone: an analyst's reading (a misspelling, a synonym,
+               or a narrower thing answered with the broader value) is applied and stated in the
+               answer; something no list has is refused; anything unclear is asked about
   5. confirm   the resolved reading, written back as one sentence, is confirmed with one yes/no;
                unconfirmed, the reader asks
 
@@ -125,26 +126,20 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
             else:
                 outcomes.append(_decisions._ungrounded("filter", f"\"{value}\" is a value of "
                                                        f"{' and of '.join(d.split('__')[-1] for d in dims)}; ask which"))
-    unresolved = list(dict.fromkeys(t["quote"] for f in terms for t in f if not t["values"] and not t["ambiguous"]))
-    beside = {t["quote"]: t["values"] for f in terms for t in f if t["values"] and t["rest"]}
-    asked = unresolved + [q for q in beside if q not in unresolved]
-    if asked:
-        answers = lang.decide("suggest", language.suggestion_questions(asked, surface), question)
-        for i, quote in enumerate(asked):
-            if quote in beside:
-                s = resolve.kept(quote, beside[quote], answers.get(f"sug{i}"), surface)
-                if s["kind"] == "refuse":
-                    outcomes.append(_decisions._refuse("filter", "ungoverned_dimension_value", s["why"]))
-                elif s["kind"] == "ask":
-                    outcomes.append(_decisions._ungrounded("filter", s["why"]))
-                continue
-            s = resolve.suggested(quote, answers.get(f"sug{i}"), surface)
-            if s["kind"] == "corrected":
+    # Phrases the lists do not settle alone: no listed value in them ("Deutschland"), or a listed value
+    # beside other words ("desktop accounts"). One request judges all of them.
+    open_ = {t["quote"]: t["values"] for f in terms for t in f
+             if not t["ambiguous"] and (not t["values"] or t["rest"])}
+    if open_:
+        answers = lang.decide("suggest", language.suggestion_questions(list(open_), surface), question)
+        for i, (quote, values) in enumerate(open_.items()):
+            s = resolve.judged(quote, values, answers.get(f"sug{i}"), surface)
+            if s["kind"] == "assumed":
                 for t in (t for f in terms for t in f if t["quote"] == quote):
-                    t["values"], t["rest"], t["why"] = [(s["dim"], s["value"])], s["rest"], s["why"]
+                    t["values"], t["why"] = [(s["dim"], s["value"])], s["why"]
             elif s["kind"] == "refuse":
                 outcomes.append(_decisions._refuse("filter", "ungoverned_dimension_value", s["why"]))
-            else:
+            elif s["kind"] == "ask":
                 outcomes.append(_decisions._ungrounded("filter", s["why"]))
 
     reading = resolve.build(proposal, terms, surface, principles, lo, hi, _seasons(cursor, governance), outcomes)

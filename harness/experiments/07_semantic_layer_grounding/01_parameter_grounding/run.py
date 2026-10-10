@@ -61,7 +61,7 @@ from evals import report
 from evals.gold import _validate, compute_gold, stamp_suite
 from evals.row import measured_row
 from evals.runner import regrade_run
-from agent.guardrails.parameters import rules_text
+from agent.guardrails.parameters import _period_span, rules_text
 from evals.second_turn import follow_up
 from evals.calls import call_use
 from evals.selective import selective
@@ -385,11 +385,27 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
         elif period is None:
             if reading["periods"] or "period" in opened:
                 errors.append(f"period {reading['periods'] or 'left open'}, label has none")
+        elif expect.get("partial"):
+            # A period partly inside the data is answered for the covered days and says so (design
+            # section 13): each period read lies inside the labelled one, and the answer states it.
+            wanted = [_period_span(str(x)) for x in (period if isinstance(period, list) else [period])]
+            spans = [_period_span(str(x)) for x in reading["periods"]]
+            inside = spans and all(sp and any(w and w[0] <= sp[0] and sp[1] <= w[1] for w in wanted) for sp in spans)
+            said = any("only partly in the data" in (d.get("disclose") or "") for d in reading["decisions"])
+            if not inside or "period" in opened:
+                errors.append(f"period {reading['periods']} instead of the covered part of {period}")
+            elif not said:
+                errors.append("partial period not stated in the answer")
         else:
             need = set().union(*[_months(p) or set() for p in (period if isinstance(period, list) else [period])])
             if got != need or "period" in opened:
                 errors.append(f"period {reading['periods']}{' (left open)' if 'period' in opened else ''} "
                               f"instead of {period}")
+        # An analyst's reading (a synonym, a narrower word answered with the broader value) is correct
+        # only when the answer states it; unstated, it is a silent wrong answer (design section 13).
+        if expect.get("assumption") and action == "answer" and not any(
+                d.get("basis") == "analyst_judgement" and d.get("disclose") for d in reading["decisions"]):
+            errors.append("analyst assumption not stated in the answer")
         # Several listed values (or periods) may be read as a list filter or as a breakdown; both
         # show every one of them.
         listed = {k for k, v in want.items() if isinstance(v, list) and k not in ("time_grain",)}

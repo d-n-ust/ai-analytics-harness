@@ -1292,7 +1292,36 @@ unmarked. The round trip's false alarms are now the largest cause.
 A third sealed set was not run: the OpenRouter balance was $0.29 of $5.00, and a sealed run with both
 readers costs about $0.30.
 
-## 34 · Open
+## 34 · Three sources of a reading (owner's decisions, 2026-10-10)
+
+The strict closed world was applied too literally: only the value lists could produce an answer. The
+owner restated the order of sources (`milestoneA.md`): the parameter ontology first, methodological
+rules second, and a senior analyst's judgement third, with lower confidence and always disclosed.
+Decisions: a synonym, translation or misspelling is answered with the listed value and the reading is
+stated; a narrower word ("iPhone") is answered with the broader value and the answer says it is
+broader; a period partly inside the data is answered for the covered part, which the answer states.
+Design draft 5 (`03_typed_reader/design.md`, section 13).
+
+**Built.**
+- The suggestion step offers, per value, "the same thing as" and "one kind of" (narrower), each with
+  the value's declared meaning.
+- An analyst reading needs one option at 0.85 or above and no other at 0.15; it is recorded with the
+  basis `analyst_judgement` and stated in the answer ("Read "iPhone users" as platform ios, which is
+  broader: it includes more than "iPhone users"").
+- A period partly inside the data runs on the covered days; the answer says so ("July 2026 is only
+  partly in the data; this covers 1 to 12 July 2026"). The round-trip sentence keeps the period as
+  asked.
+- The grader accepts an analyst reading or a partial period only when the answer states it
+  (`assumption: true`, `partial: true` on the label); unstated, it is graded as an error.
+- `relabel_policy5.py` relabels the three development sets to this policy (3, 10 and 24 items).
+- Author brief version 3 (`02_readiness_audit/replication3/author_brief.md`) carries the policy for
+  the third blind set.
+
+**Measured.** Development tests under the new labels: 27 of 28 (the failure, the clipped period in
+the round-trip sentence, is fixed and not yet re-run). The two burned replication sets were not run:
+the OpenRouter balance ran out (HTTP 402).
+
+## 35 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.

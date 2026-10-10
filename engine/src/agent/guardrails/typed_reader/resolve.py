@@ -169,55 +169,57 @@ def spelling_variant(word: str, value) -> bool:
     return prev[-1] <= 2
 
 
-def kept(quote: str, values: list, answer: dict, surface: dict) -> dict:
-    """PURE. The reply for a phrase that holds a listed value beside other words ("desktop accounts",
-    "the Linux desktop app"), from the same choice as `suggested`. The value stays only when the model
-    clearly reads the whole phrase as that value; a phrase that names something no list has refuses;
-    anything else asks. {"kind": "kept" | "ask" | "refuse", "why"}"""
-    probs = dict((answer or {}).get("probabilities") or {})
-    best = max(probs, key=probs.get) if probs else "other"
-    named = {f"value:{dim}={value}" for dim, value in values}
-    if best in named and probs[best] >= CONFIDENT and all(v < PLAUSIBLE for k, v in probs.items() if k != best):
-        return {"kind": "kept", "why": ""}
-    out = suggested(quote, answer, surface)
-    if out["kind"] == "refuse":
-        return out
-    listed = " and ".join(f"{dim.split('__')[-1]} {value}" for dim, value in values)
-    return {"kind": "ask", "why": f"\"{quote}\" holds {listed} and other words; ask whether it means {listed}"}
+# An analyst's reading is a weaker source than a list value or a rule (design section 13), so it needs a
+# clearer answer: one option at this level and no other at PLAUSIBLE.
+ANALYST = 0.85
 
 
-def suggested(quote: str, answer: dict, surface: dict) -> dict:
-    """PURE. The analyst's reply for a phrase no list holds, from the decision model's choice among
-    "the same thing as value X", "a {dimension} value the layer does not have" and "something else".
+def judged(quote: str, values: list, answer: dict, surface: dict) -> dict:
+    """PURE. The reader's reply for a phrase the lists do not settle alone, from the decision model's
+    choice among, per value, "the same thing as" and "one kind of" (narrower), per dimension "one the
+    layer does not have", and "something else". `values` are the listed values code found inside the
+    phrase ("desktop" in "desktop accounts"); none for a phrase with no listed value ("Deutschland").
 
-    {"kind": "corrected" | "ask" | "refuse", "dim", "value", "rest", "why"}. Only a misspelling is corrected,
-    and only onto a listed value that code confirms as a spelling variant; every other reading of the
-    model changes the wording of a non-answer and nothing else."""
+    {"kind": "kept" | "assumed" | "refuse" | "ask", "dim", "value", "why"}:
+      kept     the phrase is the value code found in it ("desktop accounts")
+      assumed  an analyst's reading, stated in the answer: a misspelling, a synonym or translation
+               ("Deutschland" is Germany), or a narrower thing answered with the broader value
+               ("iPhone" with ios, which also includes iPads)
+      refuse   the phrase names something no list has ("TikTok")
+      ask      anything else"""
     probs = dict((answer or {}).get("probabilities") or {})
     best = max(probs, key=probs.get) if probs else "other"
     p = probs.get(best, 0.0)
-    clear = p >= CONFIDENT and all(v < PLAUSIBLE for k, v in probs.items() if k != best)
-    if best.startswith("value:") and clear:
-        dim, _, value = best[len("value:"):].partition("=")
+    clear = lambda bar: p >= bar and all(v < PLAUSIBLE for k, v in probs.items() if k != best)  # noqa: E731
+    kind, _, target = best.partition(":")
+    if kind in ("value", "part"):
+        dim, _, value = target.partition("=")
         member = next((m for d, m in _values(surface) if d["name"] == dim and str(m) == value), value)
+        label = f"{dim.split('__')[-1]} {member}"
+        if kind == "value" and (dim, member) in values and clear(CONFIDENT):
+            return {"kind": "kept", "why": ""}
         words, size = _tokens(quote), len(_tokens(str(member)))
-        for i in range(len(words) - size + 1):
-            if spelling_variant(" ".join(words[i:i + size]), member):
-                rest = [w for w in words[:i] + words[i + size:] if w not in _JOINING]
-                return {"kind": "corrected", "dim": dim, "value": member, "rest": rest,
-                        "why": f"read \"{quote}\" as {dim.split('__')[-1]} {member}, a spelling of a listed value"}
-        return {"kind": "ask", "why": f"\"{quote}\" is not a listed value; did you mean "
-                                      f"{dim.split('__')[-1]} {member}?"}
+        spelled = any(spelling_variant(" ".join(words[i:i + size]), member) for i in range(len(words) - size + 1))
+        if kind == "value" and spelled and clear(CONFIDENT):
+            return {"kind": "assumed", "dim": dim, "value": member,
+                    "why": f"read \"{quote}\" as {label}, a spelling of a listed value"}
+        if clear(ANALYST):
+            broader = f", which is broader: it includes more than \"{quote}\"" if kind == "part" else ""
+            return {"kind": "assumed", "dim": dim, "value": member, "why": f"read \"{quote}\" as {label}{broader}"}
     # "TikTok" may read as a channel or as a platform the layer lacks; split between the two, neither
     # reached the bar and the reader asked. Not in any list, with no listed value plausible, refuses.
     absent = {k[len("absent:"):]: v for k, v in probs.items() if k.startswith("absent:")}
-    if (best.startswith("absent:") and p >= CONFIDENT) or (
-            sum(absent.values()) >= CONFIDENT and all(v < PLAUSIBLE for k, v in probs.items() if k.startswith("value:"))):
+    listed = {k: v for k, v in probs.items() if k.startswith(("value:", "part:"))}
+    if (kind == "absent" and p >= CONFIDENT) or (
+            sum(absent.values()) >= CONFIDENT and all(v < PLAUSIBLE for v in listed.values())):
         dim = max(absent, key=absent.get)
         members = next((d["members"] for d in _dimensions(surface) if d["name"] == dim), [])
         return {"kind": "refuse", "dim": dim,
                 "why": f"\"{quote}\" names something the layer does not have; the governed "
                        f"{dim.split('__')[-1]} values are {', '.join(map(str, members))}"}
+    if values:
+        found = " and ".join(f"{d.split('__')[-1]} {v}" for d, v in values)
+        return {"kind": "ask", "why": f"\"{quote}\" holds {found} and other words; ask whether it means {found}"}
     return {"kind": "ask", "why": f"\"{quote}\" matches no value of the layer"}
 
 
@@ -271,7 +273,12 @@ def readable(period: str) -> str:
     if span and span[0].day == 1 and (span[1] + dt.timedelta(days=1)).day == 1:
         first, last = f"{months[span[0].month - 1]} {span[0].year}", f"{months[span[1].month - 1]} {span[1].year}"
         return first if first == last else f"{first} to {last}"
-    return f"{span[0].isoformat()} to {span[1].isoformat()}" if span else period
+    if not span:
+        return period
+    day = lambda d: f"{d.day} {months[d.month - 1]} {d.year}"             # noqa: E731
+    if (span[0].year, span[0].month) == (span[1].year, span[1].month):
+        return f"{span[0].day} to {day(span[1])}"
+    return f"{day(span[0])} to {day(span[1])}"
 
 
 # ── breakdown ──────────────────────────────────────────────────────────────────────────────────
@@ -364,12 +371,13 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         for d in dims:
             filters[d] = [f[d] for f in per_figure] if d in varying else [per_figure[0][d]]
     for dim, readings in filters.items():
-        corrected = [t["why"] for f in terms for t in f if t.get("why") and any(v[0] == dim for v in t["values"])]
+        assumed = list(dict.fromkeys(t["why"] for f in terms for t in f
+                                     if t.get("why") and any(v[0] == dim for v in t["values"])))
         listed = [x for r in readings for x in (r if isinstance(r, list) else [r])]
-        disclose = " ".join(filter(None, [_meanings(dim, listed, surface)] + [c[0].upper() + c[1:] + "." for c in corrected]))
+        disclose = " ".join(filter(None, [_meanings(dim, listed, surface)] + [a[0].upper() + a[1:] + "." for a in assumed]))
         decisions.append(_decision("filter", " or ".join(
             f"{dim} in ({', '.join(map(str, r))})" if isinstance(r, list) else f"{dim} = {r}" for r in readings),
-            "question", disclose=disclose))
+            "analyst_judgement" if assumed else "question", disclose=disclose))
 
     periods = []
     for item in proposal.get("time") or []:
@@ -378,19 +386,23 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
             decisions.append(_ungrounded("period", why))
         elif period not in periods:
             periods.append(period)
-    # A period not wholly inside the data is refused, as the engine refuses the call (design section
-    # 11: partly covered periods refuse during the comparison of the two readers).
+    # A period with no day in the data is refused. A period partly inside it is answered for the days
+    # it covers, and the answer says so (the owner's decision, design section 13).
     uncovered = [p for p in periods if not _covered(p, lo, hi)]
-    partly = [p for p in periods if p not in uncovered and not (lo <= _period_span(p)[0] and _period_span(p)[1] <= hi)]
-    if uncovered or partly:
-        said = [f"{readable(p)} is outside the data" for p in uncovered] + \
-               [f"{readable(p)} is only partly inside the data" for p in partly]
-        decisions.append(_refuse("period", "out_of_coverage", f"{'; '.join(said)} ({lo} to {hi})"))
+    asked, partial = list(periods), []
+    for i, p in enumerate(periods):
+        first, last = _period_span(p)
+        if p not in uncovered and not (lo <= first and last <= hi):
+            periods[i] = _range(max(first, lo), min(last, hi))
+            partial.append(f"{readable(p)} is only partly in the data; this covers {readable(periods[i])}.")
+    if uncovered:
+        decisions.append(_refuse("period", "out_of_coverage", f"{' and '.join(readable(p) for p in uncovered)} "
+                                 f"{'is' if len(uncovered) == 1 else 'are'} outside the data ({lo} to {hi})"))
     elif not proposal.get("time"):
         decisions.append(_ungrounded("period", "the question states no period that can be placed on the "
                                      "calendar, and no rule supplies one"))
     elif periods:
-        decisions.append(_decision("period", " or ".join(periods), "question"))
+        decisions.append(_decision("period", " or ".join(periods), "question", disclose=" ".join(partial)))
 
     group_by, separate, grain, splits = [], False, None, []
     series = proposal.get("series")
@@ -427,6 +439,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
                                      "the typed reader does not check stated facts yet"))
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": {},
             "figures": [_figure_words(f) for f in terms if any(t["values"] for t in f)], "splits": splits,
+            "asked_periods": asked,
             "values": {d["name"]: d["members"] for d in _dimensions(surface)},
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),

@@ -60,20 +60,24 @@ def test_a_value_of_two_attributes_is_ambiguous_and_a_short_code_matches_only_in
     assert R.lookup("users in", SURFACE)["values"] == []
 
 
-def test_only_a_spelling_variant_of_a_listed_value_is_corrected():
+def test_an_analyst_reading_is_applied_and_stated_and_a_word_no_list_has_is_refused():
+    """Design section 13: a misspelling, a synonym and a narrower word are answered and stated."""
     assert R.spelling_variant("andriod", "android") and R.spelling_variant("androd", "android")
     assert not R.spelling_variant("iphone", "ios") and not R.spelling_variant("wbe", "web")
-    same = {"probabilities": {"value:activity__platform=android": 0.93, "other": 0.07}}
-    assert R.suggested("Andriod", same, SURFACE)["kind"] == "corrected"
-    assert R.suggested("Andriod users", same, SURFACE)["rest"] == ["user"]
-    iphone = {"probabilities": {"value:activity__platform=ios": 0.9, "other": 0.1}}
-    assert R.suggested("iPhone", iphone, SURFACE) == {"kind": "ask", "why": "\"iPhone\" is not a listed value; "
-                                                                            "did you mean platform ios?"}
+    typo = {"probabilities": {"value:activity__platform=android": 0.93, "other": 0.07}}
+    assert R.judged("Andriod", [], typo, SURFACE)["why"] == 'read "Andriod" as platform android, a spelling of a listed value'
+    same = {"probabilities": {"value:activity__country=DE": 0.95}}
+    assert R.judged("Deutschland", [], same, SURFACE) == {"kind": "assumed", "dim": "activity__country", "value": "DE",
+                                                          "why": 'read "Deutschland" as country DE'}
+    narrower = {"probabilities": {"part:activity__platform=ios": 0.9, "other": 0.1}}
+    assert R.judged("iPhone users", [], narrower, SURFACE)["why"] == \
+        'read "iPhone users" as platform ios, which is broader: it includes more than "iPhone users"'
+    weaker = {"probabilities": {"part:activity__platform=ios": 0.8, "other": 0.1}}       # below the analyst bar
+    assert R.judged("iPhone users", [], weaker, SURFACE)["kind"] == "ask"
     absent = {"probabilities": {"absent:activity__platform": 0.92}}
-    assert R.suggested("Windows", absent, SURFACE)["kind"] == "refuse"
+    assert R.judged("Windows", [], absent, SURFACE)["kind"] == "refuse"
     unsure = {"probabilities": {"value:activity__platform=android": 0.75, "value:activity__platform=ios": 0.2}}
-    assert R.suggested("Andriod", unsure, SURFACE)["kind"] == "ask"
-
+    assert R.judged("Andriod", [], unsure, SURFACE)["kind"] == "ask"
 
 # ── accounting ─────────────────────────────────────────────────────────────────────────────────────
 def test_a_known_word_outside_every_marked_phrase_is_reported():
@@ -121,14 +125,17 @@ def test_a_group_value_is_one_figure_with_its_meaning_disclosed():
     assert "device_type mobile (platforms android and ios)" in reading["decisions"][1]["disclose"]
 
 
-def test_periods_outside_the_data_refuse_and_a_missing_period_asks():
+def test_periods_outside_the_data_refuse_partly_inside_answer_the_covered_part_and_missing_asks():
     assert "refuse" in _states(_build(_proposal(time=("2025-08",))))
     assert "refuse" in _states(_build(_proposal(time=("2024",))))
     assert _build(_proposal(time=("2026-WI",)))["periods"] == ["2025-12-01/2026-02-28"]
-    assert "refuse" in _states(_build(_proposal(time=("2026-SU",))))          # June to August; data to 12 July
+    summer = _build(_proposal(time=("2026-SU",)))                    # June to August; data to 12 July
+    assert summer["periods"] == ["2026-06-01/2026-07-12"] and _states(summer) == {"applied"}
+    assert "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026." in \
+        [d for d in summer["decisions"] if d["parameter"] == "period"][0]["disclose"]
+    assert "in June 2026 to August 2026," in TR.language.described(summer, "app_opens")      # as asked
     assert "ungrounded" in _states(_build(_proposal(time=())))
     assert "ungrounded" in _states(_build(_proposal(time=("2026-SP",))))
-
 
 def test_breakdowns_resolve_to_a_dimension_a_rule_or_a_refusal():
     assert _build(_proposal(breakdown=("by region",)))["group_by"] == ["activity__region"]
@@ -261,27 +268,26 @@ def test_a_value_of_two_dimensions_is_settled_by_the_dimension_the_question_name
 
 def test_a_word_outside_every_list_refuses_even_when_the_model_splits_the_dimension():
     split = {"probabilities": {"absent:activity__platform": 0.45, "absent:activity__region": 0.4, "other": 0.15}}
-    assert R.suggested("TikTok", split, SURFACE)["kind"] == "refuse"
+    assert R.judged("TikTok", [], split, SURFACE)["kind"] == "refuse"
     synonym = {"probabilities": {"absent:activity__country": 0.6, "value:activity__country=DE": 0.3, "other": 0.1}}
-    assert R.suggested("Deutschland", synonym, SURFACE)["kind"] == "ask"
-
+    assert R.judged("Deutschland", [], synonym, SURFACE)["kind"] == "ask"
 
 def test_a_phrase_with_words_beside_a_value_keeps_it_only_when_clearly_read_as_that_value():
     """Calibration, 2026-10-10: "desktop accounts" 0.99 desktop (kept); "the Linux desktop app" split
     between a platform the layer lacks (0.39) and desktop (0.34) (asked, not served as desktop)."""
     values = [("activity__device_type", "desktop")]
     clear = {"probabilities": {"value:activity__device_type=desktop": 0.99, "other": 0.01}}
-    assert R.kept("desktop accounts", values, clear, SURFACE)["kind"] == "kept"
+    assert R.judged("desktop accounts", values, clear, SURFACE)["kind"] == "kept"
     split = {"probabilities": {"absent:activity__platform": 0.39, "value:activity__device_type=desktop": 0.34, "other": 0.23}}
-    assert R.kept("Linux desktop app", values, split, SURFACE)["kind"] == "ask"
+    assert R.judged("Linux desktop app", values, split, SURFACE)["kind"] == "ask"
     absent = {"probabilities": {"absent:activity__platform": 0.9, "other": 0.1}}
-    assert R.kept("Linux desktop app", values, absent, SURFACE)["kind"] == "refuse"
-
+    assert R.judged("Linux desktop app", values, absent, SURFACE)["kind"] == "refuse"
 
 def test_a_range_of_whole_months_is_said_in_months():
     assert R.readable("2025-12-01/2026-02-28") == "December 2025 to February 2026"
     assert R.readable("2026-01-01/2026-01-31") == "January 2026"
-    assert R.readable("2026-01-05/2026-02-10") == "2026-01-05 to 2026-02-10"
+    assert R.readable("2026-01-05/2026-02-10") == "5 January 2026 to 10 February 2026"
+    assert R.readable("2026-07-01/2026-07-12") == "1 to 12 July 2026"
 
 
 def test_the_metric_and_the_entities_of_the_layer_are_not_leftover_words():

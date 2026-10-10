@@ -144,8 +144,9 @@ def _twins(surface: dict) -> set:
 
 
 def suggestion_questions(unresolved: list, surface: dict) -> dict:
-    """One choice per phrase no list holds: which listed value it is the same thing as, a value of a
-    dimension the layer does not have, or something else (design section 6)."""
+    """One choice per phrase the lists do not settle alone: which listed value it is the same thing as,
+    or one narrower kind of; a value of a dimension the layer does not have; or something else (design
+    sections 6 and 13)."""
     out, twins = {}, _twins(surface)
     for i, quote in enumerate(unresolved):
         criteria = {}
@@ -153,7 +154,13 @@ def suggestion_questions(unresolved: list, surface: dict) -> dict:
             label = d["column"].replace("_", " ")
             for m in d["members"]:
                 if str(m).lower() not in ("true", "false"):
-                    criteria[f"value:{d['name']}={m}"] = f"\"{quote}\" is the same thing as the {label} {m}."
+                    # The declared meaning is shown here, where the model compares the phrase with the
+                    # value: "the Linux desktop app" against desktop, "the web client".
+                    meant = (d.get("meanings") or {}).get(str(m))
+                    named = f"the {label} {m}" + (f" ({meant})" if meant else "")
+                    criteria[f"value:{d['name']}={m}"] = f"\"{quote}\" is the same thing as {named}."
+                    criteria[f"part:{d['name']}={m}"] = (f"\"{quote}\" is one kind of {named}, narrower than it: "
+                                                         f"{m} also holds other things.")
             if d["name"] not in twins:
                 # The layer's own first sentence says what the dimension is: "TikTok" was "something
                 # else" against "a channel", and is an acquisition channel the layer lacks.
@@ -171,7 +178,9 @@ def described(reading: dict, metric: str) -> str:
     figures = reading.get("figures") or []
     what = ("separately for " + ", and for ".join(figures) if len(figures) > 1
             else f"for {figures[0]}" if figures else "with no restriction")
-    when = " and ".join(readable(p) for p in reading["periods"]) or "no period"
+    # The period as asked: the covered part of a partly covered one is stated to the user separately,
+    # and "1 June to 12 July 2026" read against "summer 2026" was not confirmed (development, 2026-10-10).
+    when = " and ".join(readable(p) for p in reading.get("asked_periods") or reading["periods"]) or "no period"
     shape = []
     if "metric_time" in reading["group_by"]:
         shape.append(f"one number per {reading['grain']}" if reading.get("grain") else "as a trend over time")

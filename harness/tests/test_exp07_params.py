@@ -142,3 +142,21 @@ def test_a_dimension_under_a_second_name_is_graded_as_the_first():
     named = {"expect": {**case["expect"], "params": {"country_name": ["Germany", "France"], "period": "2026-Q2"}}}
     by_code = _reading({"activity__country": [["DE", "FR"]]}, ["2026-Q2"])
     assert run.reading_errors({"app_opens": by_code}, named, aliases=aliases)["errors"] == []
+
+
+def test_an_analyst_assumption_and_a_partial_period_count_only_when_stated():
+    run = _runner()
+    case = {"expect": {"type": "metric_answer", "metric": "app_opens", "assumption": True,
+                       "params": {"platform": "ios", "period": "2026-05"}}}
+    stated = _reading({"activity__platform": ["ios"]}, ["2026-05"])
+    stated["decisions"].append({"parameter": "filter", "state": "applied", "basis": "analyst_judgement",
+                                "disclose": 'Read "iPhone users" as platform ios, which is broader.'})
+    assert run.reading_errors({"app_opens": stated}, case)["errors"] == []
+    silent = _reading({"activity__platform": ["ios"]}, ["2026-05"])
+    assert run.reading_errors({"app_opens": silent}, case)["errors"] == ["analyst assumption not stated in the answer"]
+    july = {"expect": {"type": "metric_answer", "metric": "app_opens", "partial": True, "params": {"period": "2026-07"}}}
+    covered = _reading({}, ["2026-07-01/2026-07-12"])
+    covered["decisions"].append({"parameter": "period", "state": "applied",
+                                 "disclose": "July 2026 is only partly in the data; this covers 1 to 12 July 2026."})
+    assert run.reading_errors({"app_opens": covered}, july)["errors"] == []
+    assert run.reading_errors({"app_opens": _reading({}, ["2026-07-01/2026-07-12"])}, july)["errors"]

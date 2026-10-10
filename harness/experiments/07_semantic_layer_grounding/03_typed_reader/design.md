@@ -345,3 +345,35 @@ adoption decision is taken on the replication set.
 | closed lists are values of modelled dimension attributes; the word-table seeds are retired | owner (draft 4) | a word table beside the model is a patch; an attribute is part of the model and also serves breakdowns |
 | a misspelling is corrected onto a listed value when code confirms a spelling variant, and disclosed | owner (draft 4) | asking "did you mean android?" for a typo is an unnecessary question; the correction cannot leave the closed world |
 | section 1 wording | challenger | "every fragility" was wrong; the controlled-test row described an arm, not production |
+
+## 13. Draft 5: three sources of a reading (the owner's decisions, 2026-10-10)
+
+The strict closed world (draft 3) let only the value lists produce an answer, so everything else was
+asked about: about one reading in five on the replication sets. The owner restated the order of
+sources the experiment started from (`milestoneA.md`, "basis"):
+
+| source | example | strength | action |
+|---|---|---|---|
+| parameter ontology: a value in the data model's lists | "mobile" is `device_type = mobile` | highest | answer |
+| methodological rule, declared by the data team | "by segment"; the trend grain | high | answer, and name the rule |
+| analyst judgement: what a senior analyst knows without being told | "Deutschland" is Germany; an iPhone runs iOS | lower | answer, and state the assumption |
+| none | "Samsung phones" when the model cannot place them | — | ask, or refuse |
+
+Decisions:
+
+| case | action | the answer says |
+|---|---|---|
+| the same thing in other words: a synonym, a translation, an abbreviation, a misspelling | answer with the listed value | "Read 'Deutschland' as country_name Germany." |
+| a narrower thing than a listed value ("iPhone", "Samsung phones") | answer with the broader value | "Read 'iPhone users' as platform ios, which is broader: it includes more than iPhone." |
+| a period partly inside the data ("July 2026") | answer the covered part | "July 2026 is only partly in the data; this covers 1 to 12 July 2026." |
+
+Rules that keep this safe:
+
+- The basis of an analyst-judgement value is recorded as `analyst_judgement`, so the share of
+  readings each source answers is measured. Each one is a candidate for the lists: a word the data
+  team could add.
+- It needs a clearer reading than a list value: one option at 0.85 or above and no other at 0.15 or
+  above; the round-trip check still confirms the whole reading.
+- An assumption the answer does not state is graded as a silent wrong answer.
+- The suggestion step offers, per value, "the same thing as" and "one kind of" (narrower), and states
+  each value's declared meaning there, so "the Linux desktop app" is compared with "the web client".
