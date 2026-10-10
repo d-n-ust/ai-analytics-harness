@@ -64,12 +64,13 @@ def main() -> None:
     cursor = R.scoped_cursor(con)
     semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                                guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
-    determines, aliases = R.layer_determines(con), R.layer_aliases(con)
+    determines, aliases, rollups = R.layer_determines(con), R.layer_aliases(con), R.layer_rollups(con)
     rows = []
     for rep in range(args.reps):
         for n, test in enumerate(tests):
             for reader in READERS:
-                r = _patient(run_test, test, semantic, cursor, determines, typed=reader == "typed", aliases=aliases)
+                r = _patient(run_test, test, semantic, cursor, determines, typed=reader == "typed", aliases=aliases,
+                             rollups=rollups)
                 rows.append({**test, **r, "n": n, "rep": rep, "reader": reader, "outcome": outcome(r)})
     counts = {reader: {o: sum(1 for r in rows if r["reader"] == reader and r["outcome"] == o) for o in OUTCOMES}
               for reader in READERS}

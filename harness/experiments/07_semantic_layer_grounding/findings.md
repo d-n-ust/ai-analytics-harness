@@ -1392,7 +1392,63 @@ Coverage is the one number on which the typed reader trailed until set 3: on set
 draft 5 it attempts 81%, above the questionnaire's 76%, while the questionnaire's extra attempts are
 where its silent wrong answers come from.
 
-## 36 · Open
+## 36 · Coverage: systematic patterns, and one rule for the method (development only)
+
+**Starting point** (the reader of commit 09a7d50, all four development sets): no silent wrong answer;
+every miss an ask or a missing refusal. Five patterns covered nearly all of them: a word no list holds
+asked about instead of judged (19), the whole-reading check vetoing correct readings (8), an ordinary
+word judged a restriction (6), a word left unmarked by the proposal twice (3), "every X except Y" filed
+as a split (3).
+
+**What the calibrations of this round showed about the decision model:**
+
+| question shape | result |
+|---|---|
+| one choice over about 60 options ("what is 'Japan'?") | confidence spread over several true options; nothing clears the bar |
+| one whole-reading yes/no ("is this an accurate description?") | over every stored run, vetoed 83 right readings for 13 wrong ones |
+| one yes/no about a list of words | said yes to ordinary words ("Compare", "show") at 0.73 to 0.85 |
+| a yes/no with context added ("other than what the reading already uses") | real restrictions fell to 0.44 to 0.68 |
+| one narrow yes/no about one item | wide margins: unmarked restrictions 0.82 to 0.93 against other words 0.53 or less; structural checks right readings 0.73 or more against wrong 0.26 or less |
+| many narrow yes/no in one request (70) | answers between 0.3 and 0.6 for unrelated items; only the ends reliable |
+
+**The rule, now applied at every step:** code enumerates the items (each phrase, each unmarked word,
+each structural judgement); the decision model answers one narrow yes/no about each, in small
+requests; code combines the answers with fixed bars, and an answer between the bars is "unknown", which
+the reader turns into a question.
+
+**Changes** (each with unit tests; 343 pass):
+
+| pattern | change |
+|---|---|
+| the whole-reading check | replaced by one narrow check per structural judgement: a series, values of one dimension added together, values compared, something left out, several periods (each asked only when the proposal made that judgement; veto below 0.5) |
+| unmarked restrictions | each unmarked word gets "does it name a place, device, product, kind of customer or channel?" (bar 0.7) |
+| a thing of a listed kind that no value names ("Canada") | "is it a country?" in a request of its own; at 0.85 or more, with no plausible value of that dimension, refuse |
+| the layer's own words | one set: the metric, entity names and their labels (the layer now declares that a user is called an account), each dimension's name and the words naming it, grammar; used by normalising, lookup and the leftover check |
+| words the proposal left unmarked twice | code marks what it recognises: a series word, a listed value (left out after an exclusion word) |
+| quotes located inside other words ("DE" in "provide") | quotes matched as whole words |
+| "Compare A and B" filed as one figure | a bakery example of a comparison |
+
+The grader accepts a broader value when the answer states it as broader and the data puts the
+labelled value inside it ("Samsung phones" as mobile, label android); such answers are counted apart
+(1 in the final run).
+
+**Development results, typed reader, one repetition each:**
+
+| set | start of round: correct / coverage / balanced accuracy | end of round | silent wrong |
+|---|---|---|---|
+| first replication set (72) | 61 / 91.1% / 85.2% | 63 / 95.6% / 83.7% | 1 → 0 |
+| second replication set (72) | 60 / 81.2% / 85.4% | 70 / 97.9% / 96.5% | 0 → 0 |
+| third replication set (72) | 55 / 73.8% / 80.2% | 61 / 81.0% / 88.1% | 0 → 0 |
+| development tests (23 readings) | 22 / 94.4% / 98.1% | 21 / 88.9% / 96.3% | 0 → 0 |
+
+All three replication sets are burned: these numbers come from sets whose failures were read. A new
+blind set measures this version.
+
+**Left:** refusals turned into asks ("Japan", "TikTok", "Linux": the kind answer below 0.85); verbs
+judged restrictions ("originating", "driven", "acquired"); run-to-run variation of the proposal
+("Androd", "Google Android phones").
+
+## 37 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.

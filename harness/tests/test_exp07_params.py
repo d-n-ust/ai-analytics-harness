@@ -160,3 +160,16 @@ def test_an_analyst_assumption_and_a_partial_period_count_only_when_stated():
                                  "disclose": "July 2026 is only partly in the data; this covers 1 to 12 July 2026."})
     assert run.reading_errors({"app_opens": covered}, july)["errors"] == []
     assert run.reading_errors({"app_opens": _reading({}, ["2026-07-01/2026-07-12"])}, july)["errors"]
+
+
+def test_a_broader_value_stated_as_broader_is_graded_as_the_labelled_one():
+    run = _runner()
+    case = {"expect": {"type": "metric_answer", "metric": "app_opens", "assumption": True,
+                       "params": {"platform": "android", "period": "2026-05"}}}
+    rollups = {"platform": {"device_type": {"android": "mobile", "ios": "mobile", "web": "desktop"}}}
+    stated = _reading({"activity__device_type": ["mobile"]}, ["2026-05"])
+    stated["decisions"].append({"parameter": "filter", "state": "applied", "basis": "analyst_judgement",
+                                "disclose": 'Read "Samsung phones" as device_type mobile, which is broader.'})
+    graded = run.reading_errors({"app_opens": stated}, case, rollups=rollups)
+    assert graded["errors"] == [] and graded["broader"] == ["platform answered as device_type ['mobile']"]
+    assert run.reading_errors({"app_opens": stated}, case)["errors"]                       # no map, no credit

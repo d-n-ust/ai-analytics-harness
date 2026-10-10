@@ -290,7 +290,7 @@ def reader_action(reading: dict) -> str:
 
 
 def reading_errors(readings: dict | None, case: dict, determines: dict | None = None,
-                   aliases: dict | None = None) -> dict | None:
+                   aliases: dict | None = None, rollups: dict | None = None) -> dict | None:
     """The question reader graded as a component, against the case's labels: the action its reading
     implies, and the values it allows for every labelled parameter. This grades the reader alone, so
     a reader error is visible even when the agent recovered from it, and an agent error is not
@@ -343,6 +343,19 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
         if twin in shapes:
             mapped = [None if f is None else frozenset(to.get(v, v) for v in f) for f in shapes.pop(twin)]
             shapes[canon] = shapes.get(canon, mapped) if canon in shapes else mapped
+    # An analyst reading answered with a broader value and stated as broader follows the policy
+    # (design section 13): "Samsung phones" as device_type mobile holds the labelled android. It is
+    # graded as the labelled value; `broader` records that it was less precise.
+    broader = []
+    if expect.get("assumption") and any("which is broader" in (d.get("disclose") or "") for d in reading["decisions"]):
+        for key, value in (expect.get("params") or {}).items():
+            need = {str(v).lower() for v in (value if isinstance(value, list) else [value])}
+            for got_dim, got in list(filters.items()):
+                to = (rollups or {}).get(key, {}).get(got_dim)
+                if got_dim != key and to and need and all(to.get(v) in got for v in need):
+                    filters.pop(got_dim)
+                    filters[key] = need
+                    broader.append(f"{key} answered as {got_dim} {sorted(got)}")
     built = _built_in(expect["metric"]) if expect.get("metric") else {}
     for key, value in built.items():                 # the metric's own filter sets its value
         filters.setdefault(key, {str(value).lower()})
@@ -413,7 +426,8 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
             listed.add("metric_time")
         if got_gb != want_gb and not (want_gb - got_gb <= listed and got_gb - want_gb <= listed):
             errors.append(f"group_by {sorted(got_gb)} instead of {sorted(want_gb)}")
-    return {"action": action, "action_ok": action in _READER_ACTIONS.get(etype, {action}), "errors": errors}
+    return {"action": action, "action_ok": action in _READER_ACTIONS.get(etype, {action}), "errors": errors,
+            "broader": broader}
 
 
 def _shape_errors(key: str, readings: list, need: set, etype: str, covered: bool) -> list[str]:
@@ -449,6 +463,24 @@ def layer_aliases(con) -> dict:
             for b, values in (linked or {}).items():
                 if isinstance(values, dict) and sizes.get(a) == sizes.get(b):
                     out[_dim(b)] = (_dim(a), {str(vb).lower(): str(va).lower() for va, vb in values.items()})
+    cur.close()
+    return out
+
+
+def layer_rollups(con) -> dict:
+    """{dimension: {dimension it rolls up to: {value: value}}}, by short name and lower case, from the
+    value maps the layer derives (platform -> device_type: android -> mobile)."""
+    from agent.guardrails.parameters import surface_for
+    cur = scoped_cursor(con)
+    semantic = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow", semantic_layer=True,
+                               guardrails=parse_cell("R4"), schema=MARTS).toolbox.semantic
+    out: dict = {}
+    for metric in semantic.metrics:
+        surface = surface_for(semantic, cur, metric) or {}
+        for a, linked in ((surface.get("parameters") or {}).get("filters") or {}).get("determines", {}).items():
+            for b, values in (linked or {}).items():
+                if isinstance(values, dict):
+                    out.setdefault(_dim(a), {})[_dim(b)] = {str(va).lower(): str(vb).lower() for va, vb in values.items()}
     cur.close()
     return out
 

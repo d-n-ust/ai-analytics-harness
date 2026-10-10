@@ -45,7 +45,7 @@ def _patient(fn, *args, **kwargs):
 
 
 def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None,
-             typed: bool = False, aliases: dict | None = None) -> dict:
+             typed: bool = False, aliases: dict | None = None, rollups: dict | None = None) -> dict:
     expect = test["expect"]
     if test["element"] == "metric":
         choice = decisions.choose_metric(test["q"], semantic.metrics, forks.words_by_metric(semantic))
@@ -57,12 +57,13 @@ def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | 
     cache: dict = {}
     reading, cost = decisions.reading_for(test["q"], expect.get("metric", "app_opens"), semantic, cursor,
                                           R.GOVERNANCE if governance is None else governance, cache, typed)
-    graded = R.reading_errors(cache, {"expect": expect}, determines, aliases)
+    graded = R.reading_errors(cache, {"expect": expect}, determines, aliases, rollups)
     return {"result": graded["action"], "ok": graded["action_ok"] and not graded["errors"],
             "errors": ([] if graded["action_ok"] else [f"action {graded['action']}"]) + graded["errors"],
             "reading": {"filters": reading["filters"], "periods": reading["periods"], "group_by": reading["group_by"],
                         "grain": reading.get("grain"), "decisions": reading["decisions"],
                         "proposal": reading.get("proposal"), "seconds": reading.get("seconds")},
+            "broader": graded.get("broader") or [],
             "open": [f"{d['state']}: {d['why']}" for d in reading["decisions"] if d["state"] in ("refuse", "ungrounded")],
             "cost": cost}
 
@@ -83,8 +84,9 @@ def main() -> None:
     cursor = R.scoped_cursor(con)
     semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                                guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
-    determines, aliases = R.layer_determines(con), R.layer_aliases(con)
-    results = [{**t, **_patient(run_test, t, semantic, cursor, determines, typed=args.reader == "typed", aliases=aliases),
+    determines, aliases, rollups = R.layer_determines(con), R.layer_aliases(con), R.layer_rollups(con)
+    results = [{**t, **_patient(run_test, t, semantic, cursor, determines, typed=args.reader == "typed", aliases=aliases,
+                                rollups=rollups),
                 "reader": args.reader} for t in tests]
     groups: dict = {}
     for r in results:

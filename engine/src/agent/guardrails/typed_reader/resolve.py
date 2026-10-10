@@ -56,10 +56,16 @@ def _quotes(proposal: dict) -> list[str]:
     return [q for q in out if q]
 
 
+def _spans(question: str, quotes: list) -> list:
+    """Where each quote occurs in the question, as whole words: "DE" is not the "de" in "provide"."""
+    return [(m.start(), m.end()) for q in quotes
+            for m in re.finditer(rf"(?<!\w){re.escape(q)}(?!\w)", question, re.I)]
+
+
 def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     """PURE. The words the layer knows (a dimension value, a date word, a series word, a "by ..."
     phrase) that lie inside no marked phrase. Empty when the proposal accounts for the question."""
-    spans = [(i, i + len(q)) for q in _quotes(proposal) for i in [question.lower().find(q.lower())] if i >= 0]
+    spans = _spans(question, _quotes(proposal))
     covered = lambda a, b: any(a < e and b > s for s, e in spans)        # noqa: E731
     hits = []
     for _d, m in _values(surface):
@@ -77,20 +83,30 @@ def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     return sorted({h for a, b, h in hits if not covered(a, b)})
 
 
+def own_words(surface: dict) -> set:
+    """PURE. Words the layer itself defines, which restrict nothing: the metric ("app opens"), the
+    entities and their labels ("users", "accounts"), each dimension's name and the words naming it in
+    its description ("acquisition channel"), and grammar. Value words are kept out."""
+    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
+    own |= {w for e in surface.get("entities") or () for w in _tokens(e)}
+    own |= {w for d in surface["parameters"]["filters"]["dimensions"] for w in _tokens(d.get("entity") or "")}
+    values = {w for _d, m in _values(surface) for w in _tokens(str(m))}
+    own |= {w for d in _dimensions(surface) for w in _tokens(d["column"])
+            + _tokens((d.get("description") or "").split(". ")[0].split(":")[0]) if w not in values}
+    return own | _GRAMMAR
+
+
 def normalised(proposal: dict, surface: dict, principles: list, question: str = "") -> dict:
     """PURE. The proposal with misfiled phrases moved to where the layer says they belong, before
     anything is resolved: a term made only of the metric's own words ("app" in "mobile app opens") is
     dropped, because what is counted is not a restriction; a term that names a split ("by country")
     becomes a breakdown; a breakdown whose words are values ("across EMEA") becomes a term of every
     figure. The confirmation sees the result, so a wrong move is asked about, not served."""
-    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
+    own = own_words(surface)
     figures, breakdown = [], list(proposal.get("breakdown") or [])
     for f in proposal.get("figures") or []:
         terms = []
         for t in f.get("terms") or []:
-            words = _tokens(t["quote"])
-            if words and set(words) <= own:
-                continue
             after_by = re.search(rf"\b(?:by|per)\s+{re.escape(t['quote'])}", question, re.I)
             if any(x["quote"].lower() == t["quote"].lower() and x["keep"] == t["keep"] for x in terms):
                 continue
@@ -98,12 +114,16 @@ def normalised(proposal: dict, surface: dict, principles: list, question: str = 
                     and (_SPLIT_LEAD.match(t["quote"]) or after_by):
                 breakdown.append({"quote": t["quote"] if _SPLIT_LEAD.match(t["quote"]) else after_by.group()})
                 continue
+            words = _tokens(t["quote"])
+            if words and set(words) <= own:              # the layer's own words: no restriction
+                continue
             terms.append(t)
         if terms:
             figures.append({"terms": terms})
     kept = []
     for b in breakdown:
-        exclusion = re.search(r"\b(?:every|all)\s+\w+\s+(?:except|other than|excluding|but)\s+(.+)$", b["quote"], re.I)
+        exclusion = re.search(r"\b(?:every|all)\s+(?:\w+\s+){1,3}?(?:except|other than|excluding|but)\s+(.+)$",
+                              b["quote"], re.I)
         found = lookup(exclusion.group(1), surface) if exclusion else {}
         if exclusion and (found["values"] or found["ambiguous"]):
             term = {"quote": exclusion.group(1), "keep": False}
@@ -129,7 +149,7 @@ by for from to into onto over under during within without about across through p
 so if then i me my we us our you your he him his she her it its they them their what which who whom whose
 when where why how many much is are was were be been being am do does did done have has had having will
 would shall should can could may might must there here not
-except excluding besides apart other only also just together combined versus vs""".split())
+except excluding besides apart other only also just together combined versus vs with via side""".split())
 
 
 def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
@@ -137,11 +157,9 @@ def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
     series words, and the words the layer itself defines (the metric, its dimensions and their entities).
     A restriction the proposal left unmarked ("Germani", "Samsung") is among these whether or not any
     list knows the word; the confirmation asks whether any of them narrows what is counted."""
-    spans = [(i, i + len(q)) for q in _quotes(proposal) for i in [question.lower().find(q.lower())] if i >= 0]
+    spans = _spans(question, _quotes(proposal))
     taken = [(m.start(), m.end()) for rx in (DATE_WORDS, SERIES_WORDS) for m in rx.finditer(question)] + spans
-    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
-    own |= {w for d in surface["parameters"]["filters"]["dimensions"]
-            for w in _tokens(d.get("entity") or "") + _tokens(d.get("column") or "")}       # "users", "platform"
+    own = own_words(surface)
     out = []
     for m in re.finditer(r"[A-Za-z][A-Za-z'-]*", question):
         word = m.group()
@@ -149,6 +167,34 @@ def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
                 or set(_tokens(word)) <= own or word not in out and word.lower() in (w.lower() for w in out):
             continue
         out.append(word)
+    return out
+
+
+_UNITS = {"daily": "day", "weekly": "week", "monthly": "month", "quarterly": "quarter", "yearly": "year",
+          "day by day": "day", "week by week": "week", "month by month": "month"}
+_NEGATION = re.compile(r"\b(?:not|non|except|excluding|other than|apart from|besides|without|but)\s+(?:\w+\s+){0,2}$", re.I)
+
+
+def marked_by_code(question: str, proposal: dict, missed: list, surface: dict) -> dict:
+    """PURE. The proposal with the words code recognises on its own marked, after the proposal model
+    left them unmarked twice ("daily", "DE"): a series word sets the bucket size, and a listed value
+    becomes a term of every figure. The confirmation still checks the
+    result. A value after an exclusion word ("except IN") is marked as left out. Anything else stays
+    unmarked, and the reader asks."""
+    out = {**proposal, "figures": [dict(f) for f in proposal.get("figures") or []]}
+    values = {str(m).lower(): m for _d, m in _values(surface)}
+    for word in missed:
+        unit = _UNITS.get(word.lower())
+        if SERIES_WORDS.fullmatch(word) and not out.get("series"):
+            out["series"] = {"quote": word, "unit": unit}                       # "trend": the rule's grain
+        if SERIES_WORDS.fullmatch(word):
+            if unit and not out["series"].get("unit"):
+                out["series"] = {"quote": word, "unit": unit}
+            continue
+        at = question.find(word)
+        if word.lower() in values and at >= 0:
+            term = {"quote": word, "keep": not _NEGATION.search(question[:at])}      # "except IN": left out
+            out["figures"] = [{"terms": f["terms"] + [term]} for f in out["figures"]] or [{"terms": [term]}]
     return out
 
 
@@ -183,10 +229,8 @@ def lookup(quote: str, surface: dict) -> dict:
             ambiguous.append((str(m), sorted(owners[str(m).lower()])))
         elif (dim, m) not in values:
             values.append((dim, m))
-    # Words the layer itself defines restrict nothing: the metric ("app opens") and the entities its
-    # dimensions belong to ("users"). "mobile app opens" and "users in Germany" were asked about.
-    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
-    own |= {w for d in surface["parameters"]["filters"]["dimensions"] for w in _tokens(d.get("entity") or "")}
+    # Words the layer itself defines restrict nothing ("mobile app opens", "users in Germany").
+    own = own_words(surface)
     rest = [w for i, w in enumerate(words) if i not in taken and w not in _JOINING and w not in own]
     return {"values": values, "rest": rest, "ambiguous": ambiguous}
 
@@ -250,7 +294,12 @@ def _containing(surface: dict) -> dict:
     return closed
 
 
-def judged(quote: str, values: list, answer: dict, surface: dict) -> dict:
+# A narrow yes/no is reliable only near its ends: answers between 0.3 and 0.6 were common noise in
+# calibration. A refusal on a phrase's kind alone needs this much.
+KIND = 0.85
+
+
+def judged(quote: str, values: list, answer: dict, surface: dict, kinds: dict | None = None) -> dict:
     """PURE. The reader's reply for a phrase the lists do not settle alone, from the decision model's
     choice among, per value, "the same thing as" and "one kind of" (narrower), per dimension "one the
     layer does not have", and "something else". `values` are the listed values code found inside the
@@ -320,6 +369,20 @@ def judged(quote: str, values: list, answer: dict, surface: dict) -> dict:
         return {"kind": "refuse", "dim": dim,
                 "why": f"\"{quote}\" names something the layer does not have; the governed "
                        f"{dim.split('__')[-1]} values are {', '.join(map(str, members))}"}
+    # The closed world: a thing of a kind the layer lists, named by no value of that kind, is not in the
+    # data ("Japan" is a country; the countries are eight others).
+    kind = max((kinds or {}).items(), key=lambda kv: kv[1], default=(None, 0.0))
+    # Only values of that dimension, or of one that holds the same rows (country and country_name),
+    # count against the refusal: "Canada" read as inside the Americas region is world knowledge, and the
+    # layer's Americas is US and BR.
+    same_rows = {kind[0]} | {b for (a, _v), held in holds.items() if a == kind[0] for b, _w in held} \
+        | {a for (a, _v), held in holds.items() for b, _w in held if b == kind[0]}
+    own_values = [v for k, v in listed.items() if k.partition(":")[2].partition("=")[0] in same_rows]
+    if kind[1] >= KIND and all(v < PLAUSIBLE for v in own_values):
+        members = next((d["members"] for d in _dimensions(surface) if d["name"] == kind[0]), [])
+        return {"kind": "refuse", "dim": kind[0],
+                "why": f"\"{quote}\" is a {kind[0].split('__')[-1].replace('_', ' ')} the layer does not have; the "
+                       f"governed values are {', '.join(map(str, members))}"}
     if values:
         found = " and ".join(f"{d.split('__')[-1]} {v}" for d, v in values)
         return {"kind": "ask", "why": f"\"{quote}\" holds {found} and other words; ask whether it means {found}"}
@@ -434,32 +497,6 @@ def _figure_filters(terms: list, surface: dict) -> dict:
     return out
 
 
-def _figure_words(terms: list) -> str:
-    """One figure in plain words: "platform android and ios together", "every platform except web",
-    "device type mobile and country name Brazil". Values only: saying each value's declared meaning
-    made the confirmation judge the definition, which the answer discloses (21 false asks on the
-    second replication set); naming a phrase's unused words made it treat "accounts" as a dropped
-    restriction (6 of 8 correct readings flagged in calibration). Words beside a value are checked
-    before this, in the suggestion step (`kept`)."""
-    keep: dict = {}
-    drop: dict = {}
-    for t in terms:
-        for dim, value in t["values"]:
-            # An analyst's reading is said in the user's words: it was judged at the higher bar and is
-            # stated in the answer, and shown as the value ("device type mobile" for "Samsung phones")
-            # the round trip judged it again and said no (development run, 2026-10-10).
-            said = f"\"{t['quote']}\"" if t.get("why") else str(value)
-            (keep if t["keep"] else drop).setdefault(dim, []).append(said)
-    parts = []
-    for dim in list(keep) + [d for d in drop if d not in keep]:
-        label = dim.split("__")[-1].replace("_", " ")
-        named = " and ".join(keep.get(dim, []))
-        said = ((named if all(v.startswith('"') for v in keep[dim]) else f"{label} {named}")
-                + (" together" if len(keep[dim]) > 1 else "")) if dim in keep else f"every {label}"
-        parts.append(said + (f" except {' and '.join(drop[dim])}" if drop.get(dim) else ""))
-    return " and ".join(parts)
-
-
 def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.date, hi: dt.date,
           seasons: dict, outcomes: list) -> dict:
     """PURE. The reading, in the form `decisions.check` reads, from the proposal and its resolved
@@ -492,7 +529,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
             f"{dim} in ({', '.join(map(str, r))})" if isinstance(r, list) else f"{dim} = {r}" for r in readings),
             "analyst_judgement" if assumed else "question", disclose=disclose))
 
-    periods, said_as, declared = [], {}, []
+    periods, declared = [], []
     for item in proposal.get("time") or []:
         period, why = period_of(item.get("value"), seasons)
         if period is None:
@@ -500,16 +537,13 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         elif period not in periods:
             periods.append(period)
             if SEASON.fullmatch(str(item.get("value") or "")):
-                # A season is the calendar's declaration: the answer states its months, and the round
-                # trip sees the user's words ("winter 2026" against "December 2025 to February 2026"
-                # was read as a different winter).
-                said_as[period] = item["quote"]
+                # A season is the calendar's declaration, so the answer states its months.
                 declared.append(f"{item['quote'][0].upper() + item['quote'][1:]} is read as {readable(period)} "
                                 f"(the company calendar).")
     # A period with no day in the data is refused. A period partly inside it is answered for the days
     # it covers, and the answer says so (the owner's decision, design section 13).
     uncovered = [p for p in periods if not _covered(p, lo, hi)]
-    asked, partial = list(periods), []
+    partial = []
     for i, p in enumerate(periods):
         first, last = _period_span(p)
         if p not in uncovered and not (lo <= first and last <= hi):
@@ -524,7 +558,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
     elif periods:
         decisions.append(_decision("period", " or ".join(periods), "question", disclose=" ".join(declared + partial)))
 
-    group_by, separate, grain, splits = [], False, None, []
+    group_by, separate, grain = [], False, None
     series = proposal.get("series")
     if series:
         group_by, grain = ["metric_time"], series.get("unit") if series.get("unit") in _TIME_UNITS else None
@@ -534,15 +568,12 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         kind, target = split_by(b["quote"], surface, principles)
         if kind == "dimension" and target not in group_by:
             group_by.append(target)
-            splits.append(target.split("__")[-1].replace("_", " "))
             decisions.append(_decision("group_by", [target], "question"))
         elif kind == "rule":
             rule = by_id[target]
             dims_ = [d for d in rule.get("default", []) if d not in filters]
             group_by += [d for d in dims_ if d not in group_by]
             separate = rule.get("combine") == "separate"
-            # Said in the user's words: which dimensions the rule supplies is governed, not asked about.
-            splits.append(" ".join(_tokens(_SPLIT_LEAD.sub("", b["quote"]))))
             decisions.append(_decision("group_by", dims_, "governed_principle", disclose=rule.get("disclose", ""),
                                        why=f"principle {rule['id']}"))
         elif kind == "time":
@@ -558,8 +589,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         decisions.append(_ungrounded("premise", f"the question takes as given \"{proposal['premise'].get('quote')}\"; "
                                      "the typed reader does not check stated facts yet"))
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": {},
-            "figures": [_figure_words(f) for f in terms if any(t["values"] for t in f)], "splits": splits,
-            "asked_periods": asked, "said_as": said_as,
+
             "values": {d["name"]: d["members"] for d in _dimensions(surface)},
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),

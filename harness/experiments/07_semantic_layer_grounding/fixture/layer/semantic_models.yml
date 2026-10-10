@@ -24,7 +24,7 @@ semantic_model:
   defaults: {agg_time_dimension: active_date}
   entities:
     - {name: activity, type: primary, expr: "user_id || '|' || CAST(active_date AS VARCHAR)"}
-    - {name: user, type: foreign, expr: user_id}
+    - {name: user, type: foreign, expr: user_id, label: account}
   dimensions:
     - {name: active_date, type: time, type_params: {time_granularity: day}}
     - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
@@ -65,7 +65,7 @@ semantic_model:
   description: "The account dimension. One row is one signup."
   node_relation: {schema_name: wh_06, alias: dim_users}
   defaults: {agg_time_dimension: signup_date}
-  entities: [{name: user, type: primary, expr: user_id}]
+  entities: [{name: user, type: primary, expr: user_id, label: account}]
   dimensions:
     - {name: signup_date, type: time, type_params: {time_granularity: day}}
     - {name: is_internal, type: categorical, description: "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter."}
@@ -85,7 +85,7 @@ semantic_model:
     # "every fact carries user_id", and paying_user_count counts it) — the relationship existed in
     # the mart and was simply never declared, so the graph truthfully reported subscription and
     # user as unjoinable and every cross-entity verdict inherited a wrong reason.
-    - {name: user, type: foreign, expr: user_id}
+    - {name: user, type: foreign, expr: user_id, label: account}
   dimensions:
     - {name: started_date, type: time, type_params: {time_granularity: day}}
     - {name: cohort_month, type: categorical, expr: "strftime(started_date, '%Y-%m')",

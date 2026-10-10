@@ -135,6 +135,9 @@ def parameter_surface(models: dict, metrics: dict, metric: str, members: dict,
             for d in reachable_dimensions(models, metrics, metric)]
     return {
         "metric": metric,
+        # Every entity's name and declared label ("user", "account"): the words for the rows counted.
+        "entities": sorted({w for m in models.values() for e in m.get("entities", [])
+                            for w in (e["name"], e.get("label")) if w}),
         "description": " ".join((metrics[metric].get("description") or "").split()),
         "agg": measure.get("agg"),
         "filter": metric_filter(metrics, metric),

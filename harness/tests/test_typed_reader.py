@@ -138,7 +138,6 @@ def test_periods_outside_the_data_refuse_partly_inside_answer_the_covered_part_a
     assert "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026." in \
         [d for d in summer["decisions"] if d["parameter"] == "period"][0]["disclose"]
     asked = _build({**_proposal(), "time": [{"quote": "summer 2026", "value": "2026-SU"}]})
-    assert "in summer 2026," in TR.language.described(asked, "app_opens")                    # the user's words
     assert "Summer 2026 is read as June 2026 to August 2026 (the company calendar)." in \
         [d for d in asked["decisions"] if d["parameter"] == "period"][0]["disclose"]
     assert "ungrounded" in _states(_build(_proposal(time=())))
@@ -193,7 +192,7 @@ def test_an_unmarked_word_gets_one_retry_and_a_misspelling_is_corrected(monkeypa
                                        suggestion={"sug0": {"probabilities": {"value:activity__platform=android": 0.95}}})
     assert reading["filters"] == {"activity__platform": ["android"]} and _states(reading) == {"applied"}
     assert "Read \"Andriod\" as platform android" in [d for d in reading["decisions"] if d["parameter"] == "filter"][0]["disclose"]
-    assert "roundtrip" in asked[-1]                            # the corrected reading is confirmed
+    assert "lw0" in asked[-1]                                  # the confirmation ran
     assert TR.replay(reading, q, "app_opens", None, None, {})["filters"] == reading["filters"]
     assert cache["_typed"] and round(cost, 3) == 0.004
     served = {e["kind"]: e["served"] for e in reading["language"].values()}
@@ -201,13 +200,12 @@ def test_an_unmarked_word_gets_one_retry_and_a_misspelling_is_corrected(monkeypa
 
 
 def test_an_unconfirmed_judgement_makes_the_reader_ask(monkeypatch):
-    q = "How many app opens were there in May 2026?"
-    proposal = {**_proposal(), "time": [{"quote": "May 2026", "value": "2026-05"}]}
-    reading, *_ = _run(monkeypatch, q, [proposal], confirm={"roundtrip": {"noul": 0.3}})
+    q = "How did Android app opens break down by segment in June 2026?"
+    proposal = {**_proposal([[("Android", True)]], breakdown=("by segment",), series={"quote": "How did", "unit": None}),
+                "time": [{"quote": "June 2026", "value": "2026-06"}]}
+    reading, *_ = _run(monkeypatch, q, [proposal], confirm={"series": {"noul": 0.25}})
     assert "ungrounded" in _states(reading)
-    assert any("the number of app opens with no restriction, in May 2026, as one number for the whole period."
-               in d["why"] for d in reading["decisions"])
-
+    assert any("several numbers over time" in d["why"] for d in reading["decisions"])
 
 def test_a_replay_that_needs_a_new_request_is_marked_stale(monkeypatch):
     q = "How many app opens were there in May 2026?"
@@ -222,16 +220,6 @@ def test_misfiled_phrases_are_moved_to_where_the_layer_says_they_belong():
                      SURFACE, PRINCIPLES)
     assert [t["quote"] for t in p["figures"][0]["terms"]] == ["mobile", "across EMEA"]
     assert p["breakdown"] == [{"quote": "by country"}]
-
-
-def test_the_round_trip_sentence_states_figures_periods_and_shape():
-    both = _build(_proposal([[("Android", True), ("iOS", True)]], series={"quote": "weekly", "unit": "week"}))
-    assert TR.language.described(both, "app_opens") == (
-        "the number of app opens for platform android and ios together, in June 2026, one number per week.")
-    sep = _build(_proposal([[("Android", True)], [("iOS", True)]]))
-    assert TR.language.described(sep, "app_opens").startswith(
-        "the number of app opens separately for platform android, and for platform ios, in June 2026")
-    assert "every platform except web" in TR.language.described(_build(_proposal([[("web", False)]])), "app_opens")
 
 
 def test_one_value_list_under_two_names_offers_one_not_in_the_list_option():
@@ -328,14 +316,6 @@ def test_split_phrases_that_exclude_or_name_no_category_are_normalised():
     assert p["breakdown"] == [] and p["figures"] == [{"terms": [{"quote": "web", "keep": False}]}]
 
 
-def test_an_analyst_reading_is_said_in_the_users_words_in_the_round_trip():
-    terms = [[{"quote": "Samsung phones", "keep": True, "values": [("activity__device_type", "mobile")],
-               "rest": [], "ambiguous": [], "why": 'read "Samsung phones" as device_type mobile, which is broader'}]]
-    reading = R.build(_proposal([[("Samsung phones", True)]]), terms, SURFACE, PRINCIPLES, LO, HI, SEASONS, [])
-    assert reading["filters"] == {"activity__device_type": ["mobile"]}
-    assert TR.language.described(reading, "app_opens").startswith('the number of app opens for "Samsung phones", in')
-
-
 def test_a_misspelled_value_word_must_be_marked_too():
     """i09 of the third replication set: "Germani" left unmarked, and the total over every country served."""
     surface = {**SURFACE, "parameters": {"filters": {"dimensions": SURFACE["parameters"]["filters"]["dimensions"]
@@ -369,3 +349,53 @@ def test_an_unmarked_restriction_word_makes_the_reader_ask(monkeypatch):
     reading, _cost, asked, _cache = _run(monkeypatch, q, [proposal, proposal], confirm={"lw2": {"noul": 0.93}})
     assert reading["filters"] == {} and "ungrounded" in _states(reading)
     assert any('names "Germani"' in d["why"] for d in reading["decisions"]) and {"lw0", "lw1", "lw2"} <= set(asked[-1])
+
+
+def test_a_thing_of_a_listed_kind_that_no_value_names_is_refused():
+    other = {"probabilities": {"other": 0.6, "absent:activity__country": 0.4}}
+    assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.92})["kind"] == "refuse"
+    assert R.judged("Japan", [], other, SURFACE, {"activity__country": 0.7})["kind"] == "ask"      # below the bar
+    elsewhere = {"probabilities": {"other": 0.5, "part:activity__region=Americas": 0.3, "absent:activity__country": 0.2}}
+    assert R.judged("Canada", [], elsewhere, SURFACE, {"activity__country": 0.89})["kind"] == "refuse"
+    plausible = {"probabilities": {"other": 0.6, "value:activity__country=US": 0.3}}
+    assert R.judged("the States", [], plausible, SURFACE, {"activity__country": 0.95})["kind"] == "ask"
+
+
+def test_code_marks_a_series_word_and_a_listed_value_the_proposal_left_unmarked():
+    q = "Could you please provide the number of mobile app opens from DE in May 2026, daily?"
+    p = R.marked_by_code(q, _proposal([[("mobile", True)]]), ["DE", "daily"], SURFACE)
+    assert p["series"] == {"quote": "daily", "unit": "day"}
+    assert p["figures"] == [{"terms": [{"quote": "mobile", "keep": True}, {"quote": "DE", "keep": True}]}]
+    assert R.marked_by_code("app opens except DE", _proposal(), ["DE"], SURFACE)["figures"] == \
+        [{"terms": [{"quote": "DE", "keep": False}]}]                                                  # left out
+
+
+def test_each_structural_judgement_gets_one_narrow_question():
+    def checks(proposal):
+        terms = [[{**t, **R.lookup(t["quote"], SURFACE)} for t in f["terms"]] for f in proposal["figures"]]
+        return set(TR.language.structure_questions(proposal, _build(proposal), terms))
+    assert checks(_proposal([[("Android", True), ("iOS", True)]])) == {"combined0:activity__platform"}
+    assert checks(_proposal([[("mobile", True), ("DE", True)]])) == set()          # two filters, not a sum
+    assert checks(_proposal([[("Android", True)], [("iOS", True)]])) == {"separate"}
+    assert checks({**_proposal([[("web", False)]]), "series": {"quote": "weekly", "unit": "week"}}) == {"series", "except0_0"}
+    assert "periods" in checks({**_proposal(), "time": [{"quote": "Nov 2025", "value": "2025-11"}, {"quote": "Apr 2026", "value": "2026-04"}]})
+    shared = _proposal([[("DE", True), ("Android", True)], [("DE", True), ("iOS", True)]])
+    terms = [[{**t, **R.lookup(t["quote"], SURFACE)} for t in f["terms"]] for f in shared["figures"]]
+    assert TR.language.structure_questions(shared, _build(shared), terms)["separate"]["instructions"] == \
+        "Does the question ask for a separate number for each of Android and iOS?"
+
+def test_a_phrase_that_names_a_dimension_is_not_a_restriction():
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": [
+        {**_dim("channel", ["organic", "referral"]), "description": "The acquisition channel of the account. More."}]}}}
+    p = R.normalised(_proposal([[("acquisition channel", True), ("referral", False)]]), surface, PRINCIPLES)
+    assert p["figures"] == [{"terms": [{"quote": "referral", "keep": False}]}]
+    assert R.normalised(_proposal([[("every channel", True)]]), surface, PRINCIPLES)["figures"] == []
+    assert R.normalised(_proposal([[("organic", True)]]), surface, PRINCIPLES)["figures"] != []     # a value stays
+
+
+def test_a_short_value_is_found_as_a_whole_word_only():
+    q = "Could you please provide the number of mobile app opens from DE in May 2026?"
+    marked = {**_proposal([[("mobile", True), ("DE", True)]], time=()), "time": [{"quote": "May 2026", "value": "2026-05"}]}
+    assert R.unaccounted(q, marked, SURFACE) == []
+    assert R.marked_by_code("daily app-open trend from referal in April 2026", _proposal(), ["trend"], SURFACE)["series"] == \
+        {"quote": "trend", "unit": None}

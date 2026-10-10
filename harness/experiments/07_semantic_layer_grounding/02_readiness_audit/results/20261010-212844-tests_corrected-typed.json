@@ -1,0 +1,6948 @@
+[
+ {
+  "element": "platform",
+  "block": "combined values",
+  "type": "heldout",
+  "q": "Hey, what was the total number of app opens from Android and iOS together in May 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-05"
+   }
+  },
+  "group": "i00",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.83
+  },
+  "open": [],
+  "cost": 0.00042402,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "combined values",
+  "type": "heldout",
+  "q": "total number of app opens from Android and iOS together in May 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-05"
+   }
+  },
+  "group": "i00",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.83
+  },
+  "open": [],
+  "cost": 0.00041979,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "combined values",
+  "type": "heldout",
+  "q": "Please provide the total number of app opens from Android and iOS together in May 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-05"
+   }
+  },
+  "group": "i00",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.63
+  },
+  "open": [],
+  "cost": 0.000425914,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "Can you help me compare app opens from the US and GB during the first quarter of 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US",
+     "GB"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US or activity__country = GB",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.75
+  },
+  "open": [],
+  "cost": 0.000433586,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "Compare app opens: US and GB during the first quarter of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US",
+     "GB"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US or activity__country = GB",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.69
+  },
+  "open": [],
+  "cost": 0.00042964800000000003,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared values breakdown",
+  "type": "heldout",
+  "q": "I would like to compare app opens from the US and GB during the first quarter of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "GB"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "country"
+   ]
+  },
+  "group": "i01",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US",
+     "GB"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US or activity__country = GB",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "GB",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.71
+  },
+  "open": [],
+  "cost": 0.000433586,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "hey, what was the number of app opens from every acquisition channel except referral in the second half of 2025?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "channel": [
+     "content_seo",
+     "organic",
+     "paid_search",
+     "partnerships"
+    ],
+    "period": "2025-H2"
+   },
+   "partial": true
+  },
+  "group": "i02",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     [
+      "content_seo",
+      "organic",
+      "paid_search",
+      "partnerships"
+     ]
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel in (content_seo, organic, paid_search, partnerships)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "the second half of 2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: the number of app opens for every channel except referral, in the second half of 2025, as one number for the whole period.",
+     "confidence": 0.39
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"acquisition\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "referral",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second half of 2025",
+      "value": "2025-H2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.1
+  },
+  "open": [
+   "ungrounded: not confirmed: the number of app opens for every channel except referral, in the second half of 2025, as one number for the whole period.",
+   "ungrounded: the question names \"acquisition\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.000414814,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "number of app opens, every acquisition channel except referral, second half of 2025",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "channel": [
+     "content_seo",
+     "organic",
+     "paid_search",
+     "partnerships"
+    ],
+    "period": "2025-H2"
+   },
+   "partial": true
+  },
+  "group": "i02",
+  "result": "refuse",
+  "ok": false,
+  "errors": [
+   "action refuse"
+  ],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     [
+      "content_seo",
+      "organic",
+      "paid_search",
+      "partnerships"
+     ]
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"acquisition channel\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel in (content_seo, organic, paid_search, partnerships)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "the second half of 2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "acquisition channel",
+        "keep": false
+       },
+       {
+        "quote": "referral",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "second half of 2025",
+      "value": "2025-H2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.14
+  },
+  "open": [
+   "refuse: \"acquisition channel\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral"
+  ],
+  "cost": 0.000571428,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "Please provide the number of app opens from every acquisition channel except referral in the second half of 2025.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "channel": [
+     "content_seo",
+     "organic",
+     "paid_search",
+     "partnerships"
+    ],
+    "period": "2025-H2"
+   },
+   "partial": true
+  },
+  "group": "i02",
+  "result": "refuse",
+  "ok": false,
+  "errors": [
+   "action refuse"
+  ],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     [
+      "content_seo",
+      "organic",
+      "paid_search",
+      "partnerships"
+     ]
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"acquisition channel\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel in (content_seo, organic, paid_search, partnerships)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "the second half of 2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "acquisition channel",
+        "keep": true
+       },
+       {
+        "quote": "referral",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second half of 2025",
+      "value": "2025-H2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.84
+  },
+  "open": [
+   "refuse: \"acquisition channel\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral"
+  ],
+  "cost": 0.000574888,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "Can I see app opens from every platform except unknown during the second quarter of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "web"
+    ],
+    "period": "2026-Q2"
+   }
+  },
+  "group": "i03",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "web"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios, web)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "unknown",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.89
+  },
+  "open": [],
+  "cost": 0.000406356,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "app opens from every platform except unknown during the second quarter of 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "web"
+    ],
+    "period": "2026-Q2"
+   }
+  },
+  "group": "i03",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "web"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"every platform\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios, web)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "unknown",
+        "keep": false
+       },
+       {
+        "quote": "every platform",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.1
+  },
+  "open": [
+   "ungrounded: \"every platform\" matches no value of the layer"
+  ],
+  "cost": 0.000556638,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "heldout",
+  "q": "Please provide the records for app opens from every platform except unknown during the second quarter of 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "web"
+    ],
+    "period": "2026-Q2"
+   }
+  },
+  "group": "i03",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "web"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios, web)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: the number of app opens for every platform except unknown, in Q2 2026 (April to June), as one number for the whole period.",
+     "confidence": 0.44
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "unknown",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.24
+  },
+  "open": [
+   "ungrounded: not confirmed: the number of app opens for every platform except unknown, in Q2 2026 (April to June), as one number for the whole period."
+  ],
+  "cost": 0.000409896,
+  "reader": "typed"
+ },
+ {
+  "element": "device_type",
+  "block": "group value and country code",
+  "type": "heldout",
+  "q": "Hey, what was the number of mobile app opens from DE in May 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "country": "DE",
+    "period": "2026-05"
+   }
+  },
+  "group": "i04",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ],
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       },
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.15
+  },
+  "open": [],
+  "cost": 0.0008126660000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "device_type",
+  "block": "group value and country code",
+  "type": "heldout",
+  "q": "number of mobile app opens from DE in May 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "country": "DE",
+    "period": "2026-05"
+   }
+  },
+  "group": "i04",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ],
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       },
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.06
+  },
+  "open": [],
+  "cost": 0.000806936,
+  "reader": "typed"
+ },
+ {
+  "element": "device_type",
+  "block": "group value and country code",
+  "type": "heldout",
+  "q": "Could you please provide the number of mobile app opens from DE in May 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "country": "DE",
+    "period": "2026-05"
+   }
+  },
+  "group": "i04",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     [
+      "DE",
+      "DE"
+     ]
+    ],
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question's words \"DE\" are not accounted for"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country in (DE, DE)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "DE",
+        "keep": true
+       },
+       {
+        "quote": "mobile",
+        "keep": true
+       },
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.67
+  },
+  "open": [
+   "ungrounded: the question's words \"DE\" are not accounted for"
+  ],
+  "cost": 0.00079225,
+  "reader": "typed"
+ },
+ {
+  "element": "region",
+  "block": "combined group values and partial range",
+  "type": "heldout",
+  "q": "Can you pull up app opens from EMEA and APAC together driven by paid search from June to August 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "region": [
+     "EMEA",
+     "APAC"
+    ],
+    "channel": "paid_search",
+    "period": "2026-06-01/2026-08-31"
+   }
+  },
+  "group": "i05",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__region": [
+     [
+      "EMEA",
+      "APAC"
+     ]
+    ],
+    "activity__channel": [
+     "paid_search"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__region in (EMEA, APAC)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = paid_search",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"driven\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "EMEA",
+        "keep": true
+       },
+       {
+        "quote": "APAC",
+        "keep": true
+       },
+       {
+        "quote": "paid search",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from June to August 2026",
+      "value": "2026-06/2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.94
+  },
+  "open": [
+   "ungrounded: the question names \"driven\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.00046148399999999996,
+  "reader": "typed"
+ },
+ {
+  "element": "region",
+  "block": "combined group values and partial range",
+  "type": "heldout",
+  "q": "app opens from EMEA and APAC together through paid search from June to August 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "region": [
+     "EMEA",
+     "APAC"
+    ],
+    "channel": "paid_search",
+    "period": "2026-06-01/2026-08-31"
+   }
+  },
+  "group": "i05",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__region": [
+     [
+      "EMEA",
+      "APAC"
+     ]
+    ],
+    "activity__channel": [
+     "paid_search"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__region in (EMEA, APAC)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = paid_search",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "EMEA",
+        "keep": true
+       },
+       {
+        "quote": "APAC",
+        "keep": true
+       },
+       {
+        "quote": "paid search",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from June to August 2026",
+      "value": "2026-06/2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.72
+  },
+  "open": [],
+  "cost": 0.000452256,
+  "reader": "typed"
+ },
+ {
+  "element": "region",
+  "block": "combined group values and partial range",
+  "type": "heldout",
+  "q": "Please provide a report of app opens from EMEA and APAC together acquired through paid search from June to August 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "region": [
+     "EMEA",
+     "APAC"
+    ],
+    "channel": "paid_search",
+    "period": "2026-06-01/2026-08-31"
+   }
+  },
+  "group": "i05",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__region": [
+     [
+      "EMEA",
+      "APAC"
+     ]
+    ],
+    "activity__channel": [
+     "paid_search"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__region in (EMEA, APAC)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = paid_search",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"acquired\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "EMEA",
+        "keep": true
+       },
+       {
+        "quote": "APAC",
+        "keep": true
+       },
+       {
+        "quote": "paid search",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from June to August 2026",
+      "value": "2026-06/2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.93
+  },
+  "open": [
+   "ungrounded: the question names \"acquired\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.000464254,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "Hey, can you show me app opens in Germany during the second quarter of 2026, broken down by device model?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i06",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Germany"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Germany",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"broken down by device model\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germany",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "broken down by device model"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.33
+  },
+  "open": [
+   "refuse: the question asks to split by \"broken down by device model\", which the layer does not have"
+  ],
+  "cost": 0.00040725,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "app opens in Germany during the second quarter of 2026, broken down by device model",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i06",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Germany"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Germany",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"by device model\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germany",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by device model"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.44
+  },
+  "open": [
+   "refuse: the question asks to split by \"by device model\", which the layer does not have"
+  ],
+  "cost": 0.0004015,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "Please provide a report of app opens in Germany during the second quarter of 2026, broken down by device model.",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i06",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Germany"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Germany",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"by device model\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germany",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the second quarter of 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by device model"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.71
+  },
+  "open": [
+   "refuse: the question asks to split by \"by device model\", which the layer does not have"
+  ],
+  "cost": 0.000403,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "Hey, can you show me app opens from DE in June 2026, split by app version?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i07",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"split by app version\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "split by app version"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.22
+  },
+  "open": [
+   "refuse: the question asks to split by \"split by app version\", which the layer does not have"
+  ],
+  "cost": 0.00039825,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "app opens from DE in June 2026, split by app version?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i07",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"split by app version\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "split by app version"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.84
+  },
+  "open": [
+   "refuse: the question asks to split by \"split by app version\", which the layer does not have"
+  ],
+  "cost": 0.00039675,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unavailable dimension",
+  "type": "heldout",
+  "q": "Could you please provide the app opens from DE in June 2026, split by app version?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i07",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     [
+      "DE",
+      "DE"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question's words \"DE\" are not accounted for"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country in (DE, DE)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"split by app version\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "DE",
+        "keep": true
+       },
+       {
+        "quote": "DE",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "split by app version"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.9
+  },
+  "open": [
+   "ungrounded: the question's words \"DE\" are not accounted for",
+   "refuse: the question asks to split by \"split by app version\", which the layer does not have"
+  ],
+  "cost": 0.00080875,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "misspelling with named breakdown",
+  "type": "heldout",
+  "q": "Hey, can you pull up the app opens from Androd accounts in April 2026 by channel?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "android",
+    "period": "2026-04",
+    "group_by": [
+     "channel"
+    ]
+   },
+   "group_by": [
+    "channel"
+   ]
+  },
+  "group": "i08",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": [
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"Androd\" as platform android, a spelling of a listed value.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-04",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__channel"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Androd",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "April 2026",
+      "value": "2026-04"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by channel"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.2
+  },
+  "open": [],
+  "cost": 0.000573616,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "misspelling with named breakdown",
+  "type": "heldout",
+  "q": "app opens from Androd accounts in April 2026 by channel",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "android",
+    "period": "2026-04",
+    "group_by": [
+     "channel"
+    ]
+   },
+   "group_by": [
+    "channel"
+   ]
+  },
+  "group": "i08",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "platform [] instead of ['android']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": [
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Androd\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-04",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__channel"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Androd",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "April 2026",
+      "value": "2026-04"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by channel"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.91
+  },
+  "open": [
+   "ungrounded: \"Androd\" matches no value of the layer"
+  ],
+  "cost": 0.000564054,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "misspelling with named breakdown",
+  "type": "heldout",
+  "q": "Please provide a report of app opens from Androd accounts in April 2026 by channel.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "android",
+    "period": "2026-04",
+    "group_by": [
+     "channel"
+    ]
+   },
+   "group_by": [
+    "channel"
+   ]
+  },
+  "group": "i08",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-04"
+   ],
+   "group_by": [
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"Androd\" as platform android, a spelling of a listed value.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-04",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__channel"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Androd",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "April 2026",
+      "value": "2026-04"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by channel"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 4.12
+  },
+  "open": [],
+  "cost": 0.000953698,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Can you show me the trend of app opens in Germani during the first quarter of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.95
+  },
+  "open": [],
+  "cost": 0.0005909400000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Trend of app opens in Germani during the first quarter of 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "during the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "Trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.0
+  },
+  "open": [],
+  "cost": 0.000588332,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Please provide the trend of app opens in Germani during the first quarter of 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 5.16
+  },
+  "open": [],
+  "cost": 0.000977416,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym by segment",
+  "type": "heldout",
+  "q": "Could you pull up app opens in Deutschland during the first half of 2026 by segment?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-H1",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i10",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Germany"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Germany",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Deutschland\" as country_name Germany, which is broader: it includes more than \"Deutschland\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Deutschland",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.85
+  },
+  "open": [],
+  "cost": 0.0005950920000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym by segment",
+  "type": "heldout",
+  "q": "app opens in Deutschland during the first half of 2026 by segment",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-H1",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i10",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "country [] instead of ['de']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: the number of app opens with no restriction, in the first half of 2026, split by segment.",
+     "confidence": 0.35
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"Deutschland\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.08
+  },
+  "open": [
+   "ungrounded: not confirmed: the number of app opens with no restriction, in the first half of 2026, split by segment.",
+   "ungrounded: the question names \"Deutschland\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.000390686,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym by segment",
+  "type": "heldout",
+  "q": "Please provide the figures for app opens in Deutschland during the first half of 2026 by segment.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-H1",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i10",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Germany"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Germany",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Deutschland\" as country_name Germany, which is broader: it includes more than \"Deutschland\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Deutschland",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.96
+  },
+  "open": [],
+  "cost": 0.0005979880000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym and partial year",
+  "type": "heldout",
+  "q": "Hey, can I get app opens from the States in 2025 by segment?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "partial": true,
+   "params": {
+    "country_name": "United States",
+    "period": "2025",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i11",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US"
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"States\" as country US.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "States",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.86
+  },
+  "open": [],
+  "cost": 0.000572864,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym and partial year",
+  "type": "heldout",
+  "q": "app opens from the States in 2025 by segment",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "partial": true,
+   "params": {
+    "country_name": "United States",
+    "period": "2025",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i11",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US"
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"States\" as country US.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "States",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 3.03
+  },
+  "open": [],
+  "cost": 0.000565652,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "synonym and partial year",
+  "type": "heldout",
+  "q": "Please provide app opens from the States in 2025 by segment.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "partial": true,
+   "params": {
+    "country_name": "United States",
+    "period": "2025",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   },
+   "group_by": [
+    "platform",
+    "region",
+    "channel"
+   ]
+  },
+  "group": "i11",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "US"
+    ]
+   },
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = US",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"the States\" as country US.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "the States",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.87
+  },
+  "open": [],
+  "cost": 0.000574114,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower word monthly trend",
+  "type": "heldout",
+  "q": "Can you pull up the monthly trend of app opens from iPhone users from March to May 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "ios",
+    "period": "2026-03-01/2026-05-31",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "month"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "month"
+  },
+  "group": "i12",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-03-01/2026-05-31"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "month",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-03-01/2026-05-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from March to May 2026",
+      "value": "2026-03/2026-05"
+     }
+    ],
+    "series": {
+     "quote": "monthly trend",
+     "unit": "month"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.69
+  },
+  "open": [],
+  "cost": 0.00060078,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower word monthly trend",
+  "type": "heldout",
+  "q": "monthly trend of app opens from iPhone users from March to May 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "ios",
+    "period": "2026-03-01/2026-05-31",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "month"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "month"
+  },
+  "group": "i12",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-03-01/2026-05-31"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "month",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-03-01/2026-05-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from March to May 2026",
+      "value": "2026-03/2026-05"
+     }
+    ],
+    "series": {
+     "quote": "monthly trend",
+     "unit": "month"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.58
+  },
+  "open": [],
+  "cost": 0.00059382,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower word monthly trend",
+  "type": "heldout",
+  "q": "Please provide the monthly trend of app opens from iPhone users from March to May 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": "ios",
+    "period": "2026-03-01/2026-05-31",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "month"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "month"
+  },
+  "group": "i12",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-03-01/2026-05-31"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "month",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-03-01/2026-05-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "from March to May 2026",
+      "value": "2026-03/2026-05"
+     }
+    ],
+    "series": {
+     "quote": "monthly trend",
+     "unit": "month"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.41
+  },
+  "open": [],
+  "cost": 0.0006001120000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower words compared",
+  "type": "heldout",
+  "q": "Hey, can we compare app opens from iPhone users and Pixel phones in the first quarter of 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": [
+     "ios",
+     "android"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "platform"
+   ]
+  },
+  "group": "i13",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios",
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios or activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios. Read \"Pixel phones\" as platform android, which is broader: it includes more than \"Pixel phones\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "Pixel phones",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.48
+  },
+  "open": [],
+  "cost": 0.0007437460000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower words compared",
+  "type": "heldout",
+  "q": "compare app opens from iPhone users and Pixel phones in the first quarter of 2026",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": [
+     "ios",
+     "android"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "platform"
+   ]
+  },
+  "group": "i13",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios",
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios or activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios. Read \"Pixel phones\" as platform android, which is broader: it includes more than \"Pixel phones\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "Pixel phones",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.75
+  },
+  "open": [],
+  "cost": 0.0007395980000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "narrower words compared",
+  "type": "heldout",
+  "q": "Please compare app opens from iPhone users and Pixel phones in the first quarter of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "platform": [
+     "ios",
+     "android"
+    ],
+    "period": "2026-Q1"
+   },
+   "group_by": [
+    "platform"
+   ]
+  },
+  "group": "i13",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios",
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios or activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios. Read \"Pixel phones\" as platform android, which is broader: it includes more than \"Pixel phones\".",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     },
+     {
+      "terms": [
+       {
+        "quote": "Pixel phones",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.81
+  },
+  "open": [],
+  "cost": 0.0007427439999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "Hey, what's the number of app opens from Canada in 2025?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i14",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Canada\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Canada",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.07
+  },
+  "open": [
+   "ungrounded: \"Canada\" matches no value of the layer"
+  ],
+  "cost": 0.000526386,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "number of app opens from Canada in 2025",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i14",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Canada\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Canada",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.86
+  },
+  "open": [
+   "ungrounded: \"Canada\" matches no value of the layer"
+  ],
+  "cost": 0.000524884,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "Please provide the number of app opens from Canada in 2025.",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i14",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2025-09-05/2025-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"Canada\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2025-09-05/2025-12-31",
+     "basis": "question",
+     "quote": "",
+     "disclose": "2025 is only partly in the data; this covers 5 September 2025 to 31 December 2025.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Canada",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "2025",
+      "value": "2025"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.8
+  },
+  "open": [
+   "ungrounded: \"Canada\" matches no value of the layer"
+  ],
+  "cost": 0.0005260519999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "Hey, can I get the app opens acquired through TikTok in the first quarter of 2026?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i15",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "TikTok",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.95
+  },
+  "open": [
+   "refuse: \"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral"
+  ],
+  "cost": 0.0005443900000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "app opens acquired through TikTok in the first quarter of 2026",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i15",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "TikTok",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.15
+  },
+  "open": [
+   "refuse: \"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral"
+  ],
+  "cost": 0.000542346,
+  "reader": "typed"
+ },
+ {
+  "element": "channel",
+  "block": "unavailable value",
+  "type": "heldout",
+  "q": "Please retrieve the app opens acquired through TikTok in the first quarter of 2026.",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i15",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "TikTok",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.87
+  },
+  "open": [
+   "refuse: \"TikTok\" is a channel the layer does not have; the governed values are content_seo, organic, paid_search, partnerships, referral"
+  ],
+  "cost": 0.0005435139999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period",
+  "type": "heldout",
+  "q": "Hey, can you show me the number of app opens from the organic channel?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "channel": "organic",
+    "period": "ask"
+   }
+  },
+  "group": "i16",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     "organic"
+    ]
+   },
+   "periods": [],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = organic",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "organic",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.4
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.000351,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period",
+  "type": "heldout",
+  "q": "Number of app opens from the organic channel",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "channel": "organic",
+    "period": "ask"
+   }
+  },
+  "group": "i16",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     "organic"
+    ]
+   },
+   "periods": [],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = organic",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "organic channel",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.15
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.000507618,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period",
+  "type": "heldout",
+  "q": "Please provide the number of app opens from the organic channel.",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "channel": "organic",
+    "period": "ask"
+   }
+  },
+  "group": "i16",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__channel": [
+     "organic"
+    ]
+   },
+   "periods": [],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__channel = organic",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "organic channel",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.91
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.000508786,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period with grain",
+  "type": "heldout",
+  "q": "Hey, can you show me the weekly trend of mobile app opens?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "ask",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "week"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "week"
+  },
+  "group": "i17",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "week",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": {
+     "quote": "weekly trend",
+     "unit": "week"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.85
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.0007197499999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period with grain",
+  "type": "heldout",
+  "q": "weekly trend of mobile app opens",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "ask",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "week"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "week"
+  },
+  "group": "i17",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "week",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": {
+     "quote": "weekly trend",
+     "unit": "week"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.72
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.00071575,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "no period with grain",
+  "type": "heldout",
+  "q": "Please provide the weekly trend of mobile app opens.",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "ask",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "week"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "week"
+  },
+  "group": "i17",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "week",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": {
+     "quote": "weekly trend",
+     "unit": "week"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.58
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.0007177500000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside year",
+  "type": "heldout",
+  "q": "Hey, could you tell me what the total number of app opens in 2024 was?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i18",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2024-01-01/2024-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "2024 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "2024",
+      "value": "2024"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.16
+  },
+  "open": [
+   "refuse: 2024 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00034775,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside year",
+  "type": "heldout",
+  "q": "total number of app opens in 2024",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i18",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2024-01-01/2024-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "2024 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "2024",
+      "value": "2024"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.36
+  },
+  "open": [
+   "refuse: 2024 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00034525,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside year",
+  "type": "heldout",
+  "q": "Kindly provide the total number of app opens in 2024.",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i18",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2024-01-01/2024-12-31"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "2024 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "2024",
+      "value": "2024"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.2
+  },
+  "open": [
+   "refuse: 2024 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.0003465,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside month",
+  "type": "heldout",
+  "q": "Hey, what is the number of app opens in August 2026?",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i19",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-08"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "August 2026 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "August 2026",
+      "value": "2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.31
+  },
+  "open": [
+   "refuse: August 2026 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00036275,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside month",
+  "type": "heldout",
+  "q": "number of app opens in August 2026",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i19",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-08"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "August 2026 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "August 2026",
+      "value": "2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.63
+  },
+  "open": [
+   "refuse: August 2026 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00035325,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "wholly outside month",
+  "type": "heldout",
+  "q": "Please provide the number of app opens in August 2026.",
+  "expect": {
+   "type": "refuse"
+  },
+  "group": "i19",
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-08"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "August 2026 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "August 2026",
+      "value": "2026-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.02
+  },
+  "open": [
+   "refuse: August 2026 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00035425,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere summer",
+  "type": "heldout",
+  "q": "Hey, could you check what the number of app opens in Brazil in summer 2026 is?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Brazil",
+    "period": "ask"
+   }
+  },
+  "group": "i20",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Brazil"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Brazil",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Summer 2026 is read as June 2026 to August 2026 (the company calendar). June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Brazil",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "summer 2026",
+      "value": "2026-SU"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.25
+  },
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.000382,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere summer",
+  "type": "heldout",
+  "q": "number of app opens in Brazil in summer 2026?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Brazil",
+    "period": "ask"
+   }
+  },
+  "group": "i20",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Brazil"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Brazil",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Summer 2026 is read as June 2026 to August 2026 (the company calendar). June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Brazil",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "summer 2026",
+      "value": "2026-SU"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.6
+  },
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.00038,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere summer",
+  "type": "heldout",
+  "q": "Would you please provide the number of app opens in Brazil in summer 2026?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Brazil",
+    "period": "ask"
+   }
+  },
+  "group": "i20",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Brazil"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Brazil",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Summer 2026 is read as June 2026 to August 2026 (the company calendar). June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Brazil",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "summer 2026",
+      "value": "2026-SU"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.43
+  },
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.00038125,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere winter",
+  "type": "heldout",
+  "q": "Hey, what was the number of app opens in Indonesia in winter 2026?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Indonesia",
+    "period": "ask"
+   }
+  },
+  "group": "i21",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Indonesia"
+    ]
+   },
+   "periods": [
+    "2025-12-01/2026-02-28"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "\"winter\" matches no value of the layer"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Indonesia",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-12-01/2026-02-28",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Winter 2026 is read as December 2025 to February 2026 (the company calendar).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Indonesia",
+        "keep": true
+       },
+       {
+        "quote": "winter",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "winter 2026",
+      "value": "2026-WI"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.86
+  },
+  "open": [
+   "ungrounded: \"winter\" matches no value of the layer",
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.000550928,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere winter",
+  "type": "heldout",
+  "q": "number of app opens in Indonesia in winter 2026",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Indonesia",
+    "period": "ask"
+   }
+  },
+  "group": "i21",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Indonesia"
+    ]
+   },
+   "periods": [
+    "2025-12-01/2026-02-28"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Indonesia",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-12-01/2026-02-28",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Winter 2026 is read as December 2025 to February 2026 (the company calendar).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Indonesia",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "winter 2026",
+      "value": "2026-WI"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.47
+  },
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.00037975,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere winter",
+  "type": "heldout",
+  "q": "Could you please provide the number of app opens in Indonesia in winter 2026?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Indonesia",
+    "period": "ask"
+   }
+  },
+  "group": "i21",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Indonesia"
+    ]
+   },
+   "periods": [
+    "2025-12-01/2026-02-28"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Indonesia",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2025-12-01/2026-02-28",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Winter 2026 is read as December 2025 to February 2026 (the company calendar).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Indonesia",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "winter 2026",
+      "value": "2026-WI"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.2
+  },
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.00038125,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "implicit trend grain",
+  "type": "heldout",
+  "q": "Hey, can I see the trend of all app opens during the first quarter of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i22",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.79
+  },
+  "open": [],
+  "cost": 0.000394958,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "implicit trend grain",
+  "type": "heldout",
+  "q": "Trend of all app opens during the first quarter of 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i22",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "Trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.67
+  },
+  "open": [],
+  "cost": 0.000388,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "implicit trend grain",
+  "type": "heldout",
+  "q": "Could you please provide the trend of all app opens during the first quarter of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i22",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.77
+  },
+  "open": [],
+  "cost": 0.000394666,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "daily trend with partial month",
+  "type": "heldout",
+  "q": "Hey, could you show me the daily trend of all app opens in July 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "period": "2026-07",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "day"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "day"
+  },
+  "group": "i23",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-07-01/2026-07-12"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "day",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-07-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "July 2026 is only partly in the data; this covers 1 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "July 2026",
+      "value": "2026-07"
+     }
+    ],
+    "series": {
+     "quote": "daily trend",
+     "unit": "day"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.11
+  },
+  "open": [],
+  "cost": 0.000400414,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "daily trend with partial month",
+  "type": "heldout",
+  "q": "Daily trend of all app opens in July 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "period": "2026-07",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "day"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "day"
+  },
+  "group": "i23",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-07-01/2026-07-12"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "day",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-07-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "July 2026 is only partly in the data; this covers 1 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "July 2026",
+      "value": "2026-07"
+     }
+    ],
+    "series": {
+     "quote": "Daily trend",
+     "unit": "day"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.85
+  },
+  "open": [],
+  "cost": 0.000393414,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "daily trend with partial month",
+  "type": "heldout",
+  "q": "Could you please provide the daily trend of all app opens in July 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "partial": true,
+   "params": {
+    "period": "2026-07",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "day"
+   },
+   "group_by": [
+    "metric_time"
+   ],
+   "time_grain": "day"
+  },
+  "group": "i23",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-07-01/2026-07-12"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "day",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-07-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "July 2026 is only partly in the data; this covers 1 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "July 2026",
+      "value": "2026-07"
+     }
+    ],
+    "series": {
+     "quote": "daily trend",
+     "unit": "day"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.83
+  },
+  "open": [],
+  "cost": 0.00039183,
+  "reader": "typed"
+ }
+]

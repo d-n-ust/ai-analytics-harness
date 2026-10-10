@@ -49,6 +49,10 @@ EXAMPLES = [
      {"figures": [{"terms": [{"quote": "Sourdough", "keep": True}, {"quote": "Lyon", "keep": True}, {"quote": "Nice", "keep": True}]},
                   {"terms": [{"quote": "rye", "keep": True}, {"quote": "Lyon", "keep": True}, {"quote": "Nice", "keep": True}]}],
       "time": [{"quote": "Q3 2024", "value": "2024-Q3"}], "series": None, "breakdown": [], "premise": None}),
+    ("Compare croissant and baguette sales in Lyon for June 2025.",
+     {"figures": [{"terms": [{"quote": "croissant", "keep": True}, {"quote": "Lyon", "keep": True}]},
+                  {"terms": [{"quote": "baguette", "keep": True}, {"quote": "Lyon", "keep": True}]}],
+      "time": [{"quote": "June 2025", "value": "2025-06"}], "series": None, "breakdown": [], "premise": None}),
     ("Break down bread sales by store size for last month.",
      {"figures": [], "time": [{"quote": "last month", "value": "last_month"}], "series": None,
       "breakdown": [{"quote": "by store size"}], "premise": None}),
@@ -173,36 +177,41 @@ def suggestion_questions(unresolved: list, surface: dict) -> dict:
     return out
 
 
-def described(reading: dict, metric: str) -> str:
-    """The resolved reading as one plain sentence, built by code from the values that would run."""
-    figures = reading.get("figures") or []
-    what = ("separately for " + ", and for ".join(figures) if len(figures) > 1
-            else f"for {figures[0]}" if figures else "with no restriction")
-    # The period as asked: the covered part of a partly covered one is stated to the user separately,
-    # and "1 June to 12 July 2026" read against "summer 2026" was not confirmed (development, 2026-10-10).
-    said_as = reading.get("said_as") or {}
-    when = " and ".join(said_as.get(p) or readable(p) for p in reading.get("asked_periods") or reading["periods"]) \
-        or "no period"
-    shape = []
+def structure_questions(proposal: dict, reading: dict, terms: list) -> dict:
+    """One yes/no per structural judgement the proposal made, each about one item, in the user's words:
+    a series, several values of one dimension added together, values compared as separate numbers,
+    something left out, several periods. They replace one whole-reading question ("is this an accurate
+    description?"), which vetoed 83 right readings for 13 wrong ones across the development runs of
+    2026-10-10. On 15 calibration readings each answered on the right side: wrong readings 0.26 or less,
+    right ones 0.73 or more (findings section 36). `terms` are the resolved terms per figure, so values
+    of different dimensions ("mobile" and "Brazil") are never asked about as one combined number."""
+    out = {}
     if "metric_time" in reading["group_by"]:
-        shape.append(f"one number per {reading['grain']}" if reading.get("grain") else "as a trend over time")
-    if reading.get("splits"):
-        shape.append("split by " + " and by ".join(reading["splits"]))
-    return (f"the number of {metric.replace('_', ' ')} {what}, in {when}, "
-            + (" and ".join(shape) if shape else "as one number for the whole period") + ".")
-
-
-def roundtrip_question(reading: dict, metric: str) -> dict:
-    """One yes/no question: does the reading, written back as a sentence, ask for exactly what the
-    question asks? It replaces one question per judgement (spike and first sealed run), where every
-    extra part was one more chance of a false "no": 53 of 216 readings asked without need."""
-    # Wording chosen on 14 development readings (8 correct, 6 wrong): this one passed 7 and flagged all
-    # 6, the wrong ones at 0.32 or less; "Does this ask for exactly what the question asks..." flagged
-    # a correct exclusion at 0.66 and passed nothing wrong below 0.54 (findings section 32).
-    return {"roundtrip": _yn(
-        f"Is this an accurate description of what the question asks for: {described(reading, metric)} Answer "
-        "no if it leaves out, adds or changes a restriction, a period, a comparison or a split. Staff and test "
-        "accounts are always excluded; ignore that.")}
+        out["series"] = _yn("Does the question ask for several numbers over time (a trend, or one number per day, "
+                            "week or month), rather than one number for the whole period?")
+    for i, figure in enumerate(terms):
+        by_dim: dict = {}
+        for t in figure:
+            if t["keep"]:
+                for dim, _v in t["values"][:1]:
+                    by_dim.setdefault(dim, []).append(t["quote"])
+        for dim, quotes in by_dim.items():
+            if len(quotes) > 1 and len(terms) == 1:
+                out[f"combined{i}:{dim}"] = _yn(f"Does the question ask for {' and '.join(quotes)} added together as "
+                                                "one combined number?")
+        for j, t in enumerate(t for t in figure if not t["keep"]):
+            out[f"except{i}_{j}"] = _yn(f"Does the question ask for everything except {t['quote']}?")
+    if len(terms) > 1:
+        # Only what differs between the figures is named: "Android and iOS", not "Germany and Android ...".
+        shared = set.intersection(*({t["quote"].lower() for t in f} for f in terms))
+        names = [" and ".join(t["quote"] for t in f if t["keep"] and t["quote"].lower() not in shared) or "the rest"
+                 for f in terms]
+        out["separate"] = _yn(f"Does the question ask for a separate number for each of {' and '.join(names)}?")
+    times = [t["quote"] for t in proposal.get("time") or []]
+    if len(times) > 1:
+        out["periods"] = _yn(f"Does the question ask about {' and '.join(times)} as separate periods, rather than "
+                             "one continuous range?")
+    return out
 
 
 def inner_questions(quote: str, inner: list) -> dict:
@@ -220,3 +229,18 @@ def leftover_questions(words: list) -> dict:
     0.10 or less."""
     return {f"lw{i}": _yn(f"In this question, does the word \"{w}\" name a place, a device or platform, a product, "
                           "a kind of customer, or an acquisition channel?") for i, w in enumerate(words)}
+
+
+def kind_questions(quotes: list, surface: dict) -> dict:
+    """What kind of thing each phrase is, one narrow yes/no per dimension, in a request of its own. Used
+    only to refuse ("Japan" is a country the layer does not have): asked in the same request as the
+    value choice, the answers carried noise from it and Japan stayed below the bar."""
+    twins = _twins(surface)
+    out = {}
+    for i, quote in enumerate(quotes):
+        for d in _dimensions(surface):
+            if d["name"] not in twins and any(str(m).lower() not in ("true", "false") for m in d["members"]):
+                what = (d.get("description") or "").split(". ")[0].rstrip(".")
+                out[f"kind{i}:{d['name']}"] = _yn(f"In this question, is \"{quote}\" a {d['column'].replace('_', ' ')}"
+                                                  + (f" ({what})" if what else "") + "?")
+    return out

@@ -14,8 +14,8 @@ The steps (03_typed_reader/design.md in experiment 07):
   4. judge     a phrase the lists do not settle alone: an analyst's reading (a misspelling, a synonym,
                or a narrower thing answered with the broader value) is applied and stated in the
                answer; something no list has is refused; anything unclear is asked about
-  5. confirm   the resolved reading, written back as one sentence, is confirmed with one yes/no;
-               unconfirmed, the reader asks
+  5. confirm   one narrow yes/no per structural judgement (a series, values combined or compared,
+               something left out, several periods) and per word the reading does not use
 
 Every model request and its answer is kept with the reading, keyed by the exact request. A replay
 runs the code steps again and reuses an answer only for an identical request; a request the store
@@ -33,10 +33,9 @@ from . import language, resolve
 __all__ = ["reading_for", "replay"]
 
 
-# The round trip is a veto: it flags a reading the model judges more likely wrong than right. On the
-# calibration readings (findings section 33), wrong readings scored 0.38 or less and correct ones 0.57
-# or more, while the general bar (0.7) flagged correct ones between 0.57 and 0.69 on every set.
-ROUNDTRIP = 0.5
+# A structural check is a veto: it flags a judgement the model reads as more likely wrong than right.
+# Calibration (findings section 36): wrong readings 0.26 or less, right ones 0.73 or more.
+VETO = 0.5
 
 
 class _Stale(Exception):
@@ -117,6 +116,9 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
         proposal = resolve.normalised(lang.propose(question, missed), surface, principles, question)
         missed = resolve.unaccounted(question, proposal, surface) + resolve.missing_quotes(question, proposal)
         if missed:
+            proposal = resolve.marked_by_code(question, proposal, missed, surface)
+            missed = resolve.unaccounted(question, proposal, surface) + resolve.missing_quotes(question, proposal)
+        if missed:
             outcomes.append(_decisions._ungrounded("reading", "the question's words "
                                                    + ", ".join(f'"{w}"' for w in missed) + " are not accounted for"))
 
@@ -138,8 +140,14 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
              if not t["ambiguous"] and (not t["values"] or t["rest"])}
     if open_:
         answers = lang.decide("suggest", language.suggestion_questions(list(open_), surface), question)
-        for i, (quote, values) in enumerate(open_.items()):
-            s = resolve.judged(quote, values, answers.get(f"sug{i}"), surface)
+        judged = {q: resolve.judged(q, v, answers.get(f"sug{i}"), surface) for i, (q, v) in enumerate(open_.items())}
+        unsure = [q for q, s in judged.items() if s["kind"] == "ask"]
+        if unsure:
+            kinds = lang.decide("kind", language.kind_questions(unsure, surface), question)
+            for i, q in enumerate(unsure):
+                said = {k.split(":", 1)[1]: _decisions._yes(kinds, k) for k in kinds if k.startswith(f"kind{i}:")}
+                judged[q] = resolve.judged(q, open_[q], answers.get(f"sug{list(open_).index(q)}"), surface, said)
+        for quote, s in judged.items():
             if s["kind"] == "assumed" and s.get("inner"):
                 # Narrower values the model also found plausible: the narrowest it confirms wins.
                 said = lang.decide("inner", language.inner_questions(quote, s["inner"]), question)
@@ -165,17 +173,17 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
             "period", "the season named is for the northern hemisphere, and the figure lies in the southern one; "
                       "ask which months are meant"))
     if not any(d["state"] in ("refuse", "ungrounded") for d in reading["decisions"]):
-        # Two checks in one request: the reading as a whole, and every word of the question that no
-        # part of it uses. Code lists those words, so a restriction no list knows and the proposal left
-        # unmarked ("Germani") is put in front of the decision model by name, not left to a general
-        # "is anything missing?" (third replication set, i09).
+        # Narrow checks in one request: each structural judgement of the proposal, and each word of the
+        # question that no part of the reading uses. Code lists the words, so a restriction no list
+        # knows and the proposal left unmarked ("Germani") is put before the decision model by name.
         words = resolve.leftover_words(question, proposal, surface)
-        questions = {**language.roundtrip_question(reading, metric), **language.leftover_questions(words)}
-        answers = lang.decide("confirm", questions, question)
-        p = _decisions._yes(answers, "roundtrip")
-        if p < ROUNDTRIP:
-            reading["decisions"].append({**_decisions._ungrounded(
-                "reading", f"not confirmed: {language.described(reading, metric)}"), "confidence": p})
+        questions = {**language.structure_questions(proposal, reading, terms), **language.leftover_questions(words)}
+        answers = lang.decide("confirm", questions, question) if questions else {}
+        for key in (k for k in questions if not k.startswith("lw")):
+            p = _decisions._yes(answers, key)
+            if p < VETO:
+                reading["decisions"].append({**_decisions._ungrounded(
+                    "reading", f"not confirmed: {questions[key]['instructions']}"), "confidence": p})
         named = [w for i, w in enumerate(words) if _decisions._yes(answers, f"lw{i}") >= _decisions.CONFIDENT]
         if named:
             reading["decisions"].append(_decisions._ungrounded(
