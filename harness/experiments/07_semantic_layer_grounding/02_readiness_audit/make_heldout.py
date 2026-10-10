@@ -25,7 +25,9 @@ WRITER = "gemini-3.8-flash"
 PROMPT = ("A business user of a habit-tracking app wants this from the company's analytics: {intent}.\n"
           "Write three different questions this user might type into an analytics assistant to get it. "
           "Vary the wording the way real people do: casual, terse, formal. Keep every detail of the "
-          "request, add none. Reply with a JSON list of three strings and nothing else.")
+          "request, add none, and keep every name, code and value word exactly as the request writes it "
+          "(the first replication set lost \"the States\" to \"US\"). Reply with a JSON list of three strings "
+          "and nothing else.")
 
 
 def ask(intent: str) -> list[str]:
