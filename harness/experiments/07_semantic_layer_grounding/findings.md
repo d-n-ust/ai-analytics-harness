@@ -1375,6 +1375,23 @@ Its 14 safe misses: the round trip rejecting correct "every X except Y" readings
 
 Each set changed the reader before the next; the sets measure successive versions, not one.
 
+**The experiment's three headline numbers** (`02_readiness_audit/metrics.py`, corrected labels, the
+definitions of `harness/evals/selective.py` applied to the reader's action and parameters):
+
+| set | reader | silent wrong | balanced accuracy | coverage |
+|---|---|---|---|---|
+| 1 | questionnaire | 12.5% (27/216) | 65.6% | 80.0% |
+| 1 | typed | 0.9% (2/216) | 78.5% | 60.0% |
+| 2 | questionnaire | 22.2% (48/216) | 58.0% | 76.8% |
+| 2 | typed | 0.0% (0/216) | 83.7% | 63.6% |
+| 3 | questionnaire | 30.6% (22/72) | 69.0% | 76.2% |
+| 3 | typed | 1.4% (1/72) | 81.7% | 81.0% |
+
+Coverage is the one number on which the typed reader trailed until set 3: on sets 1 and 2 it asked on
+36% to 40% of answerable questions (the strict closed world and the per-judgement confirmation). Under
+draft 5 it attempts 81%, above the questionnaire's 76%, while the questionnaire's extra attempts are
+where its silent wrong answers come from.
+
 ## 36 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
