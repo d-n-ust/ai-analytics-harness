@@ -86,6 +86,8 @@ def normalised(proposal: dict, surface: dict, principles: list, question: str = 
             if words and set(words) <= own:
                 continue
             after_by = re.search(rf"\b(?:by|per)\s+{re.escape(t['quote'])}", question, re.I)
+            if any(x["quote"].lower() == t["quote"].lower() and x["keep"] == t["keep"] for x in terms):
+                continue
             if t["keep"] and split_by(t["quote"], surface, principles)[0] in ("dimension", "rule") \
                     and (_SPLIT_LEAD.match(t["quote"]) or after_by):
                 breakdown.append({"quote": t["quote"] if _SPLIT_LEAD.match(t["quote"]) else after_by.group()})
@@ -95,6 +97,15 @@ def normalised(proposal: dict, surface: dict, principles: list, question: str = 
             figures.append({"terms": terms})
     kept = []
     for b in breakdown:
+        exclusion = re.search(r"\b(?:every|all)\s+\w+\s+(?:except|other than|excluding|but)\s+(.+)$", b["quote"], re.I)
+        found = lookup(exclusion.group(1), surface) if exclusion else {}
+        if exclusion and (found["values"] or found["ambiguous"]):
+            term = {"quote": exclusion.group(1), "keep": False}
+            figures = [{"terms": f["terms"] + ([term] if term not in f["terms"] else [])} for f in figures] \
+                or [{"terms": [term]}]
+            continue
+        if not [w for w in _tokens(_SPLIT_LEAD.sub("", b["quote"])) if w not in _NO_CATEGORY]:
+            continue                                     # "a week-by-week breakdown": no category named
         found = lookup(re.sub(r"^\s*(?:across|in|for|by)\s+", "", b["quote"], flags=re.I), surface)
         if split_by(b["quote"], surface, principles)[0] == "none" and found["values"] and not found["rest"]:
             term = {"quote": b["quote"], "keep": True}
@@ -174,6 +185,32 @@ def spelling_variant(word: str, value) -> bool:
 ANALYST = 0.85
 
 
+def _containing(surface: dict) -> dict:
+    """{(dimension, value): {(dimension, value) that holds every row of it}}, from the value maps the
+    layer derives from the data: android is inside mobile, DE inside EMEA, and DE and Germany hold the
+    same rows (each inside the other). Each value holds itself."""
+    up: dict = {}
+    for a, linked in (surface["parameters"]["filters"].get("determines") or {}).items():
+        for b, values in (linked or {}).items():
+            if not isinstance(values, dict):
+                continue
+            sizes_equal = len(set(map(str, values.values()))) == len(values)
+            for va, vb in values.items():
+                up.setdefault((a, str(va)), set()).add((b, str(vb)))
+                if sizes_equal:                                  # a second name for the same value
+                    up.setdefault((b, str(vb)), set()).add((a, str(va)))
+    closed: dict = {}
+    for d, m in _values(surface):
+        key, seen, todo = (d["name"], str(m)), set(), [(d["name"], str(m))]
+        while todo:
+            x = todo.pop()
+            if x not in seen:
+                seen.add(x)
+                todo += list(up.get(x, ()))
+        closed[key] = seen
+    return closed
+
+
 def judged(quote: str, values: list, answer: dict, surface: dict) -> dict:
     """PURE. The reader's reply for a phrase the lists do not settle alone, from the decision model's
     choice among, per value, "the same thing as" and "one kind of" (narrower), per dimension "one the
@@ -190,22 +227,49 @@ def judged(quote: str, values: list, answer: dict, surface: dict) -> dict:
     probs = dict((answer or {}).get("probabilities") or {})
     best = max(probs, key=probs.get) if probs else "other"
     p = probs.get(best, 0.0)
-    clear = lambda bar: p >= bar and all(v < PLAUSIBLE for k, v in probs.items() if k != best)  # noqa: E731
-    kind, _, target = best.partition(":")
-    if kind in ("value", "part"):
-        dim, _, value = target.partition("=")
+    kind = best.partition(":")[0]
+    # Options that point at the same rows are one reading: DE and Germany, and "the same as android"
+    # with "one kind of android". A narrower option also supports a broader value that holds it
+    # (android counts for mobile), never the reverse. Split between two true options ("iPhone" is one
+    # kind of ios and of mobile), no single option reached the bar (development run, 2026-10-10).
+    holds = _containing(surface)
+    mass: dict = {}
+    for k, v in probs.items():
+        if k.startswith(("value:", "part:")):
+            dim, _, value = k.partition(":")[2].partition("=")
+            mass[(dim, value)] = mass.get((dim, value), 0.0) + v
+    candidates = []
+    for target in mass:
+        inside = [x for x in mass if target in holds.get(x, {x})]          # options this value holds
+        support = sum(mass[x] for x in inside)
+        rival = sum(v for k, v in probs.items() if v and not (k.startswith(("value:", "part:"))
+                    and tuple(k.partition(":")[2].partition("=")[::2]) in inside))
+        candidates.append((support, rival, len(holds.get(target, ())), target))   # more holders: narrower
+    for bar in (CONFIDENT, ANALYST):
+        clear = sorted(c for c in candidates if c[0] >= bar and c[1] < PLAUSIBLE)
+        if not clear:
+            continue
+        support, _r, _n, (dim, value) = max(clear, key=lambda c: (c[2], c[0]))    # the narrowest, then strongest
         member = next((m for d, m in _values(surface) if d["name"] == dim and str(m) == value), value)
         label = f"{dim.split('__')[-1]} {member}"
-        if kind == "value" and (dim, member) in values and clear(CONFIDENT):
+        exact = probs.get(f"value:{dim}={value}", 0.0) >= probs.get(f"part:{dim}={value}", 0.0)
+        if bar == CONFIDENT and exact and (dim, member) in values:
             return {"kind": "kept", "why": ""}
         words, size = _tokens(quote), len(_tokens(str(member)))
         spelled = any(spelling_variant(" ".join(words[i:i + size]), member) for i in range(len(words) - size + 1))
-        if kind == "value" and spelled and clear(CONFIDENT):
+        if bar == CONFIDENT and exact and spelled:
             return {"kind": "assumed", "dim": dim, "value": member,
                     "why": f"read \"{quote}\" as {label}, a spelling of a listed value"}
-        if clear(ANALYST):
-            broader = f", which is broader: it includes more than \"{quote}\"" if kind == "part" else ""
-            return {"kind": "assumed", "dim": dim, "value": member, "why": f"read \"{quote}\" as {label}{broader}"}
+        if bar == ANALYST:
+            narrower = sum(v for k, v in probs.items() if k.startswith("part:")) > \
+                sum(v for k, v in probs.items() if k.startswith("value:"))
+            broader = f", which is broader: it includes more than \"{quote}\"" if narrower else ""
+            # Values inside this one that the model also found plausible ("iPhone": ios inside mobile).
+            # The caller asks about each, narrowest first, so the answer is not broader than it must be.
+            inner = sorted((x for x in mass if x != (dim, value) and (dim, value) in holds.get(x, ())
+                            and mass[x] >= PLAUSIBLE), key=lambda x: -len(holds.get(x, ())))
+            return {"kind": "assumed", "dim": dim, "value": member, "why": f"read \"{quote}\" as {label}{broader}",
+                    "inner": inner}
     # "TikTok" may read as a channel or as a platform the layer lacks; split between the two, neither
     # reached the bar and the reader asked. Not in any list, with no listed value plausible, refuses.
     absent = {k[len("absent:"):]: v for k, v in probs.items() if k.startswith("absent:")}
@@ -268,6 +332,8 @@ def readable(period: str) -> str:
         return f"{months[span[0].month - 1]} {span[0].year}"
     if re.fullmatch(r"\d{4}-Q[1-4]", period):
         return f"{period[-2:]} {period[:4]} ({months[span[0].month - 1]} to {months[span[1].month - 1]})"
+    if span and span[0] == dt.date(span[0].year, 1, 1) and span[1] == dt.date(span[0].year, 12, 31):
+        return str(span[0].year)
     if re.fullmatch(r"\d{4}-H[12]", period):
         return f"the {'first' if period.endswith('1') else 'second'} half of {period[:4]}"
     if span and span[0].day == 1 and (span[1] + dt.timedelta(days=1)).day == 1:
@@ -285,6 +351,9 @@ def readable(period: str) -> str:
 _TIME_UNITS = {"day": "day", "week": "week", "month": "month", "quarter": "quarter", "year": "year"}
 
 
+# Words of a split phrase that name no category: "breakdown" alone asks for no split by a dimension.
+_NO_CATEGORY = {"breakdown", "break", "down", "split", "separate", "separately", "figure", "number", "series",
+                "out", "into", "broken"}
 # The words before the category in a split phrase: "by", "split by", "broken down by", "across".
 _SPLIT_LEAD = re.compile(r"^\s*(?:(?:broken\s+down|break\s+down|split|segmented|grouped|group)\s+)?"
                          r"(?:by|per|for each|across)\s+", re.I)
@@ -337,12 +406,17 @@ def _figure_words(terms: list) -> str:
     drop: dict = {}
     for t in terms:
         for dim, value in t["values"]:
-            (keep if t["keep"] else drop).setdefault(dim, []).append(str(value))
+            # An analyst's reading is said in the user's words: it was judged at the higher bar and is
+            # stated in the answer, and shown as the value ("device type mobile" for "Samsung phones")
+            # the round trip judged it again and said no (development run, 2026-10-10).
+            said = f"\"{t['quote']}\"" if t.get("why") else str(value)
+            (keep if t["keep"] else drop).setdefault(dim, []).append(said)
     parts = []
     for dim in list(keep) + [d for d in drop if d not in keep]:
         label = dim.split("__")[-1].replace("_", " ")
-        said = (f"{label} {' and '.join(keep[dim])}" + (" together" if len(keep[dim]) > 1 else "")) if dim in keep \
-            else f"every {label}"
+        named = " and ".join(keep.get(dim, []))
+        said = ((named if all(v.startswith('"') for v in keep[dim]) else f"{label} {named}")
+                + (" together" if len(keep[dim]) > 1 else "")) if dim in keep else f"every {label}"
         parts.append(said + (f" except {' and '.join(drop[dim])}" if drop.get(dim) else ""))
     return " and ".join(parts)
 
@@ -379,13 +453,20 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
             f"{dim} in ({', '.join(map(str, r))})" if isinstance(r, list) else f"{dim} = {r}" for r in readings),
             "analyst_judgement" if assumed else "question", disclose=disclose))
 
-    periods = []
+    periods, said_as, declared = [], {}, []
     for item in proposal.get("time") or []:
         period, why = period_of(item.get("value"), seasons)
         if period is None:
             decisions.append(_ungrounded("period", why))
         elif period not in periods:
             periods.append(period)
+            if SEASON.fullmatch(str(item.get("value") or "")):
+                # A season is the calendar's declaration: the answer states its months, and the round
+                # trip sees the user's words ("winter 2026" against "December 2025 to February 2026"
+                # was read as a different winter).
+                said_as[period] = item["quote"]
+                declared.append(f"{item['quote'][0].upper() + item['quote'][1:]} is read as {readable(period)} "
+                                f"(the company calendar).")
     # A period with no day in the data is refused. A period partly inside it is answered for the days
     # it covers, and the answer says so (the owner's decision, design section 13).
     uncovered = [p for p in periods if not _covered(p, lo, hi)]
@@ -402,7 +483,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         decisions.append(_ungrounded("period", "the question states no period that can be placed on the "
                                      "calendar, and no rule supplies one"))
     elif periods:
-        decisions.append(_decision("period", " or ".join(periods), "question", disclose=" ".join(partial)))
+        decisions.append(_decision("period", " or ".join(periods), "question", disclose=" ".join(declared + partial)))
 
     group_by, separate, grain, splits = [], False, None, []
     series = proposal.get("series")
@@ -439,7 +520,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
                                      "the typed reader does not check stated facts yet"))
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": {},
             "figures": [_figure_words(f) for f in terms if any(t["values"] for t in f)], "splits": splits,
-            "asked_periods": asked,
+            "asked_periods": asked, "said_as": said_as,
             "values": {d["name"]: d["members"] for d in _dimensions(surface)},
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),

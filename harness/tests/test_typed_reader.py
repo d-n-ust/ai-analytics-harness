@@ -67,8 +67,9 @@ def test_an_analyst_reading_is_applied_and_stated_and_a_word_no_list_has_is_refu
     typo = {"probabilities": {"value:activity__platform=android": 0.93, "other": 0.07}}
     assert R.judged("Andriod", [], typo, SURFACE)["why"] == 'read "Andriod" as platform android, a spelling of a listed value'
     same = {"probabilities": {"value:activity__country=DE": 0.95}}
-    assert R.judged("Deutschland", [], same, SURFACE) == {"kind": "assumed", "dim": "activity__country", "value": "DE",
-                                                          "why": 'read "Deutschland" as country DE'}
+    got = R.judged("Deutschland", [], same, SURFACE)
+    assert (got["kind"], got["dim"], got["value"], got["why"]) == ("assumed", "activity__country", "DE",
+                                                                  'read "Deutschland" as country DE')
     narrower = {"probabilities": {"part:activity__platform=ios": 0.9, "other": 0.1}}
     assert R.judged("iPhone users", [], narrower, SURFACE)["why"] == \
         'read "iPhone users" as platform ios, which is broader: it includes more than "iPhone users"'
@@ -133,7 +134,10 @@ def test_periods_outside_the_data_refuse_partly_inside_answer_the_covered_part_a
     assert summer["periods"] == ["2026-06-01/2026-07-12"] and _states(summer) == {"applied"}
     assert "June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026." in \
         [d for d in summer["decisions"] if d["parameter"] == "period"][0]["disclose"]
-    assert "in June 2026 to August 2026," in TR.language.described(summer, "app_opens")      # as asked
+    asked = _build({**_proposal(), "time": [{"quote": "summer 2026", "value": "2026-SU"}]})
+    assert "in summer 2026," in TR.language.described(asked, "app_opens")                    # the user's words
+    assert "Summer 2026 is read as June 2026 to August 2026 (the company calendar)." in \
+        [d for d in asked["decisions"] if d["parameter"] == "period"][0]["disclose"]
     assert "ungrounded" in _states(_build(_proposal(time=())))
     assert "ungrounded" in _states(_build(_proposal(time=("2026-SP",))))
 
@@ -296,3 +300,34 @@ def test_the_metric_and_the_entities_of_the_layer_are_not_leftover_words():
     assert R.lookup("users in IN", surface)["rest"] == []
     assert R.lookup("mobile app opens", surface)["rest"] == []
     assert R.lookup("Linux desktop app", surface)["rest"] == ["linux"]
+
+
+def test_options_that_point_at_the_same_rows_are_pooled_and_the_narrowest_clear_value_wins():
+    surface = {**SURFACE, "parameters": {"filters": {
+        "dimensions": SURFACE["parameters"]["filters"]["dimensions"] + [_dim("country_name", ["Germany", "India", "United States"])],
+        "determines": {"activity__platform": {"activity__device_type": {"android": "mobile", "ios": "mobile", "web": "desktop",
+                                                                          "unknown": "unknown"}},
+                       "activity__country": {"activity__country_name": {"DE": "Germany", "IN": "India", "US": "United States"}}}}}}
+    twins = {"probabilities": {"value:activity__country=DE": 0.5, "value:activity__country_name=Germany": 0.45, "other": 0.05}}
+    assert R.judged("Deutschland", [], twins, surface)["kind"] == "assumed"
+    nested = {"probabilities": {"part:activity__platform=ios": 0.88, "part:activity__device_type=mobile": 0.1, "other": 0.02}}
+    got = R.judged("iPhone users", [], nested, surface)
+    assert (got["dim"], got["value"]) == ("activity__platform", "ios") and "broader" in got["why"]
+    split = {"probabilities": {"part:activity__platform=android": 0.5, "part:activity__device_type=mobile": 0.42, "other": 0.08}}
+    got = R.judged("Samsung phones", [], split, surface)
+    assert (got["dim"], got["value"]) == ("activity__device_type", "mobile")       # android alone is not clear
+    wide = {"probabilities": {"part:activity__device_type=mobile": 0.9, "part:activity__platform=android": 0.05}}
+    assert R.judged("smartphones", [], wide, surface)["value"] == "mobile"           # mobile mass never picks android
+
+
+def test_split_phrases_that_exclude_or_name_no_category_are_normalised():
+    p = R.normalised(_proposal(breakdown=("from every platform except web", "breakdown")), SURFACE, PRINCIPLES)
+    assert p["breakdown"] == [] and p["figures"] == [{"terms": [{"quote": "web", "keep": False}]}]
+
+
+def test_an_analyst_reading_is_said_in_the_users_words_in_the_round_trip():
+    terms = [[{"quote": "Samsung phones", "keep": True, "values": [("activity__device_type", "mobile")],
+               "rest": [], "ambiguous": [], "why": 'read "Samsung phones" as device_type mobile, which is broader'}]]
+    reading = R.build(_proposal([[("Samsung phones", True)]]), terms, SURFACE, PRINCIPLES, LO, HI, SEASONS, [])
+    assert reading["filters"] == {"activity__device_type": ["mobile"]}
+    assert TR.language.described(reading, "app_opens").startswith('the number of app opens for "Samsung phones", in')

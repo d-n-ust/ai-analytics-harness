@@ -159,8 +159,8 @@ def suggestion_questions(unresolved: list, surface: dict) -> dict:
                     meant = (d.get("meanings") or {}).get(str(m))
                     named = f"the {label} {m}" + (f" ({meant})" if meant else "")
                     criteria[f"value:{d['name']}={m}"] = f"\"{quote}\" is the same thing as {named}."
-                    criteria[f"part:{d['name']}={m}"] = (f"\"{quote}\" is one kind of {named}, narrower than it: "
-                                                         f"{m} also holds other things.")
+                    criteria[f"part:{d['name']}={m}"] = (f"\"{quote}\" is narrower than {named}, and {m} is the "
+                                                         f"closest {label} that contains it.")
             if d["name"] not in twins:
                 # The layer's own first sentence says what the dimension is: "TikTok" was "something
                 # else" against "a channel", and is an acquisition channel the layer lacks.
@@ -180,7 +180,9 @@ def described(reading: dict, metric: str) -> str:
             else f"for {figures[0]}" if figures else "with no restriction")
     # The period as asked: the covered part of a partly covered one is stated to the user separately,
     # and "1 June to 12 July 2026" read against "summer 2026" was not confirmed (development, 2026-10-10).
-    when = " and ".join(readable(p) for p in reading.get("asked_periods") or reading["periods"]) or "no period"
+    said_as = reading.get("said_as") or {}
+    when = " and ".join(said_as.get(p) or readable(p) for p in reading.get("asked_periods") or reading["periods"]) \
+        or "no period"
     shape = []
     if "metric_time" in reading["group_by"]:
         shape.append(f"one number per {reading['grain']}" if reading.get("grain") else "as a trend over time")
@@ -201,3 +203,9 @@ def roundtrip_question(reading: dict, metric: str) -> dict:
         f"Is this an accurate description of what the question asks for: {described(reading, metric)} Answer "
         "no if it leaves out, adds or changes a restriction, a period, a comparison or a split. Staff and test "
         "accounts are always excluded; ignore that.")}
+
+
+def inner_questions(quote: str, inner: list) -> dict:
+    """One yes/no per narrower value the model also found plausible: is the phrase wholly inside it?"""
+    return {f"in{i}": _yn(f"Does everything \"{quote}\" refers to fall within the "
+                          f"{dim.split('__')[-1].replace('_', ' ')} {value}?") for i, (dim, value) in enumerate(inner)}

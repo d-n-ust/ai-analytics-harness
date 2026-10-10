@@ -33,6 +33,12 @@ from . import language, resolve
 __all__ = ["reading_for", "replay"]
 
 
+# The round trip is a veto: it flags a reading the model judges more likely wrong than right. On the
+# calibration readings (findings section 33), wrong readings scored 0.38 or less and correct ones 0.57
+# or more, while the general bar (0.7) flagged correct ones between 0.57 and 0.69 on every set.
+ROUNDTRIP = 0.5
+
+
 class _Stale(Exception):
     """A replay needs a request the stored reading did not make."""
 
@@ -134,6 +140,16 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
         answers = lang.decide("suggest", language.suggestion_questions(list(open_), surface), question)
         for i, (quote, values) in enumerate(open_.items()):
             s = resolve.judged(quote, values, answers.get(f"sug{i}"), surface)
+            if s["kind"] == "assumed" and s.get("inner"):
+                # Narrower values the model also found plausible: the narrowest it confirms wins.
+                said = lang.decide("inner", language.inner_questions(quote, s["inner"]), question)
+                for i, (dim, value) in enumerate(s["inner"]):
+                    if _decisions._yes(said, f"in{i}") >= resolve.ANALYST:
+                        s = {**s, "dim": dim, "value": next(m for d in _decisions._dimensions(surface)
+                                                            if d["name"] == dim for m in d["members"] if str(m) == value),
+                             "why": f"read \"{quote}\" as {dim.split('__')[-1]} {value}, which is broader: "
+                                    f"it includes more than \"{quote}\""}
+                        break
             if s["kind"] == "assumed":
                 for t in (t for f in terms for t in f if t["quote"] == quote):
                     t["values"], t["why"] = [(s["dim"], s["value"])], s["why"]
@@ -151,7 +167,7 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
     if not any(d["state"] in ("refuse", "ungrounded") for d in reading["decisions"]):
         questions = language.roundtrip_question(reading, metric)
         p = _decisions._yes(lang.decide("confirm", questions, question), "roundtrip")
-        if p < _decisions.CONFIDENT:
+        if p < ROUNDTRIP:
             reading["decisions"].append({**_decisions._ungrounded(
                 "reading", f"not confirmed: {language.described(reading, metric)}"), "confidence": p})
     return {**reading, "proposal": proposal, "language": lang.used,
