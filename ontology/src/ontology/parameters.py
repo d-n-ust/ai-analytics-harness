@@ -116,8 +116,10 @@ def reachable_dimensions(models: dict, metrics: dict, metric: str) -> list[dict]
                             # strftime(started_date, ...)); its members are read through it.
                             "expr": d.get("expr") or d["name"],
                             "description": " ".join((d.get("description") or "").split()),
-                            # What a value means when its name does not say it ("unknown").
+                            # What a value means when its name does not say it ("unknown"), and
+                            # what to say whenever a figure is restricted by the dimension.
                             "meanings": ((d.get("config") or {}).get("meta") or {}).get("values") or {},
+                            "disclose": ((d.get("config") or {}).get("meta") or {}).get("disclose") or "",
                             "joined": model is not own})
     return out
 

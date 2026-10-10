@@ -14,5 +14,12 @@ select country,
            when 'US' then 'Americas' when 'BR' then 'Americas'
            when 'GB' then 'EMEA'     when 'DE' then 'EMEA'     when 'FR' then 'EMEA'
            when 'PH' then 'APAC'     when 'ID' then 'APAC'     when 'IN' then 'APAC'
-       end as region
+       end as region,
+       -- The hemisphere of most of the country's population. A season is a date in a hemisphere, so
+       -- a question about "summer" in Brazil does not mean the company calendar's June to August.
+       case country
+           when 'BR' then 'south' when 'ID' then 'south'
+           when 'US' then 'north' when 'GB' then 'north' when 'DE' then 'north' when 'FR' then 'north'
+           when 'PH' then 'north' when 'IN' then 'north'
+       end as hemisphere
 from (select distinct country from {{ ref('stg_users') }} where country is not null)

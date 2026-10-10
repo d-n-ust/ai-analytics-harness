@@ -127,3 +127,18 @@ def test_a_stated_grain_is_graded():
     monthly = {**_reading({}, ["2026-H1"], ["metric_time"]), "grain": "month"}
     assert "time_grain month" in " ".join(run.reading_errors({"app_opens": monthly}, weekly)["errors"])
     assert run.reading_errors({"app_opens": {**monthly, "grain": "week"}}, weekly)["errors"] == []
+
+
+def test_a_dimension_under_a_second_name_is_graded_as_the_first():
+    """i08 in the replication set: the label said country DE and FR, the wording said Germany and
+    France, and the reader filtered country_name. The rows are the same."""
+    run = _runner()
+    aliases = {"country_name": ("country", {"germany": "de", "france": "fr"})}
+    case = {"expect": {"type": "metric_answer", "metric": "app_opens",
+                       "params": {"country": ["DE", "FR"], "period": "2026-Q2"}}}
+    by_name = _reading({"activity__country_name": [["Germany", "France"]]}, ["2026-Q2"])
+    assert run.reading_errors({"app_opens": by_name}, case, aliases=aliases)["errors"] == []
+    assert run.reading_errors({"app_opens": by_name}, case)["errors"]
+    named = {"expect": {**case["expect"], "params": {"country_name": ["Germany", "France"], "period": "2026-Q2"}}}
+    by_code = _reading({"activity__country": [["DE", "FR"]]}, ["2026-Q2"])
+    assert run.reading_errors({"app_opens": by_code}, named, aliases=aliases)["errors"] == []

@@ -45,7 +45,7 @@ def _patient(fn, *args, **kwargs):
 
 
 def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | None = None,
-             typed: bool = False) -> dict:
+             typed: bool = False, aliases: dict | None = None) -> dict:
     expect = test["expect"]
     if test["element"] == "metric":
         choice = decisions.choose_metric(test["q"], semantic.metrics, forks.words_by_metric(semantic))
@@ -57,12 +57,12 @@ def run_test(test: dict, semantic, cursor, determines: dict, governance: dict | 
     cache: dict = {}
     reading, cost = decisions.reading_for(test["q"], expect.get("metric", "app_opens"), semantic, cursor,
                                           R.GOVERNANCE if governance is None else governance, cache, typed)
-    graded = R.reading_errors(cache, {"expect": expect}, determines)
+    graded = R.reading_errors(cache, {"expect": expect}, determines, aliases)
     return {"result": graded["action"], "ok": graded["action_ok"] and not graded["errors"],
             "errors": ([] if graded["action_ok"] else [f"action {graded['action']}"]) + graded["errors"],
             "reading": {"filters": reading["filters"], "periods": reading["periods"], "group_by": reading["group_by"],
                         "grain": reading.get("grain"), "decisions": reading["decisions"],
-                        "proposal": reading.get("proposal")},
+                        "proposal": reading.get("proposal"), "seconds": reading.get("seconds")},
             "open": [f"{d['state']}: {d['why']}" for d in reading["decisions"] if d["state"] in ("refuse", "ungrounded")],
             "cost": cost}
 
@@ -83,13 +83,14 @@ def main() -> None:
     cursor = R.scoped_cursor(con)
     semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                                guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
-    determines = R.layer_determines(con)
-    results = [{**t, **run_test(t, semantic, cursor, determines, typed=args.reader == "typed"),
+    determines, aliases = R.layer_determines(con), R.layer_aliases(con)
+    results = [{**t, **run_test(t, semantic, cursor, determines, typed=args.reader == "typed", aliases=aliases),
                 "reader": args.reader} for t in tests]
     groups: dict = {}
     for r in results:
         if r.get("group"):
-            groups.setdefault(r["group"], set()).add(json.dumps([r["result"], r.get("reading")], sort_keys=True))
+            shown = {k: (r.get("reading") or {}).get(k) for k in ("filters", "periods", "group_by")}
+            groups.setdefault(r["group"], set()).add(json.dumps([r["result"], shown], sort_keys=True))
     by_element: dict = {}
     for r in results:
         by_element.setdefault(r["element"], [0, 0])[0] += r["ok"]

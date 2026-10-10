@@ -156,15 +156,14 @@ def test_the_call_check_runs_a_range_as_start_and_end():
 # ── the whole reader, with the models replaced ─────────────────────────────────────────────────────
 def _run(monkeypatch, question, proposals, suggestion=None, confirm=None):
     replies = iter(proposals)
-    monkeypatch.setattr(TR.language, "propose", lambda _req: (next(replies), 0.001))
+    monkeypatch.setattr(TR.language, "propose", lambda _req: (next(replies), 0.001, "openai/gpt-5.4-mini-20260301"))
     asked = []
 
     def ask(questions, _q):
         asked.append(sorted(questions))
         if any(k.startswith("sug") for k in questions):
             return suggestion or {}, 0.001, "m"
-        yes = {k: {"noul": 0.0 if k in ("beyond", "shape", "anytime") else 0.95} for k in questions}
-        return {**yes, **(confirm or {})}, 0.001, "m"
+        return {**{k: {"noul": 0.95} for k in questions}, **(confirm or {})}, 0.001, "m"
     monkeypatch.setattr(DG, "_ask", ask)
     monkeypatch.setattr(DG, "_context", lambda *_a: (SURFACE, PRINCIPLES, LO, HI))
     cache: dict = {}
@@ -180,17 +179,20 @@ def test_an_unmarked_word_gets_one_retry_and_a_misspelling_is_corrected(monkeypa
                                        suggestion={"sug0": {"probabilities": {"value:activity__platform=android": 0.95}}})
     assert reading["filters"] == {"activity__platform": ["android"]} and _states(reading) == {"applied"}
     assert "Read \"Andriod\" as platform android" in [d for d in reading["decisions"] if d["parameter"] == "filter"][0]["disclose"]
-    assert any("term0" in a for a in asked)                     # the corrected value is confirmed
+    assert asked[-1] == ["roundtrip"]                          # the corrected reading is confirmed
     assert TR.replay(reading, q, "app_opens", None, None, {})["filters"] == reading["filters"]
     assert cache["_typed"] and round(cost, 3) == 0.004
+    served = {e["kind"]: e["served"] for e in reading["language"].values()}
+    assert served["propose"] == "openai/gpt-5.4-mini-20260301" and served["confirm"] == "m"
 
 
 def test_an_unconfirmed_judgement_makes_the_reader_ask(monkeypatch):
     q = "How many app opens were there in May 2026?"
     proposal = {**_proposal(), "time": [{"quote": "May 2026", "value": "2026-05"}]}
-    reading, *_ = _run(monkeypatch, q, [proposal], confirm={"shape": {"noul": 0.86}})
+    reading, *_ = _run(monkeypatch, q, [proposal], confirm={"roundtrip": {"noul": 0.3}})
     assert "ungrounded" in _states(reading)
-    assert any("several numbers over time" in d["why"] for d in reading["decisions"])
+    assert any("the number of app opens with no restriction, in May 2026, as one number for the whole period."
+               in d["why"] for d in reading["decisions"])
 
 
 def test_a_replay_that_needs_a_new_request_is_marked_stale(monkeypatch):
@@ -198,3 +200,54 @@ def test_a_replay_that_needs_a_new_request_is_marked_stale(monkeypatch):
     proposal = {**_proposal(), "time": [{"quote": "May 2026", "value": "2026-05"}]}
     reading, *_ = _run(monkeypatch, q, [proposal])
     assert TR.replay(reading, q + " ", "app_opens", None, None, {})["stale"] == "propose"
+
+
+# ── normalising, the round-trip sentence, the hemisphere ───────────────────────────────────────────
+def test_misfiled_phrases_are_moved_to_where_the_layer_says_they_belong():
+    p = R.normalised(_proposal([[("app", True), ("by country", True), ("mobile", True)]], breakdown=("across EMEA",)),
+                     SURFACE, PRINCIPLES)
+    assert [t["quote"] for t in p["figures"][0]["terms"]] == ["mobile", "across EMEA"]
+    assert p["breakdown"] == [{"quote": "by country"}]
+
+
+def test_the_round_trip_sentence_states_figures_periods_and_shape():
+    both = _build(_proposal([[("Android", True), ("iOS", True)]], series={"quote": "weekly", "unit": "week"}))
+    assert TR.language.described(both, "app_opens") == (
+        "the number of app opens for platform android and ios together, in June 2026, one number per week.")
+    sep = _build(_proposal([[("Android", True)], [("iOS", True)]]))
+    assert TR.language.described(sep, "app_opens").startswith(
+        "the number of app opens separately for platform android, and for platform ios, in June 2026")
+    assert "every platform except web" in TR.language.described(_build(_proposal([[("web", False)]])), "app_opens")
+
+
+def test_one_value_list_under_two_names_offers_one_not_in_the_list_option():
+    surface = {**SURFACE, "parameters": {"filters": {
+        "dimensions": SURFACE["parameters"]["filters"]["dimensions"] + [_dim("country_name", ["Germany", "India", "United States"])],
+        "determines": {"activity__country": {"activity__country_name": {"DE": "Germany", "IN": "India", "US": "United States"}}}}}}
+    options = TR.language.suggestion_questions(["Japan"], surface)["sug0"]["criteria"]
+    assert "absent:activity__country" in options and "absent:activity__country_name" not in options
+    assert "value:activity__country_name=Germany" in options
+
+
+class _Cursor:
+    def __init__(self, rows):
+        self.rows, self.sql = rows, []
+
+    def execute(self, sql):
+        self.sql.append(sql)
+        return self
+
+    def fetchall(self):
+        return self.rows
+
+
+def test_a_season_over_a_figure_wholly_in_the_other_hemisphere_is_asked_about():
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": SURFACE["parameters"]["filters"]["dimensions"] + [
+        {**_dim("hemisphere", ["north", "south"]), "table": "wh.f", "expr": "hemisphere"}]}}}
+    for d in surface["parameters"]["filters"]["dimensions"]:
+        d.setdefault("expr", d["column"])
+    gov = {"calendar": {"hemisphere": "north"}}
+    reading = {"filters": {"activity__country": ["IN"]}}
+    assert TR._other_hemisphere(reading, surface, _Cursor([("south",)]), gov)
+    assert not TR._other_hemisphere(reading, surface, _Cursor([("north",), ("south",)]), gov)
+    assert not TR._other_hemisphere({"filters": {}}, surface, _Cursor([("south",)]), gov)

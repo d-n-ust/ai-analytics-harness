@@ -15,6 +15,7 @@ select
     u.region,
     u.country,
     c.country_name,
+    c.hemisphere,
     u.platform,
     p.device_type,
     u.channel
@@ -22,4 +23,4 @@ from {{ ref('stg_events') }} e
 join {{ ref('dim_users') }} u using (user_id)
 left join {{ ref('dim_country') }} c on c.country = u.country
 left join {{ ref('dim_platform') }} p on p.platform = u.platform
-group by 1, 2, 3, 6, 7, 8, 9, 10, 11, 12
+group by 1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 13

@@ -13,7 +13,8 @@ The steps (03_typed_reader/design.md in experiment 07):
   3. resolve   each phrase against the values of the layer's dimensions and the calendar (resolve.py)
   4. suggest   a phrase no list holds: a misspelling of a listed value is corrected and disclosed;
                anything else is asked about or refused (the decision model chooses only the reply)
-  5. confirm   one yes/no per judgement of the proposal; an unconfirmed one makes the reader ask
+  5. confirm   the resolved reading, written back as one sentence, is confirmed with one yes/no;
+               unconfirmed, the reader asks
 
 Every model request and its answer is kept with the reading, keyed by the exact request. A replay
 runs the code steps again and reuses an answer only for an identical request; a request the store
@@ -23,6 +24,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 
 from .. import decisions as _decisions
 from . import language, resolve
@@ -46,9 +48,12 @@ class _Language:
         if key not in self.store:
             if not self.live:
                 raise _Stale(kind)
-            output, cost = send()
+            started = time.monotonic()
+            output, cost, served = send()
             self.cost += cost
-            self.store[key] = {"kind": kind, **record, "output": output}
+            # The served version, not the alias asked for: an alias can change what it serves.
+            self.store[key] = {"kind": kind, **record, "output": output, "served": served,
+                               "seconds": round(time.monotonic() - started, 2)}
         self.used[key] = self.store[key]
         return self.store[key]["output"]
 
@@ -59,15 +64,13 @@ class _Language:
                 "breakdown": out.get("breakdown") or [], "premise": out.get("premise")}
 
     def decide(self, kind: str, questions: dict, question: str) -> dict:
-        def send():
-            answers, cost, _model = _decisions._ask(questions, question)
-            return answers, cost
-        return self._get(kind, [questions, question], send, {"questions": sorted(questions)})
+        return self._get(kind, [questions, question], lambda: _decisions._ask(questions, question),
+                         {"questions": sorted(questions)})
 
 
 def _seasons(cursor, governance: dict | None) -> dict:
     """{(season, year): (first day, last day)} from the calendar governance names (`calendar`), or {}."""
-    table = (governance or {}).get("calendar")
+    table = ((governance or {}).get("calendar") or {}).get("table")
     if not table or cursor is None:
         return {}
     rows = cursor.execute(f"SELECT season, season_year, min(date_day), max(date_day) FROM {table} "
@@ -75,13 +78,36 @@ def _seasons(cursor, governance: dict | None) -> dict:
     return {(str(s), int(y)): (a, b) for s, y, a, b in rows}
 
 
-def _read(question: str, metric: str, context: tuple, seasons: dict, lang: _Language) -> dict:
+def _other_hemisphere(reading: dict, surface: dict, cursor, governance: dict | None) -> bool:
+    """Does a figure lie wholly in the hemisphere the calendar's seasons are not for ("summer in
+    Brazil")? Read from the rows each figure keeps, so a region, a country code or a name all count."""
+    home = ((governance or {}).get("calendar") or {}).get("hemisphere")
+    dims = {d["name"]: d for d in surface["parameters"]["filters"]["dimensions"]}
+    hemi = next((d for d in dims.values() if d["column"] == "hemisphere"), None)
+    if not home or hemi is None or cursor is None or not reading["filters"]:
+        return False
+    quote = lambda v: "'" + str(v).replace("'", "''") + "'"                # noqa: E731
+    figures = max(len(r) for r in reading["filters"].values())
+    for i in range(figures):
+        where = []
+        for dim, readings in reading["filters"].items():
+            r = readings[min(i, len(readings) - 1)]
+            values = r if isinstance(r, list) else [r]
+            where.append(f"{dims[dim]['expr']} IN ({', '.join(map(quote, values))})")
+        seen = {h for (h,) in cursor.execute(f"SELECT DISTINCT {hemi['expr']} FROM {hemi['table']} "
+                                              f"WHERE {' AND '.join(where)}").fetchall()}
+        if seen and home not in seen:
+            return True
+    return False
+
+
+def _read(question: str, metric: str, context: tuple, cursor, governance: dict | None, lang: _Language) -> dict:
     surface, principles, lo, hi = context
     outcomes = []
-    proposal = lang.propose(question, [])
+    proposal = resolve.normalised(lang.propose(question, []), surface, principles, question)
     missed = resolve.unaccounted(question, proposal, surface) + resolve.missing_quotes(question, proposal)
     if missed:
-        proposal = lang.propose(question, missed)
+        proposal = resolve.normalised(lang.propose(question, missed), surface, principles, question)
         missed = resolve.unaccounted(question, proposal, surface) + resolve.missing_quotes(question, proposal)
         if missed:
             outcomes.append(_decisions._ungrounded("reading", "the question's words "
@@ -106,16 +132,20 @@ def _read(question: str, metric: str, context: tuple, seasons: dict, lang: _Lang
             else:
                 outcomes.append(_decisions._ungrounded("filter", s["why"]))
 
-    reading = resolve.build(proposal, terms, surface, principles, lo, hi, seasons, outcomes)
+    reading = resolve.build(proposal, terms, surface, principles, lo, hi, _seasons(cursor, governance), outcomes)
+    seasonal = any(resolve.SEASON.fullmatch(str(t.get("value") or "")) for t in proposal["time"])
+    if seasonal and _other_hemisphere(reading, surface, cursor, governance):
+        reading["decisions"].append(_decisions._ungrounded(
+            "period", "the season named is for the northern hemisphere, and the figure lies in the southern one; "
+                      "ask which months are meant"))
     if not any(d["state"] in ("refuse", "ungrounded") for d in reading["decisions"]):
-        questions, rule = language.confirmation_questions(proposal, terms, reading["periods"])
-        answers = lang.decide("confirm", questions, question)
-        for key, how in rule.items():
-            p = _decisions._yes(answers, key)
-            if (p < _decisions.CONFIDENT) if how == "low" else (p >= _decisions.CONFIDENT):
-                reading["decisions"].append({**_decisions._ungrounded(
-                    "reading", f"not confirmed: {questions[key]['instructions']}"), "confidence": p})
-    return {**reading, "proposal": proposal, "language": lang.used, "model": language.PROPOSAL_MODEL}
+        questions = language.roundtrip_question(reading, metric)
+        p = _decisions._yes(lang.decide("confirm", questions, question), "roundtrip")
+        if p < _decisions.CONFIDENT:
+            reading["decisions"].append({**_decisions._ungrounded(
+                "reading", f"not confirmed: {language.described(reading, metric)}"), "confidence": p})
+    return {**reading, "proposal": proposal, "language": lang.used,
+            "seconds": round(sum(e.get("seconds", 0) for e in lang.used.values()), 2)}
 
 
 def reading_for(question: str, metric: str, semantic, cursor, governance: dict | None,
@@ -129,7 +159,7 @@ def reading_for(question: str, metric: str, semantic, cursor, governance: dict |
     if context is None:
         return None, 0.0
     lang = _Language(cache.get("_typed"))
-    reading = _read(question, metric, context, _seasons(cursor, governance), lang)
+    reading = _read(question, metric, context, cursor, governance, lang)
     cache["_typed"] = lang.store
     cache[metric] = reading
     return reading, lang.cost
@@ -142,7 +172,6 @@ def replay(stored: dict, question: str, metric: str, semantic, cursor, governanc
     if context is None:
         return None
     try:
-        return _read(question, metric, context, _seasons(cursor, governance),
-                     _Language(stored.get("language"), live=False))
+        return _read(question, metric, context, cursor, governance, _Language(stored.get("language"), live=False))
     except _Stale as exc:
         return {**stored, "stale": str(exc)}

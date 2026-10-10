@@ -3,9 +3,9 @@
 The proposal model marks what each phrase of the question does. It is shown nothing about the layer
 and is taught with examples from an unrelated domain (a bakery), so its output depends on the
 question alone. The decision model (`decisions._ask`) answers yes/no and choice questions that code
-builds from the resolved reading. Wording measured in experiment 07's spike
-(03_typed_reader/spike.py, findings section 29): 44 of 45 proposals correct with `gpt-5.4-mini`, no
-error passing both checks, no false asks.
+builds from the resolved reading. The proposal wording was measured in experiment 07's spike
+(03_typed_reader/spike.py, findings section 29); the round-trip confirmation replaced one question
+per judgement after the replication sealed set (findings section 31).
 """
 from __future__ import annotations
 
@@ -52,8 +52,15 @@ EXAMPLES = [
     ("Break down bread sales by store size for last month.",
      {"figures": [], "time": [{"quote": "last month", "value": "last_month"}], "series": None,
       "breakdown": [{"quote": "by store size"}], "premise": None}),
+    ("Monthly baguette sales in Lyon from March through June 2024",
+     {"figures": [{"terms": [{"quote": "baguette", "keep": True}, {"quote": "Lyon", "keep": True}]}],
+      "time": [{"quote": "from March through June 2024", "value": "2024-03/2024-06"}],
+      "series": {"quote": "Monthly", "unit": "month"}, "breakdown": [], "premise": None}),
+    # "cake" is a term: an unmarked product here taught the model to leave "Android" unmarked in
+    # "How did Android app opens change" (development run, 2026-10-10).
     ("How did non-organic cake sales change in 2025?",
-     {"figures": [{"terms": [{"quote": "organic", "keep": False}]}], "time": [{"quote": "2025", "value": "2025"}],
+     {"figures": [{"terms": [{"quote": "cake", "keep": True}, {"quote": "organic", "keep": False}]}],
+      "time": [{"quote": "2025", "value": "2025"}],
       "series": {"quote": "change", "unit": None}, "breakdown": [], "premise": None}),
 ]
 
@@ -90,8 +97,8 @@ def proposal_request(question: str, missed: list | None = None, model: str = PRO
             "tool_choice": {"type": "function", "function": {"name": "mark_question"}}}
 
 
-def propose(request: dict) -> tuple[dict, float]:
-    """(proposal, cost in USD). Raises ReadingUnavailable after three failed attempts; a missing key is
+def propose(request: dict) -> tuple[dict, float, str]:
+    """(proposal, cost in USD, the model version that served it). Raises ReadingUnavailable after three failed attempts; a missing key is
     a configuration fault and propagates, as in `decisions._ask`."""
     from ...core.models import MODEL_SPECS
     from ...runtime.providers import load_env
@@ -108,7 +115,7 @@ def propose(request: dict) -> tuple[dict, float]:
             call = r["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
             u = r.get("usage") or {}
             cost = (u.get("prompt_tokens", 0) * spec.input_price + u.get("completion_tokens", 0) * spec.output_price) / 1e6
-            return json.loads(call), cost
+            return json.loads(call), cost, str(r.get("model") or request["model"])
         except urllib.error.HTTPError as exc:
             if exc.code in (401, 403, 404):
                 raise
@@ -123,10 +130,20 @@ def _yn(text: str) -> dict:
     return {"type": "noul", "instructions": text, "criteria": {"true": "Yes.", "false": "No."}}
 
 
+def _twins(surface: dict) -> set:
+    """Dimensions that are another dimension under a second name: each value maps to exactly one of
+    the other's and back (country and country_name). Their values are offered, but "a value the layer
+    does not have" is offered once, for the first: split over two options, neither reached the bar
+    and "Japan" was asked about instead of refused."""
+    sizes = {d["name"]: len(d["members"]) for d in _dimensions(surface)}
+    linked = surface["parameters"]["filters"].get("determines") or {}
+    return {b for a, bs in linked.items() for b in (bs or {}) if sizes.get(a) == sizes.get(b)}
+
+
 def suggestion_questions(unresolved: list, surface: dict) -> dict:
     """One choice per phrase no list holds: which listed value it is the same thing as, a value of a
     dimension the layer does not have, or something else (design section 6)."""
-    out = {}
+    out, twins = {}, _twins(surface)
     for i, quote in enumerate(unresolved):
         criteria = {}
         for d in _dimensions(surface):
@@ -134,68 +151,38 @@ def suggestion_questions(unresolved: list, surface: dict) -> dict:
             for m in d["members"]:
                 if str(m).lower() not in ("true", "false"):
                     criteria[f"value:{d['name']}={m}"] = f"\"{quote}\" is the same thing as the {label} {m}."
-            criteria[f"absent:{d['name']}"] = (f"\"{quote}\" is a {label}, but none of these: "
-                                               f"{', '.join(map(str, d['members']))}.")
+            if d["name"] not in twins:
+                criteria[f"absent:{d['name']}"] = (f"\"{quote}\" is a {label}, but none of these: "
+                                                   f"{', '.join(map(str, d['members']))}.")
         criteria["other"] = f"\"{quote}\" is something else, or it is not clear what it is."
         out[f"sug{i}"] = {"type": "choice", "criteria": criteria,
                           "instructions": f"In the question, what is \"{quote}\"?"}
     return out
 
 
-def confirmation_questions(proposal: dict, terms: list, periods: list) -> tuple[dict, dict]:
-    """(questions, flag rule per key): 'low' flags below 0.7, 'high' flags at 0.7 or above. One
-    question per judgement the proposal made, plus one per phrase whose resolved value leaves words
-    over ("Google Android phones") or was corrected from a misspelling."""
-    qs, rule, parts = {}, {}, []
-    figures = proposal.get("figures") or []
-    for i, f in enumerate(figures):
-        fterms = f.get("terms") or []
-        # One question per figure, not per term: "restricted to Android?" scored 0.09 for "Android and
-        # iOS together", because the question means both (spike, 2026-10-09).
-        keep = [t["quote"] for t in fterms if t["keep"]]
-        drop = [t["quote"] for t in fterms if not t["keep"]]
-        text = ("restrict what is counted to " + " and ".join(keep) if keep else "count everything") + \
-               (" except " + " and ".join(drop) if drop else "")
-        qs[f"fig{i}"], rule[f"fig{i}"] = _yn(f"Does the question {text}?"), "low"
-        if len(fterms) > 1:
-            qs[f"group{i}"] = _yn("Does the question ask for " + " and ".join(t["quote"] for t in fterms)
-                                  + " combined into one number?")
-            rule[f"group{i}"] = "low"
-        parts.append(" and ".join(("not " if not t["keep"] else "") + t["quote"] for t in fterms))
-    if len(figures) > 1:
-        qs["separate"], rule["separate"] = _yn("Does the question ask for separate numbers for "
-                                               + " and for ".join(parts) + "?"), "low"
-    for i, t in enumerate(x for f in terms for x in f):
-        if t.get("values") and (t.get("rest") or t.get("why")):
-            named = " and ".join(f"{d.split('__')[-1].replace('_', ' ')} {v}" for d, v in t["values"])
-            qs[f"term{i}"], rule[f"term{i}"] = _yn(f"In the question, does \"{t['quote']}\" mean {named}, and "
-                                                   f"nothing narrower?"), "low"
-    s = proposal.get("series")
-    if s:
-        qs["shape"] = _yn(f"Does the question ask for one number per {s['unit']}?" if s.get("unit")
-                          else "Does the question ask how the number changes over time?")
-        rule["shape"] = "low"
-    else:
-        # Asked about what was NOT marked, flagged only on yes. "...or for one number per day, week,
-        # month or other period?" read "in May 2026" as one number for the month and flagged nearly
-        # every question (spike run 2); "several numbers" is the distinction that matters.
-        qs["shape"] = _yn("Does the question ask for several numbers over time, one for each of several days, "
-                          "weeks or months, rather than one number for the whole period?")
-        rule["shape"] = "high"
-    for i, p in enumerate(periods):
-        qs[f"time{i}"], rule[f"time{i}"] = _yn(f"Does the question ask about {readable(p)}?"), "low"
-    if not proposal.get("time"):
-        qs["anytime"], rule["anytime"] = _yn("Does the question name a period of time?"), "high"
-    for i, b in enumerate(proposal.get("breakdown") or []):
-        by = b["quote"] if b["quote"].lower().startswith(("by", "per")) else "by " + b["quote"]
-        qs[f"by{i}"], rule[f"by{i}"] = _yn(f"Does the question ask to split the number {by}?"), "low"
-    reading = "; ".join(filter(None, [
-        ("restricted to " + "; separately ".join(parts)) if parts else "no restriction",
-        ", ".join(readable(p) for p in periods) or "no period",
-        (f"one number per {s['unit']}" if s and s.get("unit") else "a trend over time") if s else "a single total",
-        ("split " + ", ".join(b["quote"] for b in proposal.get("breakdown") or [])) if proposal.get("breakdown") else ""]))
-    qs["beyond"] = _yn(f"The question has been read as asking for: {reading}. Leaving aside what is being counted "
-                       "(the measure itself), does the question also restrict or split it by something this "
-                       "reading leaves out?")
-    rule["beyond"] = "high"
-    return qs, rule
+def described(reading: dict, metric: str) -> str:
+    """The resolved reading as one plain sentence, built by code from the values that would run."""
+    figures = reading.get("figures") or []
+    what = ("separately for " + ", and for ".join(figures) if len(figures) > 1
+            else f"for {figures[0]}" if figures else "with no restriction")
+    when = " and ".join(readable(p) for p in reading["periods"]) or "no period"
+    shape = []
+    if "metric_time" in reading["group_by"]:
+        shape.append(f"one number per {reading['grain']}" if reading.get("grain") else "as a trend over time")
+    if reading.get("splits"):
+        shape.append("split by " + " and by ".join(reading["splits"]))
+    return (f"the number of {metric.replace('_', ' ')} {what}, in {when}, "
+            + (" and ".join(shape) if shape else "as one number for the whole period") + ".")
+
+
+def roundtrip_question(reading: dict, metric: str) -> dict:
+    """One yes/no question: does the reading, written back as a sentence, ask for exactly what the
+    question asks? It replaces one question per judgement (spike and first sealed run), where every
+    extra part was one more chance of a false "no": 53 of 216 readings asked without need."""
+    # Wording chosen on 14 development readings (8 correct, 6 wrong): this one passed 7 and flagged all
+    # 6, the wrong ones at 0.32 or less; "Does this ask for exactly what the question asks..." flagged
+    # a correct exclusion at 0.66 and passed nothing wrong below 0.54 (findings section 32).
+    return {"roundtrip": _yn(
+        f"Is this an accurate description of what the question asks for: {described(reading, metric)} Answer "
+        "no if it leaves out, adds or changes a restriction, a period, a comparison or a split. Staff and test "
+        "accounts are always excluded; ignore that.")}

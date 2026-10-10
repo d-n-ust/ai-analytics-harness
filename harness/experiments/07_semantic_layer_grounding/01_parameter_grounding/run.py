@@ -289,7 +289,8 @@ def reader_action(reading: dict) -> str:
     return "refuse" if "refuse" in states else "ask" if "ungrounded" in states else "answer"
 
 
-def reading_errors(readings: dict | None, case: dict, determines: dict | None = None) -> dict | None:
+def reading_errors(readings: dict | None, case: dict, determines: dict | None = None,
+                   aliases: dict | None = None) -> dict | None:
     """The question reader graded as a component, against the case's labels: the action its reading
     implies, and the values it allows for every labelled parameter. This grades the reader alone, so
     a reader error is visible even when the agent recovered from it, and an agent error is not
@@ -298,8 +299,21 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
     `determines` maps a dimension to the dimensions its value fixes (country -> region), as the layer
     derives it from data. A filter the label does not set is accepted when a labelled dimension
     determines it: it cannot change the number. On a metric whose time dimension is the start date,
-    a period of one month IS the cohort month, so the two labels are read as one."""
+    a period of one month IS the cohort month, so the two labels are read as one.
+
+    `aliases` maps a dimension that is another under a second name (country_name) to that one and the
+    value map ({"germany": "de"}): both are graded as the canonical dimension, because they keep the
+    same rows, and a label cannot know which name a wording will use."""
     expect = case["expect"]
+    if aliases:
+        params = {}
+        for k, v in (expect.get("params") or {}).items():
+            if k in aliases and v != "ask":
+                canon, to = aliases[k]
+                v = [to.get(str(x).lower(), x) for x in v] if isinstance(v, list) else to.get(str(v).lower(), v)
+                k = canon
+            params[k] = v
+        expect = {**expect, "params": params}
     usable = {m: r for m, r in (readings or {}).items() if not m.startswith("_") and "decisions" in r}
     reading = usable.get(expect.get("metric")) or (next(iter(usable.values())) if len(usable) == 1 else None)
     if reading is None:
@@ -323,6 +337,12 @@ def reading_errors(readings: dict | None, case: dict, determines: dict | None = 
         flat = {str(x).lower() for v in values for x in (v if isinstance(v, list) else [v]) if x is not None}
         if flat:
             filters[_dim(dim)] = flat
+    for twin, (canon, to) in (aliases or {}).items():
+        if twin in filters:
+            filters[canon] = filters.get(canon, set()) | {to.get(v, v) for v in filters.pop(twin)}
+        if twin in shapes:
+            mapped = [None if f is None else frozenset(to.get(v, v) for v in f) for f in shapes.pop(twin)]
+            shapes[canon] = shapes.get(canon, mapped) if canon in shapes else mapped
     built = _built_in(expect["metric"]) if expect.get("metric") else {}
     for key, value in built.items():                 # the metric's own filter sets its value
         filters.setdefault(key, {str(value).lower()})
@@ -394,6 +414,27 @@ def _shape_errors(key: str, readings: list, need: set, etype: str, covered: bool
     if len(need) > 1 and etype == "breakdown" and not covered and any(len(r) > 1 for r in figures):
         errors.append(f"{key}: one combined figure, label is one figure per value")
     return errors
+
+
+def layer_aliases(con) -> dict:
+    """{dimension: (the dimension it renames, {its value: that value})}, by short name and lower case:
+    pairs whose values map one to one in the data (country_name -> country). Derived like
+    `layer_determines`."""
+    from agent.guardrails.parameters import surface_for
+    cur = scoped_cursor(con)
+    semantic = build_grounding(cur, rung=RUNG, spec_path=LAYER, engine="metricflow", semantic_layer=True,
+                               guardrails=parse_cell("R4"), schema=MARTS).toolbox.semantic
+    out: dict = {}
+    for metric in semantic.metrics:
+        surface = surface_for(semantic, cur, metric) or {}
+        filters = (surface.get("parameters") or {}).get("filters") or {}
+        sizes = {d["name"]: len(d["members"] or ()) for d in filters.get("dimensions") or ()}
+        for a, linked in (filters.get("determines") or {}).items():
+            for b, values in (linked or {}).items():
+                if isinstance(values, dict) and sizes.get(a) == sizes.get(b):
+                    out[_dim(b)] = (_dim(a), {str(vb).lower(): str(va).lower() for va, vb in values.items()})
+    cur.close()
+    return out
 
 
 def layer_determines(con) -> dict:

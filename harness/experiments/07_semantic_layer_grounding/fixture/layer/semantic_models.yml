@@ -34,19 +34,26 @@ semantic_model:
     # `config.meta.values` defines a value whose name does not say what it holds. An answer whose
     # figure includes such a value without the question naming it says so ("every platform except
     # web" includes unknown).
+    # `config.meta.disclose` is said whenever a figure is restricted by the dimension: what the
+    # dimension holds is narrower or different from what its name suggests.
     - name: platform
       type: categorical
-      description: "The registered client platform: android, ios, web, or unknown."
-      config: {meta: {values: {unknown: "no recorded platform: the raw value was blank or unrecognised"}}}
-    - name: device_type
-      type: categorical
-      description: "The kind of device the account uses: mobile (android and ios), desktop (web), or unknown."
+      description: "The client platform the account registered on: android, ios, web, or unknown. Not the device of each open: the events record no device."
       config:
         meta:
+          disclose: "Platform is the platform each account registered on, not the device used for each app open."
+          values: {unknown: "no recorded platform: the raw value was blank or unrecognised"}
+    - name: device_type
+      type: categorical
+      description: "The kind of device of the platform the account registered on: mobile (android and ios), desktop (web), or unknown."
+      config:
+        meta:
+          disclose: "Device type follows the platform each account registered on, not the device used for each app open."
           values:
             mobile: "platforms android and ios"
-            desktop: "platform web"
+            desktop: "platform web: the web client, including web browsers on phones"
             unknown: "no recorded platform: the raw value was blank or unrecognised"
+    - {name: hemisphere, type: categorical, description: "The hemisphere of the account country: north or south."}
     - {name: channel, type: categorical, description: "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals."}
   measures:
     - {name: active_account_count, agg: count_distinct, expr: user_id}

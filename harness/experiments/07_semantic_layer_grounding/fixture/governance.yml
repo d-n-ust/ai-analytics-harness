@@ -89,7 +89,11 @@ attributes:
 # ── the calendar: where seasons are declared ──────────────────────────────────────────────────
 # MetricFlow's time spine holds days only. The conformed date table holds the calendar attributes a
 # question uses (`season`, `season_year`); the typed reader places a season on it. Owner: Analytics.
-calendar: wh_06.dim_date
+calendar:
+  table: wh_06.dim_date
+  # The seasons in the table are northern. A figure wholly in the other hemisphere (Brazil,
+  # Indonesia) has a season of its own, so the reader asks instead of applying these months.
+  hemisphere: north
 
 # ── relationships between definitions: moved to the semantic layer ───────────────────────────
 # Which metric answers a word that several governed metrics answer ("users", "habits",

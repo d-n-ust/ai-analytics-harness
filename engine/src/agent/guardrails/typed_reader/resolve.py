@@ -25,9 +25,10 @@ DATE_WORDS = re.compile(rf"\b(?:{_MONTHS}|spring|summer|autumn|fall|winter|(?:19
                         r"year to date|ytd)\b", re.I)
 SERIES_WORDS = re.compile(r"\b(?:week by week|month by month|day by day|weekly|monthly|daily|quarterly|trend|"
                           r"over time|change[ds]?)\b", re.I)
-BY_PHRASE = re.compile(r"\b(?:by|per|for each)\s+(\w+(?:\s+\w+)?)", re.I)
+# "side by side", "one by one" and "step by step" are not splits; "week by week" is a series.
+BY_PHRASE = re.compile(r"(?<!side )(?<!one )(?<!step )\b(?:by|per|for each)\s+(\w+(?:\s+\w+)?)", re.I)
 # Words that join a value to the rest of a phrase and restrict nothing ("users on Android").
-_JOINING = {"the", "a", "an", "of", "on", "from", "in", "for", "with", "and", "or", "who", "that"}
+_JOINING = {"the", "a", "an", "of", "on", "from", "in", "for", "with", "and", "or", "who", "that", "across"}
 
 
 def _values(surface: dict):
@@ -68,6 +69,39 @@ def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     hits += [(x.start(), x.end(), x.group()) for x in SERIES_WORDS.finditer(question)]
     hits += [(x.start(1), x.end(1), "by " + x.group(1)) for x in BY_PHRASE.finditer(question)]
     return sorted({h for a, b, h in hits if not covered(a, b)})
+
+
+def normalised(proposal: dict, surface: dict, principles: list, question: str = "") -> dict:
+    """PURE. The proposal with misfiled phrases moved to where the layer says they belong, before
+    anything is resolved: a term made only of the metric's own words ("app" in "mobile app opens") is
+    dropped, because what is counted is not a restriction; a term that names a split ("by country")
+    becomes a breakdown; a breakdown whose words are values ("across EMEA") becomes a term of every
+    figure. The confirmation sees the result, so a wrong move is asked about, not served."""
+    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
+    figures, breakdown = [], list(proposal.get("breakdown") or [])
+    for f in proposal.get("figures") or []:
+        terms = []
+        for t in f.get("terms") or []:
+            words = _tokens(t["quote"])
+            if words and set(words) <= own:
+                continue
+            after_by = re.search(rf"\b(?:by|per)\s+{re.escape(t['quote'])}", question, re.I)
+            if t["keep"] and split_by(t["quote"], surface, principles)[0] in ("dimension", "rule") \
+                    and (_SPLIT_LEAD.match(t["quote"]) or after_by):
+                breakdown.append({"quote": t["quote"] if _SPLIT_LEAD.match(t["quote"]) else after_by.group()})
+                continue
+            terms.append(t)
+        if terms:
+            figures.append({"terms": terms})
+    kept = []
+    for b in breakdown:
+        found = lookup(re.sub(r"^\s*(?:across|in|for|by)\s+", "", b["quote"], flags=re.I), surface)
+        if split_by(b["quote"], surface, principles)[0] == "none" and found["values"] and not found["rest"]:
+            term = {"quote": b["quote"], "keep": True}
+            figures = [{"terms": f["terms"] + [term]} for f in figures] or [{"terms": [term]}]
+        else:
+            kept.append(b)
+    return {**proposal, "figures": figures, "breakdown": kept}
 
 
 def missing_quotes(question: str, proposal: dict) -> list[str]:
@@ -156,6 +190,7 @@ def suggested(quote: str, answer: dict, surface: dict) -> dict:
 
 # ── time ───────────────────────────────────────────────────────────────────────────────────────
 _SEASONS = {"SP": "spring", "SU": "summer", "FA": "autumn", "WI": "winter"}
+SEASON = re.compile(r"\d{4}-(SP|SU|FA|WI)", re.I)
 _RELATIVE = {"last_week": "last_week", "last_month": "last_month", "last_quarter": "last_quarter",
              "year_to_date": "ytd", "ytd": "ytd"}
 
@@ -207,12 +242,17 @@ def readable(period: str) -> str:
 _TIME_UNITS = {"day": "day", "week": "week", "month": "month", "quarter": "quarter", "year": "year"}
 
 
+# The words before the category in a split phrase: "by", "split by", "broken down by", "across".
+_SPLIT_LEAD = re.compile(r"^\s*(?:(?:broken\s+down|break\s+down|split|segmented|grouped|group)\s+)?"
+                         r"(?:by|per|for each|across)\s+", re.I)
+
+
 def split_by(quote: str, surface: dict, principles: list) -> tuple[str, str]:
     """PURE. (kind, target) for a breakdown phrase: ("dimension", name), ("rule", id) for a governed
     rule that names its own words, ("time", unit), ("near", what) when the phrase holds a dimension
     name or a rule's word among other words ("customer segment"), or ("none", "") when the layer has
     no such split."""
-    words = _tokens(re.sub(r"^\s*(?:split\s+)?(?:by|per|for each|across)\s+", "", quote, flags=re.I))
+    words = _tokens(_SPLIT_LEAD.sub("", quote))
     names = [("dimension", d["name"], _tokens(d["column"])) for d in _dimensions(surface)]
     names += [("rule", r["id"], _tokens(w)) for r in principles if r.get("slot") == "group_by"
               for w in r.get("words") or ()]
@@ -241,6 +281,28 @@ def _figure_filters(terms: list, surface: dict) -> dict:
         chosen = [v for v in (keep.get(dim) or members[dim]) if v not in drop.get(dim, [])]
         out[dim] = chosen[0] if len(chosen) == 1 else chosen
     return out
+
+
+def _figure_words(terms: list, surface: dict) -> str:
+    """One figure in plain words: "platform android and ios together", "every platform except web",
+    "device type mobile and country name Brazil". A value with a declared meaning is said with it
+    ("device type desktop (platform web: the web client, ...)"), so the confirmation compares the
+    question with what the value holds, not with its name: "the Linux desktop app" read as desktop
+    was confirmed while the name alone was shown."""
+    meanings = {d["name"]: d.get("meanings") or {} for d in _dimensions(surface)}
+    keep: dict = {}
+    drop: dict = {}
+    for t in terms:
+        for dim, value in t["values"]:
+            meant = meanings.get(dim, {}).get(str(value))
+            (keep if t["keep"] else drop).setdefault(dim, []).append(f"{value} ({meant})" if meant else str(value))
+    parts = []
+    for dim in list(keep) + [d for d in drop if d not in keep]:
+        label = dim.split("__")[-1].replace("_", " ")
+        said = (f"{label} {' and '.join(keep[dim])}" + (" together" if len(keep[dim]) > 1 else "")) if dim in keep \
+            else f"every {label}"
+        parts.append(said + (f" except {' and '.join(drop[dim])}" if drop.get(dim) else ""))
+    return " and ".join(parts)
 
 
 def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.date, hi: dt.date,
@@ -295,7 +357,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
     elif periods:
         decisions.append(_decision("period", " or ".join(periods), "question"))
 
-    group_by, separate, grain = [], False, None
+    group_by, separate, grain, splits = [], False, None, []
     series = proposal.get("series")
     if series:
         group_by, grain = ["metric_time"], series.get("unit") if series.get("unit") in _TIME_UNITS else None
@@ -305,12 +367,15 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         kind, target = split_by(b["quote"], surface, principles)
         if kind == "dimension" and target not in group_by:
             group_by.append(target)
+            splits.append(target.split("__")[-1].replace("_", " "))
             decisions.append(_decision("group_by", [target], "question"))
         elif kind == "rule":
             rule = by_id[target]
             dims_ = [d for d in rule.get("default", []) if d not in filters]
             group_by += [d for d in dims_ if d not in group_by]
             separate = rule.get("combine") == "separate"
+            # Said in the user's words: which dimensions the rule supplies is governed, not asked about.
+            splits.append(" ".join(_tokens(_SPLIT_LEAD.sub("", b["quote"]))))
             decisions.append(_decision("group_by", dims_, "governed_principle", disclose=rule.get("disclose", ""),
                                        why=f"principle {rule['id']}"))
         elif kind == "time":
@@ -326,6 +391,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         decisions.append(_ungrounded("premise", f"the question takes as given \"{proposal['premise'].get('quote')}\"; "
                                      "the typed reader does not check stated facts yet"))
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": {},
+            "figures": [_figure_words(f, surface) for f in terms if any(t["values"] for t in f)], "splits": splits,
             "values": {d["name"]: d["members"] for d in _dimensions(surface)},
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),

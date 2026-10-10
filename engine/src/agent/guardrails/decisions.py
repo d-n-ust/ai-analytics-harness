@@ -648,13 +648,16 @@ def _redundant(dims: dict, modes: dict, settled: set, determines: dict) -> dict:
 
 
 def _meanings(dim: str, values, surface: dict) -> str:
-    """The declared meaning of each value a figure includes, as one sentence for the answer."""
+    """What the answer says about a figure restricted by `dim`: the dimension's own declared sentence
+    (platform is the registered one, not the device of each open), and the declared meaning of each
+    value the figure includes."""
     column = dim.split("__")[-1]
-    meanings = next((d.get("meanings") or {} for d in surface["parameters"]["filters"]["dimensions"]
-                     if d["name"] == dim), {})
+    d = next((d for d in surface["parameters"]["filters"]["dimensions"] if d["name"] == dim), {})
+    meanings = d.get("meanings") or {}
     flat = [x for v in values for x in (v if isinstance(v, list) else [v])]
     said = [f"{column} {v} ({meanings[str(v)]})" for v in flat if str(v) in meanings]
-    return f"The figure includes {' and '.join(said)}." if said else ""
+    return " ".join(filter(None, [d.get("disclose") or "",
+                                  f"The figure includes {' and '.join(said)}." if said else ""]))
 
 
 def _premise(answers: dict, back: dict) -> dict:

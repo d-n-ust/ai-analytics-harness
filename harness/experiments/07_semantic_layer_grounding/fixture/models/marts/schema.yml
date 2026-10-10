@@ -38,6 +38,9 @@ models:
       - name: region
         description: "Sales territory: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN)."
         tests: [not_null, {accepted_values: {values: [Americas, EMEA, APAC]}}]
+      - name: hemisphere
+        description: "The hemisphere of most of the country's population: north or south. Seasons in dim_date are northern; a season asked about a southern country is asked back."
+        tests: [not_null, {accepted_values: {values: [north, south]}}]
 
   - name: dim_users
     description: >-
@@ -150,5 +153,6 @@ models:
       - {name: is_internal, description: "Staff/test flag, denormalised from dim_users so a metric can exclude them without a join."}
       - {name: device_type, description: "The account platform's device type, from dim_platform."}
       - {name: country_name, description: "The account country's name, from dim_country."}
+      - {name: hemisphere, description: "The account country's hemisphere, from dim_country."}
       - {name: value_moments, description: "Count of habit completions by this account on this day."}
       - {name: app_opens, description: "Count of app opens by this account on this day."}
