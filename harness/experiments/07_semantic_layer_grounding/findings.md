@@ -1229,7 +1229,7 @@ a91e2da.
 | questionnaire | corrected (`label_audit.md`) | 123 (57%) | 48 (22%) | 45 | 0 |
 | typed | corrected | 171 (79%) | 0 | 45 | 0 |
 
-Per intent, readings with a silent wrong answer: questionnaire 7 of 24 intents, typed reader 0 of 24.
+Intents with a silent wrong reading: questionnaire 5 of 24 as written (6 corrected), typed reader 0 of 24.
 
 | prediction | result (corrected; as written) | held |
 |---|---|---|
