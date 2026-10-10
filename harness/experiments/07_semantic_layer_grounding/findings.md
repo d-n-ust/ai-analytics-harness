@@ -1321,7 +1321,61 @@ Design draft 5 (`03_typed_reader/design.md`, section 13).
 the round-trip sentence, is fixed and not yet re-run). The two burned replication sets were not run:
 the OpenRouter balance ran out (HTTP 402).
 
-## 35 · Open
+## 35 · The third replication set (draft 5 policy, one repetition)
+
+Development changes before the run (commit 6a95199): equivalent options pooled (DE and Germany;
+"the same as" and "one kind of" a value), a narrower option supporting the broader value that holds it,
+and a follow-up yes/no for the narrowest confirmed value (iPhone → ios); an analyst reading and a season
+said in the user's words in the round trip, with the season's months stated in the answer; the round
+trip vetoes below 0.5 (calibration: wrong readings at 0.38 or less). On 53 targeted development
+questions the typed reader went from 19 to 39 correct, with no silent wrong.
+
+Third set: intents by `gpt-5.6-terra` from author brief version 3 (the draft 5 policy), wordings by
+`gemini-3.8-flash`, pre-registered at 14b234d, one repetition (`02_readiness_audit/replication3/`).
+
+| reader | labels | correct | silent wrong | safe miss | wrong refusal |
+|---|---|---|---|---|---|
+| questionnaire | as written | 34 (47%) | 22 | 14 | 2 |
+| typed | as written | 36 (50%) | 19 | 17 | 0 |
+| questionnaire | corrected | 37 (51%) | 22 | 11 | 2 |
+| typed | corrected | 57 (79%) | 1 | 14 | 0 |
+
+Adoption rule met under both. The label problem is one format error repeated on 8 intents: the author
+wrote `group_by` beside `type` instead of inside `params`, so every trend and every split was graded as
+wrong for both readers. The regrade needs no model call: the runner stores every reading.
+
+| prediction | result (corrected) | held |
+|---|---|---|
+| questionnaire correct 45% to 65% | 51% | yes |
+| questionnaire silent wrong 8 or more | 22 | yes |
+| typed correct 75% or more | 79% | yes |
+| typed silent wrong 2 or fewer | 1 | yes |
+
+The questionnaire's silent wrong readings are mostly analyst readings it applies without saying so
+(Androd, Germani, Deutschland, iPhone answered with no statement), and combined values served as
+separate figures.
+
+**The typed reader's one silent wrong** was "Germani": not marked by the proposal, not a listed word,
+accepted by the round trip as "no restriction". Fixed after the run: a misspelling of a listed value
+(one edit; two on values of eight letters or more) counts as that value in the accounting check, so
+the proposal must mark it. A scan of every wording in the four sets finds no ordinary word matched;
+the three i09 wordings then read Germany, stated.
+
+Its 14 safe misses: the round trip rejecting correct "every X except Y" readings, "Canada" and
+"TikTok" asked about instead of refused, and proposal errors ("acquisition channel" filed as a split,
+"DE" unmarked once).
+
+**Across the three blind sets, typed reader against questionnaire, corrected labels:**
+
+| set | readings per reader | typed: silent wrong | questionnaire: silent wrong | typed: correct | questionnaire: correct |
+|---|---|---|---|---|---|
+| 1 (strict closed world) | 216 | 2 | 27 | 73% | 63% |
+| 2 (strict closed world) | 216 | 0 | 48 | 79% | 57% |
+| 3 (draft 5: three sources) | 72 | 1 | 22 | 79% | 51% |
+
+Each set changed the reader before the next; the sets measure successive versions, not one.
+
+## 36 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.

@@ -63,7 +63,10 @@ def test_a_value_of_two_attributes_is_ambiguous_and_a_short_code_matches_only_in
 def test_an_analyst_reading_is_applied_and_stated_and_a_word_no_list_has_is_refused():
     """Design section 13: a misspelling, a synonym and a narrower word are answered and stated."""
     assert R.spelling_variant("andriod", "android") and R.spelling_variant("androd", "android")
+    assert not R.spelling_variant("anndroiid", "android")
     assert not R.spelling_variant("iphone", "ios") and not R.spelling_variant("wbe", "web")
+    assert not R.spelling_variant("month", "north") and not R.spelling_variant("Japan", "APAC")
+    assert R.spelling_variant("refferal", "referral") and R.spelling_variant("Germani", "Germany")
     typo = {"probabilities": {"value:activity__platform=android": 0.93, "other": 0.07}}
     assert R.judged("Andriod", [], typo, SURFACE)["why"] == 'read "Andriod" as platform android, a spelling of a listed value'
     same = {"probabilities": {"value:activity__country=DE": 0.95}}
@@ -331,3 +334,15 @@ def test_an_analyst_reading_is_said_in_the_users_words_in_the_round_trip():
     reading = R.build(_proposal([[("Samsung phones", True)]]), terms, SURFACE, PRINCIPLES, LO, HI, SEASONS, [])
     assert reading["filters"] == {"activity__device_type": ["mobile"]}
     assert TR.language.described(reading, "app_opens").startswith('the number of app opens for "Samsung phones", in')
+
+
+def test_a_misspelled_value_word_must_be_marked_too():
+    """i09 of the third replication set: "Germani" left unmarked, and the total over every country served."""
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": SURFACE["parameters"]["filters"]["dimensions"]
+                                                     + [_dim("country_name", ["Germany", "India"])]}}}
+    q = "Please provide the trend of app opens in Germani during the first quarter of 2026."
+    quoted = {**_proposal(time=()), "time": [{"quote": "the first quarter of 2026", "value": "2026-Q1"}],
+              "series": {"quote": "trend", "unit": None}}
+    assert R.unaccounted(q, quoted, surface) == ["Germani"]
+    assert R.unaccounted("How many app opens were there in June 2026?",
+                         {**_proposal(time=()), "time": [{"quote": "June 2026", "value": "2026-06"}]}, surface) == []

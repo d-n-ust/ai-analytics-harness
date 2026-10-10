@@ -1,0 +1,323 @@
+[
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Can you show me the trend of app opens in Germani during the first quarter of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.07
+  },
+  "open": [],
+  "cost": 0.0005726700000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Trend of app opens in Germani during the first quarter of 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "during the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "Trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.8
+  },
+  "open": [],
+  "cost": 0.00057254,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "misspelling trend",
+  "type": "heldout",
+  "q": "Please provide the trend of app opens in Germani during the first quarter of 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "assumption": true,
+   "params": {
+    "country_name": "Germany",
+    "period": "2026-Q1",
+    "group_by": [
+     "metric_time"
+    ]
+   },
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "group": "i09",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     "DE"
+    ]
+   },
+   "periods": [
+    "2026-Q1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country = DE",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Read \"Germani\" as country DE.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Germani",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first quarter of 2026",
+      "value": "2026-Q1"
+     }
+    ],
+    "series": {
+     "quote": "trend",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.96
+  },
+  "open": [],
+  "cost": 0.000960668,
+  "reader": "typed"
+ }
+]

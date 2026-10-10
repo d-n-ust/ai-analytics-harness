@@ -65,6 +65,12 @@ def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     for _d, m in _values(surface):
         for found in re.finditer(rf"\b{re.escape(str(m))}s?\b", question, 0 if len(str(m)) <= 2 else re.I):
             hits.append((found.start(), found.end(), found.group()))
+    # A misspelling of a listed value is the same word: "Germani" was left unmarked, nothing flagged it,
+    # and the total over every country was served (third replication set, i09).
+    names = [str(m) for _d, m in _values(surface) if len(str(m)) >= 4]
+    for found in re.finditer(r"[A-Za-z]{4,}", question):
+        if any(spelling_variant(found.group(), m) for m in names):
+            hits.append((found.start(), found.end(), found.group()))
     hits += [(x.start(), x.end(), x.group()) for x in DATE_WORDS.finditer(question)]
     hits += [(x.start(), x.end(), x.group()) for x in SERIES_WORDS.finditer(question)]
     hits += [(x.start(1), x.end(1), "by " + x.group(1)) for x in BY_PHRASE.finditer(question)]
@@ -163,8 +169,10 @@ def named_dimension(question: str, dims: list, surface: dict) -> str | None:
 
 
 def spelling_variant(word: str, value) -> bool:
-    """PURE. Is `word` the value misspelled: at most two letters apart (insertion, deletion,
-    substitution or an adjacent swap), on a value of at least four letters?"""
+    """PURE. Is `word` the value misspelled: one edit apart (insertion, deletion, substitution or an
+    adjacent swap) on a value of four to seven letters, two on a longer one? Two edits on short values
+    matched ordinary words ("month" and "north", "Japan" and "APAC"); every misspelling seen was one
+    edit away, except "refferal" (two, on an eight-letter value)."""
     a, b = str(word).lower(), str(value).lower()
     if len(b) < 4 or a == b:
         return False
@@ -177,7 +185,7 @@ def spelling_variant(word: str, value) -> bool:
                 cost = min(cost, prev2[j - 2] + 1)
             row.append(cost)
         prev2, prev = prev, row
-    return prev[-1] <= 2
+    return prev[-1] <= (1 if len(b) < 8 else 2)
 
 
 # An analyst's reading is a weaker source than a list value or a rule (design section 13), so it needs a
