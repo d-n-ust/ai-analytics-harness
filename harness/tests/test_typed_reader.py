@@ -251,3 +251,42 @@ def test_a_season_over_a_figure_wholly_in_the_other_hemisphere_is_asked_about():
     assert TR._other_hemisphere(reading, surface, _Cursor([("south",)]), gov)
     assert not TR._other_hemisphere(reading, surface, _Cursor([("north",), ("south",)]), gov)
     assert not TR._other_hemisphere({"filters": {}}, surface, _Cursor([("south",)]), gov)
+
+
+def test_a_value_of_two_dimensions_is_settled_by_the_dimension_the_question_names():
+    dims = ["activity__device_type", "activity__platform"]
+    assert R.named_dimension("app opens from every platform except unknown", dims, SURFACE) == "activity__platform"
+    assert R.named_dimension("app opens from unknown", dims, SURFACE) is None
+
+
+def test_a_word_outside_every_list_refuses_even_when_the_model_splits_the_dimension():
+    split = {"probabilities": {"absent:activity__platform": 0.45, "absent:activity__region": 0.4, "other": 0.15}}
+    assert R.suggested("TikTok", split, SURFACE)["kind"] == "refuse"
+    synonym = {"probabilities": {"absent:activity__country": 0.6, "value:activity__country=DE": 0.3, "other": 0.1}}
+    assert R.suggested("Deutschland", synonym, SURFACE)["kind"] == "ask"
+
+
+def test_a_phrase_with_words_beside_a_value_keeps_it_only_when_clearly_read_as_that_value():
+    """Calibration, 2026-10-10: "desktop accounts" 0.99 desktop (kept); "the Linux desktop app" split
+    between a platform the layer lacks (0.39) and desktop (0.34) (asked, not served as desktop)."""
+    values = [("activity__device_type", "desktop")]
+    clear = {"probabilities": {"value:activity__device_type=desktop": 0.99, "other": 0.01}}
+    assert R.kept("desktop accounts", values, clear, SURFACE)["kind"] == "kept"
+    split = {"probabilities": {"absent:activity__platform": 0.39, "value:activity__device_type=desktop": 0.34, "other": 0.23}}
+    assert R.kept("Linux desktop app", values, split, SURFACE)["kind"] == "ask"
+    absent = {"probabilities": {"absent:activity__platform": 0.9, "other": 0.1}}
+    assert R.kept("Linux desktop app", values, absent, SURFACE)["kind"] == "refuse"
+
+
+def test_a_range_of_whole_months_is_said_in_months():
+    assert R.readable("2025-12-01/2026-02-28") == "December 2025 to February 2026"
+    assert R.readable("2026-01-01/2026-01-31") == "January 2026"
+    assert R.readable("2026-01-05/2026-02-10") == "2026-01-05 to 2026-02-10"
+
+
+def test_the_metric_and_the_entities_of_the_layer_are_not_leftover_words():
+    surface = {**SURFACE, "parameters": {"filters": {"dimensions": SURFACE["parameters"]["filters"]["dimensions"] + [
+        {**_dim("signup_channel", ["x"]), "entity": "user", "joined": True}]}}}
+    assert R.lookup("users in IN", surface)["rest"] == []
+    assert R.lookup("mobile app opens", surface)["rest"] == []
+    assert R.lookup("Linux desktop app", surface)["rest"] == ["linux"]

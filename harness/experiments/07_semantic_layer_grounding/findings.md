@@ -1261,7 +1261,38 @@ numbers without warning, against 27 and 48 for the questionnaire (corrected labe
 same ($0.09 to $0.10 per 216 readings). Its correct rate depends on how often its confirmation asks
 without need, which moved between 73% and 79% as that step changed.
 
-## 33 · Open
+## 33 · Fixing the typed reader's false asks (development only)
+
+Three causes from section 32, two designs tried for the first, each chosen on development readings.
+
+| cause | design tried | result | kept |
+|---|---|---|---|
+| the round-trip sentence stated each value's meaning, and the check judged the definition | B: state the phrase's unused words instead ("the words "account" were not used") | calibration: 6 of 8 correct readings flagged; "accounts" read as a dropped restriction | no |
+| | C: plain values in the sentence; a phrase with words beside a value goes to the suggestion step, and keeps the value only when the model clearly reads the whole phrase as it | calibration: "desktop accounts" 0.99, "mobile customers" 0.92, "users acquired via referral" 1.00 kept; "the Linux desktop app" split 0.39 / 0.34, asked | yes |
+| a value of two dimensions ("every platform except unknown") | the dimension whose name the question uses decides | deterministic | yes |
+| "TikTok" asked about | refuse when "not in any list" sums to 0.7 over the dimensions and no listed value reaches 0.15; each "not in the list" option states the dimension's own description | the model still answered "something else" for TikTok | kept, no effect yet |
+
+Also: words the layer itself defines (the metric, "app opens"; an entity of its dimensions, "users") are
+not leftover words; a range of whole months is said in months; the proposal request caps its output
+(1,500 tokens) and a billing refusal (HTTP 402) is a hard error, with the HTTP code and body in the
+message.
+
+Development results, typed reader, one repetition (both sets are burned):
+
+| set | section 32 | now |
+|---|---|---|
+| `tests_dev.yml` (28) | 27 | 26 |
+| first replication set, corrected labels (72) | 65 | 61 |
+| second replication set, corrected labels (72) | about 57 (79% over 216) | 62 |
+
+No silent wrong answer in any of the 172 readings. Every failure is an ask: the round trip rejecting a
+correct reading (8 of 144), "TikTok", "every platform except unknown" filed as a split, "daily" left
+unmarked. The round trip's false alarms are now the largest cause.
+
+A third sealed set was not run: the OpenRouter balance was $0.29 of $5.00, and a sealed run with both
+readers costs about $0.30.
+
+## 34 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.

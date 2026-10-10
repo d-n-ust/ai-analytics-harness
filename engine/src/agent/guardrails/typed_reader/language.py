@@ -93,7 +93,9 @@ def proposal_request(question: str, missed: list | None = None, model: str = PRO
         messages.append({"role": "user", "content": "These words of the question are not marked: " + ", ".join(missed)
                          + ". If any of them restricts what is counted, names a period, or asks for a split or a "
                            "series, mark it. Then call mark_question again for the same question."})
-    return {"model": MODEL_SPECS[model].openrouter_id, "temperature": 0, "messages": messages, "tools": [TOOL],
+    # max_tokens bounds the cost of one request; a marked question is a few hundred tokens. Without it
+    # the provider reserves its default (65,536) against the account's balance (HTTP 402, 2026-10-10).
+    return {"model": MODEL_SPECS[model].openrouter_id, "temperature": 0, "max_tokens": 1500, "messages": messages, "tools": [TOOL],
             "tool_choice": {"type": "function", "function": {"name": "mark_question"}}}
 
 
@@ -117,13 +119,14 @@ def propose(request: dict) -> tuple[dict, float, str]:
             cost = (u.get("prompt_tokens", 0) * spec.input_price + u.get("completion_tokens", 0) * spec.output_price) / 1e6
             return json.loads(call), cost, str(r.get("model") or request["model"])
         except urllib.error.HTTPError as exc:
-            if exc.code in (401, 403, 404):
+            if exc.code in (401, 402, 403, 404):         # credentials, credit, model: not transient
                 raise
             err: Exception = exc
+            detail = f"HTTP {exc.code}: {exc.read()[:200].decode(errors='replace')}"
         except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError, IndexError) as exc:
-            err = exc
+            err, detail = exc, type(exc).__name__
         time.sleep(3 * (attempt + 1))
-    raise ReadingUnavailable(f"proposal model unavailable: {type(err).__name__}")
+    raise ReadingUnavailable(f"proposal model unavailable: {detail}")
 
 
 def _yn(text: str) -> dict:
@@ -152,8 +155,11 @@ def suggestion_questions(unresolved: list, surface: dict) -> dict:
                 if str(m).lower() not in ("true", "false"):
                     criteria[f"value:{d['name']}={m}"] = f"\"{quote}\" is the same thing as the {label} {m}."
             if d["name"] not in twins:
-                criteria[f"absent:{d['name']}"] = (f"\"{quote}\" is a {label}, but none of these: "
-                                                   f"{', '.join(map(str, d['members']))}.")
+                # The layer's own first sentence says what the dimension is: "TikTok" was "something
+                # else" against "a channel", and is an acquisition channel the layer lacks.
+                what = (d.get("description") or "").split(". ")[0].rstrip(".")
+                criteria[f"absent:{d['name']}"] = (f"\"{quote}\" is a {label}" + (f" ({what})" if what else "")
+                                                   + f", but none of these: {', '.join(map(str, d['members']))}.")
         criteria["other"] = f"\"{quote}\" is something else, or it is not clear what it is."
         out[f"sug{i}"] = {"type": "choice", "criteria": criteria,
                           "instructions": f"In the question, what is \"{quote}\"?"}

@@ -84,7 +84,7 @@ def main() -> None:
     semantic = build_grounding(cursor, rung=R.RUNG, spec_path=R.LAYER, engine="metricflow", semantic_layer=True,
                                guardrails=parse_cell("R4"), schema=R.MARTS).toolbox.semantic
     determines, aliases = R.layer_determines(con), R.layer_aliases(con)
-    results = [{**t, **run_test(t, semantic, cursor, determines, typed=args.reader == "typed", aliases=aliases),
+    results = [{**t, **_patient(run_test, t, semantic, cursor, determines, typed=args.reader == "typed", aliases=aliases),
                 "reader": args.reader} for t in tests]
     groups: dict = {}
     for r in results:

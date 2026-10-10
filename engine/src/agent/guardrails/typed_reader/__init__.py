@@ -117,12 +117,27 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
              for f in proposal["figures"]]
     for t in (t for f in terms for t in f):
         for value, dims in t["ambiguous"]:
-            outcomes.append(_decisions._ungrounded("filter", f"\"{value}\" is a value of "
-                                                   f"{' and of '.join(d.split('__')[-1] for d in dims)}; ask which"))
+            chosen = resolve.named_dimension(question, dims, surface)
+            if chosen:
+                member = next(m for d in _decisions._dimensions(surface) if d["name"] == chosen
+                              for m in d["members"] if str(m).lower() == value.lower())
+                t["values"] = t["values"] + [(chosen, member)]
+            else:
+                outcomes.append(_decisions._ungrounded("filter", f"\"{value}\" is a value of "
+                                                       f"{' and of '.join(d.split('__')[-1] for d in dims)}; ask which"))
     unresolved = list(dict.fromkeys(t["quote"] for f in terms for t in f if not t["values"] and not t["ambiguous"]))
-    if unresolved:
-        answers = lang.decide("suggest", language.suggestion_questions(unresolved, surface), question)
-        for i, quote in enumerate(unresolved):
+    beside = {t["quote"]: t["values"] for f in terms for t in f if t["values"] and t["rest"]}
+    asked = unresolved + [q for q in beside if q not in unresolved]
+    if asked:
+        answers = lang.decide("suggest", language.suggestion_questions(asked, surface), question)
+        for i, quote in enumerate(asked):
+            if quote in beside:
+                s = resolve.kept(quote, beside[quote], answers.get(f"sug{i}"), surface)
+                if s["kind"] == "refuse":
+                    outcomes.append(_decisions._refuse("filter", "ungoverned_dimension_value", s["why"]))
+                elif s["kind"] == "ask":
+                    outcomes.append(_decisions._ungrounded("filter", s["why"]))
+                continue
             s = resolve.suggested(quote, answers.get(f"sug{i}"), surface)
             if s["kind"] == "corrected":
                 for t in (t for f in terms for t in f if t["quote"] == quote):

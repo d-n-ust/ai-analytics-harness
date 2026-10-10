@@ -135,8 +135,20 @@ def lookup(quote: str, surface: dict) -> dict:
             ambiguous.append((str(m), sorted(owners[str(m).lower()])))
         elif (dim, m) not in values:
             values.append((dim, m))
-    rest = [w for i, w in enumerate(words) if i not in taken and w not in _JOINING]
+    # Words the layer itself defines restrict nothing: the metric ("app opens") and the entities its
+    # dimensions belong to ("users"). "mobile app opens" and "users in Germany" were asked about.
+    own = set(_tokens(str(surface.get("metric", "")).replace("_", " ")))
+    own |= {w for d in surface["parameters"]["filters"]["dimensions"] for w in _tokens(d.get("entity") or "")}
+    rest = [w for i, w in enumerate(words) if i not in taken and w not in _JOINING and w not in own]
     return {"values": values, "rest": rest, "ambiguous": ambiguous}
+
+
+def named_dimension(question: str, dims: list, surface: dict) -> str | None:
+    """PURE. Of the dimensions a value belongs to, the one whose name the question uses ("every
+    platform except unknown"), or None when it names none or several."""
+    columns = {d["name"]: d["column"].replace("_", " ") for d in _dimensions(surface)}
+    named = [d for d in dims if re.search(rf"\b{re.escape(columns.get(d, d))}s?\b", question, re.I)]
+    return named[0] if len(named) == 1 else None
 
 
 def spelling_variant(word: str, value) -> bool:
@@ -155,6 +167,23 @@ def spelling_variant(word: str, value) -> bool:
             row.append(cost)
         prev2, prev = prev, row
     return prev[-1] <= 2
+
+
+def kept(quote: str, values: list, answer: dict, surface: dict) -> dict:
+    """PURE. The reply for a phrase that holds a listed value beside other words ("desktop accounts",
+    "the Linux desktop app"), from the same choice as `suggested`. The value stays only when the model
+    clearly reads the whole phrase as that value; a phrase that names something no list has refuses;
+    anything else asks. {"kind": "kept" | "ask" | "refuse", "why"}"""
+    probs = dict((answer or {}).get("probabilities") or {})
+    best = max(probs, key=probs.get) if probs else "other"
+    named = {f"value:{dim}={value}" for dim, value in values}
+    if best in named and probs[best] >= CONFIDENT and all(v < PLAUSIBLE for k, v in probs.items() if k != best):
+        return {"kind": "kept", "why": ""}
+    out = suggested(quote, answer, surface)
+    if out["kind"] == "refuse":
+        return out
+    listed = " and ".join(f"{dim.split('__')[-1]} {value}" for dim, value in values)
+    return {"kind": "ask", "why": f"\"{quote}\" holds {listed} and other words; ask whether it means {listed}"}
 
 
 def suggested(quote: str, answer: dict, surface: dict) -> dict:
@@ -179,12 +208,16 @@ def suggested(quote: str, answer: dict, surface: dict) -> dict:
                         "why": f"read \"{quote}\" as {dim.split('__')[-1]} {member}, a spelling of a listed value"}
         return {"kind": "ask", "why": f"\"{quote}\" is not a listed value; did you mean "
                                       f"{dim.split('__')[-1]} {member}?"}
-    if best.startswith("absent:") and p >= CONFIDENT:
-        dim = best[len("absent:"):]
+    # "TikTok" may read as a channel or as a platform the layer lacks; split between the two, neither
+    # reached the bar and the reader asked. Not in any list, with no listed value plausible, refuses.
+    absent = {k[len("absent:"):]: v for k, v in probs.items() if k.startswith("absent:")}
+    if (best.startswith("absent:") and p >= CONFIDENT) or (
+            sum(absent.values()) >= CONFIDENT and all(v < PLAUSIBLE for k, v in probs.items() if k.startswith("value:"))):
+        dim = max(absent, key=absent.get)
         members = next((d["members"] for d in _dimensions(surface) if d["name"] == dim), [])
         return {"kind": "refuse", "dim": dim,
-                "why": f"\"{quote}\" names a {dim.split('__')[-1]} the layer does not have; the governed "
-                       f"values are {', '.join(map(str, members))}"}
+                "why": f"\"{quote}\" names something the layer does not have; the governed "
+                       f"{dim.split('__')[-1]} values are {', '.join(map(str, members))}"}
     return {"kind": "ask", "why": f"\"{quote}\" matches no value of the layer"}
 
 
@@ -235,6 +268,9 @@ def readable(period: str) -> str:
         return f"{period[-2:]} {period[:4]} ({months[span[0].month - 1]} to {months[span[1].month - 1]})"
     if re.fullmatch(r"\d{4}-H[12]", period):
         return f"the {'first' if period.endswith('1') else 'second'} half of {period[:4]}"
+    if span and span[0].day == 1 and (span[1] + dt.timedelta(days=1)).day == 1:
+        first, last = f"{months[span[0].month - 1]} {span[0].year}", f"{months[span[1].month - 1]} {span[1].year}"
+        return first if first == last else f"{first} to {last}"
     return f"{span[0].isoformat()} to {span[1].isoformat()}" if span else period
 
 
@@ -283,19 +319,18 @@ def _figure_filters(terms: list, surface: dict) -> dict:
     return out
 
 
-def _figure_words(terms: list, surface: dict) -> str:
+def _figure_words(terms: list) -> str:
     """One figure in plain words: "platform android and ios together", "every platform except web",
-    "device type mobile and country name Brazil". A value with a declared meaning is said with it
-    ("device type desktop (platform web: the web client, ...)"), so the confirmation compares the
-    question with what the value holds, not with its name: "the Linux desktop app" read as desktop
-    was confirmed while the name alone was shown."""
-    meanings = {d["name"]: d.get("meanings") or {} for d in _dimensions(surface)}
+    "device type mobile and country name Brazil". Values only: saying each value's declared meaning
+    made the confirmation judge the definition, which the answer discloses (21 false asks on the
+    second replication set); naming a phrase's unused words made it treat "accounts" as a dropped
+    restriction (6 of 8 correct readings flagged in calibration). Words beside a value are checked
+    before this, in the suggestion step (`kept`)."""
     keep: dict = {}
     drop: dict = {}
     for t in terms:
         for dim, value in t["values"]:
-            meant = meanings.get(dim, {}).get(str(value))
-            (keep if t["keep"] else drop).setdefault(dim, []).append(f"{value} ({meant})" if meant else str(value))
+            (keep if t["keep"] else drop).setdefault(dim, []).append(str(value))
     parts = []
     for dim in list(keep) + [d for d in drop if d not in keep]:
         label = dim.split("__")[-1].replace("_", " ")
@@ -391,7 +426,7 @@ def build(proposal: dict, terms: list, surface: dict, principles: list, lo: dt.d
         decisions.append(_ungrounded("premise", f"the question takes as given \"{proposal['premise'].get('quote')}\"; "
                                      "the typed reader does not check stated facts yet"))
     return {"filters": filters, "periods": periods, "group_by": group_by, "separate": separate, "premise": {},
-            "figures": [_figure_words(f, surface) for f in terms if any(t["values"] for t in f)], "splits": splits,
+            "figures": [_figure_words(f) for f in terms if any(t["values"] for t in f)], "splits": splits,
             "values": {d["name"]: d["members"] for d in _dimensions(surface)},
             "period_options": periods,
             "grain": grain, "rule": next((r for r in principles if r.get("slot") == "time_grain"), None),
