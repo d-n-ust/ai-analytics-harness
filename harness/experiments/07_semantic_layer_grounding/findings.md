@@ -1198,17 +1198,81 @@ set's failures, so its effect must be measured on a new sealed set, not on this 
 grain or decision record, so the i02 correction could not be fully regraded. The runner now stores
 both.
 
-## 32 · Open
+## 32 · After the panel: data-model meanings, a round-trip check, and a second blind set
+
+**The panel** (cofounder, AI engineer, semantic modelling, systems architect, data modelling) found two
+silent-error risks in the data model and three weaknesses in the reader. Changes, each committed:
+
+| finding | change |
+|---|---|
+| "app opens on Android" counts the account's registered platform; the events record no device | the dimension declares a sentence (`config.meta.disclose`) that every platform or device-type figure states |
+| `desktop` is the web client, which includes phone browsers | its declared meaning says so, and a figure that includes it discloses it |
+| seasons are northern; Brazil and Indonesia are southern | `dim_country.hemisphere`; the typed reader asks when a season meets a figure wholly in the southern hemisphere (read from the rows the figure keeps) |
+| one yes/no per judgement raised 53 false asks of 216 | one round-trip question: the resolved query written back as a sentence. Wording chosen on 14 development readings (8 correct, 6 wrong): it flagged all 6 wrong ones at 0.32 or less and passed 7 of 8 correct ones |
+| misfiled phrases ("app" as a term, "by country" as a term, "across EMEA" as a split) | normalised before resolution; the round trip sees the result |
+| "Japan": the "not in the list" choice was split between `country` and `country_name` | offered once per pair of dimensions that map one to one |
+| the served model version was not recorded | each stored request keeps the served version and its latency; the typed reader takes 1.7 s at the median and 2.9 s at p95 (95 readings, model requests only) |
+| the grader failed a reading on `country_name` against a label on `country` | a dimension under a second name is graded as the first, with the value map from the data |
+
+On development data (the first replication set, now burned; 72 wordings, one repetition) the typed
+reader went from 73% correct with 2 silent wrong (of 216) to 65 of 72 with none.
+
+**The second replication sealed set** (`02_readiness_audit/replication2/`). Intents by `gpt-5.6-terra`
+from author brief version 2 (which closes the gaps the first audit found); wordings by
+`gemini-3.8-flash`, told to keep every name and value word. Pre-registered at c39ffc3, readers at
+a91e2da.
+
+| reader | labels | correct | silent wrong | safe miss | wrong refusal |
+|---|---|---|---|---|---|
+| questionnaire | as written | 111 (51%) | 42 (19%) | 63 | 0 |
+| typed | as written | 135 (62.5%) | 0 | 63 | 18 |
+| questionnaire | corrected (`label_audit.md`) | 123 (57%) | 48 (22%) | 45 | 0 |
+| typed | corrected | 171 (79%) | 0 | 45 | 0 |
+
+Per intent, readings with a silent wrong answer: questionnaire 7 of 24 intents, typed reader 0 of 24.
+
+| prediction | result (corrected; as written) | held |
+|---|---|---|
+| questionnaire correct 55% to 70% | 57%; 51% | yes; no |
+| questionnaire silent wrong 8% or more | 22%; 19% | yes |
+| typed correct 80% or more | 79%; 62.5% | no |
+| typed silent wrong 2% or less | 0%; 0% | yes |
+
+**What the typed reader still gets wrong: it asks too often** (45 corrected readings, 21%):
+
+| cause | intents | readings |
+|---|---|---|
+| the round trip rejects a correct reading of "mobile" or "desktop" when the sentence includes the value's declared meaning ("desktop (platform web: the web client, including web browsers on phones)") | i00, i01, i17 | 21 |
+| "every platform except unknown": "unknown" is a value of two dimensions, and the word "platform" beside it is not used to choose | i04 | 9 |
+| "TikTok" asked about instead of refused as a channel the layer lacks | i12 | 9 |
+| the round trip rejects a correct "by country" | i13 | 3 |
+| "daily" left unmarked by the proposal | i08 | 3 |
+
+The first cause comes from the change that stopped "the Linux desktop app" being read as desktop in
+development: it traded one silent error for 21 false asks on this set. A narrower rule would state a
+value's meaning only when the phrase has words beyond the value.
+
+**What the questionnaire gets wrong without saying so:** combined values served as separate figures
+(i02, i15), synonyms answered ("iPhone", "Deutschland"), a range of months read as something else
+(i06), and July 2026 answered although it is partly outside the data (i21).
+
+**Reading.** On two blind sets by two different authors, the typed reader served 2 and then 0 wrong
+numbers without warning, against 27 and 48 for the questionnaire (corrected labels). Its cost is the
+same ($0.09 to $0.10 per 216 readings). Its correct rate depends on how often its confirmation asks
+without need, which moved between 73% and 79% as that step changed.
+
+## 33 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.
 - **The typed reader, phase 2:** check stated premises; show a small set of readings instead of
   asking (the questionnaire's `show_small_choice_sets`); true synonyms ("iPhone", design draft 5).
-- **The typed reader's safe misses** (section 31): the per-figure confirmation for compared values,
-  the "side by side" pattern, the "not in the list" choice across linked dimensions, a range of months
-  in the proposal. Measured on a new sealed set built by the same procedure.
-- **A restriction no list holds** ("Samsung phones"): the one silent wrong of the typed reader. A
-  check that every content word of the question is accounted for, not only the known ones.
+- **The typed reader's false asks** (section 32): a value's declared meaning in the round-trip
+  sentence only when the phrase has words beyond the value; a dimension word beside a value of two
+  dimensions ("every platform except unknown"); a value the layer lacks refused when the model names
+  its dimension ("TikTok"). Measured on a third sealed set.
+- **The label policy for two rules at once** (a season both partly outside the data and in the other
+  hemisphere): the brief should say which wins.
 - **The rubric:** replace the "kind of fact" column with what the controlled test showed (does the
   fact reach the decision, can the output express it, who computes it).
 - **Partly covered periods:** ask and offer the covered interval; comparisons, growth and distinct
