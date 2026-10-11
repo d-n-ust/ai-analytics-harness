@@ -523,3 +523,15 @@ def test_the_language_resources_hold_no_fact_about_the_data():
     patterns = [E.DATE_WORDS, E.SERIES_WORDS, E._NEGATION, E._SPLIT_LEAD]
     clash = {w for w in names | values if w in words or any(p.fullmatch(w) for p in patterns)}
     assert clash <= {"day", "week", "month", "quarter", "year"} and values and names, clash   # time grains are calendar words
+
+
+def test_a_split_phrase_is_matched_by_stem_and_a_time_unit_word_is_a_series():
+    assert R.split_by("segmented", SURFACE, PRINCIPLES) == ("rule", "canonical_segments")
+    assert R.split_by("Weekly", SURFACE, PRINCIPLES) == ("time", "week")
+    assert R.split_by("by device model", SURFACE, PRINCIPLES)[0] == "none"
+
+
+def test_an_alternative_that_drops_a_known_word_is_not_accounted_for():
+    q = "Weekly app opens first half 2026."
+    p = {**_proposal(time=()), "time": [{"quote": "first half 2026", "value": "2026-H1"}]}
+    assert R.unaccounted(q, p, SURFACE) == ["Weekly"]

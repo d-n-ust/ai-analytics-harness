@@ -200,9 +200,12 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
             checked, _alt_vetoed, alt_answers = _checked(question, alt_proposal, alt_terms, alt, surface, lang, "recheck")
             structural = [k for k in alt_answers if not k.startswith("lw")]
             series_gone = "series" not in vetoed or _decisions._yes(answers, "series") <= 1 - _decisions.CONFIDENT
+            # The alternative must account for the question as the first reading had to: dropping a misfiled
+            # split ("Weekly") lost the series it named, and one total was served (fourth replication set).
+            accounted = not resolve.unaccounted(question, alt_proposal, surface)
             unexplained = len(checked["decisions"]) > len(alt["decisions"]) + 0 and any(
                 d["parameter"] == "filter" and "does not use" in d.get("why", "") for d in checked["decisions"])
-            if series_gone and not unexplained and all(_decisions._yes(alt_answers, k) >= _decisions.CONFIDENT
+            if series_gone and accounted and not unexplained and all(_decisions._yes(alt_answers, k) >= _decisions.CONFIDENT
                                                        for k in structural):
                 reading, proposal, terms = checked, alt_proposal, alt_terms
     return {**reading, "proposal": proposal, "language": lang.used, "notes": lang.notes,

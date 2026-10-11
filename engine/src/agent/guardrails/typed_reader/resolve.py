@@ -445,12 +445,15 @@ def split_by(quote: str, surface: dict, principles: list) -> tuple[str, str]:
     rule that names its own words, ("time", unit), ("near", what) when the phrase holds a dimension
     name or a rule's word among other words ("customer segment"), or ("none", "") when the layer has
     no such split."""
-    words = _tokens(_SPLIT_LEAD.sub("", quote))
+    words = [w for w in _tokens(_SPLIT_LEAD.sub("", quote)) if w not in _GRAMMAR]
+    if len(words) == 1 and words[0] in _UNITS:                   # "weekly": a series, not a dimension
+        return "time", _UNITS[words[0]]
     names = [("dimension", d["name"], _tokens(d["column"])) for d in _dimensions(surface)]
     names += [("rule", r["id"], _tokens(w)) for r in principles if r.get("slot") == "group_by"
               for w in r.get("words") or ()]
     for kind, target, name in names:
-        if words == name:
+        # Compared by stem, as the layer's own words are: "segmented" asks for the "segment" rule.
+        if [_stem(w) for w in words] == [_stem(w) for w in name]:
             return kind, target
     if len(words) == 1 and words[0] in _TIME_UNITS:
         return "time", _TIME_UNITS[words[0]]

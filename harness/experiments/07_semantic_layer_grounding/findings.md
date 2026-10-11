@@ -1486,7 +1486,46 @@ desktop app" (kind below 0.7), "Samsung phone" (split by the proposal), "driven"
 **Not done yet:** removing the one-failure patches and measuring that nothing regresses; one tested file
 for the English language resources; a metamorphic template suite; a fresh blind set.
 
-## 38 · Open
+## 38 · The fourth replication set (typed reader only, one repetition)
+
+**Before the run** (commit 201f869): the rules written for single failures removed and replaced by a
+narrow check per split phrase whose alternative drops the split; the English closed classes in one file
+(`typed_reader/english.py`), with a test that fails if a layer value or dimension name appears there (it
+found the season names, now read from the calendar); a metamorphic suite (8 template families filled from
+the layer, 3 wordings each): 21 of 24 correct, 6 of 8 groups read alike, no silent wrong.
+
+**The set:** intents by `gpt-5.6-terra` from author brief version 4 (complete lists declared), wordings by
+`deepseek-v4-flash` (gemini is now one of the reader's models), pre-registered at 6626bff. Typed reader
+only, one repetition (the owner's choice).
+
+| labels | correct | silent wrong | balanced accuracy | coverage |
+|---|---|---|---|---|
+| as written | 61 / 72 | 3 (4.2%) | 80.2% | 96.3% |
+| corrected (`label_audit.md`) | 68 / 72 | 1 (1.4%) | 95.4% | 96.3% |
+
+| prediction | result (corrected; as written) | held |
+|---|---|---|
+| silent wrong 1 or fewer | 1; 3 | yes; no |
+| balanced accuracy 80% or more | 95.4%; 80.2% | yes |
+| coverage 85% or more | 96.3% | yes |
+| 18 of 24 intents read alike in all wordings | 19 | yes |
+
+**The one real silent wrong** came from the alternative mechanism of section 37: "Weekly app opens first
+half 2026." had "Weekly" filed as a split; the split check said no and the alternative dropped the split,
+and with it the series. Fixed after the run: an alternative must pass the same accounting check as the
+first reading, so a known word it leaves uncovered rejects it; a time-unit word as a split is a series.
+The wording is now asked about. A wrong refusal ("segmented") is fixed by matching split phrases by stem.
+
+**Across the four blind sets** (corrected labels; each set measured a newer version of the reader):
+
+| set | readings | silent wrong | balanced accuracy | coverage |
+|---|---|---|---|---|
+| 1 | 216 | 0.9% | 78.5% | 60.0% |
+| 2 | 216 | 0.0% | 83.7% | 63.6% |
+| 3 | 72 | 1.4% | 81.7% | 81.0% |
+| 4 | 72 | 1.4% | 95.4% | 96.3% |
+
+## 39 · Open
 
 - **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
   today); accept date ranges once a reader produces them.
