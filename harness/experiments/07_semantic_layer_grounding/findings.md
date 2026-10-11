@@ -1548,6 +1548,75 @@ The wording is now asked about. A wrong refusal ("segmented") is fixed by matchi
 - Grow the metamorphic suite (more families, more fills) and run it on every change; it is the cheapest
   regression test of non-fragility.
 
+**Large dimensions (not built, not tested):**
+- Today a dimension with more than 50 values is treated as open (`MAX_MEMBERS` in
+  `ontology/parameters.py`): its values are not read, and the reader skips the dimension. A question
+  that names one of its values ("app opens in Munich", with a city dimension of 3,000 values) cannot
+  be answered. The likely outcome is a question back; a refusal is possible if the model reads the
+  phrase as a value of another dimension the layer lacks. No question of this kind has been run.
+- The judgement step does not scale either. It is one request, but the multiple-choice question has
+  about two options per value of every dimension (74 options for "iPhone users" on this layer). A
+  product or city dimension would put thousands of options in one question.
+- Design (owner's decision, 2026-10-11): code builds a shortlist, the decision model chooses from it.
+  1. One index over every value of every dimension, each value embedded with its dimension and its
+     declared meaning ("platform: ios, ..."), not as a bare code.
+  2. Two searches, merged: word search for spellings, typos and codes ("Muncih", "DE"), and embedding
+     search for meaning ("München", "Big Apple", "iPhone users" to ios). Each finds what the other
+     misses.
+  3. Searching all dimensions at once also settles which dimension a phrase names ("Paris" the city
+     or the campaign): both reach the shortlist and the decision model chooses.
+  4. The values that contain a shortlisted value are added (ios brings mobile), so the "narrower
+     than" options stay available.
+  5. The same 0.85 and 0.15 checks apply to the shortlist. A value missing from the shortlist makes
+     the analyst ask, never refuse: "not in the data" requires that the word search over a complete
+     list found nothing. A low embedding score is not evidence of absence.
+- Test in two steps: (A) the shortlist alone, recall at k on a fixture city dimension of several
+  thousand values with exact names, typos, other-language names, nicknames, narrower places and absent
+  cities, at no model cost; (B) end to end on 10 to 20 questions, only if (A) shows high recall.
+- Step A prototype (2026-10-11, `04_value_search/README.md`; 12,409 cities, no model calls): word
+  search alone finds typos (92 percent at rank 1, 100 at rank 5); other names of a city (Calcutta,
+  Big Apple) are missed by every method, so places need an alias table; an English-only embedding
+  model fails on spelling. Six large foreign cities share a name with a listed city (Rome, Georgia),
+  so an exact match does not ground a value in a large dimension, and no score separates an absent
+  city from a typo. Two of the phrase sets are weak (generated transliterations; author-written).
+
+**How a parameter is grounded: rule or dimension search (owner's decision, 2026-10-11):**
+- The three sources of section 34 (a listed value, a rule, an analyst's reading) become two
+  mechanisms. A parameter is grounded by **a rule** (declared in the layer, the governance file or
+  the calendar: the metric's own filters, "summer is June to August", "by segment", default periods,
+  date grammar) or by **a dimension search**. A dimension search has two steps:
+  1. **candidate search** finds the values the phrase could mean;
+  2. **resolution**: one exact match is applied by code and needs no statement; otherwise the decision
+     model judges among the candidates (the 0.85 and 0.15 bars), and the reading is stated; if no
+     candidate passes, the analyst asks.
+  "AI analyst judgement" (the article's name for the analyst's reading) is therefore a step inside
+  the search, used only when no rule and no exact match settles the parameter.
+- The shape of the query (compared or combined, a series or one number) is neither a value nor
+  usually declared. It stays with the narrow yes/no checks: a judgement about the shape, not a search.
+- **Candidate search** is one module with one interface, `candidates(phrase, dimension) -> options
+  with labels and context, exhaustive or not`, and a strategy per dimension, declared in the layer
+  (`config.meta.search`) or defaulted by size:
+
+  | strategy | for | how | exhaustive |
+  |---|---|---|---|
+  | all | 50 values or fewer | the whole list (the reader today) | yes |
+  | words | names where typos are the risk | normalised spelling distance | no |
+  | aliases | places, companies, customers | an alias table, then words | no |
+  | meaning | descriptive categories | multilingual embeddings and words | no |
+  | exact, pattern | codes, IDs, SKUs | a format rule, then exact or prefix match | yes, on a complete list |
+  | hierarchy | geography, organisations | a parent fixed by the question limits the search to its subtree (no model call); otherwise the best two parents are chosen from a short list, then the leaf strategy runs inside them | yes, for a small complete subtree |
+
+  Only an exhaustive search of a complete dimension can support "not in the data"; every other miss
+  is asked about. Each option carries its context ("Rome, Georgia, United States"), so a namesake is
+  visible to the model and stated in the answer. The strategy, the options and their scores are
+  stored with the reading, so a replay after the index changes is marked stale.
+- A hierarchy also lets a phrase name a higher level ("Bavaria", "the sales division"): the value is
+  the node, not a list of its children. It must be built on keys, not names ("Paris" has two
+  parents), and an organisation hierarchy must be read as it was in the question's period.
+- The reader today finds values in two places (`resolve.py` lookup and spelling, `language.py`
+  options). Candidate search replaces both; the refactor goes behind a switch, with the small
+  dimensions unchanged and the existing tests as the proof.
+
 **Measurement:**
 - A fifth blind set with three repetitions and both readers, for a stable number to publish; the fourth
   ran once and only the typed reader. State results per intent, with labels as written and corrected.
