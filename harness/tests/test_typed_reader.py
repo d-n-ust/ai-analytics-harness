@@ -318,10 +318,15 @@ def test_options_that_point_at_the_same_rows_are_pooled_and_the_narrowest_clear_
     assert R.judged("smartphones", [], wide, surface)["value"] == "mobile"           # mobile mass never picks android
 
 
-def test_split_phrases_that_exclude_or_name_no_category_are_normalised():
-    p = R.normalised(_proposal(breakdown=("from every platform except web", "breakdown")), SURFACE, PRINCIPLES)
-    assert p["breakdown"] == [] and p["figures"] == [{"terms": [{"quote": "web", "keep": False}]}]
-
+def test_a_misfiled_split_is_checked_and_its_alternative_drops_it():
+    """"every platform except web" and a bare "breakdown" were repaired by rules written for each; now a
+    narrow check asks about each split phrase, and the alternative is the reading without it."""
+    p = _proposal([[("web", False)]], breakdown=("every platform", "breakdown"))
+    terms = [[{**t, **R.lookup(t["quote"], SURFACE)} for t in f["terms"]] for f in p["figures"]]
+    asked = TR.language.structure_questions(p, _build(p), terms)
+    assert {"split0", "split1"} <= set(asked)
+    alt, _figures = R.flipped(p, terms, ["split0", "split1"])
+    assert alt["breakdown"] == [] and alt["figures"] == [{"terms": [{"quote": "web", "keep": False}]}]
 
 def test_a_misspelled_value_word_must_be_marked_too():
     """i09 of the third replication set: "Germani" left unmarked, and the total over every country served."""
@@ -500,3 +505,21 @@ def test_the_alternative_is_adopted_only_when_its_checks_confirm_it(monkeypatch)
     monkeypatch.setattr(DG, "_ask", ask(0.6))                          # the alternative not confirmed
     reading, _cost = TR.reading_for(q, "app_opens", None, None, {}, {})
     assert "ungrounded" in _states(reading)
+
+
+def test_the_language_resources_hold_no_fact_about_the_data():
+    """english.py is English only: no dimension name and no listed value of the experiment's layer."""
+    import pathlib
+    import re
+    import yaml
+    from agent.guardrails.typed_reader import english as E
+    root = pathlib.Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding" / "fixture"
+    names = {d["name"].lower() for doc in yaml.safe_load_all((root / "layer" / "semantic_models.yml").read_text()) if doc
+             for d in (doc.get("semantic_model") or {}).get("dimensions", [])}
+    values = {str(v).lower() for m in yaml.safe_load((root / "models" / "marts" / "schema.yml").read_text())["models"]
+              for c in m.get("columns", []) for t in c.get("tests", []) if isinstance(t, dict) and "accepted_values" in t
+              for v in t["accepted_values"]["values"]}
+    words = set(E._GRAMMAR) | set(E._JOINING) | set(E._UNITS) | set(E._TIME_UNITS)
+    patterns = [E.DATE_WORDS, E.SERIES_WORDS, E._NEGATION, E._SPLIT_LEAD]
+    clash = {w for w in names | values if w in words or any(p.fullmatch(w) for p in patterns)}
+    assert clash <= {"day", "week", "month", "quarter", "year"} and values and names, clash   # time grains are calendar words

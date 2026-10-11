@@ -48,7 +48,7 @@ class _Language:
     and recorded; in a replay it raises `_Stale`."""
 
     def __init__(self, store: dict | None = None, live: bool = True):
-        self.store, self.live, self.cost, self.used = dict(store or {}), live, 0.0, {}
+        self.store, self.live, self.cost, self.used, self.notes = dict(store or {}), live, 0.0, {}, []
 
     def _get(self, kind: str, payload, send, record: dict):
         key = hashlib.sha256(json.dumps([kind, payload], sort_keys=True, default=str).encode()).hexdigest()[:16]
@@ -110,9 +110,16 @@ def _other_hemisphere(reading: dict, surface: dict, cursor, governance: dict | N
 
 def _read(question: str, metric: str, context: tuple, cursor, governance: dict | None, lang: _Language) -> dict:
     surface, principles, lo, hi = context
+    # The calendar's words (season names) are read from the calendar, not listed in code.
+    surface = {**surface, "calendar_words": sorted({season for season, _year in _seasons(cursor, governance)})}
     outcomes = []
     proposal = resolve.normalised(lang.propose(question, []), surface, principles, question)
-    second = resolve.normalised(lang.propose(question, [], language.SECOND_MODEL), surface, principles, question)
+    # The second proposal adds independence; it is not required. A reply without the structured output
+    # (three attempts) leaves the first proposal alone, and the reading records it.
+    try:
+        second = resolve.normalised(lang.propose(question, [], language.SECOND_MODEL), surface, principles, question)
+    except _decisions.ReadingUnavailable:
+        second, lang.notes = proposal, lang.notes + ["second proposal unavailable"]
     if resolve.canonical(proposal, surface) != resolve.canonical(second, surface):
         asked = language.reconcile_questions(proposal, second, surface)
         answers = lang.decide("reconcile", asked, question) if asked else {}
@@ -198,7 +205,7 @@ def _read(question: str, metric: str, context: tuple, cursor, governance: dict |
             if series_gone and not unexplained and all(_decisions._yes(alt_answers, k) >= _decisions.CONFIDENT
                                                        for k in structural):
                 reading, proposal, terms = checked, alt_proposal, alt_terms
-    return {**reading, "proposal": proposal, "language": lang.used,
+    return {**reading, "proposal": proposal, "language": lang.used, "notes": lang.notes,
             "seconds": round(sum(e.get("seconds", 0) for e in lang.used.values()), 2)}
 
 

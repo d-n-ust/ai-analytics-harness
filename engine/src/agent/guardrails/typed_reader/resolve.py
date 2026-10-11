@@ -17,18 +17,10 @@ import re
 from ..decisions import CONFIDENT, PLAUSIBLE, _dimensions, _meanings, _refuse, _covered
 from ..forks import _tokens
 from ..parameters import _decision, _period_span, _ungrounded
+from .english import (_GRAMMAR, _JOINING, _MONTHS, _NEGATION, _SPLIT_LEAD, _TIME_UNITS, _UNITS, BY_PHRASE,
+                      DATE_WORDS, SERIES_WORDS)
 
 # ── accounting ─────────────────────────────────────────────────────────────────────────────────
-_MONTHS = "january|february|march|april|may|june|july|august|september|october|november|december"
-DATE_WORDS = re.compile(rf"\b(?:{_MONTHS}|spring|summer|autumn|fall|winter|(?:19|20)\d\d|q[1-4]|h[12]|first half|"
-                        r"second half|last (?:week|month|quarter|year)|this (?:week|month|quarter|year)|"
-                        r"year to date|ytd)\b", re.I)
-SERIES_WORDS = re.compile(r"\b(?:week by week|month by month|day by day|weekly|monthly|daily|quarterly|trend|"
-                          r"over time|change[ds]?)\b", re.I)
-# "side by side", "one by one" and "step by step" are not splits; "week by week" is a series.
-BY_PHRASE = re.compile(r"(?<!side )(?<!one )(?<!step )\b(?:by|per|for each)\s+(\w+(?:\s+\w+)?)", re.I)
-# Words that join a value to the rest of a phrase and restrict nothing ("users on Android").
-_JOINING = {"the", "a", "an", "of", "on", "from", "in", "for", "with", "and", "or", "who", "that", "across"}
 
 
 def _values(surface: dict):
@@ -62,6 +54,14 @@ def _spans(question: str, quotes: list) -> list:
             for m in re.finditer(rf"(?<!\w){re.escape(q)}(?!\w)", question, re.I)]
 
 
+def _time_words(question: str, surface: dict) -> list:
+    """Matches of the date phrases and of the calendar's own words (its season names, carried on the
+    surface as `calendar_words`)."""
+    words = surface.get("calendar_words") or []
+    calendar = re.compile(rf"\b(?:{'|'.join(map(re.escape, words))})\b", re.I) if words else None
+    return [*DATE_WORDS.finditer(question), *(calendar.finditer(question) if calendar else [])]
+
+
 def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     """PURE. The words the layer knows (a dimension value, a date word, a series word, a "by ..."
     phrase) that lie inside no marked phrase. Empty when the proposal accounts for the question."""
@@ -77,9 +77,11 @@ def unaccounted(question: str, proposal: dict, surface: dict) -> list[str]:
     for found in re.finditer(r"[A-Za-z]{4,}", question):
         if any(spelling_variant(found.group(), m) for m in names):
             hits.append((found.start(), found.end(), found.group()))
-    hits += [(x.start(), x.end(), x.group()) for x in DATE_WORDS.finditer(question)]
+    hits += [(x.start(), x.end(), x.group()) for x in _time_words(question, surface)]
     hits += [(x.start(), x.end(), x.group()) for x in SERIES_WORDS.finditer(question)]
-    hits += [(x.start(1), x.end(1), "by " + x.group(1)) for x in BY_PHRASE.finditer(question)]
+    # A "by ..." phrase names a split only when a word after "by" is not grammar ("side by side").
+    hits += [(x.start(1), x.end(1), "by " + x.group(1)) for x in BY_PHRASE.finditer(question)
+             if any(w.lower() not in _GRAMMAR for w in x.group(1).split())]
     return sorted({h for a, b, h in hits if not covered(a, b)})
 
 
@@ -93,7 +95,8 @@ def own_words(surface: dict) -> set:
     values = {w for _d, m in _values(surface) for w in _tokens(str(m))}
     own |= {w for d in _dimensions(surface) for w in _tokens(d["column"])
             + _tokens((d.get("description") or "").split(". ")[0].split(":")[0]) if w not in values}
-    return own | _GRAMMAR
+    # Grammar words in the form the question's words are compared in ("across" is the token "acros").
+    return own | _GRAMMAR | {t for g in _GRAMMAR for t in _tokens(g)}
 
 
 def normalised(proposal: dict, surface: dict, principles: list, question: str = "") -> dict:
@@ -122,34 +125,13 @@ def normalised(proposal: dict, surface: dict, principles: list, question: str = 
             figures.append({"terms": terms})
     kept = []
     for b in breakdown:
-        exclusion = re.search(r"\b(?:every|all)\s+(?:\w+\s+){1,3}?(?:except|other than|excluding|but)\s+(.+)$",
-                              b["quote"], re.I)
-        found = lookup(exclusion.group(1), surface) if exclusion else {}
-        if exclusion and (found["values"] or found["ambiguous"]):
-            term = {"quote": exclusion.group(1), "keep": False}
-            figures = [{"terms": f["terms"] + ([term] if term not in f["terms"] else [])} for f in figures] \
-                or [{"terms": [term]}]
-            continue
-        if not [w for w in _tokens(_SPLIT_LEAD.sub("", b["quote"])) if w not in _NO_CATEGORY]:
-            continue                                     # "a week-by-week breakdown": no category named
-        found = lookup(re.sub(r"^\s*(?:across|in|for|by)\s+", "", b["quote"], flags=re.I), surface)
+        found = lookup(b["quote"], surface)
         if split_by(b["quote"], surface, principles)[0] == "none" and found["values"] and not found["rest"]:
             term = {"quote": b["quote"], "keep": True}
             figures = [{"terms": f["terms"] + [term]} for f in figures] or [{"terms": [term]}]
         else:
             kept.append(b)
     return {**proposal, "figures": figures, "breakdown": kept}
-
-
-# Closed grammatical classes: articles, prepositions, conjunctions, pronouns, auxiliary and modal verbs,
-# question words, and the words that shape figures ("except", "together"), which the reading states.
-# They never narrow what is counted, and the classes do not grow with new questions.
-_GRAMMAR = set("""a an the this that these those some any each every all both either neither no of in on at
-by for from to into onto over under during within without about across through per than as and or but nor
-so if then i me my we us our you your he him his she her it its they them their what which who whom whose
-when where why how many much is are was were be been being am do does did done have has had having will
-would shall should can could may might must there here not
-except excluding besides apart other only also just together combined versus vs with via side""".split())
 
 
 def _stem(word: str) -> str:
@@ -163,7 +145,7 @@ def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
     A restriction the proposal left unmarked ("Germani", "Samsung") is among these whether or not any
     list knows the word; the confirmation asks whether any of them narrows what is counted."""
     spans = _spans(question, _quotes(proposal))
-    taken = [(m.start(), m.end()) for rx in (DATE_WORDS, SERIES_WORDS) for m in rx.finditer(question)] + spans
+    taken = [(m.start(), m.end()) for m in [*_time_words(question, surface), *SERIES_WORDS.finditer(question)]] + spans
     own = own_words(surface)
     # A word sharing its stem with a word the layer uses to name a dimension ("acquired", from "the
     # acquisition channel") is the layer's own word in another form.
@@ -177,11 +159,6 @@ def leftover_words(question: str, proposal: dict, surface: dict) -> list[str]:
             continue
         out.append(word)
     return out
-
-
-_UNITS = {"daily": "day", "weekly": "week", "monthly": "month", "quarterly": "quarter", "yearly": "year",
-          "day by day": "day", "week by week": "week", "month by month": "month"}
-_NEGATION = re.compile(r"\b(?:not|non|except|excluding|other than|apart from|besides|without|but)\s+(?:\w+\s+){0,2}$", re.I)
 
 
 def marked_by_code(question: str, proposal: dict, missed: list, surface: dict) -> dict:
@@ -461,15 +438,6 @@ def readable(period: str) -> str:
 
 
 # ── breakdown ──────────────────────────────────────────────────────────────────────────────────
-_TIME_UNITS = {"day": "day", "week": "week", "month": "month", "quarter": "quarter", "year": "year"}
-
-
-# Words of a split phrase that name no category: "breakdown" alone asks for no split by a dimension.
-_NO_CATEGORY = {"breakdown", "break", "down", "split", "separate", "separately", "figure", "number", "series",
-                "out", "into", "broken"}
-# The words before the category in a split phrase: "by", "split by", "broken down by", "across".
-_SPLIT_LEAD = re.compile(r"^\s*(?:(?:broken\s+down|break\s+down|split|segmented|grouped|group)\s+)?"
-                         r"(?:by|per|for each|across)\s+", re.I)
 
 
 def split_by(quote: str, surface: dict, principles: list) -> tuple[str, str]:
@@ -677,7 +645,7 @@ def flipped(proposal: dict, terms: list, vetoed: list) -> tuple[dict, list] | No
     """PURE. The alternative reading for vetoed two-way judgements, or None when a vetoed judgement has no
     single alternative. A narrow check said no to: a series (alternative: one number), values of one
     dimension added together (one figure per value), values compared (one combined figure), a value
-    kept (left out), a value left out (kept). The caller adopts the alternative only when its own
+    kept (left out), a value left out (kept), a split (no split). The caller adopts the alternative only when its own
     narrow checks confirm it."""
     figures = [[dict(t) for t in f] for f in terms]
     out = dict(proposal)
@@ -694,6 +662,9 @@ def flipped(proposal: dict, terms: list, vetoed: list) -> tuple[dict, list] | No
             kept = key.startswith("include")
             same = [t for t in figures[i] if t["keep"] == kept]
             same[j]["keep"] = not kept
+        elif key.startswith("split"):
+            drop = (proposal.get("breakdown") or [])[int(key[len("split"):])]       # index into the original
+            out["breakdown"] = [b for b in out.get("breakdown") or [] if b is not drop]
         elif key == "separate":
             merged: list = []
             for f in figures:

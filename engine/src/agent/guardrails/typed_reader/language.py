@@ -216,6 +216,11 @@ def structure_questions(proposal: dict, reading: dict, terms: list) -> dict:
         names = [" and ".join(t["quote"] for t in f if t["keep"] and t["quote"].lower() not in shared) or "the rest"
                  for f in terms]
         out["separate"] = _yn(f"Does the question ask for a separate number for each of {' and '.join(names)}?")
+    # Each split phrase: misfiled phrases ("every platform except unknown", a bare "breakdown") were
+    # repaired by rules written for each; the check and its alternative (no split) replace them.
+    for k, b in enumerate(proposal.get("breakdown") or []):
+        by = b["quote"] if b["quote"].lower().startswith(("by", "per", "split", "broken", "break")) else "by " + b["quote"]
+        out[f"split{k}"] = _yn(f"Does the question ask to split the number {by}?")
     times = [t["quote"] for t in proposal.get("time") or []]
     if len(times) > 1:
         out["periods"] = _yn(f"Does the question ask about {' and '.join(times)} as separate periods, rather than "
