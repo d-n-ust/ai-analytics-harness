@@ -30,8 +30,8 @@ PROMPT = ("A business user of a habit-tracking app wants this from the company's
           "and nothing else.")
 
 
-def ask(intent: str) -> list[str]:
-    spec = MODEL_SPECS[WRITER]
+def ask(intent: str, writer: str = WRITER) -> list[str]:
+    spec = MODEL_SPECS[writer]
     body = json.dumps({"model": spec.openrouter_id, "temperature": 0.9,
                        "messages": [{"role": "user", "content": PROMPT.format(intent=intent)}]}).encode()
     req = urllib.request.Request(os.environ["OPEN_ROUTER_BASE_URL"].rstrip("/") + "/chat/completions", data=body,
@@ -46,16 +46,17 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--intents", default="intents_heldout.yml")
     ap.add_argument("--out", default="tests_heldout.yml")
+    ap.add_argument("--writer", default=WRITER, help="the wording model; keep it outside the reader's model families")
     args = ap.parse_args()
     from agent.runtime.providers import load_env
     load_env()
     intents = yaml.safe_load((HERE / args.intents).read_text())["intents"]
     tests = []
     for n, it in enumerate(intents):
-        for q in ask(it["intent"]):
+        for q in ask(it["intent"], args.writer):
             tests.append({"element": it["element"], "block": it["block"], "type": "heldout", "q": q,
                           "expect": it["expect"], "group": f"i{n:02d}"})
-    header = (f"# Sealed held-out tests (stage 7). Wordings written by {WRITER} from {args.intents},\n"
+    header = (f"# Sealed held-out tests (stage 7). Wordings written by {args.writer} from {args.intents},\n"
               "# one intent at a time, without the layer. Do not read the failures before stage 7.\n")
     (HERE / args.out).write_text(header + yaml.safe_dump({"tests": tests}, sort_keys=False,
                                                                     allow_unicode=True, width=120))

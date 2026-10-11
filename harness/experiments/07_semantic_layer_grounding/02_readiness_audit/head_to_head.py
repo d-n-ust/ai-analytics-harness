@@ -56,6 +56,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("tests")
     ap.add_argument("--reps", type=int, default=3)
+    ap.add_argument("--readers", default=",".join(READERS), help="comma-separated: questionnaire, typed")
     args = ap.parse_args()
     path = HERE / args.tests
     tests = yaml.safe_load(path.read_text())["tests"]
@@ -68,21 +69,22 @@ def main() -> None:
     rows = []
     for rep in range(args.reps):
         for n, test in enumerate(tests):
-            for reader in READERS:
+            for reader in args.readers.split(","):
                 r = _patient(run_test, test, semantic, cursor, determines, typed=reader == "typed", aliases=aliases,
                              rollups=rollups)
                 rows.append({**test, **r, "n": n, "rep": rep, "reader": reader, "outcome": outcome(r)})
+    readers = args.readers.split(",")
     counts = {reader: {o: sum(1 for r in rows if r["reader"] == reader and r["outcome"] == o) for o in OUTCOMES}
-              for reader in READERS}
+              for reader in readers}
     groups = {t.get("group") for t in tests}
     per_intent = round(len(tests) / max(len(groups), 1)) * args.reps
     print(f"{len(tests)} wordings x {args.reps} repetitions per reader; layer {R.LAYER_SHA}")
     print(f"{'reader':15}" + "".join(f"{o:>15}" for o in OUTCOMES) + f"{'cost':>10}")
-    for reader in READERS:
+    for reader in readers:
         cost = sum(r["cost"] for r in rows if r["reader"] == reader)
         print(f"{reader:15}" + "".join(f"{counts[reader][o]:>15}" for o in OUTCOMES) + f"{'$%.4f' % cost:>10}")
-    verdict, why = adopt(counts, per_intent)
-    print(f"\nadoption rule: {'MET' if verdict else 'NOT MET'} ({why})")
+    verdict, why = adopt(counts, per_intent) if len(readers) == 2 else (None, "one reader: no comparison")
+    print(f"\nadoption rule: {why if verdict is None else ('MET' if verdict else 'NOT MET') + f' ({why})'}")
     out = HERE / "results" / f"{time.strftime('%Y%m%d-%H%M%S')}-head_to_head.json"
     out.write_text(json.dumps({"tests": args.tests, "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                                "layer": R.LAYER_SHA, "reps": args.reps, "counts": counts, "adopt": verdict,
