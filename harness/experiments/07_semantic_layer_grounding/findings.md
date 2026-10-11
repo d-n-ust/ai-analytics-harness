@@ -20,10 +20,16 @@ section 19 records the first held-out result, on frozen code. Section 20 (2026-1
 2026-10-07) records the fixes made after reading its misses; they are fitted to that suite. Section
 22 records a second held-out suite (v2, another independent author) and its result on frozen code,
 the only held-out result for the section 20 fixes; section 23 records the fixes made after it, which
-are fitted to v2. Section 24 records the design and review of a semantic-layer readiness audit; it
-has not been run. Model throughout: `gpt-5-mini`;
+are fitted to v2. Section 24 records the design and review of a semantic-layer readiness audit.
+Sections 25 to 28 (2026-10-08 to 2026-10-09) run the audit on one slice, the controlled test, and the
+target reader's design. Sections 29 to 31 build the typed reader and compare it with the questionnaire
+on a replication sealed set by an outside author. Sections 32 to 38 (2026-10-10 to 2026-10-11) change
+the data model and the reader after the panel reviews and the owner's decisions, and measure each
+version on a new sealed set (four in all); every fix in those sections is fitted to the sets whose
+failures were read before it, and only the next set measures it. Agent model throughout: `gpt-5-mini`;
 decision model: `typesafe/jev-1.13-20260917`, requested through the alias `~typesafe/jev-latest`
-until 2026-10-06 and pinned since; every reading now records the version that served it.
+until 2026-10-06 and pinned since; the typed reader's proposal models are `gpt-5.4-mini` and, since
+section 37, `gemini-3.8-flash`; every reading records the version that served each request.
 
 ---
 
@@ -1527,29 +1533,49 @@ The wording is now asked about. A wrong refusal ("segmented") is fixed by matchi
 
 ## 39 · Open
 
-- **Grader, answer side:** check a breakdown answer's values against the label (extra numbers pass
-  today); accept date ranges once a reader produces them.
-- **The typed reader, phase 2:** check stated premises; show a small set of readings instead of
-  asking (the questionnaire's `show_small_choice_sets`); true synonyms ("iPhone", design draft 5).
-- **The typed reader's false asks** (section 32): a value's declared meaning in the round-trip
-  sentence only when the phrase has words beyond the value; a dimension word beside a value of two
-  dimensions ("every platform except unknown"); a value the layer lacks refused when the model names
-  its dimension ("TikTok"). Measured on a third sealed set.
-- **The label policy for two rules at once** (a season both partly outside the data and in the other
+**The typed reader:**
+- Its remaining misses on the fourth set, all asks: a correct combined reading rejected by the combined
+  check ("Combined app opens from Android and iOS"); a comparison both proposal models read as combined
+  and whose alternative was not confirmed ("US vs BR"); a terse series ("Weekly app opens first half
+  2026."), read by the decision model as possibly one weekly figure. From the development sets: "the Linux
+  desktop app" and "users in Japan" asked instead of refused (the kind answer below 0.7); "Samsung phone"
+  split by the proposal; "driven" judged a restriction.
+- Cost and latency: $0.0029 a reading and 5.9 s at the median (9.8 s at p95) on the fourth set, against
+  $0.0004 and 1.7 s for one proposal. The requests run one after another; the two proposals, and the
+  suggestion and kind requests, can run in parallel.
+- Stated premises are asked about, not checked (phase 1); a small set of readings is asked about rather
+  than shown (the questionnaire's `show_small_choice_sets`).
+- Grow the metamorphic suite (more families, more fills) and run it on every change; it is the cheapest
+  regression test of non-fragility.
+
+**Measurement:**
+- A fifth blind set with three repetitions and both readers, for a stable number to publish; the fourth
+  ran once and only the typed reader. State results per intent, with labels as written and corrected.
+- Label quality: two of four blind sets had a format error repeated across intents (set 3: `group_by`
+  outside `params`; set 4: clarify labels without their filters), and wording writers drifted from the
+  intent's words in sets 1, 2 and 4. The brief should give one complete example per outcome type, and
+  the structure check should catch a clarify label without the intent's filters.
+- The label policy when two rules apply (a season both partly outside the data and in the other
   hemisphere): the brief should say which wins.
-- **The rubric:** replace the "kind of fact" column with what the controlled test showed (does the
-  fact reach the decision, can the output express it, who computes it).
-- **Partly covered periods:** ask and offer the covered interval; comparisons, growth and distinct
-  counts refuse (the review's proposal; today the call is refused).
+- Grader, answer side: check a breakdown answer's values against the label (extra numbers pass today).
+
+**The audit and governance:**
+- The rubric: replace the "kind of fact" column with what the controlled test showed (does the fact
+  reach the decision, can the output express it, who computes it).
 - Release preflight `UNDECLARED_TERMS` (branch `wt-undeclared`).
 - A current-state metric needs no period ("right now", h2_005); an explicit population loses to the
   team's default reading of a word; a premise about a direction of change cannot be checked (h2_012);
   a ratio split by month and averaged (t_010).
 - Re-measure `reading_first`; ablate the answer-side gates one at a time; type refusals like
   clarifying questions; ask only when an unsure value changes the number.
-- Confirm the provisional governance: owners, "subscribers" as accounts, the revenue declaration.
+- Confirm the provisional governance: owners, "subscribers" as accounts, the revenue declaration; and
+  which further lists are complete (region, channel kept open).
 
-Closed since the previous open list: the audit method is rewritten and run on one slice (section
-26); the controlled intervention is done (section 27); a bucket that does not line up with the
-period is cut at the period and disclosed (D13); design draft 4; the spike of the language step (section 29); the modelled attributes and the
-typed reader (section 30); the head-to-head on a replication sealed set, which closes stage 7 (section 31).
+Closed since the previous open list: the audit method is rewritten and run on one slice (section 26);
+the controlled intervention is done (section 27); a bucket that does not line up with the period is cut
+at the period and disclosed (D13); design drafts 4 and 5; the spike of the language step (section 29);
+the modelled attributes and the typed reader (section 30); the head-to-head on the first replication
+set (section 31); platform and desktop meanings, hemispheres, the round-trip check and its replacement
+(sections 32 to 36); synonyms, narrower words and partly covered periods answered and stated (section
+34); the reader's false asks reduced at every step, the rules written for single failures removed, the
+English resources in one tested file, the metamorphic suite (sections 36 to 38).
