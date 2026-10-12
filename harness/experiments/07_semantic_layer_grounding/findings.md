@@ -1627,6 +1627,10 @@ The wording is now asked about. A wrong refusal ("segmented") is fixed by matchi
 - The label policy when two rules apply (a season both partly outside the data and in the other
   hemisphere): the brief should say which wins.
 - Grader, answer side: check a breakdown answer's values against the label (extra numbers pass today).
+- `regrade.py` calls `reading_errors` without the layer's rollups, which `head_to_head.py` passes, so
+  a broader value stated as broader counts as a silent error (set 4: 2 instead of 1, the extra one
+  "iPhone users" read as `device_type = mobile` and stated); it also fails at the adoption step.
+  `grid.py` passes the rollups (2026-10-12).
 
 **The audit and governance:**
 - The rubric: replace the "kind of fact" column with what the controlled test showed (does the fact

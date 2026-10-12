@@ -13,32 +13,37 @@ question: >-
   governed principle, and discloses it, have a lower silent error rate at equal or better coverage
   and balanced accuracy than the same agent without that step, and than the same agent told only to
   state its assumptions?
-status: in_progress
+status: in_progress    # measured on four blind sets; the final run is open (findings section 39)
 
 article:
-  slug: tbd
+  slug: what-an-ai-analyst-needs-from-your-semantic-layer    # draft
   repo: decisionspine-site
 
 runs: cli
 
 evidence:
-  - milestoneA.md                     # the model of query trust, and the measurement design
-  - findings.md                       # the ledger of what each exploratory run showed
-  - 01_parameter_grounding/cases.yml  # 14 questions, gold_sql proven against the marts
-  - fixture/governance.yml      # what the MetricFlow layer cannot express
+  - findings.md                       # the ledger, sections 1-39; section 39 is the open list
+  - milestoneA.md                     # the first model of query trust and the three-arm design (2026-09-22)
+  - fixture/                          # the dbt project, the MetricFlow layer with modelled attributes, governance.yml
+  - 01_parameter_grounding/           # study 01: the agent arms; development, red-team and held-out suites
+  - 02_readiness_audit/               # study 02: the reader alone; controlled test, blind sets 1-4, label audits, grid.py
+  - 03_typed_reader/design.md         # the typed reader's design
+  - 04_value_search/README.md         # candidate search for large dimensions, step A
   - probes/                           # single-run outputs from before the shared runner, cited by findings.md
 
 notes:
-  - "ARMS. R3 is the agent at rung 3. R3+disclose adds one instruction to state every assumption and
-     default. R3+grounding adds the grounding step (ground.py, a prototype that moves into
-     engine/src/agent). R3+disclose is the control for R3+grounding: it separates the effect of
-     asking for disclosure from the effect of grounding."
-  - "MEASURES. Headline: silent error rate, balanced accuracy and coverage, from the shared grader.
-     Secondary: disclosure of the decisions each case labels, graded by a fixed word list applied to
-     every arm's answer text, so every disclosure verdict is prose-graded and reported as unaudited."
-  - "SELF-SUFFICIENT FIXTURE. fixture/ is a copy of experiment 06's dbt project and MetricFlow layer,
-     kept here so this experiment runs without another experiment's folder. It is byte-identical to
-     06's at the time of copying; governance.yml is the only addition."
-  - "DEVELOPMENT SUITE. All 14 questions were written by the experiment's authors, so a result on
-     them measures fit, not generalisation (E-12). A held-out suite is required before any number is
-     published."
+  - "ARMS (study 01). R4 is the agent at rung 3 with raw SQL withdrawn. R4+disclose_assumptions adds
+     one instruction to state every assumption. R4+parameter_grounding adds the LLM grounding step;
+     R4+decision_grounding adds a decision model choosing each parameter from options built by code.
+     Held-out v1 (section 19): silent error 0.298, 0.298, 0.193 and 0.053 respectively."
+  - "THE READER ALONE (study 02). From section 24 the question reader is graded as a component on
+     blind sets: intents written by one model, wordings by another, predictions registered first,
+     labels audited after each run. The typed reader replaced the questionnaire reader (sections 30
+     to 38). Each set measured a newer version; only set 1 compares the two readers on one set."
+  - "MEASURES. Silent error, balanced accuracy and coverage (harness/evals/selective.py), applied to
+     the reader's action and parameters. Regrading from stored readings costs nothing."
+  - "SELF-SUFFICIENT FIXTURE. fixture/ began as a copy of experiment 06's dbt project and MetricFlow
+     layer. This experiment added modelled attributes (device_type, country_name, seasons,
+     hemisphere), value meanings, complete lists and governance.yml."
+  - "LIMITS. One synthetic warehouse, one metric (app_opens) in the blind sets, and short value lists:
+     candidate search for large dimensions is a prototype only."

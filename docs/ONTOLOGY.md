@@ -242,7 +242,7 @@ the evidence there is for it, stated with that limit.
 
 Sources: `06 §n` is `harness/experiments/06_third_state/findings.md`; `SUMMARY` is
 `harness/scratchpad/ambiguity/SUMMARY.md`; `04/<study>` is
-`harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`.
+`harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`; `07 §n` is `harness/experiments/07_semantic_layer_grounding/findings.md`.
 
 ### O-01  The semantic-layer format has no field naming the concept a metric claims.
 Evidence: nothing in a MetricFlow manifest says that `active_users` and `active_accounts` are two
@@ -335,3 +335,29 @@ Source: commit `c2266d3`.
 Evidence: O-01 in full. A staleness guard that stored absolute paths hashed the original files from
 a copied tree and reported that the copy was current.
 Source: 06 §6.
+
+---
+
+## Grounding every parameter of the query (experiment 07)
+
+### O-13  A parameter is grounded by a rule or by a dimension search. The model's judgement is a step inside the search, not a third source.
+Evidence: experiment 07 began with three sources of a reading (a listed value, a declared rule, an
+analyst's reading) and ended with two mechanisms. A rule is declared in the layer, the governance
+file or the calendar. A dimension search finds the candidate values a phrase could mean; one exact
+match is applied by code, otherwise the decision model judges among the candidates and the reading
+is stated; if nothing passes, the analyst asks. The shape of the query (compared or combined, a
+series or one number) is judged separately by narrow yes/no checks.
+Source: 07 §34, §39.
+
+### O-14  Derive value maps from the data, so a reader can see that two filters keep the same rows.
+Evidence: `ontology/parameters.py` records where each value of one dimension falls in another
+(country to region, platform to device type) by reading the rows, not a description. With the maps,
+"platform in (android, ios)" and "device_type = mobile" are one restriction, and a stated "iPhone" is
+known to lie inside both ios and mobile.
+Source: 07 §30, §32; `ontology/src/ontology/parameters.py` (`_determines`).
+
+### O-15  A hierarchy for search must be built on keys, not names, and an organisation hierarchy must be read as of the question's period. (Design.)
+Evidence: in a city dimension of 12,409 names, six large foreign capitals share a name with a
+smaller listed city (Rome, Georgia; Lima, Ohio), so a name has no single parent. A parent named in
+the question can narrow the search to its subtree without a model call. Not built.
+Source: 07 §39; `04_value_search/README.md`.

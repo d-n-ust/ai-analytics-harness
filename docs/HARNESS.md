@@ -17,8 +17,8 @@ building it taught.
 this repository generates. The numbers demonstrate mechanisms, not universal model performance.
 
 Sources are abbreviated: `04/<study>` is `harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`,
-`06 §n` is `harness/experiments/06_third_state/findings.md`, `FINDINGS §n` is `docs/FINDINGS.md`,
-and `SUMMARY` is `harness/scratchpad/ambiguity/SUMMARY.md`.
+`06 §n` is `harness/experiments/06_third_state/findings.md`, `07 §n` is `harness/experiments/07_semantic_layer_grounding/findings.md`,
+`FINDINGS §n` is `docs/FINDINGS.md`, and `SUMMARY` is `harness/scratchpad/ambiguity/SUMMARY.md`.
 
 ---
 
@@ -324,3 +324,51 @@ question that asked for `value_moments`, 4 of 4 draws, while plain R3 on the sam
 correct twin and the July R0–R9 run had the case correct 28 of 30. The drift sits in the guardrails
 that R9 and `current_best` share and R3 lacks, on the default layer. Not yet diagnosed.
 Source: this session's probe; `results/published/2026-07-reliability-ladder/runs/`.
+
+---
+
+## Grounding every parameter of the query (experiment 07)
+
+### H-38  Ground every parameter of a governed call, not only the metric. Asking the agent to disclose its assumptions is not a substitute.
+Evidence: held-out v1 (19 questions, three repetitions): the plain agent 0.298 silent errors; the
+same agent told to state every assumption 0.298; a decision model choosing each parameter from
+options built by code from the layer 0.053, at coverage 0.762 against 0.952. A direction on 19
+questions, not a significant result.
+Source: 07 §19.
+
+### H-39  Let the model mark what each phrase is for, and let code find the value.
+Evidence: on one blind set (216 readings), the reader whose model only marks phrases, with code
+resolving them against the layer's values, served 0.9% silent errors against 12.5% for a reader that
+asked the model about every value. Coverage fell from 80.0% to 60.0% until stated judgements were
+allowed (H-40).
+Source: 07 §30, §31, §35.
+
+### H-40  Allow the analyst's judgement only where no rule and no exact match applies, above fixed bars, and state it in the answer.
+Evidence: a phrase that matches no value ("Deutschland", "iPhone users") becomes one multiple-choice
+question over the candidate values; code accepts a value only when the options pointing to it reach
+0.85 together and every other option stays below 0.15, and the answer states the reading. Coverage
+rose to 81.0% on the next blind set with silent errors at 1.4%. The bars are fixed, not tuned per
+question.
+Source: 07 §34, §35; `engine/src/agent/guardrails/typed_reader/resolve.py`.
+
+### H-41  Ask the model small questions. One yes/no about a whole reading is not a check.
+Evidence: a single yes/no over the whole reading vetoed 83 right readings for 13 wrong ones across
+the stored runs. One narrow yes/no per judgement (a series, values combined or compared, something
+left out) separated right readings (0.73 or more) from wrong ones (0.26 or less) on the calibration
+readings. Seventy narrow questions in one request blurred the answers (0.3 to 0.6 on unrelated
+items), so a request holds a few.
+Source: 07 §36.
+
+### H-42  Showing the agent its reading before it acts made it worse.
+Evidence: held-out v1: silent errors 0.053 without the reading shown first, 0.193 with it. The
+blocked-call loop that taught the reading one refusal at a time was the safer design.
+Source: 07 §17, §19.
+
+### H-43  Large dimensions need a candidate search before the judgement. (Open.)
+Evidence: the reader skips any dimension with more than 50 values. A prototype over 12,409 cities
+(no model call) found misspelled names by word search alone (the right city first 92 times in 100,
+in the top five every time), found no other name of a city ("Bombay", "Big Apple") without an alias
+table, and showed that no similarity score separates an absent value from a misspelled present
+one. Design: methods declared per dimension, run by code; only an exhaustive search of a complete
+dimension supports "not in the data".
+Source: 07 §39; `harness/experiments/07_semantic_layer_grounding/04_value_search/README.md`.

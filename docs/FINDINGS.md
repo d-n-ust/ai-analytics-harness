@@ -434,6 +434,8 @@ declared `0` had matched any rate below 50%.
 | 6 | split identity from arithmetic in `num_match` | small change, wide blast radius | rule (a) asks "is this a governed result", rule (b) "is this a comparison of two"; only (b) accumulates float error, and they share one predicate. Cost a correct answer 5/5 in one cell |
 | 7 | rename `value_moments` / `weekly_value_moments` | layer change + regrade | the 28% mislabel rate, and the largest single defect we have not touched |
 | 8 | **`real_value_moments` served for `value_moments` at the standard cell on the default layer** | one ablation: `current_best` minus each R9-tier guardrail, on `t1_ios_value_moments_june` | found 2026-09-04 by a three-question probe: 4 of 4 draws at rungs 3 and 7 served the `real_` twin (5,374 for a correct 5,648), plain R3 on the same code served the correct twin 2 of 2, and the July R0–R9 run had the case correct 28 of 30. The drift is in guardrails R9 and `current_best` share and R3 lacks. The published held-out boards did not see it because they run on the 06 fixture, where the twin was collapsed. `FOUNDATION.md` F-40, `HARNESS.md` H-37 |
+| 9 | **experiment 07's final run** | a frozen version, a fifth blind set, three repetitions, the plain agent as a third arm on the same questions | the published start and latest numbers of §12 come from different suites and units; only this run gives a like-for-like number |
+| 10 | **grounding values in large dimensions** | candidate search step B: end to end, namesakes and missing values tested on purpose | the reader skips any dimension with more than 50 values today; step A (word search) found typos but no other names of a city (07 §39) |
 
 ---
 
@@ -452,6 +454,12 @@ attempts; that the served number follows the label rather than the definition, 1
 controlled swap; and the knowing-versus-showing gap, which reproduces published work on our own
 fixture rather than restating it.
 
+From §12 (experiment 07). **Publishable:** the controlled test, with its n (8 items, three readings
+each, one reader); that telling the agent to state its assumptions left its silent-error rate
+unchanged on held-out questions; and the reader design, with the blind-set numbers labelled as one
+run on one metric. **Not yet:** a start-to-latest improvement presented as one comparison, since the
+two ends were measured on different suites and units, and anything about large dimensions.
+
 **Not yet:** anything claiming the graph captures reasoning (§2); a model ranking (§6); the exact
 repair rate (§3); the judge's reliability (§9.2); orphans as any kind of signal (§4); and the
 ambiguity gate as a RATE (§8) — 15 of 15 on one question is a demonstration that the mechanism
@@ -460,3 +468,47 @@ run.
 
 **The honest headline available now:** *"we kept trying to fix the AI, and the fixes that held were
 the ones that made the data say more about itself."*
+
+---
+
+## 12. Every parameter of the query, not only the metric (experiment 07)
+
+A governed metric does not make the answer governed: a `query_metric` call also carries filters, a
+period, a time grain and a group-by, and the semantic layer governs few of them. Experiment 07
+measured how those parameters are grounded, first in the whole agent and then in the question
+reader alone. One synthetic warehouse; the blind sets use one metric, `app_opens`.
+
+**Established, with n:**
+
+- **A fact must be data the code applies, not a sentence.** One fact ("mobile" is android and iOS),
+  8 items read three times, only the layer varied: fact missing, 6/24 correct and 9 silent wrong;
+  as prose in the description, 6/24 correct and 18 asks; declared and shown to the model, 18/24;
+  declared and applied by code, 24/24 (07 §27). The fact became a modelled attribute,
+  `dim_platform.device_type` (07 §30).
+- **Asking for disclosure is not grounding.** On held-out v1 (19 questions, three repetitions), the
+  plain agent served 0.298 silent errors and the same agent told to state its assumptions 0.298. A
+  decision model choosing each parameter from options built by code served 0.053, at coverage
+  0.762 against 0.952: a direction on 19 questions, not a significant result (07 §19).
+- **The model marks, code resolves.** On blind set 1 (216 readings, both readers on the same set),
+  the reader in which the model only marks what each phrase is for and code resolves it against
+  the layer's values served 0.9% silent errors against 12.5% for the questionnaire reader, at
+  coverage 60.0% against 80.0% (07 §31, §35).
+- **Small checks, not one big one.** One yes/no over the whole reading vetoed 83 right readings for
+  13 wrong ones across the stored runs; one narrow yes/no per judgement replaced it (07 §36).
+- **The latest reader.** Blind set 4 (72 readings, one run, corrected labels): silent errors 1.4% (1
+  of 72), balanced accuracy 95.4%, coverage 96.3%. With the labels as written: 4.2%, 80.2%, 96.3%
+  (07 §38).
+
+**Measured nulls and reversals:** showing the agent its reading before the first call raised silent
+errors from 0.053 to 0.193 (07 §19); the fixes made after held-out v1 reached 19/19 on the sets they
+were fitted to and did not raise the rate on held-out v2 (07 §20, §22); a round-trip check traded
+one silent error for 21 false asks (07 §32).
+
+**Measurement corrections** (not improvements): label audits moved every blind set, in both
+directions (set 1: the questionnaire's silent errors 18% to 12.5%; set 4: 4.2% to 1.4%), and two of
+four sets repeated a format error across intents (07 §31 to §39).
+
+**Open:** the final run (§10, row 9); values in large dimensions (§10, row 10); `regrade.py` omits the
+layer's rollups (07 §39).
+
+→ [`harness/experiments/07_semantic_layer_grounding/findings.md`](../harness/experiments/07_semantic_layer_grounding/findings.md)

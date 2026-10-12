@@ -34,12 +34,13 @@ Three readers arrive here with three intents.
   built, and why prompts are not enough. [`docs/ONTOLOGY.md`](docs/ONTOLOGY.md): the concept layer
   the semantic layer cannot express.
 
-## The six experiments
+## The seven experiments
 
 The first three vary one axis of the agent — what it *knows*, what it may *do*, what it must
 *declare* — over the same **65 questions**. Experiments 4 and 5 freeze the agent and vary the
 warehouse underneath it. Experiment 6 freezes both and asks what the agent does when two governed
-definitions are both right. Every delta is attributable to one change, not to prompt luck or
+definitions are both right. Experiment 7 moves from the metric to the rest of the query: the filters,
+period, grain and split around a governed metric. Every delta is attributable to one change, not to prompt luck or
 question drift.
 
 The first three are independent, not one ladder. A declaration is not "stricter" than a verifier, so
@@ -101,6 +102,18 @@ does not stop the silent choice; it changes which definition is chosen (886 → 
 this problem is the advisory arm.*
 → [`harness/experiments/06_third_state/`](harness/experiments/06_third_state/) ·
 [`results/published/2026-09-held-out-reliability/`](results/published/2026-09-held-out-reliability/)
+
+**7 · Semantic layer grounding** — the metric is governed, but is the query? A `query_metric` call
+also needs filters, a period, a time grain and a split, and the semantic layer governs few of them.
+Every parameter must be grounded: by a rule the data team declared, or by a dimension search that
+matches the user's words to the layer's values, with any judgement stated in the answer.
+*A fact written as a sentence in the layer was not applied; the same fact as a modelled attribute
+was applied **24 of 24** times. The plain agent served **29.8%** silent errors on held-out
+questions; telling it to state its assumptions changed nothing (**29.8%**). A reader in which the
+model only marks phrases and code resolves them reached **1.4%** silent errors (1 of 72) with
+**96%** coverage on the fourth blind set: one run, one metric, one synthetic warehouse, with a
+final run still open.*
+→ [`harness/experiments/07_semantic_layer_grounding/`](harness/experiments/07_semantic_layer_grounding/)
 
 [`docs/FINDINGS.md`](docs/FINDINGS.md) is the standing ledger — what is established, what is a
 measured null, and what was tried and rejected. Every number is labelled with its n.
