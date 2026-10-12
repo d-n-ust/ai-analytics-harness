@@ -52,6 +52,9 @@ class ToolResult:
     # "how often did the coverage check fire, and for what" is a count rather than a grep
     # through English.
     reason: str = ""
+    # A [policy] hand-back whose only legal reply is a QUESTION, not a refusal: the `clarify`
+    # arguments the correction cap converts the answer to (h2_015, a question naming no measure).
+    ask: dict | None = None
     blocked_by: str = ""   # the guardrail that refused, when one did
     acts: tuple = ()       # what every guardrail did on this call, in order
     # THE EVIDENCE UNION. Typed records of what this call actually computed, for the trace-reading

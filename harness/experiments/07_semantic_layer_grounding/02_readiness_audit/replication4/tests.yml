@@ -1,0 +1,583 @@
+# Sealed held-out tests (stage 7). Wordings written by deepseek-v4-flash from replication4/intents.yml,
+# one intent at a time, without the layer. Do not read the failures before stage 7.
+tests:
+- element: period
+  block: unrestricted month
+  type: heldout
+  q: Hey, how many app opens were there in May 2026?
+  expect: &id001
+    type: metric_answer
+    metric: app_opens
+    params:
+      period: 2026-05
+  group: i00
+- element: period
+  block: unrestricted month
+  type: heldout
+  q: app opens May 2026 count
+  expect: *id001
+  group: i00
+- element: period
+  block: unrestricted month
+  type: heldout
+  q: Please provide the total number of app opens for May 2026.
+  expect: *id001
+  group: i00
+- element: grain
+  block: unrestricted trend
+  type: heldout
+  q: What was the trend in app opens during the first quarter of 2026?
+  expect: &id002
+    type: metric_answer
+    metric: app_opens
+    params:
+      period: 2026-Q1
+      group_by:
+      - metric_time
+  group: i01
+- element: grain
+  block: unrestricted trend
+  type: heldout
+  q: trend in app opens Q1 2026
+  expect: *id002
+  group: i01
+- element: grain
+  block: unrestricted trend
+  type: heldout
+  q: I need the trend in app opens during the first quarter of 2026.
+  expect: *id002
+  group: i01
+- element: grain
+  block: weekly trend
+  type: heldout
+  q: Hey, can you pull the weekly app opens in the first half of 2026 for me?
+  expect: &id003
+    type: metric_answer
+    metric: app_opens
+    params:
+      period: 2026-H1
+      group_by:
+      - metric_time
+      time_grain: week
+  group: i02
+- element: grain
+  block: weekly trend
+  type: heldout
+  q: Weekly app opens first half 2026.
+  expect: *id003
+  group: i02
+- element: grain
+  block: weekly trend
+  type: heldout
+  q: Please provide the weekly app opens data for the first half of 2026.
+  expect: *id003
+  group: i02
+- element: grain
+  block: monthly trend
+  type: heldout
+  q: How many times did people open the app each month in 2026?
+  expect: &id004
+    type: metric_answer
+    metric: app_opens
+    partial: true
+    params:
+      period: '2026'
+      group_by:
+      - metric_time
+      time_grain: month
+  group: i03
+- element: grain
+  block: monthly trend
+  type: heldout
+  q: Monthly app opens 2026.
+  expect: *id004
+  group: i03
+- element: grain
+  block: monthly trend
+  type: heldout
+  q: Please provide the monthly number of app opens for the year 2026.
+  expect: *id004
+  group: i03
+- element: region
+  block: group value and two restrictions
+  type: heldout
+  q: Hey, can you tell me how many app opens from mobile users in EMEA during winter 2026?
+  expect: &id005
+    type: metric_answer
+    metric: app_opens
+    params:
+      device_type: mobile
+      region: EMEA
+      period: 2025-12-01/2026-02-28
+  group: i04
+- element: region
+  block: group value and two restrictions
+  type: heldout
+  q: App opens from mobile users in EMEA winter 2026?
+  expect: *id005
+  group: i04
+- element: region
+  block: group value and two restrictions
+  type: heldout
+  q: I would like to request the number of app opens from mobile users in EMEA during winter 2026.
+  expect: *id005
+  group: i04
+- element: region
+  block: filtered trend
+  type: heldout
+  q: Hey, can you show me the app opens trend in EMEA from March to May 2026?
+  expect: &id006
+    type: metric_answer
+    metric: app_opens
+    params:
+      region: EMEA
+      period: 2026-03-01/2026-05-31
+      group_by:
+      - metric_time
+  group: i05
+- element: region
+  block: filtered trend
+  type: heldout
+  q: app opens trend EMEA March to May 2026
+  expect: *id006
+  group: i05
+- element: region
+  block: filtered trend
+  type: heldout
+  q: Please provide the app opens trend in EMEA from March to May 2026.
+  expect: *id006
+  group: i05
+- element: country
+  block: named country by segment
+  type: heldout
+  q: Can you show me app opens from Germany in 2026 by segment?
+  expect: &id007
+    type: breakdown
+    metric: app_opens
+    partial: true
+    params:
+      country_name: Germany
+      period: '2026'
+      group_by:
+      - platform
+      - region
+      - channel
+  group: i06
+- element: country
+  block: named country by segment
+  type: heldout
+  q: app opens from Germany in 2026 by segment
+  expect: *id007
+  group: i06
+- element: country
+  block: named country by segment
+  type: heldout
+  q: I would like to see app opens from Germany in 2026 by segment, please.
+  expect: *id007
+  group: i06
+- element: period
+  block: southern hemisphere season by segment
+  type: heldout
+  q: Can you show me app opens in Brazil by segment during summer 2026?
+  expect: &id008
+    type: clarify
+    metric: app_opens
+    params:
+      period: ask
+  group: i07
+- element: period
+  block: southern hemisphere season by segment
+  type: heldout
+  q: app opens in Brazil by segment during summer 2026
+  expect: *id008
+  group: i07
+- element: period
+  block: southern hemisphere season by segment
+  type: heldout
+  q: Please provide the data for app opens in Brazil, segmented, for summer 2026.
+  expect: *id008
+  group: i07
+- element: country
+  block: country code and device type
+  type: heldout
+  q: Could you let me know how many mobile app opens we had in DE in the first quarter of 2026?
+  expect: &id009
+    type: metric_answer
+    metric: app_opens
+    params:
+      device_type: mobile
+      country: DE
+      period: 2026-Q1
+  group: i08
+- element: country
+  block: country code and device type
+  type: heldout
+  q: Mobile app opens in DE first quarter of 2026 count.
+  expect: *id009
+  group: i08
+- element: country
+  block: country code and device type
+  type: heldout
+  q: I would like to request the number of mobile app opens in DE for the first quarter of 2026.
+  expect: *id009
+  group: i08
+- element: period
+  block: southern hemisphere season
+  type: heldout
+  q: How many web app opens in Indonesia during summer 2026?
+  expect: &id010
+    type: clarify
+    metric: app_opens
+    params:
+      period: ask
+  group: i09
+- element: period
+  block: southern hemisphere season
+  type: heldout
+  q: Web app opens Indonesia summer 2026 count
+  expect: *id010
+  group: i09
+- element: period
+  block: southern hemisphere season
+  type: heldout
+  q: Could you please provide the number of web app opens in Indonesia for summer 2026?
+  expect: *id010
+  group: i09
+- element: platform
+  block: combined platforms
+  type: heldout
+  q: What's the combined number of app opens from Android and iOS in the first half of 2026?
+  expect: &id011
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-H1
+  group: i10
+- element: platform
+  block: combined platforms
+  type: heldout
+  q: Combined app opens from Android and iOS in the first half of 2026?
+  expect: *id011
+  group: i10
+- element: platform
+  block: combined platforms
+  type: heldout
+  q: I would like to request the combined number of app opens from Android and iOS in the first half of 2026.
+  expect: *id011
+  group: i10
+- element: country
+  block: combined countries
+  type: heldout
+  q: Hey, could you tell me the combined number of app opens from DE and FR from December 2025 through February 2026?
+  expect: &id012
+    type: metric_answer
+    metric: app_opens
+    params:
+      country:
+      - DE
+      - FR
+      period: 2025-12-01/2026-02-28
+  group: i11
+- element: country
+  block: combined countries
+  type: heldout
+  q: Combined app opens DE FR December 2025 through February 2026.
+  expect: *id012
+  group: i11
+- element: country
+  block: combined countries
+  type: heldout
+  q: Please provide the combined number of app opens from DE and FR for the period December 2025 through February 2026.
+  expect: *id012
+  group: i11
+- element: platform
+  block: compared platforms
+  type: heldout
+  q: Hey, can you show me how Android and iOS app opens compare for first quarter of 2026?
+  expect: &id013
+    type: breakdown
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-Q1
+      group_by:
+      - platform
+  group: i12
+- element: platform
+  block: compared platforms
+  type: heldout
+  q: Compare Android vs iOS app opens first quarter of 2026.
+  expect: *id013
+  group: i12
+- element: platform
+  block: compared platforms
+  type: heldout
+  q: Please provide a comparison of app opens from Android and iOS during the first quarter of 2026.
+  expect: *id013
+  group: i12
+- element: country
+  block: compared countries
+  type: heldout
+  q: Hey, can you show me how app opens from US and BR compare in May 2026?
+  expect: &id014
+    type: breakdown
+    metric: app_opens
+    params:
+      country:
+      - US
+      - BR
+      period: 2026-05
+      group_by:
+      - country
+  group: i13
+- element: country
+  block: compared countries
+  type: heldout
+  q: App opens US vs BR May 2026
+  expect: *id014
+  group: i13
+- element: country
+  block: compared countries
+  type: heldout
+  q: Please provide a comparison of app opens from the US and BR in May 2026.
+  expect: *id014
+  group: i13
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: Can you show me app opens for Canada from every platform except web in August 2025 by device model?
+  expect: &id015
+    type: refuse
+    metric: app_opens
+  group: i14
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: Canada app opens from every platform except web in August 2025 by device model
+  expect: *id015
+  group: i14
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: I would like to see app opens for Canada from every platform except web in August 2025 by device model.
+  expect: *id015
+  group: i14
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: Hey, can you show me app opens from every country except Germany for Windows users in the first half of 2027, broken
+    down by device model?
+  expect: &id016
+    type: refuse
+    metric: app_opens
+  group: i15
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: App opens from all countries except Germany, Windows users, H1 2027, by device model.
+  expect: *id016
+  group: i15
+- element: breakdown
+  block: exclusion and unavailable split
+  type: heldout
+  q: Please provide a report of app opens from every country excluding Germany, for Windows users, during the first half of
+    2027, segmented by device model.
+  expect: *id016
+  group: i15
+- element: country
+  block: misspelled country
+  type: heldout
+  q: Hey, can you tell me the number of app opens from Germny in April 2026?
+  expect: &id017
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    params:
+      country_name: Germany
+      period: 2026-04
+  group: i16
+- element: country
+  block: misspelled country
+  type: heldout
+  q: app opens Germny April 2026 count
+  expect: *id017
+  group: i16
+- element: country
+  block: misspelled country
+  type: heldout
+  q: I would like to request the number of app opens from Germny in April 2026.
+  expect: *id017
+  group: i16
+- element: platform
+  block: misspelled platform
+  type: heldout
+  q: How many app opens from Android in Q2 2026?
+  expect: &id018
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    params:
+      platform: android
+      period: 2026-Q2
+  group: i17
+- element: platform
+  block: misspelled platform
+  type: heldout
+  q: Number of app opens from andriod in the second quarter of 2026
+  expect: *id018
+  group: i17
+- element: platform
+  block: misspelled platform
+  type: heldout
+  q: Could you please provide the count of app opens from Android devices during the second quarter of 2026?
+  expect: *id018
+  group: i17
+- element: country
+  block: country synonym and partial season
+  type: heldout
+  q: Can you tell me how many app opens came from the States in summer 2026?
+  expect: &id019
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    partial: true
+    params:
+      country_name: United States
+      period: 2026-06-01/2026-08-31
+  group: i18
+- element: country
+  block: country synonym and partial season
+  type: heldout
+  q: app opens from the States summer 2026
+  expect: *id019
+  group: i18
+- element: country
+  block: country synonym and partial season
+  type: heldout
+  q: I would like to request the number of app opens from the States during summer 2026.
+  expect: *id019
+  group: i18
+- element: country
+  block: country translation and partial range
+  type: heldout
+  q: Hey, can you tell me the number of app opens from Deutschland from July through August 2026?
+  expect: &id020
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    partial: true
+    params:
+      country_name: Germany
+      period: 2026-07-01/2026-08-31
+  group: i19
+- element: country
+  block: country translation and partial range
+  type: heldout
+  q: App opens from Deutschland July-August 2026.
+  expect: *id020
+  group: i19
+- element: country
+  block: country translation and partial range
+  type: heldout
+  q: Please provide the number of app opens from Deutschland for the period July through August 2026.
+  expect: *id020
+  group: i19
+- element: platform
+  block: narrower device
+  type: heldout
+  q: How many app opens did iPhone users have in May 2026?
+  expect: &id021
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    params:
+      platform: ios
+      period: 2026-05
+  group: i20
+- element: platform
+  block: narrower device
+  type: heldout
+  q: iPhone users app opens May 2026 count?
+  expect: *id021
+  group: i20
+- element: platform
+  block: narrower device
+  type: heldout
+  q: Could you please provide the number of app opens from iPhone users in May 2026?
+  expect: *id021
+  group: i20
+- element: platform
+  block: narrower device
+  type: heldout
+  q: Hey, can you tell me the number of app opens from Pixel phones in the first half of 2026?
+  expect: &id022
+    type: metric_answer
+    metric: app_opens
+    assumption: true
+    params:
+      platform: android
+      period: 2026-H1
+  group: i21
+- element: platform
+  block: narrower device
+  type: heldout
+  q: Number of app opens from Pixel phones in first half of 2026.
+  expect: *id022
+  group: i21
+- element: platform
+  block: narrower device
+  type: heldout
+  q: I would like to request the number of app opens from Pixel phones in the first half of 2026.
+  expect: *id022
+  group: i21
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: Hey, could you tell me the number of app opens from TikTok?
+  expect: &id023
+    type: clarify
+    metric: app_opens
+    params:
+      channel: ask
+      period: ask
+  group: i22
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: app opens from TikTok?
+  expect: *id023
+  group: i22
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: What is the total number of app opens from TikTok?
+  expect: *id023
+  group: i22
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: Can you tell me the number of app opens from Instagram?
+  expect: &id024
+    type: clarify
+    metric: app_opens
+    params:
+      channel: ask
+      period: ask
+  group: i23
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: the number of app opens from Instagram
+  expect: *id024
+  group: i23
+- element: channel
+  block: unlisted channel without period
+  type: heldout
+  q: Please provide the number of app opens from Instagram.
+  expect: *id024
+  group: i23

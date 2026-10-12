@@ -1,0 +1,2191 @@
+[
+ {
+  "element": "platform",
+  "block": "governed code",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.38
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00042632,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "case variant",
+  "type": "INV",
+  "q": "how many times did ANDROID users open the app in june 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "ANDROID",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "june 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.69
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00042832,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "typo",
+  "type": "INV",
+  "q": "How many times did Andriod users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   },
+   "assumption": true
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"Andriod users\" as platform android, a spelling of a listed value.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Andriod users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.19
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0005776360000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym",
+  "type": "INV",
+  "q": "How many app opens came from Google Android phones in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question names \"phones\", which the reading does not use; ask what it means"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Google Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.36
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the question names \"phones\", which the reading does not use; ask what it means"
+  ],
+  "cost": 0.000572254,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym (other value)",
+  "type": "MFT",
+  "q": "How many app opens came from iPhone users in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "ios",
+    "period": "2026-06"
+   },
+   "assumption": true
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "ios"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = ios",
+     "basis": "analyst_judgement",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. Read \"iPhone users\" as platform ios.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "iPhone users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.47
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.000575052,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "DIR",
+  "q": "How many app opens were there in June 2026 on every platform except web?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "unknown"
+    ],
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "unknown"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios, unknown)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open. The figure includes platform unknown (no recorded platform: the raw value was blank or unrecognised).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "web",
+        "keep": false
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.65
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.000425938,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "list",
+  "type": "MFT",
+  "q": "How many app opens did Android and iOS users have together in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.66
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.000444524,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "declared parent group",
+  "type": "MFT",
+  "q": "How many mobile app opens were there in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__device_type = mobile",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Device type follows the platform each account registered on, not the device used for each app open. The figure includes device_type mobile (platforms android and ios).",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "mobile",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.42
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00081825,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "absent value",
+  "type": "invalid",
+  "q": "How many app opens came from Windows users in June 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "windows"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "filter",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "\"Windows\" names something the layer does not have; the governed platform values are android, ios, unknown, web",
+     "reason": "ungoverned_dimension_value"
+    },
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Windows",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 2.03
+  },
+  "broader": [],
+  "open": [
+   "refuse: \"Windows\" names something the layer does not have; the governed platform values are android, ios, unknown, web"
+  ],
+  "cost": 0.000550264,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "omitted",
+  "type": "base",
+  "q": "How many app opens were there in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.55
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0003935,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "quarter",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in Q2 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-Q2"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-Q2",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "Q2 2026",
+      "value": "2026-Q2"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.63
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.000430612,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "half-year",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in the first half of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.5
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.000435196,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "season (declared, partly covered)",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in summer 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06-01/2026-08-31"
+   },
+   "partial": true
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Summer 2026 is read as June 2026 to August 2026 (the company calendar). June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "summer 2026",
+      "value": "2026-SU"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.6
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00042832,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "outside coverage",
+  "type": "invalid",
+  "q": "How many times did Android users open the app in August 2025?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2025-08"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "August 2025 is outside the data (2025-09-05 to 2026-07-12)",
+     "reason": "out_of_coverage"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "August 2025",
+      "value": "2025-08"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.14
+  },
+  "broader": [],
+  "open": [
+   "refuse: August 2025 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.00041425,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "omitted",
+  "type": "base",
+  "q": "How many times did Android users open the app?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "ask"
+   }
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question states no period that can be placed on the calendar, and no rule supplies one"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android users",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.2
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.000383,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "omitted (rule)",
+  "type": "base",
+  "q": "How did Android app opens change over the first half of 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": {
+     "quote": "change",
+     "unit": null
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.68
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00044432,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "explicit week",
+  "type": "MFT",
+  "q": "Show Android app opens week by week for the first half of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "week",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android app",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": {
+     "quote": "week by week",
+     "unit": "week"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 1.63
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.00045508999999999995,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "explicit month",
+  "type": "MFT",
+  "q": "Show Android app opens month by month for the first half of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "month",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": {
+     "quote": "month by month",
+     "unit": "month"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 3.23
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0008763400000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unnamed ('by segment', rule)",
+  "type": "base",
+  "q": "How did Android app opens break down by segment in June 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "region",
+     "channel"
+    ]
+   }
+  },
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "group_by ['channel', 'metric_time', 'region'] instead of ['channel', 'region']"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "metric_time",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: Does the question ask for several numbers over time (a trend, or one number per day, week or month), rather than one number for the whole period?",
+     "confidence": 0.25
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": {
+     "quote": "How did",
+     "unit": null
+    },
+    "breakdown": [
+     {
+      "quote": "by segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.56
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: not confirmed: Does the question ask for several numbers over time (a trend, or one number per day, week or month), rather than one number for the whole period?"
+  ],
+  "cost": 0.000457276,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "named dimension",
+  "type": "MFT",
+  "q": "Break down Android app opens in June 2026 by region.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "region"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "activity__region"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__region"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by region"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 3.15
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0008507139999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "named dimension",
+  "type": "MFT",
+  "q": "Break down Android app opens in June 2026 by country.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "country"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "activity__country"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__country"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by country"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.8
+  },
+  "broader": [],
+  "open": [],
+  "cost": 0.0008507139999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "homograph ('customer segment')",
+  "type": "invalid?",
+  "q": "Break down Android app opens in June 2026 by customer segment.",
+  "expect": {
+   "type": "contested",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the question asks to split by \"by customer segment\"; ask whether it means segment"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by customer segment"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 2.5
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the question asks to split by \"by customer segment\"; ask whether it means segment"
+  ],
+  "cost": 0.0008387500000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "absent dimension",
+  "type": "invalid",
+  "q": "Break down Android app opens in June 2026 by device model.",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform = android",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "refuse",
+     "why": "the question asks to split by \"by device model\", which the layer does not have",
+     "reason": "dimension_not_supported"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android app opens",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "June 2026",
+      "value": "2026-06"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "by device model"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 1.41
+  },
+  "broader": [],
+  "open": [
+   "refuse: the question asks to split by \"by device model\", which the layer does not have"
+  ],
+  "cost": 0.00043,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "governed term",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in June 2026?",
+  "expect": {
+   "outcome": "app_opens"
+  },
+  "result": "app_opens",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000102144,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "undeclared synonym",
+  "type": "MFT",
+  "q": "How many app launches did Android users have in June 2026?",
+  "expect": {
+   "outcome": "app_opens"
+  },
+  "result": "app_opens",
+  "ok": true,
+  "errors": [],
+  "cost": 0.00010206000000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "absent measure",
+  "type": "MFT",
+  "q": "How many sessions did Android users have in June 2026?",
+  "expect": {
+   "outcome": "refuse"
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "cost": 0.00010197599999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "absent measure",
+  "type": "MFT",
+  "q": "How much time did Android users spend in the app in June 2026?",
+  "expect": {
+   "outcome": "refuse"
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000102228,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "vague measure",
+  "type": "MFT",
+  "q": "How engaged were Android users in June 2026?",
+  "expect": {
+   "outcome": "ask"
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000101808,
+  "reader": "typed"
+ }
+]

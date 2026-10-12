@@ -1,0 +1,248 @@
+[
+ {
+  "model": "gpt-5.4-mini",
+  "rows": [
+   {
+    "q": "How many times did Android users open the app in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "how many times did ANDROID users open the app in june 2026",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "ANDROID users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "june 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.98,
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Andriod users open the app in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Andriod users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from Google Android phones in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Google Android phones",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from iPhone users in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "iPhone users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026 on every platform except web?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "web",
+         "keep": false
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.95,
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.39
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens did Android and iOS users have together in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        },
+        {
+         "quote": "iOS",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "term0_0": 0.09,
+     "term0_1": 0.09,
+     "group0": 0.97,
+     "shape": 0.97,
+     "time0": 0.99,
+     "beyond": 0.35
+    },
+    "flags": [
+     "term0_0",
+     "term0_1"
+    ],
+    "errors": []
+   }
+  ],
+  "cost": 0.00262968
+ }
+]

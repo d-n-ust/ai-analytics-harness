@@ -19,8 +19,9 @@ experiments/
 │   ├── 02_segment__mf/             the segment hides in the AGGREGATE      (S4)
 │   └── …                           catalogue format, entity, grain, additivity
 ├── 05_preflight_ambiguity/         ✓ shipped — does fixing what a static scan flags remove the runtime harm?
-└── 06_third_state/                 ✓ measured — what does the agent do when two definitions are both right?
-    └── fixture/                    a dbt project, a MetricFlow layer, the contested pair, the held-out suites
+├── 06_third_state/                 ✓ measured — what does the agent do when two definitions are both right?
+│   └── fixture/                    a dbt project, a MetricFlow layer, the contested pair, the held-out suites
+└── 07_semantic_layer_grounding/   · in progress — is a query governed when only its metric is?
 ```
 
 ```bash

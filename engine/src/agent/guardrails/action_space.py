@@ -222,6 +222,9 @@ def clarify_schema(base: dict, guardrails, record=None) -> dict:
     and demanding two would teach the model to invent a pair rather than report the ambiguity it
     actually found.
     """
+    if getattr(guardrails, "decision_grounding", False):
+        typed = clarify_schema(base, _without_decisions(guardrails), record) if guardrails.typed_clarify else base
+        return _parameter_clarify(typed, record)
     if not guardrails.typed_clarify:
         return base
     props = dict(base["input_schema"]["properties"])
@@ -275,6 +278,32 @@ def clarify_schema(base: dict, guardrails, record=None) -> dict:
                             "of the question is defensible and they give different numbers."),
             "input_schema": {**base["input_schema"], "properties": props,
                              "required": required}}
+
+
+def _without_decisions(guardrails):
+    from dataclasses import replace as _replace
+    return _replace(guardrails, decision_grounding=False)
+
+
+def _parameter_clarify(base: dict, record=None) -> dict:
+    """Under `decision_grounding` a clarifying question is typed against the governed ontology: it
+    names the metric, the ONE parameter left open, and the governed values offered for it. The
+    final-action gate (gates/reading.py) holds it to the reading of the question, so the reply can
+    only be a choice the layer could run, never a substitute value or a mapping the layer lacks."""
+    props = dict(base["input_schema"]["properties"])
+    props["metric"] = {"type": "string", "description": "The governed metric the question is about, "
+                                                        "spelled as the catalogue spells it."}
+    props["parameter"] = {"type": "string", "description": (
+        "The ONE parameter the question leaves open: a dimension as query_metric names it "
+        "(activity__region), `period`, or `metric` when the measure itself is open.")}
+    props["options"] = {"type": "array", "items": {"type": "string"}, "description": (
+        "The values offered to the user, each a governed value of that parameter exactly as the "
+        "layer spells it. Never a value the layer does not have, and never another value's figure "
+        "standing in for one: when the question names a value the layer lacks, refuse instead.")}
+    note(record, "decision_grounding", Position.ACTION_SPACE, "applied",
+         "clarify names the metric, the open parameter and governed options")
+    required = list(dict.fromkeys([*base["input_schema"].get("required", []), "parameter", "options"]))
+    return {**base, "input_schema": {**base["input_schema"], "properties": props, "required": required}}
 
 
 def _spec_answer(base: dict, record=None) -> dict:

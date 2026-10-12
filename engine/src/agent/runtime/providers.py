@@ -131,6 +131,8 @@ def _anthropic_blocks(turn: Turn) -> list:
 # Anthropic
 # --------------------------------------------------------------------------- #
 class AnthropicModel:
+    route = "direct"
+
     def __init__(self, spec: ModelSpec):
         import anthropic
         load_env()
@@ -209,6 +211,8 @@ class AnthropicModel:
 # OpenAI — adapter to/from Anthropic block shape
 # --------------------------------------------------------------------------- #
 class OpenAIModel:
+    route = "direct"
+
     def __init__(self, spec: ModelSpec):
         from openai import OpenAI
         load_env()
@@ -360,7 +364,11 @@ class OpenAIModel:
             kw["reasoning_effort"] = self.reasoning       # reasoning models: no temperature knob
         elif temperature is not None:
             kw["temperature"] = temperature               # legacy models take temperature
-        resp = _call(self.client.chat.completions.create, **kw)
+        return self._chat_turn(_call(self.client.chat.completions.create, **kw))
+
+    @staticmethod
+    def _chat_turn(resp) -> Turn:
+        """A chat-completions reply as a Turn. Shared with OpenRouter, which speaks this format."""
         msg = resp.choices[0].message
         calls = [ToolCall(tc.id, tc.function.name, _args(tc.function.arguments))
                  for tc in (msg.tool_calls or [])]
@@ -375,9 +383,100 @@ class OpenAIModel:
 
 
 # --------------------------------------------------------------------------- #
+# OpenRouter — one OpenAI-compatible endpoint in front of every provider
+# --------------------------------------------------------------------------- #
+class OpenRouterModel(OpenAIModel):
+    """Every catalogued model through OpenRouter's chat-completions endpoint.
+
+    Two settings keep a run through OpenRouter comparable with one sent directly:
+
+      HOST PINNED. OpenRouter may serve a model from several hosts (openai/* also runs on Azure,
+      claude on Bedrock and Vertex). A different host is a different system, so each request
+      allows only the catalog's `openrouter_hosts`, with fallbacks off. An outage then fails the
+      row honestly instead of quietly changing what was measured. The host that actually served
+      each call is kept as `last_host`, and the loop writes it onto the turn.
+
+      REASONING TRANSLATED. OpenRouter takes one `reasoning` object for every provider. The effort
+      the direct adapter would send is sent here in that form, and `.reasoning` reports it, so the
+      treatment on the row is the same whichever route carried it.
+
+    The chat path is used for every model, including those the direct adapter sends through
+    OpenAI's Responses API; OpenRouter translates. The price stays the catalog's (`ModelSpec`), as
+    for every route: the harness owns the price, not the backend.
+    """
+
+    route = "openrouter"
+
+    def __init__(self, spec: ModelSpec):
+        from openai import OpenAI
+        load_env()
+        key, base = os.environ.get("OPEN_ROUTER_API_KEY"), os.environ.get("OPEN_ROUTER_BASE_URL")
+        if not key or not base:
+            raise NotConfigured("OPEN_ROUTER_API_KEY and OPEN_ROUTER_BASE_URL must both be set to "
+                                "use the OpenRouter route (or set AAH_LLM_ROUTE=direct).")
+        if not spec.openrouter_id or not spec.openrouter_hosts:
+            raise NotConfigured(f"{spec.name} has no OpenRouter id or allowed host in the catalog "
+                                "(models.py). Add them, or run it with AAH_LLM_ROUTE=direct.")
+        self.last_host = None
+        self.spec = spec
+        self.client = OpenAI(base_url=base, api_key=key, max_retries=MAX_RETRIES,
+                             timeout=REQUEST_TIMEOUT)
+        self.reasoning = (spec.effort_for(os.environ.get("OPENAI_REASONING", DEFAULT_REASONING))
+                          if spec.provider != "anthropic" else
+                          ("on" if spec.thinking and spec.thinking.get("type") != "disabled" else "off"))
+        if spec.provider == "deepseek" and self.reasoning not in ("high", "xhigh", "max"):
+            self.reasoning = "none"      # what is sent: DeepSeek thinking is on/off, and this is off
+
+    @property
+    def sampling(self) -> dict:
+        base = (super().sampling if self.spec.provider != "anthropic" else
+                {"thinking": self.reasoning, "temperature": None,
+                 "temperature_note": "not sent by the agent loop; provider default applies"})
+        return {**base, "route": "openrouter", "hosts": list(self.spec.openrouter_hosts)}
+
+    def _reasoning(self) -> dict | None:
+        """The effort, in OpenRouter's single `reasoning` object; None to send nothing."""
+        if self.spec.provider == "anthropic":
+            return {"enabled": True} if self.reasoning == "on" else None
+        if self.spec.provider == "deepseek":
+            # As on the direct route: thinking only at high/max; every lower setting is off.
+            return {"enabled": self.reasoning in ("high", "xhigh", "max")}
+        if self.spec.supports_reasoning_effort:
+            return {"effort": self.reasoning}
+        return None
+
+    def respond(self, convo, tools: list, force_tool: str | None = None,
+                temperature: float | None = None, require_tool: bool = False) -> Turn:
+        extra = {"provider": {"order": list(self.spec.openrouter_hosts), "allow_fallbacks": False}}
+        reasoning = self._reasoning()
+        if reasoning is not None:
+            extra["reasoning"] = reasoning
+        kw = dict(
+            model=self.spec.openrouter_id,
+            messages=self._render_chat(convo),
+            tools=self._to_openai_tools(tools),
+            tool_choice=({"type": "function", "function": {"name": force_tool}} if force_tool
+                         else "required" if require_tool else "auto"),
+            max_tokens=MAX_TOKENS,
+            extra_body=extra,
+        )
+        # A temperature only where the direct route would send one: a reasoning model rejects it.
+        if temperature is not None and (
+                (self.spec.provider == "anthropic" and self.reasoning == "off")
+                or (self.spec.provider == "openai" and not self.spec.supports_reasoning_effort)):
+            kw["temperature"] = temperature
+        resp = _call(self.client.chat.completions.create, **kw)
+        # OpenRouter names the host that served the call in a field outside the OpenAI schema.
+        self.last_host = getattr(resp, "provider", None) or (getattr(resp, "model_extra", None) or {}).get("provider")
+        return self._chat_turn(resp)
+
+
+# --------------------------------------------------------------------------- #
 # Mock
 # --------------------------------------------------------------------------- #
 class MockModel:
+    route = "mock"
+
     def __init__(self, spec: ModelSpec):
         self.spec = spec
         self.reasoning = "mock"
@@ -395,12 +494,36 @@ class MockModel:
         return Turn.of("", [call], Usage(10, 5, 0))
 
 
+ROUTES = ("openrouter", "direct")
+
+
+def llm_route() -> str:
+    """Which API carries model calls. OpenRouter is the primary route whenever its key is set;
+    `AAH_LLM_ROUTE=direct` sends calls to each provider's own API instead. Recorded on every row
+    as `route`, because the route is part of what produced a number."""
+    load_env()
+    route = os.environ.get("AAH_LLM_ROUTE") or (
+        "openrouter" if os.environ.get("OPEN_ROUTER_API_KEY") else "direct")
+    if route not in ROUTES:
+        raise ValueError(f"AAH_LLM_ROUTE={route!r}; expected one of {ROUTES}")
+    return route
+
+
 def get_model(name: str, mock: bool = False, reasoning: str | None = None):
     """`reasoning` overrides the effort for this instance (OpenAI only) — used to run the
     verifier as a careful checker (e.g. 'low') even when the main agent runs at 'minimal'."""
     spec = MODEL_SPECS[name]
     if mock:
         return MockModel(spec)
+    if llm_route() == "openrouter":
+        model = OpenRouterModel(spec)
+        if reasoning is not None and spec.provider != "anthropic":
+            model.reasoning = spec.effort_for(reasoning)
+            if spec.provider == "deepseek" and model.reasoning not in ("high", "xhigh", "max"):
+                model.reasoning = "none"     # thinking is on/off for DeepSeek; below high it is off
+        return model
+    if spec.provider == "google":
+        raise NotConfigured(f"{name} is reachable only through OpenRouter; unset AAH_LLM_ROUTE=direct.")
     if spec.provider in ("openai", "deepseek"):
         model = OpenAIModel(spec)
         if reasoning is not None:

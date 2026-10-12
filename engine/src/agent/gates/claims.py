@@ -8,6 +8,8 @@ the answer back, or None (standing down, or after constructing into the exit cal
 """
 from __future__ import annotations
 
+import json
+
 import re  # noqa: F401
 
 import evidence as claim_audit  # noqa: F401
@@ -32,6 +34,19 @@ _scalar = trace.scalar
 _REPAIR_TEXT = 200
 
 
+def _comparison(finding: dict, findings: list) -> bool:
+    """A claim that cites several figures and states none of its own ("iOS came out ahead") is a
+    comparison, not a list, when every figure it cites is also stated by a claim citing it alone.
+    One footnote per number still holds: each number has its own claim. Without those, it is the
+    list q_003 wrote (three regions cited, 0 stated) and is handed back (h2_003 was handed back
+    for a comparison and converted to a refusal at the cap)."""
+    value = finding["value"]
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and value:
+        return False
+    single = {g["sources"][0] for g in findings if g is not finding and len(g["sources"]) == 1}
+    return len(finding["sources"]) >= 2 and set(finding["sources"]) <= single
+
+
 def malformed_claims(run, exit_call: ToolCall):
     """A citation that names nothing is a MALFORMED CALL, and is handed back as one.
 
@@ -41,10 +56,21 @@ def malformed_claims(run, exit_call: ToolCall):
     model never heard about it. That is why 22% of references named a container rather than a
     number: not because the model could not do better, but because nothing ever told it.
 
-    Only UNRESOLVED is handed back. A reference that points at nothing is objectively broken,
-    the way a bad argument is. Whether a claim is mislabelled, or states a figure its evidence
-    does not support, are judgements about the ANALYSIS — those stay in the audit, where they
-    are measured rather than corrected away.
+    Two faults are handed back, both about the claim's FORM. A reference that points at nothing
+    is objectively broken, the way a bad argument is. A LIST is the other: a claim that cites
+    three or more figures, or two with a figure that is neither of them nor a relation between
+    them, is several measurements written as one. The schema holds one figure per claim, so the
+    model fills it with something (0, in the stored q_003 run), and the reader and the grader both
+    read that number. Whether a claim is mislabelled, or states a figure its single cited value
+    does not support, are judgements about the ANALYSIS — those stay in the audit, where they are
+    measured rather than corrected away.
+
+    Under `decision_grounding` there is a third fault, and it is not about form: an UNGOVERNED
+    FIGURE, one the claim states while citing nothing, or one that none of its cited values is and
+    that no difference, ratio or percent change of two of them gives. There the governed layer is
+    the whole action space, so such a figure is not an analysis to measure but an action the agent
+    may not take (t_010: 9.41, the mean of three monthly ratios, stated with no source). A zero is
+    left alone: the model writes 0 into claims that are statements, not figures.
 
     Gated on `protocol.repair`, not on `protocol.claims`: asking for an account is a
     treatment and correcting one is an enforcement, and while they shared a flag no cell could
@@ -59,27 +85,98 @@ def malformed_claims(run, exit_call: ToolCall):
     audited = claim_audit.audit(declared, run.steps, exit_call.args.get("source_metric"),
                                 **run._audit_context())
     broken = [f for f in audited["findings"] if f["unresolved"]]
-    if not broken:
+    findings = audited["findings"]
+    lists = [f for f in findings if not f["unresolved"] and not _comparison(f, findings) and
+             (len(f["sources"]) >= 3 or (len(f["sources"]) == 2 and not f["bound"]))]
+    policy = getattr(run.grounding.toolbox.g, "decision_grounding", False)
+    ungoverned = [f for f in audited["findings"] if f not in lists and not f["unresolved"]
+                  and isinstance(f["value"], (int, float)) and not isinstance(f["value"], bool) and f["value"]
+                  and {"unsourced", "value_mismatch", "composed"} & set(f["why"])] if policy else []
+    if not broken and not lists and not ungoverned:
         return None
     # Truncated: this is here to be RECOGNISED in the final answer, not re-read. A prefix is
     # enough to tell a surviving sentence from a deleted one, and the full text is already in
     # the turn log for anyone who wants it.
     run.repairs.append({"claims": len(declared),
+                         # The whole attempt, so a handed-back answer that never served can still
+                         # be read: the cap can convert it to a refusal, and then nothing else
+                         # keeps the claims the model wrote.
+                         "attempt": [dict(c) for c in declared],
                          "broken": [{"text": str(f["text"] or "")[:_REPAIR_TEXT],
-                                     "cites": list(f["unresolved"])} for f in broken]})
-    lines = ["Your answer was not accepted: some claims cite evidence that does not exist."]
+                                     "cites": list(f["unresolved"])} for f in broken],
+                         **({"lists": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "cites": f["sources"]}
+                                       for f in lists]} if lists else {}),
+                         **({"ungoverned": [{"text": str(f["text"] or "")[:_REPAIR_TEXT], "value": f["value"],
+                                             "cites": f["sources"]} for f in ungoverned]} if ungoverned else {})})
+    # Under decision_grounding the governed layer is the whole action space, so a figure that cites no
+    # governed result is not unverified but illegal: marked [policy], it becomes a refusal if the
+    # budget runs out, instead of being served with a caveat (r_001 served 112,345 citing a call
+    # that never ran).
+    lines = [("[policy] " if policy else "") + "Your answer was not accepted: some claims are malformed."]
     for f in broken:
         for ref in f["unresolved"]:
             lines.append(f"  claim {f['id']} cites {ref!r} — {run._why_unresolved(ref)}")
+    for f in lists:
+        lines.append(f"  claim {f['id']} cites {len(f['sources'])} figures but states one value "
+                     f"({f['value']}) — write one claim per figure, each with its own value and source. "
+                     "A comparison of those figures (which is larger) may then be its own claim citing them, "
+                     "with no value of its own")
+    for f in ungoverned:
+        lines.append(f"  claim {f['id']} states {f['value']}, which "
+                     + ("cites no governed result" if "unsourced" in f["why"] else
+                        "is none of the values it cites and no difference, ratio or percent change of two of "
+                        "them") + " — every figure must be a governed result: cite the result that IS this "
+                     "figure, or query it with query_metric (a ratio over a period is read whole, not "
+                     "averaged from smaller periods)")
     lines.append("Re-send the answer with each source naming ONE value, as handle:field. "
                  "Every governed result printed its citable fields on a [cite] line.")
+    # A list-shaped claim citing the buckets of one split query is the same move written differently.
+    supplied = _whole_period_results(run, lists + ungoverned) if policy else []
+    if supplied:
+        lines.append("The governed figure for each whole period was run for you. Cite it instead of adding "
+                     "or averaging the smaller periods:")
+        lines += supplied
     # A repair is the only guardrail outcome that is neither allowed nor refused, so it needs
     # its own verb. Recorded on the run rather than on a step: the thing being handed back is
     # the ANSWER, which no step owns.
     run.acts.append(Act("repair", str(Position.REPAIR), "handed back",
                          f"{sum(len(f['unresolved']) for f in broken)} citation(s) named "
-                         f"nothing; correction {run.claim_retries} of 2").as_dict())
-    return ToolResult("\n".join(lines), is_error=True)
+                         f"nothing, {len(lists)} list-shaped claim(s), {len(ungoverned)} ungoverned "
+                         f"figure(s); "
+                         f"correction {run.claim_retries} of 2").as_dict())
+    return ToolResult("\n".join(lines), is_error=True, reason="other" if policy else None)
+
+
+def _whole_period_results(run, ungoverned: list) -> list[str]:
+    """The governed figure a split query was standing in for, run by the mechanism.
+
+    An agent that queried a period by month and then added (h_005: 240 + 202 + 195 = 637) or averaged
+    (t_010: three monthly ratios averaged to 9.41 against the quarter's 18.92) the buckets states a
+    figure no governed call returned, and is handed back. Telling it to "query it" on the last turn
+    leaves it nothing to do but refuse; the mechanism knows the call, so it runs it: the same query
+    without the time split, for the same period. The figure then IS a governed result, with a
+    handle, and for a non-additive metric it is the only correct one."""
+    if not ungoverned or not hasattr(run, "execute"):
+        return []
+    by_handle = {st.get("handle"): st for st in run.steps if st.get("handle")}
+    queries: dict = {}
+    for f in ungoverned:
+        for ref in f["sources"]:
+            step = by_handle.get(str(ref).strip().strip("[]").partition(":")[0])
+            if step is None or step.get("tool") != "query_metric":
+                continue
+            for q in step.get("grounded_queries") or [step["args"]]:
+                if "metric_time" not in (q.get("group_by") or []):
+                    continue
+                whole = {k: v for k, v in q.items() if k not in ("group_by", "time_grain", "because")}
+                rest = [g for g in q.get("group_by") or [] if g != "metric_time"]
+                if rest:
+                    whole["group_by"] = rest
+                queries.setdefault(json.dumps(whole, sort_keys=True, default=str), whole)
+    if not queries:
+        return []
+    results = run.execute([ToolCall(f"whole-{i}", "query_metric", q) for i, q in enumerate(queries.values())])
+    return [r.content for r in results]
 
 
 def dropped_constraint(run, exit_call):

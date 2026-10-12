@@ -216,14 +216,19 @@ def _audit_context() -> dict:
         con.close()
 
 
-def regrade_run(run_dir: Path) -> None:
+def regrade_run(run_dir: Path, questions: list | None = None, extra=None) -> None:
     """Re-grade a finished run from its stored answers (no model calls) and regenerate
     its summary. This is how a grade.py change reaches every past number — the model
-    outputs are immutable; only the verdicts derived from them change."""
+    outputs are immutable; only the verdicts derived from them change.
+
+    `questions` defaults to the frozen suite. An experiment with its own suite passes its cases,
+    already resolved by `compute_gold` (a contested or breakdown case carries its values on the
+    case). `extra(answer, case)` returns further per-row fields the experiment derives from the
+    stored answer, so they are recomputed with the verdict rather than left stale."""
     import evidence as claim_audit
 
     from .gold import load_questions
-    qmap = {q["id"]: q for q in load_questions()}
+    qmap = {q["id"]: q for q in (load_questions() if questions is None else questions)}
     raw = run_dir / "raw.jsonl"
     rows = [json.loads(line) for line in raw.open()]
     # The claim audit is a pure lookup over the stored trace, so a claims.py change reaches every
@@ -244,14 +249,18 @@ def regrade_run(run_dir: Path) -> None:
                      # were stored reads typed_value False and falls back to the prose scan,
                      # which is exactly how it was graded when it was written.
                      declared_value=r.get("declared_value"),
-                     typed_value=bool(r.get("typed_value", False)))
+                     typed_value=bool(r.get("typed_value", False)),
+                     # the claims are part of what the reader receives, so the grade reads them
+                     claims=tuple(r.get("claims") or ()))
         g = grade(ans, qmap[r["qid"]], r.get("gold"))
         r.update({k: g[k] for k in ("correct", "executed", "abstained", "confident_wrong",
                                     "wrong_metric",
                                     "fabricated", "off_governance", "wrong_scope",
-                                    "needs_judge", "bucket",
-                                    "expected_refuse", "reason_match", "metric_match",
-                                    "driver_ok", "cause_ok", "score")})
+                                    "needs_judge", "bucket", "graded_by",
+                                    "expected_refuse", "expected_action", "clarify_accepted", "reason_match",
+                                    "metric_match", "driver_ok", "cause_ok", "score")})
+        if extra is not None:
+            r.update(extra(ans, qmap[r["qid"]]))
     with raw.open("w") as f:
         for r in rows:
             f.write(json.dumps(r, default=str) + "\n")

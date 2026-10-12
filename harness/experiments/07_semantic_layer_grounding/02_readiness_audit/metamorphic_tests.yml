@@ -1,0 +1,198 @@
+# Metamorphic tests, written by metamorphic.py from templates filled with the layer's values. Three
+# wordings of one request per group; the reading must be the same for all three.
+tests:
+- element: platform
+  block: one value
+  type: INV
+  q: How many app opens came from android users in May 2026?
+  expect: &id001
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform: android
+      period: 2026-05
+  group: m00
+- element: platform
+  block: one value
+  type: INV
+  q: Hey, could you quickly tell me how many app opens came from android users in May 2026?
+  expect: *id001
+  group: m00
+- element: platform
+  block: one value
+  type: INV
+  q: android app opens may 2026
+  expect: *id001
+  group: m00
+- element: platform
+  block: everything except one value
+  type: INV
+  q: How many app opens were there in May 2026 on every platform except ios?
+  expect: &id002
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - unknown
+      - web
+      period: 2026-05
+  group: m01
+- element: platform
+  block: everything except one value
+  type: INV
+  q: Please give me the number of app opens in May 2026 for all platforms other than ios.
+  expect: *id002
+  group: m01
+- element: platform
+  block: everything except one value
+  type: INV
+  q: app opens may 2026 excluding ios
+  expect: *id002
+  group: m01
+- element: platform
+  block: two values combined
+  type: INV
+  q: How many app opens did android and ios users have together in May 2026?
+  expect: &id003
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-05
+  group: m02
+- element: platform
+  block: two values combined
+  type: INV
+  q: Can you add up android and ios app opens into one total for May 2026?
+  expect: *id003
+  group: m02
+- element: platform
+  block: two values combined
+  type: INV
+  q: android + ios app opens combined may 2026
+  expect: *id003
+  group: m02
+- element: platform
+  block: two values compared
+  type: INV
+  q: Compare app opens from android and ios in May 2026.
+  expect: &id004
+    type: breakdown
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-05
+  group: m03
+- element: platform
+  block: two values compared
+  type: INV
+  q: Hey, how did android app opens compare with ios app opens in May 2026, as two numbers?
+  expect: *id004
+  group: m03
+- element: platform
+  block: two values compared
+  type: INV
+  q: android vs ios app opens may 2026
+  expect: *id004
+  group: m03
+- element: grain
+  block: weekly series
+  type: INV
+  q: Show APAC app opens week by week for the first quarter of 2026.
+  expect: &id005
+    type: breakdown
+    metric: app_opens
+    params:
+      region: APAC
+      period: 2026-Q1
+      group_by:
+      - metric_time
+      time_grain: week
+  group: m04
+- element: grain
+  block: weekly series
+  type: INV
+  q: Could you pull the weekly trend of app opens in APAC during the first quarter of 2026?
+  expect: *id005
+  group: m04
+- element: grain
+  block: weekly series
+  type: INV
+  q: weekly apac app opens the first quarter of 2026
+  expect: *id005
+  group: m04
+- element: country
+  block: misspelled value
+  type: INV
+  q: How many app opens came from Brzail in May 2026?
+  expect: &id006
+    type: metric_answer
+    metric: app_opens
+    params:
+      country_name: Brazil
+      period: 2026-05
+    assumption: true
+  group: m05
+- element: country
+  block: misspelled value
+  type: INV
+  q: Hi, what was the number of app opens from Brzail in May 2026?
+  expect: *id006
+  group: m05
+- element: country
+  block: misspelled value
+  type: INV
+  q: brzail app opens may 2026
+  expect: *id006
+  group: m05
+- element: country
+  block: a country no list holds
+  type: INV
+  q: How many app opens came from Japan in May 2026?
+  expect: &id007
+    type: refuse
+    metric: app_opens
+    params: {}
+  group: m06
+- element: country
+  block: a country no list holds
+  type: INV
+  q: Hey, can you tell me the app opens from users in Japan for May 2026?
+  expect: *id007
+  group: m06
+- element: country
+  block: a country no list holds
+  type: INV
+  q: japan app opens may 2026
+  expect: *id007
+  group: m06
+- element: channel
+  block: breakdown by a named dimension
+  type: INV
+  q: Break down organic app opens in May 2026 by country.
+  expect: &id008
+    type: breakdown
+    metric: app_opens
+    params:
+      channel: organic
+      period: 2026-05
+      group_by:
+      - country
+  group: m07
+- element: channel
+  block: breakdown by a named dimension
+  type: INV
+  q: Can I see organic app opens for May 2026, split by country?
+  expect: *id008
+  group: m07
+- element: channel
+  block: breakdown by a named dimension
+  type: INV
+  q: organic app opens may 2026 by country
+  expect: *id008
+  group: m07

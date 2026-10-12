@@ -24,7 +24,7 @@ from dataclasses import dataclass, field, replace
 import evidence as claim_audit
 
 from ..core import trace
-from ..core.conversation import Conversation, ToolCall, Turn, Usage
+from ..core.conversation import Conversation, ToolCall, ToolResult, Turn, Usage
 from ..core.numbers import bare_number
 from ..core.outcomes import TERMINAL_TOOLS, Answer, declared_handles
 from ..core.provenance import ContextLedger
@@ -34,10 +34,13 @@ from ..gates import contract as _g_contract
 from ..gates import disclosure as _g_disclosure
 from ..gates import measure as _g_measure
 from ..gates import pipeline as _pipeline
+from ..gates import reading as _g_reading
 from ..gates import segments as _g_segments
 from ..gates._common import GRACE, MAX_CORRECTIONS
 from ..guardrails import Act, Position, after, before
 from ..guardrails import classify as _classify
+from ..guardrails import decisions as _decisions
+from ..guardrails import parameters as _parameters
 from .providers import ProviderError
 
 __all__ = ["Answer", "TERMINAL_TOOLS", "Turn", "Usage", "run_agent"]
@@ -159,7 +162,10 @@ class _Run:
     repairs: list = field(default_factory=list)
     _scope_verdict: object = None      # cached (chose, quote) from the scope judge, once per run
     _premise: object = None           # cached presupposition record, once per run (gates/contract)
-    handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps   # what the AFTER guardrails did to the answer
+    handles: dict = field(default_factory=dict)   # r1, r2 … -> index into steps
+    # `parameter_grounding`: one grounding per metric per run, so repeated calls agree.
+    grounded: dict = field(default_factory=dict)
+    _grounding_cost: float = 0.0     # decision_grounding: this call's decision-request cost, in USD   # what the AFTER guardrails did to the answer
 
     @property
     def claim_retries(self) -> int:
@@ -183,7 +189,22 @@ class _Run:
         for call in calls:
             self.tool_calls += 1
             t0 = time.perf_counter()
-            result = self.grounding.toolbox.dispatch(call.name, call.args)
+            queries, decisions = self._ground(call)
+            if not queries:
+                # Nothing runs. A value the layer lacks means decline; an ungrounded one means ask.
+                args = call.args
+                refused = next((d for d in decisions if d["state"] == "refuse"), None)
+                outside = any(d["state"] == "outside" for d in decisions)
+                result = ToolResult(_parameters.note_text(decisions), is_error=True,
+                                    reason=(refused["reason"] if refused else
+                                            "outside_question" if outside else "underspecified_request"),
+                                    blocked_by="parameter_grounding")
+            else:
+                args = queries[0]
+                result = self._dispatch_all(call.name, queries)
+            if queries and decisions and not result.is_error:
+                # Before the rows, so the decisions are read before the numbers they qualify.
+                result = replace(result, content=_parameters.note_text(decisions) + "\n" + result.content)
             # Every result that SUCCEEDED gets a HANDLE, printed where the model reads it, so the
             # answer can name what it is reporting instead of leaving the harness to find it by
             # matching numbers. Tool-agnostic on purpose: a governed tool added later is
@@ -200,7 +221,12 @@ class _Run:
                 handle = f"r{len(self.handles) + 1}"
                 self.handles[handle] = len(self.steps)
                 result = replace(result, content=f"[{handle}] {result.content}{_citable(handle, result)}")
-            self.steps.append({"tool": call.name, "args": call.args, "error": result.is_error,
+            self.steps.append({"tool": call.name, "args": args, "error": result.is_error,
+                               # What the agent asked for, when `parameter_grounding` replaced it,
+                               # and the decision record: value, basis, quoted phrase, state.
+                               **({"requested_args": call.args, "grounding": decisions,
+                                   "grounded_queries": queries} if decisions else {}),
+                               **({"grounding_cost_usd": self._grounding_cost} if self._grounding_cost else {}),
                                "handle": handle,
                                "result": result.content[:_TRACE_LIMIT],
                                # The stored result is CLIPPED; these two say so. Without them a
@@ -246,6 +272,77 @@ class _Run:
             results.append(result.for_call(call))
         return results
 
+
+    def _ground(self, call) -> tuple[list, list]:
+        """`parameter_grounding`: the queries a governed call runs as, and the decisions behind
+        them. Any other call, or the flag off, passes through as its own single query. The grounding
+        call's tokens are added to the run's usage, so the arm is charged for what it costs.
+
+        When the decision model cannot read the question this time, the call runs as the agent
+        wrote it and the reader is told its parameters were not checked; the run records why
+        (`_unavailable`). The question is not read again in this run."""
+        self._grounding_cost = 0.0
+        if "_unavailable" in self.grounded:
+            return [call.args], [_decisions.unchecked(self.grounded["_unavailable"]["why"])]
+        try:
+            return self._ground_checked(call)
+        except _decisions.ReadingUnavailable as exc:
+            self.grounded["_unavailable"] = {"why": str(exc)}
+            return [call.args], [_decisions.unchecked(str(exc))]
+
+    def _ground_checked(self, call) -> tuple[list, list]:
+        tb = self.grounding.toolbox
+        grounding = getattr(tb.g, "decision_grounding", False) or getattr(tb.g, "parameter_grounding", False)
+        if call.name != "query_metric" or not grounding:
+            return [call.args], []
+        term, term_known, bent = None, False, False
+        if getattr(tb.g, "decision_grounding", False):
+            # The question as a whole, read once: the fork word it uses decides whether a fork is
+            # routed at all, and a request to bend the rules refuses the call (below, unless the
+            # reading refuses with a more specific reason, such as a value the layer lacks).
+            asked, self._grounding_cost = _decisions.question_level(self.grounded, self.question, tb.semantic)
+            term, term_known = asked["term"], asked["term_known"]
+            bent = asked["substitution"] >= _decisions.CONFIDENT
+        # The metric next: in a declared fork it is routed to the requester team's reading.
+        metric, routed = _parameters.route_metric(call.args.get("metric", ""), tb.governance, tb.semantic,
+                                                  term, term_known)
+        if routed is not None and routed["state"] == "ungrounded":
+            return [], [_decisions.substitution_refusal() if bent else routed]
+        args = {**call.args, "metric": metric}
+        if getattr(tb.g, "decision_grounding", False):
+            # Billed per request by OpenRouter, not per token of the agent's model, so it is kept on
+            # the step (`grounding_cost_usd`) rather than folded into the run's token usage.
+            queries, decisions, cost = _decisions.ground(
+                self.question, args, tb.semantic, tb.con, tb.governance, self.grounded,
+                typed=getattr(tb.g, "typed_reader", False))
+            self._grounding_cost += cost
+            if bent and not any(d["state"] == "refuse" for d in decisions):
+                return [], [_decisions.substitution_refusal()]
+        else:
+            queries, decisions, usage = _parameters.ground(
+                self.model, self.question, args, tb.semantic, tb.con, tb.governance, self.grounded,
+                tolerant=getattr(tb.g, "tolerant_quotes", False), retry=getattr(tb.g, "quote_retry", False))
+            if usage is not None:
+                self.usage += usage
+        return queries, ([routed] if routed else []) + decisions
+
+    def _dispatch_all(self, name: str, queries: list):
+        """One result for one call, however many queries it ran as. Several (a principle that
+        declares separate breakdowns) are concatenated in order, values and labels kept parallel,
+        so the call keeps ONE handle and every figure in it stays citable. The first error wins:
+        a partial breakdown must not read as a whole one."""
+        results = [self.grounding.toolbox.dispatch(name, q) for q in queries]
+        if len(results) == 1:
+            return results[0]
+        failed = next((r for r in results if r.is_error), None)
+        if failed is not None:
+            return failed
+        return replace(results[0],
+                       content="\n\n".join(r.content for r in results),
+                       values=[v for r in results for v in (r.values or [])],
+                       labels=[x for r in results for x in (r.labels or [])],
+                       sql=";\n".join(r.sql for r in results if r.sql) or None,
+                       acts=tuple(a for r in results for a in r.acts))
 
     def needs_correction(self, exit_call):
         """The first fault worth handing this answer back for, or None to serve it.
@@ -548,17 +645,50 @@ class _Run:
                             iterations=iterations, error="provider_refused")
 
     def _record(self, **kw) -> Answer:
+        # The repair history rides every exit, not only a served answer: a run converted to a
+        # refusal at the correction cap was stored with no repairs and zero retries, so the
+        # hand-backs that caused the conversion were invisible (h2_003).
+        kw.setdefault("repairs", tuple(self.repairs))
+        kw.setdefault("claim_retries", self.claim_retries)
+        kw.setdefault("hand_backs", self.hand_backs)
         return Answer(question=self.question, rung=self.grounding.rung,
-                      model=self.model.spec.name, tool_calls=self.tool_calls,
+                      model=self.model.spec.name, route=getattr(self.model, "route", ""),
+                      tool_calls=self.tool_calls,
                       # The run's OWN meter (`_MeteredModel`) — every model call this answer cost:
                       # the main loop, every classifier/gate, the define_measure sub-agent.
                       model_calls=getattr(self.model, "calls", 0),
                       # The shadow Scope is a property of the QUESTION, so it rides the common
                       # construction — a refusal's row needs it exactly as much as an answer's.
                       scope_shadow=self.scope_shadow,
+                      readings={k: v for k, v in self.grounded.items() if isinstance(v, dict)} or None,
                       input_tokens=self.usage.input, output_tokens=self.usage.output,
                       cached_tokens=self.usage.cached, steps=self.steps, turns=self.turns,
                       acts=self.acts, **kw)
+
+
+def _planned_answer(run, question: str):
+    """The run's answer from `decisions.plan`, recorded as steps so the trace shows the plan and
+    every query it ran; None when the plan cannot be formed."""
+    tb = run.grounding.toolbox
+    planned = _decisions.plan(question, tb, tb.governance)
+    if planned is None:
+        return None
+    run.steps.append({"tool": "plan", "args": {"question": question}, "error": False, "handle": "",
+                      "result": planned["text"][:_TRACE_LIMIT], "grounding": planned["decisions"],
+                      "grounded_queries": planned["queries"], "grounding_cost_usd": planned["cost"],
+                      "blocked_reason": planned["reason"] if planned["action"] != "answer" else "",
+                      "blocked_by": "decision_plan" if planned["action"] != "answer" else ""})
+    for q, r in zip(planned["queries"], planned["results"]):
+        run.steps.append({"tool": "query_metric", "args": q, "error": r.is_error, "handle": "",
+                          "result": r.content[:_TRACE_LIMIT], "result_values": r.values,
+                          "result_labels": r.labels, "blocked_reason": r.reason, "blocked_by": r.blocked_by})
+    if planned["action"] == "answer":
+        values = [v for r in planned["results"] for v in (r.values or [])]
+        return run._record(answer=planned["text"], explanation="Planned and executed by decision_plan.",
+                           outcome="answer", abstained=False, source_metric=planned["metric"],
+                           declared_value=values[0] if len(values) == 1 else None, iterations=0)
+    return run._record(answer=None, explanation=planned["text"], outcome=planned["action"].replace("ask", "clarify"),
+                       reason=planned["reason"], abstained=True, iterations=0)
 
 
 def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_model=None,
@@ -579,9 +709,17 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
         run.scope_shadow = _classify.read_scope(model, question)
     # scope_segments: the record's spans licensed at entry (gates/segments.entry_mappings). The
     # notes ride the MESSAGE, not run.question — quote verifiers read the original words.
+    # decision_plan: ground first, then construct the terminal action. A planned question never
+    # reaches the generative loop; one the plan cannot form falls through to it unchanged.
+    if getattr(grounding.toolbox.g, "decision_plan", False):
+        planned = _planned_answer(run, question)
+        if planned is not None:
+            return planned
     opening_text = question
     if getattr(grounding.toolbox.g, "scope_segments", False) and run.scope_shadow:
         opening_text += _g_segments.entry_mappings(run.scope_shadow, grounding.semantic)
+    if getattr(grounding.toolbox.g, "reading_first", False):
+        opening_text += "\n\n" + _g_reading.opening_reading(run)
     convo = Conversation.opening(grounding.system, opening_text)
 
     def done(answer: Answer) -> Answer:
@@ -627,7 +765,13 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                           "calls": [c.name for c in turn.tool_calls],
                           "exit": turn.exit_call.name if turn.exit_call else None,
                           "in": turn.usage.input, "out": turn.usage.output,
-                          "cached": turn.usage.cached})
+                          "cached": turn.usage.cached,
+                          # The host that served this call, when the route reports one (OpenRouter).
+                          "host": getattr(model, "last_host", None)})
+        if it == 0 and getattr(run, "opening_reading", None):
+            # reading_first: what the agent was shown, and the decision-model requests behind it.
+            text, cost = run.opening_reading
+            run.turns[-1].update({"reading": text, **({"grounding_cost_usd": cost} if cost else {})})
         run.usage += turn.usage
         convo.add(turn)
 
@@ -662,13 +806,22 @@ def run_agent(question: str, grounding, model, max_iters: int = 8, verifier_mode
                 # not be able to serve it — the cap CONVERTS the exit to the refusal the policy
                 # names. (The wired spec_authoring's first full-suite run produced exactly this:
                 # an authored computable served-with-caveat under strict governance.)
+                if str(correction.content or "").startswith("[policy]") and correction.ask:
+                    asked = ToolCall(turn.exit_call.id, "clarify", dict(correction.ask))
+                    run.acts.append(Act("answerability_gate", str(Position.REPAIR), "converted",
+                                         "policy violation at the cap: the answer became the "
+                                         "question the policy names").as_dict())
+                    return done(run.finish(asked, it + 1))
                 if str(correction.content or "").startswith("[policy]"):
+                    # The correction names its refusal code when it has one (exit_matches_reading:
+                    # `ungoverned_dimension_value` for a value the layer lacks).
                     refusal = ToolCall(turn.exit_call.id, "refuse", {
-                        "reason": "no_governed_definition",
+                        "reason": correction.reason or "no_governed_definition",
                         "missing": "a governed definition for the computed measure",
-                        "explanation": "Converted at the correction cap: the served figure was "
-                                       "computable but has no governed definition, and this "
-                                       "configuration's policy is strict governance."})
+                        "explanation": "Converted at the correction cap: " + (
+                            correction.content.removeprefix("[policy] ")[:300] if correction.reason else
+                            "the served figure was computable but has no governed definition, and "
+                            "this configuration's policy is strict governance.")})
                     run.acts.append(Act("answerability_gate", str(Position.REPAIR), "converted",
                                          "policy violation at the cap: the answer became the "
                                          "refusal the policy names").as_dict())

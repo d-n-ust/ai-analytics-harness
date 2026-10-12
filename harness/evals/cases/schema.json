@@ -1,274 +1,570 @@
 {
- "$schema": "http://json-schema.org/draft-07/schema#",
- "$id": "https://decisionspine/ai-analytics-harness/evals/case.schema.json",
- "title": "Eval case",
- "description": "One question with a declared expected outcome. See README.md.",
- "type": "object",
- "additionalProperties": false,
- "required": [
-  "id",
-  "question",
-  "expect"
- ],
- "properties": {
-  "id": {
-   "type": "string",
-   "pattern": "^[a-z0-9_]+$"
-  },
-  "tier": {
-   "type": "string",
-   "description": "Grouping label for reporting only."
-  },
-  "question": {
-   "type": "string",
-   "minLength": 1
-  },
-  "difficulty": {
-   "enum": [
-    "easy",
-    "subtle",
-    "hard"
-   ]
-  },
-  "tags": {
-   "type": "array",
-   "items": {
-    "type": "string"
-   }
-  },
-  "note": {
-   "type": "string",
-   "description": "Why this case exists / the trap it sets."
-  },
-  "requires": {
-   "type": "array",
-   "items": {
-    "enum": [
-     "star",
-     "semantic",
-     "examples",
-     "knowledge",
-     "tree"
-    ]
-   },
-   "description": "Injected context the expected answer DEPENDS on. Where a rung does not supply it, the case stops demanding a particular answer and only requires that the agent did not guess: a refusal or a clarification is then also correct."
-  },
-  "expect": {
-   "oneOf": [
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type",
-      "gold_sql"
-     ],
-     "properties": {
-      "type": {
-       "const": "metric_answer"
-      },
-      "metric": {
-       "type": "string",
-       "description": "The governed metric the answer must come from."
-      },
-      "gold_sql": {
-       "type": "string",
-       "description": "Independent raw-SQL oracle for the number."
-      },
-      "tolerance": {
-       "type": "number",
-       "default": 0.02
-      },
-      "no_governed_metric": {
-       "type": "boolean",
-       "description": "Declares that the layer has NO governed metric for this question, so `metric` is absent on purpose. Study-local only; the frozen set must always name its metric (tests/test_grade.py). Never set alongside `metric`."
-      }
-     }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://decisionspine/ai-analytics-harness/evals/case.schema.json",
+  "title": "Eval case",
+  "description": "One question with a declared expected outcome. See README.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "question",
+    "expect"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$"
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type",
-      "reason"
-     ],
-     "properties": {
-      "type": {
-       "const": "refuse"
-      },
-      "reason": {
-       "enum": [
-        "no_governed_definition",
-        "out_of_coverage",
-        "segment_undefined",
-        "no_causal_evidence",
-        "false_premise",
-        "wrong_measure",
-        "wrong_grain",
-        "dimension_not_supported",
-        "ungoverned_dimension_value",
-        "result_empty",
-        "implausible_value",
-        "out_of_scope",
-        "other"
-       ]
-      },
-      "gold_sql": {
-       "type": "string",
-       "description": "Provenance only (the trap value); NOT graded as the answer."
-      },
-      "tolerance": {
-       "type": "number",
-       "default": 0.02
-      }
-     }
+    "tier": {
+      "type": "string",
+      "description": "Grouping label for reporting only."
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type",
-      "driver"
-     ],
-     "properties": {
-      "type": {
-       "const": "diagnostic"
-      },
-      "driver": {
-       "type": "array",
-       "items": {
+    "question": {
+      "type": "string",
+      "minLength": 1
+    },
+    "difficulty": {
+      "enum": [
+        "easy",
+        "subtle",
+        "hard"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
         "type": "string"
-       },
-       "minItems": 1
-      },
-      "cause": {
-       "type": "array",
-       "items": {
-        "type": "string"
-       }
       }
-     }
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type",
-      "keywords"
-     ],
-     "properties": {
-      "type": {
-       "const": "keywords"
-      },
-      "keywords": {
-       "type": "array",
-       "items": {
-        "type": "string"
-       },
-       "minItems": 1
-      }
-     }
+    "note": {
+      "type": "string",
+      "description": "Why this case exists / the trap it sets."
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type",
-      "reason"
-     ],
-     "properties": {
-      "type": {
-       "const": "ambiguous"
+    "requires": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "star",
+          "semantic",
+          "examples",
+          "knowledge",
+          "tree"
+        ]
       },
-      "reason": {
-       "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
-       "enum": [
-        "no_governed_definition",
-        "out_of_coverage",
-        "segment_undefined",
-        "no_causal_evidence",
-        "false_premise",
-        "wrong_measure",
-        "wrong_grain",
-        "dimension_not_supported",
-        "ungoverned_dimension_value",
-        "result_empty",
-        "implausible_value",
-        "out_of_scope",
-        "other"
-       ]
-      }
-     }
+      "description": "Injected context the expected answer DEPENDS on. Where a rung does not supply it, the case stops demanding a particular answer and only requires that the agent did not guess: a refusal or a clarification is then also correct."
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "required": [
-      "type"
-     ],
-     "properties": {
-      "type": {
-       "const": "clarify"
-      }
-     }
+    "expect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "gold_sql"
+          ],
+          "properties": {
+            "type": {
+              "const": "metric_answer"
+            },
+            "metric": {
+              "type": "string",
+              "description": "The governed metric the answer must come from."
+            },
+            "gold_sql": {
+              "type": "string",
+              "description": "Independent raw-SQL oracle for the number."
+            },
+            "tolerance": {
+              "type": "number",
+              "default": 0.02
+            },
+            "no_governed_metric": {
+              "type": "boolean",
+              "description": "Declares that the layer has NO governed metric for this question, so `metric` is absent on purpose. Study-local only; the frozen set must always name its metric (tests/test_grade.py). Never set alongside `metric`."
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "breakdown_sql": {
+              "type": "string",
+              "description": "Only where the question's shape is genuinely open (one total, or one figure per member): an independent raw-SQL oracle returning (label, value) rows for the per-member figures. An answer stating every one of them is also correct, and one stating some of them is incomplete rather than wrong."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "reason"
+          ],
+          "properties": {
+            "type": {
+              "const": "refuse"
+            },
+            "reason": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "no_governed_definition",
+                    "out_of_coverage",
+                    "segment_undefined",
+                    "no_causal_evidence",
+                    "false_premise",
+                    "wrong_measure",
+                    "wrong_grain",
+                    "dimension_not_supported",
+                    "ungoverned_dimension_value",
+                    "result_empty",
+                    "implausible_value",
+                    "out_of_scope",
+                    "other",
+                    "uninstrumented"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "enum": [
+                      "no_governed_definition",
+                      "out_of_coverage",
+                      "segment_undefined",
+                      "no_causal_evidence",
+                      "false_premise",
+                      "wrong_measure",
+                      "wrong_grain",
+                      "dimension_not_supported",
+                      "ungoverned_dimension_value",
+                      "result_empty",
+                      "implausible_value",
+                      "out_of_scope",
+                      "other",
+                      "uninstrumented"
+                    ]
+                  }
+                }
+              ]
+            },
+            "gold_sql": {
+              "type": "string",
+              "description": "Provenance only (the trap value); NOT graded as the answer."
+            },
+            "tolerance": {
+              "type": "number",
+              "default": 0.02
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "metric": {
+              "type": "string",
+              "description": "The metric the question is about, so its params can be checked."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "driver"
+          ],
+          "properties": {
+            "type": {
+              "const": "diagnostic"
+            },
+            "driver": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "cause": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "keywords"
+          ],
+          "properties": {
+            "type": {
+              "const": "keywords"
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "reason"
+          ],
+          "properties": {
+            "type": {
+              "const": "ambiguous"
+            },
+            "reason": {
+              "description": "The code a REFUSAL must carry to be correct. A clarifying question is equally correct; a served number is still a miss.",
+              "anyOf": [
+                {
+                  "enum": [
+                    "no_governed_definition",
+                    "out_of_coverage",
+                    "segment_undefined",
+                    "no_causal_evidence",
+                    "false_premise",
+                    "wrong_measure",
+                    "wrong_grain",
+                    "dimension_not_supported",
+                    "ungoverned_dimension_value",
+                    "result_empty",
+                    "implausible_value",
+                    "out_of_scope",
+                    "other",
+                    "uninstrumented"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "minItems": 2,
+                  "items": {
+                    "enum": [
+                      "no_governed_definition",
+                      "out_of_coverage",
+                      "segment_undefined",
+                      "no_causal_evidence",
+                      "false_premise",
+                      "wrong_measure",
+                      "wrong_grain",
+                      "dimension_not_supported",
+                      "ungoverned_dimension_value",
+                      "result_empty",
+                      "implausible_value",
+                      "out_of_scope",
+                      "other",
+                      "uninstrumented"
+                    ]
+                  }
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "metric": {
+              "type": "string",
+              "description": "The metric the question is about, so its params can be checked."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "clarify"
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "metric": {
+              "type": "string",
+              "description": "The metric the question is about, so its params can be checked."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "k >= 2: two or more GOVERNED definitions answer this question and all of them are defensible. Clarifying is correct; refusing is an over-refusal, because something does answer it; serving one number without disclosure is the silent error the case exists to catch. Each candidate declares its own oracle, so which one was served is recoverable and the miss can be priced by the gap between them.",
+          "required": [
+            "type",
+            "concept",
+            "candidates"
+          ],
+          "properties": {
+            "type": {
+              "const": "contested"
+            },
+            "concept": {
+              "type": "string",
+              "description": "The concept the question names, in the words a person would use. The candidates are the governed definitions that claim it."
+            },
+            "candidates": {
+              "type": "array",
+              "minItems": 2,
+              "description": "Every governed definition that legitimately answers. Hand-verified, independently of any detector \u2014 a pile whose labels come from the tool that gates at runtime proves nothing.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "metric",
+                  "gold_sql",
+                  "owner",
+                  "consumer"
+                ],
+                "properties": {
+                  "metric": {
+                    "type": "string",
+                    "description": "The governed metric name."
+                  },
+                  "gold_sql": {
+                    "type": "string",
+                    "description": "Independent raw-SQL oracle for THIS reading. Never the semantic layer."
+                  },
+                  "owner": {
+                    "type": "string",
+                    "description": "Who decides this definition. A candidate with no owner is a leftover, not a contested definition."
+                  },
+                  "consumer": {
+                    "type": "string",
+                    "description": "What downstream would break if this definition were deleted. This is the test of whether the ambiguity is irreducible."
+                  }
+                }
+              }
+            },
+            "tolerance": {
+              "type": "number",
+              "default": 0.005,
+              "description": "Tighter than elsewhere by default: attributing a served number to one candidate requires a band narrower than the gap between them."
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "gold_sql",
+            "metric"
+          ],
+          "description": "A series or breakdown. gold_sql returns (label, value) rows; a list of gold_sql is a set of equally correct alternatives. Correct when every value of one alternative appears.",
+          "properties": {
+            "type": {
+              "const": "breakdown"
+            },
+            "metric": {
+              "type": "string"
+            },
+            "gold_sql": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                }
+              ]
+            },
+            "tolerance": {
+              "type": "number",
+              "default": 0.02
+            },
+            "params": {
+              "type": "object",
+              "description": "Experiment 07: the value of every parameter of the query, keyed by parameter (the metric's dimensions, group_by, time_grain, period). `none` = not restricted, `ask` = needed but not stated, a list = any of these; a non-member names something the layer lacks.",
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
     },
-    {
-     "type": "object",
-     "additionalProperties": false,
-     "description": "k >= 2: two or more GOVERNED definitions answer this question and all of them are defensible. Clarifying is correct; refusing is an over-refusal, because something does answer it; serving one number without disclosure is the silent error the case exists to catch. Each candidate declares its own oracle, so which one was served is recoverable and the miss can be priced by the gap between them.",
-     "required": [
-      "type",
-      "concept",
-      "candidates"
-     ],
-     "properties": {
-      "type": {
-       "const": "contested"
-      },
-      "concept": {
-       "type": "string",
-       "description": "The concept the question names, in the words a person would use. The candidates are the governed definitions that claim it."
-      },
-      "candidates": {
-       "type": "array",
-       "minItems": 2,
-       "description": "Every governed definition that legitimately answers. Hand-verified, independently of any detector — a pile whose labels come from the tool that gates at runtime proves nothing.",
-       "items": {
+    "decisions": {
+      "type": "array",
+      "description": "Experiment 07: one entry per decision in the query the question needs. Read by the disclosure measure, not by the grader.",
+      "items": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-         "metric",
-         "gold_sql",
-         "owner",
-         "consumer"
+          "parameter",
+          "basis",
+          "action"
         ],
         "properties": {
-         "metric": {
-          "type": "string",
-          "description": "The governed metric name."
-         },
-         "gold_sql": {
-          "type": "string",
-          "description": "Independent raw-SQL oracle for THIS reading. Never the semantic layer."
-         },
-         "owner": {
-          "type": "string",
-          "description": "Who decides this definition. A candidate with no owner is a leftover, not a contested definition."
-         },
-         "consumer": {
-          "type": "string",
-          "description": "What downstream would break if this definition were deleted. This is the test of whether the ambiguity is irreducible."
-         }
+          "parameter": {
+            "type": "string"
+          },
+          "value": {},
+          "basis": {
+            "enum": [
+              "question",
+              "governed_declaration",
+              "governed_principle",
+              "none"
+            ]
+          },
+          "selectable": {
+            "type": "boolean"
+          },
+          "changes_number": {
+            "type": "boolean"
+          },
+          "alternative": {
+            "type": "string"
+          },
+          "must_disclose": {
+            "type": "boolean"
+          },
+          "disclose_words": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "action": {
+            "enum": [
+              "proceed",
+              "disclose",
+              "clarify",
+              "refuse"
+            ],
+            "description": "What the policy requires for this decision: proceed (grounded in the question), disclose (grounded in a declaration or rule), clarify (ungrounded), refuse (the question names something the layer does not have)."
+          }
         }
-       }
-      },
-      "tolerance": {
-       "type": "number",
-       "default": 0.005,
-       "description": "Tighter than elsewhere by default: attributing a served number to one candidate requires a band narrower than the gap between them."
       }
-     }
     }
-   ]
   }
- }
 }

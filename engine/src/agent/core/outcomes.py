@@ -215,6 +215,9 @@ class Answer:
     # The unified Scope record (tier 4 shadow): one typed reading of the question, published for
     # per-field agreement analysis against the live classifiers. None when the shadow is off.
     scope_shadow: dict | None = None
+    # decision_grounding: the reading of the question per metric (the value sets, decisions, the
+    # decision model's raw answers and serving version), and the metric choice under `_metric`.
+    readings: dict | None = None
     # What each of those handbacks was given, so the repair can be told from a deletion: the
     # claim count and the broken claims' text going in, against `claims` above coming out.
     # Without it a repaired answer and a truncated one are the same stored row.
@@ -234,6 +237,8 @@ class Answer:
     output_tokens: int = 0
     cached_tokens: int = 0          # prompt-cache HITS (a subset of input_tokens, billed ~10%)
     error: str | None = None
+    # Which API carried the model calls: "openrouter", "direct" or "mock" (providers.llm_route).
+    route: str = ""
     steps: list = field(default_factory=list)
     turns: list = field(default_factory=list)   # one per model call: latency, cost, what it asked
     acts: list = field(default_factory=list)    # what the AFTER guardrails did to this answer

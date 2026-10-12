@@ -1,0 +1,833 @@
+[
+ {
+  "element": "platform",
+  "block": "governed code",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00037384399999999997,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "case variant",
+  "type": "INV",
+  "q": "how many times did ANDROID users open the app in june 2026",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000375928,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "typo",
+  "type": "INV",
+  "q": "How many times did Andriod users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00045092,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym",
+  "type": "INV",
+  "q": "How many app opens came from Google Android phones in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00037597,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym (other value)",
+  "type": "MFT",
+  "q": "How many app opens came from iPhone users in June 2026?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "platform": "ask",
+    "period": "2026-06"
+   }
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "ungrounded: \"iPhone users\" is not a listed value; did you mean platform ios?"
+  ],
+  "cost": 0.00042569799999999996,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "exclusion",
+  "type": "DIR",
+  "q": "How many app opens were there in June 2026 on every platform except web?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios",
+     "unknown"
+    ],
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios",
+      "unknown"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000370454,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "list",
+  "type": "MFT",
+  "q": "How many app opens did Android and iOS users have together in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00039076199999999996,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "declared parent group",
+  "type": "MFT",
+  "q": "How many mobile app opens were there in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "device_type": "mobile",
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__device_type": [
+     "mobile"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000705078,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "absent value",
+  "type": "invalid",
+  "q": "How many app opens came from Windows users in June 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "windows"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: \"Windows users\" names a platform the layer does not have; the governed values are android, ios, unknown, web"
+  ],
+  "cost": 0.000421642,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "omitted",
+  "type": "base",
+  "q": "How many app opens were there in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-06"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00034144000000000004,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "quarter",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in Q2 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-Q2"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-Q2"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000376556,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "half-year",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in the first half of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1"
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000380972,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "season (declared, partly covered)",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in summer 2026?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-08-31"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: 2026-06-01 to 2026-08-31 is only partly inside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.0003515,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "outside coverage",
+  "type": "invalid",
+  "q": "How many times did Android users open the app in August 2025?",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android"
+   }
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2025-08"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: August 2025 is outside the data (2025-09-05 to 2026-07-12)"
+  ],
+  "cost": 0.0003515,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "omitted",
+  "type": "base",
+  "q": "How many times did Android users open the app?",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "ask"
+   }
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [],
+   "group_by": []
+  },
+  "open": [
+   "ungrounded: the question states no period that can be placed on the calendar, and no rule supplies one"
+  ],
+  "cost": 0.00032025,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "omitted (rule)",
+  "type": "base",
+  "q": "How did Android app opens change over the first half of 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "open": [],
+  "cost": 0.000743658,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "explicit week",
+  "type": "MFT",
+  "q": "Show Android app opens week by week for the first half of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "open": [],
+  "cost": 0.0007541580000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "grain",
+  "block": "explicit month",
+  "type": "MFT",
+  "q": "Show Android app opens month by month for the first half of 2026.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ]
+  },
+  "open": [],
+  "cost": 0.0007541580000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "unnamed ('by segment', rule)",
+  "type": "base",
+  "q": "How did Android app opens break down by segment in June 2026?",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "region",
+     "channel"
+    ]
+   }
+  },
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "group_by ['channel', 'metric_time', 'region'] instead of ['channel', 'region']"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "metric_time",
+    "activity__region",
+    "activity__channel"
+   ]
+  },
+  "open": [
+   "ungrounded: not confirmed: Does the question ask how the number changes over time?"
+  ],
+  "cost": 0.00039692000000000004,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "named dimension",
+  "type": "MFT",
+  "q": "Break down Android app opens in June 2026 by region.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "region"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "activity__region"
+   ]
+  },
+  "open": [],
+  "cost": 0.000730842,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "named dimension",
+  "type": "MFT",
+  "q": "Break down Android app opens in June 2026 by country.",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06",
+    "group_by": [
+     "country"
+    ]
+   }
+  },
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": [
+    "activity__country"
+   ]
+  },
+  "open": [],
+  "cost": 0.000730842,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "homograph ('customer segment')",
+  "type": "invalid?",
+  "q": "Break down Android app opens in June 2026 by customer segment.",
+  "expect": {
+   "type": "contested",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "refuse",
+  "ok": false,
+  "errors": [
+   "action refuse"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: the question asks to split by \"by customer segment\", which the layer does not have"
+  ],
+  "cost": 0.0007132499999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "absent dimension",
+  "type": "invalid",
+  "q": "Break down Android app opens in June 2026 by device model.",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: the question asks to split by \"by device model\", which the layer does not have"
+  ],
+  "cost": 0.0007132499999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "governed term",
+  "type": "MFT",
+  "q": "How many times did Android users open the app in June 2026?",
+  "expect": {
+   "outcome": "app_opens"
+  },
+  "result": "app_opens",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000102144,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "undeclared synonym",
+  "type": "MFT",
+  "q": "How many app launches did Android users have in June 2026?",
+  "expect": {
+   "outcome": "app_opens"
+  },
+  "result": "app_opens",
+  "ok": true,
+  "errors": [],
+  "cost": 0.00010206000000000001,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "absent measure",
+  "type": "MFT",
+  "q": "How many sessions did Android users have in June 2026?",
+  "expect": {
+   "outcome": "refuse"
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "cost": 0.00010197599999999999,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "absent measure",
+  "type": "MFT",
+  "q": "How much time did Android users spend in the app in June 2026?",
+  "expect": {
+   "outcome": "refuse"
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000102228,
+  "reader": "typed"
+ },
+ {
+  "element": "metric",
+  "block": "vague measure",
+  "type": "MFT",
+  "q": "How engaged were Android users in June 2026?",
+  "expect": {
+   "outcome": "ask"
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "cost": 0.000101808,
+  "reader": "typed"
+ }
+]

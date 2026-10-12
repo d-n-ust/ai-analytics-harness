@@ -281,6 +281,21 @@ def _knowledge_block() -> str:
 
 
 
+# `disclose_assumptions`: the instruction alone. Experiment 07's control for `parameter_grounding`.
+_RRUNG_DISCLOSE_ASSUMPTIONS = (
+    "\n\nDISCLOSURE. In your answer, state every assumption and default behind the number: any "
+    "filter or segment applied (including one the metric applies by definition), the definition "
+    "used, the period, and the grain. One short sentence each.")
+
+# `parameter_grounding`: what the agent sees appended to a governed result, and what to do with it.
+_RRUNG_PARAMETER_GROUNDING = (
+    "\n\nPARAMETER GROUNDING. Before a governed query runs, its parameters are grounded against "
+    "the question and the governed layer, and the query runs with the grounded parameters. The "
+    "result then lists them under [parameter grounding]. State every line marked DISCLOSE in your "
+    "answer, in plain words. If a parameter the answer depends on is UNGROUNDED, the query does not "
+    "run: ask the user with `clarify` instead of assuming a value.")
+
+
 def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
     """Assemble what the agent is told, from the rung it is grounded at, the guardrails it runs
     under, and the protocol it declares by.
@@ -306,6 +321,10 @@ def system_prompt(rung: int, g, protocol: Protocol | None = None) -> str:
         system += _RRUNG_DISCLOSURE_CHECK
     if g.constraint_regression:
         system += _RRUNG_CONSTRAINT_REGRESSION
+    if g.disclose_assumptions:
+        system += _RRUNG_DISCLOSE_ASSUMPTIONS
+    if g.parameter_grounding or g.decision_grounding:
+        system += _RRUNG_PARAMETER_GROUNDING
     if g.check_tools:
         system += _RRUNG_CHECKS
     if g.coverage_check:

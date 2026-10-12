@@ -90,7 +90,10 @@ class Selective:
     answerable: int        # pile A
     answered: int          # …of which it attempted
     right: int             # …of which it got the answer right
-    wrong: int             # …of which it got the answer wrong          ← invisible failure
+    wrong: int             # …of which it got the answer wrong
+    # …of those, the wrong answers a reader cannot tell are wrong (`served_wrong`). The rest are
+    # visibly incomplete (a breakdown missing a segment) and are wrong but not silent.
+    wrong_silent: int
     # DECLINED a question it could have answered, by EITHER route. The name predates the third
     # outcome and is kept because every published row carries it; what it counts has always been
     # "did not attempt", and a clarification has always landed here. `over_clarified` is the part
@@ -101,6 +104,10 @@ class Selective:
     unanswerable: int      # pile B
     refused: int           # …of which it correctly declined
     served: int            # …of which it served a number anyway        ← invisible failure
+    # …of which it ASKED where only a refusal is right. Visible, so not a silent error, but not a
+    # correct decline either: counting it as one let an agent that always asks score 0.67 balanced
+    # accuracy with no answer at all. Not part of `refused`.
+    asked_instead: int
 
     contested: int          # pile C
     clarified: int          # …of which it correctly asked which reading was meant
@@ -135,7 +142,7 @@ class Selective:
         pile C is a correct result of a governed metric, and only the absence of the sentence
         naming the other one makes it a failure.
         """
-        return _rate(self.wrong + self.served + self.contested_served, self.n)
+        return _rate(self.wrong_silent + self.served + self.contested_served, self.n)
 
     @property
     def balanced_accuracy(self) -> float:
@@ -198,7 +205,8 @@ class Selective:
                 "answerable_right": self.right, "answerable_wrong": self.wrong,
                 "answerable_over_refused": self.over_refused,
                 "unanswerable_n": self.unanswerable, "unanswerable_refused": self.refused,
-                "unanswerable_served": self.served,
+                "unanswerable_served": self.served, "unanswerable_asked_instead": self.asked_instead,
+                "answerable_wrong_silent": self.wrong_silent,
                 "contested_n": self.contested, "contested_clarified": self.clarified,
                 "contested_disclosed": self.contested_disclosed,
                 "contested_served": self.contested_served,
@@ -250,6 +258,10 @@ def selective(rows: list[dict]) -> Selective:
     # Counting `outcome == "answer"` instead swept those in, and they are the opposite kind of
     # failure: the reader sees "I can't", so nothing is silent about it. It cost ~9 points at R0.
     served = sum(1 for r in b if served_wrong(r))
+    # A row graded before `clarify_accepted` existed keeps its old reading (a question counted as a
+    # decline), so the archive scores what it scored until it is regraded.
+    asked_instead = sum(1 for r in b if r["outcome"] == "clarify" and not served_wrong(r)
+                        and not r.get("clarify_accepted", True))
     # Every SERVED answer that declared a graph, from either pile. An abstention declares nothing
     # to check, and an answer with no claims was never asked for one.
     audited = [r for r in scored if r["outcome"] == "answer" and not r.get("abstained")
@@ -264,9 +276,11 @@ def selective(rows: list[dict]) -> Selective:
     return Selective(
         n=len(scored), errors=len(rows) - len(scored),
         answerable=len(a), answered=len(answered), right=right, wrong=len(answered) - right,
+        wrong_silent=sum(1 for r in answered if not r.get("correct") and served_wrong(r)),
         over_refused=len(a) - len(answered),
         over_clarified=sum(1 for r in a if r["outcome"] == "clarify"),
-        unanswerable=len(b), refused=len(b) - served, served=served,
+        unanswerable=len(b), refused=len(b) - served - asked_instead, served=served,
+        asked_instead=asked_instead,
         contested=len(c), clarified=sum(1 for r in c if r["outcome"] == "clarify"),
         # Served an answer the grader accepted (disclosed every reading — grade.py's fourth
         # action). Read from the grader's `correct` so the definition lives in one place: on a

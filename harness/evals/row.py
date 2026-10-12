@@ -55,7 +55,20 @@ __all__ = ["measured_row", "ROW_SCHEMA_VERSION"]
 #      round trip was priced at half an episode by assumption, which flattered every arm that buys
 #      safety by asking. None on a run that did not clarify, which is not the same as a round trip
 #      that bought nothing.
-ROW_SCHEMA_VERSION = 21
+# v22: `graded_by` — how the verdict was reached (numeric / numeric+claims / action / prose). `grade()` has computed
+#      it since v21, but the row never recorded it, so report.py's grading-provenance table read
+#      every row as "unrecorded".
+# v23: `route` — which API carried the model calls (openrouter / direct / mock). The same model id
+#      through two routes can differ in upstream, reasoning translation and price, so a row that
+#      does not say which route produced it cannot be compared with one that does.
+# v24: `readings` — under decision_grounding, the reading of the question per metric, with the decision
+#      model's raw answers and the version that served them, and the metric choice. Without it a
+#      row kept only the decisions derived from the reading, so no decision could be replayed.
+# v25: `clarify_accepted` — whether a clarifying question is a correct reply to the case. Pile B
+#      had scored every clarification as a refusal, so an agent that always asked scored 0.67
+#      balanced accuracy. Also, refusals converted at the correction cap now keep `repairs`,
+#      `claim_retries` and `hand_backs`, and each claims repair keeps the whole attempt.
+ROW_SCHEMA_VERSION = 25
 
 
 def _cost_usd(model: str, input_tokens: int, output_tokens: int, cached_tokens: int) -> float | None:
@@ -91,7 +104,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         # Stamped on the case by `gold.stamp_suite`, so no runner can forget to pass it. None on
         # a case built by hand in a test, which belongs to no suite.
         "qid": case["id"], "tier": case.get("tier"), "question": case["question"],
-        "suite": case.get("suite"), "model": answer.model, "gold": gold,
+        "suite": case.get("suite"), "model": answer.model, "route": answer.route, "gold": gold,
 
         # ---- what the run did --------------------------------------------------------
         "answer": answer.answer, "explanation": answer.explanation,
@@ -110,7 +123,9 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         "off_governance": g.get("off_governance", False),
         "wrong_scope": g.get("wrong_scope", False), "wrong_metric": g["wrong_metric"],
         "needs_judge": g.get("needs_judge", False), "bucket": g["bucket"],
+        "graded_by": g["graded_by"],
         "expected_refuse": g["expected_refuse"], "expected_action": g["expected_action"],
+        "clarify_accepted": g["clarify_accepted"],
         "reason_match": g["reason_match"], "metric_match": g.get("metric_match"),
         "driver_ok": g.get("driver_ok"), "cause_ok": g.get("cause_ok"),
         "served_candidate": g.get("served_candidate"), "divergence": g.get("divergence"),
@@ -123,6 +138,7 @@ def measured_row(answer, case: dict, gold, *, elapsed_s: float, **context) -> di
         "claims": list(answer.claims), "claim_audit": answer.claim_audit,
         "claim_retries": answer.claim_retries, "hand_backs": answer.hand_backs,
         "repairs": list(answer.repairs), "scope_shadow": answer.scope_shadow,
+        "readings": getattr(answer, "readings", None),
         "verifier_verdict": answer.verifier_verdict, "error": answer.error,
 
         # ---- telemetry ----------------------------------------------------------------

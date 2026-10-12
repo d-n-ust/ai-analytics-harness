@@ -1,0 +1,98 @@
+[
+ {
+  "element": "platform",
+  "block": "typo",
+  "type": "INV",
+  "q": "How many times did Andriod users open the app in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.000447114,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym",
+  "type": "INV",
+  "q": "How many app opens came from Google Android phones in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "android",
+    "period": "2026-06"
+   }
+  },
+  "group": "P",
+  "result": "answer",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [],
+  "cost": 0.00037597,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "undeclared synonym (other value)",
+  "type": "MFT",
+  "q": "How many app opens came from iPhone users in June 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": "ios",
+    "period": "2026-06"
+   }
+  },
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "platform [] instead of ['ios']"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "ungrounded: \"iPhone users\" is not a listed value; did you mean platform ios?"
+  ],
+  "cost": 0.00042569799999999996,
+  "reader": "typed"
+ }
+]

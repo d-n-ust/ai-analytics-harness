@@ -1,0 +1,442 @@
+[
+ {
+  "element": "grain",
+  "block": "weekly trend",
+  "type": "heldout",
+  "q": "Weekly app opens first half 2026.",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "period": "2026-H1",
+    "group_by": [
+     "metric_time"
+    ],
+    "time_grain": "week"
+   }
+  },
+  "group": "i02",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {},
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [
+    "metric_time"
+   ],
+   "grain": "week",
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "metric_time"
+     ],
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: Does the question ask for several numbers over time (a trend, or one number per day, week or month), rather than one number for the whole period?",
+     "confidence": 0.31
+    }
+   ],
+   "proposal": {
+    "figures": [],
+    "time": [
+     {
+      "quote": "first half 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": {
+     "quote": "Weekly",
+     "unit": "week"
+    },
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.35
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: not confirmed: Does the question ask for several numbers over time (a trend, or one number per day, week or month), rather than one number for the whole period?"
+  ],
+  "cost": 0.0036943180000000003,
+  "reader": "typed"
+ },
+ {
+  "element": "period",
+  "block": "southern hemisphere season by segment",
+  "type": "heldout",
+  "q": "Please provide the data for app opens in Brazil, segmented, for summer 2026.",
+  "expect": {
+   "type": "clarify",
+   "metric": "app_opens",
+   "params": {
+    "country_name": "Brazil",
+    "period": "ask",
+    "group_by": [
+     "platform",
+     "region",
+     "channel"
+    ]
+   }
+  },
+  "group": "i07",
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__country_name": [
+     "Brazil"
+    ]
+   },
+   "periods": [
+    "2026-06-01/2026-07-12"
+   ],
+   "group_by": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country_name = Brazil",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-06-01/2026-07-12",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Summer 2026 is read as June 2026 to August 2026 (the company calendar). June 2026 to August 2026 is only partly in the data; this covers 1 June 2026 to 12 July 2026.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "group_by",
+     "value": [
+      "activity__platform",
+      "activity__region",
+      "activity__channel"
+     ],
+     "basis": "governed_principle",
+     "quote": "",
+     "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+     "state": "applied",
+     "why": "principle canonical_segments"
+    },
+    {
+     "parameter": "period",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Brazil",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "summer 2026",
+      "value": "2026-SU"
+     }
+    ],
+    "series": null,
+    "breakdown": [
+     {
+      "quote": "segmented"
+     }
+    ],
+    "premise": null
+   },
+   "seconds": 9.32
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: the season named is for the northern hemisphere, and the figure lies in the southern one; ask which months are meant"
+  ],
+  "cost": 0.004457762,
+  "reader": "typed"
+ },
+ {
+  "element": "platform",
+  "block": "combined platforms",
+  "type": "heldout",
+  "q": "Combined app opens from Android and iOS in the first half of 2026?",
+  "expect": {
+   "type": "metric_answer",
+   "metric": "app_opens",
+   "params": {
+    "platform": [
+     "android",
+     "ios"
+    ],
+    "period": "2026-H1"
+   }
+  },
+  "group": "i10",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask"
+  ],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     [
+      "android",
+      "ios"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-H1"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__platform in (android, ios)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "Platform is the platform each account registered on, not the device used for each app open.",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-H1",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: Does the question ask for Android and iOS added together as one combined number?",
+     "confidence": 0.46
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "Android",
+        "keep": true
+       },
+       {
+        "quote": "iOS",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "the first half of 2026",
+      "value": "2026-H1"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.48
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: not confirmed: Does the question ask for Android and iOS added together as one combined number?"
+  ],
+  "cost": 0.002319688,
+  "reader": "typed"
+ },
+ {
+  "element": "country",
+  "block": "compared countries",
+  "type": "heldout",
+  "q": "App opens US vs BR May 2026",
+  "expect": {
+   "type": "breakdown",
+   "metric": "app_opens",
+   "params": {
+    "country": [
+     "US",
+     "BR"
+    ],
+    "period": "2026-05",
+    "group_by": [
+     "country"
+    ]
+   }
+  },
+  "group": "i13",
+  "result": "ask",
+  "ok": false,
+  "errors": [
+   "action ask",
+   "country: one combined figure, label is one figure per value"
+  ],
+  "reading": {
+   "filters": {
+    "activity__country": [
+     [
+      "BR",
+      "US"
+     ]
+    ]
+   },
+   "periods": [
+    "2026-05"
+   ],
+   "group_by": [],
+   "grain": null,
+   "decisions": [
+    {
+     "parameter": "metric_filter",
+     "value": "activity__is_internal = false",
+     "basis": "governed_declaration",
+     "quote": "",
+     "disclose": "app_opens applies activity__is_internal = false by definition.",
+     "state": "applied",
+     "why": "declared by the metric; not selectable"
+    },
+    {
+     "parameter": "filter",
+     "value": "activity__country in (BR, US)",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "period",
+     "value": "2026-05",
+     "basis": "question",
+     "quote": "",
+     "disclose": "",
+     "state": "applied",
+     "why": ""
+    },
+    {
+     "parameter": "reading",
+     "value": "?",
+     "basis": "none",
+     "quote": "",
+     "disclose": "",
+     "state": "ungrounded",
+     "why": "not confirmed: Does the question ask for BR and US added together as one combined number?",
+     "confidence": 0.19
+    }
+   ],
+   "proposal": {
+    "figures": [
+     {
+      "terms": [
+       {
+        "quote": "BR",
+        "keep": true
+       },
+       {
+        "quote": "US",
+        "keep": true
+       }
+      ]
+     }
+    ],
+    "time": [
+     {
+      "quote": "May 2026",
+      "value": "2026-05"
+     }
+    ],
+    "series": null,
+    "breakdown": [],
+    "premise": null
+   },
+   "seconds": 6.4
+  },
+  "broader": [],
+  "open": [
+   "ungrounded: not confirmed: Does the question ask for BR and US added together as one combined number?"
+  ],
+  "cost": 0.002384014,
+  "reader": "typed"
+ }
+]

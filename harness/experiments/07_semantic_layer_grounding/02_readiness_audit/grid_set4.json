@@ -1,0 +1,33 @@
+{
+ "platform": {
+  "grounded": 7,
+  "unneeded asks": 1,
+  "assumed": 7
+ },
+ "device type": {
+  "grounded": 6
+ },
+ "country": {
+  "grounded": 11,
+  "unneeded asks": 1,
+  "assumed": 9
+ },
+ "region": {
+  "grounded": 6
+ },
+ "channel": {
+  "asks": 6
+ },
+ "period": {
+  "grounded": 52,
+  "asks": 12
+ },
+ "time grain": {
+  "grounded": 6
+ },
+ "group by": {
+  "grounded": 19,
+  "wrong": 1,
+  "unneeded asks": 1
+ }
+}

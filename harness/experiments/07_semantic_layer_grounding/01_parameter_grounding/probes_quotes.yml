@@ -1,0 +1,76 @@
+# Probe set for the evidence check (tolerant_quotes, quote_retry). NOT part of the measured suite:
+# four rewordings of q_001 written to make the grounding model's quote differ from the question's
+# text. Each asks for the same number as q_001 (8,232). Run with --cases probes_quotes.yml.
+
+cases:
+  - id: p_001_typo
+    tier: answerable
+    tags: [probe, quote_check]
+    question: "How many times did Andriod users open the app in June 2026?"
+    expect:
+      type: metric_answer
+      metric: app_opens
+      params:
+        platform: android
+        period: 2026-06
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-
+        test.com'))
+    note: "a misspelt platform; the model may quote the corrected word. Same answer as q_001: 8,232."
+
+  - id: p_002_extra_words
+    tier: answerable
+    tags: [probe, quote_check]
+    question: "How many times did users on Android open the app during June of 2026?"
+    expect:
+      type: metric_answer
+      metric: app_opens
+      params:
+        platform: android
+        period: 2026-06
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-
+        test.com'))
+    note: "words between the parts of each phrase. Same answer as q_001: 8,232."
+
+  - id: p_003_abbreviation
+    tier: answerable
+    tags: [probe, quote_check]
+    question: "How many Android app opens were there in Jun 2026?"
+    expect:
+      type: metric_answer
+      metric: app_opens
+      params:
+        platform: android
+        period: 2026-06
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-
+        test.com'))
+    note: "an abbreviated month. Same answer as q_001: 8,232."
+
+  - id: p_004_terse
+    tier: answerable
+    tags: [probe, quote_check]
+    question: "android opens jun '26?"
+    expect:
+      type: metric_answer
+      metric: app_opens
+      params:
+        platform: android
+        period: 2026-06
+      tolerance: 0.005
+      gold_sql: >-
+        SELECT count(*) FROM "_source".evt e JOIN "_source".u u ON u.uid = e.uid WHERE e.etype = 1 AND
+        lower(coalesce(u.plat, '')) = 'android' AND e.ts >= DATE '2026-06-01' AND e.ts < DATE
+        '2026-07-01' AND NOT ((coalesce(u.internal, 0) = 1) OR (lower(u.email) LIKE '%@internal-
+        test.com'))
+    note: "terse, lower case, a two-digit year. Same answer as q_001: 8,232."

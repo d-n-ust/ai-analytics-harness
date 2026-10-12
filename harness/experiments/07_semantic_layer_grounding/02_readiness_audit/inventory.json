@@ -1,0 +1,403 @@
+{
+ "scope": {
+  "questions": [
+   {
+    "suite": "cases.yml",
+    "id": "q_001_android_opens_june"
+   },
+   {
+    "suite": "cases.yml",
+    "id": "q_002_android_opens_trend_h1"
+   },
+   {
+    "suite": "cases.yml",
+    "id": "q_003_android_opens_by_segment_june"
+   }
+  ],
+  "metric": "app_opens",
+  "dimensions": [
+   "platform",
+   "region",
+   "channel",
+   "country",
+   "is_internal"
+  ],
+  "time": [
+   "period",
+   "time_grain"
+  ],
+  "rules": [
+   "trend_granularity",
+   "canonical_segments"
+  ]
+ },
+ "metric": {
+  "app_opens": {
+   "type": "simple",
+   "measure": "app_open_count",
+   "aggregation": "sum",
+   "additivity": "additive",
+   "own_filter": "{{ Dimension('activity__is_internal') }} = false",
+   "time_anchor": "active_date",
+   "coverage": [
+    "2025-09-05",
+    "2026-07-12"
+   ],
+   "owner": "Product",
+   "declared_words": [
+    "app launches",
+    "app opens",
+    "app visits",
+    "times the app was opened"
+   ],
+   "same_measure": []
+  }
+ },
+ "dimensions": {
+  "platform": {
+   "paths": [
+    "activity__platform"
+   ],
+   "description": "The registered client platform: android, ios, web, or unknown.",
+   "value_set_source": "read from data at run time (SELECT DISTINCT); no value list is declared",
+   "values": [
+    "android",
+    "ios",
+    "unknown",
+    "web"
+   ],
+   "described_values": [
+    "android",
+    "ios",
+    "unknown",
+    "web"
+   ],
+   "declared_aliases": [],
+   "coverage_per_value": [
+    {
+     "value": "android",
+     "rows": 11284,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "ios",
+     "rows": 12425,
+     "first": "2025-09-05",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "unknown",
+     "rows": 936,
+     "first": "2025-10-06",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "web",
+     "rows": 12059,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    }
+   ],
+   "determines": []
+  },
+  "region": {
+   "paths": [
+    "activity__region",
+    "user__region"
+   ],
+   "description": "Derived region: Americas (US, BR), EMEA (GB, DE, FR), APAC (PH, ID, IN).",
+   "value_set_source": "read from data at run time (SELECT DISTINCT); no value list is declared",
+   "values": [
+    "APAC",
+    "Americas",
+    "EMEA"
+   ],
+   "described_values": [
+    "APAC",
+    "Americas",
+    "EMEA"
+   ],
+   "declared_aliases": [],
+   "coverage_per_value": [
+    {
+     "value": "APAC",
+     "rows": 4025,
+     "first": "2025-09-17",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "Americas",
+     "rows": 13134,
+     "first": "2025-09-05",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "EMEA",
+     "rows": 19545,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    }
+   ],
+   "determines": []
+  },
+  "channel": {
+   "paths": [
+    "activity__channel",
+    "user__channel"
+   ],
+   "description": "The acquisition channel of the account. content_seo is content marketing and SEO; organic is organic; paid_search is paid search; partnerships is an internal test integration; referral is referrals.",
+   "value_set_source": "read from data at run time (SELECT DISTINCT); no value list is declared",
+   "values": [
+    "content_seo",
+    "organic",
+    "paid_search",
+    "partnerships",
+    "referral"
+   ],
+   "described_values": [
+    "content_seo",
+    "organic",
+    "paid_search",
+    "partnerships",
+    "referral"
+   ],
+   "declared_aliases": [],
+   "coverage_per_value": [
+    {
+     "value": "content_seo",
+     "rows": 6860,
+     "first": "2025-09-08",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "organic",
+     "rows": 7943,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "paid_search",
+     "rows": 7650,
+     "first": "2025-09-05",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "partnerships",
+     "rows": 7541,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "referral",
+     "rows": 6710,
+     "first": "2025-09-28",
+     "last": "2026-07-12"
+    }
+   ],
+   "determines": []
+  },
+  "country": {
+   "paths": [
+    "activity__country"
+   ],
+   "description": "The account country, as an ISO code: US (the United States); BR (Brazil); GB (the United Kingdom); DE (Germany); FR (France); PH (the Philippines); ID (Indonesia); IN (India).",
+   "value_set_source": "read from data at run time (SELECT DISTINCT); no value list is declared",
+   "values": [
+    "BR",
+    "DE",
+    "FR",
+    "GB",
+    "ID",
+    "IN",
+    "PH",
+    "US"
+   ],
+   "described_values": [
+    "BR",
+    "DE",
+    "FR",
+    "GB",
+    "ID",
+    "IN",
+    "PH",
+    "US"
+   ],
+   "declared_aliases": [],
+   "coverage_per_value": [
+    {
+     "value": "BR",
+     "rows": 6838,
+     "first": "2025-09-08",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "DE",
+     "rows": 6973,
+     "first": "2025-09-24",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "FR",
+     "rows": 6468,
+     "first": "2025-09-17",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "GB",
+     "rows": 6104,
+     "first": "2025-09-16",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "ID",
+     "rows": 1258,
+     "first": "2025-10-05",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "IN",
+     "rows": 1471,
+     "first": "2025-09-17",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "PH",
+     "rows": 1296,
+     "first": "2025-11-02",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "US",
+     "rows": 6296,
+     "first": "2025-09-05",
+     "last": "2026-07-12"
+    }
+   ],
+   "determines": [
+    "region"
+   ]
+  },
+  "is_internal": {
+   "paths": [
+    "activity__is_internal",
+    "user__is_internal"
+   ],
+   "description": "TRUE for staff and test accounts. Customer-facing figures exclude these (is_internal = false); the two governed active-user definitions differ only on whether they apply this filter.",
+   "value_set_source": "read from data at run time (SELECT DISTINCT); no value list is declared",
+   "values": [
+    false,
+    true
+   ],
+   "described_values": [
+    false,
+    true
+   ],
+   "declared_aliases": [],
+   "coverage_per_value": [
+    {
+     "value": "False",
+     "rows": 35225,
+     "first": "2025-09-05",
+     "last": "2026-07-12"
+    },
+    {
+     "value": "True",
+     "rows": 1479,
+     "first": "2025-09-17",
+     "last": "2026-07-12"
+    }
+   ],
+   "determines": []
+  }
+ },
+ "time": {
+  "period_forms": [
+   "YYYY-MM",
+   "YYYY-Qn",
+   "YYYY-Hn",
+   "last_week",
+   "last_month",
+   "last_quarter",
+   "ytd",
+   "all"
+  ],
+  "runtime_grains": [
+   "day",
+   "week",
+   "month"
+  ],
+  "metricflow_grains": [
+   "day",
+   "week",
+   "month",
+   "quarter",
+   "year"
+  ],
+  "coverage": [
+   "2025-09-05",
+   "2026-07-12"
+  ]
+ },
+ "rules": {
+  "trend_granularity": {
+   "id": "trend_granularity",
+   "slot": "time_grain",
+   "when": "a time series is requested (group_by includes metric_time) but no bucket is grounded",
+   "target_points": [
+    15,
+    40
+   ],
+   "prefer": "coarsest_in_range",
+   "buckets_within_period": true,
+   "rationale": "A trend needs enough points to show its shape and few enough to read: 15-40. Day is usually too granular, month too coarse over a short span; the rule computes the fit from the span rather than guessing. A bucket that crosses the period's edge reports data from outside the period, so only grains whose buckets line up with the period are considered.",
+   "owner": "analytics",
+   "status": "certified"
+  },
+  "canonical_segments": {
+   "id": "canonical_segments",
+   "slot": "group_by",
+   "when": "an unspecified breakdown is asked ('by segment') with no dimension named",
+   "default": [
+    "activity__platform",
+    "activity__region",
+    "activity__channel"
+   ],
+   "combine": "separate",
+   "disclose": "broken down by the standard business segments: platform (product), region (sales), channel (marketing)",
+   "rationale": "A senior analyst's first-pass breakdown is the canonical high-level business segments, not one arbitrary dimension. Showing all three is the analysis; it is not a fork worth a clarify.",
+   "owner": "analytics",
+   "status": "certified"
+  }
+ },
+ "flags": [
+  {
+   "element": "region",
+   "flag": "reachable by 2 entity paths: activity__region, user__region"
+  },
+  {
+   "element": "channel",
+   "flag": "reachable by 2 entity paths: activity__channel, user__channel"
+  },
+  {
+   "element": "country",
+   "flag": "values with no data in a whole covered month: {'PH': ['2025-10']}"
+  },
+  {
+   "element": "is_internal",
+   "flag": "reachable by 2 entity paths: activity__is_internal, user__is_internal"
+  },
+  {
+   "element": "is_internal",
+   "flag": "fixed by app_opens's own filter"
+  },
+  {
+   "element": "time_grain",
+   "flag": "MetricFlow grains the runtime does not accept: ['quarter', 'year']"
+  },
+  {
+   "element": "governance",
+   "flag": "'segment' names two things: the key `segments` (populations: customers, all_accounts, active_book) and the rule `canonical_segments` (dimensions)"
+  }
+ ]
+}

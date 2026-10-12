@@ -1,0 +1,10 @@
+# The scope of this audit slice: three questions, and the layer elements they touch.
+# Every stage of the readiness audit runs on exactly these elements.
+questions:
+  - {suite: cases.yml, id: q_001_android_opens_june}
+  - {suite: cases.yml, id: q_002_android_opens_trend_h1}
+  - {suite: cases.yml, id: q_003_android_opens_by_segment_june}
+metric: app_opens
+dimensions: [platform, region, channel, country, is_internal]   # country: it determines region
+time: [period, time_grain]
+rules: [trend_granularity, canonical_segments]

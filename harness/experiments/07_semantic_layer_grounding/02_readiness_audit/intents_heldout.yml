@@ -1,0 +1,52 @@
+# Sealed held-out intents for stage 7 (written 2026-10-08, before any stage-6 fix).
+#
+# Each intent says in plain words what a business user wants, with the outcome that is correct for
+# this layer. make_heldout.py asks a model of another family (gemini-3.8-flash) to write three ways a
+# user would ask for it, from the intent alone: it never sees the layer. The labels come from the
+# intents, so no label depends on a wording, and no wording was written with the layer in view.
+# Nothing in this file or tests_heldout.yml may be used to design a fix; run it only at stage 7.
+# Outcomes follow the label policy of the existing suites (u_001 no period -> ask; r_006 "all but
+# web" includes unknown; t_004 a dimension the layer lacks -> refuse).
+intents:
+  - {element: platform, block: governed code, intent: "the number of app opens from Android users in May 2026",
+     expect: {type: metric_answer, metric: app_opens, params: {platform: android, period: "2026-05"}}}
+  - {element: platform, block: undeclared synonym, intent: "the number of app opens from people using iPhones in May 2026",
+     expect: {type: metric_answer, metric: app_opens, params: {platform: ios, period: "2026-05"}}}
+  - {element: platform, block: exclusion, intent: "the number of app opens in April 2026 from every platform except the website",
+     expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios, unknown], period: "2026-04"}}}
+  - {element: platform, block: list, intent: "the combined number of app opens from Android and iPhone users in March 2026",
+     expect: {type: metric_answer, metric: app_opens, params: {platform: [android, ios], period: "2026-03"}}}
+  - {element: platform, block: undeclared group, intent: "the number of app opens from mobile phones in May 2026",
+     expect: {type: ambiguous, metric: app_opens, params: {period: "2026-05"}}}
+  - {element: platform, block: absent value, intent: "the number of app opens from smartwatch users in May 2026",
+     expect: {type: refuse, metric: app_opens, params: {}}}
+  - {element: period, block: quarter, intent: "the number of app opens from Android users in the first quarter of 2026",
+     expect: {type: metric_answer, metric: app_opens, params: {platform: android, period: "2026-Q1"}}}
+  - {element: period, block: season, intent: "the number of app opens from Android users during spring 2026",
+     expect: {type: clarify, metric: app_opens, params: {platform: android, period: ask}}}
+  - {element: period, block: outside coverage, intent: "the number of app opens from Android users in July 2025",
+     expect: {type: refuse, metric: app_opens, params: {platform: android}}}
+  - {element: period, block: omitted, intent: "the number of app opens from Android users, with no time period mentioned at all",
+     expect: {type: clarify, metric: app_opens, params: {platform: android, period: ask}}}
+  - {element: grain, block: explicit month, intent: "how Android app opens developed month to month over the first quarter of 2026",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-Q1", group_by: [metric_time]}}}
+  - {element: grain, block: explicit week, intent: "the weekly trend of Android app opens during the second quarter of 2026",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-Q2", group_by: [metric_time]}}}
+  - {element: grain, block: explicit day, intent: "Android app opens day by day over May 2026",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-05", group_by: [metric_time]}}}
+  - {element: breakdown, block: named dimension, intent: "Android app opens in May 2026, split by acquisition channel",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-05", group_by: [channel]}}}
+  - {element: breakdown, block: named dimension, intent: "Android app opens in May 2026, split by country",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-05", group_by: [country]}}}
+  - {element: breakdown, block: unnamed ('by segment'), intent: "Android app opens in May 2026, broken down by segment",
+     expect: {type: breakdown, metric: app_opens, params: {platform: android, period: "2026-05", group_by: [region, channel]}}}
+  - {element: breakdown, block: absent dimension, intent: "Android app opens in May 2026, split by app version",
+     expect: {type: refuse, metric: app_opens, params: {}}}
+  - {element: metric, block: undeclared synonym, intent: "how many times people launched the app in May 2026",
+     expect: {outcome: app_opens}}
+  - {element: metric, block: absent measure, intent: "how many screen views there were in May 2026",
+     expect: {outcome: refuse}}
+  - {element: metric, block: absent measure, intent: "the average length of a session in May 2026",
+     expect: {outcome: refuse}}
+  - {element: metric, block: vague measure, intent: "how the product performed overall in May 2026",
+     expect: {outcome: ask}}

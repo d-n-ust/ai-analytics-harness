@@ -1,0 +1,63 @@
+[
+ {
+  "element": "breakdown",
+  "block": "homograph ('customer segment')",
+  "type": "invalid?",
+  "q": "Break down Android app opens in June 2026 by customer segment.",
+  "expect": {
+   "type": "contested",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "ask",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "ungrounded: \"app\" matches no value of the layer",
+   "ungrounded: the question asks to split by \"by customer segment\"; ask whether it means segment"
+  ],
+  "cost": 0.000446324,
+  "reader": "typed"
+ },
+ {
+  "element": "breakdown",
+  "block": "absent dimension",
+  "type": "invalid",
+  "q": "Break down Android app opens in June 2026 by device model.",
+  "expect": {
+   "type": "refuse",
+   "metric": "app_opens",
+   "params": {}
+  },
+  "result": "refuse",
+  "ok": true,
+  "errors": [],
+  "reading": {
+   "filters": {
+    "activity__platform": [
+     "android"
+    ]
+   },
+   "periods": [
+    "2026-06"
+   ],
+   "group_by": []
+  },
+  "open": [
+   "refuse: the question asks to split by \"by device model\", which the layer does not have"
+  ],
+  "cost": 0.00036325,
+  "reader": "typed"
+ }
+]

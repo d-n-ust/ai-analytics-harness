@@ -1,0 +1,157 @@
+# Independent raters, 2026-10-08, from rubric.md and rating_sheet.md only.
+B (claude-fable-5-1):
+  1:
+    where: declared
+    who: code
+  2:
+    where: modelled
+    who: code
+  3:
+    where: prose
+    who: code
+  4:
+    where: missing
+    who: '-'
+  5:
+    where: missing
+    who: '-'
+  6:
+    where: modelled
+    who: code
+  7:
+    where: prose
+    who: '-'
+  8:
+    where: prose
+    who: model
+  9:
+    where: in our code only
+    who: code
+  10:
+    where: in our code only
+    who: code
+  11:
+    where: modelled
+    who: code
+  12:
+    where: declared
+    who: code
+  13:
+    where: declared
+    who: code
+  14:
+    where: declared
+    who: code
+  15:
+    where: modelled
+    who: code
+  16:
+    where: in our code only
+    who: code
+  17:
+    where: modelled
+    who: code
+C (claude-sonnet-5):
+  1:
+    where: declared
+    who: model
+  2:
+    where: modelled
+    who: code
+  3:
+    where: prose
+    who: model
+  4:
+    where: missing
+    who: '-'
+  5:
+    where: missing
+    who: '-'
+  6:
+    where: modelled
+    who: code
+  7:
+    where: modelled
+    who: code
+  8:
+    where: prose
+    who: model
+  9:
+    where: in our code only
+    who: code
+  10:
+    where: in our code only
+    who: code
+  11:
+    where: modelled
+    who: code
+  12:
+    where: declared
+    who: code
+  13:
+    where: declared
+    who: code
+  14:
+    where: declared
+    who: code
+  15:
+    where: modelled
+    who: code
+  16:
+    where: missing
+    who: '-'
+  17:
+    where: modelled
+    who: code
+D (claude-opus-5-5):
+  1:
+    where: declared
+    who: code
+  2:
+    where: modelled
+    who: code
+  3:
+    where: prose
+    who: model
+  4:
+    where: missing
+    who: '-'
+  5:
+    where: missing
+    who: '-'
+  6:
+    where: modelled
+    who: code
+  7:
+    where: modelled
+    who: '-'
+  8:
+    where: prose
+    who: model
+  9:
+    where: in our code only
+    who: code
+  10:
+    where: in our code only
+    who: code
+  11:
+    where: modelled
+    who: code
+  12:
+    where: declared
+    who: code
+  13:
+    where: declared
+    who: code
+  14:
+    where: declared
+    who: model
+  15:
+    where: modelled
+    who: code
+  16:
+    where: in our code only
+    who: code
+  17:
+    where: modelled
+    who: code

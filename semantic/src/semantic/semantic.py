@@ -455,7 +455,7 @@ class SemanticLayer:
             if not time_col:
                 raise SemanticError(f"metric {name!r} has no time dimension to grain by.")
             if time_grain not in TIME_GRAINS:
-                raise SemanticError(f"time_grain {time_grain!r} must be day, week, or month.")
+                raise SemanticError(f"time_grain {time_grain!r} must be one of {', '.join(TIME_GRAINS)}.")
             select.append(f"date_trunc('{time_grain}', {time_col})::date AS period")
             group.append("period")
         for d in group_by or []:

@@ -221,8 +221,11 @@ def _unknown_filter_values(tb, args) -> list:
     out = []
     for dim, val in (args.get("filters") or {}).items():
         vals = members.get(dim) or members.get(str(dim).split("__")[-1])
-        if vals and norm(val) not in {norm(v) for v in vals}:
-            out.append((dim, val, list(vals)))
+        # A list is an IN filter (the engine compiles it so); each item must be a member.
+        bad = [v for v in (val if isinstance(val, (list, tuple)) else [val])
+               if norm(v) not in {norm(m) for m in vals or ()}]
+        if vals and bad:
+            out.append((dim, bad if isinstance(val, (list, tuple)) else val, list(vals)))
     return out
 
 

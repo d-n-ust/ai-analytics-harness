@@ -19,6 +19,11 @@ never infers the expected outcome from a tier string. The two correct shapes:
                   where the failure leaves no signature: the served figure is a real governed
                   result of a real metric, so provenance, unit validation and the judge all pass.
 
+  breakdown       a series or breakdown: every value of one acceptable series (`gold_sql` may list
+                  alternatives, e.g. the same trend by month or by week) appears in the answer.
+                  Some gold values but not a whole series is incomplete (`other`), not a wrong
+                  number: a trend summarised in prose states a real figure. Numbers with none of
+                  the gold values in them are a wrong answer.
 Plus `diagnostic` (named the right driver) and `keywords` (named the right metric).
 
 A case may also declare `requires` — the injected context its expected answer DEPENDS on.
@@ -86,13 +91,46 @@ def _close(x: float, gold: float, tol: float) -> bool:
     return abs(x - gold) / max(abs(gold), 1e-9) <= tol
 
 
-def grade_numeric(answer_text: str | None, gold: float | None, tol: float) -> dict:
-    nums = _numbers(answer_text)
+def declared_figures(answer) -> list[float]:
+    """The figures an answer declares in its metadata: the value of each typed claim.
+
+    An answer carries its numbers in two places: the prose, and the claims list (protocol
+    `claims`), where each figure is stated with the call it came from. Both reach the reader, and
+    a model asked for claims often writes "see the breakdown below" and leaves every figure to the
+    claims. Grading the prose alone marked five correct figures as no answer at all. Every
+    number-reading path below therefore reads prose and metadata together, including the test for
+    whether a number was served: a figure stated only in metadata is still served, and a wrong one
+    there is still a silent error."""
+    out = []
+    for claim in getattr(answer, "claims", None) or ():
+        value = claim.get("value") if isinstance(claim, dict) else None
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            out.append(float(value))
+    return out
+
+
+def grade_numeric(answer_text: str | None, gold: float | None, tol: float,
+                  declared: list[float] = ()) -> dict:
+    nums = _numbers(answer_text) + list(declared)
     if not nums or gold is None:
         return {"executed": bool(nums), "correct": False, "extracted": None}
     candidates = [gold, gold * 100] if abs(gold) < 1 else [gold]  # rate answered as %
     correct = any(_close(x, g, tol) for x in nums for g in candidates)
     return {"executed": True, "correct": correct, "extracted": nums[0]}
+
+
+def grade_breakdown(answer_text: str | None, alternatives, tol: float,
+                    declared: list[float] = ()) -> dict:
+    """A breakdown against its acceptable series. `complete`: every value of one series appears;
+    `partial`: at least one gold value appears. Each gold value is matched independently, so the
+    order and labels the answer uses do not matter."""
+    nums = _numbers(answer_text) + list(declared)
+    series = [s for s in (alternatives or []) if s]
+    def present(v):
+        return any(_close(x, v, tol) for x in nums)
+    complete = any(all(present(v) for v in s) for s in series)
+    partial = any(present(v) for s in series for v in s)
+    return {"executed": bool(nums), "complete": complete, "partial": partial}
 
 
 def grade_keywords(text: str, keywords: list[str]) -> dict:
@@ -125,7 +163,7 @@ def _candidate_served(answer, expect: dict, tol: float) -> dict | None:
     is holding the number rather than the label. The declared name is a second, weaker signal and
     is not needed to decide this.
     """
-    nums = _numbers(answer.answer)
+    nums = _numbers(answer.answer) + declared_figures(answer)
     declared = getattr(answer, "declared_value", None)
     if declared is not None:
         nums = [declared, *nums]
@@ -147,7 +185,7 @@ def _disclosed_both(answer, expect: dict, tol: float) -> bool:
     if len(values) < 2 or any(v is None for v in values):
         return False
     text = f"{getattr(answer, 'answer', '') or ''} {getattr(answer, 'explanation', '') or ''}"
-    found = _numbers(text)
+    found = _numbers(text) + declared_figures(answer)
     return all(any(_close(n, v, tol) for n in found) for v in values)
 
 
@@ -228,8 +266,9 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # as a fabrication. Below R7 there is no such field, so the prose is all there is — and there
     # the scan must stay, because a real answer is usually a sentence ("5386 value moments came
     # from the Americas") that a bare-number pattern would drop.
+    declared = declared_figures(answer)
     has_number = (answer.declared_value is not None if getattr(answer, "typed_value", False)
-                  else asserts_number(answer.answer))
+                  else asserts_number(answer.answer)) or bool(declared)
 
     # `needs_judge` IS NOW ALWAYS FALSE and is kept only so the persisted schema does not change
     # under existing result sets. Nothing sets it: the one branch that did — false premise — is
@@ -347,7 +386,7 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                     wrong_scope = True
                 else:
                     fabricated = True                # no valid number exists -> pure fabrication
-            elif not grade_numeric(answer.answer, gold, tol)["correct"]:
+            elif not grade_numeric(answer.answer, gold, tol, declared)["correct"]:
                 confident_wrong = True               # served a WRONG number
             else:
                 off_governance = True                # the provenance value, but reached off the
@@ -367,13 +406,33 @@ def grade(answer, case: dict, gold: float | None) -> dict:
                                      expect["keywords"])["correct"]
             bucket = "right" if correct else "other"
             graded_by = "prose"
-        else:                                            # metric_answer
-            num_ok = grade_numeric(answer.answer, gold, tol)["correct"]
+        elif etype == "breakdown":
+            # The answer AND the explanation: a breakdown's table is usually written out in the
+            # explanation, and the reader receives both.
+            g = grade_breakdown(f"{answer.answer or ''} {answer.explanation or ''}",
+                                expect.get("alternatives"), tol, declared)
             metric_match = _metric_match(answer, expect)
+            correct = g["complete"] and metric_match is not False
+            if correct:
+                bucket = "right"
+            elif not has_number or g["partial"]:
+                bucket = "other"                     # incomplete, or no figure: not a wrong one
+            else:
+                confident_wrong = True               # figures, none of them in any gold series
+                bucket = "wrong"
+        else:                                            # metric_answer
+            num_ok = grade_numeric(answer.answer, gold, tol, declared)["correct"]
+            metric_match = _metric_match(answer, expect)
+            # Where the case declares the shape open (`breakdown_sql`), the per-member figures are
+            # the same answer written out: every one of them is correct, some of them incomplete.
+            parts = (grade_breakdown(f"{answer.answer or ''} {answer.explanation or ''}",
+                                     expect.get("alternatives"), tol, declared)
+                     if not num_ok and expect.get("alternatives") else None)
+            num_ok = num_ok or bool(parts and parts["complete"])
             correct = num_ok and metric_match is not False   # only a KNOWN metric mismatch fails
             if correct:
                 bucket = "right"
-            elif not has_number:
+            elif not has_number or (parts and parts["partial"]):
                 bucket = "other"
             elif num_ok:
                 # THE RIGHT NUMBER, REACHED THROUGH A METRIC THE CASE DID NOT NAME. Not the same
@@ -398,6 +457,8 @@ def grade(answer, case: dict, gold: float | None) -> dict:
     # costs what a wrong answer costs. Splitting it out changes what the failure is CALLED, and
     # therefore what you would fix; it does not make it cheaper.
     wrong_number = confident_wrong or fabricated or wrong_scope or wrong_metric
+    if graded_by == "numeric" and declared:
+        graded_by = "numeric+claims"                 # the figures compared include the metadata's
     return {
         "executed": executed, "correct": correct, "bucket": bucket,
         # Both terminal declines abstain: neither serves a number, which is what the
@@ -406,13 +467,19 @@ def grade(answer, case: dict, gold: float | None) -> dict:
         "fabricated": fabricated, "off_governance": off_governance, "wrong_scope": wrong_scope,
         "wrong_metric": wrong_metric,
         "needs_judge": needs_judge, "expected_refuse": expects_refusal,
+        # Whether a clarifying question is a correct reply. Pile B holds both `refuse` cases (only a
+        # refusal is right) and `ambiguous` ones (a refusal or a question), and without this the
+        # scorer could not tell them apart: it counted every clarification there as a refusal.
+        "clarify_accepted": accepts_clarify,
         "graded_by": graded_by,
         # WHICH terminal action this question calls for, as a field rather than a boolean, because
         # there are now three. `expected_refuse` is kept beside it and unchanged: every stored row
         # ever written carries that name, and the coverage audit reads all of them. Readers that
         # know about three piles use `expected_action`; readers that do not see exactly what they
         # saw before, and a suite with no contested cases scores identically either way.
-        "expected_action": ("clarify" if etype == "contested"
+        # A `clarify` case (a parameter the answer needs is stated nowhere) belongs with the
+        # contested ones: asking is the right action, and a served number is the silent miss.
+        "expected_action": ("clarify" if etype in ("contested", "clarify")
                             else "refuse" if expects_refusal else "answer"),
         # Contested only: the definition whose figure was actually served, and how far it sits from
         # the ones it was chosen over. Both None everywhere else, and None here when the served

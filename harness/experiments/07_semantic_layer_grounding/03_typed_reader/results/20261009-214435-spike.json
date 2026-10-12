@@ -1,0 +1,2821 @@
+[
+ {
+  "model": "gpt-5.4-mini",
+  "rows": [
+   {
+    "q": "How many times did Android users open the app in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "how many times did ANDROID users open the app in june 2026",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "ANDROID",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "june 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Andriod users open the app in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Andriod",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from Google Android phones in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Google Android phones",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from iPhone users in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "iPhone users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026 on every platform except web?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "web",
+         "keep": false
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.94,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.34
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens did Android and iOS users have together in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        },
+        {
+         "quote": "iOS",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.96,
+     "group0": 0.97,
+     "shape": 0.97,
+     "time0": 0.99,
+     "beyond": 0.37
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many mobile app opens were there in June 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [
+     "mobile"
+    ],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.2
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "mobile"
+     ]
+    ]
+   },
+   {
+    "q": "How many app opens came from Windows users in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Windows users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in Q2 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "Q2 2026",
+       "value": "2026-Q2"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.24
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in the first half of 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "the first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.91,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in summer 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "summer 2026",
+       "value": "2026-SU"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in August 2025?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "August 2025",
+       "value": "2025-08"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.89,
+     "anytime": 0.1,
+     "beyond": 0.35
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How did Android app opens change over the first half of 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "the first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": {
+      "quote": "change",
+      "unit": null
+     },
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [
+     "Android"
+    ],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.35
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "Android"
+     ]
+    ]
+   },
+   {
+    "q": "Show Android app opens week by week for the first half of 2026.",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "the first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": {
+      "quote": "week by week",
+      "unit": "week"
+     },
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [
+     "Android"
+    ],
+    "probs": {
+     "shape": 0.82,
+     "time0": 0.98,
+     "beyond": 0.48
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "Android"
+     ]
+    ]
+   },
+   {
+    "q": "Show Android app opens month by month for the first half of 2026.",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "the first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": {
+      "quote": "month by month",
+      "unit": "month"
+     },
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [
+     "Android"
+    ],
+    "probs": {
+     "shape": 0.77,
+     "time0": 0.97,
+     "beyond": 0.5
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "Android"
+     ]
+    ]
+   },
+   {
+    "q": "How did Android app opens break down by segment in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": {
+      "quote": "How did",
+      "unit": null
+     },
+     "breakdown": [
+      {
+       "quote": "by segment"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.1,
+     "time0": 0.99,
+     "by0": 0.96,
+     "beyond": 0.52
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": [
+     [
+      "series spurious",
+      "{\"quote\": \"How did\", \"unit\": null}"
+     ]
+    ]
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by region.",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [
+      {
+       "quote": "by region"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [
+     "Android"
+    ],
+    "probs": {
+     "shape": 0.55,
+     "time0": 0.99,
+     "by0": 0.98,
+     "beyond": 0.41
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": [
+     [
+      "term omitted",
+      "Android"
+     ]
+    ]
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by country.",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [
+      {
+       "quote": "by country"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.65,
+     "time0": 0.99,
+     "by0": 0.97,
+     "beyond": 0.43
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by customer segment.",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [
+      {
+       "quote": "by customer segment"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [
+     "Android"
+    ],
+    "probs": {
+     "shape": 0.47,
+     "time0": 0.99,
+     "by0": 0.98,
+     "beyond": 0.47
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": [
+     [
+      "term omitted",
+      "Android"
+     ]
+    ]
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by device model.",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [
+      {
+       "quote": "by device model"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.52,
+     "time0": 0.99,
+     "by0": 0.97,
+     "beyond": 0.41
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "How many app launches did Android users have in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many sessions did Android users have in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How much time did Android users spend in the app in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How engaged were Android users in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.97,
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.3
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "What was the number of app opens on mobile in May 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.97,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How often did mobile users open the app in April 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "April 2026",
+       "value": "2026-04"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.59,
+     "time0": 0.99,
+     "beyond": 0.42
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Give me app opens from mobile devices for Q1 2026.",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile devices",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "Q1 2026",
+       "value": "2026-Q1"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.5,
+     "time0": 0.99,
+     "beyond": 0.34
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Mobile app opens, March 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "March 2026",
+       "value": "2026-03"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [
+     "Mobile"
+    ],
+    "probs": {
+     "shape": 0.8,
+     "time0": 0.99,
+     "beyond": 0.51
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "Mobile"
+     ]
+    ]
+   },
+   {
+    "q": "What were non-mobile app opens in May 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile app",
+         "keep": false
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.79,
+     "shape": 0.88,
+     "time0": 0.99,
+     "beyond": 0.33
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from everything except mobile in April 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile",
+         "keep": false
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "April 2026",
+       "value": "2026-04"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.96,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.3
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many Android app opens were there in May 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in May 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.2
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in July 2025?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "July 2025",
+       "value": "2025-07"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.22
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "What were app opens in Q1 2025?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "Q1 2025",
+       "value": "2025-Q1"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.8,
+     "time0": 0.99,
+     "beyond": 0.34
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens did we have in November 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "November 2026",
+       "value": "2026-11"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in 2024?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "2024",
+       "value": "2024"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.24
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in summer 2025?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "summer 2025",
+       "value": "2025-SU"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.29
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in winter 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "winter 2026",
+       "value": "2026-WI"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.29
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in autumn 2025?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "autumn 2025",
+       "value": "2025-FA"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in October 2025?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "October 2025",
+       "value": "2025-10"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in Q1 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "Q1 2026",
+       "value": "2026-Q1"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.24
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026?",
+    "proposal": {
+     "figures": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   }
+  ],
+  "cost": 0.016271100000000007
+ },
+ {
+  "model": "gemini-3.8-flash",
+  "rows": [
+   {
+    "q": "How many times did Android users open the app in June 2026?",
+    "proposal": {
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.24
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "how many times did ANDROID users open the app in june 2026",
+    "proposal": {
+     "series": null,
+     "premise": null,
+     "time": [
+      {
+       "quote": "june 2026",
+       "value": "2026-06"
+      }
+     ],
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "ANDROID"
+        }
+       ]
+      }
+     ],
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Andriod users open the app in June 2026?",
+    "proposal": {
+     "breakdown": [],
+     "series": null,
+     "premise": null,
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Andriod"
+        }
+       ]
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from Google Android phones in June 2026?",
+    "proposal": {
+     "series": null,
+     "breakdown": [],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Google Android phones",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from iPhone users in June 2026?",
+    "proposal": {
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "premise": null,
+     "breakdown": [],
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "iPhone users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026 on every platform except web?",
+    "proposal": {
+     "breakdown": [],
+     "series": null,
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": false,
+         "quote": "web"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.95,
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.36
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens did Android and iOS users have together in June 2026?",
+    "proposal": {
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        },
+        {
+         "quote": "iOS",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.96,
+     "group0": 0.97,
+     "shape": 0.97,
+     "time0": 0.99,
+     "beyond": 0.36
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many mobile app opens were there in June 2026?",
+    "proposal": {
+     "breakdown": [],
+     "premise": null,
+     "figures": [],
+     "series": null,
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ]
+    },
+    "unaccounted": [
+     "mobile"
+    ],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "mobile"
+     ]
+    ]
+   },
+   {
+    "q": "How many app opens came from Windows users in June 2026?",
+    "proposal": {
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Windows users"
+        }
+       ]
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026?",
+    "proposal": {
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "figures": [],
+     "premise": null,
+     "breakdown": [],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in Q2 2026?",
+    "proposal": {
+     "time": [
+      {
+       "value": "2026-Q2",
+       "quote": "Q2 2026"
+      }
+     ],
+     "breakdown": [],
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.92,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in the first half of 2026?",
+    "proposal": {
+     "time": [
+      {
+       "quote": "first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android users",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.91,
+     "time0": 0.99,
+     "beyond": 0.26
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in summer 2026?",
+    "proposal": {
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android users"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "summer 2026",
+       "value": "2026-SU"
+      }
+     ],
+     "premise": null,
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app in August 2025?",
+    "proposal": {
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android users"
+        }
+       ]
+      }
+     ],
+     "breakdown": [],
+     "time": [
+      {
+       "quote": "August 2025",
+       "value": "2025-08"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.93,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many times did Android users open the app?",
+    "proposal": {
+     "series": null,
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "time": [],
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.97,
+     "shape": 0.9,
+     "anytime": 0.11,
+     "beyond": 0.34
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How did Android app opens change over the first half of 2026?",
+    "proposal": {
+     "breakdown": [],
+     "series": {
+      "unit": null,
+      "quote": "change"
+     },
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "first half of 2026",
+       "value": "2026-H1"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.32
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "Show Android app opens week by week for the first half of 2026.",
+    "proposal": {
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "first half of 2026",
+       "value": "2026-H1"
+      }
+     ],
+     "series": {
+      "quote": "week by week",
+      "unit": "week"
+     },
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.96,
+     "shape": 0.83,
+     "time0": 0.98,
+     "beyond": 0.42
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "Show Android app opens month by month for the first half of 2026.",
+    "proposal": {
+     "premise": null,
+     "series": {
+      "unit": "month",
+      "quote": "month by month"
+     },
+     "time": [
+      {
+       "value": "2026-H1",
+       "quote": "first half of 2026"
+      }
+     ],
+     "breakdown": [],
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.94,
+     "shape": 0.78,
+     "time0": 0.97,
+     "beyond": 0.47
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How did Android app opens break down by segment in June 2026?",
+    "proposal": {
+     "breakdown": [
+      {
+       "quote": "by segment"
+      }
+     ],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.47,
+     "time0": 0.99,
+     "by0": 0.96,
+     "beyond": 0.43
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by region.",
+    "proposal": {
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "series": null,
+     "breakdown": [
+      {
+       "quote": "by region"
+      }
+     ],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.59,
+     "time0": 0.99,
+     "by0": 0.97,
+     "beyond": 0.4
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by country.",
+    "proposal": {
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "breakdown": [
+      {
+       "quote": "by country"
+      }
+     ],
+     "series": null,
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.54,
+     "time0": 0.99,
+     "by0": 0.97,
+     "beyond": 0.47
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by customer segment.",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "premise": null,
+     "breakdown": [
+      {
+       "quote": "by customer segment"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.45,
+     "time0": 0.99,
+     "by0": 0.98,
+     "beyond": 0.43
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Break down Android app opens in June 2026 by device model.",
+    "proposal": {
+     "breakdown": [
+      {
+       "quote": "by device model"
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "series": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.51,
+     "time0": 0.99,
+     "by0": 0.97,
+     "beyond": 0.38
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "How many app launches did Android users have in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "breakdown": [],
+     "series": null,
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many sessions did Android users have in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "premise": null,
+     "breakdown": [],
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How much time did Android users spend in the app in June 2026?",
+    "proposal": {
+     "breakdown": [],
+     "time": [
+      {
+       "quote": "June 2026",
+       "value": "2026-06"
+      }
+     ],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.25
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How engaged were Android users in June 2026?",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "Android",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ],
+     "breakdown": [],
+     "series": null,
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.97,
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.32
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "What was the number of app opens on mobile in May 2026?",
+    "proposal": {
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile",
+         "keep": true
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "series": null,
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.27
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How often did mobile users open the app in April 2026?",
+    "proposal": {
+     "series": null,
+     "time": [
+      {
+       "quote": "April 2026",
+       "value": "2026-04"
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile users",
+         "keep": true
+        }
+       ]
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.61,
+     "time0": 0.99,
+     "beyond": 0.37
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Give me app opens from mobile devices for Q1 2026.",
+    "proposal": {
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "mobile devices"
+        }
+       ]
+      }
+     ],
+     "time": [
+      {
+       "quote": "Q1 2026",
+       "value": "2026-Q1"
+      }
+     ],
+     "breakdown": [],
+     "series": null,
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.54,
+     "time0": 0.99,
+     "beyond": 0.36
+    },
+    "flags": [
+     "shape"
+    ],
+    "errors": []
+   },
+   {
+    "q": "Mobile app opens, March 2026?",
+    "proposal": {
+     "figures": [],
+     "breakdown": [],
+     "series": null,
+     "time": [
+      {
+       "quote": "March 2026",
+       "value": "2026-03"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [
+     "Mobile"
+    ],
+    "probs": {
+     "shape": 0.76,
+     "time0": 0.99,
+     "beyond": 0.49
+    },
+    "flags": [],
+    "errors": [
+     [
+      "term omitted",
+      "Mobile"
+     ]
+    ]
+   },
+   {
+    "q": "What were non-mobile app opens in May 2026?",
+    "proposal": {
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": false,
+         "quote": "mobile"
+        }
+       ]
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.8,
+     "shape": 0.88,
+     "time0": 0.99,
+     "beyond": 0.33
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens came from everything except mobile in April 2026?",
+    "proposal": {
+     "breakdown": [],
+     "figures": [
+      {
+       "terms": [
+        {
+         "quote": "mobile",
+         "keep": false
+        }
+       ]
+      }
+     ],
+     "series": null,
+     "time": [
+      {
+       "quote": "April 2026",
+       "value": "2026-04"
+      }
+     ],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.97,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.3
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many Android app opens were there in May 2026?",
+    "proposal": {
+     "time": [
+      {
+       "quote": "May 2026",
+       "value": "2026-05"
+      }
+     ],
+     "breakdown": [],
+     "premise": null,
+     "figures": [
+      {
+       "terms": [
+        {
+         "keep": true,
+         "quote": "Android"
+        }
+       ]
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "fig0": 0.98,
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.24
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in May 2026?",
+    "proposal": {
+     "breakdown": [],
+     "time": [
+      {
+       "value": "2026-05",
+       "quote": "May 2026"
+      }
+     ],
+     "series": null,
+     "premise": null,
+     "figures": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.21
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in July 2025?",
+    "proposal": {
+     "series": null,
+     "premise": null,
+     "time": [
+      {
+       "value": "2025-07",
+       "quote": "July 2025"
+      }
+     ],
+     "breakdown": [],
+     "figures": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.21
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "What were app opens in Q1 2025?",
+    "proposal": {
+     "premise": null,
+     "time": [
+      {
+       "quote": "Q1 2025",
+       "value": "2025-Q1"
+      }
+     ],
+     "breakdown": [],
+     "series": null,
+     "figures": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.8,
+     "time0": 0.99,
+     "beyond": 0.31
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens did we have in November 2026?",
+    "proposal": {
+     "series": null,
+     "time": [
+      {
+       "value": "2026-11",
+       "quote": "November 2026"
+      }
+     ],
+     "figures": [],
+     "breakdown": [],
+     "premise": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.23
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in 2024?",
+    "proposal": {
+     "premise": null,
+     "series": null,
+     "figures": [],
+     "time": [
+      {
+       "quote": "2024",
+       "value": "2024"
+      }
+     ],
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.22
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in summer 2025?",
+    "proposal": {
+     "premise": null,
+     "breakdown": [],
+     "series": null,
+     "time": [
+      {
+       "quote": "summer 2025",
+       "value": "2025-SU"
+      }
+     ],
+     "figures": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.91,
+     "time0": 0.99,
+     "beyond": 0.29
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in winter 2026?",
+    "proposal": {
+     "figures": [],
+     "premise": null,
+     "breakdown": [],
+     "series": null,
+     "time": [
+      {
+       "quote": "winter 2026",
+       "value": "2026-WI"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.91,
+     "time0": 0.99,
+     "beyond": 0.29
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in autumn 2025?",
+    "proposal": {
+     "premise": null,
+     "time": [
+      {
+       "quote": "autumn 2025",
+       "value": "2025-FA"
+      }
+     ],
+     "figures": [],
+     "series": null,
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.9,
+     "time0": 0.99,
+     "beyond": 0.28
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in October 2025?",
+    "proposal": {
+     "breakdown": [],
+     "premise": null,
+     "figures": [],
+     "time": [
+      {
+       "value": "2025-10",
+       "quote": "October 2025"
+      }
+     ],
+     "series": null
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.95,
+     "time0": 0.99,
+     "beyond": 0.22
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in Q1 2026?",
+    "proposal": {
+     "premise": null,
+     "series": null,
+     "figures": [],
+     "time": [
+      {
+       "value": "2026-Q1",
+       "quote": "Q1 2026"
+      }
+     ],
+     "breakdown": []
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.94,
+     "time0": 0.99,
+     "beyond": 0.22
+    },
+    "flags": [],
+    "errors": []
+   },
+   {
+    "q": "How many app opens were there in June 2026?",
+    "proposal": {
+     "premise": null,
+     "series": null,
+     "breakdown": [],
+     "figures": [],
+     "time": [
+      {
+       "value": "2026-06",
+       "quote": "June 2026"
+      }
+     ]
+    },
+    "unaccounted": [],
+    "probs": {
+     "shape": 0.96,
+     "time0": 0.99,
+     "beyond": 0.21
+    },
+    "flags": [],
+    "errors": []
+   }
+  ],
+  "cost": 0.2634967440000001
+ }
+]

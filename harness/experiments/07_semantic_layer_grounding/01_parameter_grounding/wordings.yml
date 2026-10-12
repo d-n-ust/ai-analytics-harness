@@ -1,0 +1,68 @@
+# How people ask for each number: the wording sweep (sweep.py).
+#
+# Each wording is run through the steps that decide WHICH governed number answers a question,
+# without the agent: the question check reads the declared word, the layer decides for the
+# requester (Product, governance.yml), and where no declared word settles it the decision model's
+# metric choice applies, with its rules (no measure named, none in the list, split between two).
+#
+# expect:  a metric name    that metric answers
+#          several          every governed reading is shown, each with its figure (a declared fork)
+#          ask              the user must be asked (a fork, a vague word, a split)
+#          refuse           no governed metric measures it
+#
+# Provenance: written 2026-10-08 by claude-opus-5-5, which had read the layer. That makes this a
+# development set. The method asks for wordings from a model family other than the system's and a
+# person's review of a sample; replace or extend this file accordingly.
+requester: Product
+wordings:
+  active_users:
+    - {q: "How many active users did we have in June 2026?", expect: active_users}
+    - {q: "What was our MAU in June 2026?", expect: active_users}
+    - {q: "How many people used the product in June 2026?", expect: active_users}
+    - {q: "How many customers did we have in June 2026?", expect: active_users}
+    - {q: "How many real customers were active in Q2 2026?", expect: active_users}
+  active_accounts:
+    - {q: "How many accounts were active in June 2026, staff and test accounts included?", expect: active_accounts}
+  active_users_growth:
+    - {q: "How much did active users grow week over week in June 2026?", expect: active_users_growth}
+    - {q: "What was the change in active users from May to June 2026?", expect: active_users_growth}
+  value_moments:
+    - {q: "How many habits were completed in June 2026?", expect: value_moments}
+    - {q: "How many habit completions did we have in Q2 2026?", expect: value_moments}
+  total_value_moments:
+    - {q: "How many habits were completed in June 2026, counting staff and test accounts too?", expect: total_value_moments}   # open: team routing overrides an explicit population
+  habits_per_active_user:
+    - {q: "How many habits did the average active user complete in June 2026?", expect: habits_per_active_user}
+    - {q: "What were habits per active user in Q2 2026?", expect: habits_per_active_user}
+  app_opens:
+    - {q: "How many app opens did we have in June 2026?", expect: app_opens}
+    - {q: "How many app launches were there in June 2026?", expect: app_opens}
+    - {q: "How many times was the app opened in June 2026?", expect: app_opens}
+  new_signups:
+    - {q: "How many signups did we get in Q2 2026?", expect: new_signups}
+    - {q: "How many new users did we get in June 2026?", expect: new_signups}
+    - {q: "How many registrations came from paid search in Q2 2026?", expect: new_signups}
+  mrr:
+    - {q: "What is our MRR right now?", expect: mrr}
+    - {q: "What is our monthly recurring revenue today?", expect: mrr}
+    - {q: "What is our revenue right now?", expect: mrr}
+  gross_mrr:
+    - {q: "What is our gross MRR, before refunds, right now?", expect: gross_mrr}
+  paying_users:
+    - {q: "How many paying customers do we have right now?", expect: paying_users}
+    - {q: "How many paying users are on the annual plan right now?", expect: paying_users}
+  active_subscriptions:
+    - {q: "How many active subscriptions do we have right now?", expect: active_subscriptions}
+  marketing_spend:
+    - {q: "What was our total marketing spend in Q2 2026?", expect: several}
+  acquisition_spend:
+    - {q: "What did we spend on acquisition channels in Q2 2026?", expect: acquisition_spend}
+  # Words that should not be answered by one number.
+  open:
+    - {q: "How engaged were our users in June 2026?", expect: ask}
+    - {q: "How is the business doing this quarter?", expect: ask}
+    - {q: "How many subscribers do we have right now?", expect: paying_users}   # declared 2026-10-08, provisional
+  absent:
+    - {q: "How many sessions did we have in June 2026?", expect: refuse}
+    - {q: "What was our churn rate in Q2 2026?", expect: refuse}
+    - {q: "What was the average order value in June 2026?", expect: refuse}

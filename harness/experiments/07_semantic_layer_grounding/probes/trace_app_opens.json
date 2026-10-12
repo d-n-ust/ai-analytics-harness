@@ -1,0 +1,62 @@
+[
+  {
+    "executed": true,
+    "correct": true,
+    "bucket": "right",
+    "abstained": false,
+    "confident_wrong": false,
+    "fabricated": false,
+    "off_governance": false,
+    "wrong_scope": false,
+    "wrong_metric": false,
+    "needs_judge": false,
+    "expected_refuse": false,
+    "expected_action": "answer",
+    "served_candidate": null,
+    "divergence": null,
+    "reason_match": null,
+    "metric_match": null,
+    "driver_ok": null,
+    "cause_ok": null,
+    "score": 1.0,
+    "outcome": "answer",
+    "id": "a_android_opens_june",
+    "error": null,
+    "question": "How many times did Android users open the app in June 2026?",
+    "rung": 3,
+    "model": "gpt-5-mini",
+    "config": "loop default",
+    "rep": 0,
+    "declared": 8232.0,
+    "reason": null,
+    "missing": null,
+    "candidates": [],
+    "source_metric": null,
+    "direction": null,
+    "tool_calls": 1,
+    "model_calls": 2,
+    "tool_errors": 0,
+    "handbacks": 0,
+    "scope_shadow": null,
+    "repairs_total": 0,
+    "acts": [],
+    "answer_text": "8232",
+    "explanation": "Queried governed metric app_opens filtered to activity__platform = android for period 2026-06; the metric returned 8,232 app opens in June 2026.",
+    "steps": [
+      {
+        "tool": "query_metric",
+        "args": {
+          "metric": "app_opens",
+          "filters": {
+            "activity__platform": "android"
+          },
+          "period": "2026-06"
+        },
+        "error": false,
+        "blocked": false,
+        "evidence": null,
+        "result": "[r1] time scope: period=2026-06 -> 2026-06-01..2026-06-30\ncolumns: value\n(8232,)\n[cite] r1 \u2014 cite this whole statement as evidence"
+      }
+    ]
+  }
+]

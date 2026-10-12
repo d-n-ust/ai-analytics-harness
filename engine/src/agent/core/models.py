@@ -49,6 +49,13 @@ class ModelSpec:
     # gpt-5.6 rejects function tools + reasoning_effort on /v1/chat/completions; it needs the
     # Responses API (/v1/responses). True routes this model's calls through _create_responses.
     use_responses_api: bool = False
+    # The model's id on OpenRouter ("openai/gpt-5-mini"), or None when OpenRouter does not list it.
+    # A model with no id cannot take the OpenRouter route, and says so rather than falling back.
+    openrouter_id: str | None = None
+    # The OpenRouter hosts allowed to serve it, as OpenRouter names them. The model's own company
+    # by default; a named third party only where OpenRouter has no first-party host, and then
+    # said so in the catalog, because a different host is a different system.
+    openrouter_hosts: tuple[str, ...] = ()
     # The reasoning efforts this model ACCEPTS, in ladder order. Not every model has the same
     # ladder and the difference is not just where the floor is: gpt-5-mini takes
     # minimal/low/medium/high and rejects `none`; gpt-5.6-terra takes none/low/medium/high/xhigh
@@ -100,9 +107,10 @@ class ModelSpec:
     def _provider_is_routable(cls, provider: str) -> str:
         """get_model (providers.py) routes on this string, and an unknown value falls through to
         the Anthropic adapter silently — a typo would run the wrong client rather than fail. Keep
-        it to the three the providers module actually implements."""
-        if provider not in ("openai", "anthropic", "deepseek"):
-            raise ValueError(f"provider={provider!r}; expected openai, anthropic or deepseek")
+        it to the ones the providers module actually implements. `google` is reachable only through
+        OpenRouter; there is no direct Google adapter."""
+        if provider not in ("openai", "anthropic", "deepseek", "google"):
+            raise ValueError(f"provider={provider!r}; expected openai, anthropic, deepseek or google")
         return provider
 
     def effort_for(self, requested: str) -> str:
@@ -121,9 +129,30 @@ class ModelSpec:
         return min(self.efforts, key=lambda e: abs(EFFORT_LADDER.index(e) - want))
 
 
+# Each model's id on OpenRouter, checked against its /models list on 2026-09-30.
+_OPENROUTER_IDS = {
+    "claude-haiku-4-5": "anthropic/claude-haiku-4.5",
+    "claude-sonnet-5": "anthropic/claude-sonnet-5",
+    "gpt-5.6-terra": "openai/gpt-5.6-terra",
+    "gpt-5.6-sol": "openai/gpt-5.6-sol",
+    "gpt-5.4-mini": "openai/gpt-5.4-mini",
+    "gpt-5-mini": "openai/gpt-5-mini",
+    "gpt-5.6-luna": "openai/gpt-5.6-luna",
+    "gpt-4.1-mini": "openai/gpt-4.1-mini",
+    "gemini-3.8-flash": "google/gemini-3.8-flash",
+    "deepseek-v4-flash": "deepseek/deepseek-v4-flash",
+}
+
+# The first-party hosts per company, as OpenRouter names them (its /endpoints list, 2026-09-30).
+_FIRST_PARTY_HOSTS = {"openai": ("openai",), "anthropic": ("anthropic",),
+                      "google": ("google-vertex", "google-ai-studio"), "deepseek": ("deepseek",)}
+
+
 def _spec(model_id: str, inp: float, out: float, provider: str = "openai",
           thinking: dict | None = None, **kw) -> ModelSpec:
-    return ModelSpec(model_id, model_id, inp, out, provider, thinking, **kw)
+    kw.setdefault("openrouter_hosts", _FIRST_PARTY_HOSTS.get(provider, ()))
+    return ModelSpec(model_id, model_id, inp, out, provider, thinking,
+                     openrouter_id=_OPENROUTER_IDS.get(model_id), **kw)
 
 
 # Keyed by the full model id — the same string appears on the CLI, in every result
@@ -178,8 +207,15 @@ MODEL_SPECS: dict[str, ModelSpec] = {spec.model_id: spec for spec in [
     # plus reasoning_effort in {high,max}; our 'none' = non-thinking mode — see
     # OpenAIModel._deepseek_reasoning. Prices are DeepSeek's real published rates
     # (USD / 1M tokens, cache-miss input). Ids verified live against /models 2026-07-23.
+    # On OpenRouter, DeepSeek does not host V4 Flash itself: every host is a third party, most at
+    # fp8 or fp4. DeepInfra (fp8) is pinned so a run is one named system; it is NOT DeepSeek's own
+    # serving, and a result from it is not comparable with one from api.deepseek.com.
     _spec("deepseek-v4-flash", 0.14, 0.28, provider="deepseek",
-          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY", price_confirmed=True),
+          base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY", price_confirmed=True,
+          openrouter_hosts=("deepinfra/fp8",)),
     _spec("deepseek-v4-pro", 0.435, 0.87, provider="deepseek",
           base_url="https://api.deepseek.com", api_key_env="DEEPSEEK_API_KEY", price_confirmed=True),
+    # Google, through OpenRouter only. Price is OpenRouter's listing, not confirmed with Google.
+    _spec("gemini-3.8-flash", 0.75, 3.75, provider="google",
+          efforts=("minimal", "low", "medium", "high")),
 ]}

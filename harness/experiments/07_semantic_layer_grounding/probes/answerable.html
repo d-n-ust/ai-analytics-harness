@@ -1,0 +1,65 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>Answerability — is the concept governed, computable, or not there?</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin:0; background:#f4f1ea; color:#211d18;
+         font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+  .wrap { max-width:1040px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:#7a6f5f; margin:0 0 6px; }
+  .lead { color:#57503f; font-size:13.5px; max-width:72ch; margin:0 0 26px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+  .card { background:#fbf9f4; border:1px solid #e5ddcd; border-radius:10px; padding:16px 18px; }
+  .q { font-size:18px; font-weight:600; margin-bottom:10px; }
+  .verdict { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.06em;
+             padding:4px 10px; border-radius:20px; }
+  .gloss { color:#6b6252; font-size:12.5px; margin:8px 0; }
+  .meta { font-size:12.5px; color:#57503f; margin:6px 0; }
+  .meta code, .ev code { font:12px/1.4 "SF Mono",Menlo,Consolas,monospace; color:#5a5142; }
+  .reason { font-size:12.5px; color:#4a4234; margin:8px 0 4px; }
+  .ev { margin-top:6px; }
+  details { margin-top:10px; }
+  summary { cursor:pointer; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#8a7f6d; }
+  ol { margin:8px 0 0; padding-left:18px; font:12px/1.5 "SF Mono",Menlo,Consolas,monospace; color:#5a5142; }
+</style></head><body><div class="wrap">
+  <h1>Answerability &middot; the left branch</h1>
+  <p class="lead">Before any metric runs, a concept resolves to one of three states, decided by the
+     graph, not the model. GOVERNED means a metric matches. COMPUTABLE means the parts are captured
+     but no governed definition composes them, so any answer is authored. UNINSTRUMENTED means the
+     warehouse does not hold it, which is decidable only because the spine asserts closure.</p>
+  <div class="grid">
+        <div class="card">
+          <div class="q">&ldquo;app opens&rdquo;</div>
+          <div class="verdict" style="background:#e7f1ea;color:#2f6f4f">GOVERNED</div>
+          <div class="gloss">a governed metric matches</div>
+          <div class="meta">candidates: <code>app_opens</code></div>
+          <details><summary>traverse</summary><ol><li>vocabulary[&#x27;app opens&#x27;] -&gt; [&#x27;app_opens&#x27;]</li></ol></details>
+        </div>
+        <div class="card">
+          <div class="q">&ldquo;active users&rdquo;</div>
+          <div class="verdict" style="background:#e7f1ea;color:#2f6f4f">GOVERNED</div>
+          <div class="gloss">a governed metric matches</div>
+          <div class="meta">candidates: <code>active_users, active_accounts</code></div>
+          <details><summary>traverse</summary><ol><li>vocabulary[&#x27;active users&#x27;] -&gt; [&#x27;active_users&#x27;, &#x27;active_accounts&#x27;]</li></ol></details>
+        </div>
+        <div class="card">
+          <div class="q">&ldquo;90-day retention&rdquo;</div>
+          <div class="verdict" style="background:#faf0d7;color:#9a6a00">COMPUTABLE</div>
+          <div class="gloss">the data is there, no governed definition</div>
+          <div class="meta">needs: <code>user.signup_date, activity.active_date</code> &nbsp;·&nbsp; activity -&gt; user (many_to_one)</div><div class="reason">Signup cohort and activity both exist and are joinable, so retention is computable; no governed metric defines the window, the numerator, or what &#x27;retained&#x27; means, so any figure is an authored definition, not a governed one.</div>
+          <details><summary>traverse</summary><ol><li>requires user.signup_date: grounded</li><li>requires activity.active_date: grounded</li></ol></details>
+        </div>
+        <div class="card">
+          <div class="q">&ldquo;minutes in app&rdquo;</div>
+          <div class="verdict" style="background:#f7e4e4;color:#a33">UNINSTRUMENTED</div>
+          <div class="gloss">the data is not there</div>
+          <div class="reason">Every event is a point in time; none carries a duration or an end timestamp, so no elapsed time can be derived.</div><div class="ev"><code>fixture/models/staging/stg_events.sql — event_ts only, no end_ts or duration column</code></div>
+          <details><summary>traverse</summary><ol><li>not_captured names &#x27;session duration / minutes in app&#x27;</li></ol></details>
+        </div>
+        <div class="card">
+          <div class="q">&ldquo;page views&rdquo;</div>
+          <div class="verdict" style="background:#f7e4e4;color:#a33">UNINSTRUMENTED</div>
+          <div class="gloss">the data is not there</div>
+          <div class="reason">There is no page or screen event; etype decodes to app_open / value_moment / reminder_click only.</div><div class="ev"><code>fixture/models/staging/stg_events.sql — the etype CASE has three arms</code></div>
+          <details><summary>traverse</summary><ol><li>not_captured names &#x27;page or screen views&#x27;</li></ol></details>
+        </div></div>
+</div></body></html>

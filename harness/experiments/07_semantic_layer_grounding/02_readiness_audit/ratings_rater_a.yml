@@ -1,0 +1,18 @@
+# Rater A (claude-opus-5-5), 2026-10-08. Kept outside the repository until rater B has rated.
+1:  {where: declared, who: code, note: "meta.terms on app_opens; routing reads it"}
+2:  {where: modelled, who: code, note: "metric filter, applied by the engine"}
+3:  {where: modelled, who: code, note: "the value itself; matched case-insensitively by code"}
+4:  {where: missing, who: "-"}
+5:  {where: missing, who: "-"}
+6:  {where: modelled, who: code, note: "read from data; the member check uses it"}
+7:  {where: missing, who: "-", note: "only implied by stg_users.sql (blank -> unknown); the description lists the value without its meaning"}
+8:  {where: prose, who: model}
+9:  {where: in our code only, who: code}
+10: {where: in our code only, who: code}
+11: {where: modelled, who: code, note: "computed from data; the reader's 'outside the data' check uses it"}
+12: {where: declared, who: code, note: "applied only when the agent's call has no grain"}
+13: {where: declared, who: code}
+14: {where: declared, who: model, note: "shown to the agent and the residual question as text"}
+15: {where: modelled, who: code, note: "derived from data (determines); also prose in the description"}
+16: {where: missing, who: "-", note: "nothing says the two paths are one concept"}
+17: {where: modelled, who: code}

@@ -1,0 +1,579 @@
+# Sealed held-out tests (stage 7). Wordings written by gemini-3.8-flash from replication/intents.yml,
+# one intent at a time, without the layer. Do not read the failures before stage 7.
+tests:
+- element: platform
+  block: several values combined
+  type: heldout
+  q: Could you get me the total number of app opens for March 2026 with Android and iOS added together as one figure?
+  expect: &id001
+    type: metric_answer
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      period: 2026-03
+  group: i00
+- element: platform
+  block: several values combined
+  type: heldout
+  q: March 2026 total app opens Android and iOS added together single figure
+  expect: *id001
+  group: i00
+- element: platform
+  block: several values combined
+  type: heldout
+  q: Please provide the total number of app opens across Android and iOS combined into a single figure for March 2026.
+  expect: *id001
+  group: i00
+- element: platform
+  block: several values compared with a country name
+  type: heldout
+  q: Could you show me app opens for users in Germany during Q1 2026, with Android and iOS displayed side by side as two separate
+    numbers?
+  expect: &id002
+    type: breakdown
+    metric: app_opens
+    params:
+      platform:
+      - android
+      - ios
+      country_name: Germany
+      period: 2026-Q1
+      group_by:
+      - platform
+  group: i01
+- element: platform
+  block: several values compared with a country name
+  type: heldout
+  q: 'App opens, users in Germany, Q1 2026: Android and iOS side by side as two separate numbers'
+  expect: *id002
+  group: i01
+- element: platform
+  block: several values compared with a country name
+  type: heldout
+  q: Please report app opens for users in Germany during the first quarter of 2026, presented as two separate numbers side
+    by side for Android and iOS.
+  expect: *id002
+  group: i01
+- element: platform
+  block: misspelling with a daily series
+  type: heldout
+  q: Hey, can you pull up the day-by-day count of Android app opens for November 2025?
+  expect: &id003
+    type: breakdown
+    metric: app_opens
+    params:
+      platform: android
+      period: 2025-11
+      group_by:
+      - metric_time
+      grain: day
+  group: i02
+- element: platform
+  block: misspelling with a daily series
+  type: heldout
+  q: Android app opens, day-by-day count, November 2025
+  expect: *id003
+  group: i02
+- element: platform
+  block: misspelling with a daily series
+  type: heldout
+  q: Please provide the day-by-day count of app opens on Android across November 2025.
+  expect: *id003
+  group: i02
+- element: platform
+  block: narrower word
+  type: heldout
+  q: How many times was our app opened on Samsung phones throughout May 2026?
+  expect: &id004
+    type: clarify
+    metric: app_opens
+    params:
+      platform: ask
+      period: 2026-05
+  group: i03
+- element: platform
+  block: narrower word
+  type: heldout
+  q: Samsung phone app opens May 2026
+  expect: *id004
+  group: i03
+- element: platform
+  block: narrower word
+  type: heldout
+  q: Please provide the total number of times the app was opened from Samsung phones during May 2026.
+  expect: *id004
+  group: i03
+- element: platform
+  block: value not in layer
+  type: heldout
+  q: How many app opens did we get on the Linux desktop app during the second quarter of 2026?
+  expect: &id005
+    type: refuse
+    metric: app_opens
+  group: i04
+- element: platform
+  block: value not in layer
+  type: heldout
+  q: Linux desktop app opens Q2 2026
+  expect: *id005
+  group: i04
+- element: platform
+  block: value not in layer
+  type: heldout
+  q: Please provide the total number of app opens recorded for the Linux desktop app during the second quarter of 2026.
+  expect: *id005
+  group: i04
+- element: channel
+  block: exclusion
+  type: heldout
+  q: Hey, can you give me the single total of app opens in February 2026 from users who were acquired through every channel
+    except paid search?
+  expect: &id006
+    type: metric_answer
+    metric: app_opens
+    params:
+      channel:
+      - content_seo
+      - organic
+      - partnerships
+      - referral
+      period: 2026-02
+  group: i05
+- element: channel
+  block: exclusion
+  type: heldout
+  q: Single total of Feb 2026 app opens, users acquired via all channels except paid search.
+  expect: *id006
+  group: i05
+- element: channel
+  block: exclusion
+  type: heldout
+  q: Please provide a single total of app opens recorded in February 2026 for users acquired through every channel excluding
+    paid search.
+  expect: *id006
+  group: i05
+- element: channel
+  block: misspelling with a named breakdown
+  type: heldout
+  q: Can you pull up app opens by country for users acquired through referrals in the first half of 2026?
+  expect: &id007
+    type: breakdown
+    metric: app_opens
+    params:
+      channel: referral
+      period: 2026-H1
+      group_by:
+      - country
+  group: i06
+- element: channel
+  block: misspelling with a named breakdown
+  type: heldout
+  q: App opens by country for users acquired via referral in first half of 2026
+  expect: *id007
+  group: i06
+- element: channel
+  block: misspelling with a named breakdown
+  type: heldout
+  q: Please provide a breakdown by country of app opens for users acquired via referral during the first half of 2026.
+  expect: *id007
+  group: i06
+- element: channel
+  block: several values compared over a season
+  type: heldout
+  q: Could you get me app opens for winter 2026, broken out into separate figures for organic users and paid search users?
+  expect: &id008
+    type: breakdown
+    metric: app_opens
+    params:
+      channel:
+      - organic
+      - paid_search
+      period: 2025-12-01/2026-02-28
+      group_by:
+      - channel
+  group: i07
+- element: channel
+  block: several values compared over a season
+  type: heldout
+  q: Winter 2026 app opens, organic users vs paid search users, separate figures.
+  expect: *id008
+  group: i07
+- element: channel
+  block: several values compared over a season
+  type: heldout
+  q: Please provide the app opens for winter 2026, presented as separate figures for organic users and paid search users.
+  expect: *id008
+  group: i07
+- element: country
+  block: codes combined
+  type: heldout
+  q: Can you pull the combined app opens for DE and FR as a single number for Q2 2026?
+  expect: &id009
+    type: metric_answer
+    metric: app_opens
+    params:
+      country:
+      - DE
+      - FR
+      period: 2026-Q2
+  group: i08
+- element: country
+  block: codes combined
+  type: heldout
+  q: Total app opens DE + FR combined into one figure Q2 2026
+  expect: *id009
+  group: i08
+- element: country
+  block: codes combined
+  type: heldout
+  q: Please provide the total number of app opens for Germany and France combined into a single figure for Q2 2026.
+  expect: *id009
+  group: i08
+- element: country
+  block: exclusion with no period
+  type: heldout
+  q: How many total app opens do we have from everywhere except IN?
+  expect: &id010
+    type: clarify
+    metric: app_opens
+    params:
+      country:
+      - US
+      - BR
+      - GB
+      - DE
+      - FR
+      - PH
+      - ID
+      period: ask
+  group: i09
+- element: country
+  block: exclusion with no period
+  type: heldout
+  q: Total app opens excluding IN
+  expect: *id010
+  group: i09
+- element: country
+  block: exclusion with no period
+  type: heldout
+  q: Please provide the aggregate count of app opens across all countries with the exception of IN.
+  expect: *id010
+  group: i09
+- element: country
+  block: synonym
+  type: heldout
+  q: How many app opens did we have in the States in October 2025?
+  expect: &id011
+    type: clarify
+    metric: app_opens
+    params:
+      country_name: ask
+      period: 2025-10
+  group: i10
+- element: country
+  block: synonym
+  type: heldout
+  q: US app opens October 2025
+  expect: *id011
+  group: i10
+- element: country
+  block: synonym
+  type: heldout
+  q: What was the total number of app opens originating from the United States during October 2025?
+  expect: *id011
+  group: i10
+- element: country
+  block: value not in layer with two dimensions
+  type: heldout
+  q: How many app opens did we get from users in Japan on iOS in January 2026?
+  expect: &id012
+    type: refuse
+    metric: app_opens
+  group: i11
+- element: country
+  block: value not in layer with two dimensions
+  type: heldout
+  q: iOS app opens Japan January 2026
+  expect: *id012
+  group: i11
+- element: country
+  block: value not in layer with two dimensions
+  type: heldout
+  q: Please provide the total number of app opens on iOS from users located in Japan for January 2026.
+  expect: *id012
+  group: i11
+- element: region
+  block: group value with no period
+  type: heldout
+  q: Hey, can you pull up app opens in APAC split by platform?
+  expect: &id013
+    type: clarify
+    metric: app_opens
+    params:
+      region: APAC
+      group_by:
+      - platform
+      period: ask
+  group: i12
+- element: region
+  block: group value with no period
+  type: heldout
+  q: APAC app opens by platform
+  expect: *id013
+  group: i12
+- element: region
+  block: group value with no period
+  type: heldout
+  q: Please provide the count of app opens in the APAC region, broken down by platform.
+  expect: *id013
+  group: i12
+- element: region
+  block: group value with a trend and no bucket size
+  type: heldout
+  q: Hey, can you show me how app opens trended across EMEA during Q2 2026?
+  expect: &id014
+    type: breakdown
+    metric: app_opens
+    params:
+      region: EMEA
+      period: 2026-Q2
+      group_by:
+      - metric_time
+  group: i13
+- element: region
+  block: group value with a trend and no bucket size
+  type: heldout
+  q: EMEA app opens trend Q2 2026
+  expect: *id014
+  group: i13
+- element: region
+  block: group value with a trend and no bucket size
+  type: heldout
+  q: Please provide the trend of app opens in the EMEA region for the second quarter of 2026.
+  expect: *id014
+  group: i13
+- element: region
+  block: year partly outside
+  type: heldout
+  q: How many total app opens did we get in the Americas across the full year 2025?
+  expect: &id015
+    type: refuse
+    metric: app_opens
+  group: i14
+- element: region
+  block: year partly outside
+  type: heldout
+  q: Total app opens Americas full year 2025
+  expect: *id015
+  group: i14
+- element: region
+  block: year partly outside
+  type: heldout
+  q: Please provide the total number of app opens recorded in the Americas for the full year 2025.
+  expect: *id015
+  group: i14
+- element: period
+  block: season wholly outside with a trend
+  type: heldout
+  q: How did desktop app opens trend through summer 2025?
+  expect: &id016
+    type: refuse
+    metric: app_opens
+  group: i15
+- element: period
+  block: season wholly outside with a trend
+  type: heldout
+  q: Desktop app opens trend summer 2025
+  expect: *id016
+  group: i15
+- element: period
+  block: season wholly outside with a trend
+  type: heldout
+  q: Please provide the trend of desktop app opens through summer 2025.
+  expect: *id016
+  group: i15
+- element: grain
+  block: weekly series over a season partly outside
+  type: heldout
+  q: Can you show me a week-by-week breakdown of all app opens across autumn 2025?
+  expect: &id017
+    type: refuse
+    metric: app_opens
+  group: i16
+- element: grain
+  block: weekly series over a season partly outside
+  type: heldout
+  q: All app opens week-by-week autumn 2025
+  expect: *id017
+  group: i16
+- element: grain
+  block: weekly series over a season partly outside
+  type: heldout
+  q: Please generate a week-by-week series of all app opens across autumn 2025.
+  expect: *id017
+  group: i16
+- element: grain
+  block: monthly series over a month range with two dimensions
+  type: heldout
+  q: Hey, could you get me the monthly mobile app opens in Brazil from November 2025 through April 2026?
+  expect: &id018
+    type: breakdown
+    metric: app_opens
+    params:
+      device_type: mobile
+      country_name: Brazil
+      period: 2025-11-01/2026-04-30
+      group_by:
+      - metric_time
+      grain: month
+  group: i17
+- element: grain
+  block: monthly series over a month range with two dimensions
+  type: heldout
+  q: Monthly mobile app opens Brazil Nov 2025 through Apr 2026
+  expect: *id018
+  group: i17
+- element: grain
+  block: monthly series over a month range with two dimensions
+  type: heldout
+  q: Please provide the monthly count of mobile app opens in Brazil for the period from November 2025 through April 2026.
+  expect: *id018
+  group: i17
+- element: breakdown
+  block: by segment with no restriction
+  type: heldout
+  q: Can I get all app opens in the first half of 2026 split by segment?
+  expect: &id019
+    type: breakdown
+    metric: app_opens
+    params:
+      period: 2026-H1
+      group_by:
+      - platform
+      - region
+      - channel
+  group: i18
+- element: breakdown
+  block: by segment with no restriction
+  type: heldout
+  q: app opens H1 2026 by segment
+  expect: *id019
+  group: i18
+- element: breakdown
+  block: by segment with no restriction
+  type: heldout
+  q: Please provide all app opens for the first half of 2026, broken down by segment.
+  expect: *id019
+  group: i18
+- element: breakdown
+  block: by segment with a restricted region
+  type: heldout
+  q: Can I get the app opens in the Americas during Q4 2025 broken down by segment?
+  expect: &id020
+    type: breakdown
+    metric: app_opens
+    params:
+      region: Americas
+      period: 2025-Q4
+      group_by:
+      - platform
+      - channel
+  group: i19
+- element: breakdown
+  block: by segment with a restricted region
+  type: heldout
+  q: Q4 2025 Americas app opens by segment
+  expect: *id020
+  group: i19
+- element: breakdown
+  block: by segment with a restricted region
+  type: heldout
+  q: Please provide the app opens in the Americas during the fourth quarter of 2025, broken down by segment.
+  expect: *id020
+  group: i19
+- element: breakdown
+  block: dimension not in layer over a month range
+  type: heldout
+  q: Can you pull up all app opens from January to March 2026 split out by app version?
+  expect: &id021
+    type: refuse
+    metric: app_opens
+  group: i20
+- element: breakdown
+  block: dimension not in layer over a month range
+  type: heldout
+  q: all app opens January to March 2026 by app version
+  expect: *id021
+  group: i20
+- element: breakdown
+  block: dimension not in layer over a month range
+  type: heldout
+  q: Please provide a breakdown of all app opens from January to March 2026 by app version.
+  expect: *id021
+  group: i20
+- element: breakdown
+  block: dimension not in layer for one month
+  type: heldout
+  q: Can you grab all app opens from March 2026, broken down by subscription plan?
+  expect: &id022
+    type: refuse
+    metric: app_opens
+  group: i21
+- element: breakdown
+  block: dimension not in layer for one month
+  type: heldout
+  q: March 2026 app opens by subscription plan
+  expect: *id022
+  group: i21
+- element: breakdown
+  block: dimension not in layer for one month
+  type: heldout
+  q: Please provide the total number of app opens during March 2026, segmented by subscription plan.
+  expect: *id022
+  group: i21
+- element: breakdown
+  block: split phrase with a known word
+  type: heldout
+  q: Hey, can you show me all the app opens from June 2026 broken down by sales region?
+  expect: &id023
+    type: contested
+    metric: app_opens
+    params:
+      period: 2026-06
+      group_by:
+      - region
+  group: i22
+- element: breakdown
+  block: split phrase with a known word
+  type: heldout
+  q: All app opens, June 2026, by sales region.
+  expect: *id023
+  group: i22
+- element: breakdown
+  block: split phrase with a known word
+  type: heldout
+  q: Could you please provide all app opens for June 2026, segmented by sales region?
+  expect: *id023
+  group: i22
+- element: period
+  block: year wholly outside
+  type: heldout
+  q: Hey, could you tell me how many app opens we had from organic users in 2024?
+  expect: &id024
+    type: refuse
+    metric: app_opens
+  group: i23
+- element: period
+  block: year wholly outside
+  type: heldout
+  q: 2024 app opens organic users
+  expect: *id024
+  group: i23
+- element: period
+  block: year wholly outside
+  type: heldout
+  q: Please provide the total number of app opens generated by organic users for the year 2024.
+  expect: *id024
+  group: i23

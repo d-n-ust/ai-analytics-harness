@@ -421,6 +421,57 @@ GUARDRAILS: tuple[Guardrail, ...] = (
               "hands back an answer whose number came from a call that dropped a filter an earlier "
               "call had asked for",
               ("gates/claims.py", "runtime/prompts.py"), in_ladder=False),
+    # Experiment 07's control arm: the instruction alone, with no mechanism behind it. It separates
+    # the effect of ASKING for disclosure from the effect of grounding (`parameter_grounding`).
+    Guardrail("disclose_assumptions", Position.DISCLOSURE,
+              "one prompt line: state every assumption and default behind the number (filter, "
+              "segment, definition, period, grain) in the answer",
+              ("runtime/prompts.py",), in_ladder=False),
+    # Experiment 07's treatment. Keeps the agent's metric and re-derives every other parameter of a
+    # governed query from the question: the model maps the question onto the metric's parameter
+    # surface, the mechanism checks existence and the quoted basis, applies named principles, runs
+    # the grounded query, and appends the decisions for the answer to state.
+    Guardrail("parameter_grounding", Position.BEFORE,
+              "grounds each parameter of a governed query in the question, a governed declaration "
+              "or a governed principle, runs the query with those parameters, and appends the "
+              "decisions to the result for the answer to disclose",
+              ("guardrails/parameters.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
+    # Two variants of parameter_grounding's evidence check, separate so each is measured alone.
+    Guardrail("tolerant_quotes", Position.BEFORE,
+              "matches a quoted phrase to the question by word stem, small gaps, a shared prefix or "
+              "one typo, instead of the exact consecutive words",
+              ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
+    # The same job as parameter_grounding with the proposal step replaced: one decision-model request
+    # chooses every parameter from option lists generated from the layer.
+    Guardrail("decision_grounding", Position.BEFORE,
+              "grounds each parameter of a governed query with one decision-model request whose options "
+              "are the layer's own members, periods inside coverage and governed rules; confident choices "
+              "run, `not_in_list` refuses, unsure or missing values ask",
+              ("guardrails/decisions.py", "runtime/loop.py", "runtime/prompts.py"), in_ladder=False),
+    # decision_grounding moved to the start of the run, with the output written by the mechanism.
+    Guardrail("decision_plan", Position.BEFORE,
+              "before the agent acts, one decision-model request chooses the metric and every "
+              "parameter from layer-generated options; code decides refuse, ask or answer and writes "
+              "the refusal, the question, or the answer from the returned values",
+              ("guardrails/decisions.py", "runtime/loop.py"), in_ladder=False),
+    Guardrail("quote_retry", Position.BEFORE,
+              "sends a quote that is not in the question back to the model once; if it is still not "
+              "there, the parameter is ungrounded and the agent asks instead of the value being "
+              "dropped silently",
+              ("guardrails/parameters.py", "runtime/loop.py"), in_ladder=False),
+    # The same reading with the questionnaire replaced: a language model marks the phrases and code
+    # resolves them against the layer's value lists (experiment 07, 03_typed_reader/design.md).
+    Guardrail("typed_reader", Position.BEFORE,
+              "reads the question for decision_grounding by marking its phrases with a language model that "
+              "sees no part of the layer, resolving each phrase against the layer's value lists and the "
+              "calendar in code, and confirming each judgement with one yes/no question",
+              ("guardrails/typed_reader/__init__.py", "guardrails/decisions.py", "runtime/loop.py"), in_ladder=False),
+    # decision_grounding's reading, shown to the agent before its first call instead of discovered
+    # one blocked call at a time. The checks are unchanged; only what the agent knows first moves.
+    Guardrail("reading_first", Position.ACTION_SPACE,
+              "reads the question before the first turn (metric from the catalogue, then the allowed "
+              "values, open parameters and missing values) and puts that reading in the opening message",
+              ("gates/reading.py", "runtime/loop.py"), in_ladder=False),
 )
 
 # The published ladder: the guardrails R0..R9 switch on, in order. Guardrails outside it keep their
@@ -487,6 +538,14 @@ class GuardrailSet:
     scope_segments: bool = False
     scope_classifier: bool = False
     constraint_regression: bool = False
+    disclose_assumptions: bool = False
+    parameter_grounding: bool = False
+    tolerant_quotes: bool = False
+    decision_grounding: bool = False
+    decision_plan: bool = False
+    quote_retry: bool = False
+    typed_reader: bool = False
+    reading_first: bool = False
 
     def label(self) -> str:
         """A self-describing name, so a stored row says what produced it. Ladder presets read as
@@ -495,6 +554,7 @@ class GuardrailSet:
         for n, preset in LADDER.items():
             if preset == self:
                 return f"R{n}"
+        plus = []
         for n, preset in LADDER.items():                   # a preset with one guardrail moved
             missing = [f.name for f in fields(self)
                        if getattr(preset, f.name) and not getattr(self, f.name)]
@@ -502,12 +562,15 @@ class GuardrailSet:
                      if getattr(self, f.name) and not getattr(preset, f.name)]
             if len(missing) == 1 and not added:
                 return f"R{n}-{missing[0]}"
-            # The mirror, and it arrived with the guardrails outside the ladder: a preset PLUS one.
-            # Without it `R3+typed_clarify` labelled itself by listing all five of its flags, which
-            # is a cell name that has to be decoded rather than read, and which no longer says
-            # which base it is a variation of.
-            if len(added) == 1 and not missing:
-                return f"R{n}+{added[0]}"
+            if not missing:
+                plus.append((len(added), n, added))
+        # The mirror, and it arrived with the guardrails outside the ladder: a preset PLUS some.
+        # Without it `R3+typed_clarify` labelled itself by listing all five of its flags, which is a
+        # cell name that has to be decoded rather than read, and which no longer says which base it
+        # is a variation of. The base is the preset needing the fewest additions.
+        if plus:
+            _, n, added = min(plus)
+            return f"R{n}+" + "+".join(added)
         return "+".join(on) if on else "none"
 
     def without(self, *names: str) -> GuardrailSet:
@@ -634,6 +697,21 @@ def incoherent(g: GuardrailSet, rung: int | None = None) -> str | None:
     if g.scope_classifier and not g.disclosure_check:
         return ("scope_classifier without disclosure_check: it stands down a check that is not "
                 "running, so it can only cost a model call.")
+    if g.decision_plan and g.parameter_grounding:
+        return ("decision_plan with parameter_grounding: a planned question never reaches the "
+                "grounding step it would configure.")
+    if g.typed_reader and not g.decision_grounding:
+        return ("typed_reader without decision_grounding: it replaces the reading that step makes, and "
+                "that step is not running.")
+    if g.reading_first and not g.decision_grounding:
+        return ("reading_first without decision_grounding: the reading it shows is the one the "
+                "grounding step enforces, and that step is not running.")
+    if g.decision_grounding and g.parameter_grounding:
+        return ("decision_grounding with parameter_grounding: two grounding steps would both rewrite "
+                "the same call.")
+    if (g.tolerant_quotes or g.quote_retry) and not g.parameter_grounding:
+        return ("tolerant_quotes or quote_retry without parameter_grounding: both change the grounding "
+                "step's evidence check, which is not running.")
     if g.constraint_regression and not g.coverage_check:
         return ("constraint_regression without coverage_check: raw SQL is still on the table, so a "
                 "restriction can be re-expressed in a query this check cannot read.")

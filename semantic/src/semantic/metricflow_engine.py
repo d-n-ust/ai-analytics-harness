@@ -115,6 +115,10 @@ class MetricFlowLayer:
             raise SystemExit(f"{directory}: the metricflow engine takes a DIRECTORY of YAML "
                              "(semantic_model: / metric: documents), not a single file")
         self.con = con
+        # The directory the manifest was parsed from. Kept so a consumer that needs the layer's
+        # own declarations (ontology.parameters reads entities, joins and metric filters) reads
+        # the same files this engine compiles, not a second copy of them.
+        self.spec_dir = directory
         self._ensure_time_spine()
         result = parse_directory_of_yaml_files_to_semantic_manifest(str(directory))
         self._manifest = result.semantic_manifest
@@ -631,9 +635,18 @@ class MetricFlowLayer:
         grain = kw.get("time_grain")
         if grain:
             group_by = [f"metric_time__{grain}" if g == "metric_time" else g for g in group_by]
+        # A BUCKET THAT CROSSES THE PERIOD'S EDGE IS CUT AT THE EDGE. MetricFlow widens the time
+        # constraint to whole buckets, so "the first half of 2026 by year" counted 1-12 July (30,449
+        # instead of 27,045) and "by week" counted 29-31 December and 1-5 July. A day-level filter
+        # keeps every row inside the period, as semantic.py's row filter always has; the edge buckets
+        # are then partial, and the caller says so (guardrails: decisions.check).
+        bucketed = any(g.startswith("metric_time__") and g != "metric_time__day" for g in group_by)
+        days = [f"{{{{ TimeDimension('metric_time', 'day') }}}} {op} '{to_dt(d).date().isoformat()}'"
+                for op, d in ((">=", start), ("<=", end)) if d is not None and bucketed]
+        constraints = ([where] if where else []) + days
         request = MetricFlowQueryRequest.create(
             metric_names=[name],
-            where_constraints=[where] if where else None,
+            where_constraints=constraints or None,
             group_by_names=group_by or None,
             time_constraint_start=to_dt(start), time_constraint_end=to_dt(end))
         # METRICFLOW'S OWN EXCEPTIONS STOP HERE. `dispatch` catches SemanticError and hands the

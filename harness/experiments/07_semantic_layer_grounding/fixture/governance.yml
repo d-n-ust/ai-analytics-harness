@@ -1,0 +1,150 @@
+# Governance for this fixture: the facts the MetricFlow layer cannot express.
+#
+# `semantic_models.yml` declares measures, dimensions and metric filters. It has no field for who
+# owns a definition, what a filter means, which words map to which definitions, which definitions
+# compete, or which default fills a parameter the question leaves open. MetricFlow users put these
+# facts in free-text descriptions. This file states them as structured data, and its content is the
+# list of what the layer is missing (milestoneA.md, "Outputs of the experiment").
+#
+# It never restates a fact the layer, the models or the warehouse already hold. Members, coverage
+# and joins are derived from those sources at run time (ontology.parameters). Additivity is derived
+# from each measure's `agg` (agent.core.measure). Absence is derived from the complete list of what
+# the warehouse captures (ontology.graph), so no list of absent concepts is kept here.
+#
+# Read by: ground.py (methodological_rules). The other sections are the documented overlay and the
+# source for the contested case in 01_parameter_grounding/cases.yml.
+
+# ── who the agent answers for (runtime governance) ─────────────────────────────────────────────
+# When a question's metric belongs to a contested pair, the grounding step uses the member owned by
+# this team and says so (guardrails/parameters.py route_metric). Without a requester the pair stays
+# ambiguous and the agent must ask.
+requester:
+  team: Product
+
+# ── named segments (Cube: segment; MetricFlow: metric filter) ─────────────────────────────────
+# The layer applies `is_internal = false` inside two metrics' filters. What the filter means, who
+# owns it and how firm it is are not declared anywhere, which is how the contested pair came about.
+segments:
+  customers:
+    kind: segment
+    entity: user
+    filter: "is_internal = false"
+    means: "External accounts: real customers, excluding staff and test accounts."
+    owner: Product
+    evidence: decided
+    status: certified
+    note: >-
+      The is_internal rule itself rests on two undocumented signals (an internal flag and an
+      @internal-test.com email) and reads silence as external: 271 accounts say nothing. That
+      judgement lives in stg_users.sql, not in any declaration.
+  all_accounts:
+    kind: segment
+    entity: user
+    filter: none
+    means: "Every account, internal and test included. Used for load and capacity, not customers."
+    owner: Platform
+    evidence: decided
+    status: certified
+  active_book:
+    kind: segment
+    entity: subscription
+    filter: "status = 'active'"
+    means: "Subscription terms currently active: the paying book."
+    owner: Finance
+    evidence: decided
+    status: certified
+
+# ── per-measure governance: status, and the segment its filter applies (owner: on the metric) ──
+measures:
+  app_opens:
+    status: certified
+    segment: customers
+  active_users:
+    status: certified
+    segment: customers
+  active_accounts:
+    status: certified
+    segment: all_accounts
+  value_moments:
+    status: certified
+    segment: customers
+  total_value_moments:
+    status: certified
+    segment: all_accounts
+
+# ── per-attribute governance ──────────────────────────────────────────────────────────────────
+attributes:
+  is_internal:
+    status: certified
+    note: "The customer/internal split. Derived in staging from two undocumented raw signals."
+  platform:
+    status: certified
+
+# ── vocabulary: words for metrics, words for values ───────────────────────────────────────────
+# Words that reach more than one metric are declared on the metrics (`config.meta.terms` in
+# layer/semantic_models.yml). Words for dimension values are the values of modelled attributes
+# (dim_platform.device_type, dim_country.country_name, dim_date.season), and what a value means, when
+# its name does not say it, is on the dimension (`config.meta.values`). No word list is kept here.
+
+# ── the calendar: where seasons are declared ──────────────────────────────────────────────────
+# MetricFlow's time spine holds days only. The conformed date table holds the calendar attributes a
+# question uses (`season`, `season_year`); the typed reader places a season on it. Owner: Analytics.
+calendar:
+  table: wh_06.dim_date
+  # The seasons in the table are northern. A figure wholly in the other hemisphere (Brazil,
+  # Indonesia) has a season of its own, so the reader asks instead of applying these months.
+  hemisphere: north
+
+# ── relationships between definitions: moved to the semantic layer ───────────────────────────
+# Which metric answers a word that several governed metrics answer ("users", "habits",
+# "marketing spend", "revenue") is declared on the metrics themselves, in `config.meta.terms` in
+# layer/semantic_models.yml, and decided by preflight (engine/src/agent/guardrails/forks.py). Each
+# metric's owner moved there too (`config.meta.owner`). This file keeps who is asking (`requester`).
+
+# ── methodological rules: a governed default for a parameter the question leaves open ──────────
+# The model names the rule; ground.py applies its value deterministically and discloses it. If no
+# rule fits, the parameter is left unset or the agent asks.
+methodological_rules:
+  - id: trend_granularity
+    slot: time_grain
+    when: "a time series is requested (group_by includes metric_time) but no bucket is grounded"
+    target_points: [15, 40]
+    prefer: coarsest_in_range
+    # Every bucket must lie wholly inside the period. Without this, the engine answers "the first half
+    # of 2026 by week" with whole weeks, so the first and last points silently include 29-31 Dec 2025
+    # and 1-5 Jul 2026 (404 and 2,059 instead of 221 and 615). Among grains that fit, the range applies.
+    buckets_within_period: true
+    rationale: "A trend needs enough points to show its shape and few enough to read: 15-40. Day is
+      usually too granular, month too coarse over a short span; the rule computes the fit from the
+      span rather than guessing. A bucket that crosses the period's edge reports data from outside
+      the period, so only grains whose buckets line up with the period are considered."
+    owner: analytics
+    status: certified
+  - id: canonical_segments
+    slot: group_by
+    # "across the business" was listed here until 2026-10-06. It came from a keyword list in the first
+    # prototype and was never tested; this text is shown to the decision model and the agent, so it
+    # taught them that "how many users across the business" asks for a breakdown. It usually means
+    # a total (held-out h_001).
+    when: "an unspecified breakdown is asked ('by segment') with no dimension named"
+    default: [activity__platform, activity__region, activity__channel]
+    # The words that ask for this rule's breakdown, for a reader that matches words rather than
+    # judging the `when` sentence (the typed reader).
+    words: [segment, segments]
+    # One breakdown per dimension, not a cross-table: "the standard segments" means three views an
+    # analyst reads side by side, and a single group_by over all three returns every combination.
+    combine: separate
+    disclose: "broken down by the standard business segments: platform (product), region (sales), channel (marketing)"
+    rationale: "A senior analyst's first-pass breakdown is the canonical high-level business segments,
+      not one arbitrary dimension. Showing all three is the analysis; it is not a fork worth a clarify."
+    owner: analytics
+    status: certified
+  - id: show_small_choice_sets
+    slot: any
+    when: "the question leaves a choice open and there are at most 3 governed options for it"
+    max_options: 3
+    rationale: "With three or fewer readings, showing all of them answers the question in one turn
+      and costs the reader less than a clarifying question. Asking is kept for larger choice sets,
+      for a missing period, and for an unclear shape of answer."
+    owner: analytics
+    status: certified

@@ -37,7 +37,7 @@ NAMED_PERIODS = ("last_week", "prev_week", "last_month", "last_quarter", "ytd", 
 # schema's enum, and the catalogue's prose. A refactor of the third dropped `time_grain` from the
 # catalogue entirely while the other two kept accepting it, so the catalogue advertised less than
 # the layer enforced. One tuple, imported everywhere, is why that cannot recur.
-TIME_GRAINS = ("day", "week", "month")
+TIME_GRAINS = ("day", "week", "month", "quarter", "year")
 
 
 def _last_complete_week(today: dt.date) -> tuple[dt.date, dt.date]:
