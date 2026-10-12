@@ -510,8 +510,9 @@ def test_the_alternative_is_adopted_only_when_its_checks_confirm_it(monkeypatch)
 def test_the_language_resources_hold_no_fact_about_the_data():
     """english.py is English only: no dimension name and no listed value of the experiment's layer."""
     import pathlib
-    import re
+
     import yaml
+
     from agent.guardrails.typed_reader import english as E
     root = pathlib.Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding" / "fixture"
     names = {d["name"].lower() for doc in yaml.safe_load_all((root / "layer" / "semantic_models.yml").read_text()) if doc

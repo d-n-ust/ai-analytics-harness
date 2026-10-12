@@ -1271,8 +1271,8 @@ def answer_text(metric: str, queries: list, results: list, decisions: list,
                 governance: dict | None = None) -> str:
     """The answer, written from the returned values. Figures are copied, never generated."""
     lines = []
-    for q, r in zip(queries, results):
-        pairs = list(zip(r.labels or [""], r.values or []))
+    for q, r in zip(queries, results, strict=False):
+        pairs = list(zip(r.labels or [""], r.values or [], strict=False))
         head = f"{metric} ({_scope(q)}; period {q.get('period', 'all data')})"
         if q.get("group_by"):
             by = q.get("time_grain") if q["group_by"] == ["metric_time"] else q["group_by"][0].split("__")[-1]

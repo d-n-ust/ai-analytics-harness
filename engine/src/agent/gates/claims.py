@@ -9,7 +9,6 @@ the answer back, or None (standing down, or after constructing into the exit cal
 from __future__ import annotations
 
 import json
-
 import re  # noqa: F401
 
 import evidence as claim_audit  # noqa: F401
