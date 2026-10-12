@@ -14,11 +14,21 @@ from __future__ import annotations
 import datetime as dt
 import re
 
-from ..decisions import CONFIDENT, PLAUSIBLE, _dimensions, _meanings, _refuse, _covered
+from ..decisions import CONFIDENT, PLAUSIBLE, _covered, _dimensions, _meanings, _refuse
 from ..forks import _tokens
 from ..parameters import _decision, _period_span, _ungrounded
-from .english import (_GRAMMAR, _JOINING, _MONTHS, _NEGATION, _SPLIT_LEAD, _TIME_UNITS, _UNITS, BY_PHRASE,
-                      DATE_WORDS, SERIES_WORDS)
+from .english import (
+    _GRAMMAR,
+    _JOINING,
+    _MONTHS,
+    _NEGATION,
+    _SPLIT_LEAD,
+    _TIME_UNITS,
+    _UNITS,
+    BY_PHRASE,
+    DATE_WORDS,
+    SERIES_WORDS,
+)
 
 # ── accounting ─────────────────────────────────────────────────────────────────────────────────
 
@@ -661,7 +671,7 @@ def flipped(proposal: dict, terms: list, vetoed: list) -> tuple[dict, list] | No
             rest = [t for t in figures[i] if t not in on]
             figures[i:i + 1] = [rest + [t] for t in on]
         elif key.startswith(("include", "except")):
-            i, j = (int(x) for x in key.lstrip("includeexcept").split("_"))
+            i, j = (int(x) for x in key.removeprefix("include").removeprefix("except").split("_"))
             kept = key.startswith("include")
             same = [t for t in figures[i] if t["keep"] == kept]
             same[j]["keep"] = not kept

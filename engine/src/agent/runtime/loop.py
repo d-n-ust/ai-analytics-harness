@@ -678,7 +678,7 @@ def _planned_answer(run, question: str):
                       "grounded_queries": planned["queries"], "grounding_cost_usd": planned["cost"],
                       "blocked_reason": planned["reason"] if planned["action"] != "answer" else "",
                       "blocked_by": "decision_plan" if planned["action"] != "answer" else ""})
-    for q, r in zip(planned["queries"], planned["results"]):
+    for q, r in zip(planned["queries"], planned["results"], strict=False):
         run.steps.append({"tool": "query_metric", "args": q, "error": r.is_error, "handle": "",
                           "result": r.content[:_TRACE_LIMIT], "result_values": r.values,
                           "result_labels": r.labels, "blocked_reason": r.reason, "blocked_by": r.blocked_by})

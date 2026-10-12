@@ -21,7 +21,6 @@ from functools import lru_cache
 
 import preflight
 
-
 # The question's word is not known (the arm has no question check): route on the agent's call, as
 # before. A known word, or None for "the question uses no fork word", restricts routing to it.
 ANY = object()
@@ -189,7 +188,6 @@ def _decide(facts: tuple, metric: str, team: str | None, word: str, semantic=Non
         return metric, None
     why = f"meta.terms: '{word}'"
     every = preflight.readings(facts, word, None)
-    claimed = set(every.metrics) if every else set()
     if outcome.action == "ask":
         return metric, _decision("metric", "?", "none", state="ungrounded",
                                  why=f"'{word}' has several governed readings and none is declared for "

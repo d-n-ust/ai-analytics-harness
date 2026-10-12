@@ -5,7 +5,19 @@ which values it applies, which it drops, and what it tells the answer to disclos
 """
 from __future__ import annotations
 
-from agent.guardrails import parse_cell
+import datetime as _dt
+from pathlib import Path as _Path
+from types import SimpleNamespace
+from types import SimpleNamespace as _NS
+
+from agent.core.conversation import ToolCall, Turn, Usage
+from agent.core.conversation import ToolResult as _TR
+from agent.gates import claims as _claims_gate
+from agent.gates import reading as _coverage_gate
+from agent.guardrails import decisions as DG
+from agent.guardrails import forks as F
+from agent.guardrails import incoherent, parse_cell
+from agent.guardrails import parameters as P
 from agent.guardrails.parameters import note_text, resolve
 
 SURFACE = {
@@ -177,9 +189,6 @@ def test_the_model_can_declare_a_parameter_ungrounded():
 
 
 # ── the two variants of the evidence check: tolerant_quotes and quote_retry ──────────────────────
-from agent.core.conversation import ToolCall, Turn, Usage
-from agent.guardrails import parameters as P
-from agent.guardrails import incoherent
 
 
 def test_tolerant_matching_accepts_ordinary_variation_and_still_rejects_other_words():
@@ -255,9 +264,7 @@ def test_the_variants_need_parameter_grounding():
 
 
 # ── decision_grounding: the policy applied to a decision model's answers ─────────────────────────
-import datetime as _dt
 
-from agent.guardrails import decisions as DG
 
 _LO, _HI = _dt.date(2025, 9, 5), _dt.date(2026, 7, 12)
 
@@ -418,15 +425,13 @@ def test_quarter_and_year_buckets_line_up_only_on_their_own_edges():
     assert P._lines_up("year", _d.date(2025, 1, 1), _d.date(2026, 12, 31))
     assert not P._lines_up("year", _d.date(2026, 1, 1), _d.date(2026, 6, 30))
     from ontology.parameters import TIME_GRAINS as ONTOLOGY
+
     from warehouse.config import TIME_GRAINS as WAREHOUSE
     assert ONTOLOGY == WAREHOUSE            # one list, kept twice only because ontology imports nothing
 
 
 # ── runtime governance: a fork declared in the layer (meta.terms), resolved by preflight ───────────
-from pathlib import Path as _Path
-from types import SimpleNamespace
 
-from agent.guardrails import forks as F
 
 _LAYER = SimpleNamespace(spec_dir=_Path(__file__).resolve().parents[1] / "experiments" / "07_semantic_layer_grounding"
              / "fixture" / "layer")
@@ -498,7 +503,6 @@ def test_the_rules_are_rendered_for_the_agent():
 
 
 # ── decision_plan: the terminal action is written by the mechanism ────────────────────────────────
-from agent.core.conversation import ToolResult as _TR
 
 
 def test_the_answer_copies_every_returned_value_and_states_the_filter_in_plain_words():
@@ -627,10 +631,7 @@ def test_a_series_read_partly_as_a_trend_and_partly_as_a_breakdown_by_time_is_a_
 
 
 # ── the answer side: a list written as one claim, and a value the answer leaves out ────────────────
-from types import SimpleNamespace as _NS
 
-from agent.gates import claims as _claims_gate
-from agent.gates import reading as _coverage_gate
 
 
 def _gate_run(steps, grounded=None, repair=True):
@@ -805,7 +806,8 @@ def test_an_ungoverned_figure_is_a_policy_violation_under_decision_grounding():
         {"text": "April 9.277", "value": 9.277, "sources": ["r1:2026-04"]},
         {"text": "the metric excludes staff", "value": 0, "sources": []}]})
     assert _claims_gate.malformed_claims(_gate_run([monthly]), statement) is None
-    off = _gate_run([monthly]); off.grounding.toolbox.g.decision_grounding = False
+    off = _gate_run([monthly])
+    off.grounding.toolbox.g.decision_grounding = False
     exit_call = _NS(name="answer", args={"answer": "9.41", "claims": [{"text": "a", "value": 9.41, "sources": []}]})
     assert _claims_gate.malformed_claims(off, exit_call) is None, "without decision_grounding it is measured, not corrected"
 

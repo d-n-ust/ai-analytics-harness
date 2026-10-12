@@ -129,10 +129,9 @@ def propose(request: dict) -> tuple[dict, float, str]:
         except urllib.error.HTTPError as exc:
             if exc.code in (401, 402, 403, 404):         # credentials, credit, model: not transient
                 raise
-            err: Exception = exc
             detail = f"HTTP {exc.code}: {exc.read()[:200].decode(errors='replace')}"
         except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError, IndexError) as exc:
-            err, detail = exc, type(exc).__name__
+            detail = type(exc).__name__
         time.sleep(3 * (attempt + 1))
     raise ReadingUnavailable(f"proposal model unavailable: {detail}")
 
