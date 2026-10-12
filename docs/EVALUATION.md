@@ -18,8 +18,8 @@ this repository generates. The numbers demonstrate mechanisms, not universal mod
 
 Sources are abbreviated: `04/<study>` is `harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`,
 `05` is `harness/experiments/05_preflight_ambiguity/`, `06 §n` is
-`harness/experiments/06_third_state/findings.md`, `FINDINGS §n` is `docs/FINDINGS.md`, and
-`published/<folder>` is `results/published/<folder>/`.
+`harness/experiments/06_third_state/findings.md`, `07 §n` is `harness/experiments/07_semantic_layer_grounding/findings.md`, `FINDINGS §n` is
+`docs/FINDINGS.md`, and `published/<folder>` is `results/published/<folder>/`.
 
 ---
 
@@ -309,3 +309,40 @@ Source: 06 §38.
 E-17 in full. The check being audited already existed; re-implementing it produced a string of
 phantom findings before the real one was called.
 Source: FINDINGS §9.
+
+---
+
+## Grounding every parameter of the query (experiment 07)
+
+### E-35  Grade the question reader as a component, per parameter, not only the final answer.
+Evidence: `reading_errors` grades the reading's action and every labelled parameter, so a reader
+error is visible even when the agent recovered, and an agent error is not charged to the reader.
+Counted per parameter (`grid.py`), blind set 4 shows where the gaps are: period was used in 64
+checks and channel in 6; platform and country leaned on stated judgements (7 of 15 and 9 of 21);
+the one silent error was in group by.
+Source: 07 §24, §38; `02_readiness_audit/grid.py`.
+
+### E-36  Have the questions written outside the work, register predictions first, and audit the labels after every run. Report both numbers.
+Evidence: four blind sets, intents written by one model and wordings by another, neither seeing the
+code. Label audits moved every set: set 4 as written, 4.2% silent errors and 80.2% balanced
+accuracy; corrected, 1.4% and 95.4%. Two of four sets repeated one format error across intents.
+Source: 07 §31, §32, §35, §38, §39.
+
+### E-37  A start-to-latest table across different suites is a development story, not a comparison.
+Evidence: experiment 07's best-looking pair, 0.298 silent errors for the plain agent and 1.4% for
+the latest reader, comes from a 19-question held-out suite graded on whole answers and a 72-reading
+blind set graded on readings. The only same-set comparison of two readers is blind set 1. The final
+run puts the plain agent on the same questions as a third arm.
+Source: 07 §19, §31, §38, §39.
+
+### E-38  Run a metamorphic suite on every change: one request, three wordings, the same reading expected.
+Evidence: 8 families filled from the layer's values, 3 wordings each: 21 of 24 correct, 6 of 8
+groups read alike, no silent wrong. It is the cheapest regression test of non-fragility.
+Source: 07 §38; `02_readiness_audit/metamorphic.py`.
+
+### E-39  The regrade that disagreed with the run. (Open.)
+Evidence: `regrade.py` calls the grader without the layer's rollups, which the run passed, so it
+counted a broader value stated as broader ("iPhone users" as `device_type = mobile`) as a second
+silent error on set 4. Found on 2026-10-12 while building the readiness grid; the run's number (1 of
+72) stands.
+Source: 07 §39.

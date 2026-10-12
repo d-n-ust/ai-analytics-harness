@@ -22,8 +22,8 @@ be worse in ways these did not anticipate.
 
 Sources are abbreviated: `04/<study>` is `harness/experiments/04_repair_matrix/<study>/PRACTITIONER-NOTES.md`,
 `05` is `harness/experiments/05_preflight_ambiguity/` (`practical.md`, `findings.md`), `06 §n` is
-`harness/experiments/06_third_state/findings.md`, `FINDINGS §n` is `docs/FINDINGS.md`, and
-`SUMMARY` is `harness/scratchpad/ambiguity/SUMMARY.md`.
+`harness/experiments/06_third_state/findings.md`, `07 §n` is `harness/experiments/07_semantic_layer_grounding/findings.md`, `FINDINGS §n` is
+`docs/FINDINGS.md`, and `SUMMARY` is `harness/scratchpad/ambiguity/SUMMARY.md`.
 
 ---
 
@@ -349,3 +349,41 @@ the correct twin 2 of 2, and the July R0–R9 run had the case correct 28 of 30.
 boards did not see this because their suites run on the 06 fixture. Not yet diagnosed; recorded here
 so the tag that ships these notes does not imply the default environment was re-measured.
 Source: this session's probe; `results/published/2026-07-reliability-ladder/runs/20260727-140714-gpt-5-mini.raw.jsonl.gz`.
+
+---
+
+## Grounding every parameter of the query (experiment 07)
+
+### F-41  Put the words people use into the layer as dimension values. A sentence in a description is not applied.
+Evidence: one fact, "mobile" is android and iOS, held four ways with the code fixed (8 items, three
+readings each): missing, 6/24 correct with 9 silent wrong; as prose in the description, 6/24 correct
+with 18 asks; declared and applied by code, 24/24. The fact became `dim_platform.device_type`; country
+names and seasons became columns the same way. The test has 8 items on one reader.
+Source: 07 §27, §30.
+
+### F-42  Write down what a value or a dimension means when its name could mislead, and let the answer say it.
+Evidence: "platform" is the platform the account signed up on, not the device of each app open, and
+"desktop" includes web browsers on phones. Neither was stated anywhere until the values were
+modelled; both change the number. The layer now holds them as `meta.disclose` and `meta.values`,
+and the reader repeats them in the answer.
+Source: 07 §32.
+
+### F-43  Declare which dimensions are complete. Only a complete list lets the analyst say "not in the data".
+Evidence: country and platform are declared complete (`meta.complete`), so a country outside the
+list can be refused as not in the data; channel is not, because marketing adds channels, so an
+unknown channel name is asked about. Without the declaration the reader could only ask. Two
+development cases ("users in Japan", "the Linux desktop app") are still asked about rather than
+refused.
+Source: 07 §37, §39.
+
+### F-44  Rules that fill in missing details are definitions with owners, not prompt text. Some depend on another fact.
+Evidence: "summer" is June to August only in the northern hemisphere, so the calendar rule names its
+hemisphere and each country carries one; for a southern country the analyst asks which months are
+meant. "By segment" is declared as three dimensions in `governance.yml`.
+Source: 07 §32, §34.
+
+### F-45  Every metric should declare the words that name it and its owner.
+Evidence: "customers" was routed to `paying_users` (371) until the metrics declared their words;
+with `meta.terms` the routing on the development wordings was 62 right and 0 wrong. Development
+sets only; the first version of this declaration did not raise the rate on held-out v2.
+Source: 07 §20, §22, §25.

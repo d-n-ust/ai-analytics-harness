@@ -21,7 +21,11 @@ experiments/
 ├── 05_preflight_ambiguity/         ✓ shipped — does fixing what a static scan flags remove the runtime harm?
 ├── 06_third_state/                 ✓ measured — what does the agent do when two definitions are both right?
 │   └── fixture/                    a dbt project, a MetricFlow layer, the contested pair, the held-out suites
-└── 07_semantic_layer_grounding/   · in progress — is a query governed when only its metric is?
+└── 07_semantic_layer_grounding/   · in progress — is a query governed when only its metric is? (measured; final run open)
+    ├── 01_parameter_grounding/     the agent arms on development and held-out suites
+    ├── 02_readiness_audit/         the question reader alone: controlled test, four blind sets, the grid
+    ├── 03_typed_reader/            the reader's design: the model marks phrases, code resolves them
+    └── 04_value_search/            candidate search for large dimensions (prototype)
 ```
 
 ```bash

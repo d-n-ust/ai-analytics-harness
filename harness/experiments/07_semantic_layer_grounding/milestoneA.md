@@ -1,5 +1,8 @@
 # Milestone A: a model of query trust for agentic analytics
 
+> Design record from 2026-09-22, kept as written. What was built and measured afterwards differs: see
+> `findings.md` from section 11 and the experiment's `README.md`.
+
 This document records the model that experiment 07 arrived at, so that the reasoning is not lost
 between sessions. The components built in this experiment exist to enforce the rule stated in
 "The rule" below. The model is preliminary: it is demonstrated on four questions and not yet
